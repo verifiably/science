@@ -1,0 +1,127 @@
+# System redesign — adoption-order ledger
+
+**Status:** Living record, updated as designs bank and artifacts land.
+**Purpose:** The banked designs are each careful about what they do *not* wait on, but no
+document names the dependency order between them or the legal partial states in between.
+This ledger does, modeled on `atoms`' deferred-obligation ledger: an entry leaves when its
+owning design/plan lands *and* its verification covers it. The design commit that names an
+entry discharges nothing.
+
+## 0. The clean-start ruling (2026-08-04)
+
+With every design banked, the redesigned system is **built from the ground up on
+`nodes` + `atoms` in this repository**, rather than migrated into the existing
+codebase. The prior implementation is preserved, public and unchanged, as
+**`proto-science`** (`github.com/khughitt/proto-science`); this repository takes
+the `science` name and starts its own version line.
+
+Three consequences, recorded so they survive:
+
+- **The git history is deliberately not carried over.** These nine design
+  documents seed the first commit; the review history that produced them —
+  including the eleven-round review of the tamper-evident log — stays browsable
+  in `proto-science`.
+- **Key project elements are *reproduced*, never migrated.** Code may be
+  borrowed, but a record only exists here if this system produced it. A migrated
+  record would be a provenance-weak assertion — exactly what the kernel's
+  guarantees exist to exclude — and nothing in §1's implementation items assumes
+  the old codebase.
+- **`proto-science` is not a dependency.** No import, no compatibility layer, no
+  dual-write. It is heritage and a reference to read, and the two repositories
+  share only the design documents' text.
+
+## 1. Unbuilt artifacts and what waits on them
+
+| # | artifact | owner | waits on it | state |
+|---|---|---|---|---|
+| 1 | **World index** — address/alias/producers maps + producer snapshot, publishable and consumable without the corpora it names | world §5; packaging, write ownership, and staleness are open questions (world §10) | `not-present` resolution, receipt checkability, merge inbound hygiene, `corpus_id` uniqueness refusal, §9 anchor carriage (repro §9 amendment 2026-08-03), and retraction discovery — a fourth derived map, target identity → retraction addresses (5a §4) | **Design banked 2026-08-03** (`2026-08-03-world-index-packaging-design.md`; world §5/W8a/W13/lim. 9/§10 amended in place); build awaits implementation — X1–X12, with X2 gated on `atoms` A6–A8 |
+| 2 | **Corpus manifests / `corpus_id` minting** | world §5 | world index build; exact corpus-state identity | Per-corpus explicit adoption act; the one place a duplicate can be created is copying a stamped corpus — refused at index build |
+| 3 | **`nodes` contract deltas** — shipped, versioned §11.1 projection; reserved-path contract; recoverable construction; digest-id hazards | `nodes` `2026-08-03-nodes-under-the-system-redesign-design.md` | node content identity and corpus-state identity (world §5, amendment 2026-08-03); manifest safety; audits over damaged corpora | Direction approved; blocks profile *implementation*, not design |
+| 4 | **`atoms` A6–A8** — coherent capture, effect/recovery execution, exerciser | `atoms` authority design §14 | durable multi-file commit; retirement of the single-writer/no-durability profile claims (substrate §7) | Nothing in banked designs waits on them; adoption route is science's composition root (`atoms` §12.2) |
+| 5 | **Tamper-evident mutation log** (repro §9) | `2026-08-03-tamper-evident-log-design.md` — `atoms` owns registration (the A6–A8 executor path), science owns anchor carriage and verification | closing kernel §8.7's four recorded-mutation consequences and strengthening the fifth — chronology — for boundary-mediated executions (G2a/R12's out-of-band negative remains) | **Design banked 2026-08-03** (per-root chains with settlement lifecycle, epoch-cadence anchors + explicit anchor act, surviving-observer bound; kernel §8.7/G2a, comp §3.3/R12/§9, packaging §3/§4/§5/§5.1/§5.2/X9/§12/lim. 1, and `atoms` §15 amended in the banking commit); consumes artifact 1 as anchor carrier; the four-of-five closure lands at implementation (L1–L13) |
+| 6 | **Retraction + correction lifecycle** | sub-problem 5a (§2) | four banked limitations that currently say the wrong answer stays computable (comp §5.2/§11.13/§13, world lim. 11) | **Banked 2026-08-03** (`2026-08-03-correction-lifecycle-design.md`; kernel §3.3/G8/§8.7 amended in the banking commit); C1–C10 await implementation |
+| 7 | **Normative contract + conformance oracles + instrument certification** | sub-problem 5b (§2) | disposition of the 63 legacy check modules (principle in 5b §8); homes for G1, G2a–G2c, G3–G8; S1–S8 (S1a); W1–W13 (W5a, W8a–b); R1–R23; C1–C10; X1–X12 | **Design banked 2026-08-03** (`2026-08-03-normative-contract-design.md`; tenth kind `instrument-certification`, rule-binding recipe member, certification-enumeration receipt — kernel, world §3/§4.2/§5/W8a, comp §4.2/§4.2a/§7.3/§7.3b–c/R18/R19, 5a §3/§4/C10/§9, packaging §5/§5.2/§7/X9/X10/X12 amended in the banking commit); the first contract cut, the executable suite, and N1–N10 await implementation |
+
+## 2. Sub-problem 5 — split and order (ruled 2026-08-03)
+
+Sub-problem 5 is two clusters with a clean seam, taken in the reverse of the charter's
+implied order:
+
+- **5a — retraction and the correction lifecycle**, first: retraction (form already fixed:
+  additive, attributed, kernel §5.1 digest member, structurally subtractive,
+  eligibility-bearing), conflict-route retirement, and coverage-declaration
+  accountability — the judgment cluster, all "who may change recorded judgment and how is
+  the change visible."
+- **5b — the versioned normative contract and its conformance oracles**, second, carrying
+  instrument certification with it: equivalence-rule, falsifier, interpretation-rule, and
+  scope-derivation-rule certification, plus code-lineage independence.
+
+Rationale, recorded so it survives:
+
+1. The retraction hole is live in banked designs — four separate limitations defer here.
+2. Versioning a normative contract before adding a known-pending belief operation
+   guarantees a major bump on arrival; the operation set completes before the document
+   that describes it freezes.
+3. "Prove this can fail" is what an oracle does, so instrument certification travels with
+   the oracle work, not the lifecycle work.
+
+Two standing constraints on 5a:
+
+- **5a does not build tamper evidence.** A retraction record is as deletable as the
+  record it retracts; the four §8.7 consequences gain a fifth (deleting a correction
+  silently restores standing) rather than losing any. 5a's scope section states this
+  non-goal explicitly, so the judgment cluster is not read as closing §8.7 by
+  adjacency — the same "hygiene, not tamper evidence" line the kernel drew for the
+  verification constructor.
+- **One form, decided first.** Whether verification retraction, conflict-route
+  retirement, and coverage narrowing are one lifecycle form — an authored, attributed
+  act that subtracts standing without deleting a record, with an optional
+  replacement — is 5a's opening decision. If they share the form, 5a defines it once
+  and instantiates it three times, and coverage narrowing's visibility rule falls out
+  of the shared form.
+
+Two standing constraints on 5b:
+
+- **The guarantee tables stay frozen under their current ids.** G1, G2a–G2c, G3–G8,
+  S1–S8, W1–W13, R1–R23 are conformance oracles in embryo; 5a extends, never renumbers, so 5b inherits
+  them unchanged and gives them a version and a conformance meaning.
+- **`nodes`' STANDARD transfers as form, not force.** Its three-tier model exists to stop
+  two language implementations drifting; science has one implementation. The reusable
+  form is the versioned normative doc, frozen oracles, and explicit change policy;
+  science's reason for the oracles is its own estimator doctrine — a check must be able
+  to fail.
+
+## 3. Order of work
+
+1. **Sub-problem 5a** — retraction + correction lifecycle. **Banked 2026-08-03.**
+2. **World-index packaging design** — where it lives, who writes it, staleness and
+   consistency semantics, with §9 anchor carriage as a stated consumer (repro §9
+   amendment). Everything in artifact 1's "waits on it" column leans here; it should not
+   be designed last by default. 5a added two more consumers: the retraction map (its
+   fourth derived map) and the temporal half of 5a's limitation 6, which explicitly
+   defers a fresh retraction's reach to this design's staleness semantics.
+   **Banked 2026-08-03.**
+3. **Sub-problem 5b** — normative contract + oracles + instrument certification, after
+   5a's operations exist. **Banked 2026-08-03.** Items 4–6 below proceed on
+   their own clocks; the design track's next open item is the §9 log design.
+4. **`nodes` contract deltas** land on their own clock; required before profile
+   implementation, not before design.
+5. **`atoms` A6–A8** proceed independently; composition-root adoption follows.
+6. **§9 log design** after the world-index packaging design settles the anchor.
+   **Banked 2026-08-03** (`2026-08-03-tamper-evident-log-design.md`). The
+   design track has no open items; L1–L13 await implementation with A6–A8.
+
+## 4. Invariants and gates to pin when their layer lands
+
+- **Concurrent-merge interleaving.** Single-writer holds per corpus, but two writers in
+  two corpora can each merge across the other's referrers. The redirect makes partial
+  application correct; pin it with a stated invariant test when the world layer lands,
+  rather than leaving "one world does not add concurrency" (world lim. 5) to carry the
+  claim alone.
+- **Measurement gates.** Exact maximum-independent-set aggregation and belief-digest
+  closure recomputation get measured at mm30 scale before any optimization — the same
+  rule substrate §8 applies to `nodes` indexes.
+- **Cold arrivals.** A corpus arriving by copy/sync without engine metadata is a normal
+  cold bootstrap (`atoms` §7); a corpus arriving *with* another host's metadata is a
+  restored-backup classification case. Neither is corruption; both should appear in the
+  world-index packaging design's staleness story.
