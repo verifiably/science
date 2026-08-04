@@ -30,6 +30,11 @@ Three consequences, recorded so they survive:
   dual-write. It is heritage and a reference to read, and the two repositories
   share only the design documents' text.
 
+Ownership moves with the restart: the system lives under the **`verifiably`**
+organization rather than a personal account, so governance and long-term
+stewardship are not tied to one individual. §5 records the namespace and
+decomposition rulings that follow from it.
+
 ## 1. Unbuilt artifacts and what waits on them
 
 | # | artifact | owner | waits on it | state |
@@ -125,3 +130,65 @@ Two standing constraints on 5b:
   cold bootstrap (`atoms` §7); a corpus arriving *with* another host's metadata is a
   restored-backup classification case. Neither is corruption; both should appear in the
   world-index packaging design's staleness story.
+
+## 5. Repository and package decomposition (ruled 2026-08-04)
+
+The system lives under one GitHub organization, **`verifiably`**, alongside its two
+substrates. The organization, not the repository name, is what makes short generic
+names (`atoms`, `nodes`, `science`) defensible: they are layer names in one stack.
+
+**Distribution namespaces are flat and the organization does not namespace them.**
+The rulings, so they are not re-derived: npm uses the scope — `@verifiably/<name>`;
+PyPI has no scopes, so the *distribution* name is `verifiably-<name>` while the
+*import* name stays bare (`pip install verifiably-science`, `import science`). The
+ugly name is confined to the install line.
+
+**Three boundaries, deliberately not conflated:** what is cloned (repository), what
+is installed (distribution), and what imports what (module). Module boundaries are
+free and are drawn eagerly. Distribution boundaries are expensive and
+hard to reverse — version matrices, release choreography, cross-package
+migrations — so they are drawn reluctantly, on the `atoms`/`nodes` test: **split on
+an observed second consumer or a genuinely different constraint regime, never on a
+projected one.** This is the same discipline computation-reproducibility §9 applies
+to the content-addressable store, one level up.
+
+Two splits pass that test now:
+
+- **The normative contract and its conformance oracles**, on doctrinal grounds
+  rather than taste. 5b requires **code-lineage independence** for instrument
+  certification: an oracle sharing code with the implementation it tests cannot
+  independently falsify it, so a suite shipped inside the package it verifies makes
+  independence an assertion with no mechanism. Separate distribution makes it
+  enforceable and lets a third party run the suite against any implementation —
+  the reason `nodes` has a STANDARD.
+- **The agent surface** (skills, commands, coding-agent plugin manifests). The
+  second consumer is already observed, not projected, and the cadence differs in
+  kind: the surface churns while the kernel must not, because belief digests
+  depend on kernel semantics. Coupling would also force every library consumer to
+  carry agent plumbing it never calls.
+
+Everything else stays in one `science` distribution: the epistemic kernel, world
+addressing, computation and reproducibility, the correction lifecycle, world-index
+packaging, and the mutation log are **one guarantee surface that co-evolves** — the
+2026-08-03 banking commit alone amended five documents across four of them, and as
+separate packages each such amendment becomes a multi-repo version dance. The
+**CLI** is a consumer of the library and splitting it later is nearly free, so it
+stays in-repo behind its own entry point.
+
+Three things are **not** packages:
+
+- **The meta-science arm** is research *about* the system. Under §0 it is
+  reproduced as a project and corpus **managed by** the system, not code shipped
+  beside it — which makes it the first serious dogfooding consumer.
+- **The autonomous arm** is policy over the agent surface (what may run
+  unattended, envelope and supervision): a consumer, not a peer.
+- **`commons`** keeps its existing repository and its own audience (other
+  installations); it consumes the world index.
+
+**Record the seam now, materialize it later.** Empty repositories accumulate stale
+scaffolding and imply structure nothing has validated, so the split happens when
+the code exists to split, not at organization-creation time.
+
+One dependency is open: the conformance package cannot be scoped until the
+**first contract cut** (§1, artifact 7) names what the contract is a contract
+*for*. The package boundary and the contract's scope are decided together.
