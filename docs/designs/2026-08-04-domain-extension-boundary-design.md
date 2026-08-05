@@ -8,6 +8,14 @@ kind-SSOT question; and organizes the `science` repository so that a later
 decomposition into distributable packs is a move, not a rewrite. No domain
 exists yet: this design rules the **boundary** and the **organization**, and
 deliberately builds no domain-pack machinery (ledger §5's materialization rule).
+**Amended 2026-08-05** by the formal model and claim calculus design: §5's
+resolution outcomes refine from three to **five** and D3 with them (ρA7); §6's
+compiled-registry inventory widens — `ProfileSpec` compiles **claim schemas**
+alongside `KindSpec`s, with D4's scope unchanged (ρA5); §8's consulted-set walk
+gains every contract reached through a **claim schema**, and D6 gains that arm,
+as does limitation 2 (ρA6); §12's predicate-vocabulary question **closes** —
+yes, a domain contract like any other — and its versioning question records a
+bound plus the parallel-genesis case (ρA5, ρC1).
 **Inherits:** substrate §2 (split by nature; the pricing argument;
 defer-and-promote), §4.1/§6.1 (the arity-and-history test), §12 (the
 `KIND_DESCRIPTORS`-versus-`KindSpec` open question, closed here); kernel §4.2
@@ -236,20 +244,36 @@ vocabulary:
 A bare namespace with no release is **refused**: it is the drift §2.4 exists to
 prevent.
 
-**Resolution is separate from binding, and its outcomes are three distinct
-things** — a distinction worth keeping precise, because world §5.1's vocabulary
-is narrower than it is tempting to assume:
+**Resolution is separate from binding, and its outcomes are five distinct
+things in two groups that must never be mixed** — a distinction worth keeping
+precise, because world §5.1's vocabulary is narrower than it is tempting to
+assume:
 
-| outcome | when |
-|---|---|
-| `not-present` | the bound ontology **dataset has a world address** that the consulted index records, but the corpus holding it is absent — world §5.1's case exactly, and only this case |
-| `not-available` | the dataset is identified but its **bytes are not held here**, so terms cannot be read — an artifact-availability fact, not an addressing one |
-| `unknown` | the term is **outside the bound vocabulary** altogether, or the binding's namespace was never consulted — nothing was ever indexed to be absent |
+| outcome | group | when |
+|---|---|---|
+| `member` | **resolved** | the vocabulary was read, and the term **is** in it |
+| `not-member` | **resolved** | the vocabulary was read, and the term is **not** in it |
+| `not-present` | **check not performed** | the bound ontology **dataset has a world address** that the consulted index records, but the corpus holding it is absent — world §5.1's case exactly, and only this case |
+| `not-available` | **check not performed** | the dataset is identified but its **bytes are not held here**, so terms cannot be read — an artifact-availability fact, not an addressing one |
+| `not-consulted` | **check not performed** | the binding's namespace was **never consulted** — nothing was ever indexed to be absent |
 
-A binding is well-formed in all three cases; none is an error, and none may
-silently fall back to a different release. The distinction matters because
-collapsing `not-available` into `not-present` would report an unindexed
-artifact as though the index had spoken about it.
+A binding is well-formed in all five cases; none is an error, and none may
+silently fall back to a different release. **Only `not-member` refuses.** The
+grouping carries the weight: the resolved pair reports what the vocabulary
+*says*, the not-performed trio reports that nobody looked, and nothing anywhere
+may read the second group as evidence about membership. Collapsing
+`not-available` into `not-present` would report an unindexed artifact as though
+the index had spoken about it.
+
+> **Amended 2026-08-05** (formal model ρA7). This table previously had **three**
+> rows, and its third was a **disjunction**: `unknown` meant *"the term is
+> outside the bound vocabulary altogether, **or** the binding's namespace was
+> never consulted."* Those are two incompatible facts under one token — one a
+> finding, the other the absence of one — and only the first can carry a
+> refusal. Under the old table a decoder reporting "not in the vocabulary" could
+> be doing so on the strength of nobody having looked. The split adds `member`
+> and `not-member` and renames the residue `not-consulted`; **`not-present` and
+> `not-available` are unchanged**, so D3's existing arms pass verbatim.
 
 This also keeps ontologies exactly where the kernel already put them: `reads`
 inputs that confer no eligibility (kernel §4.1), and `term` entities identified
@@ -270,8 +294,21 @@ per-kind artifact is compiled from it.
 ```text
 science base contract  ─┐   (normative SSOT)
                         ├─▶  ProfileSpec  ─┬─▶  KindSpec set ─▶ Registry.register()
-active domain contracts ┘   (compiled)     └─▶  any further per-kind artifact
+active domain contracts ┘   (compiled)     ├─▶  claim schemas   (added 2026-08-05)
+                                           └─▶  any further per-kind artifact
 ```
+
+> **Widened 2026-08-05** (formal model ρA5, M7). `ProfileSpec` compiles more
+> than per-kind artifacts. It also compiles **claim schemas** — the operator,
+> dimension and sort declarations a domain contract issues — which are **not
+> per-kind artifacts**: an operator roster is not a `KindSpec` and belongs to no
+> kind. So *"any further per-kind artifact is compiled from it"* is no longer a
+> complete description of what `ProfileSpec` compiles, and the sentence is
+> widened rather than corrected: the rule was right, its inventory was short.
+> **D4's scope is unchanged** — it governs the sole authored per-kind source and
+> `KindSpec` compilation, and it does not reach claim schemas. That there is no
+> second authored operator artifact beside the contracts is a separate
+> obligation with its own oracle, the formal model's **M7**.
 
 The two roles are distinct and should not both be called "authoritative": the
 **contracts are the normative SSOT** — what a reviewer reads, what a version
@@ -397,11 +434,25 @@ rules:
 - **Each domain contract, only if actually read.** A domain activated in a
   manifest but never interpreted does **not** enter the digest. Membership is
   computed rather than declared: walk the derivation's closure, collect the
-  namespace of every facet it reads, and resolve each namespace to a contract
+  namespace of every facet it reads, **and every contract reached through a
+  claim schema** — the operator, its dimensions, its argument and restriction
+  sorts, and each sort's vocabulary binding — then resolve each to a contract
   identity by §8.1.
 
 Belief therefore moves when the base contract moves, and when a domain contract
 it actually used moves — not when an unrelated domain is upgraded.
+
+> **The trigger set widens 2026-08-05** (formal model ρA6). D6's **asymmetry** —
+> unconditional base, conditional domain — is untouched, and so is the
+> facet-namespace rule: what changes is that facets are no longer the only route
+> by which a derivation reaches a contract. A claim reaches its contract through
+> its **operator**, and through the sorts and dimensions that operator declares;
+> none of those is a facet key, so a facet-only walk omits the contract
+> declaring `affects` from a belief derived over a claim at `affects`. Like
+> limitation 2's under-collecting walk, this failure is **invisible in every
+> test that uses facets** and fails **open**. The prior rule is not wrong — it is
+> **insufficient alone**, which is a different fault and the reason this is an
+> amendment rather than a note.
 
 ### 8.1 Cross-corpus agreement, and why W5 survives
 
@@ -495,10 +546,10 @@ what must not break it.
 |---|---|---|
 | D1 | `nodes` assigns no domain semantics | assert `nodes` ships **no domain contract, schema, validator, or vocabulary adapter**, and that **no `nodes` API accepts** a domain, contract, or vocabulary argument; assert every domain-flavoured string in the `nodes` tree is **opaque** — its normative fixtures already carry `bio-axes` and `HGNC:7296` (`fixtures/gene_phf19.*`) purely as example payload the kernel never interprets, and that is **conforming, not a violation**; **negative:** add a `nodes` code path that reads a facet key's namespace and behaves differently for `biology/` → refused, since assigning meaning to a namespace is exactly what this row forbids. A grep for domain *names* is **not** the test and would fail against a conforming tree |
 | D2 | Interpretation is separable from identity | add a `biology/gene-axis` facet to a dataset node and assert the **dataset address is unchanged** (bytes did not move) while **node content identity and corpus-state identity both move**; correct the facet's payload and assert the same asymmetry again; **negative:** change the bytes and assert a **different dataset** is minted with no facet involvement |
-| D3 | A vocabulary binding is exact or refused, and its three unresolved states stay distinct | bind `vocabulary: {namespace: MONDO}` with no release → **refused** at contract load; bind a namespace+release and a held-dataset content identity → both **accepted**; then assert the three outcomes are **not collapsed** (§5): index the bound dataset's world address but make its corpus absent → **`not-present`**; identify the dataset but hold none of its bytes here → **`not-available`**, never reported as `not-present`; query a term outside the bound vocabulary → **`unknown`**. In every case assert the binding remains **well-formed**, no error is raised, and **no fallback to another release** occurs |
+| D3 | A vocabulary binding is exact or refused, and its **five** resolution outcomes stay distinct across two groups (amended 2026-08-05 — formal model ρA7) | bind `vocabulary: {namespace: MONDO}` with no release → **refused** at contract load; bind a namespace+release and a held-dataset content identity → both **accepted**; then assert the outcomes are **not collapsed** (§5): index the bound dataset's world address but make its corpus absent → **`not-present`**; identify the dataset but hold none of its bytes here → **`not-available`**, never reported as `not-present`; never consult the binding's namespace → **`not-consulted`**; read a **readable** vocabulary and query a term in it → **`member`**, and one outside it → **`not-member`**. **Five-way non-collapsing:** assert no member of the five is reported as any other, and specifically that no *check-not-performed* outcome (`not-present`, `not-available`, `not-consulted`) is ever reported as `not-member` — the collapse the old three-state `unknown` permitted, and the one that would let a decoder refuse a good term because nobody looked. Assert **only `not-member` refuses**. In every case assert the binding remains **well-formed**, no error is raised, and **no fallback to another release** occurs |
 | D4 | `ProfileSpec` is the only per-kind source; `KindSpec` is compiled | have `science` and a domain both contribute facets to `dataset`; assert exactly **one** `KindSpec` is registered for it carrying the union, that `Registry.register()` is called **once** per kind, and that no duplicate-registration error is reachable; mutate a domain contract and assert the compiled spec changes with **no `nodes` code change**; assert **no second authored per-kind artifact exists** — nothing plays `KIND_DESCRIPTORS`' old role beside `ProfileSpec`, and any further per-kind artifact is compiled from it; assert a namespaced facet key round-trips **identically** through the Python and TypeScript canonical projections (the one shared parity fixture this design adds) |
 | D5 | The manifest pin is inside corpus-state identity, over a canonical projection | reformat `corpus.yaml` — whitespace, key order, quoting style — and assert corpus-state identity is **unchanged**; **reorder the `domains` mapping** and assert it is **unchanged** (ordering is inert by construction, since the projection sorts object keys); change a pinned contract identity and assert it **moves**; change any other non-node file and assert it is **unchanged**; assert the digest covers the **complete** canonical projection by adding a new permitted field and confirming it participates without a further amendment; **refusals:** an unknown field, a duplicate `domains` key, and a malformed contract identity are each **refused at load**, never ignored and never digested |
-| D6 | Every consulted profile contract enters belief; activated-but-unconsulted ones do not | derive belief over an assessment reading `biology/gene-axis`, bump the biology contract, and assert `belief_input_digest` **moves**; activate an unrelated domain and bump *it*, and assert the digest is **unchanged**; **the base-contract arm:** bump the **`science` base contract** in a way that reinterprets the **unnamespaced** `empirical-observation` facet (§3.4) and assert the digest **moves** — a consulted-set rule collecting only *domain* namespaces would miss exactly this, at the eligibility hinge; **the unconditional arm:** take a derivation whose closure reads **no base-profile facet at all**, bump the base contract so it reinterprets a **kernel kind or a relation signature** (`assessment`, `dataset`, `assesses`), and assert the digest **still moves** — membership of `science_contract` is unconditional, so no facet-triggered walk may be able to omit it; **negative — the defect this closes:** reinterpret a facet, kind, or signature in a successor contract without changing any facet byte or assessment byte and assert the digest **still moves**, so two beliefs can never share one digest |
+| D6 | Every consulted profile contract enters belief; activated-but-unconsulted ones do not — **through facets and through claim schemas alike** (claim-schema arm added 2026-08-05, formal model ρA6) | **the claim-schema arm:** derive belief over an assessment reading a claim at the operator `affects`, bump the contract **declaring** `affects` while touching **no facet**, and assert `belief_input_digest` **moves** — a walk collecting only facet namespaces reaches no operator and would miss this entirely; then derive belief over an assessment reading `biology/gene-axis`, bump the biology contract, and assert `belief_input_digest` **moves**; activate an unrelated domain and bump *it*, and assert the digest is **unchanged**; **the base-contract arm:** bump the **`science` base contract** in a way that reinterprets the **unnamespaced** `empirical-observation` facet (§3.4) and assert the digest **moves** — a consulted-set rule collecting only *domain* namespaces would miss exactly this, at the eligibility hinge; **the unconditional arm:** take a derivation whose closure reads **no base-profile facet at all**, bump the base contract so it reinterprets a **kernel kind or a relation signature** (`assessment`, `dataset`, `assesses`), and assert the digest **still moves** — membership of `science_contract` is unconditional, so no facet-triggered walk may be able to omit it; **negative — the defect this closes:** reinterpret a facet, kind, or signature in a successor contract without changing any facet byte or assessment byte and assert the digest **still moves**, so two beliefs can never share one digest |
 | D7 | Contract agreement holds across a derivation, and W5 survives unamended | **W5 preservation:** move a dataset that appears in the producers map between two corpora pinning the **same** contract identities and assert `belief_input_digest` is **unchanged** even though both corpus-state identities moved — the row two prior snapshot-identity revisions violated; **agreement:** construct a closure spanning corpora pinning **different** identities for one namespace and assert the derivation is **refused**, never merged, never resolved by recency; **move refusal:** attempt to move a node whose facets use `biology/` into a corpus pinning a different `biology` identity and assert the **write boundary refuses**, so the belief-moving case is unreachable by relocation rather than tolerated; **the base-contract arms:** construct a closure spanning corpora that agree on every domain namespace but pin **different `science_contract`s** and assert the derivation is **refused** even though no base-profile facet is read; and attempt to move a Science node carrying **no domain facets whatsoever** into a corpus pinning a different `science_contract` and assert the move is **refused** — base-contract agreement is not conditional on facet content |
 | D8 | Domain contributions compose without collision | two domains contributing same-named facets in **different** namespaces → both compose; two contributions to one namespaced facet key → **refused** at compile, never last-writer-wins; a domain attempting to define a **kernel kind** or a relation signature → **refused** |
 | D9 | Practices carry no vocabulary | a `PRACTICE.yaml` declaring a vocabulary binding or a facet schema → **refused**; assert a practice contributes **nothing** to the compiled registry and therefore can never move `belief_input_digest` |
@@ -515,12 +566,17 @@ what must not break it.
    as the kernel's semantic-identity hazard and is stated, not closed.
 2. **"Consulted" must be computed, and the computation is load-bearing.** D6's
    guarantee is only as good as the closure walk that collects facet
-   namespaces. An under-collecting walk silently omits a contract from the
+   namespaces **and claim-schema references** (widened 2026-08-05 — formal model
+   ρA6). An under-collecting walk silently omits a contract from the
    digest, which is exactly the defect §8 exists to prevent — and it would fail
-   *open*, not closed. The **unnamespaced** base-profile facets are the sharpest
+   *open*, not closed. The **unnamespaced** base-profile facets are one sharp
    case: a walk keyed on the presence of a namespace separator would drop the
    `science` base contract entirely while looking correct on every domain facet,
-   which is why §8 states the empty namespace explicitly. This needs its own
+   which is why §8 states the empty namespace explicitly. **Claim schemas are a
+   second, and they are worse**, because the omitted contract is reached by no
+   facet at all: an operator, its dimensions, its sorts and their vocabulary
+   bindings are all outside the facet-key space, so a facet-complete walk can be
+   claim-blind while every facet test passes. This needs its own
    conformance oracle when 5b's contract cut lands.
 3. **Correcting an interpretation leaves no record of the prior claim.** While
    interpretations are facets, a corrected payload is an ordinary revision: the
@@ -544,18 +600,56 @@ what must not break it.
 
 ## 12. Open questions
 
-- **Domain contract versioning policy.** What constitutes a breaking change to
+- **Domain contract versioning policy** — **still open, now bounded**
+  (2026-08-05, formal model ρC1). What constitutes a breaking change to
   a facet contract, and whether contract identity being content-derived is
   sufficient or a declared compatibility range is also needed. Interacts with
   5b's versioning rules and should be settled with them.
+
+  **The bound.** Whatever policy is chosen must be **compatible with** four
+  rules the formal model adopts for **claim vocabulary only** — operators,
+  dimensions and sorts, not facets: every contract declares either **`genesis`**
+  or **`successor(<predecessor contract identity>)`**; every claim-vocabulary
+  identifier present in both a contract and its declared predecessor must carry
+  an **identical canonical schema projection**, which compares meaning-bearing
+  fields and lets a description, comment or example change freely; **retired**
+  claim-vocabulary declarations are retained immutably as **tombstones**,
+  because historical claims are typed against them; and a violation of any of
+  these is **refused at contract load**, not at claim decode. So the policy may
+  not permit a successor to drop a claim-vocabulary declaration, nor to reuse
+  such an identifier under a different canonical schema projection.
+  D §12's own framing — whether content-derived identity is *sufficient* — is
+  answered in one direction only: **not for vocabulary**, because a
+  content-derived identity says what a contract *is* and never what it
+  *succeeds*.
+
+  **What stays open, including one case the bound does not cover.** Breaking
+  changes to **facet** contracts; whether a declared compatibility range is
+  needed; how ranges interact with 5b's versioning rules; and the
+  **parallel-genesis** case — nothing above stops an author publishing a
+  *second* contract in the same namespace that also declares `genesis`, reusing
+  an operator identifier under a different schema and never being compared
+  against anything. The rules enforce immutability **within a declared
+  lineage**, not across a namespace. Closing that needs either validation of a
+  corpus's **pin transition** against its prior pin, or a **namespace/lineage
+  authority** saying which contract legitimately succeeds which. Both are
+  governance rather than typing, and neither is designed. The formal model's
+  **M6** asserts the gap rather than concealing it: it tests that such a
+  contract **loads**, and names this bullet as its home.
 - **Parity for domains.** Whether a domain must ship Python and TypeScript
   validators or may be Python-first with parity declared per contract. The
   declarative form makes parity cheap but does not make it automatic.
 - **Distribution.** Where domain contracts are published once they leave the
   repository, and whether a domain is ultimately a package, a corpus, or both.
   Ledger §5's split test governs, and nothing forces the answer yet.
-- **The predicate vocabulary.** Kernel limitation 4 records nine predicates,
-  declared inadequate, with no owner and no extension rule — while `predicate`
-  feeds proposition semantic identity. Whether the predicate vocabulary becomes
-  a domain contract like any other is the obvious question this design raises
-  and does not answer.
+- ~~**The predicate vocabulary.**~~ **CLOSED 2026-08-05** by the formal model
+  and claim calculus design (ρA5): **yes — a domain contract like any other.**
+  `predicate` becomes **`operator`**, declared by a domain contract without
+  exception, carrying arity, argument sorts, permitted qualifier dimensions,
+  sign-aptness and admissible layers; term identity, issue-and-retire, and
+  *never redefine* follow the succession rules bounded above. The closed
+  nine-term enum is retired, and **no second authored operator roster** may
+  exist beside the contracts (M7). What that design does **not** close is the
+  referent-binding half of kernel limitation 4 — the persistence, discovery,
+  supersession and correction path for a claim's binding check — which is
+  re-recorded as open there (its ρO1) rather than deleted.

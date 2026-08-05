@@ -232,12 +232,16 @@ persisted proposition:
 | same semantic identity | ordinary non-semantic update |
 | changed semantic identity | **mint a new proposition** + `supersedes` edge to the old |
 
-Non-semantic markdown — body prose, formatting, `title` — remains hand-editable.
-Only the semantic fields are governed, and the kernel design §4.1 moves the claim
-itself out of `title` into a canonical `statement` field so that this sentence is
-true: today `title` *is* the statement, hand-editable and author-owned, so
-"title remains hand-editable" and "the statement is immutable" cannot both hold
-without that split.
+Non-semantic markdown — body prose, formatting, `title`, and the authored
+`display_statement` — remains hand-editable. Only the semantic fields are
+governed, and the kernel design §4.1 moves the claim itself out of prose
+entirely: today `title` *is* the statement, hand-editable and author-owned, so
+"title remains hand-editable" and "the claim is immutable" cannot both hold
+without that split. *(Amended 2026-08-05, formal model ρA1/ρA2: kernel §4.1
+first split the claim into a canonical `statement` field; it now carries the
+claim as a **typed projection** and keeps no identity-bearing prose field at all,
+so the governed set is the typed fields and the hand-editable set is every prose
+field.)*
 
 ### 4.2.1 Which writers are trusted — a rule, not a migration finding
 

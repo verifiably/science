@@ -1,9 +1,15 @@
 # Formal model and claim calculus — design
 
-**Status:** Draft — complete first pass, §1–§11. Review rounds so far: §2–§4
-three, §5 one, §6 one, §7 two, §8 two, §9 two. **Not banked**: §8's amendments
-have not been applied to the nine designs, so the banked corpus still says what
-§8.2 proposes to change (limitation 13).
+**Status:** **Banked 2026-08-05**, after review rounds across every section
+(§2–§4 three, §5 one, §6 one, §7 two, §8 two, §9 three). The banking commit
+applies §8.7's amendment set across the corpus: kernel §4.1/§5/§8/§11 with G3,
+G7 and limitation 4; computation §7.1 (R5 unchanged); world §4.3, W4 and §10;
+correction §3, §4 and C10; the normative contract §4; the domain extension
+boundary §5, §6, §8, §12 with D3, D6 and limitation 2; plus the ledger and the
+README. Two consequential edits fall outside §8.7's table and are recorded here:
+**world §4.1** and **substrate §4.2** each restated the proposition-identity
+basis in passing, and both would otherwise have kept describing an identity over
+prose (ρA1, ρA2).
 
 **Inherits:** the epistemic kernel (G1–G8, §4.1's signatures and semantic
 identity, §8.7's recorded-history limit, limitation 4's predicate vocabulary),
@@ -17,11 +23,13 @@ its banked citation, and a claim with no citation is a gap, recorded as one.
 M\* revises only inside the claim neighbourhood, and every revision names the
 guarantees it preserves, amends, or invalidates.
 
-**Banking obligations (recorded now, discharged at banking).** When this design
-is banked, **M1–M13 must be added to the normative contract's exact oracle
-inventory (its §4) and to ledger artifact 7's inventory**, the ledger gains an
-artifact row, and the README's document count and table move. Both the L-table
-and the N-table reached the inventory late; this note exists so M does not.
+**Banking obligations — recorded before drafting, discharged 2026-08-05.**
+**M1–M13** are in the normative contract's exact oracle inventory (its §4) and in
+ledger artifact 7's inventory; the ledger carries artifact 9 and an order-of-work
+item 8; the README's count and table are updated. Both the L-table and the
+N-table reached that inventory late — L omitted at its own banking, N only when a
+later design noticed 5b §5 requires every oracle table in the suite — and this
+note existed so M would not repeat it.
 
 ## 1. Why
 
@@ -77,6 +85,15 @@ deeply. ρ is initially local to that neighbourhood, and M\* expands only when
 another design question requires it.
 
 ## 2. M₀ — the formal inventory
+
+> **M₀ is a snapshot, not a current description.** It transcribes the banked
+> corpus **as it stood on 2026-08-04**, before this design's banking commit
+> applied §8.2. Where §8 amends something, M₀ deliberately keeps the *old*
+> reading — a proposition's identity over a normalized `statement` (§2.1), D3's
+> "three unresolved states" (§5.2) — because ρ is a map **from** that state and
+> rewriting its source would erase what changed. Read §8 for what the corpus says
+> now. This is the one part of the document that is stale by design, and it is
+> the reason §1's constraint reads *"M₀ transcribes and cites; it never rules."*
 
 Every player gets a compact entry: **construction** (authored, derived, or
 external), **identities** (the canonical projections πᵢ its commitments are
@@ -2406,6 +2423,17 @@ invites the assumption that more moved than did.
 | D §12 | the predicate-vocabulary question is closed (ρA5); the versioning question records ρC1's bound, including the **parallel-genesis** case |
 | **M1–M13** | §9's rows, plus the §1 banking obligations already recorded |
 
+**Two edits this table missed, found by the banking drift sweep.** Neither is a
+new ruling; both are places where a *third* document restated an amended rule in
+passing and would otherwise have kept asserting the old one. **World §4.1** cites
+the kernel's proposition rule as motivation for its own addressing rule, quoting
+the statement-plus-factored-fields basis; **substrate §4.2** describes kernel
+§4.1 as moving the claim "out of `title` into a canonical `statement` field",
+which ρA2 supersedes. A table built from the amendments alone will systematically
+miss this class, because the drift lives wherever a rule is *cited*, not where it
+is stated — the reason the sweep runs over the whole corpus and not over the
+amendment list.
+
 **Implementation authorities M\* introduces.** Editing design prose does not
 make two implementations hash a typed claim identically, and none of these
 exists today. Each needs a named home before M\* is buildable:
@@ -2557,13 +2585,19 @@ check and every reader has a reason to re-validate defensively.
     its `population-group` binding would be refused at load today. This is D
     limitation 5's position, inherited: the rulings are what this design commits
     to, not the shapes of the files.
-13. **Until banked, ρ is a proposal.** §8's amendments have not been applied to
-    the nine designs. A reader who takes §8.2 as a description of the banked
-    corpus will be wrong about G3, G7, R5, W4, correction §3's import/audit
-    contract and §4's well-foundedness rationale, D3, D §5's outcome set, and
-    D6's trigger set — exactly the drift
-    this repository's own doc discipline warns about, so the status header
-    carries it.
+13. **ρ is applied, and four of its rows are now the only record of what the
+    corpus used to say.** §8's amendments landed in the 2026-08-05 banking
+    commit, so §8.2 is no longer a proposal — but that inverts the reading
+    hazard rather than removing it. Two banked *arguments* were found **invalid**
+    and replaced, not merely extended: correction §4's digest-containment
+    well-foundedness proof (ρA9) and `unknown` as evidence of non-membership
+    (ρA7). Both replacements are stated at their sites with the withdrawn text
+    quoted, because a reader encountering only the new text has no way to know an
+    argument was retired rather than refined. The same applies to kernel §4.1's
+    identity basis (ρA1) and world §4.3's curator-assertion arm (ρA10). What is
+    **not** banked is anything in §8.4: ρO1–ρO5 name requirements with no
+    mechanism, and their homes — kernel limitation 4, world §10, D §12 — record
+    them as open.
 
 ## 11. Open questions
 

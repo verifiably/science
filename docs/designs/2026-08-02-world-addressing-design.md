@@ -213,8 +213,10 @@ Two consequences worth stating, because both are load-bearing:
 ### 4.1 A nominal id cannot be a canonical address
 
 §1.1 is the general case of the kernel's proposition rule. The kernel required a
-proposition's identity to be a hash over its statement and factored fields
-because a nominal title was editable without consequence. `paper:Chen2023` fails
+proposition's identity to be a hash over the claim's own structure — since
+2026-08-05, over its typed projection, and before that over a normalized
+statement plus factored fields (kernel §4.1) — because a nominal title was
+editable without consequence. `paper:Chen2023` fails
 the same test from the other direction: it is *stable* while its referent
 changes, so two referents can wear it at once.
 
@@ -346,10 +348,44 @@ content, so they are notes, and there is nothing to merge. An earlier draft used
 them here on the strength of a shared provider identifier, which the
 content-identity ruling removed.)
 
-> **Rule.** Merging two records into one world entity is an authored, recorded
-> act with a basis: either **both bases agree** (coreference is established
-> mechanically), or a curator asserts the identification and the assertion is
-> stored with its rationale. An unrecorded merge is not available.
+> **Rule** (amended 2026-08-05 — formal model ρA10). Merging two records into one
+> world entity is an authored, recorded act with a basis: either **both bases
+> agree** (coreference is established mechanically), or a curator asserts the
+> identification and the assertion is stored with its rationale. An unrecorded
+> merge is not available. **The curator-assertion arm does not reach
+> `retraction`s.** Two retractions may be merged **only** when their bases are
+> equal; a curator-asserted merge of **distinct-basis** retractions is
+> **refused**.
+
+**Why retractions are the one exception.** Merge rewrites every reachable inbound
+reference (W4), so it **redirects** existing edges rather than adding one — and
+that is enough to build a cycle out of two valid states. Take `T → S → R`, where
+`S` retracts `T` and `R` retracts `S`, and merge `T` into `R`: rewriting `S`'s
+inbound reference retargets it at `R`, and the graph now holds `R ↔ S`.
+Correction's `standing` recursion follows exactly those edges, and its
+termination rests on the retraction graph being **acyclic** (correction §4, as
+amended 2026-08-05). A curator asserting that two **different** retraction acts
+are one is the single sanctioned operation that can close such a cycle — and it
+is an assertion the event token already contradicts, since distinct acts are
+distinct by construction.
+
+**Equal-basis consolidation must survive, and does.** Two *replicas* of one
+retraction held in two corpora are §5's `duplicate location` state — one
+identity, two corpora — for which an authored merge is the only prescribed
+resolution; refusing them would leave a banked state with nowhere to go.
+Consolidating replicas changes location and not the graph: no target tuple moves,
+no identity is re-minted, and a counter-retraction already targeting that
+retraction is untouched. An earlier draft of this amendment excluded retractions
+from merge outright, which conflated **semantic identity** with **physical
+multiplicity**.
+
+**What this rule does not settle.** It closes the *cycle* case only. A merge of
+any two records that would rewrite some retraction's **exact target tuple** —
+merging assessment `A` into `A′` while `S` retracts `A`, say — changes `S`'s
+content and therefore its content-derived identity, re-minting `S` and cascading
+through every record that names it. That tension between W4's inbound rewrite and
+content-derived identity has **no ruled outcome**, and is recorded as open in §10
+(formal model ρO5).
 
 **An equal basis — hence an equal canonical address — establishes coreference; it
 does not decide whose content survives.** Two records of the same source carry different bodies, different
@@ -1307,7 +1343,7 @@ Certified by mutation, per the kernel's §5 discipline.
 | **W1** | Distinct bases never become one node | Load all three colliding `paper:` pairs (`Chen2023`, `Liu2020`, `Shi2025`); assert **six nodes and six distinct world addresses — two per pair** — and that no handle lookup silently picks one |
 | **W2** | A shared basis establishes coreference mechanically | Two records of one source carrying the same normalized DOI; assert one identity, no curator assertion required |
 | **W3** | Creating a world entity without its basis is refused | Attempt to create a `source` with **no accepted external identifier** (no DOI, PMID, ISBN or accession), and a `dataset` holding no content (the §1.1 DepMap case); assert both are **refused** — not silently coerced to notes. Author the curation note as a separate explicit act, then supply the basis and assert the world entity is minted from it. **Negative:** assert no title-and-year fallback exists to be reached |
-| **W4** | A merge is authored, and never derives content by precedence | Merge two records whose bases disagree; assert refusal. Merge with a curator assertion; assert the rationale is stored, the survivor's **outgoing** relations are the union of both, **every retired address resolves to the survivor**, every reachable inbound reference is rewritten, and **no** field-level precedence rule was applied. **Redirect set:** give the removed node a pre-existing deprecated address, merge, and assert that **both pre-merge live addresses and every inherited deprecated address** resolve to the survivor, while the survivor's own live address is **not** in its `deprecated_ids`. **`uid`:** assert the survivor keeps one input `uid` and that **no third `uid` was minted**. **Absent referrer:** hold one referrer's corpus out of the checkout, merge, and assert its untouched old address still resolves — the redirect, not the rewrite, is what carries it. **Absent survivor:** publish the index, remove the *survivor's* corpus, and assert a retired address reports `not-present`, never `unknown`. **Derived fields are not selectable:** merge two dataset records at one content address carrying **different lineage bases** (sub-problem 4 §5.2); assert **both** survive, that no field-selection path offers a choice between them, that the dataset becomes `lineage-divergent` and independence over it `not-certified`, and that the conflict **still stands after deleting either producing run** — pinning that field-by-field authorship governs authored content only, and that this is the one durable form of a divergence whose other form (§11.14 there) is not |
+| **W4** | A merge is authored, and never derives content by precedence | Merge two records whose bases disagree; assert refusal. Merge with a curator assertion; assert the rationale is stored, the survivor's **outgoing** relations are the union of both, **every retired address resolves to the survivor**, every reachable inbound reference is rewritten, and **no** field-level precedence rule was applied. **Redirect set:** give the removed node a pre-existing deprecated address, merge, and assert that **both pre-merge live addresses and every inherited deprecated address** resolve to the survivor, while the survivor's own live address is **not** in its `deprecated_ids`. **`uid`:** assert the survivor keeps one input `uid` and that **no third `uid` was minted**. **Absent referrer:** hold one referrer's corpus out of the checkout, merge, and assert its untouched old address still resolves — the redirect, not the rewrite, is what carries it. **Absent survivor:** publish the index, remove the *survivor's* corpus, and assert a retired address reports `not-present`, never `unknown`. **Derived fields are not selectable:** merge two dataset records at one content address carrying **different lineage bases** (sub-problem 4 §5.2); assert **both** survive, that no field-selection path offers a choice between them, that the dataset becomes `lineage-divergent` and independence over it `not-certified`, and that the conflict **still stands after deleting either producing run** — pinning that field-by-field authorship governs authored content only, and that this is the one durable form of a divergence whose other form (§11.14 there) is not. **Retractions, both arms (added 2026-08-05 — formal model ρA10):** attempt a curator-asserted merge of two **distinct-basis** retractions and assert **refusal** — merge redirects inbound references, so this is the one sanctioned act that can close a cycle in the retraction graph; then consolidate two **equal-basis** replicas of one retraction held in two corpora **while a counter-retraction `R` already targets it**, and assert the merge **succeeds**, that the retraction's content identity is **unchanged**, and that `R` is **not rewritten and not re-minted** — §5's `duplicate location` state has no other resolution |
 | **W5** | Moving an entity between corpora changes only its location | Move a `source` from one corpus to another; assert its **`uid` unchanged**, its **canonical address unchanged**, no entry added to `deprecated_ids`, every inbound reference unchanged, and `belief_input_digest` unchanged. Then move a **dataset** that appears in the producers map, and assert `belief_input_digest` is **still** unchanged even though the address map and **both corpus-state identities** moved, so that re-deriving now mints a **new receipt** naming the same snapshot — this row is what two successive revisions of §5's snapshot identity violated, once through the address map and once through exact coverage states, so it is asserted against a member of the producer enumeration and not only against an unrelated `source` |
 | **W5a** | A basis change is ruled by case, never by default (§4.4) | Re-hold a dataset with a different manifest and assert a **new** entity with prior assessments still bound to the old. Correct a source's identifier and assert **one** entity: `uid` preserved, address renamed, old address resolving through `deprecated_ids`. **Negative:** assert the system does not choose between correction and new-work on its own |
 | **W6** | The four resolution states never collapse | Resolve a ref whose corpus is absent, one that does not exist, and an alias matching two entities; assert three distinct findings. **Negative:** assert removing a corpus from the checkout does **not** convert its ids to `unknown` |
@@ -1472,7 +1508,24 @@ purpose is to report what is missing.
   kernel's own structure; `verification ──verifies──▶ assessment` carries
   assessments across by the same argument; and G3's belief digest already names
   `observes` dataset content identities that cross corpora.
-One question remains — the `source` basis — and migration order is not among the
-open set: §4.2 populates the world
+- **Merge versus a retraction's immutable exact target** (opened 2026-08-05 —
+  formal model ρO5). W4 requires that *every reachable inbound reference is
+  rewritten* on a merge, while a `retraction`'s identity is derived from content
+  that **includes its exact target tuple**. The two cannot both hold: merging
+  assessment `A` into `A′` while `S` retracts `A` rewrites `S`'s target, changes
+  `S`'s content, and therefore **re-mints `S`** — after which any `R` targeting
+  `S` names a stale identity and is re-minted in turn, cascading as far as the
+  retraction chain reaches. §4.3's ρA10 amendment closes the *cycle* case and not
+  this one, and identity-preserving replica consolidation is exempt because it
+  moves no target tuple. The candidate resolutions are visibly different designs
+  — retractions naming targets through a **stable handle** rather than a content
+  identity; **refusing** any merge that would change a retraction's exact target
+  tuple; or **defining the cascade** and making it an explicit, recorded
+  consequence of merging — and each trades something real. Until one is chosen,
+  such merges have **no ruled outcome**: this is a gap in the design, not a
+  refusal the system performs.
+
+Two questions remain — the `source` basis and the merge/immutable-target
+tension — and migration order is not among the open set: §4.2 populates the world
 incrementally as bases arrive, and whether that runs per kind, per project, or per
 basis is an implementation-plan decision, not a design one.
