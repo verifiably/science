@@ -1,7 +1,7 @@
 # Formal model and claim calculus — design
 
-**Status:** Draft — §2–§6 written; §2–§4 corrected through review round 3;
-§7–§11 not yet drafted.
+**Status:** Draft — §2–§6 written; §2–§4 corrected through review round 3, §5
+and §6 each through one review round; §7–§11 not yet drafted.
 
 **Inherits:** the epistemic kernel (G1–G8, §4.1's signatures and semantic
 identity, §8.7's recorded-history limit, limitation 4's predicate vocabulary),
@@ -1036,21 +1036,64 @@ Claim  =  Σ (op : Operator).  Args(op) × Qualifiers(op) × Polarity(op) × Lay
 
 A claim is a **dependent sum**: choosing the operator determines the *types* of
 everything else. The four indexed families are supplied by the operator's term
-contract (§7):
+contract (§7).
 
-| family | supplied by the contract as | why indexed |
-|---|---|---|
-| `Args(op)` | an ordered list of **argument sorts**, one per slot | arity is not universally 2; `subtype-of` and `binds` do not take the same kinds of thing |
-| `Qualifiers(op)` | the set of **qualifier dimensions** meaningful for this operator | a population restriction is meaningless for a structural operator |
-| `Polarity(op)` | `{positive, negative, unsigned}` if sign-apt, otherwise the **unit type** | sign-aptness is a property of the operator |
-| `Layer(op)` | the admissible subset of claim layers | `subtype-of` is structural and nothing else |
+Two levels have to stay distinct, and the first draft of this section collapsed
+them. What a contract *declares* is a **schema**; what a claim *carries* is an
+**inhabitant** of the type that schema induces. Writing `Args(op)` for both is
+what made "wrong-sorted arguments are unconstructible" a slogan rather than a
+consequence.
 
-**Arguments are bound referents, not strings.** Each slot holds a `term`
-identifier from the vocabulary its argument sort declares (§2.9 (b) recorded
-that today they are bare strings). A slot that cannot be bound cannot be filled,
-which is what §6.6 is about.
+**Arguments.**
 
-### 6.3 Unconstructibility replaces validation
+```text
+arity(op)    :  ℕ                                          declared
+ArgSort(op)  :  Fin(arity(op)) → Sort                      declared, one sort per slot
+
+Args(op)     =  ∏ (i : Fin(arity(op))).  Referent(ArgSort(op, i))      induced
+```
+
+`Args(op)` is a **dependent product over slots**, and `Referent(s)` is the type
+of bound referents of sort `s` — a `term` identifier drawn from the vocabulary
+that sort declares (§2.9 (b) recorded that today they are bare strings). A slot
+of the wrong sort is not a rejected value: `Referent(gene)` and
+`Referent(phenotype)` are different types, so no term of one inhabits the other.
+A slot that cannot be bound at all cannot be filled, which is what §6.6 is
+about. Arity is declared per operator because it is not universally 2 —
+`subtype-of` and `binds` do not take the same number or the same kinds of thing.
+
+**Qualifiers.**
+
+```text
+Dims(op)             :  a finite set of dimension identifiers        declared
+RestrictionSort(op)  :  Dims(op) → Sort                              declared, per dimension
+
+Qualifiers(op)       =  the qualifier structure over ⟨Dims(op), RestrictionSort(op)⟩   induced
+```
+
+`Dims(op)` is the set of dimensions **permitted** for this operator — a
+population restriction is meaningless for a structural operator — and
+`RestrictionSort(op)(d)` fixes what a restriction on `d` may be bound to, so a
+restriction is sorted exactly as an argument is. §6.4 defines the structure
+itself, and states which fragment of it this pass inhabits.
+
+**Polarity and layer.**
+
+```text
+signApt(op)  :  Bool                                       declared
+Polarity(op) =  { positive, negative, unsigned }   if signApt(op)
+             =  1                                  otherwise — the unit type
+
+Layers(op)   :  a non-empty finite set of layer identifiers          declared
+Layer(op)    =  that set, as a type                                  induced
+```
+
+Sign-aptness is a property of the operator, not of a central roster (§6.3).
+`Layers(op)` is non-empty by construction — an operator admitting no layer would
+make `Claim` uninhabited at that operator — and it is often a singleton:
+`subtype-of` is structural and nothing else.
+
+### 6.3 Unconstructibility inside the model; refusal at the boundary
 
 The current model pairs a flat `Predicate` enum with a flat `Polarity` enum and
 a **hard-coded three-element roster**, `SIGN_MEANINGFUL_PREDICATES`, consulted
@@ -1060,7 +1103,7 @@ computation §1.3 records as already retired elsewhere, and that kernel §4.1
 states as doctrine: *"A class is a roster — every new kind must be remembered
 into it, so it has a hole by construction. A signature is a predicate."*
 
-Under the dependent sum there is nothing to validate:
+Under the dependent sum the invalid combination is unspellable:
 
 ```text
 Polarity(op)  =  { positive, negative, unsigned }     when the contract declares op sign-apt
@@ -1079,7 +1122,41 @@ inadmissible layer is not a rejected value but an uninhabited type, and an
 argument of the wrong sort has no slot to occupy.
 
 This is *explicit over defensive* applied to the type rather than the guard, and
-it classifies as **US†** — the invalid combination is unspellable, not refused.
+inside the model it classifies as **US†** — the invalid combination is
+unspellable, not refused.
+
+**But the model is not the only thing that produces claims.** Serialized YAML,
+imported records, a restored corpus and a raw write can all *express* a
+combination the type cannot hold. Unconstructibility eliminates the internal
+guard; it does not eliminate the boundary. The two are different laws at
+different places, and collapsing them would leave the actual entry points
+unruled.
+
+```text
+decodeClaim  :  WireClaim × ProfileSpec  →  Claim + Refused
+```
+
+Decoding is where sign-aptness, arity, argument sorts, permitted dimensions,
+restriction sorts and admissible layers are **checked against the profile**,
+because only there does an untyped external value meet the contract that types
+it. `ProfileSpec` is the second parameter for the reason D4 makes it the sole
+compiled per-kind source: the operator contracts a decode consults are compiled
+profile contracts, not a roster the decoder carries.
+
+The split is therefore:
+
+| where | law | what it means |
+|---|---|---|
+| the typed constructor, inside the model | **US†** | there is no ill-typed `Claim` value to guard against; internal code may trust a `Claim` unconditionally |
+| `decodeClaim`, on every import, deserialization and restore | **RF†** | an ill-formed wire claim is refused as a value, and nothing is minted |
+| a raw write that bypasses the boundary | neither | it produces an **audit finding**, on the same terms as every other bypass in the system |
+
+The third row is the honest one. A hand-edited file on disk can hold bytes that
+no constructor and no decode would produce; that case is detected, not
+prevented, and it belongs to the audit surface rather than to the type. What the
+dependent sum buys is that *once decoded*, no downstream reader needs to
+re-check — the check happens exactly once, at the one place an external value
+enters.
 
 ### 6.4 Qualifiers — kernel structure, domain terms
 
@@ -1091,55 +1168,145 @@ values and one identity, and **the exact failure the kernel was built to prevent
 becomes invisible**. The qualifier is therefore not an optional enrichment; it
 is what makes the typed form admissible at all.
 
-```text
-Qualifiers(op)  =  a finite map,  dimension ↦ ⟨ quantifier, restriction ⟩
+**`Qualifiers(op)` is a typed structure, and this pass inhabits one fragment of
+it.** The temptation is to declare the structure to *be* a dimension-keyed map
+and move on. That would be a quiet commitment to a logic, because a map has no
+quantifier scope and no order:
 
-dimension     drawn from the operator contract's declared dimension set
-quantifier    ∈ { generic, universal, existential }        — kernel-owned, closed
-restriction   a bound referent — a `term` identifier in the dimension's vocabulary
+```text
+∀ population. ∃ condition. P      ≠      ∃ condition. ∀ population. P
 ```
 
-**The kernel owns the structure; domains own what fills it.** The kernel rules
-that qualification is a dimension-keyed map, that each entry carries an explicit
-quantifier, and that a restriction is a **bound referent and never prose**.
-Which dimensions exist — `population`, `condition`, `regime`, `time-scale` — is
-domain vocabulary, declared per operator by its contract.
+A map also permits at most one restriction per dimension, so a claim restricted
+to two populations, or to a range, has no representation. Those are real
+expressive limits, and the honest move is to name them as the boundary of this
+pass rather than to let a convenient encoding decide the logic by default.
 
-That split is D3 applied one level up, and it is what keeps `Claim` from
-silently becoming a biology type. A qualifier structure designed around
-populations would breach the domain boundary inside the kernel's most
+So the kernel rules three things about the structure and defers the fourth:
+
+1. it is a **canonical, inspectable typed term** — not an opaque string, and not
+   a rendering of one (§6.7);
+2. every restriction is a **bound referent, never prose**, sorted by
+   `RestrictionSort(op)`;
+3. every restriction carries an **explicit quantifier**, kernel-owned and
+   closed: `{ generic, universal, existential }`;
+4. its **grammar is versioned**, and a later revision may extend it to express
+   scope order and composition without invalidating terms already written under
+   the earlier grammar.
+
+The fragment this pass inhabits — call it the **flat fragment** — is exactly the
+dimension-keyed map: each permitted dimension carries at most one
+`⟨quantifier, restriction⟩`, and dimensions are mutually independent, so scope
+order is not merely unrepresented but **irrelevant** within the fragment.
+
+```text
+QualifiersFlat(op)  =  a finite partial map,  d : Dims(op)  ↦  ⟨ quantifier, Referent(RestrictionSort(op, d)) ⟩
+```
+
+Anything richer — a scoped alternation, a disjunction of restrictions, a
+quantitative range — is **refused at `decodeClaim`** (§6.3) rather than
+flattened into the map. Flattening is the failure mode to avoid: it would
+produce a well-typed claim that means something other than the span it came
+from, which is the scope-widening failure kernel §4.1 exists to prevent,
+committed by the encoding instead of by an editor.
+
+**The kernel owns the structure; domains own what fills it.** Which dimensions
+exist — `population`, `condition`, `regime`, `time-scale` — is domain
+vocabulary, declared per operator by its contract, along with each dimension's
+restriction sort. That split is D3 applied one level up, and it is what keeps
+`Claim` from silently becoming a biology type: a qualifier structure designed
+around populations would breach the domain boundary inside the kernel's most
 load-bearing object.
 
-Under this structure the founding example separates mechanically:
+Under this structure the founding example separates mechanically. Kernel §4.1's
+edit is *"X affects Y in adults"* → *"X affects Y in all humans"*, and the two
+differ in both slots the qualifier provides:
 
 ```text
-c_adults  = ⟨ affects, [X, Y], { population ↦ ⟨generic, term:adults⟩ }, positive, causal ⟩
-c_humans  = ⟨ affects, [X, Y], { population ↦ ⟨generic, term:humans⟩ }, positive, causal ⟩
+c_adults  = ⟨ affects, [X, Y], { population ↦ ⟨generic,   term:adults⟩ }, positive, causal ⟩
+c_humans  = ⟨ affects, [X, Y], { population ↦ ⟨universal, term:humans⟩ }, positive, causal ⟩
 
-π_claim(c_adults)  ≠  π_claim(c_humans)      different restriction identifiers
+π_claim(c_adults)  ≠  π_claim(c_humans)
 ```
+
+*"in adults"* is a generic claim about a population; *"in all humans"* is
+universal over one — so the quantifiers differ, and the restriction identifiers
+differ independently of them. Either difference alone separates the identities:
+holding the quantifier fixed, `term:adults ≠ term:humans` still forks, which is
+the case that matters, since the widening a reviewer would miss is usually a
+restriction swap and not a visible *"all"*.
 
 Two identities, a `supersedes` link, and every prior assessment still bound to
 the claim it actually assessed — with no prose anywhere in the projection.
 
 ### 6.5 The canonical projection, and why `statement` leaves identity
 
+**Every position in the projection is an identifier.** A symbol is what a term
+is *called*; an identifier is what it *is*. The distinction is the whole content
+of the binding rule already settled for vocabulary (D6, D §8): **claim identity
+binds the term identifier, and the consulted vocabulary contract enters
+`belief_input_digest`.** Putting the contract release into claim identity would
+fork every claim on every ontology release; leaving the contract out of belief
+entirely would let a reinterpretation of a term move a belief silently. The
+projection carries identifiers, and the release travels the other channel.
+
 ```text
-π_claim(c)  =  ⟨ operator symbol,
-                 args         — by slot index, each a bound referent identifier,
-                 qualifiers   — sorted by dimension key, each ⟨quantifier, restriction id⟩,
-                 polarity     — the inhabitant of Polarity(op); absent when Polarity(op) = 1,
-                 layer ⟩
+π_claim(c)  =  ⟨ operator      — the operator's term identifier,
+                 args          — by slot index, each a bound referent identifier,
+                 qualifiers    — sorted by dimension identifier, each
+                                 ⟨ quantifier tag, restriction referent identifier ⟩,
+                 polarity      — the polarity tag; absent when Polarity(op) = 1,
+                 layer ⟩       — the layer term identifier
 
 I_claim(c)  =  H( tag_claim ‖ encode(π_claim(c)) )        under science.identity.v1
 ```
 
-**`statement` is excluded from identity and becomes a derived gloss** — rendered
-from the typed form by default, freely overridable, never an input to identity,
-belief, or matching. This is precisely the move kernel §4.1 already made for
-`title`, and §4.1's own argument carries it the last step: *"A field cannot be
-both hand-editable prose and an identity input."* Once the typed form is
-normative, `statement` is in exactly the position `title` was.
+Five positions, five kinds of name, and none of them prose:
+
+| position | what enters the hash | owned by |
+|---|---|---|
+| operator | the operator's **term identifier** | a domain (or the base) contract |
+| argument, per slot | the **referent identifier**, in the sort's vocabulary | a domain contract |
+| qualifier key | the **dimension identifier** | a domain contract |
+| qualifier restriction | the **referent identifier**, in the dimension's restriction sort | a domain contract |
+| quantifier | a **canonical kernel tag** from the closed set | the kernel |
+| polarity | a **canonical kernel tag** from the closed set | the kernel |
+| layer | the **layer term identifier** | the base contract |
+
+The two kernel-owned positions are tags rather than contract-issued identifiers
+because their sets are closed and kernel-owned; §7 must still fix their
+canonical encodings, since a tag that is stable in prose but unstable in bytes
+would fork identities across implementations.
+
+`I_claim` therefore names an identity that survives an ontology release, and
+`belief_input_digest` — not `I_claim` — is what moves when the contract behind
+one of those identifiers is reinterpreted. §7 defines the contracts these
+identifiers are issued by.
+
+**`statement` is excluded from identity**, which is precisely the move kernel
+§4.1 already made for `title`, with §4.1's own argument carrying it the last
+step: *"A field cannot be both hand-editable prose and an identity input."* Once
+the typed form is normative, `statement` is in exactly the position `title` was.
+
+But "a derived gloss, freely overridable" was still one field with two
+construction authorities — the defect CA† names, committed in the sentence that
+was supposed to fix it. It splits in two:
+
+| | `render(Claim)` | `display_statement` |
+|---|---|---|
+| produced by | a **deterministic function** of the typed form and the consulted vocabulary | **authored** by a human |
+| stored | **no** — computed on read | yes, optional, may be absent |
+| authority | derived | authored |
+| in `π_claim` | no | no |
+| in belief or matching | no | no |
+
+Both are identity-inert; neither is ever read by identity, belief, standing or
+estimand matching. Making `render` unstored is what keeps it honest: a stored
+rendering is a cache that can disagree with what it renders, and a disagreement
+between the gloss and the claim is exactly the confusion this section removes.
+An authored `display_statement` is then an ordinary annotation with one
+authority and no derived counterpart to drift from — a reader may prefer it, and
+nothing downstream may consult it.
 
 Three consequences worth stating.
 
@@ -1176,40 +1343,71 @@ The refusal reaches further than it first appears, and the reason is structural:
 `source-assertion`'s identity basis **contains the proposition identity** (world
 §4.2). A source-assertion for an untypeable claim is therefore not merely
 disallowed — it is **unconstructible**, because one of its identity components
-does not exist. There is no route by which untyped prose enters the record set
-as an assertion.
+does not exist. No constructor and no `decodeClaim` path admits untyped prose
+into the record set as an assertion; a raw write that fabricates one is an audit
+finding, on the terms §6.3 already set out.
 
 **The cost, stated plainly.** Coverage of the literature becomes gated by the
 operator vocabulary's expressiveness. Kernel limitation 4 already says real
 claims will not fit nine terms cleanly; under this design an unfitting claim is
 not degraded, it is **queued**. That makes the vocabulary's extension rule
-load-bearing for *throughput*, not only for correctness, and it is consistent
-with limitation 1's framing of the unassessed row as the ranked work queue.
+load-bearing for *throughput*, not only for correctness.
+
+**This queue is a new operational consequence, not a banked precedent.** Kernel
+limitation 1's ranked work queue is *widely-asserted-but-unassessed
+propositions* — claims that exist, carry assertions, and lack assessments. An
+untypeable span has no proposition at all and therefore cannot appear in that
+row. Reusing the project-scoped `task` tier to hold it is sensible and needs no
+new kind, but it introduces a **second** backlog with a different membership
+condition and a different owner: the first is answered by running an analysis,
+the second only by extending a vocabulary. §11 records it as such; nothing in
+the kernel currently sizes it.
 
 ### 6.7 What is preserved for entailment, without defining it
 
-Once a qualifier carries an explicit quantifier over a bound restriction domain,
-`c_adults` and `c_humans` are not merely unequal — they are **ordered by
-entailment**, and that order is what belief aggregation across related claims
-would eventually need. It is also the same relation the estimand-match residue
-needs.
+Once a qualifier carries an explicit quantifier over a bound restriction
+referent, `c_adults` and `c_humans` **retain the typed information a future
+entailment relation would need**, and may become comparable under it. That is
+the claim §6 makes, and it is weaker than the one the first draft made.
 
-**§6 does not define it.** Defining subsumption would pull ontology reasoning,
-quantifier interaction and partial orders over restriction domains into a
-section whose job is the identity of a single claim.
+The first draft said the two were "ordered by entailment." They are not, and
+`term:adults ⊆ term:humans` does not establish it. At least three things stand
+between restriction inclusion and claim entailment:
 
-What §6 *does* is keep the order definable later, which rules three encodings
-out:
+| | why inclusion is not enough |
+|---|---|
+| operator variance | an operator need not be monotone in a restriction, and none has yet declared a variance |
+| quantifier semantics | `generic` is not `universal` weakened — a generic claim tolerates exceptions, so it neither implies nor is implied by the universal over the same referent |
+| ontology subsumption | `term:adults ⊆ term:humans` is a fact of a vocabulary contract at a release, not of the identifiers, and D6 deliberately keeps the release out of claim identity |
+
+There is also a substantive reason to distrust the intuition rather than merely
+its formalization: a statistical effect can **reverse** across a subpopulation,
+so a claim true of adults may be false of humans, and a relation that concluded
+otherwise from inclusion alone would be unsound about the world, not just
+underspecified.
+
+**§6 therefore does not define it.** Defining subsumption would pull ontology
+reasoning, quantifier interaction, operator variance and partial orders over
+restriction domains into a section whose job is the identity of a single claim.
+
+What §6 *does* is keep such a relation **definable later**, which is a
+requirement on the encoding and rules three of them out:
 
 | ruled out | why |
 |---|---|
-| an opaque canonical string for the whole qualifier map | nothing can be compared inside it |
+| an opaque canonical string for the whole qualifier structure | nothing can be compared inside it |
 | pre-normalizing restrictions to a most-general form | destroys the distinction being preserved |
-| folding qualifiers into the operator symbol (`affects-in-adults`) | multiplies terms and loses the factorization the map provides |
+| folding qualifiers into the operator identifier (`affects-in-adults`) | multiplies terms and loses the factorization the structure provides |
 
-The entailment structure is recorded in §11 as required-future, with its
-motivation, so that a later design inherits the constraint rather than
-rediscovering it.
+The estimand-match residue of limitation 5 is **related to** this relation and
+not assumed to be the same one. `match(claim_type, estimand_type)` asks whether
+a study's estimand answers a claim; entailment asks whether one claim follows
+from another. They plainly share machinery — both compare typed restrictions
+under a vocabulary — but whether one is definable from the other is an open
+question, not a shortcut §6 may take.
+
+Both are recorded in §11 as required-future with their motivation, so that a
+later design inherits the constraint rather than rediscovering it.
 
 ## 7. M\* — term contracts and referent typing
 
