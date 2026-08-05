@@ -5,6 +5,8 @@ clusters (adoption ledger §2), taken after 5a and the world-index packaging des
 so the operation set and the rules store both exist before the document that
 describes them freezes. The banking amendment set below was applied across
 kernel, world, comp, 5a, and packaging in the banking commit.
+**Amended 2026-08-05** by the formal model and claim calculus design: §4's exact
+oracle inventory gains **M1–M13**.
 **Inherits:** the ledger §2 constraints (tables frozen under current ids; `nodes`'
 STANDARD transfers as form, not force); comp §3.1b (the rule-binding route, queued
 to be decided once, here); comp limitation 4 and §11.4 (equivalence rules and
@@ -120,8 +122,21 @@ Four change classes, four different mints, none interchangeable:
 G2a–G2c, G3–G8; S1–S8 with S1a; W1–W13 with W5a and W8a–W8b; R1–R23; C1–C10;
 X1–X12; **N1–N10** (this document's own table, §9); **L1–L13** (tamper-evident
 log, banked 2026-08-03, omitted from this inventory at its banking and added
-2026-08-04); **D1–D10** (domain extension boundary, banked 2026-08-04): the
+2026-08-04); **D1–D10** (domain extension boundary, banked 2026-08-04);
+**M1–M13** (formal model and claim calculus, banked 2026-08-05): the
 exact current inventory, with no base G2 — are permanent names.
+
+**M enters at banking, by that design's own standing obligation.** Both L and N
+reached this inventory *late* — L was omitted at its banking and added a day
+later, N only when D's banking noticed that §5 requires every oracle table in the
+suite. The formal model recorded the obligation in its own header before its
+first section was drafted, precisely so a third table would not repeat the
+pattern. **M1–M13** covers claim typing and identity (M4, M5, M8, M9, M11, M13),
+the vocabulary lifecycle and its single authored source (M6, M7), cross-language
+projection parity (M10), untypeable spans (M12), `standing`'s termination over an
+acyclic retraction graph (M3), run-input binding (M2), and declared-closure
+containment at the instrumented resolver (M1, which states its own boundary as a
+declared limit rather than claiming every undeclared read is detected).
 
 **N is in the suite, and its self-reference is not a cycle.** §5 makes every
 oracle table part of the conformance suite, §9 states N as a guarantee table,

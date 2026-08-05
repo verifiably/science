@@ -3,6 +3,12 @@
 **Status:** Banked 2026-08-03. First of the two sub-problem 5 clusters (adoption
 ledger §2); the kernel document's §3.3, G8 row, and §8.7 consequences table were
 amended in the banking commit.
+**Amended 2026-08-05** by the formal model and claim calculus design (ρA9): §4's
+well-foundedness argument — a retraction's identity covering its target's, so a
+cycle would be unconstructible — is **withdrawn as invalid** and replaced by an
+**acyclicity invariant on the retraction graph**; §3 gains the import/audit
+graph-validation obligation that invariant requires; C10 is credited with the
+termination role it always played, with its test unchanged.
 **Inherits:** comp §5.2's fixed form and §12's two open halves; world §4.3 (conflict
 routes) and limitation 11 (refuted snapshots); comp §11.13 (nothing retires a run) and
 the coverage-accountability question (comp §11, world limitation 11's coda).
@@ -97,6 +103,20 @@ toggle). It is admitted at the write boundary and validated at import/audit exac
 verifications are; a raw-written retraction is the standard raw-write case — undetected
 until audit, then reported.
 
+> **Import and audit obligation** (added 2026-08-05 — formal model ρA9). §4's
+> termination argument rests on the retraction graph being **acyclic**, and a bundle
+> arrives with no admission history to make that true by construction. So an import
+> **validates the bundle together with the resolved world context** — never the bundle
+> alone — and **refuses**, with no write, any bundle for which the union admits no
+> topological order. The refusal must carry a **cycle-specific** result naming the
+> offending edge set, not a generic failure. **Audit** classifies a cyclic
+> configuration reached by a raw write as **malformed, before any standing or belief
+> evaluation is attempted**: it is an integrity fault, not a belief that happens to be
+> unknown. This is the only new obligation §4's replacement argument imposes, and it
+> is what stops the argument holding for locally authored corpora while failing
+> silently for imported ones. **C10's existing test is not widened** — the new oracle
+> is the formal model's **M3**.
+
 ## 4. Standing — what "no longer read" means per target
 
 Standing is **computed, never stored on the target**. The target is byte-unchanged; a
@@ -105,12 +125,49 @@ well-founded and discoverable:
 
 **Standing, defined.** An input's standing is subtracted iff **at least one standing
 retraction targets it**, and a retraction is itself standing unless a standing
-retraction targets *it*. The recursion is well-founded: a retraction's identity covers
-its target's identity, so a cycle would require two records each containing the
-other's digest — unconstructible. A counter-retraction therefore restores nothing by
+retraction targets *it*. The recursion is well-founded because the **retraction graph
+is acyclic** — the argument is below, and it was replaced on 2026-08-05. A
+counter-retraction therefore restores nothing by
 itself; it removes one retraction from standing, and the target's standing returns
 **iff no sibling standing retraction remains** (event tokens permit several
 retractions of one target; C5 pins the sibling case).
+
+**Why the recursion terminates** (amended 2026-08-05 — formal model ρA9). This
+document previously argued that *"a retraction's identity covers its target's
+identity, so a cycle would require two records each containing the other's digest —
+unconstructible."* **That is not a well-foundedness proof, and it is withdrawn.** Both
+identities are **fixed-width digests**, so "covers" establishes no containment order
+and nothing decreases along a chain; and collision resistance is not a proof that a
+cycle of digests has no solution, it is a statement about how hard one would be to
+find. The argument was computational intuition wearing a structural argument's
+clothes.
+
+What replaces it is an **acyclicity invariant on the retraction graph**. Over a finite
+evaluated world state, orient every retraction edge `target → retraction`. The
+**admissible** states are those in which that graph is a **DAG**, and the readings —
+standing, admission, eligibility, belief — are defined over admissible states only. A
+topological rank then exists as a **theorem** rather than a stored field, `standing`
+follows strictly increasing rank through a finite DAG, and the recursion terminates.
+
+**Nobody maintains a counter, because each way a record arrives preserves the
+invariant for its own reason:**
+
+| how a record arrives | why the DAG survives |
+|---|---|
+| an ordinary **write** | **C10** already requires the retraction's target to *already resolve*. A record that existed before the retraction cannot name it, so the new edge runs from an existing node to a newly added one and closes no cycle. Preserved by construction rather than by a check — and this is C10 carrying a termination role it was not previously credited with |
+| an **import** | a bundle carries records with no admission history, so the import validates **the bundle together with the resolved world context** for acyclicity and refuses a bundle for which no topological order exists (§3). Without this arm the argument holds for locally authored corpora and fails silently for imported ones |
+| a **merge** | world §4.3, as amended 2026-08-05: **distinct-basis retractions cannot be curator-merged**, so no merge redirects one retraction's edge onto another act. Equal-basis replicas consolidate, which changes location and not the graph. This arm is needed because merge **redirects** existing references rather than adding one, and is the one sanctioned act the write argument does not cover |
+| a **raw write** | nothing is preserved, because nothing checked. A raw-written cycle yields an **inadmissible** state, which **audit** classifies as malformed **before** any standing or belief evaluation — the disposition every other raw-write defect gets (§3). It is not a state whose belief is unknown; it is a corpus with a detected integrity fault |
+
+**The rank is derived per evaluation and never stored.** An authoritative stored rank
+would be **admission-order dependent** (two corpora holding identical records could
+disagree), **noncanonical** (many topological orders satisfy one DAG), and
+**evaluation-context dependent** (a cross-corpus edge's position depends on which
+corpora the evaluation spans) — and it is unnecessary, since the invariant yields
+termination without anyone naming an order. A per-root mutation-log sequence cannot
+substitute for it either: a `retraction` is a **world** kind and may target a record in
+another corpus, while the log's sequence is **per root**, so it cannot order the very
+edges most in need of ordering.
 
 **Discovery, bounded.** Retractions are joined through the world index, which gains a
 **fourth derived map** — the retraction map, target identity → retraction addresses —
@@ -286,7 +343,7 @@ certified by mutation, per the estimator doctrine — every check must be able t
 | C7 | Route retirement never selects silently | conflict of two routes: retire one → certifiable over the survivor; retire both → `not-certified`; assert stored basis facet unchanged throughout (route preservation) |
 | C8 | A retracted snapshot is refused where recomputation already happens | import naming it refuses before any write; audit and diagnostic query report `retracted`; **negative:** mounting the corpus writes nothing and validates nothing |
 | C9 | Narrowing is snapshot succession plus retraction, never mutation behind an identity | derive the narrowed successor snapshot, retract the old naming it as `successor`; assert the old snapshot's identity and its receipts are byte-unchanged, a computation naming the old hits C8's refusal, one naming the new proceeds, and the digest moves. **Negative:** nothing resolves through the retraction to the successor implicitly |
-| C10 | Ineligible or ill-formed targets are unspellable through the boundary | retraction naming a note, a proposition, a run → refused; **a `route` arm naming a route absent from the named dataset's stamped basis → malformed**; a retraction naming an `instrument-certification` → **eligible** (added 2026-08-03, normative-contract §7.2 — its standing is read by scope derivation); raw-write each refused case and assert the audit reports it |
+| C10 | Ineligible or ill-formed targets are unspellable through the boundary — and, since 2026-08-05, this is also what makes an ordinary write incapable of closing a cycle in the retraction graph (§4; formal model ρA9, M3). **The test below is unchanged**; the row gains a role it always played, not an arm | retraction naming a note, a proposition, a run → refused; **a `route` arm naming a route absent from the named dataset's stamped basis → malformed**; a retraction naming an `instrument-certification` → **eligible** (added 2026-08-03, normative-contract §7.2 — its standing is read by scope derivation); raw-write each refused case and assert the audit reports it |
 
 ## 8. Limitations
 

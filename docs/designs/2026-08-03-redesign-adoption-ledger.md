@@ -19,7 +19,8 @@ Three consequences, recorded so they survive:
 
 - **The git history is deliberately not carried over.** Nine design
   documents seeded the first commit (a tenth, the domain extension boundary,
-  banked 2026-08-04 — §1 and §3 carry the current inventory); the review
+  banked 2026-08-04; an eleventh, the formal model and claim calculus, banked
+  2026-08-05 — §1 and §3 carry the current inventory); the review
   history that produced them —
   including the eleven-round review of the tamper-evident log — stays browsable
   in `proto-science`.
@@ -47,8 +48,9 @@ decomposition rulings that follow from it.
 | 4 | **`atoms` A6–A8** — coherent capture, effect/recovery execution, exerciser | `atoms` authority design §14 | durable multi-file commit; retirement of the single-writer/no-durability profile claims (substrate §7) | Nothing in banked designs waits on them; adoption route is science's composition root (`atoms` §12.2) |
 | 5 | **Tamper-evident mutation log** (repro §9) | `2026-08-03-tamper-evident-log-design.md` — `atoms` owns registration (the A6–A8 executor path), science owns anchor carriage and verification | closing kernel §8.7's four recorded-mutation consequences and strengthening the fifth — chronology — for boundary-mediated executions (G2a/R12's out-of-band negative remains) | **Design banked 2026-08-03** (per-root chains with settlement lifecycle, epoch-cadence anchors + explicit anchor act, surviving-observer bound; kernel §8.7/G2a, comp §3.3/R12/§9, packaging §3/§4/§5/§5.1/§5.2/X9/§12/lim. 1, and `atoms` §15 amended in the banking commit); consumes artifact 1 as anchor carrier; the four-of-five closure lands at implementation (L1–L13) |
 | 6 | **Retraction + correction lifecycle** | sub-problem 5a (§2) | four banked limitations that currently say the wrong answer stays computable (comp §5.2/§11.13/§13, world lim. 11) | **Banked 2026-08-03** (`2026-08-03-correction-lifecycle-design.md`; kernel §3.3/G8/§8.7 amended in the banking commit); C1–C10 await implementation |
-| 7 | **Normative contract + conformance oracles + instrument certification** | sub-problem 5b (§2) | disposition of the 63 legacy check modules (principle in 5b §8); homes for G1, G2a–G2c, G3–G8; S1–S8 (S1a); W1–W13 (W5a, W8a–b); R1–R23; C1–C10; X1–X12; N1–N10; L1–L13; D1–D10 (N, L and D added 2026-08-04 — L having been omitted at the §9 banking, and N because 5b §5 puts every oracle table in the suite) | **Design banked 2026-08-03** (`2026-08-03-normative-contract-design.md`; tenth kind `instrument-certification`, rule-binding recipe member, certification-enumeration receipt — kernel, world §3/§4.2/§5/W8a, comp §4.2/§4.2a/§7.3/§7.3b–c/R18/R19, 5a §3/§4/C10/§9, packaging §5/§5.2/§7/X9/X10/X12 amended in the banking commit); the first contract cut, the executable suite, and N1–N10 await implementation |
+| 7 | **Normative contract + conformance oracles + instrument certification** | sub-problem 5b (§2) | disposition of the 63 legacy check modules (principle in 5b §8); homes for G1, G2a–G2c, G3–G8; S1–S8 (S1a); W1–W13 (W5a, W8a–b); R1–R23; C1–C10; X1–X12; N1–N10; L1–L13; D1–D10; M1–M13 (N, L and D added 2026-08-04 — L having been omitted at the §9 banking, and N because 5b §5 puts every oracle table in the suite; **M added 2026-08-05**, on the obligation that design recorded in its own header before drafting, so a third table would not arrive late) | **Design banked 2026-08-03** (`2026-08-03-normative-contract-design.md`; tenth kind `instrument-certification`, rule-binding recipe member, certification-enumeration receipt — kernel, world §3/§4.2/§5/W8a, comp §4.2/§4.2a/§7.3/§7.3b–c/R18/R19, 5a §3/§4/C10/§9, packaging §5/§5.2/§7/X9/X10/X12 amended in the banking commit); the first contract cut, the executable suite, and N1–N10 await implementation |
 | 8 | **Domain extension boundary** — where domain-specific material lives across `nodes`, `science`, and downstream domains | `2026-08-04-domain-extension-boundary-design.md` | consistent organization of domain material; the first domain pack; the predicate-vocabulary design | **Design banked 2026-08-04** (interpretation as facet conjunction with an explicit promotion trigger; exact vocabulary bindings; `ProfileSpec` as the sole compiled profile with a zero `nodes` delta; manifest `profile` block inside corpus-state identity; consulted profile contracts in G3 — world §5/W13/lim. 9, packaging §6, kernel §5.1, substrate §6.1/§12, and this ledger amended in the banking commit); D1–D10 await implementation |
+| 9 | **Formal model + typed claim calculus** — a formal model of the banked system (M₀), the smallest system satisfying the intended guarantees (M\*), and the refinement map between them | `2026-08-04-formal-model-and-claim-calculus-design.md` | the claim grammar and canonical tag encoding (`science` base contract); `π_claim` + `tag_claim` in `science.identity.v1`; `ProfileSpec` compilation of claim schemas; the Python/TypeScript claim-identity parity fixture | **Design banked 2026-08-05** (a proposition **is** a typed claim, `Claim = Σ(op:Operator). Args × Qualifiers × Polarity × Layer`, with `statement` demoted out of identity; five-way term resolution; contract succession for claim vocabulary — kernel §4.1/§5/§8/§11 with G3, G7 and limitation 4; comp §7.1; world §4.1/§4.3/W4/§10; substrate §4.2; 5a §3/§4/C10; 5b §4; D §5/§6/§8/§12 with D3, D6 and limitation 2; and this ledger and the README amended in the banking commit); M1–M13 await implementation, and four **implementation authorities** above have no home yet |
 
 ## 2. Sub-problem 5 — split and order (ruled 2026-08-03)
 
@@ -122,11 +124,20 @@ Two standing constraints on 5b:
    `science` is organized so a later decomposition into packs is a move rather
    than a rewrite. **Banked 2026-08-04**
    (`2026-08-04-domain-extension-boundary-design.md`); D1–D10 await
-   implementation. Its §12 names the **predicate vocabulary** as the next
-   focused design: kernel limitation 4 records nine predicates, declared
-   inadequate, with no owner and no extension rule — while `predicate` feeds
-   proposition semantic identity, so a predicate contract's identity
-   consequences reach past that document's remit.
+   implementation. Its §12 named the **predicate vocabulary** as the next
+   focused design; that became item 8.
+8. **Formal model and typed claim calculus** — taken instead of a
+   predicate-vocabulary design on its own, because the vocabulary question could
+   not be answered without saying what a proposition *is*. **Banked 2026-08-05**
+   (`2026-08-04-formal-model-and-claim-calculus-design.md`); **M1–M13** await
+   implementation. Two consequences for the order of work: its **ρO** rows open
+   three questions that belong to other designs — merge versus a retraction's
+   immutable exact target (world §10), binding-check persistence and its
+   correction path (kernel limitation 4), and a population vocabulary — and its
+   **implementation authorities** (the claim grammar and kernel tag bytes, the
+   `π_claim` projection under `science.identity.v1`, claim-schema compilation,
+   and a cross-language parity fixture) have no home yet and are prerequisites
+   for building M\*, not for banking it.
 
 ## 4. Invariants and gates to pin when their layer lands
 

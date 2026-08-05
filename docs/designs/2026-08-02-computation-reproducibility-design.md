@@ -1847,12 +1847,27 @@ unchanged belief in that situation would assert a recomputation nobody performed
 | what was removed | result |
 |---|---|
 | artifact bytes **unreachable here**, a controlled copy still held | belief **unchanged**; replay eligibility `not-available` |
-| the **last held copy** of an `observes` input destroyed | the input is no longer **held**; eligibility fails and admission **changes** |
+| the **last held copy** of an `observes` input destroyed | the input is no longer **held**; eligibility fails and admission **changes** — a **`def`** dependency (formal model §4.2, ρA8): held-ness selects *which answer you get*, not what the answer says |
 | the **corpus holding the records** | belief **not computable here**; addresses still resolve to `not-present`, never `unknown` |
 
 Making the second case computable would require a **separately published
 belief-input snapshot** carrying the digest members of kernel §5.1 — which the
 world index deliberately does not contain. §13 records it as open.
+
+**The second row's dependency is typed, and the typing is what keeps G3 true**
+(added 2026-08-05 — formal model §4.2, ρA8). The three edge kinds a belief
+reading depends on are not interchangeable: a `sem` edge changes the belief's
+**value** and must therefore be in the closure digest; a `def` edge selects
+**which arm of the answer is reached at all**; a `bind` edge merely routes.
+Held-ness is a `def` edge. Typing it as `sem` — the reading a casual glance
+invites, since destroying a copy plainly changes the outcome — would make G3
+**false**: two configurations differing only in whether the last copy survives
+share one `belief_input_digest` while yielding different answers. Typing it as
+`def` instead restricts G3 to its `Belief` arm, where the digest does determine
+the value, and leaves R5's three arms exactly as banked. What is *not* supplied
+by this typing is any mechanism making the destruction **recorded** — nothing
+observes it, so the case is reached by a check failing rather than by an act
+being committed (formal model ρO2).
 
 Held-ness is a **world** property — the bytes exist somewhere we control and are
 content-addressed — while availability is a **checkout** property. Kernel §2.2's

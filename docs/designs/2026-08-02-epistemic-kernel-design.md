@@ -395,12 +395,34 @@ same `uid` and silently retargets every source assertion and every assessment
 already bound to it — institutionalizing precisely the scope-widening failure
 this kernel exists to prevent (`fb-2026-07-18-009`, `fb-2026-07-19-009`).
 
-> **Rule.** A proposition carries a **semantic identity**: a hash over its
-> normalized `statement` plus its factored fields (`subject`, `predicate`,
-> `object`, `polarity`, `claim_layer`). That hash is **immutable for the life of
-> the node**. Any edit that would change it instead **mints a new proposition
-> node — new `uid`, new id — linked to the old by `supersedes`**. Edits that do
-> not change it (typography, formatting, body prose) are ordinary revisions.
+> **Rule** (amended 2026-08-05 — formal model §6, ρA1/ρA3/ρA4). A proposition
+> **is** a typed claim, and carries a **semantic identity**:
+> `I_claim(c) = H(tag_claim ‖ encode(π_claim(c)))` — a hash over the claim's
+> canonical projection, which is its **operator**, its **sorted bound argument
+> referents**, its **qualifiers**, its **polarity**, and its **claim layer**. No
+> prose participates. That hash is **immutable for the life of the node**. Any
+> edit that would change it instead **mints a new proposition node — new `uid`,
+> new id — linked to the old by `supersedes`**. Edits that do not change it
+> (typography, formatting, body prose, the display gloss) are ordinary
+> revisions.
+
+The prior basis was *"a hash over its normalized `statement` plus its factored
+fields (`subject`, `predicate`, `object`, `polarity`, `claim_layer`)."* Four
+things changed, and each is load-bearing: prose **left** the basis; `qualifiers`
+**entered** it, because §4.1's own founding example turns on *"in adults"*
+versus *"in all humans"* and without a qualifier slot the two would collapse to
+one identity; `subject` and `object` became **sorted referents bound to a
+vocabulary** rather than bare strings; and `predicate` became **`operator`**,
+issued by a domain contract rather than drawn from a closed nine-term enum
+(limitation 4). The projection's field order, per-position encoding and the
+`tag_claim` domain-separation tag are fixed by `science.identity.v1`; the closed
+kernel tags — quantifiers, polarities, layers — are fixed by the `science` base
+contract.
+
+This **strengthens** the guarantee G7 tests rather than weakening it. Under the
+prior basis a scope-widening edit forked identity only if the prose changed
+enough to move the hash — the "too loose" horn §11 named. Under the typed
+projection it forks whenever a typed field differs, and prose cannot mask it.
 
 Relations keep binding the node ref / `uid`, exactly as `nodes` specifies. No
 parallel reference scheme is introduced: because a semantic change produces a
@@ -408,7 +430,7 @@ parallel reference scheme is introduced: because a semantic change produces a
 free, and old assessments continue to point at the proposition they actually
 assessed. The immutability is a **node invariant**, not a new addressing layer.
 
-##### The statement is a field, and `title` is not it
+##### Prose is not identity — and after 2026-08-05, prose is not a field either
 
 "Normalized statement" above needs a home, and today it does not have one. The
 current promotion path *derives* the proposition title from `subject predicate
@@ -421,28 +443,54 @@ edited freely, with no identity consequence.
 That cannot survive alongside a semantic hash. A field cannot be both
 hand-editable prose and an identity input.
 
-> **Rule.** A proposition carries a canonical **`statement`** field. It is a
-> semantic field: covered by the hash, immutable for the life of the node, and
-> writable only through the mint-a-successor path. `title` becomes **display
-> only** — derived from `statement` by default, freely overridable, and never an
-> input to identity, belief, or matching.
+> **Rule** (amended 2026-08-05 — formal model §6.5, ρA2). The doctrine above
+> applies one field further: `statement` too cannot be both hand-editable prose
+> and an identity input, so it is **not stored as an identity-bearing field at
+> all**. Prose appears in two places, each with **exactly one construction
+> authority**: an **unstored `render(Claim, Locale)`**, derived from the typed
+> projection and never authored; and an optional authored **`display_statement`**,
+> never derived. Both are **identity-inert**. `title` remains **display only** —
+> defaulting to the rendering, freely overridable, and never an input to
+> identity, belief, or matching.
+
+The prior rule made `statement` "a semantic field: covered by the hash,
+immutable for the life of the node, and writable only through the
+mint-a-successor path." That was the right instinct applied to the wrong
+carrier: it is the *claim*, not a sentence about it, that must be immutable.
+With the typed projection carrying identity, a prose field covered by the hash
+buys nothing and costs the normalization problem §11 records.
+
+**One rendering, one authored gloss, and neither is identity.** `render` takes a
+locale so that a claim can be shown in more than one language without any of
+them being privileged; nothing downstream of identity may consume its output as
+a key.
 
 This is the one substantive change to the proposition record. **For new writes it
-is mechanical**: `statement` is authored or derived at mint, the author's
-override — the thing `CREATE_ONLY_KEYS` exists to preserve — keeps living on
-`title`, where editing it is harmless, and what changes is that editing the
-*claim* is no longer indistinguishable from editing its *label*.
+is mechanical**: the typed claim is constructed at mint, the rendering follows
+from it, the author's override — the thing `CREATE_ONLY_KEYS` exists to preserve
+— keeps living on `title` and `display_statement`, where editing it is harmless,
+and what changes is that editing the *claim* is no longer indistinguishable from
+editing its *label*.
 
 **Migration is not mechanical, and must not pretend to be.** An existing record
 may carry an author-overridden title, incomplete factored fields, or both, and in
 those cases the original derived title is **unrecoverable** — the override
 destroyed it, which is exactly the defect being fixed, observed after the fact.
 
-> **Migration rule.** Seed `statement` from the record's current `title`. Where
-> the title does not reconstruct from the factored fields, or the factored fields
-> are incomplete, mark the record **suspect** and route it to salvage
-> (sub-problem 7). Never reconstruct an unavailable prior title, and never infer
-> one from the fields it disagrees with.
+> **Migration rule** (amended 2026-08-05, ρA2). Seed `display_statement` from the
+> record's current `title`. Where the record's factored fields do not **type as a
+> claim** — no operator resolves, an argument does not bind to its sort's
+> vocabulary, or a qualifier the title carries has no dimension to carry it —
+> mark the record **suspect** and route it to salvage (sub-problem 7). Never
+> reconstruct an unavailable prior title, and never infer a typed field from
+> prose it disagrees with.
+
+The amended condition is **stricter** than the one it replaces, and deliberately
+so. "The title does not reconstruct from the factored fields" was a comparison
+between two pieces of prose; "does not type as a claim" is a comparison against a
+contract. A record whose title read *"X affects Y in adults"* while its factored
+fields carried no qualifier passed the old condition and fails the new one — the
+exact case §4.1 exists to catch (formal model M5).
 
 A suspect record is a curation item, not an error: it is readable, it is
 inspectable against its own sources, and it is barred from certifying anything
@@ -827,15 +875,28 @@ that has never been observed failing is uncertified.
 | **G2a** | **Execution-boundary ordering.** The boundary refuses to begin a run that does not name an already-frozen analysis-spec identity, and records that identity before any other observation | Attempt to begin a run naming no frozen spec, and one naming a spec frozen mid-execution; assert both are **refused**, not downgraded. **Also assert the negative:** perform a run out of band, freeze a spec afterwards and attach it, and confirm the ordering is **undetectable** — G2a is a guarantee about what the boundary will start, never a proof about what happened outside it |
 | **G2b** | An assessment requires held, content-hashed inputs | Point a run at an unheld or unhashed input; assert refusal |
 | **G2c** | An assessment is admitted only in the **admitted** verification state | Walk every row of the §3.3 lifecycle table; assert admission only for `clean-environment, passed` with no active `failed`. Assert a passing sibling does **not** clear an active failure |
-| **G3** | Every belief state names its **complete transitive input closure** (below), as one digest | Recompute from the named closure alone; assert identity. Then mutate **each** closure member in turn — including ones the old G3 omitted — and assert the digest changes every time. **Structure, not only content:** a member that is a *set* must be tested for what the set's own structure carries — **permute** the keyed facets across assessments and assert the digest changes, and **delete** a producing run so a lineage basis entry stops resolving and assert the same. **Reads, not descriptions:** **add** a second producing run to a dataset already in the closure, changing nothing else, and assert the digest changes — the divergence test reads the producer set, so the producer set is a closure member. **Scope, not only contents:** enumerate the producer sets from a snapshot covering **fewer corpora**, with every present corpus identical, and assert the digest changes — an enumeration is bounded by what it consulted. **Negative — location is not evidence:** move an entity between corpora, and separately edit an alias; assert the digest is **unchanged** both times (world W5), pinning that the member is the **producer snapshot** and not the world index that carries it. All four were live holes in earlier revisions, and none is reached by mutating a member's value |
+| **G3** | **Whenever a belief is produced**, that belief state names its **complete transitive input closure** (below), as one digest (arm restriction added 2026-08-05 — formal model ρA8) | Recompute from the named closure alone; assert identity. Then mutate **each** closure member in turn — including ones the old G3 omitted — and assert the digest changes every time. **Structure, not only content:** a member that is a *set* must be tested for what the set's own structure carries — **permute** the keyed facets across assessments and assert the digest changes, and **delete** a producing run so a lineage basis entry stops resolving and assert the same. **Reads, not descriptions:** **add** a second producing run to a dataset already in the closure, changing nothing else, and assert the digest changes — the divergence test reads the producer set, so the producer set is a closure member. **Scope, not only contents:** enumerate the producer sets from a snapshot covering **fewer corpora**, with every present corpus identical, and assert the digest changes — an enumeration is bounded by what it consulted. **Negative — location is not evidence:** move an entity between corpora, and separately edit an alias; assert the digest is **unchanged** both times (world W5), pinning that the member is the **producer snapshot** and not the world index that carries it. All four were live holes in earlier revisions, and none is reached by mutating a member's value |
 | **G4** | A **recorded** failed replay cannot be silently orphaned (narrowed — §3.2) | Attempt an unreferenced successor to a recorded failure; assert refusal. **Also assert the negative:** discard the failed attempt entirely and confirm the system *cannot* detect it — the test pins the limit so no reader over-reads G4 |
 | **G5** | Divergence is computed, never authored | Attempt to author a divergence record; assert no such kind exists |
 | **G6** | `reads` inputs never confer eligibility | Build a run whose only inputs are a literature corpus and an ontology; assert no assessment is admissible regardless of quantity or QA state |
-| **G7** | A semantic edit to a proposition cannot retarget existing evidence | Edit a proposition's scope in place; assert a new semantic identity is minted, that prior assessments still bind the old one, and that belief on the old identity is unchanged. **Also assert the converse:** overwrite `title` alone and assert *no* mint, no new node, and an unchanged digest — pinning that the split of §4.1 is real in both directions and that display edits stay free |
+| **G7** | A semantic edit to a proposition cannot retarget existing evidence | Edit a proposition's scope in place; assert a new semantic identity is minted, that prior assessments still bind the old one, and that belief on the old identity is unchanged. **Also assert the converse, in both prose forms** (second form added 2026-08-05, ρA1/ρA2): overwrite `title` alone, and separately overwrite `display_statement` alone, and assert in each case *no* mint, no new node, and an unchanged digest — pinning that the split of §4.1 is real in both directions and that display edits stay free. The positive arm is unchanged and **strengthens** under the typed projection: it forked identity only when prose moved the hash, and now forks whenever a typed field differs |
 | **G8** | A later failing verification forces recomputation and, **while recorded**, clears only by explicit resolution **or a standing retraction** (bounded — §3.3, amended by correction-lifecycle §7a) | Attach a failing verification to an admitted assessment; assert invalidation and recomputation of every touched proposition. Assert it is **not** cleared by recency or by a passing sibling, **and is cleared by a standing retraction** (correction-lifecycle C6). **Also assert the negative:** delete the failing verification and confirm the assessment returns to admitted — pinning that deletion is §3.2's undetectable-history limit, not a tamper-evidence claim |
 
 Each row must be a failing test before it is a passing one. G4's negative half is
 deliberate: a guarantee whose limit is untested will be read as the strong claim.
+
+**G3's arm restriction (added 2026-08-05, formal model ρA8) narrows the
+statement and preserves every test.** Asking for a belief has three possible
+answers, not one: a belief, *not available*, or a refusal. The closure digest
+determines the **first**; whether that arm is reached at all is decided by
+eligibility and by whether the inputs are still **held** — and held-ness is not a
+closure member, because it selects the answer's *shape* rather than its *value*.
+Stated without the restriction, G3 was falsifiable by a case it never intended to
+cover: two configurations differing only in whether the last held copy of an
+`observes` input survives share one `belief_input_digest` while yielding
+different answers. That is not a qualifier on G3 — under the unrestricted
+phrasing it is a G3 violation. R5 already tests the held-ness case, unchanged,
+and no G3 arm moves.
 
 **G2a is a guarantee about the execution boundary, not about chronology, and
 sub-problem 4 is where that surfaced.** A content hash proves content **equality,
@@ -1066,8 +1127,25 @@ ordinary terms.
    verbatim-identical blind passes disagreeing on **25–40% of rubric-ambiguous
    fields**, with systematic pass-1-higher drift. Extraction reliability needs
    its own accounting.
-4. **One-sided referent binding is still hard.** The predicate vocabulary is
-   currently 9 terms; real claims will not fit cleanly.
+4. **One-sided referent binding is still hard** (amended 2026-08-05 — formal
+   model ρA5, ρO1). The **vocabulary half is answered.** Predicates become
+   **operators**, declared by a domain contract like any other vocabulary, with
+   term identity, an issue-and-retire rule, and *never redefine* enforced at
+   contract load against a declared predecessor (formal model §7.1, §7.3, §7.3a;
+   M6, M7). The closed nine-term enum is retired, and no second authored
+   operator roster may exist beside the contracts.
+   **The binding half stays open, and is now stated precisely** rather than
+   impressionistically. Decoding a claim resolves each argument against its
+   sort's bound vocabulary and yields one of five outcomes (D §5 as amended);
+   what is unsettled is whether that check's receipt **persists**, how it would
+   be discovered or superseded, whether an unchecked claim may be assessed, and
+   what corrects a claim later found `not-member` (formal model ρO1). The banked
+   correction rules make the obvious path unspellable — C §4's eligible-target
+   set is exactly `node` and `route`, a proposition is not retraction-eligible,
+   and 5b §7.6's audit mints nothing — so the answer is either a lifecycle
+   design or promotion to an independently addressed record, which is a new kind
+   with its own eligibility analysis. It is recorded as open here rather than
+   deleted.
 5. **The estimand-match residue is not solved here.** Making extraction a
    provenanced computation forces an estimand to be *recorded*. It does not force
    it to *match* the claim it is used for. That is the largest surviving piece of
@@ -1183,11 +1261,15 @@ This document is sub-problem 1. Each of the following gets its own design:
   declares an acquisition boundary, and what distinguishes a dataset that carries
   the facet from one that merely claims it. This is the hinge the whole
   eligibility predicate turns on, so it cannot stay informal for long.
-- **Semantic-identity normalization** (§4.1). The hash covers the normalized
-  statement plus the factored fields, but *normalization* is undefined — whether
-  whitespace, casing, term-synonym resolution through the ontology layer, or
-  numeric formatting participate. Too loose and a scope change slips through as a
-  revision; too tight and every typo forks the identity.
+- **Semantic-identity normalization** (§4.1) — **closed for prose 2026-08-05**
+  (formal model ρA1), **narrowed to term synonyms**. The hash no longer covers a
+  statement, so whitespace, casing and numeric formatting have nothing to
+  normalize, and the too-loose/too-tight dilemma dissolves for them: a typo
+  cannot fork an identity because a typo cannot reach one. What survives is
+  **term-synonym resolution** — two argument referents naming the same entity
+  under different ontology identifiers project differently and so hash
+  differently. That question is **relocated, not answered**: it is a
+  vocabulary-binding question (D §5), where it is open.
 - **Independence from dataset lineage** (§4.2.1) requires dataset provenance to
   record ancestry deeply enough to find common ancestors. Whether current dataset
   provenance can support that is unverified, and it is a dependency on
