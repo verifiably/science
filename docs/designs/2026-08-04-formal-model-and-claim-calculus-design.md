@@ -1,7 +1,7 @@
 # Formal model and claim calculus — design
 
 **Status:** Draft — complete first pass, §1–§11. Review rounds so far: §2–§4
-three, §5 one, §6 one, §7 two, §8 one, §9 one. **Not banked**: §8's amendments
+three, §5 one, §6 one, §7 two, §8 two, §9 two. **Not banked**: §8's amendments
 have not been applied to the nine designs, so the banked corpus still says what
 §8.2 proposes to change (limitation 12).
 
@@ -18,7 +18,7 @@ M\* revises only inside the claim neighbourhood, and every revision names the
 guarantees it preserves, amends, or invalidates.
 
 **Banking obligations (recorded now, discharged at banking).** When this design
-is banked, **M1–M\<n\> must be added to the normative contract's exact oracle
+is banked, **M1–M13 must be added to the normative contract's exact oracle
 inventory (its §4) and to ledger artifact 7's inventory**, the ledger gains an
 artifact row, and the README's document count and table move. Both the L-table
 and the N-table reached the inventory late; this note exists so M does not.
@@ -134,7 +134,7 @@ stated once here rather than repeated in every row.
 | `verification` | **derived** comparison of two runs, immutable | content identity over **(ordered run identities, equivalence-rule identity, comparison-report identity, scope-derivation rule identity, scope, verdict)** — the report's digest is what makes two differently-evidenced verifications two nodes | immutable; superseded by a later verification naming the failure it supersedes; **or** cleared by a standing retraction | reads two runs, the frozen equivalence rule; produces admission input | admission (fail-closed); belief (member 3) | location; alias | world **§4.2**; kernel §3.3; comp §7.3, §7.3b; **G8**, **R4**, **C6** |
 | `dataset` | authored (acquired) or derived (`produces`) | **content identity** (manifest/content hash). Provider identifiers and accessions are **aliases**, never the basis | produced by a run; carries a stamped descendant-side **lineage basis**, tagged `single(route) \| conflict([route])` | read by runs under a role; carries facets, incl. `empirical-observation` | eligibility (held-ness + facet); belief (members 4, 5) | availability in this checkout **while a controlled copy remains held**; facet addition leaves the **address** unchanged (**D2**) | world §4.2; kernel §2.2, §4.1; comp §5.2, §7.1; **R5**, **D2** |
 | `source` | authored record in a corpus | **normalized external identifier** — DOI, PMID, ISBN, accession. A work's identity is issued by the world, not computed by us | authored; `member_of` a dataset (the corpus **is** a dataset) | read by extraction | none directly — only through `source-assertion` | everything in belief | world **§4.2**; kernel §4.1, §4.3 |
-| `retraction` | authored, attributed, immutable | world address; **its identity covers its target's identity** — which is what makes cycles unconstructible | additive: the target stays byte-identical and resolvable. A counter-retraction removes **one** retraction from standing | reads its target; produces a standing subtraction | standing → admission → belief (member 6) | location; alias | correction §3, §4; **C1**, **C6**, **C10** |
+| `retraction` | authored, attributed, immutable | world address; **its identity covers its target's identity** — banked as what makes cycles unconstructible, an argument **ρA9 replaces** | additive: the target stays byte-identical and resolvable. A counter-retraction removes **one** retraction from standing | reads its target; produces a standing subtraction | standing → admission → belief (member 6) | location; alias | correction §3, §4; **C1**, **C6**, **C10** |
 | `instrument-certification` | **content-derived**, no event token — a derived demonstration on the `verification` precedent | content identity over **(contract identity, discriminated subject, implementation content identity, witness evaluations)**; the rule identity inside carries the fixture-set identity | re-deriving unchanged is **idempotent**; a byte-identical re-mint of a retracted certification **stays retracted**. Withdrawal is by **retraction**, corrected by **counter-retraction**; under a **successor cut it is a different record**, so recertification-after-amendment is a new act, never a toggle | certifies executable instruments, never authored lineage claims | rule-binding resolution; verification scope evidence | — | 5b §7.1, §7.2; world §4.2; N-table |
 
 ### 2.2 Relation signatures and relation instances
@@ -427,10 +427,11 @@ narrower statement.
 **`standing`** is defined by structural recursion, not as a least fixpoint: an
 input's standing is subtracted iff at least one **standing** retraction targets
 it, and the operator is **antitone** through that negation. What makes the
-recursion well-founded is banked and structural — *a retraction's identity
-covers its target's identity, so a cycle would require two records each
-containing the other's digest* (correction §4). Unique structural recursion, not
-Knaster–Tarski.
+recursion well-founded is banked as *a retraction's identity covers its target's
+identity, so a cycle would require two records each containing the other's
+digest* (correction §4) — transcribed here as M₀ states it, and **replaced by
+ρA9**, which finds that argument invalid and substitutes an admission-rank
+order. Either way the recursion is unique and structural, not Knaster–Tarski.
 
 **`eligible`** is kernel §4.1's predicate: the assessment's run has at least one
 `observes` input, all inputs are held, and the assessment is `admitted`. `reads`
@@ -450,7 +451,7 @@ recomputation nobody performed" (comp §7.1).
 | **order-independence** | `status : 𝒫(RegistryRecord) → RegistryStatus` — registry status is a function of the record **set**, so no arrival order can appear in it | **X6** — *"assert every status is invariant under record arrival order"*, the implementation oracle for that typing |
 | **observational invariance** | `ω ∼_B ω′ ⟹ B(ω,q) = B(ω′,q)`. Declared inert dimensions: location, alias, display fields, availability-with-a-copy-held | **W5**, **R5**, **G7** (converse half), **D2** |
 | **commitment sensitivity** | a change to a declared semantic projection changes the encoded commitment, up to negligible collision probability | **G3**, **L4**, **D5** |
-| **well-founded recursion** | `standing` terminates by content-address containment | argued correction §4; **no row tests it directly** — C5 tests chain-not-toggle and sibling-awareness |
+| **well-founded recursion** | `standing` terminates | argued correction §4 by content-address containment — an argument **ρA9 invalidates and replaces** with an admission-rank order; **no banked row tests it directly** (C5 tests chain-not-toggle and sibling-awareness), which is why **M3** exists |
 | **fail-closure** | `admission` reduces into an **unordered** three-element codomain under **failure-first precedence** | **G2c**, **G8**, **C6** |
 | **declared limit** | a *negative* row: the system provably **cannot** detect something, tested so the positive half is not over-read | **G4**, **G2a**, **G8** negatives; §8.7 |
 
@@ -688,7 +689,7 @@ readings are where definedness actually enters.
 
 | reading | factors through its commitment | `def` edges | note |
 |---|---|---|---|
-| `standing` | ✅ retractions, counter-retractions, coverage declaration | the target must be an eligible target (**C10**) | recursion well-founded by content-address containment |
+| `standing` | ✅ retractions, counter-retractions, coverage declaration | the target must be an eligible target (**C10**) | recursion well-founded — by content-address containment as banked, by admission rank under ρA9 |
 | `admission` | ✅ active verifications only | none | the fixed active set is the whole dependency |
 | `eligible` | n/a — `eligible` has no commitment of its own | **held-ness of every input** — finding (b) enters here | this is the reading finding (b) is *about*; `B` inherits it |
 
@@ -1314,7 +1315,7 @@ was supposed to fix it. It splits in two:
 
 | | `render(Claim)` | `display_statement` |
 |---|---|---|
-| produced by | a **deterministic function** of the typed form and the consulted vocabulary | **authored** by a human |
+| produced by | a **deterministic function** `render(Claim, Locale)` of the typed form, the consulted vocabulary, and an **explicit** locale — never an ambient one | **authored** by a human |
 | stored | **no** — computed on read | yes, optional, may be absent |
 | authority | derived | authored |
 | in `π_claim` | no | no |
@@ -2044,6 +2045,35 @@ every test that uses facets.
 The mechanism that would make the `NotAvailable` case *recorded* rather than
 merely correct is **not** supplied here; that is ρO2.
 
+**ρA9 — `standing`'s well-foundedness argument is replaced.**
+
+| | |
+|---|---|
+| banked prose | correction §4: *"The recursion is well-founded: a retraction's identity covers its target's identity, so a cycle would require two records each containing the other's digest — **unconstructible**."* |
+| why it fails | it is not a well-foundedness proof. Both identities are **fixed-width digests**, so "covers" establishes no containment order and nothing decreases along a chain. And collision resistance is not a proof that a cycle of digests has no solution — it is a statement about the difficulty of finding one. The banked argument is computational intuition wearing a structural argument's clothes |
+| replaced by | an **admission rank**. C §4's own boundary rule already requires a retraction to target an **already-existing, resolvable eligible record**, so admission gives a strictly increasing order: `rank(target) < rank(retraction)` for every admitted retraction. `standing`'s recursion follows strictly increasing ranks through a finite population, so it terminates |
+| oracle | **M3**, whose sabotage moves off the identity projection and onto the order rule. **C10** (eligible, resolvable target) is preserved and becomes load-bearing for termination, which it was not previously credited with |
+| preserved | the **property** — `standing` terminates, and the antitone operator is a unique structural recursion rather than a fixpoint (§3.3). C5's chain-not-toggle and sibling cases. **WF** |
+| amended | the argument, and C §4's sentence carrying it |
+| invalidated | *"a cycle would require two records each containing the other's digest — unconstructible"* as a proof of anything |
+
+Two consequences worth stating, because the rank is a different kind of object
+from a digest.
+
+**Rank is not in identity and not in belief.** It is an admission-order fact,
+local to a corpus, and the obvious carrier is the mutation log's sequence (L).
+Putting it in `π` anywhere would make identity depend on write order, breaking
+W5's location-invariance and D5's formatting-inertness at once. Termination does
+not need rank to be *stable across* corpora — only to exist within the state
+being evaluated.
+
+**Import needs topological validation.** Admission gives the order for records
+written here; a bundle imported wholesale does not have one unless the import
+enforces it. So an import must admit a retraction's target **before** the
+retraction, and refuse a bundle for which no such order exists. Without that arm
+the rank argument holds for locally authored corpora and silently fails for
+imported ones — which is exactly the shape of failure §8 exists to surface.
+
 ### 8.3 Contract succession — an adopted rule and a bound, not one thing
 
 §7.3a does two different things in one passage, and filing them together would
@@ -2066,13 +2096,26 @@ eventually settles on; an unscoped "every identifier" would have this design
 quietly deciding facet versioning while §8.3's own constraint says that stays
 open.
 
+**`genesis` is an escape hatch, and the honest ruling is to say so.** Nothing
+above stops an author from publishing a *second* contract under the same
+namespace that also declares `genesis`, reusing an operator identifier with a
+different schema and never being compared against anything. The rules enforce
+immutability **within a declared lineage**, not across a namespace.
+
+Closing that would require one of two mechanisms this design does not supply:
+validating a corpus's **pin transition** against its prior pin, so a namespace
+cannot silently jump lineages; or a **namespace/lineage authority** that says
+which contract legitimately succeeds which. Both are governance, not typing.
+**The parallel-genesis case is added to D §12** as part of ρC1, and M6 is worded
+to the guarantee that actually holds.
+
 **ρC1 (constraint) — the broader versioning policy stays open.**
 
 | | |
 |---|---|
 | banked open question | D §12: *"Domain contract versioning policy. What constitutes a breaking change to a facet contract, and whether contract identity being content-derived is sufficient or a declared compatibility range is also needed."* |
 | constraint | the policy must be **compatible with** the four adopted rules above; it may not, for instance, permit a successor to drop a claim-vocabulary declaration or to reuse such an identifier under a different canonical schema projection |
-| what stays open | what counts as a breaking change to a **facet** contract, whether a declared compatibility range is needed, and how ranges interact with 5b's versioning rules. None of that is settled here |
+| what stays open | what counts as a breaking change to a **facet** contract, whether a declared compatibility range is needed, how ranges interact with 5b's versioning rules, and the **parallel-genesis** case — whether preventing a same-namespace lineage fork needs pin-transition validation or a namespace authority. None of that is settled here |
 | status | **open.** ρC1 bounds the answer; it does not supply one |
 
 D §12's own framing — whether content-derived identity is *sufficient* — is
@@ -2156,8 +2199,9 @@ invites the assumption that more moved than did.
 | D §5, D3 | the outcome set refines to five; D3 gains a five-way non-collapsing arm (ρA7) |
 | D §6 | the compiled-registry prose widens: `ProfileSpec` compiles claim schemas alongside the `KindSpec` set (ρA5) |
 | D §8, D6, D limitation 2 | the trigger set widens; D6 gains a claim-schema arm (ρA6) |
-| D §12 | the predicate-vocabulary question is closed (ρA5); the versioning question records ρC1's bound |
-| **M1–M\<n\>** | §9's new rows, plus the §1 banking obligations already recorded |
+| correction §4 | the well-foundedness rationale is replaced by the admission-rank order; C10 gains its termination role (ρA9) |
+| D §12 | the predicate-vocabulary question is closed (ρA5); the versioning question records ρC1's bound, including the **parallel-genesis** case |
+| **M1–M13** | §9's rows, plus the §1 banking obligations already recorded |
 
 **Implementation authorities M\* introduces.** Editing design prose does not
 make two implementations hash a typed claim identically, and none of these
@@ -2207,12 +2251,12 @@ pass on the other's evidence.
 
 | id | guarantee | how it is tested |
 |---|---|---|
-| **M1** | **Undeclared reads are detected, not noticed.** Every value a semantic derivation actually reads is inside its declared input closure | Instrument the derivation so each value read is recorded at read time; assert the recorded read-set is contained in the declared closure, for a corpus exercising every closure member. **Sabotage:** add a code path that reads one value outside the closure — a facet, a contract, a producer set — changing nothing else, and assert the check **fails**. This is the row §1 asks for: G3's own text records four members that "were live holes in earlier revisions," each found by a reviewer noticing, and nothing in that method distinguishes a complete closure from one whose next hole is unnoticed. **Negative:** a run that reads nothing outside the closure must pass without exemptions, or the row is untestable in the ordinary case |
+| **M1** | **Every read that crosses the instrumented resolver is inside the declared closure** | Instrument the resolver so each value read through it is recorded at read time; assert the recorded read-set is contained in the declared closure, for a corpus exercising every closure member. **Sabotage:** add a code path that reads one value outside the closure **through the resolver** — a facet, a contract, a producer set — changing nothing else, and assert the check **fails**. **Scope, and it is a real one (DL):** the row is bounded by the resolver. A read that never crosses it — a module-level constant, an environment lookup, a cached global, a file opened directly — is invisible and passes, so M1 does **not** assert that every undeclared read is detected (limitation 1). Strengthening it to that claim requires an exhaustive capability or sandbox boundary, which this design does not propose. **Why the bounded row is still worth having:** G3's own text records four closure members that "were live holes in earlier revisions," each found by a reviewer noticing. M1 converts the ordinary case from noticing to checking, and names precisely the case it leaves to noticing |
 | **M2** | **Every run input reaches the assessment's carrier identity** | Take an assessment; for each input of its run, **replace that input with a newly minted dataset carrying a different content identity** — inputs are immutable and content-addressed, so the mutation is a substitution, not an edit — and assert the assessment identity **moves** every time. **Sabotage:** attach an input to the run that no declared role partition covers, and assert the attempt is **refused**, not silently ignored. §4.3 finding (a) established that the current path is three hops (the recipe's role-partitioned `inputs` → R2 → assessment identity) and is a **binding** path, not a proven semantic one; this row pins the binding so the fragility is tested rather than argued |
-| **M3** | **`standing` terminates on every input** | Evaluate `standing` over retraction chains of increasing depth, including counter-retractions and several standing retractions of one target; assert termination and a stable value. **Sabotage — attack the argument, not the hashes:** well-foundedness rests on a retraction's identity projection **covering its target's identity**, so containment strictly decreases along the chain. Remove the target identity from that projection and assert the change is **refused** — a projection that no longer covers its target admits a cycle nothing downstream would catch. **Explicitly not the test:** a hand-written cyclic pair is refused because its stored identities disagree with its payloads, which tests identity **recomputation** and says nothing about well-foundedness. Correction §4 argues the property; no banked row tests it |
+| **M3** | **`standing` terminates, because every retraction outranks its target** | Evaluate `standing` over retraction chains of increasing depth, including counter-retractions and several standing retractions of one target; assert termination and a stable value. **Sabotage — the order rule, not the hashes:** admit a retraction whose target does not already exist, or whose admission rank is not strictly greater than its target's, and assert the write is **refused** (C10). Separately, import a bundle whose records cannot be topologically ordered — a retraction and its target mutually preceding each other — and assert the **import is refused**, not admitted in file order. **Explicitly not the test:** a hand-written cyclic pair is refused because its stored identities disagree with its payloads, which tests identity **recomputation** and says nothing about well-foundedness — this is the confusion ρA9 corrects in correction §4's own rationale. **Negative:** rank must appear in **no** identity and **no** digest; move a corpus and re-admit in a different order, and assert every identity and `belief_input_digest` is unchanged |
 | **M4** | **Every argument and restriction is a typed referent; resolved non-membership refuses, and an unperformed check stays explicit** | Decode a claim whose argument term **is** in the sort's bound vocabulary with that vocabulary readable → accepted, outcome `member`. **Sabotage:** decode one whose term is **not** in a readable vocabulary → **refused**, nothing minted. **Negative — availability is not membership:** make the vocabulary unreadable and decode the same bad term → **accepted**, outcome `not-available`, and assert the two accepting receipts are distinguishable. **Receipt completeness:** on every accepting decode, assert the receipt carries **exactly one outcome per referent position** — no position missing, none duplicated — plus the **`ResolutionSnapshot` identity** it resolved against. **Static:** assert a bare string cannot occupy an argument slot at all. **Scope:** the five outcomes' mutual distinctness is **D3**'s, as amended by ρA7, not this row's |
 | **M5** | **Qualification participates in claim identity** | Two claims differing **only** in a restriction identifier → different `I_claim`; differing **only** in quantifier tag → different; one carrying a dimension the other omits → different. Then the founding case end to end: mint kernel §4.1's *"in adults"* claim, assess it, "edit" to *"in all humans"*, and assert a **new** identity, the prior assessment still bound to the old one, and a `supersedes` link. **Sabotage:** drop the qualifier map from `π_claim` and assert the founding case **collapses to one identity** — the row's whole point. **Negative:** re-serialize the qualifier map with keys in a different order and assert the identity is **unchanged** |
-| **M6** | **Operators are issued, retired, and never redefined** | A successor contract changing `arity`, `arg_sorts`, `sign_apt`, `layers` or `dimensions` under an existing identifier → **refused at contract load**. A successor **dropping** a retired declaration → refused. A successor **adding** a new operator → accepted; assert existing **claim identities are unchanged**, and assert **consulted belief digests move**, because the contract identity moved and D6 puts it in the digest. Adding is additive for identity and never for belief, and a row claiming "no existing claim affected" without that second arm would be false. **Retirement, both paths:** assert the authoring constructor **cannot select** a retired identifier (statically), and that decode/restore of a historical claim at that identifier **succeeds** against the frozen declaration. **Sabotage:** flip `sign_apt` on a live operator and assert load fails; remove the declared predecessor link and assert the redefinition check is **unable to run** rather than silently passing. **Negative:** a purely editorial change is accepted, moves the contract identity, and needs no new identifier |
+| **M6** | **Operators are issued, retired, and never redefined within a declared succession** | A successor contract changing `arity`, `arg_sorts`, `sign_apt`, `layers` or `dimensions` under an existing identifier → **refused at contract load**. A successor **dropping** a retired declaration → refused. A successor **adding** a new operator → accepted; assert existing **claim identities are unchanged**, and assert **consulted belief digests move**, because the contract identity moved and D6 puts it in the digest. Adding is additive for identity and never for belief, and a row claiming "no existing claim affected" without that second arm would be false. **Retirement, both paths:** assert the authoring constructor **cannot select** a retired identifier (statically), and that decode/restore of a historical claim at that identifier **succeeds** against the frozen declaration. **Sabotage:** flip `sign_apt` on a live operator and assert load fails; remove the declared predecessor link and assert the redefinition check is **unable to run** rather than silently passing. **Negative:** a purely editorial change is accepted, moves the contract identity, and needs no new identifier. **Declared limit (DL):** a second contract in the same namespace declaring `genesis` and reusing an identifier under a different schema is **not** caught — assert that it loads, and that the gap is the parallel-genesis case recorded in D §12, not a defect in this row |
 | **M7** | **No second authored operator artifact exists** | Assert operator, dimension and sort declarations exist **only** in profile contracts, and every runtime form is compiled from `ProfileSpec`. **Sabotage:** add a hand-authored operator roster beside the contracts and assert it is **refused or unreachable** — never consulted as a parallel source. **Negative:** a grep for operator names is **not** the test and would fail against a conforming tree. The test is a pair of mutations: change a contract's **semantic schema** — an operator's dimension set, say — and assert the compiled schema changes with **no code change**; change only a **description** and assert the compiled schema is **unchanged** while the contract identity moves. D4 does not cover this — it governs per-kind sources, and a claim schema is not a per-kind artifact |
 | **M8** | **Claim identity is independent of contract release and of compilation** | Bump a consulted contract editorially and assert `I_claim` is **unchanged** while `belief_input_digest` **moves** (§7.4 row 1). Recompile `ProfileSpec` — different merge order, different compiler build — and assert `I_claim` is unchanged and `ProfileSpec`'s identity appears in **neither** `π_claim` nor the consulted set. **Sabotage:** fold the contract release into `π_claim` and assert an ontology release now forks every claim, which is the failure this row forbids. **Negative:** bump an **activated but unconsulted** contract and assert both `I_claim` and the digest are unchanged (§7.4 row 3) |
 | **M9** | **`π_claim`'s shape depends on the claim, never on a contract field** | Project a claim at a **sign-inapt** operator; assert the polarity position is **present**, carrying `sign_inapt_tag`. Assert `inapt` and `unsigned` are **distinct byte sequences in the encoding**, asserted **directly against the base contract** rather than inferred from two claim digests — the two tags necessarily occur under **different operators**, so differing digests would prove only that the operators differ. **Sabotage:** omit the position for sign-inapt operators and assert the digest changes — the defect §7.5 corrects, in which a `sign_apt` edit would re-project stored claims. **Negative:** combined with **M6**, an edit that would re-project a stored claim must be **unreachable**, not merely untried |
@@ -2241,15 +2285,17 @@ check and every reader has a reason to re-validate defensively.
 
 ## 10. Limitations
 
-1. **M1 is only as complete as its read-interception boundary.** The row asserts
-   that every value a derivation reads lies inside its declared closure, but it
-   can only see reads that go through the instrumented path. A direct ambient
-   read — a module-level constant, a environment lookup, a cached global, a file
-   opened outside the resolver — is invisible to the check and passes. That is
-   the sabotage that matters most and the one M1 cannot self-administer: the
-   failure is **open**, and it has the same shape as D limitation 2's
-   under-collecting walk, one level up. M1 improves the odds against unnoticed
-   closure holes; it does not convert noticing into proving.
+1. **M1 is bounded by its read-interception boundary, and says so.** M1 asserts
+   containment for reads that cross the instrumented resolver — not for every
+   read. A direct ambient read — a module-level constant, an environment lookup,
+   a cached global, a file opened outside the resolver — never reaches the
+   instrumentation and passes. The failure is **open**, and it has the same shape
+   as D limitation 2's under-collecting walk, one level up. Closing it needs an
+   exhaustive capability or sandbox boundary; until then, M1 converts the
+   ordinary case from noticing to checking and leaves the ambient case to
+   noticing. The scope is written into M1's own text rather than left to this
+   list, because a limitation cannot rescue an oracle that fails its own
+   sabotage.
 2. **An operator's declared schema is authored, not checked.** M6 tests that a
    declaration cannot change; nothing tests that it was right in the first
    place. Whether `affects` really takes a molecular entity and a phenotype, and
@@ -2265,8 +2311,7 @@ check and every reader has a reason to re-validate defensively.
    how much of the real literature the fragment reaches.
 4. **The untypeable-span backlog is unsized.** §6.6 establishes that it exists,
    is distinct from kernel limitation 1's unassessed queue, and is discharged
-   only by extending a vocabulary. Nothing measures how large it would be, and
-   under a nine-term starting vocabulary it is plausibly most of the corpus.
+   only by extending a vocabulary. Nothing measures how large it would be.
 5. **M\* is deep only in the claim neighbourhood.** §1's scope ruling was wide
    M₀ / narrow M\*, so this document can detect a defect in claim typing and
    cannot detect one in, say, verification scope derivation. Absence of findings
@@ -2300,7 +2345,8 @@ check and every reader has a reason to re-validate defensively.
     to, not the shapes of the files.
 12. **Until banked, ρ is a proposal.** §8's amendments have not been applied to
     the nine designs. A reader who takes §8.2 as a description of the banked
-    corpus will be wrong about G3, G7, R5, D3, D5's outcome set and D6's trigger
+    corpus will be wrong about G3, G7, R5, C §4's rationale, D3, D §5's outcome
+    set and D6's trigger
     set — which is exactly the drift this repository's own doc discipline warns
     about, so the status header carries it.
 
@@ -2325,9 +2371,13 @@ check and every reader has a reason to re-validate defensively.
   recording so a later design does not have to rediscover it: **belief
   aggregation across related claims** needs it — without an order, a corpus
   holding a claim about adults and a claim about humans has two unrelated belief
-  states and no way to say the evidence bears on both. The three barriers are
-  named in §6.7, and the population-reversal case is why the intuition itself,
-  not merely its formalization, must be distrusted.
+  states and no way to say whether the evidence could bear on both. **Necessary,
+  not sufficient:** an entailment relation supplies the structure and does not by
+  itself license transferring evidence from one claim to the other; that
+  additionally requires estimand and evidence compatibility, which is a separate
+  question below. The three barriers are named in §6.7, and the
+  population-reversal case is why the intuition itself, not merely its
+  formalization, must be distrusted.
 - **Estimand match (ρO3).** Kernel limitation 5's residue becomes stateable as
   `match(claim_type, estimand_type)` once claims are typed. Whether it is
   definable *from* entailment, or is a related but independent relation, is
@@ -2361,15 +2411,26 @@ check and every reader has a reason to re-validate defensively.
   ontology term.
 - **Where domain-neutral operators live.** §7.1 rules that operators are
   domain-issued without exception and that `subtype-of` and its kin belong to a
-  general-purpose domain contract. Whether that contract is a real domain with a
-  namespace and an owner, or a distinguished one, is unsettled — and it is the
-  one place §7.1's uniform rule feels like a technicality.
+  general-purpose domain contract. **What is open is only its namespace,
+  ownership and distribution.** Whatever it is called, it remains an **ordinary,
+  conditionally consulted domain contract** — it does not become base-adjacent,
+  does not acquire unconditional membership in the consulted set, and does not
+  get to issue anything the base contract owns. Treating it as "distinguished"
+  in any stronger sense would reopen §7.1's uniform rule through the back door,
+  which is precisely why that rule is uniform.
 - **The layer vocabulary's actual contents.** §7.1's
-  `[causal, structural, statistical, methodological]` is illustrative. Kernel
-  §11's largest open question — non-empirical propositions, which have no
-  `observes` input and so cannot produce an assessment — lands directly on which
-  layers exist and which of them belief can reach.
-- **Whether `render(Claim)` is one function or a per-locale family.** §6.5 makes
-  it deterministic and unstored; it does not say deterministic in what language.
-  Since it is identity-inert, this is cheap to defer and cheap to get wrong
-  later only if someone stores the output.
+  `[causal, structural, statistical, methodological]` is illustrative and nothing
+  fixes the real set. **This is not kernel §11's non-empirical question, and the
+  two must not be merged:** a non-empirical proposition is blocked by the
+  `observes` eligibility rule, which reads the assessment's run and not the
+  claim's layer, so no layer vocabulary can make one assessable. Adding a layer
+  changes what a claim can *say*; a second route — proof, derivation, simulation,
+  with its own eligibility predicate and guarantees — is what would change what
+  belief can *reach*. That route stays kernel §11's, unamended here.
+- **Which locales `render` supports.** The **interface is settled here**:
+  `render(Claim, Locale) → String`, with the locale an explicit parameter. An
+  ambient locale would make the function non-deterministic in its arguments —
+  the same defect `decodeClaim` had before `ResolutionSnapshot` became a
+  parameter (§7.2) — and that is a defect whether or not the output is stored.
+  What stays open is only which locales exist and who supplies their
+  vocabulary strings.
