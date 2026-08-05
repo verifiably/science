@@ -1423,6 +1423,12 @@ the predicate vocabulary becomes a domain contract like any other"* — and it
 closes the two halves of kernel limitation 4 that the nine-term roster left
 open: **who owns the vocabulary, and by what rule it extends**.
 
+A third half the roster never had is opened rather than closed. Once arguments
+and restrictions are bound referents instead of strings, binding them acquires
+a lifecycle, and §7.2 finds that lifecycle unspellable under the banked
+correction rules. §7 takes the diagnostic fork deliberately and says so; the
+claim being made is narrower than "limitation 4 is closed."
+
 ### 7.1 The contract split
 
 The vocabulary is a contract like any other, but it does not sit in **one**
@@ -1605,41 +1611,74 @@ what restores determinism: same three inputs, same outcome, anywhere, which is
 the property §3.4's well-definedness law asks of every reading.
 
 **`BindingCheckReceipt`** records, per referent position, which of the five
-outcomes was obtained and under which snapshot identity. It is a **boundary
-receipt** — §2.3 already lists that as one of the four non-node
-identity-bearers, so this needs no new kind. It is emitted on the accepting arm
-only; the refusing arm produces no claim and therefore no receipt.
+outcomes was obtained and under which snapshot identity. It is **not** in claim
+identity: a corpus that happens to hold an ontology must not mint different
+identities from one that does not, which would make `I_claim` depend on what
+bytes are lying around — precisely what §6.5's identifier discipline exists to
+prevent. It is emitted on the accepting arm only; the refusing arm produces no
+claim and therefore no receipt.
 
-The receipt is **not** in claim identity. A corpus that happens to hold an
-ontology must not mint different identities from one that does not — that would
-make `I_claim` depend on what bytes are lying around, which is precisely what
-§6.5's identifier discipline exists to prevent.
+It **reuses the boundary receipt's envelope, and is not the banked artifact.**
+The first draft said "§2.3 already lists that as one of the four non-node
+identity-bearers, so this needs no new kind." That was wrong on three counts
+that matter. §2.3's boundary receipt is **nested inside a run** (comp §4.2,
+§4.4b): it has no independent carrier, no lookup path by which a later process
+could find it, and no `supersedes` lifecycle of its own. This receipt is
+produced while decoding a claim rather than inside a run, and the use it was
+introduced for — a later process finding it and recording that the check has now
+been performed — needs exactly the independent carrier, lookup path and
+succession the banked receipt lacks. Shared envelope, different artifact
+contract, and the difference is what the next subsection has to resolve.
 
-#### The lifecycle of an unchecked binding
+#### The correction path is unspellable under C, and §7 takes the diagnostic fork
 
-An accepted-but-unchecked claim is a standing obligation, and naming the
-obligation without naming its discharge would leave the referent half of
-limitation 4 narrowed rather than closed. Re-resolution under a later snapshot
-has three outcomes, and the banked correction machinery already supplies all
-three:
+The first draft said re-resolution to `not-member` becomes an audit finding and
+"a human retracts." Nothing in the banked corpus permits that sentence. Four
+independent rules block it:
 
-| later outcome | what happens |
+| rule | consequence here |
 |---|---|
-| `member` | the receipt is superseded by one recording a performed check; the claim is untouched, since its identity never depended on the check |
-| still unresolvable | nothing; the obligation stands |
-| `not-member` | an **audit finding** — the claim was minted on an identifier that is not in its vocabulary |
+| eligible targets are exactly the records whose standing a computed view reads — two arms, `node` and `route` (C §4) | a non-node receipt is in neither arm |
+| propositions are **explicitly not retraction-eligible**; their lifecycle is `supersedes` (C §4) | the claim itself cannot be the target |
+| audit mints nothing (5b §7.6) | detection cannot produce the correction |
+| `supersedes` does not apply independently to a nested receipt | the receipt cannot be superseded in place |
 
-The third case is the one with teeth, and two banked rules decide it rather than
-this design. First, the claim is immutable, so the correction is a
-**retraction** with its recursive closure over dependents (C), never an edit.
-Second, **detection is separate from correction**: 5b §7.6's *audit mints
-nothing* applies unchanged, so re-resolution reports and a human retracts. An
-automatic retraction on re-resolution would let an ontology release silently
-withdraw claims, which is the failure mode D6 keeps releases out of identity to
-avoid.
+So the correction, spelled out under the banked rules, would have to be some
+combination of minting a corrected successor proposition, retracting the
+**assessments and semantic snapshots** that carry the belief consequences, and
+resolving the still-open `source-assertion` correction lifecycle (§2.9 (a)).
+That is a lifecycle design, not a clause.
 
-What §7 does **not** settle is when re-resolution runs, or whether an unchecked
-claim may be assessed before its check is performed. Both go to §11.
+There are two clean options, and they are genuinely different designs:
+
+1. **Binding checks stay diagnostic.** The receipt is a decode-time diagnostic
+   with no independent addressing, no discovery path, and no succession. A
+   `not-member` re-resolution is reported to a human, who decides what to do
+   using the existing lifecycles. Persistence and correction remain **open**.
+2. **Binding checks are promoted** to independently addressed records, with
+   identity, a discovery path, succession, standing, and declared belief and
+   eligibility consequences.
+
+**§7 takes option 1, and says why option 2 is not available cheaply.** The
+requirement that produced the question — needing independent supersession and
+correction — *is* D's promotion trigger, the same one that decides when an
+interpretation facet must become an interpretation node. Calling option 2 "no
+new kind" would evade the design's own boundary, in the very document that
+spent §6.4 defending that boundary. Option 2 is a kind with an eligibility
+analysis, and this design's scope rule (§1) says M\* expands only when another
+design question requires it.
+
+**Therefore §7 does not close the referent-binding half of limitation 4.** It
+narrows it: the ownership half is closed (§7.3), the term-identity and extension
+half is closed (§7.3, §7.3a), and referent binding now has a defined check with
+five honest outcomes and a decode boundary that cannot silently fabricate one.
+What remains open is everything after the check — persistence, discovery,
+succession, and the correction path for a claim found to name a term its
+vocabulary does not contain. §11 records it, and records the promotion trigger
+as the condition under which option 2 becomes the answer.
+
+Two smaller questions go to §11 alongside it: when re-resolution runs at all,
+and whether an unchecked claim may be assessed before its check is performed.
 
 ### 7.3 Term identity, and the extension rule
 
