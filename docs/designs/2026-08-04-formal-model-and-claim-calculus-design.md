@@ -1,6 +1,7 @@
 # Formal model and claim calculus — design
 
-**Status:** Draft — §2–§4 written; §5–§11 not yet drafted.
+**Status:** Draft — §2–§4 written and corrected through review round 1;
+§5–§11 not yet drafted.
 
 **Inherits:** the epistemic kernel (G1–G8, §4.1's signatures and semantic
 identity, §8.7's recorded-history limit, limitation 4's predicate vocabulary),
@@ -33,14 +34,16 @@ member's value." Each was found by a reviewer noticing. Nothing in the method
 distinguishes a closure that is complete from one whose next hole has not yet
 been noticed.
 
-The second is that **one stratum was never formalized at all**. On independent
-axes — epistemic role, construction method, identity discipline, lifecycle —
-the label family (`predicate`, `polarity`, `claim_layer`,
-`identification_strength`, `scope`, `verdict`, resolution outcome, standing,
-`MembershipRole`) has *no identity discipline and no construction method*, while
-three of its members are inputs to proposition semantic identity. Kernel
-limitation 4 records the visible corner of this: "The predicate vocabulary is
-currently 9 terms; real claims will not fit cleanly."
+The second is that **part of one family was never formalized**. The system's
+labels are not homogeneous — `verdict` is a result codomain, `scope` a derived
+label, `identification_strength` an ordered measure, `predicate` and
+`claim_layer` semantic vocabulary — and they need different contracts, not one.
+Sorted that way (§2.9 (c)), the codomains and derived labels are adequately
+ruled. **The ordered measures lack their orders, and the semantic vocabulary
+lacks term identity, an extension rule, and an owner** — while `predicate`,
+`polarity` and `claim_layer` are three of the five inputs to proposition
+semantic identity. Kernel limitation 4 records the visible corner: "The
+predicate vocabulary is currently 9 terms; real claims will not fit cleanly."
 
 This document is a two-ended refinement loop, not a transcription:
 
@@ -74,45 +77,118 @@ another design question requires it.
 ## 2. M₀ — the formal inventory
 
 Every player gets a compact entry: **construction** (authored, derived, or
-external), **identity discipline** (the canonical projection πᵢ its commitment
-is taken over), **lifecycle** (the legal transitions), **reads / produces**,
-**readings affected**, **inertness** (the observational equivalences under which
-it does not move), and **banked citations**.
+external), **identities** (the canonical projections πᵢ its commitments are
+taken over — plural, see below), **lifecycle** (the legal transitions),
+**reads / produces**, **readings affected**, **inertness** (the observational
+equivalences under which it does not move), and **banked citations**.
 
-The state space is many-sorted:
+**The object universe is many-sorted; the state space is not the universe.**
 
 ```text
-Ω  =  Rec  ⊎  Proj  ⊎  Ext  ⊎  Art  ⊎  Con  ⊎  Cfg
-      │        │        │       │       │       └─ corpus and world configuration
-      │        │        │       │       └───────── contracts and rules
-      │        │        │       └───────────────── held artifacts (bytes)
-      │        │        └───────────────────────── external referents
-      │        └────────────────────────────────── project-scoped records
-      └─────────────────────────────────────────── world records
+U  =  Rec  ⊎  Proj  ⊎  Ext  ⊎  Art  ⊎  Con  ⊎  Cfg  ⊎  Sub
+      │        │        │       │       │       │       └─ subrecord artifacts
+      │        │        │       │       │       └───────── corpus / world configuration
+      │        │        │       │       └───────────────── contracts and rules
+      │        │        │       └───────────────────────── held artifacts (bytes)
+      │        │        └───────────────────────────────── external referents
+      │        └─────────────────────────────────────────── project-scoped records
+      └──────────────────────────────────────────────────── world records
+
+ω ∈ Ω  =  ⟨ population ⊆ U,  relation instances,  derived maps,  configuration ⟩
 ```
+
+A **configuration** `ω` is a finite population of objects drawn from `U`,
+together with the relation instances among them, the derived maps standing over
+them, and the corpus/world configuration they are addressed under. `U` is what
+exists as a kind of thing; `Ω` is what the system is in at a moment. Conflating
+them is what made the first draft treat `Ω` as a disjoint union.
+
+**Identities are plural per player.** One player bears several commitments that
+move independently, and D2 is the proof: adding a `biology/gene-axis` facet to a
+dataset node leaves the **dataset address** unchanged while moving that node's
+**content identity** and, through it, the **corpus-state identity**. An entry
+whose identity column held one value could not express D2, so the column holds a
+set.
 
 **The sorts are not a partition of concerns.** A `dataset` is a world record
 *and* names held bytes; an `assessment` is a record, a derivation, and the
-subject of several identities. The sorts partition the *carrier*; the axes
-above cut across it, which is why each entry carries all seven fields
-independently.
+subject of several identities. The sorts partition the *carrier*; the axes above
+cut across it, which is why each entry carries all seven fields independently.
 
 ### 2.1 `Rec` — world records (the ten kernel kinds)
 
-| player | construction | identity (πᵢ) | lifecycle | reads / produces | affects | inert under | banked |
-|---|---|---|---|---|---|---|---|
-| `proposition` | authored | **semantic identity** — normalized `statement` + `(subject, predicate, object, polarity, claim_layer)`; immutable for the life of the node. World-unique address | mint → semantic edit **mints a successor** linked by `supersedes`; display edits are ordinary revisions | reads nothing; target of `assesses`, `asserts\|denies\|hypothesizes`, `targets` | belief (closure member 2) | `title` overwrite; location; alias | kernel §4.1; **G7**; world §3, §4 |
-| `source-assertion` | authored or extracted, attributed | world-unique address, derived. **No semantic identity is stated** — gap §2.7 (a) | authored; `anchored_in` a source span | reads `source`; produces nothing derived | none — belief-inert **by type** | everything in belief | kernel §4.1, §4.2; **G1**, **G6** |
-| `assessment` | **derived** — an immutable derived output with no revision path | `(spec, run, proposition)` | minted by derivation; never revised; standing subtractable by `retraction` | reads spec, run, proposition; produces the **assessment facet** | belief (member 1); admission | location; alias; availability-with-copy-held | kernel §4.2.1, §5.1; comp §5.1; **G2b**, **G2c** |
-| `analysis-spec` | authored, frozen pre-run | **spec identity** — the frozen hash | authored → **frozen** (immutable). The freeze also resolves `rule_bindings`, refusing on ambiguity | declares inputs, parameters, nondeterminism contract, interpretation and equivalence rules; `targets` a proposition | eligibility via **G2a**; belief transitively via assessment identity | — | kernel §4.1; comp §4.2a; 5b §6; **G2a** |
-| `run` | executed through the boundary | **run address** over the execution recipe (comp §4.2); moves when **any** recipe member changes | begin is **refused** without an already-frozen spec identity, which is recorded first; recipe frozen pre-execution; result and occurrence recorded after | reads datasets by role (`observes`, `reads`, `transforms`), code, environment, workflow definition, parameters, `rule_bindings`; produces outputs manifest and a **nested** boundary receipt (not a node) | eligibility (≥1 `observes`); belief transitively | availability **in this checkout** while a controlled copy remains held | comp §4.2, §4.2a, §7.1; **R2**, **R5**; kernel **G2a** |
-| `verification` | **derived** comparison of two runs, immutable | world address; basis = `(scope, verdict)` + equivalence-rule hash + differences + the comparison report **inline** | immutable; superseded by a later verification naming the failure it supersedes; **or** cleared by a standing retraction | reads two runs, the frozen equivalence rule; produces admission input | admission (fail-closed); belief (member 3) | location; alias | kernel §3.3; comp §7.3, §7.3b; **G8**, **R4**, **C6** |
-| `dataset` | authored (acquired) or derived (`produces`) | **content identity** over the bytes; world address for the record | produced by a run; carries a stamped descendant-side **lineage basis**, tagged `single(route) \| conflict([route])` | read by runs under a role; carries facets, incl. `empirical-observation` | eligibility (heldness + facet); belief (members 4, 5) | availability in this checkout **while a controlled copy remains held** | kernel §2.2, §4.1; comp §5.2, §7.1; **R5** |
-| `source` | authored record in a corpus | world address | authored; `member_of` a dataset (the corpus **is** a dataset) | read by extraction | none directly — only through `source-assertion` | everything in belief | kernel §4.1, §4.3 |
-| `retraction` | authored, attributed, immutable | world address; **its identity covers its target's identity** — which is what makes cycles unconstructible | additive: the target stays byte-identical and resolvable. A counter-retraction removes **one** retraction from standing | reads its target; produces a standing subtraction | standing → admission → belief (member 6) | location; alias | correction §3, §4; **C1**, **C6** |
-| `instrument-certification` | **content-derived** — no event token, exact-K | content-derived identity; a byte-identical re-mint **stays retracted** | minted from content; withdrawal answered by a superseding verification | certifies executable instruments, never authored lineage claims | rule-binding resolution; verification scope evidence | — | 5b §7.2, §7.5; N-table |
+Each row's **identities** cell lists every commitment the player bears. All ten
+additionally bear a **node-content identity** (moved by any facet or field
+change) and contribute to their corpus's **corpus-state identity**; those two are
+stated once here rather than repeated in every row.
 
-### 2.2 `Proj` — project-scoped records
+| player | construction | identities (πᵢ) | lifecycle | reads / produces | affects | inert under | banked |
+|---|---|---|---|---|---|---|---|
+| `proposition` | authored | **semantic identity** — normalized `statement` + `(subject, predicate, object, polarity, claim_layer)`, immutable for the life of the node; **world address** derived from it | mint → semantic edit **mints a successor** linked by `supersedes`; display edits are ordinary revisions | reads nothing; target of `assesses`, `asserts\|denies\|hypothesizes`, `targets` | belief (closure member 2) | `title` overwrite; location; alias | kernel §4.1; **G7**; world §3, §4.2 |
+| `source-assertion` | authored or extracted, attributed | **content identity over `(source identity, anchored span, stance, proposition identity)`** — the proposition hash alone would collapse forty assertions of P into one node and destroy the discourse counts | authored; `anchored_in` a source span. **Correction/continuity lifecycle unstated** — gap §2.9 (a) | reads `source`; produces nothing derived | none — belief-inert **by type** | everything in belief | world **§4.2**; kernel §4.1, §6; **G1**, **G6** |
+| `assessment` | **derived** — an immutable derived output with no revision path | **`(analysis-spec identity, run identity, proposition identity)`** — a key over the derivation's inputs, not a content hash. `rule_bindings` reaches it through `run` | minted by derivation; never revised; standing subtractable by `retraction` | reads spec, run, proposition; produces the **assessment facet** | belief (member 1); admission | location; alias; availability-with-copy-held | world §4.2; kernel §4.2.1, §5.1; comp §5.1; **G2b**, **G2c** |
+| `analysis-spec` | authored, frozen pre-run | **content identity**, frozen; immutable by construction | authored → **frozen**. The freeze also resolves `rule_bindings`, refusing on ambiguity | declares inputs, parameters, nondeterminism contract, interpretation and equivalence rules; `targets` a proposition | eligibility via **G2a**; belief transitively via assessment identity | — | world §4.2; comp §4.2a; 5b §6; **G2a** |
+| `run` | executed through the boundary | **content identity of the execution closure — recipe + result + occurrence**; the occurrence's minted **event token** is what keeps two identical executions distinct. Moves when **any** closure member changes | begin is **refused** without an already-frozen spec identity, which is recorded first; recipe frozen pre-execution; result and occurrence recorded after | reads datasets by role (`observes`, `reads`, `transforms`), code, environment, workflow definition, parameters, `rule_bindings`; produces outputs manifest and a **nested** boundary receipt | eligibility (≥1 `observes`); belief transitively | availability **in this checkout** while a controlled copy remains held | world **§4.2**; comp §4.1, §4.2, §7.1; **R2**, **R5**; kernel **G2a** |
+| `verification` | **derived** comparison of two runs, immutable | content identity over **(ordered run identities, equivalence-rule identity, comparison-report identity, scope-derivation rule identity, scope, verdict)** — the report's digest is what makes two differently-evidenced verifications two nodes | immutable; superseded by a later verification naming the failure it supersedes; **or** cleared by a standing retraction | reads two runs, the frozen equivalence rule; produces admission input | admission (fail-closed); belief (member 3) | location; alias | world **§4.2**; kernel §3.3; comp §7.3, §7.3b; **G8**, **R4**, **C6** |
+| `dataset` | authored (acquired) or derived (`produces`) | **content identity** (manifest/content hash). Provider identifiers and accessions are **aliases**, never the basis | produced by a run; carries a stamped descendant-side **lineage basis**, tagged `single(route) \| conflict([route])` | read by runs under a role; carries facets, incl. `empirical-observation` | eligibility (held-ness + facet); belief (members 4, 5) | availability in this checkout **while a controlled copy remains held**; facet addition leaves the **address** unchanged (**D2**) | world §4.2; kernel §2.2, §4.1; comp §5.2, §7.1; **R5**, **D2** |
+| `source` | authored record in a corpus | **normalized external identifier** — DOI, PMID, ISBN, accession. A work's identity is issued by the world, not computed by us | authored; `member_of` a dataset (the corpus **is** a dataset) | read by extraction | none directly — only through `source-assertion` | everything in belief | world **§4.2**; kernel §4.1, §4.3 |
+| `retraction` | authored, attributed, immutable | world address; **its identity covers its target's identity** — which is what makes cycles unconstructible | additive: the target stays byte-identical and resolvable. A counter-retraction removes **one** retraction from standing | reads its target; produces a standing subtraction | standing → admission → belief (member 6) | location; alias | correction §3, §4; **C1**, **C6**, **C10** |
+| `instrument-certification` | **content-derived**, no event token — a derived demonstration on the `verification` precedent | content identity over **(contract identity, discriminated subject, implementation content identity, witness evaluations)**; the rule identity inside carries the fixture-set identity | re-deriving unchanged is **idempotent**; a byte-identical re-mint of a retracted certification **stays retracted**. Withdrawal is by **retraction**, corrected by **counter-retraction**; under a **successor cut it is a different record**, so recertification-after-amendment is a new act, never a toggle | certifies executable instruments, never authored lineage claims | rule-binding resolution; verification scope evidence | — | 5b §7.1, §7.2; world §4.2; N-table |
+
+### 2.2 Relation signatures and relation instances
+
+Relations are not a sort of object; they are the edges of a configuration. Two
+things must be inventoried separately, because they bear different disciplines.
+
+A **relation signature** is a closed predicate over kinds, owned by `science` and
+never redefined by a domain. The kernel's signatures:
+
+```text
+SourceAssertion ──asserts | denies | hypothesizes──▶ Proposition
+Assessment  ──assesses──▶ Proposition          (the only belief-bearing edge)
+AnalysisSpec──targets────▶ Proposition
+Assessment  ──produced_by──▶ Run
+Verification──verifies───▶ Assessment          (also ──replays──▶ Run ×2)
+Run         ──executes───▶ AnalysisSpec
+Run         ──observes───▶ Dataset             (empirical-observation facet required)
+Run         ──reads──────▶ Dataset             (confers no eligibility, in any quantity)
+Run         ──transforms─▶ Dataset             (lineage input; confers no eligibility)
+Run         ──produces───▶ Dataset
+SourceAssertion──anchored_in──▶ Source         (span-level)
+Source      ──member_of──▶ Dataset             (the corpus is a dataset)
+*           ──supersedes──▶ *                  (same-kind succession)
+```
+
+`derived_from` is a **view** over `produces ∘ transforms` and is never a stored
+edge — a distinction M₀ must keep, because a view has no instance identity.
+
+A **relation instance** is identified by *the source node's live id, the position
+of the relation in that node's stored list, the predicate, and the unresolved
+target* (substrate §5). The position is load-bearing: a shape carrying
+`(predicate, target)` alone cannot say **whose** edge dangled. Predicate matching
+on relation instances is **exact string equality** over a free string — which is
+a different object from the proposition's `predicate` field, and §2.9 (d) records
+the collision.
+
+| player | construction | identities | affects | banked |
+|---|---|---|---|---|
+| relation signature | authored, in the science base contract | contract identity of the contract declaring it | eligibility; every closure; what is spellable at all | kernel §4.1; D §3.2, §8 |
+| relation instance | authored | `(source live id, position, predicate, unresolved target)`; the **resolution** is recorded separately from the stored ref | lineage; belief member 5 | substrate §5; comp §5.1 |
+
+### 2.3 `Sub` — identity-bearing artifacts that are not nodes
+
+Three artifacts carry commitments, enter identities, and are **not** nodes. They
+were absent from the first draft, which is why the inventory could not express
+what a comparison report does.
+
+| player | construction | identity | why not a node | banked |
+|---|---|---|---|---|
+| **boundary receipt** | constructed by the boundary | receipt identity; **nested inside the run**, never a node | a receipt names its inputs and holds none of them | comp §4.2, §4.4b; world §5 |
+| **comparison report** | derived | **comparison-report identity** — a member of `verification`'s basis. Embeds boundary receipts, conformance results and certification evidence **inline** | the evidence must make two differently-evidenced verifications two nodes; a reference would let it drift | comp §7.3b; 5b §6, §7.6; world §4.2 |
+| **lineage basis** | stamped descendant-side at production | tagged `single(route) \| conflict([route])`, the **tag inside the digest** | a durable descendant-side record, not an edge, so deleting the producing run leaves the loss **detectable** | comp §5.2; kernel §5.1 |
+| **facet** | authored or derived, per contract | canonical facet digest; keyed to its carrier in belief member 1 | facets stay facets until the promotion trigger — no API retracts, supersedes, or attributes one | D §4, **D10**; kernel §5.1 |
+
+### 2.4 `Proj` — project-scoped records
 
 | player | construction | identity | affects | banked |
 |---|---|---|---|---|
@@ -123,7 +199,7 @@ independently.
 These need no world identity, so they need no migration. That is a banked
 consequence, not an omission.
 
-### 2.3 `Ext` — external referents
+### 2.5 `Ext` — external referents
 
 | player | construction | identity | affects | banked |
 |---|---|---|---|---|
@@ -131,9 +207,9 @@ consequence, not an omission.
 
 **`term` is the only sort member living outside the world's identity space**,
 and proposition `subject`/`object` are today bare strings that do not reference
-it. Gap §2.7 (b).
+it. Gap §2.9 (b).
 
-### 2.4 `Art` — held artifacts
+### 2.6 `Art` — held artifacts
 
 | player | identity | notes | banked |
 |---|---|---|---|
@@ -143,7 +219,7 @@ it. Gap §2.7 (b).
 | workflow definition | `workflow_definition_identity` over the snapshot | recipe member; declared pre-execution | comp §4.2, §6 |
 | rule fixtures | **fixture-set identity** | half of rule identity | 5b §6 |
 
-### 2.5 `Con` — contracts and rules
+### 2.7 `Con` — contracts and rules
 
 | player | construction | identity | affects | banked |
 |---|---|---|---|---|
@@ -157,7 +233,7 @@ it. Gap §2.7 (b).
 | **belief policy version** | authored | version | the aggregation rule itself (closure member 7) | kernel §5.1 |
 | normative contract **cut** | derived | cut identity over normative rows + executable case identities — **never** the digest the cut produces | discovery from explicit cut + epoch | 5b §4, §5, §9 |
 
-### 2.6 `Cfg` — corpus and world configuration
+### 2.8 `Cfg` — corpus and world configuration
 
 | player | construction | identity | affects | banked |
 |---|---|---|---|---|
@@ -169,30 +245,49 @@ it. Gap §2.7 (b).
 | **producer snapshot** | derived | **semantic identity** = producers map + the stable `corpus_id`s of covered corpora | a **required argument** to belief with no default, no implicit "latest", no stored selector — any of those would make belief follow the checkout | kernel §5.1; world §5 |
 | log heads / anchors | appended | per-engine-root hash chains at a reserved in-corpus path | subject-bound anchors; five-step verification under an explicit selected subject | L-design; **L1–L13** |
 
-### 2.7 Gaps found while transcribing
+### 2.9 Gaps found while transcribing
 
 Recorded here rather than repaired; repair is ρ's job and only inside the claim
 neighbourhood.
 
-**(a) `source-assertion` has no stated semantic identity.** It has a world
-address, and `proposition` has an identity discipline that survives semantic
-edit. Nothing states what happens when a source-assertion's *content* is edited
-— whether an extraction rerun that changes the asserted span or stance mints a
-successor or revises in place. Since extraction is a fallible computation with a
-measured 25–40% field-level disagreement rate (kernel limitation 3), this is not
-hypothetical.
+**(a) `source-assertion` has an identity basis but no correction lifecycle.**
+World §4.2 rules the basis — a hash over `(source identity, anchored span,
+stance, proposition identity)` — so the first draft's claim that it had none was
+wrong. The gap is downstream of that: because the span and the stance are *in*
+the basis, an extraction rerun that shifts either **produces a different node**,
+and nothing states whether the earlier one is superseded, retracted, or left
+standing beside its replacement. Since extraction is a fallible computation with
+a measured 25–40% field-level disagreement rate (kernel limitation 3), a corpus
+re-extracted twice yields two populations of assertion nodes with no declared
+relation between them, and the discourse counts §6 of the kernel computes are
+counts over that population.
 
 **(b) `subject` and `object` are bare strings while `term` exists.** The
 referent side of every claim is unbound, and `term` is scoped *external*, so
 binding it means proposition semantic identity would depend on an identifier
 minted outside the world. This is the first thing M\* must resolve.
 
-**(c) The label family has no construction method and no identity discipline.**
-Nine enumerations, four different contract kinds needed (semantic vocabulary,
-result codomain, ordered measure, structural), none supplied.
-`identification_strength` is the sharpest: its own definition places five values
-on a continuum and one off it, so it is not totally ordered, and nothing states
-what the order is.
+**(c) The label family is heterogeneous, and only two of its four classes are
+defective.** The first draft's blanket claim — that the family has no
+construction method and no identity discipline — is false, and the correction
+matters because it changes what M\* owes.
+
+| class | members | construction | verdict |
+|---|---|---|---|
+| **result codomain** | `verdict`, resolution outcome (`not-present` / `not-available` / `unknown`), standing | ruled: `verdict` is the equivalence rule's codomain (comp §7.2); the three resolution outcomes are ruled distinct and non-collapsible (D §5); standing is defined by recursion (correction §4) | **adequate** |
+| **derived label** | `scope`, divergence state | ruled: `scope` is **derived** from how two runs' recipes relate, never authored, with `not-certified` as the floor (comp §7.3, **R4**); divergence is computed, never authored (**G5**) | **adequate as construction** |
+| **ordered measure** | `identification_strength`; `scope` wherever it is *compared* rather than matched | **defective** — no order is defined. `identification_strength`'s own definition places five values on a continuum and one (`analogical`) off it, so it is not totally ordered; and admission tests `scope` for equality with `clean-environment`, so nothing yet needs an order the design does not supply | **defective** |
+| **semantic vocabulary** | `predicate`, `claim_layer`; `polarity` as currently coupled | **defective** — no term identity, no extension rule, no owner, and three of these feed proposition semantic identity. `polarity`'s admissible values are gated by a hard-coded three-element roster over `predicate` | **defective** |
+
+So the finding is not "the labels are unformalized" but: **result codomains and
+derived labels have adequate contracts; ordered measures lack their orders; and
+semantic vocabulary lacks everything.** M\* owes the last two.
+
+**(d) `predicate` names two unrelated objects.** The relation instance's
+`predicate` is a free string matched by exact equality (substrate §5); the
+proposition's `predicate` is a semantic-vocabulary term inside an identity hash.
+They share a word, a field name, and nothing else. M\* must not let the term
+contract leak onto edges.
 
 ## 3. M₀ — the system-wide model
 
@@ -213,7 +308,17 @@ collision-resistance assumption, and M₀ states it that way.
 
 ### 3.2 Transitions
 
-`ω →ᵃ ω′`, where refusal is a **value**, not an exception:
+Refusal is a **value**, so the transition is a function into a sum, not a
+relation between configurations:
+
+```text
+step : Ω × Action  →  Ω  +  Refused
+```
+
+A relation `ω →ᵃ ω′` cannot simultaneously make refusal a value, because a
+refused act has no `ω′` to relate to — the first draft wrote both and meant only
+this one. `Refused` carries the reason; nothing in `Ω` records that an act was
+attempted unless a record makes it so, which is §8.7's territory.
 
 | transition | precondition | banked |
 |---|---|---|
@@ -237,11 +342,38 @@ does not have.
 ### 3.3 The four readings
 
 ```text
-standing   : Ω × Rec        → { standing, subtracted }
-admission  : Ω × Assessment → { not-admitted, invalidated, admitted }
+standing   : Ω × Target       → { standing, subtracted }
+admission  : Ω × Assessment   → Adm
 eligible   : Ω × AssessesEdge → Bool
-B          : Ω × Q          → Belief  +  NotAvailable  +  Refused
+B          : Ω × Q            → Belief  +  NotAvailable  +  Refused
 ```
+
+`Target` is **not** all of `Rec`. Retraction targets are the eligible node and
+route targets only: a retraction naming a note, or a proposition, is
+**unspellable through the boundary** (**C10**). Typing `standing` over `Rec`
+would make ill-formed targets expressible and then require a validator to
+reject them — defensive where the type should refuse.
+
+**`admission`** is an explicit reduction, and the three-element order it reduces
+into must be defined before it can be named:
+
+```text
+Adm  =  { not-admitted  <  invalidated  <  admitted }   — as an order of standing,
+                                                          but the reduction is not a join
+
+admission(ω, a)  =  let V = active verifications of a in ω               (§3.3 lifecycle)
+                    if  V = ∅                                  → not-admitted
+                    if  ∃v ∈ V.  verdict(v) = failed           → invalidated
+                    if  ∃v ∈ V.  verdict(v) = passed
+                        ∧ scope(v) = clean-environment          → admitted
+                    otherwise                                   → not-admitted
+```
+
+`failed` is **absorbing**: a passing sibling never clears an active failure
+(**G2c**). The reduction is over the **fixed set of active verifications**, so
+it is a function of that set and nothing wider; it is *not* monotone over
+record-set inclusion once retractions and counter-retractions exist, and M₀
+claims only the narrower statement.
 
 **`standing`** is defined by structural recursion, not as a least fixpoint: an
 input's standing is subtracted iff at least one **standing** retraction targets
@@ -250,13 +382,6 @@ recursion well-founded is banked and structural — *a retraction's identity
 covers its target's identity, so a cycle would require two records each
 containing the other's digest* (correction §4). Unique structural recursion, not
 Knaster–Tarski.
-
-**`admission`** is a reduction over the **fixed set of active verifications**
-attached to an assessment, into a three-element order with `failed` absorbing:
-none → `not-admitted`; any active `failed` → `invalidated` regardless of passing
-siblings; ≥1 active `passed` at `clean-environment` with no active `failed` →
-`admitted`. It is **not** monotone over record-set inclusion once retractions and
-counter-retractions exist; the lattice statement is the narrower, defensible one.
 
 **`eligible`** is kernel §4.1's predicate: the assessment's run has at least one
 `observes` input, all inputs are held, and the assessment is `admitted`. `reads`
@@ -272,23 +397,42 @@ recomputation nobody performed" (comp §7.1).
 
 | law | statement | tested by |
 |---|---|---|
-| **well-definedness / order-independence** | each reading is a function of the record set, hence independent of arrival order | argued packaging §4; **no row tests it directly** — X4 tests append-only, X6 tests status terminality |
+| **well-definedness** | each reading is a *function* of the configuration — one value, no ambient input | **G3** (recompute from the named closure alone; assert identity) |
+| **order-independence** | the reduction from a history of acts to a configuration forgets order: two populations holding the same records agree on every reading | **X6** — *"assert every status is invariant under record arrival order"* — for **registry statuses only** |
 | **observational invariance** | `ω ∼_B ω′ ⟹ B(ω,q) = B(ω′,q)`. Declared inert dimensions: location, alias, display fields, availability-with-a-copy-held | **W5**, **R5**, **G7** (converse half), **D2** |
 | **commitment sensitivity** | a change to a declared semantic projection changes the encoded commitment, up to negligible collision probability | **G3**, **L4**, **D5** |
 | **well-founded recursion** | `standing` terminates by content-address containment | argued correction §4; **no row tests it directly** — C5 tests chain-not-toggle and sibling-awareness |
 | **fail-closure** | `admission` reduces into a three-element order with `failed` absorbing | **G2c**, **G8**, **C6** |
 | **declared limit** | a *negative* row: the system provably **cannot** detect something, tested so the positive half is not over-read | **G4**, **G2a**, **G8** negatives; §8.7 |
 
-**Two laws are argued in prose and tested by no row.** Order-independence is
-what packaging §4's conclusion rests on — *"two registry copies that hold the
-same records agree on every status regardless of arrival order"* — and
-well-foundedness is what makes `standing` a definition at all. Both are load-
-bearing, neither is an oracle. They are the first candidate M-rows, and finding
-them took only the act of naming the laws separately from the rows; §5's
-classification pass is the systematic version of the same move.
+**Order-independence is only a real law once histories are modeled.** As `Ω` is
+defined in §2, a configuration already forgets how it was reached, so
+"independent of arrival order" is *tautological* — there is no order in the
+object to be independent of. The law has content only over a **history and its
+state-reduction function**:
 
-The **declared-limit** class is why the taxonomy needs six entries rather than
-five. G4's row does not assert a property of the system; it asserts that
+```text
+reduce : Act*  →  Ω  +  Refused        order-independence:  reduce(h) = reduce(perm(h))
+                                       for every permutation perm admissible under
+                                       each act's preconditions
+```
+
+The permutation qualifier is not decoration: `admit` refuses a duplicate
+`corpus_id` and `begin` refuses without a frozen spec, so not every reordering
+is a legal history, and the law quantifies only over those that are. X6 tests
+exactly this for registry statuses, where arrival is modeled. **M₀ does not model
+histories elsewhere**, so order-independence is currently stated and tested for
+the registry and asserted nowhere else — which is the honest position, not a gap.
+
+**Well-foundedness is argued in prose and tested by no row.** It is what makes
+`standing` a definition rather than a description, and correction §4 argues it
+structurally by content-address containment. C5 tests chain-not-toggle and
+sibling-awareness — behaviour *given* that the recursion terminates — not
+termination itself. That is a candidate M-row, and finding it took only the act
+of naming the laws separately from the rows.
+
+The **declared-limit** class is why the taxonomy needs seven entries rather than
+six. G4's row does not assert a property of the system; it asserts that
 discarding a failed replay attempt is undetectable, and tests that the system
 cannot detect it. Classified as well-definedness or invariance it would be
 misfiled; dropped, §8.7's recorded-history limit would lose its carrier.
@@ -300,7 +444,7 @@ the conclusion the sentence draws (two registry copies with the same records
 agree regardless of arrival order) follows from each predicate being a *function
 of the record set*, which is what M₀ states.
 
-## 4. The dependency graph and the closure check
+## 4. The typed dependency graph and the soundness check
 
 ### 4.1 Two graphs, and only one is well-founded
 
@@ -315,96 +459,130 @@ by content-address containment (§3.3). M₀ therefore records the well-foundedn
 recursion at the type level and no banked argument at the instance level is a
 gap; none was found in the four readings.
 
-### 4.2 What the check can and cannot establish
+### 4.2 One dependency relation is three
 
-Writing `Dep₀` for the dependency relation declared by the §2 entries and
-`Closure(r)` for a reading's declared closure:
+A single `Dep₀` conflates three edges that answer different questions, and the
+first draft's check was unsound for exactly that reason — it compared a mixed
+edge set against a digest and concluded about belief.
 
 ```text
-completeness   Dep₀*(r) ⊆ Closure(r)     every declared dependency is committed
-minimality     Closure(r) ⊆ Dep₀*(r)     every committed member is a dependency
-together                    equality
+x →ˢᵉᵐ r     semantic read   — x's value participates in computing r's value
+x →ᵇⁱⁿᵈ r    binding         — x's identity is committed in r's digest
+x →ᵈᵉᶠ r     definedness     — x's state determines whether r is defined at all
 ```
 
-**The bound, stated plainly: a dependency omitted from both `Dep₀` and
-`Closure` is invisible to this check.** It is a consistency check between two
-declarations, not a proof about executed code. Closing that gap needs a
-different instrument, recorded here as an M obligation: an **undeclared-read
-oracle** that instruments a derivation to read an input it did not declare and
-requires conformance to fail.
+They are independent. An input can be `sem` without `bind` (read but
+uncommitted — the defect class G3 exists to forbid), `bind` without `sem`
+(committed but unread — over-commitment: harmless to soundness, noisy to
+recomputation), and `def` without either.
 
-### 4.3 Running the check on `B`
+The two properties worth checking are therefore **not** completeness and
+minimality of one relation, but:
 
-`Closure(B)` is G3's eight members (kernel §5.1). `Dep₀*(B)` is what §2's
-entries declare, transitively.
+```text
+soundness     sem  ⊆  bind            anything that can change the value moves the digest
+economy       bind ⊆  sem ∪ def       nothing is committed that cannot matter
+```
 
-| declared dependency | reaches which closure member | verdict |
+**Soundness is what G3 actually asserts.** "Recompute from the named closure
+alone; assert identity" is false exactly when some `sem` edge is not a `bind`
+edge. Economy is the minimality claim, and it is the weaker of the two: a
+violation is over-commitment, which costs recomputation churn rather than
+correctness.
+
+**The bound, stated plainly: an edge omitted from both the declarations and the
+closure is invisible to this check.** It is a consistency check between two
+declarations, not a proof about executed code — a derivation that reads an input
+nobody declared satisfies every check here. Closing that gap needs a different
+instrument, recorded as an M obligation: an **undeclared-read oracle** that
+instruments a derivation to read an input it did not declare and requires
+conformance to fail.
+
+### 4.3 Running the soundness check on `B`
+
+`bind(B)` is G3's eight members (kernel §5.1). `sem(B)` is what §2's entries
+read, transitively.
+
+| `sem` edge into `B` | `bind` member it reaches | soundness |
 |---|---|---|
-| assessment facet values, bound to the assessment carrying them | 1 — keyed assessment facets | ✅ |
+| assessment facet values, keyed to their carrier | 1 — keyed assessment facets | ✅ |
 | what is believed | 2 — proposition semantic identities | ✅ |
-| admission ← active verifications `(scope, verdict, supersession state)` | 3 | ✅ |
-| eligibility ← `observes` bytes | 4 — `observes` content identities | ✅ |
-| independence ← ancestry | 5 — lineage snapshot | ✅ |
-| standing ← retractions + coverage declaration | 6 — retraction enumeration | ✅ |
+| active verifications `(scope, verdict, supersession state)` → admission | 3 | ✅ |
+| `observes` bytes | 4 — `observes` content identities | ✅ |
+| ancestry → independence | 5 — lineage snapshot | ✅ |
+| retractions + coverage declaration → standing | 6 — retraction enumeration | ✅ |
 | the aggregation rule | 7 — belief policy version | ✅ |
-| interpretation ← consulted contracts | 8 — profile contracts | ✅ |
-| **`reads` inputs** — ontologies, literature corpora, reference graphs, simulator configuration | **1, transitively** | ⚠️ finding (a) |
-| **held-ness of `observes` inputs** | **nothing** | ⚠️ finding (b) |
+| consulted contracts → interpretation | 8 — profile contracts | ✅ |
+| **every non-`observes` run input** — ontologies, literature corpora, reference graphs, simulator configuration | **1, by a three-hop path** | ✅ but fragile — finding (a) |
+| **held-ness of every input** | **nothing** | ⚠️ unresolved — finding (b) |
 
-**Minimality holds:** each of the eight is reached by a declared dependency, so
-no member is committed without being depended on.
+**Economy is not established.** The first draft claimed minimality on the
+grounds that each of the eight members is reached by some declared dependency.
+That argument compared the wrong objects: it showed `bind ⊆ sem` using an
+untyped edge relation, before `sem`, `bind` and `def` were distinguished at all.
+Establishing `bind ⊆ sem ∪ def` requires each §2 entry to *type* its outgoing
+edges, which this draft does not yet do. Recorded as remaining work, not as a
+result.
 
-**Finding (a) — a complete but undeclared transitive path.** A run's `reads`
-inputs *do* reach the digest, by three hops that no design states together:
-`inputs` is a recipe member carrying `(role, dataset address, content identity,
-exclusion certification?)` for **every** role including `reads` (comp §4.2); a
-run's address moves when any recipe member changes (**R2**); an assessment's
-identity is `(spec, run, proposition)`, and member 1 keys facets by assessment
-identity (kernel §5.1). So swapping the ontology a run read moves the digest.
+**Finding (a) — sound, but by a path nothing declares.** A run's non-`observes`
+inputs *do* reach the digest, by three hops no design states together: `inputs`
+is a recipe member carrying `(role, dataset address, content identity, exclusion
+certification?)` for **every** role (comp §4.2); a run's identity moves when any
+closure member changes (**R2**); an assessment's identity is `(spec, run,
+proposition)`, and member 1 keys facets by assessment identity (kernel §5.1). So
+swapping the ontology a run read moves the digest, and `sem ⊆ bind` holds here.
 
-The check therefore returns **complete**, but the completeness is **fragile**:
-it rests entirely on `inputs` being role-partitioned rather than
-`observes`-only, and nothing near G3 says so. Narrowing that recipe member — an
-edit that would look local and reasonable — would silently break G3 without
-touching G3's row, its mutation test, or any text that mentions belief. This is
-exactly the class of defect the dependency graph exists to expose, and it is a
-candidate M-row: *every input a run reads is in belief's transitive closure, and
-the path runs through the recipe.*
+The soundness is nonetheless **fragile**: it rests entirely on that recipe
+member being role-partitioned rather than `observes`-only, and nothing near G3
+says so. Narrowing it — a local, reasonable-looking edit — would break G3
+without touching G3's row, its mutation test, or any text mentioning belief.
+Candidate M-row: *every input a run reads is in belief's `bind` closure, and the
+path runs through the recipe.*
 
-**Finding (b) — a real incompleteness, already known and correctly reasoned.**
-Held-ness is in `Dep₀*(B)` — `eligible` requires all inputs held, and destroying
-the last held copy makes admission change (comp §7.1's three-case table). It is
-in no closure member: the `observes` **content identity** is a recorded string
-that does not move when the bytes cease to exist, and no other member moves
-either. So two states differing in whether the last copy survives can share a
-`belief_input_digest` while yielding different belief.
+**Finding (b) — a genuine choice point, not a transcription.** Held-ness is a
+dependency of `B`; the question the first draft never asked is **which edge type
+it is**, and the two answers are incompatible.
 
-The designs know this. Comp §7.1 states that making that case computable *"would
-require a separately published belief-input snapshot carrying the digest members
-of kernel §5.1 — which the world index deliberately does not contain,"* and §13
-records it as open. The gap is deliberate and reasoned: a digest cannot contain
-a member the holder cannot compute, and held-ness is a world-wide property.
+First, a scope correction: kernel §4.1's predicate requires that **all** inputs
+are held, not only `observes` ones. Destroying the last held copy of an ontology
+a run `reads` therefore has the same standing as destroying an `observes`
+dataset. The first draft scoped this to `observes` and was wrong.
 
-What M₀ adds is the **precise qualifier that G3's row currently lacks**. G3
-reads "every belief state names its complete transitive input closure" and its
-test asserts recomputation identity. The claim that actually holds is:
+| reading | consequence |
+|---|---|
+| held-ness is a **`sem`** edge — losing it yields a *different belief value* | `sem ⊆ bind` **fails**: two states differing in whether the last copy survives share a `belief_input_digest` and yield different belief. That is a G3 violation, not a qualifier on G3 |
+| held-ness is a **`def`** edge — losing it makes `B` *undefined* | `B` is partial. The guarantee becomes: **whenever `B` returns a belief, that belief's commitment is complete** — `B(ω,q)↓ ⟹ bind(B) determines it`. Soundness survives, and `NotAvailable` is the honest result |
 
-> G3's completeness is relative to the **locally computable** dependencies of
-> `B`. Held-ness is a world property outside that set, and belief can therefore
-> move without the digest moving in exactly one case: the destruction of the last
-> held copy of an `observes` input.
+The first draft chose neither and wrote "G3's completeness is relative to the
+locally computable dependencies of `B`". **That formulation is withdrawn.**
+Locality is a property of a *holder*, not of the dependency relation; letting it
+qualify the relation means the same system has different dependencies at
+different checkouts, which makes the model unstable exactly where it must not be.
 
-That qualifier is a candidate amendment to G3's row rather than a new
-guarantee — it narrows a claim to what is true, which is what §8.7 already does
-for the recorded-history limit, and it classifies as **declared-limit**.
+**Recommendation for ρ: `def`, made computable by recording the loss.** Held-ness
+becomes a `def` edge, so `B` returns `NotAvailable` rather than a silently
+different belief. The reason this is not merely relabelling the problem is that
+the `def` reading admits a repair the `sem` reading does not: **make the loss of
+the last held copy a recorded act.** A record is in the configuration, enters the
+closure as an ordinary `bind` member, and the digest moves — the general shape
+this system already uses everywhere else. The unrecorded case then falls exactly
+where every other unrecorded act falls, under §8.7's recorded-history limit,
+classified **declared-limit**.
+
+This is a revision, not a transcription: comp §7.1's second row currently reads
+`sem` — *"eligibility fails and admission **changes**"* — so adopting `def`
+amends it. Held for §8 (ρ), with the guarantees it touches named there.
 
 ### 4.4 The other three readings
 
-| reading | completeness | minimality | note |
+Reported on the same typed basis. `def` columns are stated because two of these
+readings are where definedness actually enters.
+
+| reading | `sem ⊆ bind` | `def` edges | note |
 |---|---|---|---|
-| `standing` | ✅ retractions, counter-retractions, coverage declaration | ✅ | recursion well-founded by content-address containment |
-| `admission` | ✅ active verifications only | ✅ | the fixed active set is the whole dependency |
-| `eligible` | ⚠️ inherits finding (b) — held-ness | ✅ | `eligible` is where held-ness enters, and it has no commitment of its own |
+| `standing` | ✅ retractions, counter-retractions, coverage declaration | the target must be an eligible target (**C10**) | recursion well-founded by content-address containment |
+| `admission` | ✅ active verifications only | none | the fixed active set is the whole dependency |
+| `eligible` | n/a — `eligible` has no commitment of its own | **held-ness of every input** — finding (b) enters here | this is the reading finding (b) is *about*; `B` inherits it |
 
 ## 5. Guarantee classification
 
