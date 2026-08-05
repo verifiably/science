@@ -129,15 +129,35 @@ non-atomic record · **K** wrong epistemic kind.
 > sum to it**, and no percentage may be computed by dividing one column by the
 > total. The only partition in this section is the verdict column.
 
-| verdict | n | share |
-|---|---|---|
-| **T** — types given bound vocabulary | 5 | 19% |
-| **T-split** — types after decomposition | 1 | 4% |
-| **R** — refused | 21 | 78% |
+| verdict | n |
+|---|---|
+| **T** — types given bound vocabulary | 5 |
+| **T-split** — types after decomposition | 1 |
+| **R** — refused | 21 |
 
-So **6 of 27 (22%)** are reachable without extending the claim grammar or
-re-homing the record to another kernel kind; the flat fragment refuses the other
-21.
+> **"6 of 27" is a reproduction yield, not claim-calculus coverage, and it is
+> not final.** The 27 are records *labelled* propositions by the legacy system.
+> Re-homing one onto another kernel kind **removes it from the proposition
+> denominator**; it does not thereby become a successfully typed claim, and it
+> is not a failure of the calculus either. Reporting 6/27 as "coverage"
+> conflates two different measurements, and an earlier draft did exactly that.
+
+Two figures, reported separately, with different denominators and different
+pending inputs:
+
+| figure | denominator | value | pending on |
+|---|---|---|---|
+| **reproduction yield** — legacy records that reproduce as at least one well-formed record of the new system | all **27** legacy proposition-labelled records | **6 determined-successful**, 10 blocked on grammar, **11 undetermined** | the §2.4 re-homing adjudication. Until it runs, no single fraction is honest — the yield is *6 of 27 with 11 undetermined*, never 22% |
+| **expressiveness** — typed-claim coverage among records judged actually to be propositions | **16**, if all 11 **K** records re-home | **6 of 16 (38%)**, provisional | both the §2.4 adjudication and open question 4 |
+
+**Open question 4 can move this figure, and the records it would move are
+named.** If an adjustment set defaults to the `analysis-spec` rather than to the
+claim, then **0002** plausibly becomes **T** (leaving only vocabulary), and
+**0016** and **0024** become **T-split** (leaving only non-atomicity). **0008**
+and **0009** stay blocked as **K**, and **0013** stays refused on its focus
+operator. So the expressiveness figure is bounded below by 6/16 and could reach
+9/16 on that adjudication alone — which is why neither number is quotable until
+open question 4 is settled.
 
 | blocker class | records | n |
 |---|---|---|
@@ -201,15 +221,29 @@ kernel kinds they are not one thing:
 >
 > **The objection, stated correctly.** A claim-valued argument does *not*
 > break §6.5's "every position is an identifier" rule: a claim identity is an
-> identifier, and `I_claim` would sit in the slot perfectly well. The real
-> objection is that it **widens `Args` from referents to epistemic records**,
-> and imports their identity and lifecycle semantics into `Claim` — a referent
-> is a term drawn from a bound vocabulary, whereas a claim is minted,
-> superseded, retracted and assessed. Admitting one into an argument slot puts
-> succession and standing inside a structure whose whole point (§6.5) is that
-> it is inert. Eleven records is a strong pull toward exactly that. If most
-> re-home onto existing kinds, the pull disappears; if a residue survives,
-> *that* residue — not the whole class — is the case for the extension.
+> identifier, and `I_claim` would sit in the slot perfectly well. Nor does it
+> import retraction or standing — **C10 refuses a retraction naming a
+> proposition**, so a proposition's lifecycle is `supersedes` and nothing else.
+> An earlier draft of this blockquote claimed both, and both were wrong.
+>
+> The actual boundary change is that `Args` widens from **external referents**
+> to **internal record identities**. A referent is a term drawn from a bound
+> vocabulary: it resolves through the vocabulary contract, and §7's five
+> outcomes are the whole of its resolution story. A proposition identity
+> resolves through the **world**, and carries **supersession** — so an argument
+> slot holding one inherits record resolution and a successor chain, and a
+> claim's arguments stop being inert with respect to anything but vocabulary.
+>
+> **And it collapses a discourse edge into claim semantics.** *"X supports Y"*
+> is today spelled by an **edge** — `assesses` from an assessment, or
+> `asserts | denies | hypothesizes` from a source-assertion. Those edges are
+> what let forty assertions of one proposition stay forty nodes (§2.1's
+> source-assertion row) and what keep the belief-bearing edge the only
+> belief-bearing edge. Re-spelling the relation inside `Claim` puts it where no
+> edge discipline reaches it. Eleven records is a strong pull toward exactly
+> that. If most re-home onto existing kinds, the pull disappears; if a residue
+> survives, *that* residue — not the whole class — is the case for the
+> extension.
 
 ---
 
@@ -230,7 +264,7 @@ Verdicts: **accept** · **accept-mod** (accepted with a stated modification) ·
 | F8 | drop the normative contract's superstructure, keep the oracle tables | **re-litigate** | §4.3, split into parity machinery (deferrable) and SSOT/succession/identity/inventory (not). Note that retiring `instrument-certification` would remove a **tenth kernel kind** cited across several documents — a cross-corpus amendment, not a cut |
 | F9 | world addressing's basis-derived address is unjustified | **re-litigate** | §4.1. Verified: §4 rejects three alternatives and never considers the adjacent one |
 | F10 | world §5's receipt apparatus is 42% of the document and its evidence expires | **re-litigate, folded into F9** | limitations 10 and 11 concede expiry-on-next-commit and inability-to-invalidate. Its fate follows the address ruling |
-| F11 | compound guarantee rows defeat localization | **accept** | W8a is 1,877 words in one cell. Renumbering is banned; **appending is not**, so splitting is free. §5.2 found **eight** rows compound enough that cut 1 can reach only part of each — M5, M6, M8, M12, D3, D4, D6, N2 — not the one this document first assumed. Cut 1 works around them by selecting arms; splitting the banked rows would remove the workaround, and is the cheaper fix if the pattern recurs at cut 2 |
+| F11 | compound guarantee rows defeat localization | **accept** | W8a is 1,877 words in one cell. Renumbering is banned; **appending is not**, so splitting is free. §5.2 found **five** rows compound enough that cut 1 can reach part of each — M5, M6, M8, D3, N2 — not the one this document first assumed, and not the eight a second draft claimed before D4, D6 and M12 were withdrawn from the cut entirely. Cut 1 works around the five by selecting arms; splitting the banked rows would remove the workaround, and is the cheaper fix if the pattern recurs at cut 2 |
 | F12 | revision archaeology triples reading cost | **accept-mod** | the review blurs two things. The **withdrawal blockquote stays at its site** — that discipline is what caught the migration-rule defect before the last push. The **narrative history** moves to a per-document appendix |
 | F13 | not one outward citation in 11,953 lines | **accept** | verified. A reader cannot distinguish deliberate divergence from ignorance. Each document gains a short related-work note naming what it re-derives and where it diverges: in-toto/SLSA, Certificate Transparency, Sigstore/Rekor, W3C PROV, RFC 8785 |
 | F14 | both ends of the attack are specification | **accept-mod** | true of `science` (11,953 lines, no code). False of the stack: `nodes` is released and parity-tested, `atoms` is real through A5b |
@@ -371,6 +405,16 @@ the banked corpus to make this work, and no selected arm may depend on a
 boundary §5.1 excludes. Every banked row is classified into exactly one of three
 states.
 
+**Three rows were selected in the first corrected draft and are withdrawn from
+the cut entirely**, because "partly selected" was itself being used to smuggle
+past the boundary:
+
+| row | why no arm survives |
+|---|---|
+| **D6** | it has **no identity arm**. Every D6 assertion is about `belief_input_digest` — the claim-schema arm, the base-contract arm, the unconditional arm and the negative arm alike. The clause selected as D6's — *"a consulted claim schema does not enter `I_claim`"* — is **M8's** assertion, misattributed. D6 is fully deferred |
+| **D4** | its mutations concern **facet** compilation, `KindSpec` registration and namespaced **facet** projection — not claim-schema compilation. Claim-schema compilation is **M7**'s, which is why M7 exists (its own text: *"D4 does not cover this — it governs per-kind sources, and a claim schema is not a per-kind artifact"*). Selecting D4 double-counted M7 |
+| **M12** | its banked text states the form is not optional: *"**End to end, which is the only form this row can take.**"* Selecting the no-mint prefix while deferring the work-item arm contradicts the row's own condition. The row needs extraction, proposition and source-assertion construction, and the typing-work queue |
+
 **Fully selected — every arm is inside the slice's boundaries (6 rows).**
 
 | row | what the slice must demonstrate | its sabotage |
@@ -382,17 +426,14 @@ states.
 | **M11** | `decodeClaim` is a function of its arguments and refuses rather than repairs, for each ill-formed input in turn | make availability ambient rather than a parameter → two holders decode the same bytes differently |
 | **M13** | `Claim` is opaque; the validated constructor is the only route; no downstream signature accepts `WireClaim` | export a raw constructor, or widen one downstream signature → must fail |
 
-**Partly selected — the arm split, stated exactly (8 rows).**
+**Partly selected — the arm split, stated exactly (5 rows).**
 
 | row | arms **in** cut 1 | arms **deferred**, and on what |
 |---|---|---|
 | **M5** | restriction identifier alone forks `I_claim`; quantifier tag alone forks; a present-versus-absent dimension forks; sabotage (drop the qualifier map → the founding pair collapses to one identity); negative (re-serialize map keys in another order → unchanged) | the founding case **end to end** — mint, assess, edit, assert a new identity with the prior assessment still bound and a `supersedes` link. Needs minting, assessment binding and succession: **persistence + belief** |
 | **M6** | a successor changing `arity`, `arg_sorts`, `sign_apt`, `layers` or `dimensions` under an existing id → refused at load; a successor dropping a retired declaration → refused; an additive successor → accepted with **claim identities unchanged**; retirement both paths; sabotage (flip `sign_apt`; remove the predecessor link); negative (editorial change accepted, contract identity moves); the parallel-genesis **DL** | *"consulted belief digests move"* on an additive successor. Needs **belief** |
-| **M8** | recompile `ProfileSpec` under a different merge order and compiler build → `I_claim` unchanged, `ProfileSpec` identity in neither `π_claim` nor the consulted set; sabotage (fold the contract release into `π_claim` → an ontology release forks every claim) | the `belief_input_digest` half of the editorial-bump arm, and the negative arm's digest half (activated-but-unconsulted). Needs **belief** |
-| **M12** | claim typing refuses the unfitted span; the extraction path receives **no proposition identity**; sabotage (a fallback minting at a placeholder operator; a source-assertion against a synthesized identity) | the span **surfaces as a project-scoped typing-work item**, and the negative arm placing it outside kernel limitation 1's unassessed queue. Needs **persistence** and a queue |
+| **M8** | recompile `ProfileSpec` under a different merge order and compiler build → `I_claim` **unchanged**, and `ProfileSpec`'s identity absent from `π_claim`; sabotage (fold the contract release into `π_claim` → an ontology release forks every claim) | the `belief_input_digest` half of the editorial-bump arm; the negative arm's digest half (activated-but-unconsulted); **and the "absent from the consulted set" clause**, which needs the consulted-contract machinery the slice does not build. Needs **belief** |
 | **D3** | `vocabulary` with no release → refused at contract load; a readable vocabulary yields `member` and `not-member`; an unconsulted namespace yields `not-consulted`; **only `not-member` refuses**; the binding stays well-formed with **no fallback to another release** | `not-present` (world address indexed, corpus absent) and `not-available` (dataset identified, no bytes held). Needs **world availability and holding**. *Note:* M4's local analogue — an unreadable vocabulary yielding `not-available` — **is** selected; the two are not the same test, and this cut does not let one stand in for the other |
-| **D4** | mutate a domain contract → the compiled spec changes with **no `nodes` code change**; **no second authored per-kind artifact exists**; a namespaced facet key round-trips identically through the Python and TypeScript canonical projections | two contributors to one kind → exactly one `KindSpec` carrying the union, `Registry.register()` called once, no duplicate-registration error reachable. Needs **facet composition and registration** |
-| **D6** | the claim-schema arm's **identity** half — a consulted claim schema does not enter `I_claim` | the belief-digest half: consulted contracts enter the digest, activated-but-unconsulted ones do not. Needs **belief** |
 | **N2** | **every oracle row can fail**, applied to cut 1's own selected arms: sabotage each selected arm and assert its check fails; construct an arm that passes under its own sabotage and assert it is reported as **malformed contract content** | the same doctrine over the rows cut 1 does not select |
 
 **N2 belongs here, and its inclusion is the point.** Its trigger is *the first
@@ -400,7 +441,7 @@ executable suite*, which is what cut 1 is — not a second implementation. A cut
 whose own rows were exempt from the discipline they encode would be the first
 thing this corpus should refuse.
 
-**Why six-plus-eight and not the ~25 the review proposed.** Selection is by
+**Why six-plus-five and not the ~25 the review proposed.** Selection is by
 boundary crossed, arm by arm. A row the slice cannot exercise is not
 strengthened by being listed, and a row listed whole while half of it is
 unreachable is worse than an honest omission.
@@ -413,11 +454,13 @@ unreachable is worse than an honest omission.
 | **M2**, **M3** | runs, run inputs, retraction graphs — none exist in the slice |
 | **G7** | its converse arm is *implied* by M5's and M8's selected arms but is not the same assertion, and its positive arm needs the mint path. Implication is not selection |
 | **S2**, **S3**, **S8** | the substrate write API and the import path are not crossed |
-| **G3** and all belief rows | the slice computes no belief (§5.5) |
+| **G3**, **D6** and all belief rows | the slice computes no belief (§5.5) |
+| **D4** | facet composition and `KindSpec` registration; its claim-adjacent content is M7's |
+| **M12** | end-to-end by its own banked condition |
 
 ### 5.3 Step 3 — fully deferred rows, grouped by untouched subsystem
 
-112 of 126 rows have **no** arm in cut 1. Grouping is by the subsystem the slice
+115 of 126 rows have **no** arm in cut 1. Grouping is by the subsystem the slice
 does not build, so each group has a single unblocking event. The N group is
 split, because its rows do **not** share a trigger.
 
@@ -433,10 +476,10 @@ split, because its rows do **not** share a trigger.
 | normative contract — **legacy adoption** | N10 | 1 | the **adoption gate** over the legacy suite. Independent of implementations entirely |
 | kernel & belief | G1–G8 (incl. G2a–c) | 10 | the belief policy design (F3) |
 | substrate | S1–S8, S1a | 9 | the write API |
-| domain boundary, not crossed | D1, D2, D5, D7, D8, D9, D10 | 7 | facets, manifests, practices |
-| formal model, not crossed | M1, M2, M3 | 3 | resolver, runs, retractions |
+| domain boundary, not crossed | D1, D2, D4, D5, D6, D7, D8, D9, D10 | 9 | facets, manifests, practices, and belief for D6 |
+| formal model, not crossed | M1, M2, M3, M12 | 4 | resolver, runs, retractions, and the extraction path for M12 |
 
-**Accounting.** 6 fully selected + 8 partly selected + 112 fully deferred = 126.
+**Accounting.** 6 fully selected + 5 partly selected + 115 fully deferred = 126.
 Every banked row is classified into exactly one of the three states. **No count
 of "arms" is offered as a denominator**: the banked rows do not enumerate their
 arms formally, so the arm splits in §5.2 are *this document's reading* of each
@@ -489,8 +532,11 @@ travel with them.
    verdicts are recorded per record so each can be disputed individually, but
    the aggregate inherits every individual error.
 2. **§2 assumes vocabulary that does not exist** (ρO4). Under today's contracts
-   the true coverage is 0/27; the 6/27 figure is counterfactual and must be
-   labelled as such wherever it is cited.
+   nothing types at all; both §2.3 figures are counterfactual on bound
+   vocabulary and must be labelled as such wherever they are cited. Neither is
+   quotable until the §2.4 re-homing and open question 4 are settled — the
+   reproduction yield has 11 undetermined records, and expressiveness ranges
+   from 6/16 to 9/16 on the adjustment-set adjudication alone.
 3. **§2 measures 27 records from one domain.** It sizes limitation 4 for the
    mm30 authored set and for nothing else. It is not an estimate of the
    literature, and formal-model limitation 3 stands unamended.
@@ -511,12 +557,17 @@ travel with them.
    and change which half of M6 or D3 is selectable. This is why §5.3 offers no
    arm count as a denominator, and it is the strongest argument for F11's
    splitting: a split row makes the boundary a banked fact instead of a reading.
-8. **The first draft of §5.2 was wrong in exactly the way §5 warns against.** It
-   claimed whole-row coverage the declared boundary could not deliver, and its
-   126-row accounting balanced arithmetically while being semantically false.
-   The withdrawal is recorded in place rather than edited away, because a cut
-   that quietly corrects its own coverage claim is the failure mode the freeze
-   discipline (§5.4) exists to prevent.
+8. **§5.2 has now been corrected twice, in the same direction both times.** The
+   first draft claimed whole-row coverage the declared boundary could not
+   deliver. The second kept D4, D6 and M12 as "partly selected" — using the arm
+   split to smuggle past the boundary rather than to respect it — when D6 has
+   no identity arm at all, D4's content belongs to M7, and M12's banked text
+   forbids a partial form. Both withdrawals are recorded in place rather than
+   edited away. **The pattern is the finding:** every error ran toward a larger
+   cut, and each was caught by review rather than by the selection method
+   itself. A cut drawn by its author against rows the author also reads is not
+   self-checking, which is an argument for F11's splitting and for a second
+   reader on cut 2.
 
 ---
 
@@ -529,14 +580,32 @@ travel with them.
    inputs reach a usable admitted set? Nothing owns this.
 3. **Where the eleven K records land** (§2.4). Until settled, `Claim` is not
    extended.
-4. **Where an adjustment set belongs at all.** Six records turn on it and no
-   banked document names the case, but the question is not only *"qualifier
-   dimension versus grammar extension"*. A covariate set may not be a property
-   of the **claim**: it may belong to the **estimand**, or to the
-   `analysis-spec` that computed the association, in which case the claim it
-   qualifies is a different claim and the adjustment never enters `Claim` at
-   all. The comparison to run is three-way — claim qualifier / estimand /
-   analysis-spec typing — and it interacts with the estimand-match deferral
-   (F6), which is where a wrong answer here would surface.
+4. **Where an adjustment set belongs.** Six records turn on it and no banked
+   document names the case. The three candidate homes are **not mutually
+   exclusive**, and an earlier draft's claim that conditioning makes it *"a
+   different claim"* is **withdrawn as false in general**: different valid
+   adjustment sets can identify the same estimand and support the same claim.
+
+   Two axes decide placement, and they are independent:
+
+   - **semantic target** — does conditioning change *what quantity is
+     estimated*, or the claim's truth conditions?
+   - **identification method** — *which covariates* were used to identify or
+     estimate that target?
+
+   `analysis-spec` already separates `estimand`, `method`, `assumptions` and
+   `parameters`, so the default placement follows:
+
+   | case | home |
+   |---|---|
+   | the set only identifies or estimates the **same** target | `analysis-spec.method` / `assumptions` / `parameters` |
+   | conditioning defines a **different** target quantity | `estimand` |
+   | the source explicitly asserts the relationship **conditional on** that set | **also** represented in the typed claim's qualification |
+
+   The third row is why the homes overlap: the same covariate set can appear in
+   an `analysis-spec` and in a claim qualifier without contradiction, because
+   they answer different questions. Settling this is a prerequisite for
+   quoting either figure in §2.3, and it interacts with the estimand-match
+   deferral (F6), which is where a wrong answer would surface.
 5. **Sub-problem 6** (F4) — audit liveness and the divergence table remain the
    corpus's largest structural deferral.
