@@ -446,6 +446,18 @@ The **facet itself is native** to `nodes`: an optional `empirical-observation`
 facet on the `dataset` kind, with a payload schema rejecting unknown keys (§2.3).
 Only the cross-node predicate is Science's.
 
+**Corrected 2026-08-04** (`2026-08-04-domain-extension-boundary-design.md` §3.4):
+the facet is **not** native to `nodes`; it belongs to the **`science` base
+profile**, and the payload schema travels with it. The placement above
+contradicted this document's own governing argument — §2's rule that scientific
+policy in a structural kernel "contaminates" it. Two independent reasons settle
+it: `dataset` is itself a Science kernel kind (kernel §4.2), and
+acquisition-boundary semantics are scientific policy whose honesty is explicitly
+outside the guarantee (kernel limitation 8). Nothing about the facet is
+structural. The cross-node predicate remains Science's, as stated; what changes
+is that the facet is Science's too, so §6.1's argument now reads without an
+exception.
+
 ### 6.2 Enforcement — both boundaries
 
 1. **Write boundary** — Science's write API refuses to create an inadmissible
@@ -556,10 +568,18 @@ be read as the strong claim.
 - **Where the profile lives.** `nodes` expects domain profiles in downstream
   repos; whether the Science profile is a package inside `science/` or its own
   distribution affects how `science-commons` and external consumers pin it.
-- **Registry vs `KIND_DESCRIPTORS`.** The kernel's kind descriptors are currently
-  the sole per-kind SSOT in `science_model.profiles`; `nodes` has its own
-  `KindSpec` registry. One must derive from the other, and which direction is
-  unresolved.
+- ~~**Registry vs `KIND_DESCRIPTORS`.**~~ **CLOSED 2026-08-04**
+  (`2026-08-04-domain-extension-boundary-design.md` §6) — and closed by
+  **retiring the descriptors**, not by choosing a direction: picking a winner
+  leaves the loser as a derived duplicate that can drift, which is the defect
+  itself. The declarative contracts — the `science` base contract plus the
+  activated domain contracts — are the **normative SSOT**; `ProfileSpec` is the
+  **sole compiled runtime profile**; `KindSpec` is a further compiled product.
+  `KIND_DESCRIPTORS` gains no successor, and under the clean-start ruling
+  (ledger §0) it is not carried over, so nothing is deprecated and no
+  compatibility layer appears. Note the pricing consequence: because
+  contributions merge *upstream* of `Registry.register()`, `nodes` gains
+  nothing — a zero runtime and contract delta, with one added parity fixture.
 - **`atoms` consumption order.** Whether Science waits for `atoms` A6–A8 or
   `nodes` adopts `atoms` first. The second route is appealing — durability
   without Science depending on `atoms` directly, matching the stated layering —
