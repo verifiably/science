@@ -1,7 +1,7 @@
 # Formal model and claim calculus — design
 
-**Status:** Draft — §2–§7 written; §2–§4 corrected through review round 3, §5
-and §6 each through one review round; §8–§11 not yet drafted.
+**Status:** Draft — §2–§8 written; §2–§4 corrected through review round 3, §5
+and §6 through one review round, §7 through two; §9–§11 not yet drafted.
 
 **Inherits:** the epistemic kernel (G1–G8, §4.1's signatures and semantic
 identity, §8.7's recorded-history limit, limitation 4's predicate vocabulary),
@@ -1886,7 +1886,226 @@ source of truth; §7 declines to create one for vocabulary.
 
 ## 8. ρ — the refinement map
 
-*Not yet drafted.*
+§1's constraint was that no revision may masquerade as a transcription. §8 is
+where that is enforced: every M\* proposal is placed against the banked prose it
+touches, the oracle that would have to change, and the guarantee classes it
+preserves, amends, or invalidates.
+
+### 8.1 Three dispositions, kept apart
+
+| disposition | what it means | what banking it costs |
+|---|---|---|
+| **amendment** (ρA) | banked prose is wrong, incomplete, or ill-typed under M\*, and must change | edit the design text **and** its oracle row |
+| **constraint** (ρC) | a banked **open question** stays open, but its answer is now bounded | edit the open question to record the bound; no oracle changes yet |
+| **open mechanism** (ρO) | M\* names a requirement and does **not** supply the mechanism | nothing is banked but the record that it is open |
+
+The three are separated because they fail differently when confused. An
+amendment recorded as a constraint leaves a false oracle in place. A constraint
+recorded as an amendment claims a question is closed that no one has answered.
+An open mechanism recorded as either claims a mechanism exists.
+
+The binding check is the case that forced the distinction, and it appears under
+**two** dispositions on purpose: the diagnostic check is adopted (§8.5), while
+its persistence and epistemic effect are ρO4. Nothing in §8 may read as though ρ
+settled the second.
+
+### 8.2 Amendments
+
+**ρA1 — Proposition semantic identity becomes typed claim identity.**
+
+| | |
+|---|---|
+| banked prose | kernel §4.1's Rule: *"A proposition carries a **semantic identity**: a hash over its normalized `statement` plus its factored fields (`subject`, `predicate`, `object`, `polarity`, `claim_layer`)."* |
+| replaced by | `I_claim(c) = H(tag_claim ‖ encode(π_claim(c)))` over the typed projection (§6.5) |
+| oracle | **G7**. Its positive arm — *"Edit a proposition's scope in place; assert a new semantic identity is minted, that prior assessments still bind the old one"* — is preserved **verbatim** and still passes. Its converse arm, *"overwrite `title` alone and assert *no* mint"*, gains a parallel `statement` arm |
+| preserved | **CS** — the property G7 actually tests, that a semantic edit forks identity and cannot retarget evidence. **WD**. The `supersedes` lifecycle. The node-invariant framing (no new addressing layer) |
+| amended | the identity **basis**: prose leaves; `qualifiers` enters; `subject`/`object` become sorted bound referents; `predicate` becomes `operator` |
+| invalidated | *"normalized `statement`"* as an identity input, and with it kernel §11's **semantic-identity normalization** open question insofar as it concerns prose — whitespace, casing and numeric formatting have nothing to normalize once no prose is in the projection. Term-synonym resolution survives, relocated to vocabulary binding (D §5) |
+
+This is the largest single amendment in the document, and its safety rests on
+G7's positive arm being *strengthened* rather than weakened: under M₀ a
+scope-widening edit forks identity only if the prose changed enough to move the
+hash, which is exactly the "too loose" horn kernel §11 names. Under ρA1 it forks
+whenever a typed field differs, and prose cannot mask it.
+
+**ρA2 — `statement` splits into a derived rendering and an authored annotation.**
+
+| | |
+|---|---|
+| banked prose | kernel §4.1's `title` split and its stated reason, *"A field cannot be both hand-editable prose and an identity input."* |
+| becomes | unstored `render(Claim)`, plus optional authored `display_statement`; both identity-inert (§6.5) |
+| oracle | **G7**'s converse arm, extended as in ρA1 |
+| preserved | the doctrine itself, applied one field further. **CA†** — each value keeps a single construction authority |
+| amended | one field with two authorities becomes two fields with one each |
+| invalidated | §6.5's own first draft, *"a derived gloss, freely overridable"* — an M\* internal correction, not a banked claim |
+
+**ρA3 — `subject` and `object` become sorted bound referents.**
+
+| | |
+|---|---|
+| banked prose | kernel §4.1's factored-field list, where `subject` and `object` are unqualified; §2.9 (b) records them as bare strings while `term` is an external scoped entity (world §3) |
+| becomes | `Args(op) = ∏ᵢ Referent(ArgSort(op,i))` (§6.2), each slot a term identifier in a bound vocabulary |
+| oracle | **none banked** — no row tests that an argument is a resolvable referent. This is a gap, and it is a candidate **M** row (§9) |
+| preserved | world §3's scoped-external `term`; D §5's binding forms |
+| amended | the field's type |
+| invalidated | nothing banked; the M₀ state was under-specified rather than wrong |
+
+**ρA4 — Qualification enters the identity basis as typed structure.**
+
+| | |
+|---|---|
+| banked prose | kernel §4.1's factored-field list, which has no qualifier slot — while §4.1's own founding example turns on *"in adults"* versus *"in all humans"* |
+| becomes | `Qualifiers(op)`, kernel-owned structure over domain-owned dimensions, flat fragment this pass (§6.4) |
+| oracle | **none banked**; candidate **M** row (§9), and the sharpest one, since G7's positive arm currently passes only because prose carries the qualifier |
+| preserved | G7's intent |
+| amended | the basis gains a member |
+| invalidated | nothing banked. The defect it closes is latent, not recorded: under ρA1 alone — prose demoted, no qualifier slot — the two claims of §4.1's own example would collapse to **one identity** |
+
+ρA4 is why ρA1 cannot be banked without it. Demoting prose while leaving the
+factored fields as they are would institutionalize the exact failure kernel §4.1
+exists to prevent.
+
+**ρA5 — `predicate` becomes `Operator`, owned by a domain contract.**
+
+| | |
+|---|---|
+| banked prose | kernel limitation 4, *"The predicate vocabulary is currently 9 terms; real claims will not fit cleanly"* — no owner, no extension rule; and D §12's open question, *"Whether the predicate vocabulary becomes a domain contract like any other"* |
+| becomes | operators declared by domain contracts, always (§7.1); term identity, issue/retire/never-redefine (§7.3) |
+| oracle | **D4** is preserved and now covers more: operator declarations are contract-authored and compiled through `ProfileSpec`, so *"no second authored per-kind artifact exists"* extends to vocabulary without a new artifact class. A retirement/redefinition arm is a candidate **M** row |
+| preserved | **D4**; D §6's contracts-are-normative / `ProfileSpec`-is-compiled split (§7.5); **US†** for the sign-aptness roster's retirement |
+| amended | limitation 4's "no owner, no extension rule" is answered; D §12's question is **closed** — yes, a domain contract like any other |
+| invalidated | the closed nine-term enum as the vocabulary's shape |
+
+**ρA6 — D6's consulted-set trigger widens to claim schemas.**
+
+| | |
+|---|---|
+| banked prose | D §8: *"walk the derivation's closure, collect the namespace of every facet it reads, and resolve each namespace to a contract identity by §8.1"* |
+| becomes | that, **plus** every contract reached through a claim schema — operator, dimension, argument and restriction sorts, and each sort's vocabulary binding (§7.1) |
+| oracle | **D6** gains a claim-schema arm: derive belief over an assessment reading a claim at `affects`, bump the contract declaring `affects` while touching no facet, and assert `belief_input_digest` **moves**. **D limitation 2**'s under-collecting-walk warning widens with it |
+| preserved | D6's **asymmetry** — unconditional base, conditional domain — entirely. D7. W5. The negative arm (bump an unconsulted domain, digest unchanged) |
+| amended | the trigger set only |
+| invalidated | nothing. The facet-namespace rule stays correct; it is now **insufficient alone**, which is a different fault from being wrong |
+
+The failure mode this closes fails **open**, which is why it is an amendment and
+not a note: a facet-only walk omits the contract declaring an operator from a
+belief derived over a claim at that operator, and the omission is invisible in
+every test that uses facets.
+
+**ρA7 — Term resolution refines from three outcomes to five.**
+
+| | |
+|---|---|
+| banked prose | D §5's table row: *"`unknown` — the term is **outside the bound vocabulary** altogether, or the binding's namespace was never consulted"* |
+| becomes | `member \| not-member \| not-consulted \| not-present \| not-available` (§7.2) |
+| oracle | **D3**, whose statement *"the three unresolved states stay distinct"* becomes four unresolved states plus `member`, with a new arm asserting `not-member` and `not-consulted` are never collapsed — on the same terms D3 already uses for `not-present` and `not-available` |
+| preserved | `not-present` and `not-available` **verbatim**, so D3's existing arms pass unchanged; *"a binding is well-formed in all cases, no error is raised, and no fallback to another release occurs"*; **ED†** |
+| amended | `unknown` splits into a finding and the absence of one |
+| invalidated | any reading of banked `unknown` as evidence of **non-membership** — the reading §7.2's first draft made, and the one that would let a decoder report "not in the vocabulary" on the strength of nobody having looked |
+
+**ρA8 — Held-ness is a `def` dependency, and G3 is stated over the `Belief` arm.**
+
+| | |
+|---|---|
+| banked prose | computation §7.1's three-case table, row 2: *"the **last held copy** of an `observes` input destroyed → the input is no longer **held**; eligibility fails and admission **changes**"*; and G3's unrestricted statement that a belief state names its complete transitive input closure |
+| becomes | held-ness typed as a **`def`** edge — it selects which arm of `B`'s codomain is reached, not the value within the `Belief` arm (§4.3 finding (b)) |
+| oracle | **R5** — all three arms, including negative (a) *"destroy the last held copy … assert eligibility fails and admission changes"*, are preserved **unchanged and still pass**. **G3**'s phrasing gains the arm restriction: whenever `B` lands in the `Belief` arm, `κ_B` determines it |
+| preserved | R5 verbatim; comp §7.1's three cases and its *"a failure to look is not a finding of absence"* framing; **DL**; the factorization law of §3.4 |
+| amended | G3's scope, from all of `B`'s codomain to its `Belief` arm |
+| invalidated | the reading under which held-ness is a `sem` edge. That reading is not merely inelegant: two configurations differing only in whether the last copy survives would share `κ_B` and therefore one `belief_input_digest` while yielding different beliefs — a **G3 violation**, not a qualifier on G3 |
+
+The mechanism that would make the `NotAvailable` case *recorded* rather than
+merely correct is **not** supplied here; that is ρO5.
+
+### 8.3 Constraints on open questions
+
+**ρC1 — Domain contract versioning must carry predecessor links and tombstones.**
+
+| | |
+|---|---|
+| banked open question | D §12: *"Domain contract versioning policy. What constitutes a breaking change to a facet contract, and whether contract identity being content-derived is sufficient or a declared compatibility range is also needed."* |
+| constraint | whatever the policy becomes, a contract must **declare its predecessor contract identity**, and must **retain retired declarations immutably as tombstones** (§7.3a) |
+| why | §7.3's *never redefine* is a two-contract diff with nothing to diff against otherwise, and retirement types historical claims against declarations a successor would have deleted. Without both, the extension rule is an honour system |
+| status | the question stays **open**. ρC1 bounds the answer; it does not supply one, and no oracle changes until the policy lands |
+
+D §12's own framing — whether content-derived identity is *sufficient* — is
+answered in one direction only: it is not sufficient for vocabulary, because a
+content-derived identity says what a contract *is* and never what it *succeeds*.
+
+### 8.4 Open mechanisms
+
+Named requirements with no mechanism. Each is a record that something is
+missing, not a design.
+
+**ρO4 — Binding-check persistence and epistemic effect.** §7.2 adopts the
+diagnostic check (§8.5) and leaves open: whether the receipt persists at all,
+how it would be discovered, how it would be superseded, and what corrects a
+claim later found `not-member`. The banked correction rules make the obvious
+path unspellable — C §4's eligible-target set is two arms and a non-node receipt
+is in neither, propositions are not retraction-eligible, and 5b §7.6's audit
+mints nothing — so the answer is either a lifecycle design or promotion to an
+independently addressed record, which is **D's own promotion trigger** and
+therefore a new kind with its own eligibility analysis. Also open: whether an
+unchecked claim may be assessed, and when re-resolution runs. **ρ does not
+settle any of this**, and no row in §8.2 depends on it.
+
+**ρO5 — The held-ness mechanism.** ρA8 decides what the *answer* is when the
+last held copy is destroyed. It does not make the case **recorded**: nothing
+observes the destruction, so `NotAvailable` is reached by a check failing rather
+than by an act being committed. §4.3 withdrew the recorded-loss repair as
+premature, and it stays withdrawn.
+
+**ρO6 — Entailment and estimand match.** §6.7 preserves the typed information a
+future entailment relation would need and defines nothing. Kernel limitation 5's
+estimand match becomes **stateable** as `match(claim_type, estimand_type)` and
+is not stated. The two are related and not assumed identical.
+
+**ρO7 — A population vocabulary.** §7.1's `population-group` sort has no
+binding, and the contract as written would be refused at load under D §5. Until
+one is selected, a population-qualified claim is untypeable — the concrete form
+of §6.6's cost.
+
+### 8.5 Adopted with no banked counterpart
+
+M\* additions that amend nothing because M₀ has no corresponding claim. They
+still enter §9 as candidate guarantees.
+
+| adopted | classes | note |
+|---|---|---|
+| the dependent-sum `Claim` and its schema/inhabitant split (§6.2) | **US†** | no M₀ type to amend |
+| `decodeClaim : WireClaim × ProfileSpec × ResolutionSnapshot → (Claim × BindingCheckReceipt) + Refused` (§6.3, §7.2) | **RF†**, **WD** | the boundary M₀ never stated; `ResolutionSnapshot` is what makes it a function of its arguments |
+| the **diagnostic** binding check and its five outcomes | **ED†** | adopted; persistence and effect are ρO4 |
+| unconstructible sign-inapt polarity; `SIGN_MEANINGFUL_PREDICATES` retired | **US†** | the roster is proto-science implementation, not banked prose |
+| untypeable spans mint nothing; a source-assertion for one is **unconstructible** | **RF†**, **US†** | follows from world §4.2's identity basis, which is preserved, not amended |
+| the polarity position is always emitted (§7.5) | **CS** | keeps `π_claim`'s shape independent of any contract field |
+
+### 8.6 Preserved untouched — the negative list
+
+Worth stating explicitly, because a claim-neighbourhood revision of this size
+invites the assumption that more moved than did.
+
+| preserved | why it is worth saying |
+|---|---|
+| world §4.2's identity bases, including `source-assertion`'s | §6.6's refusal is a **consequence** of that basis, not a change to it |
+| C §4's eligible-target set — still exactly `node` and `route` | §7.2 explicitly declines to extend it |
+| 5b §7.6, audit mints nothing | ρO4's open path must not be read as licensing an automatic retraction |
+| D7 and W5 | ρA6 widens a walk; it does not touch agreement or location-invariance |
+| kernel limitation 1's ranked queue | untypeable spans are a **second** backlog with a different membership condition, not an extension of that row (§6.6) |
+| the nine banked guarantee tables' ids | no id is renumbered; every change above is an edit to a row's text or a new arm |
+
+### 8.7 What banking this costs
+
+| artifact | edit |
+|---|---|
+| kernel §4.1 | the Rule is restated over the typed projection (ρA1); the `title` split gains its `statement` case (ρA2) |
+| kernel §11 | the semantic-identity normalization question is closed for prose, narrowed to term synonyms (ρA1) |
+| kernel limitation 4 | answered — owner and extension rule (ρA5); the referent-binding half is **re-recorded as open** (ρO4), not deleted |
+| kernel G7, G3 | G7 gains a `statement` converse arm; G3's statement gains the `Belief`-arm restriction (ρA1, ρA8) |
+| computation §7.1, R5 | §7.1's row 2 gains its `def` typing; R5's arms are unchanged (ρA8) |
+| D §5, D3 | the outcome set refines to five; D3 gains a non-collapsing arm (ρA7) |
+| D §8, D6, D limitation 2 | the trigger set widens; D6 gains a claim-schema arm (ρA6) |
+| D §12 | the predicate-vocabulary question is closed (ρA5); the versioning question records ρC1's bound |
+| **M1–M\<n\>** | §9's new rows, plus the §1 banking obligations already recorded |
 
 ## 9. Guarantees (M1–M\<n\>)
 
