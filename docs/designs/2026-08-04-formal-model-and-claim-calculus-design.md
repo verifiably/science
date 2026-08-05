@@ -1,8 +1,9 @@
 # Formal model and claim calculus — design
 
-**Status:** Draft — §2–§9 written; §2–§4 corrected through review round 3, §5
-and §6 through one review round, §7 through two, §8 through one; §10–§11 not
-yet drafted.
+**Status:** Draft — complete first pass, §1–§11. Review rounds so far: §2–§4
+three, §5 one, §6 one, §7 two, §8 one, §9 one. **Not banked**: §8's amendments
+have not been applied to the nine designs, so the banked corpus still says what
+§8.2 proposes to change (limitation 12).
 
 **Inherits:** the epistemic kernel (G1–G8, §4.1's signatures and semantic
 identity, §8.7's recorded-history limit, limitation 4's predicate vocabulary),
@@ -2240,8 +2241,135 @@ check and every reader has a reason to re-validate defensively.
 
 ## 10. Limitations
 
-*Not yet drafted.*
+1. **M1 is only as complete as its read-interception boundary.** The row asserts
+   that every value a derivation reads lies inside its declared closure, but it
+   can only see reads that go through the instrumented path. A direct ambient
+   read — a module-level constant, a environment lookup, a cached global, a file
+   opened outside the resolver — is invisible to the check and passes. That is
+   the sabotage that matters most and the one M1 cannot self-administer: the
+   failure is **open**, and it has the same shape as D limitation 2's
+   under-collecting walk, one level up. M1 improves the odds against unnoticed
+   closure holes; it does not convert noticing into proving.
+2. **An operator's declared schema is authored, not checked.** M6 tests that a
+   declaration cannot change; nothing tests that it was right in the first
+   place. Whether `affects` really takes a molecular entity and a phenotype, and
+   really admits a population dimension, is a human judgment recorded in a
+   contract — the same class as D limitation 4 and kernel limitation 8's
+   acquisition boundary.
+3. **The flat qualifier fragment is narrow, and the narrowness is a throughput
+   cost.** Scoped alternation, disjunctive restrictions, more than one
+   restriction per dimension, and quantitative ranges are all unrepresentable
+   and therefore refused (§6.4). Combined with §6.6, a claim the fragment cannot
+   express is queued rather than degraded — correct, and paid for in coverage.
+   The grammar is versioned so this can be widened, but nothing here estimates
+   how much of the real literature the fragment reaches.
+4. **The untypeable-span backlog is unsized.** §6.6 establishes that it exists,
+   is distinct from kernel limitation 1's unassessed queue, and is discharged
+   only by extending a vocabulary. Nothing measures how large it would be, and
+   under a nine-term starting vocabulary it is plausibly most of the corpus.
+5. **M\* is deep only in the claim neighbourhood.** §1's scope ruling was wide
+   M₀ / narrow M\*, so this document can detect a defect in claim typing and
+   cannot detect one in, say, verification scope derivation. Absence of findings
+   outside the neighbourhood is absence of *looking*, which is the same
+   principle this system applies everywhere else, turned on itself.
+6. **§5's classification freezes nothing.** The nine proposed † labels are an
+   overlapping cover, not a partition, and their adoption is undecided (§11).
+   Until adopted they are an analytical instrument, and citing them — as §6–§9
+   do — is provisional.
+7. **The held-ness answer is decided; the mechanism is not.** ρA8 types
+   held-ness as `def`, so destroying the last held copy routes to
+   `NotAvailable`. Nothing *records* the destruction: the state is reached by a
+   check failing rather than by an act being committed, so the system can report
+   the honest answer without being able to say when or why it changed (ρO2).
+8. **Extraction stays fallible, and the typed form relocates the problem rather
+   than removing it.** §6.5 moves linguistic ambiguity out of identity and into
+   extraction, where kernel limitation 3 already records a measured 25–40%
+   field-level disagreement rate. A typed claim is exactly as trustworthy as the
+   typing act that produced it, and that act is a computation with an error rate.
+9. **One cross-implementation check.** M10 is the only row that compares Python
+   and TypeScript. Everything else in M is single-implementation, so a divergence
+   anywhere outside claim projection is invisible to this table — deliberate, on
+   D §6's one-fixture-per-shared-encoding precedent, but a real limit.
+10. **A kernel-tag re-encoding re-mints every claim.** §7.4 row 5 is an accepted
+    severe cost, not a mitigated one. There is no migration path that preserves
+    identities across a tag byte change, because the identities *are* the bytes.
+11. **Nothing here is implemented, and no domain exists.** Every mechanism in
+    §6–§9 is unexercised, and the operator contract in §7.1 is illustrative —
+    its `population-group` binding would be refused at load today. This is D
+    limitation 5's position, inherited: the rulings are what this design commits
+    to, not the shapes of the files.
+12. **Until banked, ρ is a proposal.** §8's amendments have not been applied to
+    the nine designs. A reader who takes §8.2 as a description of the banked
+    corpus will be wrong about G3, G7, R5, D3, D5's outcome set and D6's trigger
+    set — which is exactly the drift this repository's own doc discipline warns
+    about, so the status header carries it.
 
 ## 11. Open questions
 
-*Not yet drafted.*
+**Carried from ρ, with their motivation.**
+
+- **Binding-check persistence and epistemic effect (ρO1).** Whether the receipt
+  persists at all; how it is discovered; how it is superseded; what corrects a
+  claim later found `not-member`; and whether an unchecked claim may be assessed
+  before its check is performed. The banked correction rules make the obvious
+  path unspellable (§7.2), so the answer is either a lifecycle design or
+  promotion to an independently addressed record. **The trigger is already
+  defined**: needing independent supersession and correction is D's own
+  promotion condition, so the day a binding check needs to be corrected rather
+  than merely reported is the day option 2 becomes the answer.
+- **The held-ness recording mechanism (ρO2).** What, if anything, records the
+  destruction of a last held copy. §4.3 withdrew the recorded-loss repair as
+  premature; it stays withdrawn, and limitation 7 is its residue.
+- **Claim entailment and subsumption (ρO3).** §6.7 keeps the encoding capable of
+  expressing it and defines nothing. The motivation is concrete and worth
+  recording so a later design does not have to rediscover it: **belief
+  aggregation across related claims** needs it — without an order, a corpus
+  holding a claim about adults and a claim about humans has two unrelated belief
+  states and no way to say the evidence bears on both. The three barriers are
+  named in §6.7, and the population-reversal case is why the intuition itself,
+  not merely its formalization, must be distrusted.
+- **Estimand match (ρO3).** Kernel limitation 5's residue becomes stateable as
+  `match(claim_type, estimand_type)` once claims are typed. Whether it is
+  definable *from* entailment, or is a related but independent relation, is
+  open — §6.7 declines to assume the former.
+- **A population vocabulary (ρO4).** None is selected, and none of the obvious
+  ontologies is one. Until a contract binds one, a population-qualified claim is
+  untypeable — which makes this the first concrete instance of limitation 3's
+  cost rather than a detail.
+- **Domain contract versioning policy (ρC1).** D §12's question, now bounded:
+  whatever it becomes must be compatible with §8.3's four adopted succession
+  rules. What counts as a breaking change to a **facet** contract, and whether a
+  declared compatibility range is needed, stays open and should be settled with
+  5b's versioning rules.
+
+**Raised by this document and not resolved in it.**
+
+- **Adoption of the nine † labels.** §5 deliberately freezes nothing. Adopting
+  them means committing the banked tables to a vocabulary; not adopting them
+  means §6–§9's classifications are annotations. The decision is cheap now and
+  expensive after the labels appear in oracle prose.
+- **What triggers the next M\* expansion.** §1 rules that M\* widens only when
+  another design question requires it. The two nearest candidates are
+  verification scope derivation (whose laws §5 shows are transition laws the
+  reading-based taxonomy structurally misses) and the assessment/estimand
+  neighbourhood, which ρO3 already reaches into.
+- **Quantitative restrictions.** The likely first extension to the qualifier
+  grammar — *"in adults over 65"*, *"at doses above X"* — and the one that
+  breaks the flat fragment's single-referent-per-dimension shape rather than
+  merely stretching it. Worth designing deliberately rather than as a patch,
+  because a quantitative restriction is where a bound referent stops being an
+  ontology term.
+- **Where domain-neutral operators live.** §7.1 rules that operators are
+  domain-issued without exception and that `subtype-of` and its kin belong to a
+  general-purpose domain contract. Whether that contract is a real domain with a
+  namespace and an owner, or a distinguished one, is unsettled — and it is the
+  one place §7.1's uniform rule feels like a technicality.
+- **The layer vocabulary's actual contents.** §7.1's
+  `[causal, structural, statistical, methodological]` is illustrative. Kernel
+  §11's largest open question — non-empirical propositions, which have no
+  `observes` input and so cannot produce an assessment — lands directly on which
+  layers exist and which of them belief can reach.
+- **Whether `render(Claim)` is one function or a per-locale family.** §6.5 makes
+  it deterministic and unstored; it does not say deterministic in what language.
+  Since it is identity-inert, this is cheap to defer and cheap to get wrong
+  later only if someone stores the output.
