@@ -1126,6 +1126,18 @@ This is *explicit over defensive* applied to the type rather than the guard, and
 inside the model it classifies as **US†** — the invalid combination is
 unspellable, not refused.
 
+**How much of that is static depends on where the contract comes from.** The
+dependent sum above is the specification. In an implementation whose operators
+arrive through a runtime-loaded `ProfileSpec`, neither Python nor TypeScript can
+vary a constructor's static signature by a runtime value without a
+code-generation layer this design does not propose. What is statically
+enforceable is that `Claim` is **opaque** and its **only** constructor is the
+validated one, with no coercion from the wire type (**M13**); the
+profile-dependent checks then happen once, at decode (**M11**). The guarantee
+that survives is the one worth having — the check occurs at exactly one place
+and downstream code never re-validates — and claiming more would put a
+type-system property in a design that cannot deliver it.
+
 **But the model is not the only thing that produces claims.** Serialized YAML,
 imported records, a restored corpus and a raw write can all *express* a
 combination the type cannot hold. Unconstructibility eliminates the internal
@@ -1346,13 +1358,19 @@ be bound to a referent — **mints nothing**. The boundary refuses (**RF†**), 
 the span becomes an ordinary typing-work item in the project-scoped tier (§2.4),
 which needs no new kind and no fallback record.
 
-The refusal reaches further than it first appears, and the reason is structural:
-`source-assertion`'s identity basis **contains the proposition identity** (world
-§4.2). A source-assertion for an untypeable claim is therefore not merely
-disallowed — it is **unconstructible**, because one of its identity components
-does not exist. No constructor and no `decodeClaim` path admits untyped prose
-into the record set as an assertion; a raw write that fabricates one is an audit
+The refusal propagates, and the reason is structural: `source-assertion`'s
+identity basis **contains the proposition identity** (world §4.2), and when
+typing refuses there is no proposition identity for the extraction path to
+carry. So no constructor and no `decodeClaim` path admits untyped prose into the
+record set as an assertion, and a raw write that fabricates one is an audit
 finding, on the terms §6.3 already set out.
+
+**Stated at the width it holds.** This is an end-to-end property of the
+extraction path — refusal upstream means nothing is minted downstream — and
+**not** a general claim that a source-assertion naming an unresolved proposition
+identity is unconstructible. World addressing tolerates unresolved references;
+forbidding them would be a deliberate amendment to source-assertion resolution,
+which §8 does not make. M12 is scoped to match.
 
 **The cost, stated plainly.** Coverage of the literature becomes gated by the
 operator vocabulary's expressiveness. Kernel limitation 4 already says real
@@ -1761,9 +1779,11 @@ as redefinition arriving by another route.
 at contract load" compares a contract against something, and a content-derived
 identity does not by itself say what it succeeds. So a contract **declares its
 predecessor contract identity**, and load-time validation is a two-contract
-check: every identifier present in both must have byte-identical declarations,
-and every identifier in the predecessor must still be present, live or
-tombstoned. Without the declared predecessor there is nothing to diff against,
+check: every **claim-vocabulary** identifier present in both must have an
+identical **canonical schema projection** — meaning-bearing fields, not bytes,
+so editorial edits stay free — and every such identifier in the predecessor must
+still be present, live or tombstoned. A contract with no predecessor declares
+itself `genesis`. Without the declared predecessor there is nothing to diff against,
 and "never redefine" is an honour system.
 
 This lands squarely on D §12's open **domain contract versioning policy**
@@ -2032,19 +2052,25 @@ split the way the binding check does.
 **Adopted (§8.5, with M rows) — the succession rules M\* actually asserts.**
 These are normative now, not deferred:
 
-| rule | §7.3a |
+| rule | why |
 |---|---|
-| a contract **declares its predecessor contract identity** | otherwise there is nothing to diff against |
-| every identifier present in both must have **byte-identical declarations** | this is *never redefine*, made checkable |
-| retired declarations are **retained immutably as tombstones** | historical claims are typed against them |
-| a violation of any of the three is **refused at contract load** | RF†, at load, not at claim decode |
+| a contract declares **`genesis`** or **`successor(<predecessor contract identity>)`** | a first release has no predecessor; requiring one unconditionally would make no contract loadable at all |
+| for **claim-vocabulary declarations only** — operators, dimensions, sorts — every identifier present in both a contract and its predecessor must have an **identical canonical schema projection** | this is *never redefine* made checkable. It compares the **meaning-bearing** fields, not bytes: a description, comment or example may change freely, which is what M6's editorial arm requires |
+| retired claim-vocabulary declarations are **retained immutably as tombstones** | historical claims are typed against them (§7.3a) |
+| a violation of any of the above is **refused at contract load** | RF†, at load, not at claim decode |
+
+**The scope restriction is deliberate.** These rules govern claim vocabulary and
+nothing else. Facet contracts keep whatever succession discipline D §12
+eventually settles on; an unscoped "every identifier" would have this design
+quietly deciding facet versioning while §8.3's own constraint says that stays
+open.
 
 **ρC1 (constraint) — the broader versioning policy stays open.**
 
 | | |
 |---|---|
 | banked open question | D §12: *"Domain contract versioning policy. What constitutes a breaking change to a facet contract, and whether contract identity being content-derived is sufficient or a declared compatibility range is also needed."* |
-| constraint | the policy must be **compatible with** the four adopted rules above; it may not, for instance, permit a successor to drop a declaration or to reuse an identifier with different bytes |
+| constraint | the policy must be **compatible with** the four adopted rules above; it may not, for instance, permit a successor to drop a claim-vocabulary declaration or to reuse such an identifier under a different canonical schema projection |
 | what stays open | what counts as a breaking change to a **facet** contract, whether a declared compatibility range is needed, and how ranges interact with 5b's versioning rules. None of that is settled here |
 | status | **open.** ρC1 bounds the answer; it does not supply one |
 
@@ -2098,7 +2124,7 @@ still enter §9 as candidate guarantees.
 | unconstructible sign-inapt polarity; `SIGN_MEANINGFUL_PREDICATES` retired | **US†** | the roster is proto-science implementation, not banked prose |
 | untypeable spans mint nothing; a source-assertion for one is **unconstructible** | **RF†**, **US†** | follows from world §4.2's identity basis, which is preserved, not amended |
 | the polarity position is always emitted (§7.5) | **CS** | keeps `π_claim`'s shape independent of any contract field |
-| contract succession: declared predecessor, byte-identical shared declarations, immutable tombstones, refusal at load (§8.3) | **RF†**, **CA†** | adopted now; only the **broader** versioning policy is ρC1 |
+| contract succession for claim vocabulary: `genesis`/`successor`, identical canonical schema projections across a succession, immutable tombstones, refusal at load (§8.3) | **RF†**, **CA†** | adopted now; only the **broader** versioning policy is ρC1 |
 | retirement is enforced in the authoring constructor, never at decode (§7.3a) | **US†** | decode and restore must accept retired identifiers or history becomes un-restorable |
 
 ### 8.6 Preserved untouched — the negative list
@@ -2150,12 +2176,18 @@ and a typed claim projection has strictly more ways to disagree: slot order,
 map key sorting, tag bytes, and the absent-versus-unit distinction §7.5 exists
 to remove.
 
-## 9. Guarantees (M1–M14)
+## 9. Guarantees (M1–M13)
 
-Fourteen rows. Six come from obligations this document raised before §8 — three
+Thirteen rows. Six come from obligations this document raised before §8 — three
 from the closure check and the laws (§3.4, §4.3), three from ρ cells that read
 *"no banked oracle"*. The rest come from §8.5's adopted items, which amend
 nothing and are therefore tested by nothing unless M tests them.
+
+**M does not duplicate an amended banked row.** Term-resolution discrimination
+belongs to **D3**, which ρA7 already extends to the five outcomes; an M row
+restating it would create a second oracle for one property and a second place
+to keep in step. What M adds instead is the part D3 does not reach — that an
+accepting decode's receipt is **complete** — and that lives in M4.
 
 **The discipline is §5's OF†, applied to M itself: every row must be capable of
 failing.** So each row below names a **sabotage** — a specific mutation that
@@ -2167,32 +2199,32 @@ nine banked tables use.
 
 Two rows deliberately stay apart. **M2** (every run input reaches the
 assessment's carrier identity) and **M3** (`standing` terminates) were both
-raised by §4, but they have nothing in common operationally: M2's sabotage adds
-an input outside the declared role partitions, M3's constructs a retraction
-cycle. Sharing a row would let one pass on the other's evidence.
+raised by §4, but they have nothing in common operationally: M2's sabotage
+attaches an input outside the declared role partitions, M3's strips the target
+identity out of a retraction's identity projection. Sharing a row would let one
+pass on the other's evidence.
 
 | id | guarantee | how it is tested |
 |---|---|---|
 | **M1** | **Undeclared reads are detected, not noticed.** Every value a semantic derivation actually reads is inside its declared input closure | Instrument the derivation so each value read is recorded at read time; assert the recorded read-set is contained in the declared closure, for a corpus exercising every closure member. **Sabotage:** add a code path that reads one value outside the closure — a facet, a contract, a producer set — changing nothing else, and assert the check **fails**. This is the row §1 asks for: G3's own text records four members that "were live holes in earlier revisions," each found by a reviewer noticing, and nothing in that method distinguishes a complete closure from one whose next hole is unnoticed. **Negative:** a run that reads nothing outside the closure must pass without exemptions, or the row is untestable in the ordinary case |
-| **M2** | **Every run input reaches the assessment's carrier identity** | Take an assessment; for each input of its run, mutate that input's bytes and assert the assessment identity **moves**. **Sabotage:** attach an input to the run that no declared role partition covers, and assert the attempt is **refused** — not silently ignored. §4.3 finding (a) established that the current path is three hops (the recipe's role-partitioned `inputs` → R2 → assessment identity) and is a **binding** path, not a proven semantic one; this row pins the binding so the fragility is tested rather than argued |
-| **M3** | **`standing` terminates on every input** | Evaluate `standing` over retraction chains of increasing depth, including counter-retractions and multiple standing retractions of one target, and assert termination and a stable value. **Sabotage:** attempt to construct a retraction whose target's content identity contains its own — assert it is **unconstructible**, since a retraction's identity covers its target's identity, and separately that a hand-written cyclic pair is **refused at the boundary** and an **audit finding** when raw-written. Correction §4 argues well-foundedness; no banked row tests it |
-| **M4** | **Every argument and restriction is a resolvable referent, or the decode refused** | Decode a claim whose argument term **is** in the sort's bound vocabulary with that vocabulary readable → accepted, check recorded **performed**. **Sabotage:** decode one whose term is **not** in a readable vocabulary → **refused**, nothing minted. **Negative — availability is not membership:** make the vocabulary unreadable and decode the same bad term → **accepted** with the check recorded **not performed**, and assert the two receipts are distinguishable. **Static:** assert a bare string cannot occupy an argument slot at all |
+| **M2** | **Every run input reaches the assessment's carrier identity** | Take an assessment; for each input of its run, **replace that input with a newly minted dataset carrying a different content identity** — inputs are immutable and content-addressed, so the mutation is a substitution, not an edit — and assert the assessment identity **moves** every time. **Sabotage:** attach an input to the run that no declared role partition covers, and assert the attempt is **refused**, not silently ignored. §4.3 finding (a) established that the current path is three hops (the recipe's role-partitioned `inputs` → R2 → assessment identity) and is a **binding** path, not a proven semantic one; this row pins the binding so the fragility is tested rather than argued |
+| **M3** | **`standing` terminates on every input** | Evaluate `standing` over retraction chains of increasing depth, including counter-retractions and several standing retractions of one target; assert termination and a stable value. **Sabotage — attack the argument, not the hashes:** well-foundedness rests on a retraction's identity projection **covering its target's identity**, so containment strictly decreases along the chain. Remove the target identity from that projection and assert the change is **refused** — a projection that no longer covers its target admits a cycle nothing downstream would catch. **Explicitly not the test:** a hand-written cyclic pair is refused because its stored identities disagree with its payloads, which tests identity **recomputation** and says nothing about well-foundedness. Correction §4 argues the property; no banked row tests it |
+| **M4** | **Every argument and restriction is a typed referent; resolved non-membership refuses, and an unperformed check stays explicit** | Decode a claim whose argument term **is** in the sort's bound vocabulary with that vocabulary readable → accepted, outcome `member`. **Sabotage:** decode one whose term is **not** in a readable vocabulary → **refused**, nothing minted. **Negative — availability is not membership:** make the vocabulary unreadable and decode the same bad term → **accepted**, outcome `not-available`, and assert the two accepting receipts are distinguishable. **Receipt completeness:** on every accepting decode, assert the receipt carries **exactly one outcome per referent position** — no position missing, none duplicated — plus the **`ResolutionSnapshot` identity** it resolved against. **Static:** assert a bare string cannot occupy an argument slot at all. **Scope:** the five outcomes' mutual distinctness is **D3**'s, as amended by ρA7, not this row's |
 | **M5** | **Qualification participates in claim identity** | Two claims differing **only** in a restriction identifier → different `I_claim`; differing **only** in quantifier tag → different; one carrying a dimension the other omits → different. Then the founding case end to end: mint kernel §4.1's *"in adults"* claim, assess it, "edit" to *"in all humans"*, and assert a **new** identity, the prior assessment still bound to the old one, and a `supersedes` link. **Sabotage:** drop the qualifier map from `π_claim` and assert the founding case **collapses to one identity** — the row's whole point. **Negative:** re-serialize the qualifier map with keys in a different order and assert the identity is **unchanged** |
-| **M6** | **Operators are issued, retired, and never redefined** | A successor contract changing `arity`, `arg_sorts`, `sign_apt`, `layers` or `dimensions` under an existing identifier → **refused at contract load**. A successor **dropping** a retired declaration → refused. A successor adding a new operator → accepted, no existing claim affected. **Retirement, both paths:** assert the authoring constructor **cannot select** a retired identifier (statically), and that decode/restore of a historical claim at that identifier **succeeds** against the frozen declaration. **Sabotage:** flip `sign_apt` on a live operator and assert load fails; remove the declared predecessor link and assert the redefinition check is **unable to run** rather than silently passing. **Negative:** a purely editorial change is accepted, moves the contract identity, and needs no new identifier |
-| **M7** | **No second authored operator artifact exists** | Assert operator, dimension and sort declarations exist **only** in profile contracts, and every runtime form is compiled from `ProfileSpec`. **Sabotage:** add a hand-authored operator roster beside the contracts and assert it is **refused or unreachable** — never consulted as a parallel source. **Negative:** a grep for operator names is **not** the test and would fail against a conforming tree; the test is that mutating a contract changes the compiled schema with no code change. D4 does not cover this — it governs per-kind sources, and a claim schema is not a per-kind artifact |
+| **M6** | **Operators are issued, retired, and never redefined** | A successor contract changing `arity`, `arg_sorts`, `sign_apt`, `layers` or `dimensions` under an existing identifier → **refused at contract load**. A successor **dropping** a retired declaration → refused. A successor **adding** a new operator → accepted; assert existing **claim identities are unchanged**, and assert **consulted belief digests move**, because the contract identity moved and D6 puts it in the digest. Adding is additive for identity and never for belief, and a row claiming "no existing claim affected" without that second arm would be false. **Retirement, both paths:** assert the authoring constructor **cannot select** a retired identifier (statically), and that decode/restore of a historical claim at that identifier **succeeds** against the frozen declaration. **Sabotage:** flip `sign_apt` on a live operator and assert load fails; remove the declared predecessor link and assert the redefinition check is **unable to run** rather than silently passing. **Negative:** a purely editorial change is accepted, moves the contract identity, and needs no new identifier |
+| **M7** | **No second authored operator artifact exists** | Assert operator, dimension and sort declarations exist **only** in profile contracts, and every runtime form is compiled from `ProfileSpec`. **Sabotage:** add a hand-authored operator roster beside the contracts and assert it is **refused or unreachable** — never consulted as a parallel source. **Negative:** a grep for operator names is **not** the test and would fail against a conforming tree. The test is a pair of mutations: change a contract's **semantic schema** — an operator's dimension set, say — and assert the compiled schema changes with **no code change**; change only a **description** and assert the compiled schema is **unchanged** while the contract identity moves. D4 does not cover this — it governs per-kind sources, and a claim schema is not a per-kind artifact |
 | **M8** | **Claim identity is independent of contract release and of compilation** | Bump a consulted contract editorially and assert `I_claim` is **unchanged** while `belief_input_digest` **moves** (§7.4 row 1). Recompile `ProfileSpec` — different merge order, different compiler build — and assert `I_claim` is unchanged and `ProfileSpec`'s identity appears in **neither** `π_claim` nor the consulted set. **Sabotage:** fold the contract release into `π_claim` and assert an ontology release now forks every claim, which is the failure this row forbids. **Negative:** bump an **activated but unconsulted** contract and assert both `I_claim` and the digest are unchanged (§7.4 row 3) |
-| **M9** | **`π_claim`'s shape depends on the claim, never on a contract field** | Project a claim at a **sign-inapt** operator; assert the polarity position is **present**, carrying `sign_inapt_tag`, and that `inapt` and `unsigned` produce **different** digests. **Sabotage:** omit the position for sign-inapt operators and assert the digest changes — the defect §7.5 corrects, in which a `sign_apt` edit would re-project stored claims. **Negative:** an operator's contract may not be edited in a way that changes any stored claim's projection; combined with **M6** this must be unreachable rather than merely untried |
-| **M10** | **Two implementations hash a typed claim identically** | One shared fixture: a claim exercising every position — multi-slot args, several qualifier dimensions, a sign-inapt operator, a non-ASCII referent identifier — projected and hashed in **both** Python and TypeScript, asserted byte-identical at the projection and equal at the digest. **Sabotage:** change one implementation's map-key sort, slot order, or tag bytes and assert the fixture **fails**. This follows D §6's precedent of exactly one parity fixture per shared encoding; a typed claim has strictly more ways to disagree than a facet key |
+| **M9** | **`π_claim`'s shape depends on the claim, never on a contract field** | Project a claim at a **sign-inapt** operator; assert the polarity position is **present**, carrying `sign_inapt_tag`. Assert `inapt` and `unsigned` are **distinct byte sequences in the encoding**, asserted **directly against the base contract** rather than inferred from two claim digests — the two tags necessarily occur under **different operators**, so differing digests would prove only that the operators differ. **Sabotage:** omit the position for sign-inapt operators and assert the digest changes — the defect §7.5 corrects, in which a `sign_apt` edit would re-project stored claims. **Negative:** combined with **M6**, an edit that would re-project a stored claim must be **unreachable**, not merely untried |
+| **M10** | **Two implementations hash a typed claim identically, over every closed tag** | One shared fixture artifact holding a **vector** of minimal claims, chosen so that **every** closed kernel tag appears at least once — each polarity (`positive`, `negative`, `unsigned`, `inapt`), each quantifier, each layer in the base vocabulary — plus one claim exercising multi-slot args, several qualifier dimensions and a non-ASCII referent identifier. Assert byte-identical projections and equal digests in **both** Python and TypeScript for **every** entry, and assert the vector's tag coverage is **complete against the base contract**, so adding a tag to the grammar forces a vector entry rather than silently going untested. **Sabotage:** change one implementation's map-key sort, slot order, or **a single tag's bytes**, and assert the fixture fails — under a one-claim fixture, changing an unused tag would pass. Follows D §6's precedent of exactly one parity fixture per shared encoding |
 | **M11** | **`decodeClaim` is a function of its arguments, and refuses rather than repairs** | Same `⟨WireClaim, ProfileSpec, ResolutionSnapshot⟩` decoded twice, in different processes and different checkouts → **identical** result. Then each ill-formed input in turn — a sign on a sign-inapt operator, wrong arity, an undeclared dimension, an inadmissible layer, a missing required contract — → **`Refused`**, with **nothing minted** in every case. **Sabotage:** make availability ambient rather than a parameter and assert two holders now decode the same bytes differently. **Negative:** a raw-written malformed claim is an **audit finding**, not a silent accept and not a decode failure — the boundary was bypassed, not defeated |
-| **M12** | **An untypeable span mints nothing** | Present a span no operator fits → assert **no** proposition, **no** source-assertion, and a project-scoped typing-work item. **Static:** assert a source-assertion naming a non-existent proposition identity is **unconstructible**, since world §4.2 puts the proposition identity in its basis. **Sabotage:** add a fallback that mints a proposition with a placeholder operator and assert the check fails. **Negative:** the work item must **not** appear in kernel limitation 1's unassessed queue — different membership condition, different owner (§6.6) |
-| **M13** | **Invalid claims are unspellable, tested statically** | Type-level, not by attempting a call: assert the typed constructor offers **no** polarity argument at a sign-inapt operator, no slot for an argument of the wrong sort, and no inhabitant for an inadmissible layer. **Sabotage:** reintroduce a `SIGN_MEANINGFUL_PREDICATES`-style roster with a runtime validator and assert the static check **no longer holds** — the roster is exactly what §6.3 retires, and this row is what stops it returning. **Negative:** the check must not be a passing unit test that merely never constructs the bad value |
-| **M14** | **The five term-resolution outcomes stay distinct** | Reach each of `member`, `not-member`, `not-consulted`, `not-present`, `not-available` and assert none collapses into another — extending D3's existing method to the two new members. **Sabotage:** report a `not-consulted` term as `not-member` and assert the check fails; the two have **opposite evidential force**, one being a finding and the other the absence of one. **Scope:** this row tests the **diagnostic** outcome and its recording at decode. It asserts **nothing** about persistence, discovery, succession, or epistemic effect — those are ρO1 and have no row |
+| **M12** | **An untypeable span mints nothing** | **End to end, which is the only form this row can take.** Present a span no operator fits; assert claim typing **refuses**, and assert the extraction path therefore receives **no proposition identity** and mints **no source-assertion** — the span surfaces as a project-scoped typing-work item instead. **Sabotage:** add a fallback that mints a proposition at a placeholder operator; separately, one that mints a source-assertion against a synthesized proposition identity. Assert both fail. **Negative:** the work item must **not** appear in kernel limitation 1's unassessed queue — different membership condition, different owner (§6.6). **Scope:** this row does **not** assert that a source-assertion naming an unresolved proposition identity is unconstructible in general. World addressing tolerates unresolved references, and forbidding them would be a deliberate amendment to source-assertion resolution, which ρ does not make |
+| **M13** | **`Claim` is opaque, and the only route to one is the validated constructor** | Assert `Claim` cannot be built from ambient data: no public field-wise constructor, no cast or coercion from `WireClaim`, no dict/object-literal path. Assert **no function downstream of the boundary accepts a `WireClaim`** — the wire type is confined to the decode module. **Sabotage:** export a raw constructor, or widen one downstream signature from `Claim` to `WireClaim`, and assert the check fails. **Scope, stated because the first draft overreached:** profile-dependent validity — sign-aptness, arity, argument sorts, permitted dimensions, admissible layers — is **runtime** and belongs to **M11**. Operators arrive through `ProfileSpec`, and no Python or TypeScript implementation can vary a constructor's static signature by a runtime value without a code-generation layer this design does not propose. What survives statically is the consequence that actually matters: the check happens **once**, at one place, and downstream code needs no defensive revalidation |
 
 ### 9.1 What M does not cover
 
 | not covered | why |
 |---|---|
-| binding-check persistence, discovery, succession, and the correction path for a claim later found `not-member` | ρO1. M14 covers the outcome only, and deliberately stops there |
+| binding-check persistence, discovery, succession, and the correction path for a claim later found `not-member` | ρO1. **D3** (as amended by ρA7) owns outcome discrimination and **M4** owns receipt completeness; both stop at the decode boundary |
 | whether an unchecked claim may be assessed | ρO1 |
 | the recording mechanism for destruction of a last held copy | ρO2. M has no row, because ρA8 decides the *answer* and not the mechanism |
 | entailment, subsumption, and estimand match | ρO3. §6.7 preserves the encoding's capacity to express them and defines no relation, so there is nothing to test |
@@ -2201,9 +2233,10 @@ cycle. Sharing a row would let one pass on the other's evidence.
 
 **Two rows are load-bearing beyond their own statement.** M1 is the only row
 that attacks the method rather than a property: every other row here, and in the
-nine banked tables, tests something a person thought to test. And M13 is the
-only static row — if it decays into a runtime check, §6.3's entire argument
-reduces to a validator with better manners.
+nine banked tables, tests something a person thought to test. And M13 is what
+keeps the boundary a boundary — if `Claim` stops being opaque, or one downstream
+signature widens to the wire type, then M11's single check stops being the only
+check and every reader has a reason to re-validate defensively.
 
 ## 10. Limitations
 
