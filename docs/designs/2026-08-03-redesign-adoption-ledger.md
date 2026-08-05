@@ -17,8 +17,10 @@ the `science` name and starts its own version line.
 
 Three consequences, recorded so they survive:
 
-- **The git history is deliberately not carried over.** These nine design
-  documents seed the first commit; the review history that produced them —
+- **The git history is deliberately not carried over.** Nine design
+  documents seeded the first commit (a tenth, the domain extension boundary,
+  banked 2026-08-04 — §1 and §3 carry the current inventory); the review
+  history that produced them —
   including the eleven-round review of the tamper-evident log — stays browsable
   in `proto-science`.
 - **Key project elements are *reproduced*, never migrated.** Code may be
@@ -45,7 +47,9 @@ decomposition rulings that follow from it.
 | 4 | **`atoms` A6–A8** — coherent capture, effect/recovery execution, exerciser | `atoms` authority design §14 | durable multi-file commit; retirement of the single-writer/no-durability profile claims (substrate §7) | Nothing in banked designs waits on them; adoption route is science's composition root (`atoms` §12.2) |
 | 5 | **Tamper-evident mutation log** (repro §9) | `2026-08-03-tamper-evident-log-design.md` — `atoms` owns registration (the A6–A8 executor path), science owns anchor carriage and verification | closing kernel §8.7's four recorded-mutation consequences and strengthening the fifth — chronology — for boundary-mediated executions (G2a/R12's out-of-band negative remains) | **Design banked 2026-08-03** (per-root chains with settlement lifecycle, epoch-cadence anchors + explicit anchor act, surviving-observer bound; kernel §8.7/G2a, comp §3.3/R12/§9, packaging §3/§4/§5/§5.1/§5.2/X9/§12/lim. 1, and `atoms` §15 amended in the banking commit); consumes artifact 1 as anchor carrier; the four-of-five closure lands at implementation (L1–L13) |
 | 6 | **Retraction + correction lifecycle** | sub-problem 5a (§2) | four banked limitations that currently say the wrong answer stays computable (comp §5.2/§11.13/§13, world lim. 11) | **Banked 2026-08-03** (`2026-08-03-correction-lifecycle-design.md`; kernel §3.3/G8/§8.7 amended in the banking commit); C1–C10 await implementation |
-| 7 | **Normative contract + conformance oracles + instrument certification** | sub-problem 5b (§2) | disposition of the 63 legacy check modules (principle in 5b §8); homes for G1, G2a–G2c, G3–G8; S1–S8 (S1a); W1–W13 (W5a, W8a–b); R1–R23; C1–C10; X1–X12 | **Design banked 2026-08-03** (`2026-08-03-normative-contract-design.md`; tenth kind `instrument-certification`, rule-binding recipe member, certification-enumeration receipt — kernel, world §3/§4.2/§5/W8a, comp §4.2/§4.2a/§7.3/§7.3b–c/R18/R19, 5a §3/§4/C10/§9, packaging §5/§5.2/§7/X9/X10/X12 amended in the banking commit); the first contract cut, the executable suite, and N1–N10 await implementation |
+| 7 | **Normative contract + conformance oracles + instrument certification** | sub-problem 5b (§2) | disposition of the 63 legacy check modules (principle in 5b §8); homes for G1, G2a–G2c, G3–G8; S1–S8 (S1a); W1–W13 (W5a, W8a–b); R1–R23; C1–C10; X1–X12; L1–L13; D1–D10 (the last two added 2026-08-04, L having been omitted at the §9 banking) | **Design banked 2026-08-03** (`2026-08-03-normative-contract-design.md`; tenth kind `instrument-certification`, rule-binding recipe member, certification-enumeration receipt — kernel, world §3/§4.2/§5/W8a, comp §4.2/§4.2a/§7.3/§7.3b–c/R18/R19, 5a §3/§4/C10/§9, packaging §5/§5.2/§7/X9/X10/X12 amended in the banking commit); the first contract cut, the executable suite, and N1–N10 await implementation |
+
+| 8 | **Domain extension boundary** — where domain-specific material lives across `nodes`, `science`, and downstream domains | `2026-08-04-domain-extension-boundary-design.md` | consistent organization of domain material; the first domain pack; the predicate-vocabulary design | **Design banked 2026-08-04** (interpretation as facet conjunction with an explicit promotion trigger; exact vocabulary bindings; `ProfileSpec` as the sole compiled profile with a zero `nodes` delta; manifest `profile` block inside corpus-state identity; consulted profile contracts in G3 — world §5/W13/lim. 9, packaging §6, kernel §5.1, substrate §6.1/§12, and this ledger amended in the banking commit); D1–D10 await implementation |
 
 ## 2. Sub-problem 5 — split and order (ruled 2026-08-03)
 
@@ -113,8 +117,17 @@ Two standing constraints on 5b:
    implementation, not before design.
 5. **`atoms` A6–A8** proceed independently; composition-root adoption follows.
 6. **§9 log design** after the world-index packaging design settles the anchor.
-   **Banked 2026-08-03** (`2026-08-03-tamper-evident-log-design.md`). The
-   design track has no open items; L1–L13 await implementation with A6–A8.
+   **Banked 2026-08-03** (`2026-08-03-tamper-evident-log-design.md`);
+   L1–L13 await implementation with A6–A8.
+7. **Domain extension boundary** — where domain-specific material lives, and how
+   `science` is organized so a later decomposition into packs is a move rather
+   than a rewrite. **Banked 2026-08-04**
+   (`2026-08-04-domain-extension-boundary-design.md`); D1–D10 await
+   implementation. Its §12 names the **predicate vocabulary** as the next
+   focused design: kernel limitation 4 records nine predicates, declared
+   inadequate, with no owner and no extension rule — while `predicate` feeds
+   proposition semantic identity, so a predicate contract's identity
+   consequences reach past that document's remit.
 
 ## 4. Invariants and gates to pin when their layer lands
 

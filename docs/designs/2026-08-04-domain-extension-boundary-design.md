@@ -1,6 +1,8 @@
 # Domain extension boundary — design
 
-**Status:** Draft for review, 2026-08-04. Rules where domain-specific material
+**Status:** Banked 2026-08-04, after two review rounds; the banking commit
+applies the amendment set below across world, packaging, kernel, substrate, the
+normative contract, and the ledger. Rules where domain-specific material
 lives across `nodes`, `science`, and downstream domains; closes substrate §12's
 kind-SSOT question; and organizes the `science` repository so that a later
 decomposition into distributable packs is a move, not a rewrite. No domain
@@ -36,8 +38,11 @@ substrate **§12**'s kind-SSOT question **closes** by retiring
 `KIND_DESCRIPTORS` in favour of a single compiled `ProfileSpec`; substrate
 **§6.1**'s
 placement of the `empirical-observation` facet as native to `nodes` is
-**corrected** to the `science` profile (§3.4 here). The ledger gains this
-design as a §5 companion.
+**corrected** to the `science` profile (§3.4 here); the **normative-contract**
+design's exact oracle inventory (its §5) gains **D1–D10** — and, correcting an
+omission from the §9 banking, **L1–L13**, which never reached it. The ledger
+gains this design in §1's artifact table and §3's order of work, and its
+artifact-7 oracle inventory gains **L1–L13** and **D1–D10** for the same reason.
 
 ## 1. Why
 
@@ -257,14 +262,14 @@ Substrate §12 asks which of `science_model.profiles`' `KIND_DESCRIPTORS` and
 sources of truth are the defect, and picking a winner leaves the loser as a
 derived duplicate that can drift.
 
-There is **one** authoritative source — the **profile source**: the declarative
+There is **one** normative source — the **profile source**: the declarative
 `science` base contract together with the activated domain contracts. Every
 per-kind artifact is compiled from it.
 
 ```text
-science base contract  ─┐
+science base contract  ─┐   (normative SSOT)
                         ├─▶  ProfileSpec  ─┬─▶  KindSpec set ─▶ Registry.register()
-active domain contracts ┘   (authoritative)└─▶  any further per-kind artifact
+active domain contracts ┘   (compiled)     └─▶  any further per-kind artifact
 ```
 
 The two roles are distinct and should not both be called "authoritative": the

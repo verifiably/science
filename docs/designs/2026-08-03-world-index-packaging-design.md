@@ -278,16 +278,37 @@ a root-level non-node file a declared part of the layout rather than a walk
 hazard. Fields, deliberately minimal:
 
 ```yaml
-manifest_version: 1
+manifest_version: 2
 corpus_id: <opaque 128-bit value, lowercase hex, minted once>
+profile:                # added 2026-08-04; see the amendment below
+  science_contract: science:<contract-identity>
+  domains:              # a mapping, never a list
+    biology: biology:<contract-identity>
 forked_from:            # optional; present iff this corpus was forked
   corpus_id: <parent id>
   corpus_state: <exact corpus-state identity at the fork>
 ```
 
-Nothing else. Every additional field is a place for a location or a human label
-to sneak back into an identity's neighborhood — world limitation 9's warning —
-and coordination facts have their home in `science.yaml`, not here. Replica vs
+**Amendment (2026-08-04) — the `profile` block, and why the old closure could
+not simply be widened** (`2026-08-04-domain-extension-boundary-design.md` §7).
+This section previously read "Nothing else," on the reasoning that every
+additional field is a place for a location or a human label to sneak back into
+an identity's neighborhood (world limitation 9). That reasoning is **superseded
+rather than overruled**: it was sound precisely *because* manifest fields sat
+outside every check, and world §5 has now been amended so the corpus-state
+identity is taken over the **complete canonical manifest projection**. A field
+in the manifest is no longer unchecked, so the objection no longer applies —
+and the two amendments must land together, since `profile` inside an unchecked
+manifest would reproduce exactly the defect limitation 9 named.
+
+The `profile` block pins the normative contracts under which this corpus's
+kinds and facets are legal: exactly one `science_contract`, and a
+**namespace-to-contract mapping** of domains. A mapping rather than a list makes
+duplicate namespaces unrepresentable and ordering a non-question. The manifest
+stays a **closed** shape: an unknown field, a duplicate key, or a malformed
+contract identity is **refused at load**, never ignored.
+
+Coordination facts still have their home in `science.yaml`, not here. Replica vs
 fork stays an authored act, exactly as world §5 rules it: a fork declares
 `forked_from` and mints a fresh id at copy time; a replica changes nothing; the
 undeclared case is caught by the uniqueness invariant when both are live.
