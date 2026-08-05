@@ -29,7 +29,8 @@ manifest semantic change → moves; other non-node file → unchanged); world
 **limitation 9** narrows to the residue that survives; packaging **§6**'s
 "nothing else, deliberately" closure is **superseded** by the `profile` block;
 kernel **§5.1**'s G3 closure gains a member — **every profile contract the
-derivation actually interprets**, the `science` base contract included;
+derivation consults**: exactly one `science_contract` **unconditionally**, plus
+each domain contract whose namespaced facets are actually read;
 **W5 is preserved unamended** by §8.1's agreement and move-refusal rules;
 substrate **§12**'s kind-SSOT question **closes** by retiring
 `KIND_DESCRIPTORS` in favour of a single compiled `ProfileSpec`; substrate
@@ -168,11 +169,10 @@ explicitly outside the guarantee (kernel limitation 8). Nothing about it is
 structural. The correction costs `nodes` nothing and removes the one existing
 counterexample to the boundary this design draws.
 
-> **Reviewer note.** This correction is *derived* from §2.2 rather than
-> separately ruled during design discussion. It is the single amendment here
-> that changes a banked placement without an independent argument having been
-> requested, and it should be confirmed or rejected explicitly rather than
-> adopted by adjacency.
+**Confirmed on review, 2026-08-04**, on an independent argument: `dataset` is
+itself a Science kernel kind, and acquisition-boundary semantics are scientific
+policy, so leaving either in domain-free `nodes` would contradict `nodes`'
+own ownership contract. The correction does not rest on §2.2 alone.
 
 ### 3.5 `practices` — procedure without vocabulary
 
@@ -267,9 +267,12 @@ science base contract  ─┐
 active domain contracts ┘   (authoritative)└─▶  any further per-kind artifact
 ```
 
-`ProfileSpec` is the merged, validated in-memory form of the profile source and
-is the only thing entitled to be called authoritative. `KindSpec` is a
-**compiled runtime product**. `KIND_DESCRIPTORS` does not survive as a parallel
+The two roles are distinct and should not both be called "authoritative": the
+**contracts are the normative SSOT** — what a reviewer reads, what a version
+names, what an amendment edits — while **`ProfileSpec` is the sole compiled
+runtime profile**, the merged and validated in-memory form nothing authors by
+hand. `KindSpec` is a further **compiled runtime product** derived from it.
+`KIND_DESCRIPTORS` does not survive as a parallel
 per-kind SSOT — under the clean-start ruling (ledger §0) it is not carried over
 at all, so nothing is deprecated and no compatibility layer is created; the
 descriptor concept simply has no successor. Any future artifact needing per-kind
@@ -316,7 +319,7 @@ a duplicate key, or a namespace whose contract identity is malformed is
 
 **The projection is defined through the existing canonical encoding.** The
 manifest projection is the `science.identity.v1` canonical form (computation
-§4.2's value contract — NFC strings, sorted object keys, type-preserving) of
+§4.3's value contract — NFC strings, sorted object keys, type-preserving) of
 the parsed manifest, taken over the **complete** closed field set. Defining it
 through the existing encoding rather than a new one is what makes D5's
 formatting-inert arm true by construction: YAML whitespace, key order, and
@@ -365,22 +368,34 @@ derivation actually interprets, alongside the existing belief-policy version,
 which is the exact precedent — a versioned rule entering the computed view as
 an input rather than being stamped on records.
 
-**Every consulted profile contract, not only domain contracts.** The member
-covers the **`science` base contract** as well as each domain contract. This is
-forced by §3.4: `empirical-observation` now lives in the base profile and is
-**unnamespaced**, so a rule collecting only domain namespaces would let a
-successor `science_contract` reinterpret the eligibility hinge itself without
-moving G3 — the original defect, reappearing at the most load-bearing facet in
-the system. The consulted set is a set of **contract identities**, and the base
-contract is always a member of it whenever any base-profile facet is read.
+**The `science` base contract is unconditional; domain contracts are
+conditional.** These are not the same rule, and collapsing them reopens the
+defect.
 
-**Scope: consulted, not merely activated.** A domain activated in a manifest
-but never interpreted by a given derivation does **not** enter that
-derivation's digest. Belief moves when the rules it actually used move, not when
-an unrelated contract is upgraded. The consulted set is computed rather than
-declared: walk the derivation's closure, collect the namespace of every facet it
-reads (the empty namespace denoting the base profile), and resolve each
-namespace to a contract identity by §8.1.
+`science_contract` governs the kernel kinds, the relation signatures that close
+belief, the eligibility predicate, and the unnamespaced base-profile facets. A
+Science semantic derivation therefore consults it **always** — interpreting
+`assessment`, `dataset`, or a relation signature *is* consulting it, whether or
+not the closure happens to read a base-profile facet. Making its membership
+conditional on a facet read would let a successor contract reinterpret
+`assesses` or the eligibility predicate itself without moving G3, which is the
+original defect at a still more load-bearing place than §3.4's
+`empirical-observation`.
+
+So the consulted set is a set of **contract identities** built by two different
+rules:
+
+- **Exactly one `science_contract`, always.** Every Science semantic derivation
+  includes it unconditionally. There is no closure walk that can omit it and no
+  derivation that does not consult it.
+- **Each domain contract, only if actually read.** A domain activated in a
+  manifest but never interpreted does **not** enter the digest. Membership is
+  computed rather than declared: walk the derivation's closure, collect the
+  namespace of every facet it reads, and resolve each namespace to a contract
+  identity by §8.1.
+
+Belief therefore moves when the base contract moves, and when a domain contract
+it actually used moves — not when an unrelated domain is upgraded.
 
 ### 8.1 Cross-corpus agreement, and why W5 survives
 
@@ -398,14 +413,21 @@ row; this would have been the third.
 **The rule, which removes the possibility rather than trading it off:**
 
 1. **Resolution.** A facet namespace resolves to the contract identity pinned by
-   the manifest of the corpus holding the node the facet sits on.
+   the manifest of the corpus holding the node the facet sits on. The
+   `science_contract` resolves the same way, per corpus.
 2. **Agreement.** Across one derivation's closure, every consulted namespace
    must resolve to **exactly one** contract identity. Two corpora in one closure
    pinning different identities for one namespace is **refused**, not merged,
-   not preferred-by-recency, and never silently resolved.
+   not preferred-by-recency, and never silently resolved. **`science_contract`
+   agreement is required unconditionally** — every corpus in the closure must
+   pin the same one, whether or not any base-profile facet is read, since §8
+   makes the base contract an unconditional member.
 3. **Move and merge.** Moving or merging a node into a corpus whose profile
    pins a **different** identity for any namespace the node's facets use is
-   **refused** at the write boundary.
+   **refused** at the write boundary. For a **Science node**, the receiving
+   corpus must pin the same `science_contract` regardless of which facets the
+   node carries — a node with no domain facets at all is still governed by the
+   base contract, so relocation across base-contract identities is refused too.
 
 Rule 3 is what makes rule 2 satisfiable in practice and what preserves W5
 exactly: a *permitted* move never crosses a contract boundary, so a permitted
@@ -470,8 +492,8 @@ what must not break it.
 | D3 | A vocabulary binding is exact or refused, and its three unresolved states stay distinct | bind `vocabulary: {namespace: MONDO}` with no release → **refused** at contract load; bind a namespace+release and a held-dataset content identity → both **accepted**; then assert the three outcomes are **not collapsed** (§5): index the bound dataset's world address but make its corpus absent → **`not-present`**; identify the dataset but hold none of its bytes here → **`not-available`**, never reported as `not-present`; query a term outside the bound vocabulary → **`unknown`**. In every case assert the binding remains **well-formed**, no error is raised, and **no fallback to another release** occurs |
 | D4 | `ProfileSpec` is the only per-kind source; `KindSpec` is compiled | have `science` and a domain both contribute facets to `dataset`; assert exactly **one** `KindSpec` is registered for it carrying the union, that `Registry.register()` is called **once** per kind, and that no duplicate-registration error is reachable; mutate a domain contract and assert the compiled spec changes with **no `nodes` code change**; assert **no second authored per-kind artifact exists** — nothing plays `KIND_DESCRIPTORS`' old role beside `ProfileSpec`, and any further per-kind artifact is compiled from it; assert a namespaced facet key round-trips **identically** through the Python and TypeScript canonical projections (the one shared parity fixture this design adds) |
 | D5 | The manifest pin is inside corpus-state identity, over a canonical projection | reformat `corpus.yaml` — whitespace, key order, quoting style — and assert corpus-state identity is **unchanged**; **reorder the `domains` mapping** and assert it is **unchanged** (ordering is inert by construction, since the projection sorts object keys); change a pinned contract identity and assert it **moves**; change any other non-node file and assert it is **unchanged**; assert the digest covers the **complete** canonical projection by adding a new permitted field and confirming it participates without a further amendment; **refusals:** an unknown field, a duplicate `domains` key, and a malformed contract identity are each **refused at load**, never ignored and never digested |
-| D6 | Every consulted profile contract enters belief; activated-but-unconsulted ones do not | derive belief over an assessment reading `biology/gene-axis`, bump the biology contract, and assert `belief_input_digest` **moves**; activate an unrelated domain and bump *it*, and assert the digest is **unchanged**; **the base-contract arm:** bump the **`science` base contract** in a way that reinterprets the **unnamespaced** `empirical-observation` facet (§3.4) and assert the digest **moves** — a consulted-set rule collecting only *domain* namespaces would miss exactly this, at the eligibility hinge; **negative — the defect this closes:** reinterpret a facet in a successor contract without changing any facet byte or assessment byte and assert the digest **still moves**, so two beliefs can never share one digest |
-| D7 | Contract agreement holds across a derivation, and W5 survives unamended | **W5 preservation:** move a dataset that appears in the producers map between two corpora pinning the **same** contract identities and assert `belief_input_digest` is **unchanged** even though both corpus-state identities moved — the row two prior snapshot-identity revisions violated; **agreement:** construct a closure spanning corpora pinning **different** identities for one namespace and assert the derivation is **refused**, never merged, never resolved by recency; **move refusal:** attempt to move a node whose facets use `biology/` into a corpus pinning a different `biology` identity and assert the **write boundary refuses**, so the belief-moving case is unreachable by relocation rather than tolerated |
+| D6 | Every consulted profile contract enters belief; activated-but-unconsulted ones do not | derive belief over an assessment reading `biology/gene-axis`, bump the biology contract, and assert `belief_input_digest` **moves**; activate an unrelated domain and bump *it*, and assert the digest is **unchanged**; **the base-contract arm:** bump the **`science` base contract** in a way that reinterprets the **unnamespaced** `empirical-observation` facet (§3.4) and assert the digest **moves** — a consulted-set rule collecting only *domain* namespaces would miss exactly this, at the eligibility hinge; **the unconditional arm:** take a derivation whose closure reads **no base-profile facet at all**, bump the base contract so it reinterprets a **kernel kind or a relation signature** (`assessment`, `dataset`, `assesses`), and assert the digest **still moves** — membership of `science_contract` is unconditional, so no facet-triggered walk may be able to omit it; **negative — the defect this closes:** reinterpret a facet, kind, or signature in a successor contract without changing any facet byte or assessment byte and assert the digest **still moves**, so two beliefs can never share one digest |
+| D7 | Contract agreement holds across a derivation, and W5 survives unamended | **W5 preservation:** move a dataset that appears in the producers map between two corpora pinning the **same** contract identities and assert `belief_input_digest` is **unchanged** even though both corpus-state identities moved — the row two prior snapshot-identity revisions violated; **agreement:** construct a closure spanning corpora pinning **different** identities for one namespace and assert the derivation is **refused**, never merged, never resolved by recency; **move refusal:** attempt to move a node whose facets use `biology/` into a corpus pinning a different `biology` identity and assert the **write boundary refuses**, so the belief-moving case is unreachable by relocation rather than tolerated; **the base-contract arms:** construct a closure spanning corpora that agree on every domain namespace but pin **different `science_contract`s** and assert the derivation is **refused** even though no base-profile facet is read; and attempt to move a Science node carrying **no domain facets whatsoever** into a corpus pinning a different `science_contract` and assert the move is **refused** — base-contract agreement is not conditional on facet content |
 | D8 | Domain contributions compose without collision | two domains contributing same-named facets in **different** namespaces → both compose; two contributions to one namespaced facet key → **refused** at compile, never last-writer-wins; a domain attempting to define a **kernel kind** or a relation signature → **refused** |
 | D9 | Practices carry no vocabulary | a `PRACTICE.yaml` declaring a vocabulary binding or a facet schema → **refused**; assert a practice contributes **nothing** to the compiled registry and therefore can never move `belief_input_digest` |
 | D10 | Facets stay facets until the promotion trigger | assert no API retracts, supersedes, or attributes an individual facet payload — the three operations that define the trigger are **unspellable** over facets; assert correcting an interpretation is an ordinary node revision leaving no record of the prior claim, and that this is the stated cost (limitation 3) of not yet promoting |
