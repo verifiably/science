@@ -157,10 +157,17 @@ Run         ──produces───▶ Dataset
 SourceAssertion──anchored_in──▶ Source         (span-level)
 Source      ──member_of──▶ Dataset             (the corpus is a dataset)
 *           ──supersedes──▶ *                  (same-kind succession)
-Retraction  ──retracts────▶ *                  ┐ adopted as-is into the normative
-*           ──grounded_in─▶ *                  ├ relation vocabulary at the first
-*           ──succeeded_by▶ *                  ┘ cut (5b §7.7, closing 5a §9)
+Retraction  ──retracts─────▶ EligibleTarget    ┐ adopted as-is into the normative
+Retraction  ──grounded-in──▶ Ground            ├ relation vocabulary at the first
+Retraction  ──succeeded-by─▶ Record            ┘ cut (5b §7.7, closing 5a §9)
 ```
+
+**The three adopted names are hyphenated, and all three originate from
+`Retraction`.** Both points are load-bearing: predicate matching is exact string
+equality, so `grounded_in` is simply a different predicate from `grounded-in`
+and would match nothing; and typing the latter two from `*` would let any record
+ground or succeed anything, which 5a's fields do not permit — `grounds` and
+`successor` are fields *of a retraction*.
 
 `derived_from` is a **view** over `produces ∘ transforms` and is never a stored
 edge — a distinction M₀ must keep, because a view has no instance identity.
@@ -194,9 +201,10 @@ roster this system's doctrine forbids:
 | `executes`, `targets` | assessment identity's spec and proposition components | world §4.2 |
 | `member_of` | corpus membership; discourse counts, never belief | kernel §4.3, §6 |
 | `anchored_in` | part of `source-assertion`'s identity basis (the span) | world §4.2 |
-| `supersedes`, `succeeded_by` | active/superseded state → admission | kernel §3.3 |
+| `supersedes` | active/superseded state → admission | kernel §3.3 |
 | `retracts` | standing → admission → belief member 6 | correction §4; 5b §7.7 |
-| `grounded_in` | the attributed ground of a retraction | correction §4; 5b §7.7 |
+| `grounded-in` | the recorded evidence a retraction rests on; a groundless subtraction is **unspellable** | correction §5; **C2**; 5b §7.7 |
+| `succeeded-by` | **nothing** — optional and informational, "a pointer for reviewers and diagnostics, **never an implicit redirect**"; nothing resolves through a retraction to its successor | correction §3; 5b §7.7 |
 
 | player | construction | identities | banked |
 |---|---|---|---|
@@ -388,7 +396,7 @@ route targets only: a retraction naming a note, or a proposition, is
 would make ill-formed targets expressible and then require a validator to
 reject them — defensive where the type should refuse.
 
-**`admission`** is an explicit reduction, and the three-element order it reduces
+**`admission`** is an explicit reduction, and the unordered codomain it reduces
 into must be defined before it can be named:
 
 ```text
@@ -437,30 +445,33 @@ recomputation nobody performed" (comp §7.1).
 | law | statement | tested by |
 |---|---|---|
 | **well-definedness** | each reading is a *function* of the configuration — one value, no ambient input | **G3** (recompute from the named closure alone; assert identity) |
-| **order-independence** | the reduction from a history of acts to a configuration forgets order: two populations holding the same records agree on every reading | **X6** — *"assert every status is invariant under record arrival order"* — for **registry statuses only** |
+| **order-independence** | `status : 𝒫(RegistryRecord) → RegistryStatus` — registry status is a function of the record **set**, so no arrival order can appear in it | **X6** — *"assert every status is invariant under record arrival order"*, the implementation oracle for that typing |
 | **observational invariance** | `ω ∼_B ω′ ⟹ B(ω,q) = B(ω′,q)`. Declared inert dimensions: location, alias, display fields, availability-with-a-copy-held | **W5**, **R5**, **G7** (converse half), **D2** |
 | **commitment sensitivity** | a change to a declared semantic projection changes the encoded commitment, up to negligible collision probability | **G3**, **L4**, **D5** |
 | **well-founded recursion** | `standing` terminates by content-address containment | argued correction §4; **no row tests it directly** — C5 tests chain-not-toggle and sibling-awareness |
-| **fail-closure** | `admission` reduces into a three-element order with `failed` absorbing | **G2c**, **G8**, **C6** |
+| **fail-closure** | `admission` reduces into an **unordered** three-element codomain under **failure-first precedence** | **G2c**, **G8**, **C6** |
 | **declared limit** | a *negative* row: the system provably **cannot** detect something, tested so the positive half is not over-read | **G4**, **G2a**, **G8** negatives; §8.7 |
 
-**Order-independence is stated at exactly the width X6 tests, and no wider.**
+**Order-independence is a typing, not an equation.**
 
 ```text
-status(R) = status(R′)      whenever the registry record sets are equal:  R = R′
+status : 𝒫(RegistryRecord) → RegistryStatus
 ```
 
-That is all X6 asserts — every registry status is a *function of the registry
-record set* — and its test varies arrival order to demonstrate it. M₀ claims
-nothing beyond it. In particular it does **not** claim `reduce(h) =
+Writing it as `status(R) = status(R′) whenever R = R′` would be reflexivity, not
+a law — it holds of every function whatsoever. The content is entirely in the
+**domain**: `status` takes a *set*, so there is no place in its input for an
+arrival order to sit, and independence follows from the type. X6 is the
+implementation oracle for that typing, varying arrival order and asserting the
+statuses agree.
+
+M₀ claims nothing wider. In particular it does **not** claim `reduce(h) =
 reduce(perm(h))` over whole configurations: that would assert equality of the
 entire state under reordering, which nothing banked guarantees and which
 occurrence-bearing records visibly violate — a `run` carries a minted event
 token and `started_at`, so two histories differing in order do not produce equal
-configurations even when they produce equal statuses.
-
-A system-wide history law would need histories modeled, which M₀ does not do and
-does not yet need.
+configurations even when they produce equal statuses. A system-wide history law
+would need histories modeled, which M₀ does not do and does not yet need.
 
 **Well-foundedness is argued in prose and tested by no row.** It is what makes
 `standing` a definition rather than a description, and correction §4 argues it
@@ -505,9 +516,15 @@ edge set against a digest and concluded about belief.
 
 ```text
 x →ˢᵉᵐ r     semantic read   — x's value participates in computing r's value
-x →ᵇⁱⁿᵈ r    binding         — x's identity is committed in r's digest
-x →ᵈᵉᶠ r     definedness     — x's state determines whether r is defined at all
+x →ᵇⁱⁿᵈ r    binding         — x's identity is committed in r's projection
+x →ᵈᵉᶠ r     arm selection   — x's state determines which arm of r's codomain is reached
 ```
+
+**`def` selects an arm; it does not withhold a value.** Every reading here is
+total — `B` always answers, and `NotAvailable` is one of its answers. The first
+draft called this edge "definedness … whether `r` is defined at all," which
+contradicts `B`'s totality two sections earlier. What a `def` edge decides is
+whether the reading lands in its **primary computable arm**.
 
 They are independent: an input can be `sem` without being committed (read but
 uncommitted — the defect class G3 exists to forbid), committed without being
@@ -521,11 +538,18 @@ identity-members compares two different kinds of thing. The statement that does
 type is:
 
 ```text
-B  =  B̄ ∘ κ_B          on the domain where belief is computable
+D_B   =  { (ω,q)  |  B(ω,q) ∈ Belief }        the belief arm's preimage
 
-κ_B : Ω × Q → CommittedProjection      the complete canonical committed projection
-I(B)  =  H( tag_B ‖ encode(κ_B(ω,q)) )  =  belief_input_digest
+κ_B   :  D_B  →  CommittedProjection          the complete canonical committed projection
+B|D_B =  B̄ ∘ κ_B                              factorization
+I(B)  =  H( tag_B ‖ encode(κ_B(ω,q)) )  =  belief_input_digest,  for (ω,q) ∈ D_B
 ```
+
+`κ_B` is typed over **`D_B`, not `Ω × Q`**. Outside the belief arm there is no
+claim that the projection can be computed at all — that is precisely what
+`NotAvailable` reports — so defining the digest there would assert a computation
+nobody performed. The factorization is a statement about `B` restricted to
+`D_B`, and every claim below is scoped to it.
 
 Equivalently: **equal committed projections must yield equal beliefs.** That is
 what G3's "recompute from the named closure alone; assert identity" asserts, and
@@ -578,8 +602,14 @@ which the value reaches `κ_B`, since almost none of them is committed as itself
 | retractions + coverage declaration → standing | 6 — retraction enumeration | ✅ |
 | the aggregation rule | 7 — belief policy version | ✅ |
 | consulted contracts → interpretation | 8 — profile contracts | ✅ |
-| **every non-`observes` run input** — ontologies, literature corpora, reference graphs, simulator configuration; read by the run, semantic effect unproven | **1, by a three-hop path** | ✅ **bound**, therefore factors — but fragile, finding (a) |
-| **held-ness of every input** | **nothing** | ⚠️ unresolved — finding (b) |
+
+Every verified semantic dependency of `B` factors through `κ_B`.
+
+**Two further dependencies sit deliberately outside that table**, and the
+findings below are about exactly why. Neither is an established semantic
+dependency: one is bound without being shown semantic, the other's edge type is
+undecided. Listing either as a row would let an unproven claim inherit a ✅, and
+the first draft did precisely that.
 
 The first draft additionally claimed minimality, on the grounds that each of the
 eight members is reached by some declared dependency. That argument compared the
