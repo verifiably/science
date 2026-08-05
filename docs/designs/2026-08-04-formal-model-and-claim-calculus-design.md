@@ -697,7 +697,7 @@ readings are where definedness actually enters.
 **113 rows** across nine frozen tables: G (10), S (9), W (16), R (23), C (10),
 X (12), N (10), L (13), D (10).
 
-Classification is **per assertion, not per row**, and a row may carry several
+Classification is **per assertion, not per row** — 113 rows, 128 assertions — and a row may carry several
 labels: many rows state a property in a positive arm and pin its limit in a
 negative arm, and those are different classes. **No id is renamed, renumbered or
 merged.** This section mints nothing — it labels what is already banked.
@@ -721,7 +721,7 @@ rather than half-blank.
 | G2c | admission only at `clean-environment, passed`; a passing sibling never clears a failure | **FC** |
 | G3 | recompute from the named closure alone → identity / mutate each member → digest moves, incl. permutation and scope / move an entity or edit an alias → digest unmoved | **WD** / **CS** / **OInv** |
 | G4 | an unreferenced successor to a recorded failure is refused / discarding the attempt is undetectable | RF† / **DL** |
-| G5 | divergence is computed; no authored kind exists | DA† + US† |
+| G5 | divergence is computed; no authored kind exists | CA† + US† |
 | G6 | `reads` inputs confer no eligibility in any quantity or QA state | **OInv** |
 | G7 | a semantic edit mints a new identity, prior bindings hold, old belief unmoved / a `title` overwrite mints nothing | **CS** + **OInv** / **OInv** |
 | G8 | a failing verification invalidates and forces recomputation; cleared only by resolution or standing retraction / deleting it restores admission | **FC** / **DL** |
@@ -730,14 +730,14 @@ rather than half-blank.
 
 | id | assertions | classes |
 |---|---|---|
-| S1 | closure matches membership-traversal semantics; `directed` not reinterpreted | AG† |
-| S1a | the lineage closure shares the algorithm, not the edge semantics | AG† |
+| S1 | closure matches membership-traversal semantics; `directed` not reinterpreted | PC† |
+| S1a | the lineage closure shares the algorithm, not the edge semantics | PC† |
 | S2 | a semantic edit through the write API mints a new proposition | **CS** |
 | S3 | a stale semantic hash is rejected on import / editing fields **and** hash passes | RF† / **DL** |
 | S4 | no rename path is reachable from the semantic-change branch | US† |
-| S5 | incomplete lineage never certifies independence / the deletion guarantee is scoped | CD† / **DL** |
-| S6 | only certified independence confers multiplicity | CD† |
-| S7 | eligibility is enforced at both boundaries, including raw writes | AG† |
+| S5 | incomplete lineage never certifies independence / the deletion guarantee is scoped | EB† / **DL** |
+| S6 | only certified independence confers multiplicity | EB† |
+| S7 | eligibility is enforced at both boundaries, including raw writes | PC† |
 | S8 | no module outside the write API holds a mutable handle (static) | US† |
 
 **W — world addressing**
@@ -747,13 +747,13 @@ rather than half-blank.
 | W1 | distinct bases never become one node | **CS** |
 | W2 | a shared basis establishes coreference mechanically | **WD** |
 | W3 | creating a world entity without its basis is refused | RF† |
-| W4 | a merge is authored; content is never derived by precedence | RF† + DA† |
+| W4 | a merge is authored; content is never derived by precedence | RF† + CA† |
 | W5 | a move changes only location — `uid`, identity, belief unmoved | **OInv** |
 | W5a | a basis change is ruled by case, never by default | ED† |
 | W6 | the four resolution states never collapse | ED† |
-| W7 | views see the whole world, not a directory | AG† |
+| W7 | views see the whole world, not a directory | *unclassified — direct requirement* |
 | W8 | no conflict is resolved by precedence | RF† |
-| W8a | all four index maps are derived, never authoritative | DA† |
+| W8a | all four index maps are derived, never authoritative | CA† |
 | W8b | `uid` uniqueness is enforced; its two violations are distinguished | **CS** + ED† |
 | W9 | an ambiguous alias refuses and names its candidates | RF† |
 | W10 | cross-corpus edges are ordinary, not dangling | **OInv** |
@@ -768,26 +768,26 @@ rather than half-blank.
 | R1 | an incomplete closure is refused; no `run` node is minted | RF† |
 | R2 | the address moves on every closure member; the recipe holds nothing post-execution | **CS** |
 | R3 | two executions of one recipe are two runs | **CS** |
-| R4 | scope is derived, never authored; it rests on evidence | DA† + RF† |
+| R4 | scope is derived, never authored; it rests on evidence | CA† + RF† |
 | R5 | belief does not depend on availability in this checkout | **OInv** |
 | R6 | un-replayability creates no verification and moves no state | **OInv** |
 | R7 | the two run shapes are structurally exclusive | RF† |
 | R8 | the equivalence rule cannot be chosen after outputs are seen | **CS** |
-| R9 | `inconclusive` never collapses into `passed` or `failed` | ED† + CD† |
+| R9 | `inconclusive` never collapses into `passed` or `failed` | ED† + EB† |
 | R10 | runs begin at the most upstream held form | RF† |
 | R11 | dataset-production replay is bitwise; forking identity does not cancel the verdict | RF† + **CS** |
 | R12 | the boundary refuses a run naming no frozen spec / the bound is pinned | RF† / **DL** |
 | R13 | `code_identity` captures what ran, not what was committed | **CS** |
 | R14 | identity canonicalization is **injective** and domain-separated | **CS** |
 | R15 | execution is confined to the closure it declared | RF† |
-| R16 | non-conformance blocks scope, not just reporting | CD† |
+| R16 | non-conformance blocks scope, not just reporting | EB† |
 | R17 | a recipe cannot disagree with its spec; seeds are pre-declared | RF† |
 | R18 | scope evidence is embedded and identity-bearing | **CS** |
-| R19 | derivation is validated at import and audit / neither mounting nor a raw write is an epistemic event | DA† / **DL** |
+| R19 | derivation is validated at import and audit / neither mounting nor a raw write is an epistemic event | CA† / **DL** |
 | R20 | the nondeterminism contract cannot contradict itself; stream totality reaches both records | RF† + ED† |
-| R21 | a recipe says what to execute, portably | AG† |
-| R22 | the assessment facet is derived through the ordinary API | US† + DA† |
-| R23 | a produced dataset, its ancestry and its durable basis are minted by the boundary | DA† |
+| R21 | a recipe says what to execute, portably | *unclassified — direct requirement* |
+| R22 | the assessment facet is derived through the ordinary API | US† + CA† |
+| R23 | a produced dataset, its ancestry and its durable basis are minted by the boundary | CA† |
 
 **C — correction lifecycle**
 
@@ -796,10 +796,10 @@ rather than half-blank.
 | C1 | the target is byte-identical, addressed and resolvable after retraction | **OInv** |
 | C2 | attribution, reason and ground are required at the boundary | RF† |
 | C3 | the digest covers the enumeration, never exact corpus states | **CS** + **OInv** |
-| C4 | subtraction is direction-free — support and refutation subtract identically | UF† |
+| C4 | subtraction is direction-free — support and refutation subtract identically | **OInv** |
 | C5 | chain, not toggle; standing is sibling-aware | **WF** + **CS** |
 | C6 | verification retraction recomputes admission fail-closed | **FC** |
-| C7 | retiring both routes yields `not-certified`, never a silent selection | CD† |
+| C7 | retiring both routes yields `not-certified`, never a silent selection | EB† |
 | C8 | a retracted snapshot is refused where recomputation already happens | RF† |
 | C9 | narrowing is succession plus retraction, never mutation behind an identity | **CS** |
 | C10 | ineligible or ill-formed targets are unspellable | US† |
@@ -828,11 +828,11 @@ rather than half-blank.
 | N1 | contract succession retains every id and names its predecessor | **CS** |
 | N2 | **every oracle row can fail** — a row that passes under sabotage is itself defective | OF† |
 | N3 | the fixture set is the normative half of rule identity; derivations name their exact binding | **CS** |
-| N4 | certification is recomputable; recomputation detects disagreement, not authorship | **WD** + DA† |
+| N4 | certification is recomputable; recomputation detects disagreement, not authorship | **WD** + CA† |
 | N5 | certification binds contract, rule **and** implementation | **CS** |
 | N6 | witness coverage is total per instrument, in both directions | ED† |
-| N7 | uncertified degrades and never blocks; standing is discovered from explicit inputs | CD† |
-| N8 | certification retraction is prospective, not transitive | CD† |
+| N7 | uncertified degrades and never blocks; standing is discovered from explicit inputs | EB† |
+| N8 | certification retraction is prospective, not transitive | EB† |
 | N9 | no falsification evaluator or execution path exists | US† |
 | N10 | every legacy check appears in exactly one disposition class | ED† |
 
@@ -841,12 +841,12 @@ rather than half-blank.
 | id | assertions | classes |
 |---|---|---|
 | L1 | registration precedes application; no unregistered cooperative path | EO† + US† |
-| L2 | settlement gates every absence test | CD† |
+| L2 | settlement gates every absence test | EB† |
 | L3 | valid-prefix truncation refutes; interior damage is `malformed` | ED† |
 | L4 | chain removal refutes against any surviving anchor, bound to its subject | **CS** |
 | L5 | the unanchored tail is the pinned residue | **DL** |
 | L6 | the genesis baseline reaches pre-log history — once anchored | **DL** |
-| L7 | intent claims are exactly as wide as stated | CD† |
+| L7 | intent claims are exactly as wide as stated | EB† |
 | L8 | cross-chain order exists only through world-ancestry-ordered cuts | EO† + **DL** |
 | L9 | anchor evaluation is total over the observer set, never best-reachable | ED† |
 | L10 | a fork is a new chain; a replica is the same chain | **CS** |
@@ -861,113 +861,153 @@ rather than half-blank.
 | D1 | `nodes` assigns no domain semantics | US† |
 | D2 | the dataset address is unchanged under facet addition; node and corpus identity move | **OInv** + **CS** |
 | D3 | a bare namespace is refused; the three unresolved states stay distinct | RF† + ED† |
-| D4 | `ProfileSpec` is the only per-kind source; `KindSpec` is compiled | US† + DA† |
+| D4 | `ProfileSpec` is the only per-kind source; `KindSpec` is compiled | US† + CA† |
 | D5 | reformatting `corpus.yaml` does not move the identity; content does | **OInv** + **CS** |
 | D6 | consulted contracts enter belief; activated-but-unconsulted ones do not | **CS** + **OInv** |
-| D7 | W5 survives unamended; contract agreement holds across a derivation | **OInv** + AG† |
+| D7 | W5 survives unamended; contract agreement holds across a derivation | **OInv** + PC† |
 | D8 | domain contributions compose; same-namespace collisions refuse | RF† + **WD** |
 | D9 | a practice declaring a vocabulary or schema is refused | RF† |
 | D10 | no API retracts, supersedes or attributes an individual facet payload | US† |
 
-### 5.3 What the existing taxonomy covered
+### 5.3 What the existing taxonomy covers
 
-| label | rows carrying it |
-|---|---|
-| **CS** commitment sensitivity | 26 |
-| **OInv** observational invariance | 16 |
-| **DL** declared limit | 12 |
-| **WD** well-definedness | 4 |
-| **FC** fail-closure | 3 |
-| **OI** order-independence | 1 |
-| **WF** well-founded recursion | 1 |
+The 113 rows contain **128 assertions**, since a row may state a property in a
+positive arm and pin its limit in a negative one.
 
-**53 of 113 rows carry at least one §3.4 label; 60 carry none.** Commitment
-sensitivity alone accounts for a quarter of the corpus, which is the expected
-shape — most of what these designs guarantee is that some distinction moves some
-identity. But the taxonomy reaches **under half** the corpus, and the half it
+| label | rows | assertions |
+|---|---|---|
+| **CS** commitment sensitivity | 26 | 26 |
+| **OInv** observational invariance | 17 | 18 |
+| **DL** declared limit | 12 | 12 |
+| **WD** well-definedness | 4 | 4 |
+| **FC** fail-closure | 3 | 3 |
+| **OI** order-independence | 1 | 1 |
+| **WF** well-founded recursion | 1 | 1 |
+
+**Both units, stated separately, because they measure different things:**
+
+- **54 of 113 rows** contain at least one §3.4 label; **59 contain none.** This
+  is a *row-level lower bound* on the gap — a row counts as covered when any one
+  of its assertions is covered, so rows like G1 and G2a count as covered while
+  part of their content lies outside the taxonomy.
+- **59 of 128 assertions** carry a §3.4 label; **69 do not.** This is the
+  coverage figure the classification is per-assertion in order to produce.
+
+The taxonomy reaches **under half** of what the corpus asserts, and the half it
 misses is not a scatter.
 
 ### 5.4 The residue, and why it exists
 
-The 60 unclassified rows are not miscellaneous. They fall into nine coherent
-classes — plus one singleton flagged in §5.5 — and there is a structural reason
-the taxonomy missed all of them:
-**§3.4 derived its laws from the four readings.** `standing`, `admission`,
-`eligible` and `B` are functions of a configuration, so every law derived from
-them is a law about *values in a state*. Roughly half of what the banked tables
-guarantee is about **`step` instead** — what the system will accept, in which
-order, and what cannot be expressed at all. A taxonomy built from the readings
-could not reach them, and the gap is exactly as wide as that omission predicts.
+The 69 uncovered assertions are not miscellaneous. They are **covered by nine
+recurring classes** — a cover, not a partition: the class counts sum well above
+the assertion count because one assertion can carry several labels, and the
+classes were derived to describe the residue rather than to divide it.
 
-Proposed additions, each with the evidence that forced it:
+There is a structural reason the taxonomy missed all of them: **§3.4 derived its
+laws from the four readings.** `standing`, `admission`, `eligible` and `B` are
+functions of a configuration, so every law derived from them is a law about
+*values in a state*. Roughly half of what the banked tables guarantee is about
+**`step` instead** — what the system will accept, in which order, and what
+cannot be expressed at all. A taxonomy built from the readings could not reach
+them, and the gap is exactly as wide as that omission predicts.
 
 | label | statement | rows |
 |---|---|---|
 | **RF†** refusal | `step` returns `Refused` on a stated precondition; nothing is written | 28 |
 | **US†** unspellability | the act has no representation at all — tested statically, not by attempting it | 15 |
 | **ED†** exhaustive discrimination | a fixed outcome set, no member collapsing into another, no unclassified residue | 12 |
-| **CD†** conservative default | absence of evidence yields the weak outcome, never the strong one | 9 |
-| **DA†** derivation, not authorship | the value is computed and **no** authored path exists | 9 |
-| **AG†** agreement | two independently reachable paths must agree — two algorithms, two boundaries, two engines | 6 |
+| **EB†** evidence-bounded inference | a strong outcome requires a witness: `strong(r) ⟹ ∃e. Witness(e, r)` | 9 |
+| **CA†** construction authority | each value has a **closed set of permitted constructors** — authored, derived, compiled, or boundary-minted — and no other path constructs it | 9 |
+| **PC†** path coherence | two sanctioned paths from equivalent inputs must agree; the square commutes | 4 |
 | **EO†** effect ordering | one effect durably precedes another within a single act | 3 |
 | **DU†** durable atomicity | crash-atomic and survives a persistence cut (gated on atoms A6–A8) | 2 |
 | **OF†** oracle falsifiability | every oracle row must be capable of failing; one that passes under sabotage is defective | 1 |
 
 **RF and US must stay distinct.** Refusal is a runtime answer — the act was
-expressible, the boundary declined it. Unspellability is a type-level absence —
+expressible, the boundary declined it. Unspellability is a type-level absence:
 G5's "assert no such kind exists", S8's static assertion, N9's "no evaluator
 exists", D10's "no API". The designs use both deliberately, and collapsing them
-would lose the difference between a guard and a design that needs no guard,
-which is the difference the house rule *explicit over defensive* turns on.
+would lose the difference between a guard and a design that needs no guard —
+the difference the house rule *explicit over defensive* turns on.
 
-**CD† is the largest unnamed principle in the corpus.** Comp §7.1 notices it and
-names it once — *"a failure to look is not a finding of absence"* — calling it
-"the third appearance of one principle" across `t077`'s determinism test, world
-§5.1's `not-present` ≠ `unknown`, and its own availability rule. The
-classification finds **nine** appearances, in five separate documents: S5, S6,
-R9, R16, C7, N7, N8, L2, L7. It is a principle the corpus discovered three times
-and generalized once, in prose, in one document's §7.1.
+**CA† replaces the first draft's "derivation, not authorship", which was
+backwards on its own evidence.** W4 requires a merge to be **authored** and
+forbids deriving content by precedence; classifying it as "derived, no authored
+path" reversed it. What the rows share is not that authorship is absent but that
+the **permitted constructor set is closed and named**: authored for W4, derived
+for W8a and R4, compiled for D4, boundary-minted for R22 and R23. Stated that
+way each row keeps its meaning.
 
-**OF† is reflexive and belongs in the taxonomy despite having one row.** N2
-guards the doctrine against itself: an oracle that cannot fail certifies
-nothing. It is the reason every table's rows are stated as mutation tests, so it
-is not an outlier but the rule the other 112 rows are instances of.
+**EB† is the largest unnamed principle in the corpus, and it is wider than a
+default.** Comp §7.1 names its missing-value special case once — *"a failure to
+look is not a finding of absence"* — and counts three appearances across
+`t077`'s determinism test, world §5.1's `not-present` ≠ `unknown`, and its own
+availability rule. But several of the nine rows are about **bounded inference**
+rather than a default for an absent value: certification cannot be inferred
+(N7), retraction effects do not propagate transitively (N8), and an intent claim
+cannot widen beyond what it stated (L7). The unifying form is that a strong
+reading requires a witness; the witness and the strength relation stay
+reading-specific.
 
-### 5.5 Rows that classify as nothing
+**PC† is path coherence, and only four rows earn it.** The first draft called it
+"agreement" and stretched it over six. Defined properly — two sanctioned paths
+from equivalent inputs must agree, as a commuting square — it fits S1 and S1a
+(two closure algorithms), S7 (two enforcement boundaries), and D7 (contract
+agreement across a derivation). W7 and R21 do not, and are reclassified in §5.5.
 
-**None.** Every one of the 113 rows carries at least one label under the
-combined seventeen. That is a weaker result than it sounds — the nine proposed
-classes were derived *from* the residue, so their coverage is not independent
-evidence. What can be said honestly is that the residue was **coherent**: it
-partitioned into nine classes with no leftovers and no class of size zero, and
-no row needed a class invented for it alone except N2, which is reflexive by
-design, and C4, which is flagged below.
+### 5.5 Assertions that classify as nothing
 
-Three rows carry a label only awkwardly and are flagged for review rather than
-forced:
+**Two rows, deliberately left unclassified:**
 
-- **C4** (subtraction is direction-free) is classified **UF†** *uniformity* —
-  the mechanism does not branch on the value it operates over. It is the only
-  row of that class, and it may be better read as an instance of DA† (the
-  mechanism is not authored per-direction) or as a genuine ninth class.
-- **W7** (views see the whole world) is classified AG†, but it is closer to a
-  plain functional requirement than to an agreement between two paths.
-- **R21** (a recipe says what to execute, portably) is classified AG† on the
-  strength of "two engines agree", which is a reading of the row, not its text.
+- **W7** — *views see the whole world, not a directory.* This names a view's
+  scope. It is a direct functional requirement, not an instance of a reusable
+  law, and forcing it into PC† required reading "two agreeing paths" into a row
+  that states none.
+- **R21** — *a recipe says what to execute, and says it portably.* Portability
+  is promised; two-engine equality is not textually asserted. It would earn PC†
+  only if the banked row were amended to say so, which §5 has no authority to do.
+
+**Leaving them unclassified is the correct result, not a shortfall.** A
+guarantee corpus is entitled to contain direct requirements that are not
+instances of any law, and a taxonomy that absorbs every row is one that has
+stopped discriminating. C4, by contrast, was genuinely misfiled: `standing`
+never reads whether its target supports or refutes, so subtraction being
+direction-free *is* observational invariance of that reading, and the first
+draft's singleton "uniformity" class is withdrawn.
+
+The remaining honest caveat: the nine classes of §5.4 were derived **from** the
+residue, so their coverage of it is not independent evidence. What can be said
+is that the residue was coherent — nine recurring classes, no class of size
+zero, and only two rows left over.
 
 ### 5.6 What this changes
 
-Two consequences for the rest of the document.
+**§3.4's law table is incomplete, and structurally so.** M₀ states laws for the
+readings and none for `step`. Refusal, unspellability, construction authority,
+effect ordering and durable atomicity are properties of the transition function,
+and nothing in §3 currently expresses them.
 
-**§3.4's law table is incomplete as stated**, and its incompleteness is
-structural rather than accidental. M₀ should carry laws for `step` alongside
-laws for the readings — refusal, unspellability, effect ordering and durable
-atomicity are properties of the transition function, and nothing in §3 currently
-states them.
+**Two of the classes are meta-level and do not belong in a system-law table.**
+`OF†` constrains the **oracle suite** — that every row can fail — not `Ω`,
+`step`, or any reading. `DL` is likewise documentary: it records what the system
+cannot detect. Both are **assurance laws**, and grouping them with the others
+would put a claim about the tests beside claims about the system.
 
-**The taxonomy is not yet closed**, so §5 does not freeze it. Adopting the eight
-proposed labels is a decision for review; until then §5.2's classification is
-recorded with the † marks intact.
+The vocabulary §8 should draw on, stabilized:
+
+| group | labels |
+|---|---|
+| **transition / type laws** | RF, US, CA, EO, DU |
+| **state laws** (readings) | WD, OI, OInv, CS, WF, FC |
+| **result laws** | ED, EB |
+| **relational law** | PC |
+| **assurance laws** | OF, DL |
+| — | *plus unclassified direct requirements, explicitly permitted* |
+
+**§5 freezes none of this.** The nine proposed labels keep their † marks until
+adoption is decided; what §5 establishes is that ρ needs a vocabulary of roughly
+this shape to state what M\* preserves or amends, and that manufacturing one
+class per residue shape is not that vocabulary.
 
 ## 6. M\* — the typed claim calculus
 
