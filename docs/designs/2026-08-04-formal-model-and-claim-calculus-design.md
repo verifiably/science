@@ -1,7 +1,8 @@
 # Formal model and claim calculus — design
 
-**Status:** Draft — §2–§8 written; §2–§4 corrected through review round 3, §5
-and §6 through one review round, §7 through two; §9–§11 not yet drafted.
+**Status:** Draft — §2–§9 written; §2–§4 corrected through review round 3, §5
+and §6 through one review round, §7 through two, §8 through one; §10–§11 not
+yet drafted.
 
 **Inherits:** the epistemic kernel (G1–G8, §4.1's signatures and semantic
 identity, §8.7's recorded-history limit, limitation 4's predicate vocabulary),
@@ -2149,9 +2150,60 @@ and a typed claim projection has strictly more ways to disagree: slot order,
 map key sorting, tag bytes, and the absent-versus-unit distinction §7.5 exists
 to remove.
 
-## 9. Guarantees (M1–M\<n\>)
+## 9. Guarantees (M1–M14)
 
-*Not yet drafted.*
+Fourteen rows. Six come from obligations this document raised before §8 — three
+from the closure check and the laws (§3.4, §4.3), three from ρ cells that read
+*"no banked oracle"*. The rest come from §8.5's adopted items, which amend
+nothing and are therefore tested by nothing unless M tests them.
+
+**The discipline is §5's OF†, applied to M itself: every row must be capable of
+failing.** So each row below names a **sabotage** — a specific mutation that
+must break it. A row whose sabotage still passes is defective and is the first
+thing to fix, not a row that can be left in place because it is green.
+
+Ids are frozen on banking and extended, never renumbered — the same rule the
+nine banked tables use.
+
+Two rows deliberately stay apart. **M2** (every run input reaches the
+assessment's carrier identity) and **M3** (`standing` terminates) were both
+raised by §4, but they have nothing in common operationally: M2's sabotage adds
+an input outside the declared role partitions, M3's constructs a retraction
+cycle. Sharing a row would let one pass on the other's evidence.
+
+| id | guarantee | how it is tested |
+|---|---|---|
+| **M1** | **Undeclared reads are detected, not noticed.** Every value a semantic derivation actually reads is inside its declared input closure | Instrument the derivation so each value read is recorded at read time; assert the recorded read-set is contained in the declared closure, for a corpus exercising every closure member. **Sabotage:** add a code path that reads one value outside the closure — a facet, a contract, a producer set — changing nothing else, and assert the check **fails**. This is the row §1 asks for: G3's own text records four members that "were live holes in earlier revisions," each found by a reviewer noticing, and nothing in that method distinguishes a complete closure from one whose next hole is unnoticed. **Negative:** a run that reads nothing outside the closure must pass without exemptions, or the row is untestable in the ordinary case |
+| **M2** | **Every run input reaches the assessment's carrier identity** | Take an assessment; for each input of its run, mutate that input's bytes and assert the assessment identity **moves**. **Sabotage:** attach an input to the run that no declared role partition covers, and assert the attempt is **refused** — not silently ignored. §4.3 finding (a) established that the current path is three hops (the recipe's role-partitioned `inputs` → R2 → assessment identity) and is a **binding** path, not a proven semantic one; this row pins the binding so the fragility is tested rather than argued |
+| **M3** | **`standing` terminates on every input** | Evaluate `standing` over retraction chains of increasing depth, including counter-retractions and multiple standing retractions of one target, and assert termination and a stable value. **Sabotage:** attempt to construct a retraction whose target's content identity contains its own — assert it is **unconstructible**, since a retraction's identity covers its target's identity, and separately that a hand-written cyclic pair is **refused at the boundary** and an **audit finding** when raw-written. Correction §4 argues well-foundedness; no banked row tests it |
+| **M4** | **Every argument and restriction is a resolvable referent, or the decode refused** | Decode a claim whose argument term **is** in the sort's bound vocabulary with that vocabulary readable → accepted, check recorded **performed**. **Sabotage:** decode one whose term is **not** in a readable vocabulary → **refused**, nothing minted. **Negative — availability is not membership:** make the vocabulary unreadable and decode the same bad term → **accepted** with the check recorded **not performed**, and assert the two receipts are distinguishable. **Static:** assert a bare string cannot occupy an argument slot at all |
+| **M5** | **Qualification participates in claim identity** | Two claims differing **only** in a restriction identifier → different `I_claim`; differing **only** in quantifier tag → different; one carrying a dimension the other omits → different. Then the founding case end to end: mint kernel §4.1's *"in adults"* claim, assess it, "edit" to *"in all humans"*, and assert a **new** identity, the prior assessment still bound to the old one, and a `supersedes` link. **Sabotage:** drop the qualifier map from `π_claim` and assert the founding case **collapses to one identity** — the row's whole point. **Negative:** re-serialize the qualifier map with keys in a different order and assert the identity is **unchanged** |
+| **M6** | **Operators are issued, retired, and never redefined** | A successor contract changing `arity`, `arg_sorts`, `sign_apt`, `layers` or `dimensions` under an existing identifier → **refused at contract load**. A successor **dropping** a retired declaration → refused. A successor adding a new operator → accepted, no existing claim affected. **Retirement, both paths:** assert the authoring constructor **cannot select** a retired identifier (statically), and that decode/restore of a historical claim at that identifier **succeeds** against the frozen declaration. **Sabotage:** flip `sign_apt` on a live operator and assert load fails; remove the declared predecessor link and assert the redefinition check is **unable to run** rather than silently passing. **Negative:** a purely editorial change is accepted, moves the contract identity, and needs no new identifier |
+| **M7** | **No second authored operator artifact exists** | Assert operator, dimension and sort declarations exist **only** in profile contracts, and every runtime form is compiled from `ProfileSpec`. **Sabotage:** add a hand-authored operator roster beside the contracts and assert it is **refused or unreachable** — never consulted as a parallel source. **Negative:** a grep for operator names is **not** the test and would fail against a conforming tree; the test is that mutating a contract changes the compiled schema with no code change. D4 does not cover this — it governs per-kind sources, and a claim schema is not a per-kind artifact |
+| **M8** | **Claim identity is independent of contract release and of compilation** | Bump a consulted contract editorially and assert `I_claim` is **unchanged** while `belief_input_digest` **moves** (§7.4 row 1). Recompile `ProfileSpec` — different merge order, different compiler build — and assert `I_claim` is unchanged and `ProfileSpec`'s identity appears in **neither** `π_claim` nor the consulted set. **Sabotage:** fold the contract release into `π_claim` and assert an ontology release now forks every claim, which is the failure this row forbids. **Negative:** bump an **activated but unconsulted** contract and assert both `I_claim` and the digest are unchanged (§7.4 row 3) |
+| **M9** | **`π_claim`'s shape depends on the claim, never on a contract field** | Project a claim at a **sign-inapt** operator; assert the polarity position is **present**, carrying `sign_inapt_tag`, and that `inapt` and `unsigned` produce **different** digests. **Sabotage:** omit the position for sign-inapt operators and assert the digest changes — the defect §7.5 corrects, in which a `sign_apt` edit would re-project stored claims. **Negative:** an operator's contract may not be edited in a way that changes any stored claim's projection; combined with **M6** this must be unreachable rather than merely untried |
+| **M10** | **Two implementations hash a typed claim identically** | One shared fixture: a claim exercising every position — multi-slot args, several qualifier dimensions, a sign-inapt operator, a non-ASCII referent identifier — projected and hashed in **both** Python and TypeScript, asserted byte-identical at the projection and equal at the digest. **Sabotage:** change one implementation's map-key sort, slot order, or tag bytes and assert the fixture **fails**. This follows D §6's precedent of exactly one parity fixture per shared encoding; a typed claim has strictly more ways to disagree than a facet key |
+| **M11** | **`decodeClaim` is a function of its arguments, and refuses rather than repairs** | Same `⟨WireClaim, ProfileSpec, ResolutionSnapshot⟩` decoded twice, in different processes and different checkouts → **identical** result. Then each ill-formed input in turn — a sign on a sign-inapt operator, wrong arity, an undeclared dimension, an inadmissible layer, a missing required contract — → **`Refused`**, with **nothing minted** in every case. **Sabotage:** make availability ambient rather than a parameter and assert two holders now decode the same bytes differently. **Negative:** a raw-written malformed claim is an **audit finding**, not a silent accept and not a decode failure — the boundary was bypassed, not defeated |
+| **M12** | **An untypeable span mints nothing** | Present a span no operator fits → assert **no** proposition, **no** source-assertion, and a project-scoped typing-work item. **Static:** assert a source-assertion naming a non-existent proposition identity is **unconstructible**, since world §4.2 puts the proposition identity in its basis. **Sabotage:** add a fallback that mints a proposition with a placeholder operator and assert the check fails. **Negative:** the work item must **not** appear in kernel limitation 1's unassessed queue — different membership condition, different owner (§6.6) |
+| **M13** | **Invalid claims are unspellable, tested statically** | Type-level, not by attempting a call: assert the typed constructor offers **no** polarity argument at a sign-inapt operator, no slot for an argument of the wrong sort, and no inhabitant for an inadmissible layer. **Sabotage:** reintroduce a `SIGN_MEANINGFUL_PREDICATES`-style roster with a runtime validator and assert the static check **no longer holds** — the roster is exactly what §6.3 retires, and this row is what stops it returning. **Negative:** the check must not be a passing unit test that merely never constructs the bad value |
+| **M14** | **The five term-resolution outcomes stay distinct** | Reach each of `member`, `not-member`, `not-consulted`, `not-present`, `not-available` and assert none collapses into another — extending D3's existing method to the two new members. **Sabotage:** report a `not-consulted` term as `not-member` and assert the check fails; the two have **opposite evidential force**, one being a finding and the other the absence of one. **Scope:** this row tests the **diagnostic** outcome and its recording at decode. It asserts **nothing** about persistence, discovery, succession, or epistemic effect — those are ρO1 and have no row |
+
+### 9.1 What M does not cover
+
+| not covered | why |
+|---|---|
+| binding-check persistence, discovery, succession, and the correction path for a claim later found `not-member` | ρO1. M14 covers the outcome only, and deliberately stops there |
+| whether an unchecked claim may be assessed | ρO1 |
+| the recording mechanism for destruction of a last held copy | ρO2. M has no row, because ρA8 decides the *answer* and not the mechanism |
+| entailment, subsumption, and estimand match | ρO3. §6.7 preserves the encoding's capacity to express them and defines no relation, so there is nothing to test |
+| that a population-qualified claim can be typed at all | ρO4. No population vocabulary is bound, so the case is currently untypeable by construction |
+| that an operator's declared schema faithfully describes the relation it names | authored, not checked — the same class as D limitation 4 and kernel limitation 8's acquisition boundary. M6 tests that a declaration cannot **change**; nothing tests that it was right |
+
+**Two rows are load-bearing beyond their own statement.** M1 is the only row
+that attacks the method rather than a property: every other row here, and in the
+nine banked tables, tests something a person thought to test. And M13 is the
+only static row — if it decays into a runtime check, §6.3's entire argument
+reduces to a validator with better manners.
 
 ## 10. Limitations
 
