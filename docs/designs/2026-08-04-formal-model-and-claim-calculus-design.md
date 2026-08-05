@@ -157,27 +157,55 @@ Run         ──produces───▶ Dataset
 SourceAssertion──anchored_in──▶ Source         (span-level)
 Source      ──member_of──▶ Dataset             (the corpus is a dataset)
 *           ──supersedes──▶ *                  (same-kind succession)
+Retraction  ──retracts────▶ *                  ┐ adopted as-is into the normative
+*           ──grounded_in─▶ *                  ├ relation vocabulary at the first
+*           ──succeeded_by▶ *                  ┘ cut (5b §7.7, closing 5a §9)
 ```
 
 `derived_from` is a **view** over `produces ∘ transforms` and is never a stored
 edge — a distinction M₀ must keep, because a view has no instance identity.
 
-A **relation instance** is identified by *the source node's live id, the position
-of the relation in that node's stored list, the predicate, and the unresolved
-target* (substrate §5). The position is load-bearing: a shape carrying
-`(predicate, target)` alone cannot say **whose** edge dangled. Predicate matching
-on relation instances is **exact string equality** over a free string — which is
-a different object from the proposition's `predicate` field, and §2.9 (d) records
-the collision.
+**A relation instance has no identity of its own.** It is a stored occurrence
+*embedded in* the source node, and it is committed by that node's content
+identity — which is why editing an edge moves the node, and through it the
+corpus-state identity, with no separate edge commitment anywhere. Predicate
+matching on instances is **exact string equality** over a free string, a
+different object from the proposition's `predicate` field (§2.9 (d)).
 
-| player | construction | identities | affects | banked |
-|---|---|---|---|---|
-| relation signature | authored, in the science base contract | contract identity of the contract declaring it | eligibility; every closure; what is spellable at all | kernel §4.1; D §3.2, §8 |
-| relation instance | authored | `(source live id, position, predicate, unresolved target)`; the **resolution** is recorded separately from the stored ref | lineage; belief member 5 | substrate §5; comp §5.1 |
+The tuple `(source live id, position, predicate, unresolved target)` is *not*
+that identity: it is the shape of an **unresolved traversal entry** (substrate
+§5) — what an adapter reports when a step fails to resolve. Its first two
+components exist so a finding can say **whose** edge dangled, since
+`(predicate, target)` alone deduplicates `X ─cites→ M` with `Y ─cites→ M`;
+entries are totally ordered by `(source id, position)`. The first draft
+transcribed a diagnostic shape as an identity.
+
+**Effects are indexed by signature, not by "relation instance".** The signatures
+carry different dependencies, and a single row for all of them would be the
+roster this system's doctrine forbids:
+
+| signature | what it affects | banked |
+|---|---|---|
+| `assesses` | the **only** belief-bearing edge; gates aggregation entirely | kernel §4.1; **G1** |
+| `observes` | eligibility — at least one is required, and it demands the `empirical-observation` facet | kernel §4.1; **G6** |
+| `reads`, `transforms` | confer **no** eligibility in any quantity; `transforms` feeds lineage | kernel §4.1; comp §5.2 |
+| `produces` | lineage and the producer sets — belief member 5 | comp §5.2; kernel §5.1 |
+| `verifies`, `replays` | admission; belief member 3 | kernel §3.3 |
+| `executes`, `targets` | assessment identity's spec and proposition components | world §4.2 |
+| `member_of` | corpus membership; discourse counts, never belief | kernel §4.3, §6 |
+| `anchored_in` | part of `source-assertion`'s identity basis (the span) | world §4.2 |
+| `supersedes`, `succeeded_by` | active/superseded state → admission | kernel §3.3 |
+| `retracts` | standing → admission → belief member 6 | correction §4; 5b §7.7 |
+| `grounded_in` | the attributed ground of a retraction | correction §4; 5b §7.7 |
+
+| player | construction | identities | banked |
+|---|---|---|---|
+| relation signature | authored, in the science base contract | contract identity of the declaring contract; a domain never redefines one | kernel §4.1; D §3.2, §8 |
+| relation instance | authored | **none of its own** — committed by the source node's content identity. The stored ref and its **resolution** are recorded separately, which is what makes a deletion visible | substrate §5; kernel §5.1 |
 
 ### 2.3 `Sub` — identity-bearing artifacts that are not nodes
 
-Three artifacts carry commitments, enter identities, and are **not** nodes. They
+Four artifacts carry commitments, enter identities, and are **not** nodes. They
 were absent from the first draft, which is why the inventory could not express
 what a comparison report does.
 
@@ -348,6 +376,12 @@ eligible   : Ω × AssessesEdge → Bool
 B          : Ω × Q            → Belief  +  NotAvailable  +  Refused
 ```
 
+`B` is **total** into that sum. `B(ω,q)↓` is written throughout for *"lands in
+the `Belief` arm"* — not for definedness in the partial-function sense. The
+distinction matters in §4.3: a `def` dependency does not make `B` undefined, it
+routes the result to `NotAvailable`, which is a value the caller receives and can
+act on rather than an absence.
+
 `Target` is **not** all of `Rec`. Retraction targets are the eligible node and
 route targets only: a retraction naming a note, or a proposition, is
 **unspellable through the boundary** (**C10**). Typing `standing` over `Rec`
@@ -358,22 +392,27 @@ reject them — defensive where the type should refuse.
 into must be defined before it can be named:
 
 ```text
-Adm  =  { not-admitted  <  invalidated  <  admitted }   — as an order of standing,
-                                                          but the reduction is not a join
+Adm  =  { not-admitted,  invalidated,  admitted }        an unordered three-element set
 
 admission(ω, a)  =  let V = active verifications of a in ω               (§3.3 lifecycle)
-                    if  V = ∅                                  → not-admitted
-                    if  ∃v ∈ V.  verdict(v) = failed           → invalidated
+                    if  ∃v ∈ V.  verdict(v) = failed           → invalidated      (1)
                     if  ∃v ∈ V.  verdict(v) = passed
-                        ∧ scope(v) = clean-environment          → admitted
+                        ∧ scope(v) = clean-environment          → admitted        (2)
                     otherwise                                   → not-admitted
 ```
 
-`failed` is **absorbing**: a passing sibling never clears an active failure
-(**G2c**). The reduction is over the **fixed set of active verifications**, so
-it is a function of that set and nothing wider; it is *not* monotone over
-record-set inclusion once retractions and counter-retractions exist, and M₀
-claims only the narrower statement.
+**`Adm` carries no order**, and the first draft's `not-admitted < invalidated <
+admitted` had no banked justification — it is neither an information order (an
+invalidated assessment is not "more informative" than an unadmitted one) nor a
+permissiveness order. What the lifecycle rules is a **precedence between
+clauses**: clause (1) is tested before clause (2), which is the whole content of
+"a passing sibling never clears an active failure" (**G2c**). `failed` is
+absorbing as a **reduction rule**, not as a lattice fact.
+
+The reduction is over the **fixed set of active verifications**, so it is a
+function of that set and nothing wider; it is *not* monotone over record-set
+inclusion once retractions and counter-retractions exist, and M₀ claims only the
+narrower statement.
 
 **`standing`** is defined by structural recursion, not as a least fixpoint: an
 input's standing is subtracted iff at least one **standing** retraction targets
@@ -387,7 +426,7 @@ Knaster–Tarski.
 `observes` input, all inputs are held, and the assessment is `admitted`. `reads`
 inputs never confer eligibility, in any quantity.
 
-**`B`**'s codomain has three arms, and the third two are banked, not invented:
+**`B`**'s codomain has three arms, and the latter two are banked, not invented:
 removing the corpus holding the records yields *"belief **not computable
 here**"*, which is a computability state and not a belief that happens to be
 unchanged — "reporting an unchanged belief in that situation would assert a
@@ -405,24 +444,23 @@ recomputation nobody performed" (comp §7.1).
 | **fail-closure** | `admission` reduces into a three-element order with `failed` absorbing | **G2c**, **G8**, **C6** |
 | **declared limit** | a *negative* row: the system provably **cannot** detect something, tested so the positive half is not over-read | **G4**, **G2a**, **G8** negatives; §8.7 |
 
-**Order-independence is only a real law once histories are modeled.** As `Ω` is
-defined in §2, a configuration already forgets how it was reached, so
-"independent of arrival order" is *tautological* — there is no order in the
-object to be independent of. The law has content only over a **history and its
-state-reduction function**:
+**Order-independence is stated at exactly the width X6 tests, and no wider.**
 
 ```text
-reduce : Act*  →  Ω  +  Refused        order-independence:  reduce(h) = reduce(perm(h))
-                                       for every permutation perm admissible under
-                                       each act's preconditions
+status(R) = status(R′)      whenever the registry record sets are equal:  R = R′
 ```
 
-The permutation qualifier is not decoration: `admit` refuses a duplicate
-`corpus_id` and `begin` refuses without a frozen spec, so not every reordering
-is a legal history, and the law quantifies only over those that are. X6 tests
-exactly this for registry statuses, where arrival is modeled. **M₀ does not model
-histories elsewhere**, so order-independence is currently stated and tested for
-the registry and asserted nowhere else — which is the honest position, not a gap.
+That is all X6 asserts — every registry status is a *function of the registry
+record set* — and its test varies arrival order to demonstrate it. M₀ claims
+nothing beyond it. In particular it does **not** claim `reduce(h) =
+reduce(perm(h))` over whole configurations: that would assert equality of the
+entire state under reordering, which nothing banked guarantees and which
+occurrence-bearing records visibly violate — a `run` carries a minted event
+token and `started_at`, so two histories differing in order do not produce equal
+configurations even when they produce equal statuses.
+
+A system-wide history law would need histories modeled, which M₀ does not do and
+does not yet need.
 
 **Well-foundedness is argued in prose and tested by no row.** It is what makes
 `standing` a definition rather than a description, and correction §4 argues it
@@ -444,7 +482,7 @@ the conclusion the sentence draws (two registry copies with the same records
 agree regardless of arrival order) follows from each predicate being a *function
 of the record set*, which is what M₀ states.
 
-## 4. The typed dependency graph and the soundness check
+## 4. The typed dependency graph and the factorization check
 
 ### 4.1 Two graphs, and only one is well-founded
 
@@ -471,24 +509,49 @@ x →ᵇⁱⁿᵈ r    binding         — x's identity is committed in r's dige
 x →ᵈᵉᶠ r     definedness     — x's state determines whether r is defined at all
 ```
 
-They are independent. An input can be `sem` without `bind` (read but
-uncommitted — the defect class G3 exists to forbid), `bind` without `sem`
-(committed but unread — over-commitment: harmless to soundness, noisy to
-recomputation), and `def` without either.
+They are independent: an input can be `sem` without being committed (read but
+uncommitted — the defect class G3 exists to forbid), committed without being
+`sem`, and `def` without either.
 
-The two properties worth checking are therefore **not** completeness and
-minimality of one relation, but:
+**The law is factorization, not edge-set inclusion.** `sem ⊆ bind` is not
+well-typed: a semantic value is almost never committed *as the same object*.
+Dataset bytes participate semantically; what is committed is their content
+identity. An inclusion between a set of value-dependencies and a set of
+identity-members compares two different kinds of thing. The statement that does
+type is:
 
 ```text
-soundness     sem  ⊆  bind            anything that can change the value moves the digest
-economy       bind ⊆  sem ∪ def       nothing is committed that cannot matter
+B  =  B̄ ∘ κ_B          on the domain where belief is computable
+
+κ_B : Ω × Q → CommittedProjection      the complete canonical committed projection
+I(B)  =  H( tag_B ‖ encode(κ_B(ω,q)) )  =  belief_input_digest
 ```
 
-**Soundness is what G3 actually asserts.** "Recompute from the named closure
-alone; assert identity" is false exactly when some `sem` edge is not a `bind`
-edge. Economy is the minimality claim, and it is the weaker of the two: a
-violation is over-commitment, which costs recomputation churn rather than
-correctness.
+Equivalently: **equal committed projections must yield equal beliefs.** That is
+what G3's "recompute from the named closure alone; assert identity" asserts, and
+it fails exactly when some `sem` dependency is not determined by `κ_B`.
+Collision resistance is what connects `κ_B` to the digest — the factorization is
+the property; the digest is its representation.
+
+**Commitment sensitivity is a separate law, not the converse of this one**:
+changing an admissible semantic dependency must change `κ_B`. Factorization
+alone is satisfied by a constant projection; sensitivity alone is satisfied by a
+projection that commits noise. G3's row tests both halves, which is why its
+mutation battery has a positive and a negative arm.
+
+The `sem` / `bind` / `def` vocabulary remains useful as **diagnostic shorthand**
+for classifying an edge — but only once the projection mapping each `sem`
+dependency to its committed representative is written down, which §2's entries
+do not yet carry.
+
+**The economy law is withdrawn.** The draft's `bind ⊆ sem ∪ def` would forbid
+**intentional structural commitments**, which this system deliberately makes:
+the assessment identity binds a facet *to its derivation*, defeating the
+permutation attack even when two derivations yield byte-identical facet values;
+a coverage declaration binds the meaning of an **absence**. Neither changes the
+belief value nor its definedness, and both are necessary. Rather than invent a
+fourth edge type to rescue the formula, M₀ drops it — §5's classification does
+not need it.
 
 **The bound, stated plainly: an edge omitted from both the declarations and the
 closure is invisible to this check.** It is a consistency check between two
@@ -498,12 +561,14 @@ instrument, recorded as an M obligation: an **undeclared-read oracle** that
 instruments a derivation to read an input it did not declare and requires
 conformance to fail.
 
-### 4.3 Running the soundness check on `B`
+### 4.3 Running the factorization check on `B`
 
-`bind(B)` is G3's eight members (kernel §5.1). `sem(B)` is what §2's entries
-read, transitively.
+The projection `κ_B` is G3's eight members (kernel §5.1). The semantic
+dependencies are what §2's entries read, transitively. The middle column names
+the **committed representative** of each — the identity or projection through
+which the value reaches `κ_B`, since almost none of them is committed as itself.
 
-| `sem` edge into `B` | `bind` member it reaches | soundness |
+| semantic dependency of `B` | committed member of `κ_B` it is represented by | factors |
 |---|---|---|
 | assessment facet values, keyed to their carrier | 1 — keyed assessment facets | ✅ |
 | what is believed | 2 — proposition semantic identities | ✅ |
@@ -513,31 +578,35 @@ read, transitively.
 | retractions + coverage declaration → standing | 6 — retraction enumeration | ✅ |
 | the aggregation rule | 7 — belief policy version | ✅ |
 | consulted contracts → interpretation | 8 — profile contracts | ✅ |
-| **every non-`observes` run input** — ontologies, literature corpora, reference graphs, simulator configuration | **1, by a three-hop path** | ✅ but fragile — finding (a) |
+| **every non-`observes` run input** — ontologies, literature corpora, reference graphs, simulator configuration; read by the run, semantic effect unproven | **1, by a three-hop path** | ✅ **bound**, therefore factors — but fragile, finding (a) |
 | **held-ness of every input** | **nothing** | ⚠️ unresolved — finding (b) |
 
-**Economy is not established.** The first draft claimed minimality on the
-grounds that each of the eight members is reached by some declared dependency.
-That argument compared the wrong objects: it showed `bind ⊆ sem` using an
-untyped edge relation, before `sem`, `bind` and `def` were distinguished at all.
-Establishing `bind ⊆ sem ∪ def` requires each §2 entry to *type* its outgoing
-edges, which this draft does not yet do. Recorded as remaining work, not as a
-result.
+The first draft additionally claimed minimality, on the grounds that each of the
+eight members is reached by some declared dependency. That argument compared the
+wrong objects — it ran before `sem`, `bind` and `def` were distinguished at all —
+and the law it was aiming at is withdrawn as unsound (§4.2). Nothing replaces it
+here.
 
-**Finding (a) — sound, but by a path nothing declares.** A run's non-`observes`
-inputs *do* reach the digest, by three hops no design states together: `inputs`
-is a recipe member carrying `(role, dataset address, content identity, exclusion
-certification?)` for **every** role (comp §4.2); a run's identity moves when any
-closure member changes (**R2**); an assessment's identity is `(spec, run,
-proposition)`, and member 1 keys facets by assessment identity (kernel §5.1). So
-swapping the ontology a run read moves the digest, and `sem ⊆ bind` holds here.
+**Finding (a) — a complete binding path that nothing declares.** A run's
+non-`observes` inputs *do* move the digest, by three hops no design states
+together: `inputs` is a recipe member carrying `(role, dataset address, content
+identity, exclusion certification?)` for **every** role (comp §4.2); a run's
+identity moves when any closure member changes (**R2**); an assessment's identity
+is `(spec, run, proposition)`, and member 1 keys facets by assessment identity
+(kernel §5.1).
 
-The soundness is nonetheless **fragile**: it rests entirely on that recipe
-member being role-partitioned rather than `observes`-only, and nothing near G3
-says so. Narrowing it — a local, reasonable-looking edit — would break G3
-without touching G3's row, its mutation test, or any text mentioning belief.
-Candidate M-row: *every input a run reads is in belief's `bind` closure, and the
-path runs through the recipe.*
+**What this establishes is a binding path, not a semantic one.** Swapping the
+ontology a run read moves `κ_B`. It does *not* show that the swap changes belief
+— the stored result and the assessment facet could be byte-identical — and no
+argument here is entitled to that stronger claim. Over-binding is the safe
+direction, and it is what the recipe buys.
+
+The binding is nonetheless **fragile**: it rests entirely on that recipe member
+being role-partitioned rather than `observes`-only, and nothing near G3 says so.
+Narrowing it — a local, reasonable-looking edit — would drop those inputs out of
+`κ_B` without touching G3's row, its mutation test, or any text mentioning
+belief. Candidate M-row, stated at its true strength: *every run input enters the
+execution recipe and therefore the assessment's carrier identity.*
 
 **Finding (b) — a genuine choice point, not a transcription.** Held-ness is a
 dependency of `B`; the question the first draft never asked is **which edge type
@@ -550,8 +619,8 @@ dataset. The first draft scoped this to `observes` and was wrong.
 
 | reading | consequence |
 |---|---|
-| held-ness is a **`sem`** edge — losing it yields a *different belief value* | `sem ⊆ bind` **fails**: two states differing in whether the last copy survives share a `belief_input_digest` and yield different belief. That is a G3 violation, not a qualifier on G3 |
-| held-ness is a **`def`** edge — losing it makes `B` *undefined* | `B` is partial. The guarantee becomes: **whenever `B` returns a belief, that belief's commitment is complete** — `B(ω,q)↓ ⟹ bind(B) determines it`. Soundness survives, and `NotAvailable` is the honest result |
+| held-ness is a **`sem`** edge — losing it yields a *different belief value* | **factorization fails**: two configurations differing only in whether the last copy survives share `κ_B`, and therefore share a `belief_input_digest`, while yielding different beliefs. That is a G3 violation, not a qualifier on G3 |
+| held-ness is a **`def`** edge — losing it routes the result to `NotAvailable` | factorization survives, and the guarantee reads: **whenever `B` lands in the `Belief` arm, `κ_B` determines it**. `NotAvailable` is the honest answer — a computability state, not a belief that happens to be unchanged |
 
 The first draft chose neither and wrote "G3's completeness is relative to the
 locally computable dependencies of `B`". **That formulation is withdrawn.**
@@ -559,26 +628,33 @@ Locality is a property of a *holder*, not of the dependency relation; letting it
 qualify the relation means the same system has different dependencies at
 different checkouts, which makes the model unstable exactly where it must not be.
 
-**Recommendation for ρ: `def`, made computable by recording the loss.** Held-ness
-becomes a `def` edge, so `B` returns `NotAvailable` rather than a silently
-different belief. The reason this is not merely relabelling the problem is that
-the `def` reading admits a repair the `sem` reading does not: **make the loss of
-the last held copy a recorded act.** A record is in the configuration, enters the
-closure as an ordinary `bind` member, and the digest moves — the general shape
-this system already uses everywhere else. The unrecorded case then falls exactly
-where every other unrecorded act falls, under §8.7's recorded-history limit,
-classified **declared-limit**.
+**Recommendation for ρ: `def`. The mechanism stays open.** Adopting `def` is a
+revision, not a transcription — comp §7.1's second row currently reads `sem`,
+*"eligibility fails and admission **changes**"* — so ρ must carry that amendment
+explicitly, with the guarantees it touches named.
 
-This is a revision, not a transcription: comp §7.1's second row currently reads
-`sem` — *"eligibility fails and admission **changes**"* — so adopting `def`
-amends it. Held for §8 (ρ), with the guarantees it touches named there.
+The first draft went further and recommended making loss of the last held copy a
+**recorded act**, so that held-ness became an ordinary committed member. That
+recommendation is **withdrawn as premature**, for two reasons:
+
+- A local deletion act proves only that *one copy* disappeared. "No copy
+  survives anywhere" is a world-wide **negative** fact, and recording it needs
+  coverage, authority and discovery semantics — the same machinery the retraction
+  enumeration needed, and none of it is designed.
+- Routing to `NotAvailable` does not by itself make the case computable. Comp
+  §7.1 is explicit that computing it requires a **separately published
+  belief-input snapshot** carrying kernel §5.1's members, which the world index
+  deliberately does not contain. Choosing `def` decides what the *answer* is; it
+  does not supply the ability to compute which answer applies.
+
+So §4 records the choice and leaves the mechanism to §8.
 
 ### 4.4 The other three readings
 
 Reported on the same typed basis. `def` columns are stated because two of these
 readings are where definedness actually enters.
 
-| reading | `sem ⊆ bind` | `def` edges | note |
+| reading | factors through its commitment | `def` edges | note |
 |---|---|---|---|
 | `standing` | ✅ retractions, counter-retractions, coverage declaration | the target must be an eligible target (**C10**) | recursion well-founded by content-address containment |
 | `admission` | ✅ active verifications only | none | the fixed active set is the whole dependency |
@@ -587,9 +663,9 @@ readings are where definedness actually enters.
 ## 5. Guarantee classification
 
 *Not yet drafted.* Will classify ~100 banked rows under the closed taxonomy of
-§3.4 (well-definedness, observational invariance, commitment sensitivity,
-well-founded recursion, fail-closure, declared-limit), report every row that
-classifies as none, and mint nothing.
+§3.4 — **well-definedness, order-independence, observational invariance,
+commitment sensitivity, well-founded recursion, fail-closure, declared-limit** —
+report every row that classifies as none, and mint nothing.
 
 ## 6. M\* — the typed claim calculus
 
