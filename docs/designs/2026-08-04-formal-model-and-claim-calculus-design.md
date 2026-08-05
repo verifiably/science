@@ -1,7 +1,7 @@
 # Formal model and claim calculus — design
 
-**Status:** Draft — §2–§6 written; §2–§4 corrected through review round 3, §5
-and §6 each through one review round; §7–§11 not yet drafted.
+**Status:** Draft — §2–§7 written; §2–§4 corrected through review round 3, §5
+and §6 each through one review round; §8–§11 not yet drafted.
 
 **Inherits:** the epistemic kernel (G1–G8, §4.1's signatures and semantic
 identity, §8.7's recorded-history limit, limitation 4's predicate vocabulary),
@@ -1255,7 +1255,8 @@ projection carries identifiers, and the release travels the other channel.
                  args          — by slot index, each a bound referent identifier,
                  qualifiers    — sorted by dimension identifier, each
                                  ⟨ quantifier tag, restriction referent identifier ⟩,
-                 polarity      — the polarity tag; absent when Polarity(op) = 1,
+                 polarity      — the polarity tag, always emitted; the
+                                 sign-inapt tag when Polarity(op) = 1 (§7.5),
                  layer ⟩       — the layer term identifier
 
 I_claim(c)  =  H( tag_claim ‖ encode(π_claim(c)) )        under science.identity.v1
@@ -1274,9 +1275,10 @@ Five positions, five kinds of name, and none of them prose:
 | layer | the **layer term identifier** | the base contract |
 
 The two kernel-owned positions are tags rather than contract-issued identifiers
-because their sets are closed and kernel-owned; §7 must still fix their
-canonical encodings, since a tag that is stable in prose but unstable in bytes
-would fork identities across implementations.
+because their sets are closed and kernel-owned. Their canonical encodings are
+pinned by the base contract (§7.1) — a tag that is stable in prose but unstable
+in bytes would fork identities across implementations — and changing one is the
+severe case §7.4 row 5 records.
 
 `I_claim` therefore names an identity that survives an ontology release, and
 `belief_input_digest` — not `I_claim` — is what moves when the contract behind
@@ -1411,7 +1413,246 @@ later design inherits the constraint rather than rediscovering it.
 
 ## 7. M\* — term contracts and referent typing
 
-*Not yet drafted.*
+§6 wrote `Operator`, `Sort`, `Dims` and `Layers` as though something issued
+them. §7 says what does. It answers D §12's last open question directly — *"whether
+the predicate vocabulary becomes a domain contract like any other"* — and it
+closes the two halves of kernel limitation 4 that the nine-term roster left
+open: **who owns the vocabulary, and by what rule it extends**.
+
+### 7.1 The contract split
+
+The vocabulary is a contract like any other, but it does not sit in **one**
+contract, because §6.4's D3-one-level-up ruling already divides it. The split
+follows the existing base/domain line exactly:
+
+| declared by | what it owns | why there |
+|---|---|---|
+| the **`science` base contract** | the claim grammar version; the closed quantifier tag set; the closed polarity tag set; the layer vocabulary; the canonical byte encoding of every kernel tag | these are the kernel-owned structure of `Claim` — the parts §6.4 refuses to let a domain choose |
+| a **domain contract** | operator identifiers and their declarations; dimension identifiers; sort identifiers and their vocabulary bindings | `affects` is a claim *about* biology; the kernel has no opinion on which relations exist |
+
+This inherits D6's asymmetry without amending it, and the asymmetry is the
+reason the split is safe. The base contract is in **every** semantic
+derivation's consulted set unconditionally, so a change to the claim grammar or
+a kernel tag always moves `belief_input_digest`. A domain contract enters only
+when actually read — and a derivation that interprets a claim necessarily reads
+the contract declaring its operator, so the conditional rule reaches every
+claim the derivation touches and no further. A biology contract bump does not
+disturb beliefs over chemistry claims.
+
+```yaml
+# science base contract — the kernel-owned structure
+claim_grammar:
+  version: 1
+  quantifiers: [generic, universal, existential]
+  polarities:  [positive, negative, unsigned]
+  sign_inapt_tag: inapt          # the unit inhabitant; see §7.5
+  layers:      [causal, structural, statistical, methodological]
+```
+
+```yaml
+# a domain contract — biology
+sorts:
+  molecular-entity:
+    vocabulary: {namespace: HGNC, release: "2026-05-01"}
+  phenotype:
+    vocabulary: dataset:<content-identity>
+  population-group:
+    vocabulary: {namespace: MONDO, release: "2026-07-01"}
+
+dimensions:
+  population: {restriction_sort: population-group}
+  condition:  {restriction_sort: phenotype}
+
+operators:
+  affects:
+    arity: 2
+    arg_sorts: [molecular-entity, phenotype]
+    sign_apt: true
+    layers: [causal]
+    dimensions: [population, condition]
+```
+
+Every field of the operator declaration is one of §6.2's declared schemas, and
+nothing else is: `arity`, `arg_sorts`, `sign_apt`, `layers`, `dimensions` are
+exactly `arity(op)`, `ArgSort(op)`, `signApt(op)`, `Layers(op)`, `Dims(op)`.
+`RestrictionSort(op)` is resolved through the dimension declarations rather than
+restated per operator, so two operators sharing `population` cannot disagree
+about what a population restriction is bound to.
+
+The **layer set is base-owned but per-operator restricted** — `layers: [causal]`
+selects from the base vocabulary and may not extend it. A domain that could mint
+a layer would be redefining what kind of thing a claim is, which is the boundary
+§6.4 draws.
+
+### 7.2 Sorts and referent typing
+
+A sort is a name bound to a vocabulary, and D §5 already rules how that binding
+is written: a held ontology dataset by content identity, or a namespace with an
+explicit release. A bare namespace is refused. §7 adds nothing here — it uses
+the binding as the definition of `Referent`:
+
+```text
+Referent(s)  =  the terms of the vocabulary that sort s binds
+```
+
+**Binding a referent is not the same as resolving one**, and D §5's three
+outcomes make the difference sharp. This matters more for claims than for
+facets, because a claim may legitimately name an ontology term in a corpus that
+does not hold that ontology's bytes.
+
+| resolution outcome | what `decodeClaim` does | why |
+|---|---|---|
+| the term **is** in the bound vocabulary | accept | checked and passed |
+| `unknown` — the vocabulary resolved and the term is **not** in it | **refuse** | positive evidence of a bad binding; admitting it would put an unbindable identifier in an immutable identity |
+| `not-available` or `not-present` — the vocabulary could not be read here | accept, and **record the check as not-performed** | D §5 rules both well-formed, not errors; refusing would make claim typing require holding every bound ontology |
+
+The third row is the one that needs care, and the system already has the
+principle for it. *"A failure to look is not a finding of absence"* appears nine
+times across five banked documents; here it is the **dual** case — a failure to
+look is not a finding of *presence* either. An unchecked referent binding must
+never be recorded, reported, or later read as a checked one. It is a
+decode-time fact about coverage, it is **not** in claim identity (a corpus that
+happens to hold MONDO must not mint different identities from one that does
+not), and §11 records the residue: the system can distinguish checked from
+unchecked bindings only if the decode boundary says so, and no banked row
+currently requires it.
+
+### 7.3 Term identity, and the extension rule
+
+Kernel limitation 4's real content is not that nine terms are too few. It is
+that a term has **no identity discipline**: nothing says what it means for two
+uses of `affects` to be the same operator, and nothing says what may change
+about `affects` without changing the claims already written with it.
+
+Two identities, deliberately different in kind:
+
+```text
+operator term identifier   authored, stable, namespaced      enters claim identity
+contract identity          content-derived, moves on edit    enters belief_input_digest
+```
+
+That pairing is what makes the first matrix row (§7.4) true. Making the term
+identifier content-derived would fork every claim on every editorial change to a
+contract; making the contract identity authored would let a reinterpretation
+hide. Each is derived the way its job requires.
+
+**The extension rule, in three cases.**
+
+| operation | permitted | effect on existing claims |
+|---|---|---|
+| **issue** a new operator, dimension, or sort identifier | yes, freely — additive | none; no existing claim mentions it |
+| **retire** an identifier | yes | existing claims keep their identity and stay readable; `decodeClaim` refuses **new** claims at a retired identifier |
+| **redefine** an identifier — change `arity`, `arg_sorts`, `sign_apt`, `layers`, or `dimensions` | **no; refused at contract load** | would silently change what already-written claims mean |
+
+The third row is the load-bearing one, and it is the guarantee tables' own
+discipline — *extend, never renumber* — applied to vocabulary instead of to
+guarantee ids. The reason is not aesthetic. Suppose `affects` flipped
+`sign_apt` from `false` to `true`. Every stored claim at `affects` was
+constructed with the unit polarity; after the flip the operator admits three
+polarities, and a claim's meaning has changed underneath an identity that did
+not move. Retiring `affects` and issuing `affects-directional` costs one
+identifier and keeps every prior assertion bound to what it actually asserted —
+the same trade kernel §4.1 made for propositions, one level up.
+
+A change that is **purely editorial** — a description, a comment, an example —
+moves the contract identity and therefore `belief_input_digest`, but touches no
+declared schema and so needs no new identifier. That is D limitation 1's drift
+case, inherited unchanged and not improved on here.
+
+**Who owns a term** is then simply: the contract whose namespace issues it. That
+is the answer to the "no owner" half of limitation 4, and it is the same answer
+D gives for facets, which is the point — the predicate vocabulary is not a
+special case needing its own governance.
+
+### 7.4 What moves, and what does not
+
+The five rows this section exists to pin:
+
+| change | claim identity | `belief_input_digest` |
+|---|---|---|
+| same term identifiers; consulted contract release changes | **unchanged** | **moves** |
+| an operator / dimension / layer / referent identifier differs | **a different claim** | moves transitively |
+| an activated but **unconsulted** contract changes | unchanged | **unchanged** |
+| a required contract is missing or ambiguous | **decode refused** | none produced |
+| a kernel tag's byte encoding changes | moves — **requires an explicit standard amendment** | moves |
+
+Row by row, with the citation each rests on.
+
+**Row 1 is the whole point of §6.5's identifier discipline.** An ontology
+release, a corrected description, a new operator added elsewhere in the same
+contract — all move the content-derived contract identity, and D6 puts that in
+the digest. None of them touches an identifier already in `π_claim`. Beliefs
+are re-derivable and known to be affected; claims do not fork.
+
+**Row 2 is a mint, not a mutation**, and the wording matters for the same reason
+it mattered in §6.7. A claim identity never "moves" — it is immutable by
+construction. What the row says is that two claims differing in any identifier
+position are **different claims** with different identities, and any belief over
+the new one is a different belief. "Transitively" is exact: the digest moves
+because its claim-side input moved, not by a second rule.
+
+**Row 3 is D6's conditional arm, unamended.** A domain activated in a manifest
+but never interpreted contributes nothing. §7 adds no new consulted-set rule, so
+D limitation 2 — the closure walk is load-bearing and fails *open* if it
+under-collects — is inherited exactly, and it now covers operator contracts too.
+That is worth stating plainly: **§7 enlarges what D limitation 2 can get wrong.**
+
+**Row 4 covers two different failures with one outcome.** *Missing* is a
+required contract absent from the profile. *Ambiguous* is D7's case — a closure
+spanning corpora that pin different identities for one namespace — which D7
+already refuses rather than resolving by recency. Both refuse at `decodeClaim`,
+and neither produces a claim, so no belief is produced either. Nothing partial
+is minted, and there is no arm in which an unresolved contract yields a claim
+carrying a resolution to be settled later.
+
+**Row 5 is the severe one and should read that way.** The kernel tags are
+canonical bytes inside `science.identity.v1`. Changing an encoding re-identifies
+**every claim in every corpus** — it is not a migration, it is a re-minting of
+the entire claim population. It therefore requires an explicit amendment to the
+identity standard, on the same terms as any other encoding change, and it is
+listed here precisely so that it can never be done incidentally by an
+implementation choosing a different serialization for a tag. This is also why
+§6.5's note stands: a tag stable in prose and unstable in bytes forks identities
+across implementations, so the base contract pins the bytes, not the spelling.
+
+### 7.5 Two corrections §7 forces on §6
+
+**The projection's shape must not depend on the contract.** §6.5 wrote the
+polarity position as *"absent when `Polarity(op) = 1`"*. That makes the arity of
+`π_claim` a function of a contract field, so a `sign_apt` flip would re-project
+existing claims even though nothing about them changed. §7.3 refuses such a flip
+outright, but a projection whose shape is contract-dependent is fragile in a way
+the rule alone does not fix — it means the correctness of an immutable identity
+rests on a contract never being edited a certain way.
+
+So the position is **always present**, carrying the base contract's
+`sign_inapt_tag` for the unit inhabitant:
+
+```text
+polarity  ∈  { positive, negative, unsigned, inapt }        always emitted
+```
+
+`inapt` and `unsigned` are different facts and must not be collapsed: `unsigned`
+says the operator has a sign and this claim does not assert one; `inapt` says
+the operator has no sign to assert. With this, `π_claim`'s shape is determined
+entirely by the claim's own content — operator, one entry per argument slot, one
+entry per present dimension, polarity, layer — and no contract edit can
+re-project a stored claim.
+
+**`ProfileSpec` resolves; contracts authorize.** D §6 already separates the two
+roles, and §7 must not blur them: the contracts are the normative SSOT, and
+`ProfileSpec` is the sole compiled runtime profile. `decodeClaim` takes
+`ProfileSpec` as its second parameter (§6.3) because that is the resolved,
+merged, validated form the check needs — but **`ProfileSpec`'s own identity
+never appears in `π_claim` or in the consulted set.** What enters
+`belief_input_digest` is the set of **contract** identities (D6), not the
+compiled artifact's.
+
+The reason is `KIND_DESCRIPTORS`' defect one level up. If a compiled artifact
+were an identity authority, recompiling — a different merge order, a compiler
+version, a validated-but-reordered output — could change claim identity with no
+contract edit anywhere. D closed substrate §12 by retiring the second per-kind
+source of truth; §7 declines to create one for vocabulary.
 
 ## 8. ρ — the refinement map
 
