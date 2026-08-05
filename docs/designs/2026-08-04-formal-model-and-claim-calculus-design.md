@@ -477,11 +477,12 @@ configurations even when they produce equal statuses. A system-wide history law
 would need histories modeled, which M₀ does not do and does not yet need.
 
 **Well-foundedness is argued in prose and tested by no row.** It is what makes
-`standing` a definition rather than a description, and correction §4 argues it
-structurally by content-address containment. C5 tests chain-not-toggle and
-sibling-awareness — behaviour *given* that the recursion terminates — not
-termination itself. That is a candidate M-row, and finding it took only the act
-of naming the laws separately from the rows.
+`standing` a definition rather than a description. Correction §4 argues it by
+content-address containment — an argument **ρA9 finds invalid and replaces**
+with the retraction graph's acyclicity — but either way no banked row tests
+termination: C5 tests chain-not-toggle and sibling-awareness, which is behaviour
+*given* that the recursion terminates. **M3** is that row, and finding the gap
+took only the act of naming the laws separately from the rows.
 
 The **declared-limit** class is why the taxonomy needs seven entries rather than
 six. G4's row does not assert a property of the system; it asserts that
@@ -505,8 +506,9 @@ The **type-level** dependency graph is *not* a DAG: `standing` depends on
 at the type level is normal and carries no obligation.
 
 A **concrete derivation's instance graph** is well-founded exactly where the
-banked identity rules force it — the retraction graph being the clearest case,
-by content-address containment (§3.3). M₀ therefore records the well-foundedness
+banked rules force it — the retraction graph being the clearest case, banked as
+content-address containment (§3.3) and carried under ρA9 by the acyclicity
+invariant that C10's resolvable-target rule maintains. M₀ therefore records the well-foundedness
 *argument* per recursive edge, not a blanket acyclicity claim. An edge with
 recursion at the type level and no banked argument at the instance level is a
 gap; none was found in the four readings.
@@ -1726,7 +1728,7 @@ hide. Each is derived the way its job requires.
 |---|---|---|
 | **issue** a new operator, dimension, or sort identifier | yes, freely — additive | none; no existing claim mentions it |
 | **retire** an identifier | yes | existing claims keep their identity and stay readable; the **authoring constructor** may not select a retired identifier (§7.3a) |
-| **redefine** an identifier — change `arity`, `arg_sorts`, `sign_apt`, `layers`, or `dimensions` | **no; refused at contract load** | would silently change what already-written claims mean |
+| **redefine** an identifier — change `arity`, `arg_sorts`, `sign_apt`, `layers`, or `dimensions` | **no; refused at contract load** — but only **within a declared succession**, since a parallel `genesis` in the same namespace is compared against nothing (§8.3, ρC1) | would silently change what already-written claims mean |
 
 The third row is the load-bearing one, and it is the guarantee tables' own
 discipline — *extend, never renumber* — applied to vocabulary instead of to
@@ -2051,28 +2053,41 @@ merely correct is **not** supplied here; that is ρO2.
 |---|---|
 | banked prose | correction §4: *"The recursion is well-founded: a retraction's identity covers its target's identity, so a cycle would require two records each containing the other's digest — **unconstructible**."* |
 | why it fails | it is not a well-foundedness proof. Both identities are **fixed-width digests**, so "covers" establishes no containment order and nothing decreases along a chain. And collision resistance is not a proof that a cycle of digests has no solution — it is a statement about the difficulty of finding one. The banked argument is computational intuition wearing a structural argument's clothes |
-| replaced by | an **admission rank**. C §4's own boundary rule already requires a retraction to target an **already-existing, resolvable eligible record**, so admission gives a strictly increasing order: `rank(target) < rank(retraction)` for every admitted retraction. `standing`'s recursion follows strictly increasing ranks through a finite population, so it terminates |
-| oracle | **M3**, whose sabotage moves off the identity projection and onto the order rule. **C10** (eligible, resolvable target) is preserved and becomes load-bearing for termination, which it was not previously credited with |
+| replaced by | an **acyclicity invariant on the retraction graph**. Over each finite evaluated world state, orient every retraction edge `target → retraction`; a valid state is one in which that graph is a **DAG**. A topological rank then exists as a **theorem**, `standing` follows strictly increasing topological rank through a finite DAG, and the recursion terminates |
+| oracle | **M3**, whose sabotage moves off the identity projection and onto the acyclicity invariant. **C10** (eligible, resolvable target) is preserved and becomes load-bearing for termination, which it was not previously credited with |
 | preserved | the **property** — `standing` terminates, and the antitone operator is a unique structural recursion rather than a fixpoint (§3.3). C5's chain-not-toggle and sibling cases. **WF** |
 | amended | the argument, and C §4's sentence carrying it |
 | invalidated | *"a cycle would require two records each containing the other's digest — unconstructible"* as a proof of anything |
 
-Two consequences worth stating, because the rank is a different kind of object
-from a digest.
+**Why the invariant holds without anyone maintaining a counter.** Two arms, and
+between them they cover every way a record enters a state.
 
-**Rank is not in identity and not in belief.** It is an admission-order fact,
-local to a corpus, and the obvious carrier is the mutation log's sequence (L).
-Putting it in `π` anywhere would make identity depend on write order, breaking
-W5's location-invariance and D5's formatting-inertness at once. Termination does
-not need rank to be *stable across* corpora — only to exist within the state
-being evaluated.
+| how a record arrives | why the DAG survives |
+|---|---|
+| an ordinary **write** | C10 already requires the retraction's target to **already resolve**. A record that existed before the retraction cannot name it, so the new edge points from an existing node to a newly added one and closes no cycle. The invariant is preserved by construction, not by a check |
+| an **import** | a bundle carries records with no admission history, so the import validates **the bundle together with the resolved world context** for acyclicity, and refuses a bundle for which no topological order exists. Without this arm the argument holds for locally authored corpora and fails silently for imported ones — the shape of failure §8 exists to surface |
 
-**Import needs topological validation.** Admission gives the order for records
-written here; a bundle imported wholesale does not have one unless the import
-enforces it. So an import must admit a retraction's target **before** the
-retraction, and refuse a bundle for which no such order exists. Without that arm
-the rank argument holds for locally authored corpora and silently fails for
-imported ones — which is exactly the shape of failure §8 exists to surface.
+**The rank is derived and never stored, which is the point.** An earlier draft of
+ρA9 proposed an **admission rank** carried by the mutation log's sequence. That
+formulation does not survive contact with the object it orders: a `retraction`
+is a **world** kind and may target a record in **another corpus**, while the
+mutation log's sequence is **per root** (L). There is no global clock to compare
+across roots, so a corpus-local counter cannot order a cross-corpus edge at all
+— the very edges most in need of ordering.
+
+The graph formulation needs none of that. Acyclicity is a property of the
+evaluated state, the topological rank is a consequence rather than a stored
+field, and no cross-corpus clock, global log sequence, or shared counter is
+required anywhere.
+
+**Nothing about the order enters identity or belief.** Since the rank is derived
+per evaluation, there is nothing to store; and storing one would be a defect
+independently. It would introduce **admission-order dependence** into records
+that are otherwise content-determined, and it would enlarge W13/D5's **closed
+corpus-state basis** with a field that is neither content nor manifest — the
+precise failure world limitation 9 and D §7's closed-shape rule exist to
+prevent. (Manifest *formatting* would remain inert either way; that is a
+different property and was miscited in an earlier draft.)
 
 ### 8.3 Contract succession — an adopted rule and a bound, not one thing
 
@@ -2166,7 +2181,7 @@ still enter §9 as candidate guarantees.
 | `decodeClaim : WireClaim × ProfileSpec × ResolutionSnapshot → (Claim × BindingCheckReceipt) + Refused` (§6.3, §7.2) | **RF†**, **WD** | the boundary M₀ never stated; `ResolutionSnapshot` is what makes it a function of its arguments |
 | the **diagnostic** binding check and its five outcomes | **ED†** | adopted; persistence and effect are ρO1 |
 | unconstructible sign-inapt polarity; `SIGN_MEANINGFUL_PREDICATES` retired | **US†** | the roster is proto-science implementation, not banked prose |
-| untypeable spans mint nothing; a source-assertion for one is **unconstructible** | **RF†**, **US†** | follows from world §4.2's identity basis, which is preserved, not amended |
+| untypeable spans mint nothing; refusal upstream means the extraction path receives **no proposition identity** and mints no source-assertion | **RF†** | an **end-to-end** property of that path. World §4.2's identity basis is preserved, not amended, and this is **not** a general claim that an unresolved proposition identity is unconstructible (§6.6, M12) |
 | the polarity position is always emitted (§7.5) | **CS** | keeps `π_claim`'s shape independent of any contract field |
 | contract succession for claim vocabulary: `genesis`/`successor`, identical canonical schema projections across a succession, immutable tombstones, refusal at load (§8.3) | **RF†**, **CA†** | adopted now; only the **broader** versioning policy is ρC1 |
 | retirement is enforced in the authoring constructor, never at decode (§7.3a) | **US†** | decode and restore must accept retired identifiers or history becomes un-restorable |
@@ -2245,15 +2260,15 @@ nine banked tables use.
 Two rows deliberately stay apart. **M2** (every run input reaches the
 assessment's carrier identity) and **M3** (`standing` terminates) were both
 raised by §4, but they have nothing in common operationally: M2's sabotage
-attaches an input outside the declared role partitions, M3's strips the target
-identity out of a retraction's identity projection. Sharing a row would let one
+attaches an input outside the declared role partitions, M3's writes a retraction
+against an unresolvable target and imports a bundle with no topological order. Sharing a row would let one
 pass on the other's evidence.
 
 | id | guarantee | how it is tested |
 |---|---|---|
 | **M1** | **Every read that crosses the instrumented resolver is inside the declared closure** | Instrument the resolver so each value read through it is recorded at read time; assert the recorded read-set is contained in the declared closure, for a corpus exercising every closure member. **Sabotage:** add a code path that reads one value outside the closure **through the resolver** — a facet, a contract, a producer set — changing nothing else, and assert the check **fails**. **Scope, and it is a real one (DL):** the row is bounded by the resolver. A read that never crosses it — a module-level constant, an environment lookup, a cached global, a file opened directly — is invisible and passes, so M1 does **not** assert that every undeclared read is detected (limitation 1). Strengthening it to that claim requires an exhaustive capability or sandbox boundary, which this design does not propose. **Why the bounded row is still worth having:** G3's own text records four closure members that "were live holes in earlier revisions," each found by a reviewer noticing. M1 converts the ordinary case from noticing to checking, and names precisely the case it leaves to noticing |
 | **M2** | **Every run input reaches the assessment's carrier identity** | Take an assessment; for each input of its run, **replace that input with a newly minted dataset carrying a different content identity** — inputs are immutable and content-addressed, so the mutation is a substitution, not an edit — and assert the assessment identity **moves** every time. **Sabotage:** attach an input to the run that no declared role partition covers, and assert the attempt is **refused**, not silently ignored. §4.3 finding (a) established that the current path is three hops (the recipe's role-partitioned `inputs` → R2 → assessment identity) and is a **binding** path, not a proven semantic one; this row pins the binding so the fragility is tested rather than argued |
-| **M3** | **`standing` terminates, because every retraction outranks its target** | Evaluate `standing` over retraction chains of increasing depth, including counter-retractions and several standing retractions of one target; assert termination and a stable value. **Sabotage — the order rule, not the hashes:** admit a retraction whose target does not already exist, or whose admission rank is not strictly greater than its target's, and assert the write is **refused** (C10). Separately, import a bundle whose records cannot be topologically ordered — a retraction and its target mutually preceding each other — and assert the **import is refused**, not admitted in file order. **Explicitly not the test:** a hand-written cyclic pair is refused because its stored identities disagree with its payloads, which tests identity **recomputation** and says nothing about well-foundedness — this is the confusion ρA9 corrects in correction §4's own rationale. **Negative:** rank must appear in **no** identity and **no** digest; move a corpus and re-admit in a different order, and assert every identity and `belief_input_digest` is unchanged |
+| **M3** | **`standing` terminates, because the retraction graph is a DAG** | Evaluate `standing` over retraction chains of increasing depth, including counter-retractions and several standing retractions of one target; assert termination and a stable value. **Sabotage — the acyclicity invariant, not the hashes:** attempt to write a retraction whose target does not already resolve and assert the write is **refused** (C10), which is what makes an ordinary write incapable of closing a cycle. Then import a bundle whose records plus the resolved world context admit **no topological order** — a retraction and its target each preceding the other — and assert the **import is refused**, not admitted in file order. Include a **cross-corpus** case in both arms, since that is where a per-root sequence would have failed. **Explicitly not the test:** a hand-written cyclic pair is refused because its stored identities disagree with its payloads, which tests identity **recomputation** and says nothing about well-foundedness — the confusion ρA9 corrects in correction §4's own rationale. **Negative:** no topological rank is **stored** anywhere; re-evaluate the same state after admitting records in a different order and assert every identity and `belief_input_digest` is unchanged |
 | **M4** | **Every argument and restriction is a typed referent; resolved non-membership refuses, and an unperformed check stays explicit** | Decode a claim whose argument term **is** in the sort's bound vocabulary with that vocabulary readable → accepted, outcome `member`. **Sabotage:** decode one whose term is **not** in a readable vocabulary → **refused**, nothing minted. **Negative — availability is not membership:** make the vocabulary unreadable and decode the same bad term → **accepted**, outcome `not-available`, and assert the two accepting receipts are distinguishable. **Receipt completeness:** on every accepting decode, assert the receipt carries **exactly one outcome per referent position** — no position missing, none duplicated — plus the **`ResolutionSnapshot` identity** it resolved against. **Static:** assert a bare string cannot occupy an argument slot at all. **Scope:** the five outcomes' mutual distinctness is **D3**'s, as amended by ρA7, not this row's |
 | **M5** | **Qualification participates in claim identity** | Two claims differing **only** in a restriction identifier → different `I_claim`; differing **only** in quantifier tag → different; one carrying a dimension the other omits → different. Then the founding case end to end: mint kernel §4.1's *"in adults"* claim, assess it, "edit" to *"in all humans"*, and assert a **new** identity, the prior assessment still bound to the old one, and a `supersedes` link. **Sabotage:** drop the qualifier map from `π_claim` and assert the founding case **collapses to one identity** — the row's whole point. **Negative:** re-serialize the qualifier map with keys in a different order and assert the identity is **unchanged** |
 | **M6** | **Operators are issued, retired, and never redefined within a declared succession** | A successor contract changing `arity`, `arg_sorts`, `sign_apt`, `layers` or `dimensions` under an existing identifier → **refused at contract load**. A successor **dropping** a retired declaration → refused. A successor **adding** a new operator → accepted; assert existing **claim identities are unchanged**, and assert **consulted belief digests move**, because the contract identity moved and D6 puts it in the digest. Adding is additive for identity and never for belief, and a row claiming "no existing claim affected" without that second arm would be false. **Retirement, both paths:** assert the authoring constructor **cannot select** a retired identifier (statically), and that decode/restore of a historical claim at that identifier **succeeds** against the frozen declaration. **Sabotage:** flip `sign_apt` on a live operator and assert load fails; remove the declared predecessor link and assert the redefinition check is **unable to run** rather than silently passing. **Negative:** a purely editorial change is accepted, moves the contract identity, and needs no new identifier. **Declared limit (DL):** a second contract in the same namespace declaring `genesis` and reusing an identifier under a different schema is **not** caught — assert that it loads, and that the gap is the parallel-genesis case recorded in D §12, not a defect in this row |
@@ -2345,10 +2360,10 @@ check and every reader has a reason to re-validate defensively.
     to, not the shapes of the files.
 12. **Until banked, ρ is a proposal.** §8's amendments have not been applied to
     the nine designs. A reader who takes §8.2 as a description of the banked
-    corpus will be wrong about G3, G7, R5, C §4's rationale, D3, D §5's outcome
-    set and D6's trigger
-    set — which is exactly the drift this repository's own doc discipline warns
-    about, so the status header carries it.
+    corpus will be wrong about G3, G7, R5, correction §4's well-foundedness
+    rationale, D3, D §5's outcome set, and D6's trigger set — exactly the drift
+    this repository's own doc discipline warns about, so the status header
+    carries it.
 
 ## 11. Open questions
 
