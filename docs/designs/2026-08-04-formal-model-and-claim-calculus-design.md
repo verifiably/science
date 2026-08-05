@@ -378,9 +378,26 @@ another way.
 **`Dom(step)` is a subset, and the subset is not an evasion.** Writing
 `step : Ω_valid × Action → Ω_valid + Refused` would claim that **every**
 sanctioned action on a valid configuration has a defined result — and **ρO5 says
-one class does not**. A merge whose operand is a retraction target has, today, no
-ruled outcome: not a preserved state, not a refusal, an *open question*
-(limitation 11). Those pairs are **excluded from `Dom(step)`**.
+one class does not**. The excluded class has to be named precisely, because the
+obvious phrasing excludes too much:
+
+> **Excluded from `Dom(step)`:** a `merge` that would change some retraction's
+> **exact target tuple**, and therefore that retraction's content identity.
+
+**Not** every merge involving a retraction target. Consolidating two
+**equal-basis replicas** of one retraction — world §4.3's `duplicate location`,
+*one identity, two corpora* — changes physical multiplicity and nothing else: no
+target tuple moves, no content identity changes, and a counter-retraction naming
+that retraction still names the same identity afterwards. There is no cascade to
+bound, so that merge is squarely **inside** `Dom(step)`, and ρA10 requires it to
+succeed. Excluding it would have made ρA10 and `Dom(step)` contradict each
+other — ρA10 saying the consolidation must succeed while the transition type
+said it had no defined result.
+
+What is excluded is the case with a real cascade: a merge that rewrites some
+retraction's target, re-minting it and everything naming it (limitation 11).
+Those pairs have no ruled outcome today — not a preserved state, not a refusal,
+an *open question*.
 
 The distinction matters because `Refused` is a **value the system produces**
 about a case the design has ruled on. Folding an unruled case into it would
@@ -2148,7 +2165,7 @@ claiming the invariant is universal.
 |---|---|
 | an ordinary **write** | C10 already requires the retraction's target to **already resolve**. A record that existed before the retraction cannot name it, so the new edge points from an existing node to a newly added one and closes no cycle. The invariant is preserved by construction, not by a check |
 | an **import** | a bundle carries records with no admission history, so the import validates **the bundle together with the resolved world context** for acyclicity, and refuses a bundle for which no topological order exists. Without this arm the argument holds for locally authored corpora and fails silently for imported ones — the shape of failure §8 exists to surface |
-| a **merge** | **ρA10**: distinct-basis retractions cannot be curator-merged, so no merge redirects one retraction's edge onto another act. Equal-basis replicas consolidate, which changes location and not the graph. This arm exists because merge *redirects* existing references rather than adding one, and is the single sanctioned act the write argument does not cover. It closes the cycle case. The wider **cascade** case is **ρO5**, and those merges are **outside `Dom(step)`** (§3.2) rather than covered by this row |
+| a **merge** | **ρA10**: distinct-basis retractions cannot be curator-merged, so no merge redirects one retraction's edge onto another act. Equal-basis replicas consolidate, which changes location and not the graph, and stays inside `Dom(step)`. This arm exists because merge *redirects* existing references rather than adding one, and is the single sanctioned act the write argument does not cover. It closes the cycle case. Merges that would **rewrite a retraction's target tuple** are **ρO5** and sit **outside `Dom(step)`** (§3.2) rather than being covered by this row |
 | a **raw write** | nothing is preserved, because nothing checked. A raw-written cycle produces `ω ∉ Ω_valid`, which **audit** classifies as malformed **before** any standing or belief evaluation — the same disposition every other raw-write defect gets. It is not a state whose belief is unknown; it is a corpus with a detected integrity fault |
 
 **The rank is derived and never stored, which is the point.** An earlier draft of
@@ -2219,11 +2236,17 @@ does not reach it — see **ρO5**.
 **ρO5 (open mechanism) — merge versus immutable exact targets.**
 
 W4's inbound rewrite and content-derived identity are in tension for **any**
-merge whose operand is a **retraction target**, not only for merges of
-retractions. Merge assessment `A` into `A′` while `S` retracts `A`: W4 rewrites
-`S`'s target, `S`'s content changes, and therefore `S`'s **identity** changes —
-so `S` is re-minted. Any `R` targeting `S` then names a stale identity and is
-re-minted in turn, and the cascade runs as far as the retraction chain reaches.
+merge that would **rewrite some retraction's exact target tuple** — not only for
+merges of retractions. Merge assessment `A` into `A′` while `S` retracts `A`: W4
+rewrites `S`'s target, `S`'s content changes, and therefore `S`'s **identity**
+changes — so `S` is re-minted. Any `R` targeting `S` then names a stale identity
+and is re-minted in turn, and the cascade runs as far as the retraction chain
+reaches.
+
+**The tension needs a target tuple to move.** Consolidating equal-basis replicas
+of a retraction does not move one — same identity, two corpora — so no
+re-minting occurs and no counter-retraction is disturbed. That case is exempt
+from ρO5 and defined by ρA10 (§3.2).
 
 This is not a claim-neighbourhood question and §8 does not answer it. The
 candidate resolutions are visibly different designs — retractions could name
@@ -2236,9 +2259,11 @@ question, not here.
 **What is recorded now** is that ρA10 closes the *cycle* case and leaves the
 *cascade* open, so no reader takes the merge/identity interaction as settled.
 Formally, ρO5 **names the portion of `Ω_valid × Action` excluded from
-`Dom(step)`** (§3.2): a merge whose operand is a retraction target has no ruled
-outcome, and that is a gap in the design rather than a refusal by the system.
-§10 and §11 carry it.
+`Dom(step)`** (§3.2): a merge that would change some retraction's **exact target
+tuple**, and hence its content identity, has no ruled outcome — a gap in the
+design rather than a refusal by the system. **Identity-preserving replica
+consolidation is explicitly exempt** and stays inside `Dom(step)`, since it moves
+no target tuple and starts no cascade. §10 and §11 carry it.
 
 ### 8.3 Contract succession — an adopted rule and a bound, not one thing
 
@@ -2427,7 +2452,7 @@ pass on the other's evidence.
 |---|---|---|
 | **M1** | **Every read that crosses the instrumented resolver is inside the declared closure** | Instrument the resolver so each value read through it is recorded at read time; assert the recorded read-set is contained in the declared closure, for a corpus exercising every closure member. **Sabotage:** add a code path that reads one value outside the closure **through the resolver** — a facet, a contract, a producer set — changing nothing else, and assert the check **fails**. **Scope, and it is a real one (DL):** the row is bounded by the resolver. A read that never crosses it — a module-level constant, an environment lookup, a cached global, a file opened directly — is invisible and passes, so M1 does **not** assert that every undeclared read is detected (limitation 1). Strengthening it to that claim requires an exhaustive capability or sandbox boundary, which this design does not propose. **Why the bounded row is still worth having:** G3's own text records four closure members that "were live holes in earlier revisions," each found by a reviewer noticing. M1 converts the ordinary case from noticing to checking, and names precisely the case it leaves to noticing |
 | **M2** | **Every run input reaches the assessment's carrier identity** | Take an assessment; for each input of its run, **replace that input with a newly minted dataset carrying a different content identity** — inputs are immutable and content-addressed, so the mutation is a substitution, not an edit — and assert the assessment identity **moves** every time. **Sabotage:** attach an input to the run that no declared role partition covers, and assert the attempt is **refused**, not silently ignored. §4.3 finding (a) established that the current path is three hops (the recipe's role-partitioned `inputs` → R2 → assessment identity) and is a **binding** path, not a proven semantic one; this row pins the binding so the fragility is tested rather than argued |
-| **M3** | **`standing` terminates, because the retraction graph is a DAG** | **Termination itself, on valid states:** evaluate `standing` over retraction chains of increasing depth, including counter-retractions and several standing retractions of one target, and assert termination and a stable value. Without this arm a looping implementation passes while its validator is perfectly correct. **The validator, exercised directly** — the only arm that can certify the check exists: hand it an abstract two-cycle and assert a **cycle-specific** result carrying a **witness** (the offending edge set), not a generic failure. Case-split the cycle across the boundary that matters — both records in the **bundle**, and one record in the bundle closing a cycle through the **resolved world context** — and assert import invokes the validator on the **union**, never on the bundle alone. **That import consumes the result:** force a cycle verdict for an otherwise entirely valid bundle and assert the import **refuses with no write**; an importer that calls the validator and ignores its witness must fail this arm. **Ordinary writes:** attempt a retraction whose target does not already resolve and assert refusal (C10), which is what makes a write incapable of closing a cycle. **Merge, both arms (ρA10):** attempt a curator-asserted merge of two **distinct-basis** retractions and assert **refusal** — merge rewrites inbound references, so this is the one sanctioned act that can close a cycle; then consolidate two **equal-basis** replicas of one retraction held in two corpora and assert the merge **succeeds**, since world §4.3's `duplicate location` state has no other resolution. **Raw writes:** a cyclic configuration is classified **malformed by audit before any standing or belief evaluation** — assert no reading is invoked on it (§3.3, `Ω_valid`). **Explicitly not the test:** refusing a hand-written cyclic *pair* certifies nothing. Each retraction's content-derived address already includes its target identity, so such a pair fails **identity recomputation** on its own, and a generic "import refused" passes whether or not any acyclicity validation exists. That fixture is circular evidence, and an earlier draft of this row used it. **Negative:** no topological rank is stored anywhere; re-evaluate the same state after admitting records in a different order and assert every identity and `belief_input_digest` is unchanged |
+| **M3** | **`standing` terminates, because the retraction graph is a DAG** | **Termination itself, on valid states:** evaluate `standing` over retraction chains of increasing depth, including counter-retractions and several standing retractions of one target, and assert termination and a stable value. Without this arm a looping implementation passes while its validator is perfectly correct. **The validator, exercised directly** — the only arm that can certify the check exists: hand it an abstract two-cycle and assert a **cycle-specific** result carrying a **witness** (the offending edge set), not a generic failure. Case-split the cycle across the boundary that matters — both records in the **bundle**, and one record in the bundle closing a cycle through the **resolved world context** — and assert import invokes the validator on the **union**, never on the bundle alone. **That import consumes the result:** force a cycle verdict for an otherwise entirely valid bundle and assert the import **refuses with no write**; an importer that calls the validator and ignores its witness must fail this arm. **Ordinary writes:** attempt a retraction whose target does not already resolve and assert refusal (C10), which is what makes a write incapable of closing a cycle. **Merge, both arms (ρA10):** attempt a curator-asserted merge of two **distinct-basis** retractions and assert **refusal** — merge rewrites inbound references, so this is the one sanctioned act that can close a cycle; then consolidate two **equal-basis** replicas of one retraction held in two corpora **while a counter-retraction `R` already targets it**, and assert the merge **succeeds**, that the retraction's content identity is **unchanged**, and that `R` is **not rewritten and not re-minted** — pinning that identity-preserving consolidation is inside `Dom(step)` and starts no cascade (§3.2, ρO5). World §4.3's `duplicate location` state has no other resolution. **Raw writes:** a cyclic configuration is classified **malformed by audit before any standing or belief evaluation** — assert no reading is invoked on it (§3.3, `Ω_valid`). **Explicitly not the test:** refusing a hand-written cyclic *pair* certifies nothing. Each retraction's content-derived address already includes its target identity, so such a pair fails **identity recomputation** on its own, and a generic "import refused" passes whether or not any acyclicity validation exists. That fixture is circular evidence, and an earlier draft of this row used it. **Negative:** no topological rank is stored anywhere; re-evaluate the same state after admitting records in a different order and assert every identity and `belief_input_digest` is unchanged |
 | **M4** | **Every argument and restriction is a typed referent; resolved non-membership refuses, and an unperformed check stays explicit** | Decode a claim whose argument term **is** in the sort's bound vocabulary with that vocabulary readable → accepted, outcome `member`. **Sabotage:** decode one whose term is **not** in a readable vocabulary → **refused**, nothing minted. **Negative — availability is not membership:** make the vocabulary unreadable and decode the same bad term → **accepted**, outcome `not-available`, and assert the two accepting receipts are distinguishable. **Receipt completeness:** on every accepting decode, assert the receipt carries **exactly one outcome per referent position** — no position missing, none duplicated — plus the **`ResolutionSnapshot` identity** it resolved against. **Static:** assert a bare string cannot occupy an argument slot at all. **Scope:** the five outcomes' mutual distinctness is **D3**'s, as amended by ρA7, not this row's |
 | **M5** | **Qualification participates in claim identity** | Two claims differing **only** in a restriction identifier → different `I_claim`; differing **only** in quantifier tag → different; one carrying a dimension the other omits → different. Then the founding case end to end: mint kernel §4.1's *"in adults"* claim, assess it, "edit" to *"in all humans"*, and assert a **new** identity, the prior assessment still bound to the old one, and a `supersedes` link. **Sabotage:** drop the qualifier map from `π_claim` and assert the founding case **collapses to one identity** — the row's whole point. **Negative:** re-serialize the qualifier map with keys in a different order and assert the identity is **unchanged** |
 | **M6** | **Operators are issued, retired, and never redefined within a declared succession** | A successor contract changing `arity`, `arg_sorts`, `sign_apt`, `layers` or `dimensions` under an existing identifier → **refused at contract load**. A successor **dropping** a retired declaration → refused. A successor **adding** a new operator → accepted; assert existing **claim identities are unchanged**, and assert **consulted belief digests move**, because the contract identity moved and D6 puts it in the digest. Adding is additive for identity and never for belief, and a row claiming "no existing claim affected" without that second arm would be false. **Retirement, both paths:** assert the authoring constructor **cannot select** a retired identifier (statically), and that decode/restore of a historical claim at that identifier **succeeds** against the frozen declaration. **Sabotage:** flip `sign_apt` on a live operator and assert load fails; remove the declared predecessor link and assert the redefinition check is **unable to run** rather than silently passing. **Negative:** a purely editorial change is accepted, moves the contract identity, and needs no new identifier. **Declared limit (DL):** a second contract in the same namespace declaring `genesis` and reusing an identifier under a different schema is **not** caught — assert that it loads, and that the gap is the parallel-genesis case recorded in D §12, not a defect in this row |
@@ -2517,10 +2542,12 @@ check and every reader has a reason to re-validate defensively.
     closes the case where a merge can build a retraction cycle. It does not
     close the wider one: merging *any* record that a retraction targets rewrites
     that retraction, changes its identity, and cascades through everything
-    naming it (ρO5). Until that is ruled, a merge involving a retraction target
-    has a consequence this document can describe and cannot bound — which is
-    why those pairs sit **outside `Dom(step)`** (§3.2) rather than being typed
-    as refusals. The model records a gap where there is a gap.
+    naming it (ρO5). Until that is ruled, a merge that **rewrites a
+    retraction's target tuple** has a consequence this document can describe and
+    cannot bound — which is why those pairs sit **outside `Dom(step)`** (§3.2)
+    rather than being typed as refusals. Identity-preserving replica
+    consolidation is exempt and remains fully defined. The model records a gap
+    exactly where there is one, and no wider.
 12. **Nothing here is implemented, and no domain exists.** Every mechanism in
     §6–§9 is unexercised, and the operator contract in §7.1 is illustrative —
     its `population-group` binding would be refused at load today. This is D
