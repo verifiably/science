@@ -350,8 +350,10 @@ Refusal is a **value**, so the transition is a function into a sum, not a
 relation between configurations:
 
 ```text
-step  : Ω_valid × Action  →  Ω_valid  +  Refused       (§3.3 defines Ω_valid)
-audit : Ω                 →  Validated(ω ∈ Ω_valid)  +  Findings
+Dom(step)  ⊆  Ω_valid × Action                         (§3.3 defines Ω_valid)
+
+step   : Dom(step)  →  Ω_valid  +  Refused
+audit  : Ω          →  Validated(ω ∈ Ω_valid)  +  Findings
 ```
 
 **`audit` is not a `step`, and typing it as one was a contradiction.** `step`
@@ -367,10 +369,25 @@ refused act has no `ω′` to relate to — the first draft wrote both and meant
 this one. `Refused` carries the reason; nothing in `Ω` records that an act was
 attempted unless a record makes it so, which is §8.7's territory.
 
-**`step` both starts and lands in `Ω_valid`,** which is a preservation claim and
-not a repair claim: a sanctioned action applied to a valid configuration yields a
-valid one or refuses. It does not say a sanctioned action can rescue an invalid
-configuration, and it says nothing at all about states reached another way.
+**`step` lands in `Ω_valid` wherever it is defined,** which is a preservation
+claim and not a repair claim: a sanctioned action applied to a valid
+configuration yields a valid one or refuses. It does not say a sanctioned action
+can rescue an invalid configuration, and it says nothing about states reached
+another way.
+
+**`Dom(step)` is a subset, and the subset is not an evasion.** Writing
+`step : Ω_valid × Action → Ω_valid + Refused` would claim that **every**
+sanctioned action on a valid configuration has a defined result — and **ρO5 says
+one class does not**. A merge whose operand is a retraction target has, today, no
+ruled outcome: not a preserved state, not a refusal, an *open question*
+(limitation 11). Those pairs are **excluded from `Dom(step)`**.
+
+The distinction matters because `Refused` is a **value the system produces**
+about a case the design has ruled on. Folding an unruled case into it would
+report a design gap as a runtime decision — the system saying "no" where in fact
+no one has said anything. Design-undefined behaviour is not runtime refusal, and
+`Dom(step)` is where the difference is written down. Closing ρO5 is exactly the
+act of enlarging `Dom(step)` to cover those pairs.
 
 **Raw mutation is not a `step`.** Writing bytes past the boundary is not an
 `Action` and has no transition here — that is what makes it *raw*. It can
@@ -420,10 +437,11 @@ B          : Ω_valid × Q            → Belief  +  NotAvailable  +  Refused
 **The readings are defined over `Ω_valid`, not over all of `Ω`.** `Ω` is any
 finite configuration, and **four** paths can change the retraction graph: a
 boundary `write`, an `import`, a `merge`, and a **raw write** that bypasses all
-three. The first three are `step`s and produce only `Ω_valid` (§3.2, ρA9,
-ρA10). A raw write can produce a configuration whose retraction graph has a
-cycle, and over such a configuration `standing` has no terminating definition at
-all.
+three. The first three are `step`s and produce only `Ω_valid` **wherever `step`
+is defined** (§3.2, ρA9, ρA10) — the merges ρO5 leaves unruled are outside
+`Dom(step)`, not silently valid. A raw write can produce a configuration whose
+retraction graph has a cycle, and over such a configuration `standing` has no
+terminating definition at all.
 
 **Two conditions, not one.** Acyclicity alone is too weak to carry totality: a
 raw-written configuration can be perfectly acyclic and still structurally
@@ -2130,7 +2148,7 @@ claiming the invariant is universal.
 |---|---|
 | an ordinary **write** | C10 already requires the retraction's target to **already resolve**. A record that existed before the retraction cannot name it, so the new edge points from an existing node to a newly added one and closes no cycle. The invariant is preserved by construction, not by a check |
 | an **import** | a bundle carries records with no admission history, so the import validates **the bundle together with the resolved world context** for acyclicity, and refuses a bundle for which no topological order exists. Without this arm the argument holds for locally authored corpora and fails silently for imported ones — the shape of failure §8 exists to surface |
-| a **merge** | **ρA10**: distinct-basis retractions cannot be curator-merged, so no merge redirects one retraction's edge onto another act. Equal-basis replicas consolidate, which changes location and not the graph. This arm exists because merge *redirects* existing references rather than adding one, and is the single sanctioned act the write argument does not cover. It closes the cycle case; the wider **cascade** case is ρO5 |
+| a **merge** | **ρA10**: distinct-basis retractions cannot be curator-merged, so no merge redirects one retraction's edge onto another act. Equal-basis replicas consolidate, which changes location and not the graph. This arm exists because merge *redirects* existing references rather than adding one, and is the single sanctioned act the write argument does not cover. It closes the cycle case. The wider **cascade** case is **ρO5**, and those merges are **outside `Dom(step)`** (§3.2) rather than covered by this row |
 | a **raw write** | nothing is preserved, because nothing checked. A raw-written cycle produces `ω ∉ Ω_valid`, which **audit** classifies as malformed **before** any standing or belief evaluation — the same disposition every other raw-write defect gets. It is not a state whose belief is unknown; it is a corpus with a detected integrity fault |
 
 **The rank is derived and never stored, which is the point.** An earlier draft of
@@ -2217,6 +2235,9 @@ question, not here.
 
 **What is recorded now** is that ρA10 closes the *cycle* case and leaves the
 *cascade* open, so no reader takes the merge/identity interaction as settled.
+Formally, ρO5 **names the portion of `Ω_valid × Action` excluded from
+`Dom(step)`** (§3.2): a merge whose operand is a retraction target has no ruled
+outcome, and that is a gap in the design rather than a refusal by the system.
 §10 and §11 carry it.
 
 ### 8.3 Contract succession — an adopted rule and a bound, not one thing
@@ -2497,7 +2518,9 @@ check and every reader has a reason to re-validate defensively.
     close the wider one: merging *any* record that a retraction targets rewrites
     that retraction, changes its identity, and cascades through everything
     naming it (ρO5). Until that is ruled, a merge involving a retraction target
-    has a consequence this document can describe and cannot bound.
+    has a consequence this document can describe and cannot bound — which is
+    why those pairs sit **outside `Dom(step)`** (§3.2) rather than being typed
+    as refusals. The model records a gap where there is a gap.
 12. **Nothing here is implemented, and no domain exists.** Every mechanism in
     §6–§9 is unexercised, and the operator contract in §7.1 is illustrative —
     its `population-group` binding would be refused at load today. This is D
