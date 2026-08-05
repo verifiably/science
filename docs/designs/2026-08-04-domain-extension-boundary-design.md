@@ -39,8 +39,9 @@ substrate **§12**'s kind-SSOT question **closes** by retiring
 **§6.1**'s
 placement of the `empirical-observation` facet as native to `nodes` is
 **corrected** to the `science` profile (§3.4 here); the **normative-contract**
-design's exact oracle inventory (its §5) gains **D1–D10** — and, correcting an
-omission from the §9 banking, **L1–L13**, which never reached it. The ledger
+design's exact oracle inventory (its §4) gains **D1–D10** — and, correcting
+omissions, **L1–L13**, which the §9 banking never carried there, and **N1–N10**,
+its own table, which its §5 requires in the suite. The ledger
 gains this design in §1's artifact table and §3's order of work, and its
 artifact-7 oracle inventory gains **L1–L13** and **D1–D10** for the same reason.
 

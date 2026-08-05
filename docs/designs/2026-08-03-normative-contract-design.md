@@ -118,10 +118,17 @@ Four change classes, four different mints, none interchangeable:
 
 **Oracles freeze by `(contract identity, oracle id)`.** The human ids — G1,
 G2a–G2c, G3–G8; S1–S8 with S1a; W1–W13 with W5a and W8a–W8b; R1–R23; C1–C10;
-X1–X12; **L1–L13** (tamper-evident log, banked 2026-08-03, omitted from this
-inventory at its banking and added 2026-08-04); **D1–D10** (domain extension
-boundary, banked 2026-08-04): the exact current inventory, with no base G2 — are
-permanent names.
+X1–X12; **N1–N10** (this document's own table, §9); **L1–L13** (tamper-evident
+log, banked 2026-08-03, omitted from this inventory at its banking and added
+2026-08-04); **D1–D10** (domain extension boundary, banked 2026-08-04): the
+exact current inventory, with no base G2 — are permanent names.
+
+**N is in the suite, and its self-reference is not a cycle.** §5 makes every
+oracle table part of the conformance suite, §9 states N as a guarantee table,
+and N2 guards the doctrine reflexively — so omitting N would make "exact current
+inventory" false by this document's own rules. No identity cycle arises: a cut
+contains N's **normative rows and executable case identities**, never the digest
+that cut produces.
 Extending a table appends; amending a row's meaning mints a successor contract
 identity under the retained id, exactly as 5a amended G8 and the packaging design
 amended W8a and W13; renumbering is unspellable. The estimator doctrine enters the
