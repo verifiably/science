@@ -1,0 +1,449 @@
+# External review disposition, and conformance cut 1
+
+**Status.** Draft 2026-08-05. Disposes of an external review of the eleven banked
+designs. Sizes formal-model **limitation 4** against the mm30 corpus under a
+stated manual protocol (§2). Freezes **conformance cut 1** (§5) *before* any
+implementation. Amends nothing in the banked corpus — every finding that would
+amend lands as a disposition row naming its target, and the three proposed cuts
+are docketed for re-litigation (§4), not decided here.
+
+---
+
+## 1. Method and standing
+
+The review arrived as prose. This document keeps only what was checked, and
+records what the check found — including where it found the review understated
+or mis-measured its own case.
+
+**What was verified against the tree.**
+
+| claim | verdict | measured |
+|---|---|---|
+| the corpus is specification with no execution | **true of `science` only** | 11,953 lines across eleven designs + README; no source, no test, no build manifest. `nodes` is released (0.1.1, dual-language, parity-tested) and `atoms` is real through A5b, so the *lower* end is not spec-only |
+| 126 guarantee rows across ten frozen tables | **exact** | G 10, S 9, W 16, R 23, C 10, X 12, N 10, L 13, D 10, M 13 = 126 |
+| mm30 propositions are bimodal, most machine-generated | **understated** | 307 of 334 (92%) are three-token stubs, not "five in six" |
+| the stub predicate set is a small closed enum | **true** | eight terms: `affects` 224, `associates_with` 50, `induces_state` 12, `regulates` 9, `is_proxy_for` 5, `part_of` 4, `subtype_of` 2, `binds` 1 |
+| datasets carry almost no content hash | **understated** | 0 of 259 mm30 datasets carry a content-hash field; 3 mention `sha256` anywhere. Hashing exists almost entirely on `papers` (40 files) |
+| the corpus makes no outward citation | **true** | one `Merkle`, three `canonical JSON`, nothing else. Every other apparent hit was a substring of *case* / *causal* |
+| belief aggregation is undesigned **and unlisted** | **true** | `belief policy version` occurs four times corpus-wide, always as closure member 7 or "a policy constant". No document defines the function; no open-questions list names it |
+| compound guarantee rows defeat localization | **true** | W8a is 1,877 words in one table cell; R23 ~1,560 |
+
+**Two schema facts the review did not reach, and which are sharper than its
+title-level argument.**
+
+> **(a) The typed layer and the science are disjoint record sets.** Across all
+> 334 mm30 propositions, `subject` / `predicate` / `object` / `polarity` appear
+> on **exactly the 307 stubs**. The 27 authored propositions carry none of those
+> fields — only `claim_layer` and prose. The existing structured representation
+> is not *mostly* stubs; it is *only* stubs.
+
+> **(b) No record anywhere carries a qualifier.** Zero qualifier-shaped fields
+> in 334 records. Kernel §4.1's founding example — *"in adults"* versus *"in all
+> humans"* — has **no instance** in the corpus it was designed from.
+> `Qualifiers(op)` is entirely greenfield, so §6.4's flat-fragment ruling has
+> never met a real restriction.
+
+**What is not adopted from the review.** Its corpus counts (700 propositions,
+863 evidence lines, 451 datasets) do not reconcile with measurement (334, 396,
+260 for mm30; ~472 datasets tree-wide). Nothing downstream changes, but its
+figures are not cited anywhere in this document — including its "18 of 451",
+which makes the content-addressability case **weaker** than the truth.
+
+---
+
+## 2. The typing measurement
+
+### 2.1 What this measures, and what it does not
+
+> **Scope rule.** §2 sizes formal-model **limitation 4** — the untypeable-span
+> backlog — for all 27 authored mm30 records, under the protocol below. It does
+> **not** close formal-model limitation 3, and it does **not** touch kernel
+> limitation 3. Limitation 3's extraction error is the gap between a span and
+> the claim a reader takes from it; this exercise *is* an instance of that
+> error, performed by one reader with the answer in view. The vertical slice
+> (§5) must replace judgment with an executable constructor before any coverage
+> number here is treated as a property of the system rather than of the
+> exercise.
+
+**Protocol, stated so the result is reproducible and its assumptions are
+attackable.**
+
+1. Population: all 27 mm30 propositions lacking `subject`/`predicate`/`object`
+   — the complete authored set, not a sample.
+2. Input: the record's `title` and front matter. `measurement_model` prose was
+   **not** used: a real `decodeClaim` never sees it, and the target is what a
+   constructor could reach from what is recorded as the claim.
+3. **Counterfactual vocabulary.** ρO4 records that no population vocabulary is
+   bound, so under today's contracts *every* record is untypeable by
+   construction and the measurement would be trivially 0/27. Each record is
+   therefore typed **as if** the terms and operators it needs were bound with
+   plausible sorts. "Missing vocabulary" is scored as a blocker only where it is
+   the *sole* remaining blocker.
+4. One reader, no second pass, no adjudication. Each verdict is a judgment call
+   and is recorded per record in §2.2 so it can be disputed individually.
+
+### 2.2 Per-record worksheet
+
+Verdicts: **T** types in the flat fragment given bound vocabulary · **T-split**
+types after decomposition · **R** refused.
+
+Blockers: **V** missing vocabulary · **Γ** missing claim grammar · **A**
+non-atomic record · **K** wrong epistemic kind.
+
+| # | record (short) | attempted typed claim | blockers | verdict | destination |
+|---|---|---|---|---|---|
+| 0001 | MGUS→SMM epigenomically active but transcriptomically weak | two claims, one per assay channel, each with a gradable magnitude | A, Γ | R | decompose; then §3 F-Γ-quant |
+| 0002 | PHF19 retains prognostic signal beyond gain(1q) dosage | `has-prognostic-signal(PHF19)` adjusted for a covariate set | Γ, V | R | §4 grammar: set-valued restriction |
+| 0003 | strongest current H1 mechanism is the PHF19/PRC2–IFN arm | superlative over an implicit candidate set | Γ, K | R | re-home as a **decision**; §2.3 |
+| 0004 | gain(1q)± strata have materially different rankings | comparison across two values of one dimension, magnitude-qualified | Γ | R | grammar: two restrictions on one dimension; quantitative |
+| 0005 | H2 is best read as convergent endpoints via divergent programs | interpretive predication over two claim-shaped operands | A, K | R | re-home as an **interpretation** (D §6 facet conjunction) |
+| 0006 | longitudinal gain(1q) acquisition supports a causal role | `supports(evidence, claim)` — second argument is a claim | K | R | re-home as an **assessment** (`assesses` edge) |
+| 0007 | ribosome–E2F1 bridge best read as a cell-state composition link | interpretive predication | K | R | re-home as an **interpretation** |
+| 0008 | t174 per-cell coupling collapses under the adjustment panel | `coupling-attenuates(X,Y)` under a two-element adjuster set | Γ, K | R | grammar: adjustment set; and §2.3 |
+| 0009 | composition adjusters do not absorb the bulk association | negated `absorbs(adjusters, association)` | Γ, K | R | grammar + re-home |
+| 0010 | t202 shows the null baseline depends strongly on matching | `shows-that(analysis, claim)` + magnitude | Γ, K | R | re-home as an **assessment** |
+| 0011 | t174/t202 narrow the explanation but do not adjudicate | two meta-claims about evidential state | A, K | R | re-home as a **verification result** |
+| 0012 | the migrated t174/t202 representation preserves the verdict | a claim about this record system, not about the world | K | R | re-home as an **audit/verification** finding |
+| 0013 | lineage, especially t(11;14), conditions rankings beyond gain(1q) | `conditions(lineage, ranking)` + focus operator + adjuster | Γ, V | R | grammar: adjustment set; focus has no slot |
+| 0014 | transient Polycomb perturbation is **sufficient** to induce transition | modal `sufficient-for(X, Y)` | Γ | R | grammar: modality |
+| 0015 | attractor occupancy; durable escape **requires** multi-target flattening | two claims, second modal and contrastive | A, Γ | R | decompose; grammar: modality |
+| 0016 | HD is a multi-trisomy architecture that conditions H2 beyond binary HD | two claims + comparative baseline | A, Γ | R | decompose; grammar: comparative baseline |
+| 0017 | the gain(1q)− ribosome program is a subtype-specific vulnerability | `confers-vulnerability(program)`, population ↦ ⟨generic, gain1q-neg⟩ | V | **T** | vocabulary work only |
+| 0018 | bulk state-space geometry is not reproducible across MM30 cohorts | arity-1 `reproducible-across`, negative, population ↦ ⟨universal, mm30-cohorts⟩ | V | **T** | vocabulary work only |
+| 0019 | PC-maturity composition is the **dominant** nuisance axis | superlative over an implicit set | Γ | R | grammar: superlative |
+| 0020 | the ribosome program is prognostic but not drug-exploitable | two claims of opposite polarity | A | **T-split** | decomposition rule only |
+| 0021 | the Mulligan signature replicates only partially and sign-unstably | quantitative partiality + polarity asserted to be *unstable* | Γ, K | R | polarity is one tag; re-home as **verification** |
+| 0022 | dominated by an erythroid axis, **not** proliferation **or** purity | superlative + disjunction of negated restrictions | Γ | R | §6.4's own named refusal |
+| 0023 | top OS survival genes are not materially inflated by winner's curse | negated magnitude over a selection-defined subject | Γ, K | R | grammar: threshold; re-home as **verification** |
+| 0024 | NPM1 marker ploidy-robust; HD elevates but is decoupled | three claims + an adjustment | A, Γ | R | decompose; grammar: adjustment |
+| 0025 | bulk IRE1/UPR conflates enzymatic and nonenzymatic dependencies | arity-3 `conflates(measure, X, Y)`, population ↦ MM | V | **T** | vocabulary work only |
+| 0026 | focal and whole-arm gain(1q) are distinct prognostic entities in MM | arity-2 `distinct-from`, population ↦ ⟨generic, MM⟩ | V | **T** | vocabulary work only |
+| 0027 | germline DNA-repair axis operates orthogonally to somatic drivers | arity-2 `orthogonal-to`, population ↦ ⟨generic, MM⟩ | V | **T** | vocabulary work only |
+
+### 2.3 Aggregates — an overlapping cover, not a partition
+
+> **The blocker columns are a cover.** A record may carry two or three blockers
+> and is counted under each. The column totals therefore **exceed 27 and do not
+> sum to it**, and no percentage may be computed by dividing one column by the
+> total. The only partition in this section is the verdict column.
+
+| verdict | n | share |
+|---|---|---|
+| **T** — types given bound vocabulary | 5 | 19% |
+| **T-split** — types after decomposition | 1 | 4% |
+| **R** — refused | 21 | 78% |
+
+So **6 of 27 (22%)** are reachable without extending the claim grammar or
+re-homing the record to another kernel kind; the flat fragment refuses the other
+21.
+
+| blocker class | records | n |
+|---|---|---|
+| **Γ** missing claim grammar | 0001, 0002, 0003, 0004, 0008, 0009, 0010, 0013, 0014, 0015, 0016, 0019, 0021, 0022, 0023, 0024 | 16 |
+| **K** wrong epistemic kind | 0003, 0005, 0006, 0007, 0008, 0009, 0010, 0011, 0012, 0021, 0023 | 11 |
+| **A** non-atomic record | 0001, 0005, 0011, 0015, 0016, 0020, 0024 | 7 |
+| **V** vocabulary, as the sole blocker | 0017, 0018, 0025, 0026, 0027 | 5 |
+
+**Within Γ, ranked by how many records it alone would unblock:**
+
+| grammar gap | n | status in the banked design |
+|---|---|---|
+| adjustment / covariate set (a set-valued restriction, no dimension for it) | 6 | **unnamed** — §6.4 defers quantitative restrictions and refuses disjunction, but never names this case |
+| quantitative or magnitude restriction | 5 | §6.4 defers |
+| superlative / comparative over an implicit set | 4 | unspellable; unnamed |
+| modality — necessity, sufficiency | 2 | no slot; unnamed |
+| disjunction of restrictions | 1 | §6.4 refuses explicitly |
+| two restrictions on one dimension | 1 | the map permits one |
+| polarity asserted to be *unstable* | 1 | polarity is a single tag |
+
+**Three findings follow that the review did not reach.**
+
+1. **The largest grammar gap is the adjustment set, and no banked document names
+   it.** Six records refuse because a claim's restriction is a *set* of
+   covariates conditioned on. The review led with quantitative restrictions;
+   they rank second.
+2. **Non-atomicity is the cheapest large win.** Seven records refuse partly or
+   wholly because one file holds two or three claims. That is a write-boundary
+   rule — one record, one claim — not a grammar extension, and it costs nothing
+   in `Claim`.
+3. **Second-order records are the second-largest class and must not be answered
+   in `Claim`.** See §2.4.
+
+### 2.4 The eleven **K** records — a classification, and a moratorium
+
+Kernel §11 names non-empirical claims as the largest open question. §2.2 shows
+the case is not a corner: eleven of 27 authored records are, in whole or in
+part, claims *about* claims, analyses, or the record system. Under the ten
+kernel kinds they are not one thing:
+
+| proposed home | records | why |
+|---|---|---|
+| **assessment** — evidence bearing on a proposition, the `assesses` edge | 0006, 0009, 0010 | *"supports"*, *"shows that"*, *"do not absorb"* each report a derivation's bearing on a claim. This is the belief-bearing edge, already typed |
+| **verification** — comparison of two runs under a frozen equivalence rule | 0011, 0021, 0023 | replication, sign-stability, winner's-curse inflation are verdicts over analyses, not statements about myeloma |
+| **interpretation** — D §6's facet conjunction, promotable on the trigger | 0005, 0007 | *"is best read as"* is precisely the competing-alternatives case D's promotion trigger exists for |
+| **decision / current best explanation** | 0003 | a superlative over a candidate set is a standing choice, revised as candidates change |
+| **audit finding** — about this record system | 0012 | not a world claim at all |
+| **unresolved** | 0008 | reads as an assessment, but its subject is an adjusted association the grammar cannot name; blocked behind the adjustment-set decision |
+
+> **Moratorium (proposed ruling).** **`Claim` is not extended to carry
+> second-order structure until this classification is settled.** An
+> `operator` whose argument is a claim would make `Args(op)` higher-order,
+> break `π_claim`'s "every position is an identifier" rule (§6.5), and
+> re-create inside the type the very thing the kernel's role-typed edges
+> (`observes` / `reads`, `assesses`) exist to keep outside it. Eleven records
+> is a strong pull toward exactly that mistake. If most of the eleven re-home
+> onto existing kinds, the pull disappears; if a residue survives, *that*
+> residue — not the whole class — is the case for a grammar extension.
+
+---
+
+## 3. Dispositions
+
+Verdicts: **accept** · **accept-mod** (accepted with a stated modification) ·
+**re-litigate** (docketed to §4, no verdict here) · **reject** · **defer**.
+
+| # | finding | verdict | disposition and landing site |
+|---|---|---|---|
+| F1 | the claim calculus types the stubs and refuses the science | **accept** | measured in §2 and sharpened: the typed fields exist *only* on stubs (§1 (a)). Sizes formal-model limitation 4; does **not** close limitation 3 (§2.1) |
+| F2 | content-addressability is empty on day one and no ramp is designed | **accept** | 0 of 259 mm30 datasets carry a content hash, so kernel §2.2's *held* predicate and the eligibility gate admit nothing. New obligation: **the admission ramp** — how a corpus goes from zero held inputs to a usable admitted set. No banked document owns it |
+| F3 | belief aggregation has no design and is on no open-questions list | **accept** | the largest hole. **New design opens now**, ahead of the slice (§5's stop rule depends on it). The prior, the belief scale, the displacement metric and "the policy's ordinary rule" are all cited as versioned constants that nothing defines |
+| F4 | sub-problem 6 is undesigned and four documents defer load-bearing questions into it | **accept** | including audit liveness (computation §11: *"nothing here forces an audit ever to run"*) — the universal backstop for every raw-write hole — and kernel §6's divergence table, which the kernel calls the main capability it adds. Recorded as the largest **structural** deferral; not opened in this pass |
+| F5 | non-empirical claims have no route to belief | **accept, elevated** | §2.4 shows it is 11 of 27, not a corner case. Elevated from kernel §11 open question to a **blocking prerequisite** for any grammar extension, under §2.4's moratorium |
+| F6 | estimand match is unclosed | **accept as a known deferral** | kernel limitation 5 already names it as the largest survivor of the ten-item scope cluster. Recording it as a *finding* overstates novelty; it stays open, unamended |
+| F7 | shelve the tamper-evident log | **re-litigate** | §4.2. The Dropbox observation is the review's sharpest hit and is accepted as a **hazard** (F17); "shelve L" does not follow from it |
+| F8 | drop the normative contract's superstructure, keep the oracle tables | **re-litigate** | §4.3, split into parity machinery (deferrable) and SSOT/succession/identity/inventory (not). Note that retiring `instrument-certification` would remove a **tenth kernel kind** cited across several documents — a cross-corpus amendment, not a cut |
+| F9 | world addressing's basis-derived address is unjustified | **re-litigate** | §4.1. Verified: §4 rejects three alternatives and never considers the adjacent one |
+| F10 | world §5's receipt apparatus is 42% of the document and its evidence expires | **re-litigate, folded into F9** | limitations 10 and 11 concede expiry-on-next-commit and inability-to-invalidate. Its fate follows the address ruling |
+| F11 | compound guarantee rows defeat localization | **accept** | W8a is 1,877 words in one cell. Renumbering is banned; **appending is not**, so splitting is free. First concrete case is **D6**, whose claim-schema arm §5 wants and whose belief-digest arm it cannot reach |
+| F12 | revision archaeology triples reading cost | **accept-mod** | the review blurs two things. The **withdrawal blockquote stays at its site** — that discipline is what caught the migration-rule defect before the last push. The **narrative history** moves to a per-document appendix |
+| F13 | not one outward citation in 11,953 lines | **accept** | verified. A reader cannot distinguish deliberate divergence from ignorance. Each document gains a short related-work note naming what it re-derives and where it diverges: in-toto/SLSA, Certificate Transparency, Sigstore/Rekor, W3C PROV, RFC 8785 |
+| F14 | both ends of the attack are specification | **accept-mod** | true of `science` (11,953 lines, no code). False of the stack: `nodes` is released and parity-tested, `atoms` is real through A5b |
+| F15 | the review's corpus counts | **reject** | do not reconcile with measurement; not cited (§1) |
+| F16 | build the vertical slice next | **accept, sequenced** | correct, but **cut 1 freezes first** (§5) — otherwise the cut becomes a post-hoc list of what happened to pass — and the slice **stops at the last fully designed seam** (§5.5) |
+| F17 | the real threat is two hosts publishing into synced world roots | **accept as hazard; reject minting a design** | packaging limitation 4 concedes it, and this repository is synced. But a detector presumes multiple live writers. **Decide the writer model first.** If single-writer, the smaller and stronger rule is operational prevention — one writer, and no synchronized live Git metadata — not a detector. Recorded as a decision owed, not a design opened |
+
+---
+
+## 4. Re-litigation docket
+
+Each item gets a written head-to-head against the alternative its document never
+considered. **No verdicts here.** The docket exists so the option is preserved
+rather than lost, and so each comparison is argued on terms fair to both sides.
+
+### 4.1 World address — basis-derived versus `kind:slug` with boundary uniqueness
+
+The unconsidered alternative: keep nominal `kind:slug` addresses, enforce
+uniqueness at the write boundary, and use the identity basis as a **coreference
+check** rather than as the address.
+
+Fair framing requires stating what each side actually buys.
+
+- The alternative is not weaker by assumption. §5 **already** enforces "one
+  identity, one file, one location … refused at the write boundary", so the
+  enforcement point exists either way.
+- W1 and W2 are close to restatements of *a hash is injective*. That is the
+  review's strongest single observation and the docket must not soften it.
+- **But the loss is real and must be priced.** Under basis-derived addressing,
+  two records with the same basis are **unconstructible** (US†). Under the
+  alternative they are **detected and refused** (RF†) — a strictly weaker law,
+  and one that can be bypassed by a raw write in exactly the way §6.3's third
+  row describes. The question is whether that downgrade is worth the address /
+  alias duality, the alias map, the fourth resolution state, W9, §4.4's
+  rename-on-DOI-correction machinery, and §5's receipt apparatus (F10).
+
+### 4.2 Tamper-evident log — versus `world root = git repo, anchor = push`
+
+The log design re-derives git's object model closely enough that the null
+hypothesis had to be weighed and was not: entry digest over `(predecessor,
+payload)`, linkage-not-filename ordering, genesis, fork-versus-replica, anchors
+as pushed refs, the unanchored tail as unpushed commits.
+
+Fairness constraints on the comparison:
+
+- **A git push is an anchor only against an immutable or protection-enforced
+  external ref.** An ordinary mutable remote is not an anchor: force-push
+  rewrites history, so the null hypothesis must be stated as "push to a
+  *protected* ref", and the operational cost of that protection is part of its
+  price.
+- The log's own **limitation 2** concedes that on a single host with no external
+  holders, destruction of a world and every observer of it is undetectable — so
+  in the deployment that will exist for years it degrades toward what git and
+  backups already provide.
+- Against that, git offers no **subject-bound** anchor across corpora, no intent
+  entries, and no carrier for the registry log-head the packaging design
+  reserved. Those are the properties the comparison has to defeat, not the hash
+  chain itself.
+- Every L row is already gated on unbuilt `atoms` A6–A8, so nothing is unblocked
+  by deciding this sooner, and nothing is lost by deciding it later.
+
+### 4.3 Normative contract — parity machinery versus what survives one implementation
+
+The document's own **limitation 5** concedes: *"One implementation makes
+conformance a self-check."* The docket must split the design rather than accept
+or reject it whole.
+
+| stratum | contents | provisional reading |
+|---|---|---|
+| **coordination / parity** | content-addressed cut identities, successor chains, exact-K certification, `instrument-certification` as a tenth kernel kind, §7's existential audit apparatus | machinery for keeping *independent implementations* honest. Deferrable while there is one |
+| **still needed regardless** | the single source of truth for rules, contract **succession**, **rule identity** = (symbol, fixture-set identity), and the **oracle inventory** | these hold for one implementation as much as for five. The inventory is the corpus's only test plan and is what §5 selects from |
+
+Note the coupling F8 records: `instrument-certification` is one of the ten
+kernel kinds and is cited in the formal model's §2.1 inventory, in world §4.2,
+and in the N table. Deferring its *machinery* is cheap; removing the *kind* is a
+cross-corpus amendment.
+
+---
+
+## 5. Conformance cut 1 — frozen prospectively
+
+> **Why prospectively.** A cut drawn after implementation is a list of what
+> happened to pass. This cut is frozen **before** any code exists, so a row that
+> fails is a failure and not a redefinition.
+
+### 5.1 Step 1 — the boundaries the slice crosses
+
+The slice is `Claim`, `π_claim`, `I_claim`, `decodeClaim`, the base operator
+contract, and the cross-language parity fixture. It crosses exactly three
+boundaries:
+
+1. **the typed constructor** — the only route to a `Claim`;
+2. **`decodeClaim`** — where an external value meets the contract that types it;
+3. **contract load and compilation** — where `ProfileSpec` yields claim schemas.
+
+It crosses **no** persistence boundary. Construction and canonical serialization
+are in scope; writing a record into a corpus is not, because that seam runs
+through the substrate write API and world addressing, neither of which is built.
+
+### 5.2 Step 2 — selected rows, each with an observable check or sabotage
+
+Twelve rows are selected firm, plus one conditional on a row split.
+
+| row | what the slice must demonstrate | its sabotage |
+|---|---|---|
+| **M4** | every argument and restriction is a typed referent; `not-member` refuses; an unperformed check stays explicit | decode a term absent from a **readable** vocabulary → refused, nothing minted |
+| **M5** | qualification participates in claim identity; the founding case forks | drop the qualifier map from `π_claim` → the founding case collapses to one identity |
+| **M6** | operators are issued, retired, never redefined within a succession | flip `sign_apt` on a live operator → contract load fails |
+| **M7** | no second authored operator artifact exists | add a hand-authored operator roster beside the contracts → refused or unreachable |
+| **M8** | claim identity is independent of contract release and of compilation | fold the contract release into `π_claim` → an ontology release forks every claim |
+| **M9** | `π_claim`'s shape depends on the claim, never on a contract field | omit the polarity position for sign-inapt operators → the digest changes |
+| **M10** | two implementations hash a claim identically over **every** closed tag | change one implementation's map-key sort, slot order, or a single tag's bytes → fixture fails |
+| **M11** | `decodeClaim` is a function of its arguments and refuses rather than repairs | make availability ambient rather than a parameter → two holders decode the same bytes differently |
+| **M12** | an untypeable span mints nothing | add a fallback minting at a placeholder operator → must fail |
+| **M13** | `Claim` is opaque; the validated constructor is the only route | export a raw constructor, or widen one downstream signature to `WireClaim` → must fail |
+| **D3** | the five resolution outcomes stay distinct across two groups | collapse `not-present` and `not-member` → the discrimination test fails |
+| **D4** | `ProfileSpec` is the only per-kind source; `KindSpec` is compiled | register a second `KindSpec` for one kind → refused |
+| **D6** *(conditional)* | the claim-schema arm's **identity** half | selectable only after D6 is split (F11) — its belief-digest half needs a belief evaluation the slice cannot perform |
+
+**Why twelve and not the ~25 the review proposed.** Selection is by boundary
+crossed, not by topical relevance. A row the slice cannot exercise is not
+strengthened by being listed.
+
+**Explicitly considered and excluded**, with the reason, so the exclusions are
+auditable:
+
+| row | why not in cut 1 |
+|---|---|
+| **M1** | requires an instrumented resolver; the slice has none |
+| **M2**, **M3** | runs, run inputs, retraction graphs — none exist in the slice |
+| **G7** | its converse arm is implied by M5 + M8, but its positive arm needs the mint path, which crosses persistence |
+| **S2**, **S3**, **S8** | the substrate write API and the import path are not crossed |
+| **G3** and all belief rows | the slice computes no belief (§5.5) |
+
+### 5.3 Step 3 — deferred rows, grouped by untouched subsystem
+
+113 of 126 rows are deferred. Grouping is by the subsystem the slice does not
+build, so each group has a single unblocking event.
+
+| group | rows | n | unblocked by |
+|---|---|---|---|
+| tamper log | L1–L13 | 13 | `atoms` A6–A8 (and §4.2) |
+| computation & runs | R1–R23 | 23 | the run boundary |
+| world addressing | W1–W16 | 16 | the world index (and §4.1) |
+| packaging | X1–X12 | 12 | world export |
+| correction lifecycle | C1–C10 | 10 | retraction records |
+| normative contract | N1–N10 | 10 | a second implementation (and §4.3) |
+| kernel & belief | G1–G8 (incl. G2a–c) | 10 | the belief policy design (F3) |
+| substrate | S1–S8, S1a | 9 | the write API |
+| domain boundary, not crossed | D1, D2, D5, D7, D8, D9, D10 | 7 | facets, manifests, practices |
+| formal model, not crossed | M1, M2, M3 | 3 | resolver, runs, retractions |
+
+12 selected + 1 conditional + 113 deferred = 126. Every banked row is accounted
+for in exactly one place.
+
+### 5.4 Steps 4 and 5 — freeze and amendment discipline
+
+> **Freeze.** This cut is frozen on the date in the status header, before any
+> implementation exists. **Results are recorded separately**, never by editing
+> the selection. If the cut must change, the original selection is **preserved
+> verbatim** alongside the amendment, with the reason stated — the same
+> discipline the banked corpus applies to withdrawn arguments.
+
+### 5.5 Where the slice stops
+
+> **Stop rule.** The slice stops at the **last fully designed seam**. Typed
+> claim construction, canonical projection, identity, decode and cross-language
+> parity are fully designed and can run now. **If the slice would compute a
+> belief, the belief-policy design (F3) is a prerequisite** and the slice must
+> stop short of it. Proposition and source-assertion *construction* is inside
+> the seam; belief, admission and eligibility are outside it.
+
+---
+
+## 6. What must survive any cut
+
+Recorded because §4 puts three documents at risk of deletion, and these must not
+travel with them.
+
+1. **A paper is not a measurement of the world; it is a measurement of what
+   someone wrote** — enforced by role-typing inputs (`observes` versus `reads`)
+   so that literature→belief has **no edge that spells it**, rather than a flag
+   that checks it. Structural, and grounded in observed failures.
+2. **Negative tests that assert the system cannot detect something.** The
+   discipline that produces declared limits (DL) instead of overclaims.
+3. **Kernel §2.1's explicit guaranteeable / not-guaranteeable split.**
+4. **Independence as a maximum independent set**, with the counterexamples that
+   kill both connected-components and the greedy fallback.
+5. **Every check must be able to fail** — §5's OF†, and the per-row sabotage it
+   forces. Kept even if §4.3 defers everything else in the normative contract.
+6. **Withdrawn arguments quoted at their site** (F12), which is what caught the
+   migration-rule defect.
+
+---
+
+## 7. Limitations
+
+1. **§2 is one reader's judgment.** No second pass, no adjudication. Its
+   verdicts are recorded per record so each can be disputed individually, but
+   the aggregate inherits every individual error.
+2. **§2 assumes vocabulary that does not exist** (ρO4). Under today's contracts
+   the true coverage is 0/27; the 6/27 figure is counterfactual and must be
+   labelled as such wherever it is cited.
+3. **§2 measures 27 records from one domain.** It sizes limitation 4 for the
+   mm30 authored set and for nothing else. It is not an estimate of the
+   literature, and formal-model limitation 3 stands unamended.
+4. **The blocker classification is a cover, not a partition** (§2.3), and the
+   assignment of a record to **K** rather than **Γ** is sometimes a choice
+   between two defensible readings — 0008 is recorded as unresolved for exactly
+   this reason.
+5. **§4 decides nothing.** Three documents totalling ~2,800 lines remain in an
+   undecided state until the docket is worked, and the corpus meanwhile
+   describes a system whose address scheme may not survive.
+6. **§5's cut is drawn against a slice that does not exist.** If the slice's
+   boundaries turn out differently, the cut is amended under §5.4 — and every
+   such amendment is evidence that prospective cutting is harder than it looks.
+
+---
+
+## 8. Open questions
+
+1. **The writer model** (F17). Is more than one live writer supported? Until
+   this is answered, neither a sync-corruption detector nor the operational rule
+   that would replace it can be specified.
+2. **The admission ramp** (F2). How does a corpus with zero content-addressed
+   inputs reach a usable admitted set? Nothing owns this.
+3. **Where the eleven K records land** (§2.4). Until settled, `Claim` is not
+   extended.
+4. **Whether the adjustment set is a grammar extension or a dimension.** Six
+   records turn on it, and no banked document names the case.
+5. **Sub-problem 6** (F4) — audit liveness and the divergence table remain the
+   corpus's largest structural deferral.
