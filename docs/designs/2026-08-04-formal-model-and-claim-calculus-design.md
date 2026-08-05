@@ -2251,8 +2251,9 @@ from ρO5 and defined by ρA10 (§3.2).
 This is not a claim-neighbourhood question and §8 does not answer it. The
 candidate resolutions are visibly different designs — retractions could name
 targets through a stable handle rather than a content identity; merge could be
-refused whenever an operand is a retraction target; or the cascade could be
-defined and made an explicit, recorded consequence of merging. Each trades
+refused whenever it would change a retraction's exact target tuple; or the
+cascade could be defined and made an explicit, recorded consequence of
+merging. Each trades
 something real, and choosing among them belongs with a world-addressing
 question, not here.
 
@@ -2341,12 +2342,15 @@ future entailment relation would need and defines nothing. Kernel limitation 5's
 estimand match becomes **stateable** as `match(claim_type, estimand_type)` and
 is not stated. The two are related and not assumed identical.
 
-**ρO5 — Merge versus immutable exact targets.** Stated in full at ρA10: W4's
-inbound rewrite re-mints any retraction whose target is merged, cascading
-through every record that names it. ρA10 closes the cycle case and not this one.
-The candidate resolutions — stable target handles, refusing merges on retraction
-targets, or defining the cascade as a recorded consequence — are different
-designs, and the question belongs with world addressing.
+**ρO5 — Merge versus immutable exact targets.** Stated in full at ρA10: a merge
+that would change a retraction's **exact target tuple** re-mints that retraction
+under W4's inbound rewrite, cascading through every record that names it, while
+identity-preserving replica consolidation moves no tuple and is exempt. ρA10
+closes the cycle case and not this one, and §3.2 excludes exactly the
+tuple-changing pairs from `Dom(step)`. The candidate resolutions — stable target
+handles, refusing merges that would rewrite a retraction's target tuple, or
+defining the cascade as a recorded consequence — are different designs, and the
+question belongs with world addressing.
 
 **ρO4 — A population vocabulary.** §7.1's `population-group` sort has no
 binding, and the contract as written would be refused at load under D §5. Until
@@ -2540,9 +2544,9 @@ check and every reader has a reason to re-validate defensively.
     identities across a tag byte change, because the identities *are* the bytes.
 11. **Merge and content-derived identity are in unresolved tension.** ρA10
     closes the case where a merge can build a retraction cycle. It does not
-    close the wider one: merging *any* record that a retraction targets rewrites
-    that retraction, changes its identity, and cascades through everything
-    naming it (ρO5). Until that is ruled, a merge that **rewrites a
+    close the wider one: a merge that would change a retraction's **exact
+    target tuple** rewrites that retraction, changes its identity, and cascades
+    through everything naming it (ρO5). Until that is ruled, a merge that **rewrites a
     retraction's target tuple** has a consequence this document can describe and
     cannot bound — which is why those pairs sit **outside `Dom(step)`** (§3.2)
     rather than being typed as refusals. Identity-preserving replica
