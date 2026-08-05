@@ -1133,7 +1133,8 @@ different places, and collapsing them would leave the actual entry points
 unruled.
 
 ```text
-decodeClaim  :  WireClaim × ProfileSpec  →  Claim + Refused
+decodeClaim  :  WireClaim × ProfileSpec × ResolutionSnapshot
+                ──▶  (Claim × BindingCheckReceipt) + Refused
 ```
 
 Decoding is where sign-aptness, arity, argument sorts, permitted dimensions,
@@ -1141,7 +1142,10 @@ restriction sorts and admissible layers are **checked against the profile**,
 because only there does an untyped external value meet the contract that types
 it. `ProfileSpec` is the second parameter for the reason D4 makes it the sole
 compiled per-kind source: the operator contracts a decode consults are compiled
-profile contracts, not a roster the decoder carries.
+profile contracts, not a roster the decoder carries. The third parameter and the
+receipt are §7.2's — referent membership depends on vocabulary availability,
+which is in neither of the first two, and without them the decode would not be a
+function of its arguments.
 
 The split is therefore:
 
@@ -1266,7 +1270,7 @@ Five positions, five kinds of name, and none of them prose:
 
 | position | what enters the hash | owned by |
 |---|---|---|
-| operator | the operator's **term identifier** | a domain (or the base) contract |
+| operator | the operator's **term identifier** | a domain contract, always (§7.1) |
 | argument, per slot | the **referent identifier**, in the sort's vocabulary | a domain contract |
 | qualifier key | the **dimension identifier** | a domain contract |
 | qualifier restriction | the **referent identifier**, in the dimension's restriction sort | a domain contract |
@@ -1430,14 +1434,39 @@ follows the existing base/domain line exactly:
 | the **`science` base contract** | the claim grammar version; the closed quantifier tag set; the closed polarity tag set; the layer vocabulary; the canonical byte encoding of every kernel tag | these are the kernel-owned structure of `Claim` — the parts §6.4 refuses to let a domain choose |
 | a **domain contract** | operator identifiers and their declarations; dimension identifiers; sort identifiers and their vocabulary bindings | `affects` is a claim *about* biology; the kernel has no opinion on which relations exist |
 
-This inherits D6's asymmetry without amending it, and the asymmetry is the
-reason the split is safe. The base contract is in **every** semantic
-derivation's consulted set unconditionally, so a change to the claim grammar or
-a kernel tag always moves `belief_input_digest`. A domain contract enters only
-when actually read — and a derivation that interprets a claim necessarily reads
-the contract declaring its operator, so the conditional rule reaches every
-claim the derivation touches and no further. A biology contract bump does not
-disturb beliefs over chemistry claims.
+**Operators are domain-issued without exception**, and the base contract may not
+issue one. The rule stays uniform for two reasons: a base-issued operator would
+have the kernel opining on which relations exist, which is the boundary §6.4
+draws; and because the base contract is unconditionally consulted, a base-issued
+operator would sit outside the closure walk that every other operator goes
+through, giving one class of operator a different belief rule for no reason.
+Domain-neutral relations — `subtype-of` and its kin — belong to a
+general-purpose domain contract, since nothing requires a "domain" to be a
+natural science. §6.5's table said "a domain (or the base) contract"; that
+hedge is withdrawn.
+
+**D6's asymmetry survives; D6's trigger set does not.** The unconditional-base /
+conditional-domain rule is exactly right and is inherited unchanged. But D6
+computes domain participation by walking a derivation's closure and collecting
+**the namespace of every facet it reads**, and claims introduce trigger kinds
+that walk does not have: a contract can now be reached through an operator
+identifier, a dimension identifier, a sort identifier, or a referent identifier
+in a bound vocabulary — none of which is a facet key. A walk that collected only
+facet namespaces would omit the contract declaring `affects` from a belief
+derived over a claim at `affects`, and it would fail **open**, exactly as D
+limitation 2 warns.
+
+So the amendment is stated, not glossed:
+
+> **Amendment to D6 (for §8 and D6's oracle).** The consulted set includes every
+> contract reached through a **claim schema** — the contract declaring the
+> operator, each dimension, each argument and restriction sort, and the
+> vocabulary binding each sort resolves through — in addition to every contract
+> reached through a facet namespace.
+
+With that, the reach is what §7.1 wants and no wider: a derivation interpreting
+a claim consults the contract declaring its operator, so a biology contract bump
+still leaves beliefs over chemistry claims undisturbed.
 
 ```yaml
 # science base contract — the kernel-owned structure
@@ -1456,12 +1485,14 @@ sorts:
     vocabulary: {namespace: HGNC, release: "2026-05-01"}
   phenotype:
     vocabulary: dataset:<content-identity>
-  population-group:
+  condition:
     vocabulary: {namespace: MONDO, release: "2026-07-01"}
+  population-group:
+    vocabulary: <population vocabulary — none selected; see §11>
 
 dimensions:
   population: {restriction_sort: population-group}
-  condition:  {restriction_sort: phenotype}
+  condition:  {restriction_sort: condition}
 
 operators:
   affects:
@@ -1471,6 +1502,15 @@ operators:
     layers: [causal]
     dimensions: [population, condition]
 ```
+
+The `population-group` binding is a **placeholder, not a proposal**. No
+population vocabulary has been selected, and none of the obvious candidates is
+one — MONDO is a disease ontology, and appears above bound to `condition`, which
+is what it is for. As written that contract would be **refused at load** under D
+§5, since a binding is exact or absent; it stands here to show that the sort
+mechanism does not supply the vocabularies, and §11 records the selection as
+open. It is also the concrete form of §6.6's cost: a claim qualified by
+population is untypeable until some contract binds a population vocabulary.
 
 Every field of the operator declaration is one of §6.2's declared schemas, and
 nothing else is: `arity`, `arg_sorts`, `sign_apt`, `layers`, `dimensions` are
@@ -1488,34 +1528,118 @@ a layer would be redefining what kind of thing a claim is, which is the boundary
 
 A sort is a name bound to a vocabulary, and D §5 already rules how that binding
 is written: a held ontology dataset by content identity, or a namespace with an
-explicit release. A bare namespace is refused. §7 adds nothing here — it uses
-the binding as the definition of `Referent`:
+explicit release. A bare namespace is refused. §7 changes nothing about the
+**form** of a binding — it uses the binding as the definition of `Referent` —
+but it does refine the **outcomes** of resolving through one, below:
 
 ```text
 Referent(s)  =  the terms of the vocabulary that sort s binds
 ```
 
-**Binding a referent is not the same as resolving one**, and D §5's three
-outcomes make the difference sharp. This matters more for claims than for
-facets, because a claim may legitimately name an ontology term in a corpus that
-does not hold that ontology's bytes.
+**Binding a referent is not the same as resolving one.** This matters more for
+claims than for facets, because a claim may legitimately name an ontology term
+in a corpus that does not hold that ontology's bytes.
 
-| resolution outcome | what `decodeClaim` does | why |
+#### `unknown` cannot carry the decision, and D3 must be amended
+
+The first draft of this section refused on D §5's `unknown`, treating it as
+positive evidence that a term is not in its vocabulary. It is not.
+D §5 defines `unknown` as a **disjunction**: the term is outside the bound
+vocabulary, *or* the binding's namespace was never consulted. Refusing on it
+would refuse a perfectly good identifier whenever a namespace went unconsulted —
+and, worse, would report "not in the vocabulary" on evidence that no one looked.
+That is the same error §7.2 was written to avoid, committed by the decoder.
+
+The outcome set lacks the discriminator, so §7 **refines it**, which is a real
+amendment to D §5 and to D3's oracle rather than a reading of them:
+
+| outcome | when | replaces |
 |---|---|---|
-| the term **is** in the bound vocabulary | accept | checked and passed |
-| `unknown` — the vocabulary resolved and the term is **not** in it | **refuse** | positive evidence of a bad binding; admitting it would put an unbindable identifier in an immutable identity |
-| `not-available` or `not-present` — the vocabulary could not be read here | accept, and **record the check as not-performed** | D §5 rules both well-formed, not errors; refusing would make claim typing require holding every bound ontology |
+| `member` | the vocabulary was read and the term is in it | part of D §5's implicit success |
+| `not-member` | the vocabulary **was read** and the term is **not** in it | half of `unknown` |
+| `not-consulted` | the binding's namespace was never consulted — nothing was looked at | the other half of `unknown` |
+| `not-present` | the bound dataset has a world address the consulted index records, but its corpus is absent | unchanged (world §5.1) |
+| `not-available` | the dataset is identified but its bytes are not held here | unchanged |
 
-The third row is the one that needs care, and the system already has the
-principle for it. *"A failure to look is not a finding of absence"* appears nine
-times across five banked documents; here it is the **dual** case — a failure to
-look is not a finding of *presence* either. An unchecked referent binding must
-never be recorded, reported, or later read as a checked one. It is a
-decode-time fact about coverage, it is **not** in claim identity (a corpus that
-happens to hold MONDO must not mint different identities from one that does
-not), and §11 records the residue: the system can distinguish checked from
-unchecked bindings only if the decode boundary says so, and no banked row
-currently requires it.
+`not-present` and `not-available` are carried over verbatim, so D3's
+three-outcomes-stay-distinct test survives; what changes is that `unknown`
+splits, and the two halves have opposite evidential force. `not-member` is a
+finding; `not-consulted` is the absence of one.
+
+> **Amendment to D §5 and D3 (for §8).** The term-resolution outcome is
+> `member | not-member | not-consulted | not-present | not-available`. D3's
+> oracle gains an arm asserting `not-member` and `not-consulted` are never
+> collapsed, on the same terms it already asserts for `not-present` and
+> `not-available`.
+
+With the discriminator in place the decode rule is statable:
+
+| outcome | `decodeClaim` | why |
+|---|---|---|
+| `member` | accept, check **performed and passed** | |
+| `not-member` | **refuse** | positive evidence of a bad binding; admitting it would put an unbindable identifier into an immutable identity |
+| `not-consulted`, `not-present`, `not-available` | accept, check **not performed** | all three are well-formed states, not errors; refusing would make claim typing require holding every bound ontology |
+
+*"A failure to look is not a finding of absence"* appears nine times across five
+banked documents; the bottom row is its **dual** — a failure to look is not a
+finding of presence either. An unchecked binding must never be recorded,
+reported, or later read as a checked one.
+
+#### The decode interface needs an input and an output it did not have
+
+§6.3 wrote `decodeClaim : WireClaim × ProfileSpec → Claim + Refused`. Both ends
+are short. The decision depends on **vocabulary availability**, which is in
+neither parameter, so as written the function is not a function — two holders
+could decode identical inputs differently through ambient state, and which one
+was right would be unanswerable. And "record the check as not performed" has no
+carrier in the result type, so the record has nowhere to go.
+
+```text
+decodeClaim :  WireClaim × ProfileSpec × ResolutionSnapshot
+               ──▶  (Claim × BindingCheckReceipt) + Refused
+```
+
+**`ResolutionSnapshot`** is the identified, content-derived state of vocabulary
+availability the decode resolved against. Making it an explicit parameter is
+what restores determinism: same three inputs, same outcome, anywhere, which is
+the property §3.4's well-definedness law asks of every reading.
+
+**`BindingCheckReceipt`** records, per referent position, which of the five
+outcomes was obtained and under which snapshot identity. It is a **boundary
+receipt** — §2.3 already lists that as one of the four non-node
+identity-bearers, so this needs no new kind. It is emitted on the accepting arm
+only; the refusing arm produces no claim and therefore no receipt.
+
+The receipt is **not** in claim identity. A corpus that happens to hold an
+ontology must not mint different identities from one that does not — that would
+make `I_claim` depend on what bytes are lying around, which is precisely what
+§6.5's identifier discipline exists to prevent.
+
+#### The lifecycle of an unchecked binding
+
+An accepted-but-unchecked claim is a standing obligation, and naming the
+obligation without naming its discharge would leave the referent half of
+limitation 4 narrowed rather than closed. Re-resolution under a later snapshot
+has three outcomes, and the banked correction machinery already supplies all
+three:
+
+| later outcome | what happens |
+|---|---|
+| `member` | the receipt is superseded by one recording a performed check; the claim is untouched, since its identity never depended on the check |
+| still unresolvable | nothing; the obligation stands |
+| `not-member` | an **audit finding** — the claim was minted on an identifier that is not in its vocabulary |
+
+The third case is the one with teeth, and two banked rules decide it rather than
+this design. First, the claim is immutable, so the correction is a
+**retraction** with its recursive closure over dependents (C), never an edit.
+Second, **detection is separate from correction**: 5b §7.6's *audit mints
+nothing* applies unchanged, so re-resolution reports and a human retracts. An
+automatic retraction on re-resolution would let an ontology release silently
+withdraw claims, which is the failure mode D6 keeps releases out of identity to
+avoid.
+
+What §7 does **not** settle is when re-resolution runs, or whether an unchecked
+claim may be assessed before its check is performed. Both go to §11.
 
 ### 7.3 Term identity, and the extension rule
 
@@ -1541,7 +1665,7 @@ hide. Each is derived the way its job requires.
 | operation | permitted | effect on existing claims |
 |---|---|---|
 | **issue** a new operator, dimension, or sort identifier | yes, freely — additive | none; no existing claim mentions it |
-| **retire** an identifier | yes | existing claims keep their identity and stay readable; `decodeClaim` refuses **new** claims at a retired identifier |
+| **retire** an identifier | yes | existing claims keep their identity and stay readable; the **authoring constructor** may not select a retired identifier (§7.3a) |
 | **redefine** an identifier — change `arity`, `arg_sorts`, `sign_apt`, `layers`, or `dimensions` | **no; refused at contract load** | would silently change what already-written claims mean |
 
 The third row is the load-bearing one, and it is the guarantee tables' own
@@ -1564,17 +1688,63 @@ is the answer to the "no owner" half of limitation 4, and it is the same answer
 D gives for facets, which is the point — the predicate vocabulary is not a
 special case needing its own governance.
 
+### 7.3a What retirement and redefinition actually require
+
+The two rules above are stated as though `decodeClaim` enforces them. It cannot
+enforce either, and saying so precisely changes what has to be built.
+
+**Retirement is not a decode-time property.** `decodeClaim` sees wire bytes. It
+cannot tell whether those bytes are a claim being authored now or a historical
+claim being restored from a backup, re-imported from an export, or replayed from
+the mutation log — and the two must behave differently, or retiring an
+identifier would make every corpus holding a prior claim un-restorable. Refusing
+at decode would corrupt exactly the history retirement exists to preserve.
+
+The enforceable split:
+
+| path | rule |
+|---|---|
+| the typed **authoring** constructor | **cannot select a retired identifier** — it is not offered, on the same US† terms as every other unconstructible combination |
+| **decode / import / restore** | accepts a retired identifier and types the claim against the **frozen retired declaration** |
+
+Retirement therefore lives in authoring, not in validation, which is also the
+only place it can live without a way to distinguish new bytes from old.
+
+**That requires tombstones.** Typing a historical claim against a retired
+operator means the declaration must still be readable, so a successor contract
+**retains the retired declaration immutably**, marked retired, rather than
+deleting it. A contract that drops a retired declaration is refused at load: it
+would render an existing claim population untypeable, which is the same defect
+as redefinition arriving by another route.
+
+**And redefinition detection requires predecessor-aware validation.** "Refused
+at contract load" compares a contract against something, and a content-derived
+identity does not by itself say what it succeeds. So a contract **declares its
+predecessor contract identity**, and load-time validation is a two-contract
+check: every identifier present in both must have byte-identical declarations,
+and every identifier in the predecessor must still be present, live or
+tombstoned. Without the declared predecessor there is nothing to diff against,
+and "never redefine" is an honour system.
+
+This lands squarely on D §12's open **domain contract versioning policy**
+question, and it constrains the answer: whatever that policy becomes, it must
+carry a predecessor link and a tombstone-retention rule, because the vocabulary
+extension rule is unenforceable without both. §8 records the constraint; §11
+records that the policy itself is still open.
+
 ### 7.4 What moves, and what does not
 
-The five rows this section exists to pin:
+The rows this section exists to pin — five, with the fourth split, because
+missing and ambiguous refuse at **different boundaries**:
 
-| change | claim identity | `belief_input_digest` |
-|---|---|---|
-| same term identifiers; consulted contract release changes | **unchanged** | **moves** |
-| an operator / dimension / layer / referent identifier differs | **a different claim** | moves transitively |
-| an activated but **unconsulted** contract changes | unchanged | **unchanged** |
-| a required contract is missing or ambiguous | **decode refused** | none produced |
-| a kernel tag's byte encoding changes | moves — **requires an explicit standard amendment** | moves |
+| # | change | claim identity | `belief_input_digest` |
+|---|---|---|---|
+| 1 | same term identifiers; consulted contract release changes | **unchanged** | **moves** |
+| 2 | an operator / dimension / layer / referent identifier differs | **a different claim** | moves transitively |
+| 3 | an activated but **unconsulted** contract changes | unchanged | **unchanged** |
+| 4a | a required contract is **missing** from the profile | **decode refused** | none produced |
+| 4b | contracts **conflict across corpora** a derivation spans | unaffected — each claim already decoded | none produced; **derivation refused** |
+| 5 | a kernel tag's byte encoding changes | moves — **requires an explicit standard amendment** | moves |
 
 Row by row, with the citation each rests on.
 
@@ -1591,19 +1761,35 @@ position are **different claims** with different identities, and any belief over
 the new one is a different belief. "Transitively" is exact: the digest moves
 because its claim-side input moved, not by a second rule.
 
-**Row 3 is D6's conditional arm, unamended.** A domain activated in a manifest
-but never interpreted contributes nothing. §7 adds no new consulted-set rule, so
-D limitation 2 — the closure walk is load-bearing and fails *open* if it
-under-collects — is inherited exactly, and it now covers operator contracts too.
-That is worth stating plainly: **§7 enlarges what D limitation 2 can get wrong.**
+**Row 3 is D6's conditional arm, whose *rule* is unamended and whose *triggers*
+are not.** A domain activated in a manifest but never interpreted still
+contributes nothing — that half is inherited exactly. But §7.1 amends what
+counts as reaching a contract, adding claim-schema triggers to facet
+namespaces, so the walk this row depends on is a **wider** walk than D6's
+oracle currently tests. D limitation 2 already warns that an under-collecting
+walk fails *open*; §7 does not fix that, and should say the uncomfortable part:
+**§7 enlarges the surface D limitation 2 can get wrong**, and the widened walk
+needs its own oracle arm (§8).
 
-**Row 4 covers two different failures with one outcome.** *Missing* is a
-required contract absent from the profile. *Ambiguous* is D7's case — a closure
-spanning corpora that pin different identities for one namespace — which D7
-already refuses rather than resolving by recency. Both refuse at `decodeClaim`,
-and neither produces a claim, so no belief is produced either. Nothing partial
-is minted, and there is no arm in which an unresolved contract yields a claim
-carrying a resolution to be settled later.
+**Row 4 was one row and is two, because the two failures refuse in different
+places.** Collapsing them made `decodeClaim` look responsible for a condition it
+cannot see.
+
+*4a, missing,* is local and static: a claim names an operator whose declaring
+contract is not in the profile at all. The check is inside a single
+`ProfileSpec`, so `decodeClaim` refuses and nothing is minted.
+
+*4b, conflict,* is D7's case, and it is **not** a decode failure. Each corpus in
+the closure may be individually valid and internally consistent; every claim in
+each may have decoded successfully long ago. What is inconsistent is the
+*combination* — a closure spanning corpora that pin different identities for one
+namespace — and that is only visible when a derivation assembles the closure.
+So D7's refusal fires at **derivation/belief construction**, where D already
+puts it, never resolved by recency and never merged.
+
+The shared result is that no belief is produced. Nothing partial is minted, and
+there is no arm in which an unresolved contract yields a claim carrying a
+resolution to be settled later.
 
 **Row 5 is the severe one and should read that way.** The kernel tags are
 canonical bytes inside `science.identity.v1`. Changing an encoding re-identifies
@@ -1615,7 +1801,12 @@ implementation choosing a different serialization for a tag. This is also why
 §6.5's note stands: a tag stable in prose and unstable in bytes forks identities
 across implementations, so the base contract pins the bytes, not the spelling.
 
-### 7.5 Two corrections §7 forces on §6
+### 7.5 Corrections §7 forces on §6
+
+Three, of which the first is §7.2's and is recorded there: `decodeClaim` gains
+`ResolutionSnapshot` and returns a `BindingCheckReceipt`, because §6.3's
+signature made the decode depend on state it did not take and produce a record
+it could not carry. The remaining two:
 
 **The projection's shape must not depend on the contract.** §6.5 wrote the
 polarity position as *"absent when `Polarity(op) = 1`"*. That makes the arity of
