@@ -472,31 +472,42 @@ from it, the author's override — the thing `CREATE_ONLY_KEYS` exists to preser
 and what changes is that editing the *claim* is no longer indistinguishable from
 editing its *label*.
 
-**Migration is not mechanical, and must not pretend to be.** An existing record
-may carry an author-overridden title, incomplete factored fields, or both, and in
-those cases the original derived title is **unrecoverable** — the override
+**There is no mechanical migration, and the clean start is why.** An existing
+record may carry an author-overridden title, incomplete factored fields, or both,
+and in those cases the original derived title is **unrecoverable** — the override
 destroyed it, which is exactly the defect being fixed, observed after the fact.
+The adoption ledger's §0 settles what follows: records are **reproduced under
+this system, never migrated into it**, because a migrated record is a
+provenance-weak assertion of precisely the kind these guarantees exist to
+exclude.
 
-> **Migration rule** (amended 2026-08-05, ρA2). Seed `display_statement` from the
-> record's current `title`. Where the record's factored fields do not **type as a
-> claim** — no operator resolves, an argument does not bind to its sort's
-> vocabulary, or a qualifier the title carries has no dimension to carry it —
-> mark the record **suspect** and route it to salvage (sub-problem 7). Never
-> reconstruct an unavailable prior title, and never infer a typed field from
-> prose it disagrees with.
+> **Reproduction rule** (replaces the migration rule, 2026-08-05 — ρA1, ρA2,
+> ledger §0). A legacy record contributes **two independent things, with no
+> derivation between them**. Its `title` is copied verbatim into
+> `display_statement`, which is identity-inert and asserts nothing. Its claim is
+> **constructed afresh through the ordinary authoring boundary** — the same typed
+> constructor every new claim passes — from the sources, not from the old
+> record's fields. Where that construction does not succeed, the result is a
+> **typing-work item and no proposition**: nothing is minted, no typed field is
+> inferred from prose, and no record enters the system in a degraded state.
 
-The amended condition is **stricter** than the one it replaces, and deliberately
-so. "The title does not reconstruct from the factored fields" was a comparison
-between two pieces of prose; "does not type as a claim" is a comparison against a
-contract. A record whose title read *"X affects Y in adults"* while its factored
-fields carried no qualifier passed the old condition and fails the new one — the
-exact case §4.1 exists to catch (formal model M5).
+**Why the rule is not a test applied to the old record.** A draft of this
+amendment made it one — *"mark the record suspect where its factored fields do
+not type as a claim"* — and that was wrong twice. It is **not stricter** than the
+rule it replaced: a record whose fields type perfectly while its *title*
+contradicts them passes the type check and failed the old prose comparison, so
+the two conditions are **incomparable**, not ordered. And it is **not
+checkable**: deciding whether a title carries a qualifier the fields omit means
+interpreting prose, which is the extraction problem (limitation 3), not a type
+check. Under the reproduction rule neither question arises, because nothing is
+being converted. The old fields are **evidence a human reads**, with the same
+standing as the source itself, and the typed claim's only construction authority
+is the boundary.
 
-A suspect record is a curation item, not an error: it is readable, it is
-inspectable against its own sources, and it is barred from certifying anything
-until a human confirms what the claim actually says. This is the "treat all as
-suspect until verified and re-situated" disposition applied to the one field
-where the old model has no answer to give.
+This is the "treat all as suspect until verified and re-situated" disposition
+(sub-problem 7) at its sharpest. The legacy record stays readable and
+inspectable against its own sources, and it certifies nothing — not because it
+was flagged, but because it never became a proposition in this system at all.
 
 ### 4.2 The kernel
 

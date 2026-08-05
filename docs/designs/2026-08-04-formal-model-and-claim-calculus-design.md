@@ -2410,7 +2410,7 @@ invites the assumption that more moved than did.
 
 | artifact | edit |
 |---|---|
-| kernel §4.1 | the Rule is restated over the typed projection (ρA1); the `title` split gains its `statement` case (ρA2) |
+| kernel §4.1 | the Rule is restated over the typed projection (ρA1); the `title` split gains its `statement` case (ρA2); the **migration** rule becomes a **reproduction** rule under ledger §0 — `title` copies into `display_statement`, the claim is constructed afresh through the ordinary boundary, and a failure yields a typing-work item and **no proposition** |
 | kernel §11 | the semantic-identity normalization question is closed for prose, narrowed to term synonyms (ρA1) |
 | kernel limitation 4 | answered — owner and extension rule (ρA5); the referent-binding half is **re-recorded as open** (ρO1), not deleted |
 | kernel G7, G3 | G7 gains a `statement` converse arm; G3's statement gains the `Belief`-arm restriction (ρA1, ρA8) |
