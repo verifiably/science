@@ -1906,7 +1906,7 @@ An open mechanism recorded as either claims a mechanism exists.
 
 The binding check is the case that forced the distinction, and it appears under
 **two** dispositions on purpose: the diagnostic check is adopted (§8.5), while
-its persistence and epistemic effect are ρO4. Nothing in §8 may read as though ρ
+its persistence and epistemic effect are ρO1. Nothing in §8 may read as though ρ
 settled the second.
 
 ### 8.2 Amendments
@@ -1971,10 +1971,15 @@ exists to prevent.
 |---|---|
 | banked prose | kernel limitation 4, *"The predicate vocabulary is currently 9 terms; real claims will not fit cleanly"* — no owner, no extension rule; and D §12's open question, *"Whether the predicate vocabulary becomes a domain contract like any other"* |
 | becomes | operators declared by domain contracts, always (§7.1); term identity, issue/retire/never-redefine (§7.3) |
-| oracle | **D4** is preserved and now covers more: operator declarations are contract-authored and compiled through `ProfileSpec`, so *"no second authored per-kind artifact exists"* extends to vocabulary without a new artifact class. A retirement/redefinition arm is a candidate **M** row |
-| preserved | **D4**; D §6's contracts-are-normative / `ProfileSpec`-is-compiled split (§7.5); **US†** for the sign-aptness roster's retirement |
-| amended | limitation 4's "no owner, no extension rule" is answered; D §12's question is **closed** — yes, a domain contract like any other |
+| oracle | **D4 is unchanged and does not cover this.** D4 governs the sole authored **per-kind** source and `KindSpec` compilation; a claim schema is not a per-kind artifact and an operator roster is not a `KindSpec`. Two new oracles are required, both **M** rows (§9): that no second authored operator artifact exists beside the contracts, and that retirement/redefinition behaves as §7.3 says |
+| preserved | **D4** exactly as written, at its existing scope; D §6's contracts-are-normative / `ProfileSpec`-is-compiled **split** (§7.5); **US†** for the sign-aptness roster's retirement |
+| amended | limitation 4's "no owner, no extension rule" is answered; D §12's question is **closed** — yes, a domain contract like any other. Separately, **D §6's compiled-registry prose widens**: `ProfileSpec` now compiles claim schemas alongside the `KindSpec` set, so *"any further per-kind artifact is compiled from it"* is no longer a complete description of what it compiles |
 | invalidated | the closed nine-term enum as the vocabulary's shape |
+
+The first draft of this row said D4 *"is preserved and now covers more."* That
+was normative scope acquired without editing either the prose or the oracle — the
+same move §8 exists to prevent. D4's reach is unchanged; the new obligations are
+new rows.
 
 **ρA6 — D6's consulted-set trigger widens to claim schemas.**
 
@@ -1998,7 +2003,7 @@ every test that uses facets.
 |---|---|
 | banked prose | D §5's table row: *"`unknown` — the term is **outside the bound vocabulary** altogether, or the binding's namespace was never consulted"* |
 | becomes | `member \| not-member \| not-consulted \| not-present \| not-available` (§7.2) |
-| oracle | **D3**, whose statement *"the three unresolved states stay distinct"* becomes four unresolved states plus `member`, with a new arm asserting `not-member` and `not-consulted` are never collapsed — on the same terms D3 already uses for `not-present` and `not-available` |
+| oracle | **D3**, whose statement *"the three unresolved states stay distinct"* becomes **five-way exhaustive discrimination** over two groups that must not be mixed: two **resolved membership results**, `member` and `not-member`, and three **results of a check not performed**, `not-consulted`, `not-present` and `not-available`. `not-member` is a resolved finding, not an unresolved state, and describing it as one would reproduce the very collapse the refinement exists to undo. D3 gains an arm asserting no member of the five collapses into another |
 | preserved | `not-present` and `not-available` **verbatim**, so D3's existing arms pass unchanged; *"a binding is well-formed in all cases, no error is raised, and no fallback to another release occurs"*; **ED†** |
 | amended | `unknown` splits into a finding and the absence of one |
 | invalidated | any reading of banked `unknown` as evidence of **non-membership** — the reading §7.2's first draft made, and the one that would let a decoder report "not in the vocabulary" on the strength of nobody having looked |
@@ -2015,18 +2020,32 @@ every test that uses facets.
 | invalidated | the reading under which held-ness is a `sem` edge. That reading is not merely inelegant: two configurations differing only in whether the last copy survives would share `κ_B` and therefore one `belief_input_digest` while yielding different beliefs — a **G3 violation**, not a qualifier on G3 |
 
 The mechanism that would make the `NotAvailable` case *recorded* rather than
-merely correct is **not** supplied here; that is ρO5.
+merely correct is **not** supplied here; that is ρO2.
 
-### 8.3 Constraints on open questions
+### 8.3 Contract succession — an adopted rule and a bound, not one thing
 
-**ρC1 — Domain contract versioning must carry predecessor links and tombstones.**
+§7.3a does two different things in one passage, and filing them together would
+have ρA5 promising enforceable retirement while ρC1 said no oracle exists. They
+split the way the binding check does.
+
+**Adopted (§8.5, with M rows) — the succession rules M\* actually asserts.**
+These are normative now, not deferred:
+
+| rule | §7.3a |
+|---|---|
+| a contract **declares its predecessor contract identity** | otherwise there is nothing to diff against |
+| every identifier present in both must have **byte-identical declarations** | this is *never redefine*, made checkable |
+| retired declarations are **retained immutably as tombstones** | historical claims are typed against them |
+| a violation of any of the three is **refused at contract load** | RF†, at load, not at claim decode |
+
+**ρC1 (constraint) — the broader versioning policy stays open.**
 
 | | |
 |---|---|
 | banked open question | D §12: *"Domain contract versioning policy. What constitutes a breaking change to a facet contract, and whether contract identity being content-derived is sufficient or a declared compatibility range is also needed."* |
-| constraint | whatever the policy becomes, a contract must **declare its predecessor contract identity**, and must **retain retired declarations immutably as tombstones** (§7.3a) |
-| why | §7.3's *never redefine* is a two-contract diff with nothing to diff against otherwise, and retirement types historical claims against declarations a successor would have deleted. Without both, the extension rule is an honour system |
-| status | the question stays **open**. ρC1 bounds the answer; it does not supply one, and no oracle changes until the policy lands |
+| constraint | the policy must be **compatible with** the four adopted rules above; it may not, for instance, permit a successor to drop a declaration or to reuse an identifier with different bytes |
+| what stays open | what counts as a breaking change to a **facet** contract, whether a declared compatibility range is needed, and how ranges interact with 5b's versioning rules. None of that is settled here |
+| status | **open.** ρC1 bounds the answer; it does not supply one |
 
 D §12's own framing — whether content-derived identity is *sufficient* — is
 answered in one direction only: it is not sufficient for vocabulary, because a
@@ -2037,7 +2056,7 @@ content-derived identity says what a contract *is* and never what it *succeeds*.
 Named requirements with no mechanism. Each is a record that something is
 missing, not a design.
 
-**ρO4 — Binding-check persistence and epistemic effect.** §7.2 adopts the
+**ρO1 — Binding-check persistence and epistemic effect.** §7.2 adopts the
 diagnostic check (§8.5) and leaves open: whether the receipt persists at all,
 how it would be discovered, how it would be superseded, and what corrects a
 claim later found `not-member`. The banked correction rules make the obvious
@@ -2049,18 +2068,18 @@ therefore a new kind with its own eligibility analysis. Also open: whether an
 unchecked claim may be assessed, and when re-resolution runs. **ρ does not
 settle any of this**, and no row in §8.2 depends on it.
 
-**ρO5 — The held-ness mechanism.** ρA8 decides what the *answer* is when the
+**ρO2 — The held-ness mechanism.** ρA8 decides what the *answer* is when the
 last held copy is destroyed. It does not make the case **recorded**: nothing
 observes the destruction, so `NotAvailable` is reached by a check failing rather
 than by an act being committed. §4.3 withdrew the recorded-loss repair as
 premature, and it stays withdrawn.
 
-**ρO6 — Entailment and estimand match.** §6.7 preserves the typed information a
+**ρO3 — Entailment and estimand match.** §6.7 preserves the typed information a
 future entailment relation would need and defines nothing. Kernel limitation 5's
 estimand match becomes **stateable** as `match(claim_type, estimand_type)` and
 is not stated. The two are related and not assumed identical.
 
-**ρO7 — A population vocabulary.** §7.1's `population-group` sort has no
+**ρO4 — A population vocabulary.** §7.1's `population-group` sort has no
 binding, and the contract as written would be refused at load under D §5. Until
 one is selected, a population-qualified claim is untypeable — the concrete form
 of §6.6's cost.
@@ -2074,10 +2093,12 @@ still enter §9 as candidate guarantees.
 |---|---|---|
 | the dependent-sum `Claim` and its schema/inhabitant split (§6.2) | **US†** | no M₀ type to amend |
 | `decodeClaim : WireClaim × ProfileSpec × ResolutionSnapshot → (Claim × BindingCheckReceipt) + Refused` (§6.3, §7.2) | **RF†**, **WD** | the boundary M₀ never stated; `ResolutionSnapshot` is what makes it a function of its arguments |
-| the **diagnostic** binding check and its five outcomes | **ED†** | adopted; persistence and effect are ρO4 |
+| the **diagnostic** binding check and its five outcomes | **ED†** | adopted; persistence and effect are ρO1 |
 | unconstructible sign-inapt polarity; `SIGN_MEANINGFUL_PREDICATES` retired | **US†** | the roster is proto-science implementation, not banked prose |
 | untypeable spans mint nothing; a source-assertion for one is **unconstructible** | **RF†**, **US†** | follows from world §4.2's identity basis, which is preserved, not amended |
 | the polarity position is always emitted (§7.5) | **CS** | keeps `π_claim`'s shape independent of any contract field |
+| contract succession: declared predecessor, byte-identical shared declarations, immutable tombstones, refusal at load (§8.3) | **RF†**, **CA†** | adopted now; only the **broader** versioning policy is ρC1 |
+| retirement is enforced in the authoring constructor, never at decode (§7.3a) | **US†** | decode and restore must accept retired identifiers or history becomes un-restorable |
 
 ### 8.6 Preserved untouched — the negative list
 
@@ -2088,24 +2109,45 @@ invites the assumption that more moved than did.
 |---|---|
 | world §4.2's identity bases, including `source-assertion`'s | §6.6's refusal is a **consequence** of that basis, not a change to it |
 | C §4's eligible-target set — still exactly `node` and `route` | §7.2 explicitly declines to extend it |
-| 5b §7.6, audit mints nothing | ρO4's open path must not be read as licensing an automatic retraction |
+| 5b §7.6, audit mints nothing | ρO1's open path must not be read as licensing an automatic retraction |
 | D7 and W5 | ρA6 widens a walk; it does not touch agreement or location-invariance |
 | kernel limitation 1's ranked queue | untypeable spans are a **second** backlog with a different membership condition, not an extension of that row (§6.6) |
 | the nine banked guarantee tables' ids | no id is renumbered; every change above is an edit to a row's text or a new arm |
 
 ### 8.7 What banking this costs
 
+**Design prose and oracles.**
+
 | artifact | edit |
 |---|---|
 | kernel §4.1 | the Rule is restated over the typed projection (ρA1); the `title` split gains its `statement` case (ρA2) |
 | kernel §11 | the semantic-identity normalization question is closed for prose, narrowed to term synonyms (ρA1) |
-| kernel limitation 4 | answered — owner and extension rule (ρA5); the referent-binding half is **re-recorded as open** (ρO4), not deleted |
+| kernel limitation 4 | answered — owner and extension rule (ρA5); the referent-binding half is **re-recorded as open** (ρO1), not deleted |
 | kernel G7, G3 | G7 gains a `statement` converse arm; G3's statement gains the `Belief`-arm restriction (ρA1, ρA8) |
 | computation §7.1, R5 | §7.1's row 2 gains its `def` typing; R5's arms are unchanged (ρA8) |
-| D §5, D3 | the outcome set refines to five; D3 gains a non-collapsing arm (ρA7) |
+| D §5, D3 | the outcome set refines to five; D3 gains a five-way non-collapsing arm (ρA7) |
+| D §6 | the compiled-registry prose widens: `ProfileSpec` compiles claim schemas alongside the `KindSpec` set (ρA5) |
 | D §8, D6, D limitation 2 | the trigger set widens; D6 gains a claim-schema arm (ρA6) |
 | D §12 | the predicate-vocabulary question is closed (ρA5); the versioning question records ρC1's bound |
 | **M1–M\<n\>** | §9's new rows, plus the §1 banking obligations already recorded |
+
+**Implementation authorities M\* introduces.** Editing design prose does not
+make two implementations hash a typed claim identically, and none of these
+exists today. Each needs a named home before M\* is buildable:
+
+| authority | what it must fix | home |
+|---|---|---|
+| the **claim grammar** and the **canonical byte encoding of every kernel tag** — quantifiers, polarities including `sign_inapt_tag`, and the layer vocabulary | the closed sets and their bytes, not their spelling (§7.1, §7.4 row 5) | the `science` **base contract**, which is why it is a contract and not a constant |
+| **`π_claim`'s canonical projection** and its domain-separation tag `tag_claim` | field order, encoding of each position, and the tag itself, as a first-class member of the identity standard | **`science.identity.v1`** (computation §4.3's value contract), extended — a new tag, not a new encoding |
+| **`ProfileSpec` compilation of claim schemas** | that operator, dimension and sort declarations merge and validate into the compiled profile on the same terms as `KindSpec`, with no second authored artifact | D §6's compiled-registry path, widened as above |
+| a shared **Python/TypeScript parity fixture for claim identity** | that one typed claim projects to identical bytes and hashes identically in both implementations | alongside D §6's existing namespaced-facet-key parity fixture, which is the precedent for exactly one such fixture per shared encoding |
+
+The parity fixture is the one that would otherwise be discovered late. `nodes`
+already imposes no facet-key grammar and both implementations accept arbitrary
+string keys — D §6 pinned that freedom with a fixture rather than trusting it,
+and a typed claim projection has strictly more ways to disagree: slot order,
+map key sorting, tag bytes, and the absent-versus-unit distinction §7.5 exists
+to remove.
 
 ## 9. Guarantees (M1–M\<n\>)
 
