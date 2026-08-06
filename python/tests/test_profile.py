@@ -540,10 +540,14 @@ class TestTwoGenuineContractsThatDoNotBelongTogether:
     compiled operator then carries them as facts that nothing revalidates.
 
     The general shape is worth more than the instance: authenticating each input
-    separately says nothing about whether the inputs **belong together**. A
-    parser that consumes another parser's output creates a dependency, and a
-    dependency has to be recorded and then re-checked wherever the two meet
-    again.
+    separately says nothing about whether the inputs **belong together**. It
+    applies to an artifact whose **validity is conditional** on a particular
+    upstream artifact and which **may later be recombined independently** — both
+    true of a domain contract, whose layers were checked against one base and
+    which is handed to `compile_profile` separately from any base. Such a
+    boundary must either verify a recorded dependency or revalidate the relation.
+    A stage that rechecks its inputs owes neither, which is why this is not a
+    demand that every transformation carry provenance.
     """
 
     @pytest.fixture()

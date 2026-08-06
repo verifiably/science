@@ -100,9 +100,14 @@ export class UncheckableContract extends ContractError {}
  *
  * The general shape, worth remembering because provenance checks do not catch
  * it: authenticating each input separately says nothing about whether they
- * **belong together**. A parser consuming another parser's output creates a
- * dependency, and a dependency has to be recorded and re-checked wherever the
- * two are brought back together.
+ * **belong together**. The rule is narrower than *"every stage records its
+ * inputs"*, and both halves of it matter. It applies to an artifact whose
+ * **validity is conditional** on a particular upstream artifact — some check it
+ * passed was taken against that one and is never retaken — and which **may later
+ * be recombined independently**, so it can arrive somewhere holding a different
+ * partner. Such a boundary must **either verify a recorded dependency or
+ * revalidate the relation**; a stage that rechecks what it depends on, or whose
+ * output never travels apart from its input, owes neither.
  */
 export class ContractMismatch extends ContractError {}
 

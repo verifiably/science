@@ -440,6 +440,11 @@ describe("two genuine contracts that were not typed against each other", () => {
   // time, against whatever base it was handed, and the compiled operator then
   // carries them as facts. Provenance checks cannot see this: they authenticate
   // each input and say nothing about whether the two belong together.
+  //
+  // A domain contract is in scope for that rule on both counts — its validity is
+  // conditional on one base, and it reaches `compileProfile` separately from any
+  // base — so this boundary verifies the dependency it recorded. A stage that
+  // revalidates what it depends on would owe nothing here.
   const wideText = baseText.replace(
     "layers: [causal, structural, statistical, methodological]",
     "layers: [causal, structural, statistical, methodological, speculative]",

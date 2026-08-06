@@ -136,9 +136,7 @@ export function compileProfile(base: BaseContract, domains: readonly DomainContr
       // afterwards — so compiling it here would put a claim on a layer the base
       // in force does not declare, with nothing forged anywhere.
       throw new ContractMismatch(
-        `domain contract ${JSON.stringify(contract.namespace)} was parsed against a different base contract than ` +
-          `the one being compiled with. A domain selects its layers from the base vocabulary and may not extend ` +
-          `it (§7.1); that check ran against another document, so nothing here can stand behind it.`,
+        `domain contract ${JSON.stringify(contract.namespace)} was parsed against a different base contract than the one being compiled with. A domain selects its layers from the base vocabulary and may not extend it (§7.1); that check ran against another document, so nothing here can stand behind it.`,
       );
     }
     if (seen.has(contract.namespace)) {
