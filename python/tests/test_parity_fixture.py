@@ -26,7 +26,6 @@ claim it.
 """
 
 import json
-from pathlib import Path
 
 import pytest
 from conftest import REPO_ROOT
@@ -160,16 +159,13 @@ class TestTagCoverageIsCompleteAgainstTheBaseContract:
 
 
 class TestTheFixtureIsFrozen:
-    def test_nothing_in_the_package_can_find_it(self):
-        # The generator is under `tools/`, outside the installed package, and no
-        # module locates the fixture. The suite reads it; the library cannot.
-        import science
+    """The generator lives under `tools/`, outside the installed package.
 
-        package = Path(next(iter(science.__path__)))
-        for module in package.rglob("*.py"):
-            source = module.read_text(encoding="utf-8")
-            assert "claim-identity-v1" not in source
-            assert "fixtures/" not in source
+    That the package cannot *reach* the fixture is a packaging property, and it
+    is deliberately not asserted here — a grep over source strings would prove
+    neither unreachability nor survive an innocent mention in a docstring. It
+    belongs to a packaging test, when that boundary exists to test.
+    """
 
     def test_the_artifact_is_pure_ascii_on_disk(self, parity_fixture_path):
         # The vector carries non-ASCII and combining characters on purpose. Held

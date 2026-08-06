@@ -142,7 +142,9 @@ Two standing constraints on 5b:
    item 10 (formal model §8, home column); *sited* is not *built*. Three of the
    four are now built — the base contract, `π_claim`/`tag_claim` under
    `science.identity.v1`, and claim-schema compilation — and the fourth, the
-   parity fixture, is **frozen in its Python half and owed in TypeScript**.
+   parity fixture, is **frozen and consumed by both implementations**. A
+   *second* fixture is now owed and is outside cut 1: `science.identity.v1`'s
+   numeric and escape arms are tested twice and compared never (formal model §8).
 9. **Belief policy** — taken next because the review-disposition record's §5.5
    stop rule puts it ahead of the vertical slice: the slice stops at the last
    fully designed seam, and anything computing belief had no seam to stop at.
