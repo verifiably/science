@@ -43,7 +43,7 @@ export function projectClaim(claim: Claim): ClaimProjection {
   if (!Claim.is(claim)) {
     // The brand, not `instanceof`: an object given `Claim.prototype` satisfies
     // the latter without a constructor ever having run on it, and would arrive
-    // here holding whatever its author put in it (see `brand.ts`).
+    // here holding whatever its author put in it.
     throw new ClaimError("projectClaim takes a Claim built by buildClaim; this value never went through it");
   }
   const qualifiers: Record<string, { quantifier: string; restriction: string }> = {};

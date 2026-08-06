@@ -76,7 +76,7 @@ describe("the rules this implementation does not carry are refused, not skipped"
   it("reads a genesis contract with nothing retired", () => {
     const contract = parseDomainContract(DOMAIN, "<domain>", base);
     expect(contract.namespace).toBe("testing");
-    expect(compileProfile(base, [contract]).operators.has("testing/subtype-of")).toBe(true);
+    expect("testing/subtype-of" in compileProfile(base, [contract]).operators).toBe(true);
   });
 });
 

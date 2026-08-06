@@ -8,14 +8,19 @@
  * exercise the encoding and skip the constructor, and the parity run would then
  * compare a four-stage path against a three-stage one.
  *
- * Three things make "opaque" true here, and none of them is `instanceof` — see
- * `brand.ts` for why that was never a check:
+ * Three things make "opaque" true here, and none of them is `instanceof`: that
+ * operator asks whether a prototype is on the chain, which a value can be given
+ * without any constructor ever having run on it.
  *
  * * a **private-field brand** on each type, installed only by its constructor;
  * * a **mint token** on `Claim`, so the constructor is unreachable from outside;
  * * **genuinely immutable storage** — `readonly` and `ReadonlyMap` are erased at
  *   run time, so the qualifiers are held in a frozen null-prototype record and
  *   the arguments in a frozen array.
+ *
+ * None of it reaches further than the profile it is handed, and the profile
+ * reaches no further than the contracts it was compiled from — see `profile.ts`
+ * and `contract.ts` for the rest of the chain.
  */
 
 import {
@@ -211,7 +216,7 @@ export function buildClaim(profile: ProfileSpec, parts: ClaimParts): Claim {
         `quantifier ${qualifier.quantifier} on ${dimension} is outside the kernel's closed set (§6.4).`,
       );
     }
-    const restrictionSort = profile.dimensions.get(dimension)?.restrictionSort;
+    const restrictionSort = profile.dimensions[dimension]?.restrictionSort;
     if (qualifier.restriction.sort !== restrictionSort) {
       throw new RestrictionSortMismatch(
         `${dimension} restricts to sort ${restrictionSort}; ${qualifier.restriction.term} is of sort ` +

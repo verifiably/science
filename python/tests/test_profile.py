@@ -7,6 +7,8 @@ nothing.
 """
 
 import copy
+from dataclasses import FrozenInstanceError
+from typing import ClassVar
 
 import pytest
 import yaml
@@ -18,6 +20,7 @@ from science.errors import (
     ProfileError,
     SubclassRefused,
     SuccessionViolation,
+    UnparsedContract,
     WithdrawnFromAuthoring,
 )
 from science.profile import ProfileSpec, compile_profile
@@ -162,7 +165,9 @@ class TestMergeOrderIsInert:
         # A sequence here would make the merge order an identity input.
         projection = compile_profile(base_contract, [testing]).projection()
         assert isinstance(projection[section], dict)
-        assert set(projection[section]) == {f"testing/{local}" for local in _locals(testing, section)}
+        assert set(projection[section]) == {  # type: ignore[arg-type]  # narrowed by the assert above
+            f"testing/{local}" for local in _locals(testing, section)
+        }
 
 
 def _locals(contract, section):
@@ -302,7 +307,9 @@ class TestTheProfileIsCompiledNeverAuthored:
 
     def test_activated_contracts_is_read_only(self, base_contract, testing):
         with pytest.raises(TypeError):
-            compile_profile(base_contract, [testing]).activated_contracts["forged"] = "f" * 64
+            # Assigning into a Mapping is the point — the static type
+            # forbids it and the test asks whether the run time does too.
+            compile_profile(base_contract, [testing]).activated_contracts["forged"] = "f" * 64  # type: ignore[index]
 
     def test_the_profile_cannot_be_subclassed(self):
         # Same rule as `Claim`'s, for the same reason: a subclass could expose a
@@ -310,7 +317,7 @@ class TestTheProfileIsCompiledNeverAuthored:
         # describes something else, while still passing isinstance().
         with pytest.raises(SubclassRefused):
 
-            class Rogue(ProfileSpec):
+            class Rogue(ProfileSpec):  # type: ignore[misc]  # the declaration is under test; see LaxReferent
                 pass
 
     def test_the_fields_are_frozen(self, base_contract, testing):
@@ -431,3 +438,98 @@ class TestRetirementReachesThroughSorts:
         }
         assert profile.authorable_dimensions("testing/affects") == ("testing/population", "testing/setting")
         assert profile.authorable_dimensions("testing/subtype-of") == ()
+
+
+class TestTheTrustChainStartsAtTheDocument:
+    """The link above the profile, and the one that decides whether the rest mean anything.
+
+    ``ProfileSpec`` refuses to be authored, and that refusal certifies exactly one
+    thing: ``compile_profile`` ran. It says nothing about what ``compile_profile``
+    was handed. Before these checks a hand-built ``BaseContract`` and
+    ``DomainContract`` compiled to an entirely genuine profile — resolving an
+    operator, a sort and a layer that no document declares — and the claims typed
+    against it were indistinguishable from real ones, agreeing byte-for-byte with
+    the TypeScript implementation given the same forgery.
+
+    Reported for TypeScript, found here by asking the same question of this
+    language. The forgeries differ (there, an object literal; here, a dataclass
+    constructor) and the hole is identical, which is the argument for asking every
+    such question in both.
+    """
+
+    @pytest.fixture()
+    def forged_base(self):
+        return base.BaseContract._parsed(
+            name="science",
+            version=1,
+            claim_grammar=base.ClaimGrammar(
+                version=1,
+                quantifiers=("whatever",),
+                polarities=("yes",),
+                sign_inapt_tag="no",
+                layers=("made-up",),
+            ),
+            content_identity="0" * 64,
+        )
+
+    def test_an_authored_base_contract_cannot_be_constructed(self):
+        with pytest.raises(UnparsedContract, match="parse_base_contract"):
+            base.BaseContract(
+                name="science",
+                version=1,
+                claim_grammar=base.ClaimGrammar(1, ("generic",), ("positive",), "inapt", ("causal",)),
+                content_identity="0" * 64,
+            )
+
+    def test_an_authored_domain_contract_cannot_be_constructed(self):
+        with pytest.raises(UnparsedContract, match="parse_domain_contract"):
+            domain.DomainContract(namespace="forged", version=1, predecessor=None)
+
+    def test_neither_can_be_subclassed(self):
+        # `_parsed` is reachable, so a subclass overriding nothing would still be
+        # a route to an unparsed contract that passes isinstance().
+        with pytest.raises(SubclassRefused):
+
+            class RogueBase(base.BaseContract):  # type: ignore[misc]  # the declaration is under test
+                pass
+
+        with pytest.raises(SubclassRefused):
+
+            class RogueDomain(domain.DomainContract):  # type: ignore[misc]
+                pass
+
+    def test_compilation_refuses_a_base_contract_no_parser_produced(self, testing):
+        class Impostor:
+            claim_grammar = base.ClaimGrammar(1, ("generic",), ("positive",), "inapt", ("causal",))
+            content_identity = "0" * 64
+
+        with pytest.raises(UnparsedContract, match="parse_base_contract"):
+            compile_profile(Impostor(), [testing])  # type: ignore[arg-type]
+
+    def test_compilation_refuses_a_domain_contract_no_parser_produced(self, base_contract):
+        class Impostor:
+            namespace = "forged"
+            sorts: ClassVar[dict] = {}
+            dimensions: ClassVar[dict] = {}
+            operators: ClassVar[dict] = {}
+            content_identity = "0" * 64
+
+        with pytest.raises(UnparsedContract, match="parse_domain_contract"):
+            compile_profile(base_contract, [Impostor()])  # type: ignore[list-item]
+
+    def test_a_contract_cannot_be_edited_after_it_is_parsed(self, testing):
+        # `content_identity` is derived from the document at parse time, so an
+        # editable contract would carry an identity describing a document its own
+        # contents no longer match — and recompile into a profile resolving
+        # identifiers nobody declared.
+        with pytest.raises(TypeError):
+            testing.operators["smuggled"] = testing.operators["affects"]
+        with pytest.raises(TypeError):
+            del testing.sorts["entity"]
+        with pytest.raises(FrozenInstanceError):
+            testing.namespace = "forged"
+
+    def test_the_parsed_contracts_are_the_ones_compilation_accepts(self, base_contract, testing):
+        assert isinstance(base_contract, base.BaseContract)
+        assert isinstance(testing, domain.DomainContract)
+        assert compile_profile(base_contract, [testing]).activated_contracts == {"testing": testing.content_identity}

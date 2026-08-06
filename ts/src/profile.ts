@@ -17,10 +17,23 @@
  * by whoever wrote the object, and the contracts — the normative SSOT — were
  * never opened. The private field below is installed only by `compileProfile`,
  * so "this came from the contracts" is a runtime fact rather than a shape.
+ *
+ * A brand is only ever as good as what the minting function checks, and this one
+ * was once worth nothing: `compileProfile` accepted structurally typed contracts,
+ * so the brand certified that a function had run rather than that the documents
+ * had been read. The contracts carry brands of their own (`contract.ts`), and
+ * they are checked here. **Trust does not begin at a compiled artifact — it
+ * begins at the authored document, and every link between has to hold.**
+ *
+ * Everything below is also **genuinely immutable**, which `readonly` is not:
+ * `readonly`, `ReadonlyMap` and `ReadonlySet` are erased at run time, and both a
+ * `Map`'s entries and a `Set`'s members are beyond the reach of `Object.freeze`.
+ * A profile that could be edited after minting would carry a brand attesting to
+ * a compilation whose result no longer exists.
  */
 
-import type { BaseContract, ClaimGrammar, DomainContract } from "./contract.js";
-import { ProfileError, SubclassRefused } from "./errors.js";
+import { BaseContract, type ClaimGrammar, DomainContract } from "./contract.js";
+import { ProfileError, SubclassRefused, UnparsedContract } from "./errors.js";
 
 export interface CompiledOperator {
   readonly term: string;
@@ -38,20 +51,23 @@ export interface CompiledDimension {
 
 const MINT = Symbol("science.profile.mint");
 
+/** Term identifier → compiled declaration. A frozen null-prototype record, for the reason `DeclarationTable` gives in `contract.ts`. */
+export type ResolutionTable<T> = Readonly<Record<string, T>>;
+
 export class ProfileSpec {
   #minted = true;
   readonly claimGrammar: ClaimGrammar;
-  readonly operators: ReadonlyMap<string, CompiledOperator>;
-  readonly dimensions: ReadonlyMap<string, CompiledDimension>;
-  readonly sorts: ReadonlySet<string>;
+  readonly operators: ResolutionTable<CompiledOperator>;
+  readonly dimensions: ResolutionTable<CompiledDimension>;
+  readonly sorts: readonly string[];
 
   constructor(
     token: symbol,
     parts: {
       claimGrammar: ClaimGrammar;
-      operators: ReadonlyMap<string, CompiledOperator>;
-      dimensions: ReadonlyMap<string, CompiledDimension>;
-      sorts: ReadonlySet<string>;
+      operators: ResolutionTable<CompiledOperator>;
+      dimensions: ResolutionTable<CompiledDimension>;
+      sorts: readonly string[];
     },
   ) {
     if (new.target !== ProfileSpec) {
@@ -63,10 +79,16 @@ export class ProfileSpec {
           "second per-kind source of truth; an authored profile would reintroduce it through the constructor.",
       );
     }
+    // Snapshotted, not adopted, and this is the **only** place the tables are
+    // frozen. `compileProfile` hands over ordinary mutable ones: putting the
+    // freeze there as well would leave two places responsible for an invariant
+    // this class is the one promising, and the copy here would then be
+    // unreachable — defending against a caller the mint token makes impossible,
+    // and untestable for the same reason.
     this.claimGrammar = parts.claimGrammar;
-    this.operators = parts.operators;
-    this.dimensions = parts.dimensions;
-    this.sorts = parts.sorts;
+    this.operators = frozenTable(Object.entries(parts.operators));
+    this.dimensions = frozenTable(Object.entries(parts.dimensions));
+    this.sorts = Object.freeze([...parts.sorts]);
     Object.freeze(this);
   }
 
@@ -76,38 +98,61 @@ export class ProfileSpec {
   }
 }
 
+function frozenTable<T>(entries: readonly (readonly [string, T])[]): ResolutionTable<T> {
+  const table: Record<string, T> = Object.create(null);
+  for (const [key, value] of entries) table[key] = value;
+  return Object.freeze(table);
+}
+
 function term(namespace: string, name: string): string {
   return `${namespace}/${name}`;
 }
 
 export function compileProfile(base: BaseContract, domains: readonly DomainContract[]): ProfileSpec {
-  const operators = new Map<string, CompiledOperator>();
-  const dimensions = new Map<string, CompiledDimension>();
-  const sorts = new Set<string>();
+  if (!BaseContract.is(base)) {
+    throw new UnparsedContract(
+      "the base contract was not parsed from its document — use parseBaseContract(text, source). A profile " +
+        "compiled from an authored grammar would resolve claims against polarities and layers nobody declared.",
+    );
+  }
+  // Mutable while they are being built, and frozen by the constructor — see
+  // there for why the freeze lives in one place rather than both.
+  const operators: Record<string, CompiledOperator> = Object.create(null);
+  const dimensions: Record<string, CompiledDimension> = Object.create(null);
+  const sorts: string[] = [];
   const seen = new Set<string>();
 
   for (const contract of domains) {
+    if (!DomainContract.is(contract)) {
+      throw new UnparsedContract(
+        "a domain contract was not parsed from its document — use parseDomainContract(text, source, base). " +
+          "Operators are domain-issued (§7.1), and an authored contract issues them on no authority.",
+      );
+    }
     if (seen.has(contract.namespace)) {
       // Contributions in different namespaces compose; two to one namespace are
       // refused at compile, never resolved last-writer-wins (D §8).
       throw new ProfileError(`two contracts contribute to namespace ${JSON.stringify(contract.namespace)}`);
     }
     seen.add(contract.namespace);
-    for (const name of contract.sorts.keys()) sorts.add(term(contract.namespace, name));
-    for (const [name, declaration] of contract.dimensions) {
-      dimensions.set(term(contract.namespace, name), {
+    for (const name of Object.keys(contract.sorts)) sorts.push(term(contract.namespace, name));
+    for (const [name, declaration] of Object.entries(contract.dimensions)) {
+      dimensions[term(contract.namespace, name)] = Object.freeze({
         term: term(contract.namespace, name),
         restrictionSort: term(contract.namespace, declaration.restrictionSort),
       });
     }
-    for (const [name, declaration] of contract.operators) {
-      operators.set(term(contract.namespace, name), {
+    for (const [name, declaration] of Object.entries(contract.operators)) {
+      // The declarations themselves are frozen here, where they are made. A
+      // shallow freeze would leave `argSorts` writable, and rewriting one slot
+      // re-types an operator that is otherwise entirely real.
+      operators[term(contract.namespace, name)] = Object.freeze({
         term: term(contract.namespace, name),
         arity: declaration.arity,
-        argSorts: declaration.argSorts.map((sort) => term(contract.namespace, sort)),
+        argSorts: Object.freeze(declaration.argSorts.map((sort) => term(contract.namespace, sort))),
         signApt: declaration.signApt,
-        layers: declaration.layers,
-        dimensions: declaration.dimensions.map((dimension) => term(contract.namespace, dimension)),
+        layers: Object.freeze([...declaration.layers]),
+        dimensions: Object.freeze(declaration.dimensions.map((dimension) => term(contract.namespace, dimension))),
       });
     }
   }
@@ -122,11 +167,11 @@ export function compileProfile(base: BaseContract, domains: readonly DomainContr
  * profile is a local, static failure, so it refuses here and nothing is minted.
  */
 export function resolveOperator(profile: ProfileSpec, term: string): CompiledOperator {
-  const operator = profile.operators.get(term);
+  const operator = profile.operators[term];
   if (operator === undefined) {
     throw new ProfileError(
       `no operator ${JSON.stringify(term)} in this profile. Operators are domain-issued (§7.1); ` +
-        `this profile resolves ${JSON.stringify(Array.from(profile.operators.keys()).sort())}.`,
+        `this profile resolves ${JSON.stringify(Object.keys(profile.operators).sort())}.`,
     );
   }
   return operator;

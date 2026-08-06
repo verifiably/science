@@ -20,13 +20,42 @@
  * `UncheckableContract`. Parsing past them would make this a second, weaker
  * reading of the normative source — which is worse than not reading it, because
  * it would look like agreement.
+ *
+ * **The parsed contracts are branded and deeply frozen**, and that is the root
+ * of the trust chain rather than a detail of it. `compileProfile` promises that
+ * a claim was typed against the normative source; if a structurally similar
+ * object can stand in for a parsed contract, the profile's own brand proves only
+ * that `compileProfile` ran, and the promise is empty one link further up. The
+ * declarations below are frozen rather than branded: a declaration is reachable
+ * only through a contract, so the contract's brand already governs how one gets
+ * in, and the freeze is what stops an authored contract being *edited into*
+ * after it is read.
  */
 
 import { parse as parseYaml } from "yaml";
-import { MalformedContract, UncheckableContract } from "./errors.js";
+import { MalformedContract, SubclassRefused, UncheckableContract, UnparsedContract } from "./errors.js";
 
 const TAG_ENCODING = "science.identity.v1";
 const NAME = /^[a-z][a-z0-9-]*$/;
+
+const MINT = Symbol("science.contract.mint");
+
+/**
+ * A declaration table: local name → declaration.
+ *
+ * A frozen record with a null prototype, and **not** a `Map`. A `Map`'s entries
+ * are beyond the reach of `Object.freeze`, so `ReadonlyMap` is a compile-time
+ * fiction that erases to a fully mutable object — the same fiction already found
+ * holding a claim's qualifiers. Nothing in this codebase may hold a table it
+ * describes as immutable in one.
+ */
+export type DeclarationTable<T> = Readonly<Record<string, T>>;
+
+function frozenTable<T>(entries: readonly (readonly [string, T])[]): DeclarationTable<T> {
+  const table: Record<string, T> = Object.create(null);
+  for (const [name, declaration] of entries) table[name] = declaration;
+  return Object.freeze(table);
+}
 
 export interface ClaimGrammar {
   readonly version: number;
@@ -36,10 +65,38 @@ export interface ClaimGrammar {
   readonly layers: readonly string[];
 }
 
-export interface BaseContract {
+export class BaseContract {
+  #minted = true;
   readonly name: string;
   readonly version: number;
   readonly claimGrammar: ClaimGrammar;
+
+  constructor(token: symbol, parts: { version: number; claimGrammar: ClaimGrammar }) {
+    if (new.target !== BaseContract) {
+      throw new SubclassRefused("BaseContract is sealed: a subclass could stand in for a parsed contract");
+    }
+    if (token !== MINT) {
+      throw new UnparsedContract(
+        "BaseContract is parsed, never authored — use parseBaseContract(text, source). The contracts are the " +
+          "normative SSOT (D §6); an authored one would let a claim be typed against a grammar nobody wrote down.",
+      );
+    }
+    this.name = "science";
+    this.version = parts.version;
+    this.claimGrammar = Object.freeze({
+      version: parts.claimGrammar.version,
+      quantifiers: Object.freeze([...parts.claimGrammar.quantifiers]),
+      polarities: Object.freeze([...parts.claimGrammar.polarities]),
+      signInaptTag: parts.claimGrammar.signInaptTag,
+      layers: Object.freeze([...parts.claimGrammar.layers]),
+    });
+    Object.freeze(this);
+  }
+
+  /** Did this come from the authored document, or merely look as though it had? */
+  static is(value: unknown): value is BaseContract {
+    return typeof value === "object" && value !== null && #minted in value;
+  }
 }
 
 export interface SortDecl {
@@ -60,12 +117,44 @@ export interface OperatorDecl {
   readonly dimensions: readonly string[];
 }
 
-export interface DomainContract {
+export class DomainContract {
+  #minted = true;
   readonly namespace: string;
   readonly version: number;
-  readonly sorts: ReadonlyMap<string, SortDecl>;
-  readonly dimensions: ReadonlyMap<string, DimensionDecl>;
-  readonly operators: ReadonlyMap<string, OperatorDecl>;
+  readonly sorts: DeclarationTable<SortDecl>;
+  readonly dimensions: DeclarationTable<DimensionDecl>;
+  readonly operators: DeclarationTable<OperatorDecl>;
+
+  constructor(
+    token: symbol,
+    parts: {
+      namespace: string;
+      version: number;
+      sorts: DeclarationTable<SortDecl>;
+      dimensions: DeclarationTable<DimensionDecl>;
+      operators: DeclarationTable<OperatorDecl>;
+    },
+  ) {
+    if (new.target !== DomainContract) {
+      throw new SubclassRefused("DomainContract is sealed: a subclass could stand in for a parsed contract");
+    }
+    if (token !== MINT) {
+      throw new UnparsedContract(
+        "DomainContract is parsed, never authored — use parseDomainContract(text, source, base). An authored " +
+          "one would issue operators, sorts and dimensions that no document declares (§7.1).",
+      );
+    }
+    this.namespace = parts.namespace;
+    this.version = parts.version;
+    this.sorts = parts.sorts;
+    this.dimensions = parts.dimensions;
+    this.operators = parts.operators;
+    Object.freeze(this);
+  }
+
+  static is(value: unknown): value is DomainContract {
+    return typeof value === "object" && value !== null && #minted in value;
+  }
 }
 
 function mapping(value: unknown, where: string): Record<string, unknown> {
@@ -141,8 +230,7 @@ export function parseBaseContract(text: string, source: string): BaseContract {
       `${source}.claim_grammar.sign_inapt_tag: ${JSON.stringify(signInaptTag)} is also an assertable polarity`,
     );
   }
-  return {
-    name: "science",
+  return new BaseContract(MINT, {
     version: positiveInt(document.version, `${source}.version`),
     claimGrammar: {
       version: positiveInt(grammarDocument.version, `${source}.claim_grammar.version`),
@@ -151,7 +239,7 @@ export function parseBaseContract(text: string, source: string): BaseContract {
       signInaptTag,
       layers: closedSet(grammarDocument.layers, `${source}.claim_grammar.layers`),
     },
-  };
+  });
 }
 
 function refuseRetired(body: Record<string, unknown>, where: string): void {
@@ -177,31 +265,33 @@ export function parseDomainContract(text: string, source: string, base: BaseCont
   }
   const namespace = tag(document.contract, `${source}.contract`);
 
-  const sorts = new Map<string, SortDecl>();
+  const sortEntries: [string, SortDecl][] = [];
   for (const [name, body] of Object.entries(declarations(document.sorts, `${source}.sorts`))) {
     const where = `${source}.sorts.${name}`;
     const sortBody = mapping(body, where);
     exactFields(sortBody, ["vocabulary"], ["retired"], where);
     refuseRetired(sortBody, where);
-    sorts.set(tag(name, where), { name });
+    sortEntries.push([tag(name, where), Object.freeze({ name })]);
   }
+  const sorts = frozenTable(sortEntries);
 
-  const dimensions = new Map<string, DimensionDecl>();
+  const dimensionEntries: [string, DimensionDecl][] = [];
   for (const [name, body] of Object.entries(declarations(document.dimensions, `${source}.dimensions`))) {
     const where = `${source}.dimensions.${name}`;
     const dimensionBody = mapping(body, where);
     exactFields(dimensionBody, ["restriction_sort"], ["retired"], where);
     refuseRetired(dimensionBody, where);
     const restrictionSort = tag(dimensionBody.restriction_sort, `${where}.restriction_sort`);
-    if (!sorts.has(restrictionSort)) {
+    if (!(restrictionSort in sorts)) {
       throw new MalformedContract(
         `${where}.restriction_sort: ${JSON.stringify(restrictionSort)} is not a declared sort`,
       );
     }
-    dimensions.set(tag(name, where), { name, restrictionSort });
+    dimensionEntries.push([tag(name, where), Object.freeze({ name, restrictionSort })]);
   }
+  const dimensions = frozenTable(dimensionEntries);
 
-  const operators = new Map<string, OperatorDecl>();
+  const operatorEntries: [string, OperatorDecl][] = [];
   for (const [name, body] of Object.entries(declarations(document.operators, `${source}.operators`))) {
     const where = `${source}.operators.${name}`;
     const operatorBody = mapping(body, where);
@@ -219,7 +309,7 @@ export function parseDomainContract(text: string, source: string, base: BaseCont
     }
     const argSorts = operatorBody.arg_sorts.map((entry, index) => tag(entry, `${where}.arg_sorts[${index}]`));
     for (const sort of argSorts) {
-      if (!sorts.has(sort))
+      if (!(sort in sorts))
         throw new MalformedContract(`${where}.arg_sorts: ${JSON.stringify(sort)} is not a declared sort`);
     }
     if (typeof operatorBody.sign_apt !== "boolean") {
@@ -236,19 +326,28 @@ export function parseDomainContract(text: string, source: string, base: BaseCont
     if (!Array.isArray(operatorBody.dimensions)) throw new MalformedContract(`${where}.dimensions: expected a list`);
     const permitted = operatorBody.dimensions.map((entry, index) => tag(entry, `${where}.dimensions[${index}]`));
     for (const dimension of permitted) {
-      if (!dimensions.has(dimension)) {
+      if (!(dimension in dimensions)) {
         throw new MalformedContract(`${where}.dimensions: ${JSON.stringify(dimension)} is not a declared dimension`);
       }
     }
-    operators.set(tag(name, where), {
-      name,
-      arity,
-      argSorts,
-      signApt: operatorBody.sign_apt,
-      layers,
-      dimensions: permitted,
-    });
+    operatorEntries.push([
+      tag(name, where),
+      Object.freeze({
+        name,
+        arity,
+        argSorts: Object.freeze(argSorts),
+        signApt: operatorBody.sign_apt,
+        layers: Object.freeze(layers),
+        dimensions: Object.freeze(permitted),
+      }),
+    ]);
   }
 
-  return { namespace, version: positiveInt(document.version, `${source}.version`), sorts, dimensions, operators };
+  return new DomainContract(MINT, {
+    namespace,
+    version: positiveInt(document.version, `${source}.version`),
+    sorts,
+    dimensions,
+    operators: frozenTable(operatorEntries),
+  });
 }

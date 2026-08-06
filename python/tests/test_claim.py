@@ -206,8 +206,10 @@ class TestTheValueTypesOwnTheirInvariants:
         # `Referent` says so, so sealing `Claim` alone would leave the invariant
         # reachable one level down.
         with pytest.raises(SubclassRefused):
-
-            class LaxReferent(Referent):
+            # The declaration is what is under test — `@final` states the
+            # rule and `@sealed` enforces it at run time, and only one of the two
+            # survives into a running program.
+            class LaxReferent(Referent):  # type: ignore[misc]
                 def __post_init__(self) -> None:
                     return None
 

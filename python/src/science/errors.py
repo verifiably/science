@@ -66,6 +66,18 @@ class MalformedContract(ContractError):
     and the loader disagree about what the document says."""
 
 
+class UnparsedContract(ContractError):
+    """A contract object that no parser produced.
+
+    The root of the trust chain, and the reason ``ProfileSpec``'s own refusal to
+    be authored is not sufficient on its own. That refusal says a profile came
+    from ``compile_profile``; this one says what ``compile_profile`` was handed
+    came from the authored documents. Without it a claim can be typed against a
+    hand-built contract — which is to say typed against nothing, every operator,
+    sort, layer and dimension in it invented by whoever built the object, with
+    the normative SSOT (D §6) never opened."""
+
+
 class SuccessionViolation(ContractError):
     """A successor contract that redefines, drops, or misdeclares its lineage.
     Refused at contract **load** — never at claim decode, which sees wire bytes

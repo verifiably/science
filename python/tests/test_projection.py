@@ -297,10 +297,10 @@ class TestNoProseReachesIdentity:
         projection = project_claim(claim)
         flat = [
             projection["operator"],
-            *projection["args"],
+            *projection["args"],  # type: ignore[misc]  # π_claim's shape is what the assert below checks
             projection["polarity"],
             projection["layer"],
-            *[value for entry in projection["qualifiers"].values() for value in entry.values()],
+            *[value for entry in projection["qualifiers"].values() for value in entry.values()],  # type: ignore[attr-defined]
         ]
         assert all(isinstance(value, str) and value and " " not in value for value in flat)
 

@@ -37,7 +37,7 @@ from typing import final
 
 from science.contract.base import BaseContract, ClaimGrammar
 from science.contract.domain import DomainContract, OperatorDecl, VocabularyBinding
-from science.errors import DuplicateContribution, ProfileError, WithdrawnFromAuthoring
+from science.errors import DuplicateContribution, ProfileError, UnparsedContract, WithdrawnFromAuthoring
 from science.identity import v1
 from science.sealed import sealed
 
@@ -262,8 +262,30 @@ def compile_profile(base: BaseContract, domains: Iterable[DomainContract]) -> Pr
     Merging happens **upstream** of any registration, which is why D §6 could
     report a zero `nodes` delta: `Registry` never sees two contributors for one
     kind because the compiled product is already one fully-composed spec.
+
+    **Both inputs must have come from a parser**, and that check is what makes
+    `ProfileSpec`'s own refusal to be authored worth anything. Without it the
+    refusal certifies that this function ran, not that any document was read: a
+    hand-built `BaseContract` and `DomainContract` compile to a perfectly genuine
+    `ProfileSpec` resolving operators, sorts and layers that no contract declares
+    — and the claims typed against it are indistinguishable from real ones, down
+    to agreeing byte-for-byte with the other implementation.
     """
+    if not isinstance(base, BaseContract):
+        raise UnparsedContract(
+            f"the base contract is a {type(base).__name__}, not a parsed BaseContract — use "
+            "parse_base_contract(document, source=...) or load_base_contract(path). A profile compiled from "
+            "an authored grammar would resolve claims against polarities and layers nobody declared."
+        )
     activated = list(domains)
+    for contract in activated:
+        if not isinstance(contract, DomainContract):
+            raise UnparsedContract(
+                f"a domain contract is a {type(contract).__name__}, not a parsed DomainContract — use "
+                "parse_domain_contract(document, source=..., base=..., predecessor=...) or "
+                "load_domain_contract(path, base=...). Operators are domain-issued (§7.1), and an authored "
+                "contract issues them on no authority."
+            )
 
     seen: dict[str, DomainContract] = {}
     for contract in activated:

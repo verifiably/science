@@ -24,14 +24,18 @@ deliberately outside that projection:
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+from collections.abc import Mapping
+from dataclasses import dataclass
 from pathlib import Path
+from types import MappingProxyType
+from typing import final
 
 import yaml
 
 from science.contract.base import BaseContract
-from science.errors import MalformedContract, SuccessionViolation
+from science.errors import MalformedContract, SuccessionViolation, UnparsedContract
 from science.identity import v1
+from science.sealed import sealed
 
 __all__ = [
     "DimensionDecl",
@@ -127,19 +131,73 @@ class OperatorDecl:
         }
 
 
-@dataclass(frozen=True)
+@sealed
+@final
+@dataclass(frozen=True, init=False)
 class DomainContract:
+    """**Parsed, never authored** — see ``BaseContract`` for why the lock is here
+    rather than only on what is compiled from it.
+
+    Operators, sorts and dimensions are **domain-issued without exception**
+    (§7.1), and this is the object that issues them. An authored one issues them
+    on no authority at all.
+
+    The declaration tables are read-only views over private dicts, for the reason
+    ``ProfileSpec``'s are: ``content_identity`` is derived from the document at
+    parse time, so a contract edited afterwards would carry an identity
+    describing a document that no longer matches its contents — and a profile
+    recompiled from it would resolve identifiers no document declares.
+    """
+
     namespace: str
     version: int
+
     predecessor: str | None
     """``None`` is ``genesis``. §8.3 records that genesis is an escape hatch: the
     rules enforce immutability **within a declared lineage**, not across a
     namespace, and closing the parallel-genesis case needs governance this design
     does not supply (ρC1, open)."""
-    sorts: dict[str, SortDecl] = field(default_factory=dict)
-    dimensions: dict[str, DimensionDecl] = field(default_factory=dict)
-    operators: dict[str, OperatorDecl] = field(default_factory=dict)
-    content_identity: str = ""
+
+    sorts: Mapping[str, SortDecl]
+    dimensions: Mapping[str, DimensionDecl]
+    operators: Mapping[str, OperatorDecl]
+    content_identity: str
+
+    # As in `BaseContract` and `ProfileSpec`: the lock is this method, and
+    # `init=False` a backstop — `@dataclass` will not overwrite an `__init__` the
+    # class already defines.
+    def __init__(self, *args: object, **kwargs: object) -> None:
+        raise UnparsedContract(
+            "DomainContract is parsed, never authored — use parse_domain_contract(document, source=..., "
+            "base=..., predecessor=...). Operators, sorts and dimensions are domain-issued (§7.1), and an "
+            "authored contract issues them on no authority; it would also carry a content_identity for a "
+            "document it does not contain, and skip the succession check entirely."
+        )
+
+    @classmethod
+    def _parsed(
+        cls,
+        *,
+        namespace: str,
+        version: int,
+        predecessor: str | None,
+        sorts: dict[str, SortDecl],
+        dimensions: dict[str, DimensionDecl],
+        operators: dict[str, OperatorDecl],
+        content_identity: str,
+    ) -> DomainContract:
+        contract = object.__new__(cls)
+        for name, value in (
+            ("namespace", namespace),
+            ("version", version),
+            ("predecessor", predecessor),
+            ("sorts", MappingProxyType(dict(sorts))),
+            ("dimensions", MappingProxyType(dict(dimensions))),
+            ("operators", MappingProxyType(dict(operators))),
+            ("content_identity", content_identity),
+        ):
+            object.__setattr__(contract, name, value)
+        return contract
 
     def term(self, local: str) -> str:
         """The namespaced term identifier — what enters ``π_claim`` (§6.5)."""
@@ -359,7 +417,7 @@ def parse_domain_contract(
                 )
         operators[name] = operator
 
-    contract = DomainContract(
+    contract = DomainContract._parsed(
         namespace=namespace,
         version=version,
         predecessor=_parse_lineage(root["lineage"], f"{source}: lineage"),

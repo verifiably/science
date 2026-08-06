@@ -27,11 +27,13 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from pathlib import Path
+from typing import final
 
 import yaml
 
-from science.errors import MalformedContract, TagCollision
+from science.errors import MalformedContract, TagCollision, UnparsedContract
 from science.identity import v1
+from science.sealed import sealed
 
 __all__ = ["BaseContract", "ClaimGrammar", "load_base_contract", "parse_base_contract"]
 
@@ -66,11 +68,29 @@ class ClaimGrammar:
         return (*self.polarities, self.sign_inapt_tag)
 
 
-@dataclass(frozen=True)
+@sealed
+@final
+@dataclass(frozen=True, init=False)
 class BaseContract:
+    """**Parsed, never authored.**
+
+    The same lock as ``ProfileSpec`` and ``Claim``, one link further up, and the
+    link that makes theirs worth anything: a profile's refusal to be authored
+    certifies that ``compile_profile`` ran, not that the documents were read. A
+    hand-built contract types a claim against a grammar nobody wrote down, and
+    the resulting claim is indistinguishable from a real one — including to the
+    other implementation, which agrees with it exactly.
+
+    ``content_identity`` is the sharper reason. It is derived here from the
+    document, and it is what enters ``belief_input_digest`` (§7.3); a field-wise
+    constructor would let it be supplied, so a contract could carry an identity
+    attesting to a document it does not contain.
+    """
+
     name: str
     version: int
     claim_grammar: ClaimGrammar
+
     content_identity: str
     """Content-derived, and the half that enters ``belief_input_digest`` (§7.3).
 
@@ -80,6 +100,24 @@ class BaseContract:
     projection, so editing one does not move this identity, and §7.3's editorial
     list overstates by that one item.
     """
+
+    # As in `ProfileSpec`: the lock is this method. `@dataclass` will not
+    # overwrite an `__init__` the class already defines, so `init=False` is a
+    # backstop rather than the mechanism.
+    def __init__(self, *args: object, **kwargs: object) -> None:
+        raise UnparsedContract(
+            "BaseContract is parsed, never authored — use parse_base_contract(document, source=...). "
+            "The contracts are the normative SSOT (D §6); an authored one would let a claim be typed "
+            "against a claim grammar no document declares, and carry a content_identity for a document "
+            "it does not contain."
+        )
+
+    @classmethod
+    def _parsed(cls, **fields: object) -> BaseContract:
+        contract = object.__new__(cls)
+        for name, value in fields.items():
+            object.__setattr__(contract, name, value)
+        return contract
 
 
 def _mapping(value: object, where: str) -> dict[str, object]:
@@ -162,7 +200,7 @@ def parse_base_contract(document: object, *, source: str) -> BaseContract:
         layers=_closed_set(grammar["layers"], f"{grammar_where}: layers"),
     )
 
-    return BaseContract(
+    return BaseContract._parsed(
         name=name,
         version=_positive_int(root["version"], f"{source}: version"),
         claim_grammar=claim_grammar,

@@ -59,7 +59,7 @@ export class MalformedDomain extends IdentityError {}
  * only half the hole. A subclass cannot be *constructed* through `super`, but it
  * can still be *declared*, and `Object.create(Subclass.prototype)` never calls a
  * constructor at all. The private-field brand on each type is what closes the
- * other half; see `brand.ts`.
+ * other half.
  */
 export class SubclassRefused extends ScienceError {}
 
@@ -67,6 +67,18 @@ export class ContractError extends ScienceError {}
 
 /** A contract that is structurally wrong — an unknown field, a missing one, a value of the wrong shape. */
 export class MalformedContract extends ContractError {}
+
+/**
+ * A contract object that no parser produced.
+ *
+ * The root of the trust chain. `ProfileSpec`'s brand says a profile came from
+ * `compileProfile`; this one says what `compileProfile` was given came from the
+ * authored documents. Without it the profile brand proves only that a function
+ * ran, and a claim typed against a hand-authored contract is typed against
+ * nothing — every operator, sort, layer and dimension in it invented by whoever
+ * wrote the object, with the normative SSOT never opened.
+ */
+export class UnparsedContract extends ContractError {}
 
 /**
  * A contract using a feature this implementation cannot check.

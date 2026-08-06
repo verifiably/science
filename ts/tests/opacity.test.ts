@@ -1,32 +1,61 @@
 /**
- * The three routes past `instanceof`, and the brands that close them.
+ * Every route past a type check that this implementation has been shown to have,
+ * and the brands and freezes that close them.
  *
  * Each test below **was a working exploit** before the fix, and each produced a
  * value that reached `projectClaim` or `claimIdentity` — so each one is M13's
- * guarantee failing in a language where `instanceof` was never a check.
+ * guarantee failing in a language where `instanceof` was never a check and
+ * `readonly` was never a restriction.
+ *
+ * They arrived in two rounds, and the second round is the more instructive. The
+ * first closed three forgeries of the *claim*; the second showed that closing
+ * them had moved the forgery one link up the chain rather than ending it, since
+ * a brand certifies only what its minting function checked. So the tests are
+ * organized by link — value, claim, profile, contract — and the last is the
+ * root: what a claim is ultimately typed against is an **authored document**,
+ * and every link between the document and the claim has to hold or none of them
+ * mean anything.
  *
  * The general lesson, recorded because it is not the Python one: there,
  * `isinstance` is forgeable only through `object.__new__`, which is the same act
  * as a raw write to disk — §6.3's third row, an audit finding rather than a
  * refusal. Here a derived constructor may `return` an object *instead of*
  * calling `super`, so a forgery needs no unusual call at all. The private-field
- * brand is therefore the load-bearing part on this side, and `Object.freeze` and
- * `readonly` are decoration.
+ * brand is therefore the load-bearing part on this side, and `readonly` is
+ * decoration — while `Object.freeze`, which the first round called decoration
+ * too, turns out to be load-bearing wherever a collection is held.
  */
 
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { Claim, type ClaimParts, Qualifier, Referent, buildClaim } from "../src/claim.js";
-import { parseBaseContract, parseDomainContract } from "../src/contract.js";
-import { ClaimError, ProfileError, SubclassRefused, UntypedReferent } from "../src/errors.js";
+import {
+  BaseContract,
+  type ClaimGrammar,
+  DomainContract,
+  parseBaseContract,
+  parseDomainContract,
+} from "../src/contract.js";
+import { ClaimError, ProfileError, SubclassRefused, UnparsedContract, UntypedReferent } from "../src/errors.js";
 import { type CompiledDimension, type CompiledOperator, ProfileSpec, compileProfile } from "../src/profile.js";
 import { claimIdentity, projectClaim } from "../src/projection.js";
 
 const REPO_ROOT = new URL("../../", import.meta.url);
 const read = (relative: string) => readFileSync(new URL(relative, REPO_ROOT), "utf-8");
 
-const base = parseBaseContract(read("contracts/science/CONTRACT.yaml"), "base");
-const profile = compileProfile(base, [parseDomainContract(read("fixtures/contracts/testing.yaml"), "testing", base)]);
+const baseText = read("contracts/science/CONTRACT.yaml");
+const testingText = read("fixtures/contracts/testing.yaml");
+const base = parseBaseContract(baseText, "base");
+const profile = compileProfile(base, [parseDomainContract(testingText, "testing", base)]);
+
+/** A grammar in which nothing a real contract declares is true. */
+const FORGED_GRAMMAR: ClaimGrammar = {
+  version: 1,
+  quantifiers: ["whatever"],
+  polarities: ["yes"],
+  signInaptTag: "no",
+  layers: ["made-up"],
+};
 
 const gene = new Referent("testing/entity", "EX:gene-x");
 const otherGene = new Referent("testing/entity", "EX:gene-z");
@@ -151,21 +180,19 @@ describe("the qualifiers a claim holds are genuinely immutable", () => {
 
 describe("a profile that did not come from the contracts is not a profile", () => {
   const forgedProfile = {
-    claimGrammar: {
-      version: 1,
-      quantifiers: ["whatever"],
-      polarities: ["yes"],
-      signInaptTag: "no",
-      layers: ["made-up"],
+    claimGrammar: FORGED_GRAMMAR,
+    operators: {
+      "forged/op": {
+        term: "forged/op",
+        arity: 1,
+        argSorts: ["forged/sort"],
+        signApt: true,
+        layers: ["made-up"],
+        dimensions: [],
+      } satisfies CompiledOperator,
     },
-    operators: new Map<string, CompiledOperator>([
-      [
-        "forged/op",
-        { term: "forged/op", arity: 1, argSorts: ["forged/sort"], signApt: true, layers: ["made-up"], dimensions: [] },
-      ],
-    ]),
-    dimensions: new Map<string, CompiledDimension>(),
-    sorts: new Set(["forged/sort"]),
+    dimensions: {} as Record<string, CompiledDimension>,
+    sorts: ["forged/sort"],
   };
 
   const parts: ClaimParts = {
@@ -202,6 +229,191 @@ describe("a profile that did not come from the contracts is not a profile", () =
   it("recognizes the one compileProfile returns", () => {
     expect(ProfileSpec.is(profile)).toBe(true);
     expect(ProfileSpec.is(forgedProfile)).toBe(false);
+  });
+});
+
+describe("a contract that nobody authored cannot be compiled", () => {
+  // The link above the profile's brand, and the reason that brand was once worth
+  // nothing. `compileProfile` accepted structurally typed contracts, so a plain
+  // literal minted a *genuine* `ProfileSpec` — `ProfileSpec.is` true, every
+  // downstream check satisfied — resolving an operator no document declares. The
+  // brand said "compileProfile ran", which was true and useless.
+  const forgedBase = {
+    name: "science",
+    version: 1,
+    claimGrammar: FORGED_GRAMMAR,
+  };
+  const forgedDomain = {
+    namespace: "forged",
+    version: 1,
+    sorts: { sort: { name: "sort" } },
+    dimensions: {},
+    operators: {
+      op: { name: "op", arity: 1, argSorts: ["sort"], signApt: true, layers: ["made-up"], dimensions: [] },
+    },
+  };
+
+  it("refuses an authored base contract", () => {
+    expect(() => compileProfile(forgedBase as unknown as BaseContract, [])).toThrow(UnparsedContract);
+    expect(() => compileProfile(forgedBase as unknown as BaseContract, [])).toThrow(/parseBaseContract/);
+  });
+
+  it("refuses an authored domain contract", () => {
+    expect(() => compileProfile(base, [forgedDomain as unknown as DomainContract])).toThrow(UnparsedContract);
+    expect(() => compileProfile(base, [forgedDomain as unknown as DomainContract])).toThrow(/parseDomainContract/);
+  });
+
+  it("refuses either one wearing the prototype, which is all instanceof would ask about", () => {
+    // Both arms, and the second only because the first was written alone: with
+    // just the plain literals above, swapping either brand for `instanceof` left
+    // the suite green — the literal has no prototype and fails that check too.
+    // Third time this exact vacuous test has been caught by sabotage.
+    const prototypedBase = Object.assign(Object.create(BaseContract.prototype), forgedBase);
+    expect(prototypedBase instanceof BaseContract).toBe(true);
+    expect(BaseContract.is(prototypedBase)).toBe(false);
+    expect(() => compileProfile(prototypedBase as BaseContract, [])).toThrow(UnparsedContract);
+
+    const prototypedDomain = Object.assign(Object.create(DomainContract.prototype), forgedDomain);
+    expect(prototypedDomain instanceof DomainContract).toBe(true);
+    expect(DomainContract.is(prototypedDomain)).toBe(false);
+    expect(() => compileProfile(base, [prototypedDomain as DomainContract])).toThrow(UnparsedContract);
+  });
+
+  it("cannot be authored through either constructor", () => {
+    expect(() => new BaseContract(Symbol("forged"), { version: 1, claimGrammar: FORGED_GRAMMAR })).toThrow(
+      UnparsedContract,
+    );
+    expect(
+      () =>
+        new DomainContract(Symbol("forged"), {
+          namespace: "forged",
+          version: 1,
+          sorts: {},
+          dimensions: {},
+          operators: {},
+        }),
+    ).toThrow(UnparsedContract);
+  });
+
+  it("cannot be authored through a subclass either", () => {
+    class RogueBase extends BaseContract {}
+    class RogueDomain extends DomainContract {}
+    expect(() => new RogueBase(Symbol("forged"), { version: 1, claimGrammar: FORGED_GRAMMAR })).toThrow(
+      SubclassRefused,
+    );
+    expect(
+      () => new RogueDomain(Symbol("forged"), { namespace: "x", version: 1, sorts: {}, dimensions: {}, operators: {} }),
+    ).toThrow(SubclassRefused);
+  });
+
+  it("recognizes the ones the parsers return", () => {
+    expect(BaseContract.is(base)).toBe(true);
+    expect(DomainContract.is(parseDomainContract(testingText, "testing", base))).toBe(true);
+  });
+});
+
+describe("neither a compiled profile nor its source contract can be edited after the fact", () => {
+  // `ReadonlyMap`, `ReadonlySet` and `readonly` are all erased at run time, so
+  // before the freezes each of these changed what a *later* claim was allowed to
+  // say — while the profile went on carrying a brand attesting to a compilation
+  // whose result no longer existed.
+  it("refuses a new operator injected into the resolution table", () => {
+    expect(() => {
+      (profile.operators as Record<string, CompiledOperator>)["injected/op"] = {
+        term: "injected/op",
+        arity: 1,
+        argSorts: ["testing/entity"],
+        signApt: true,
+        layers: ["causal"],
+        dimensions: [],
+      };
+    }).toThrow(TypeError);
+    expect(() =>
+      buildClaim(profile, {
+        operator: "injected/op",
+        args: [gene],
+        qualifiers: new Map(),
+        polarity: "positive",
+        layer: "causal",
+      }),
+    ).toThrow(ProfileError);
+  });
+
+  it("refuses a rewritten argument sort inside a compiled operator", () => {
+    // The nested arrays are the part a shallow freeze misses, and the one that
+    // re-types an operator that is otherwise entirely real.
+    const operator = profile.operators["testing/subtype-of"] as CompiledOperator;
+    expect(Object.isFrozen(operator)).toBe(true);
+    expect(() => {
+      (operator.argSorts as string[])[1] = "testing/outcome";
+    }).toThrow(TypeError);
+    expect(() =>
+      buildClaim(profile, {
+        operator: "testing/subtype-of",
+        args: [gene, outcome],
+        qualifiers: new Map(),
+        polarity: null,
+        layer: "structural",
+      }),
+    ).toThrow(/declared testing\/entity/);
+  });
+
+  it("refuses a rewritten restriction sort inside a compiled dimension", () => {
+    // The dimension's twin of the argument-sort case: rewriting it re-types
+    // every qualifier on that dimension, across every operator permitting it.
+    const dimension = profile.dimensions["testing/population"] as CompiledDimension;
+    expect(Object.isFrozen(dimension)).toBe(true);
+    expect(() => {
+      (dimension as { restrictionSort: string }).restrictionSort = "testing/entity";
+    }).toThrow(TypeError);
+    expect(() =>
+      buildClaim(profile, {
+        operator: "testing/affects",
+        args: [gene, outcome],
+        qualifiers: new Map([["testing/population", new Qualifier("generic", gene)]]),
+        polarity: "positive",
+        layer: "causal",
+      }),
+    ).toThrow(/restricts to sort testing\/cohort/);
+  });
+
+  it("refuses a layer smuggled into the base contract after compilation", () => {
+    // The source contract and the compiled profile are separate objects, so this
+    // one needs both freezes: the grammar the profile holds is the base
+    // contract's own, and an operator's layers are the profile's copy.
+    expect(() => {
+      (base.claimGrammar.layers as string[]).push("smuggled");
+    }).toThrow(TypeError);
+    expect(() => {
+      ((profile.operators["testing/affects"] as CompiledOperator).layers as string[]).push("smuggled");
+    }).toThrow(TypeError);
+    expect(() =>
+      buildClaim(profile, {
+        operator: "testing/affects",
+        args: [gene, outcome],
+        qualifiers: new Map(),
+        polarity: "positive",
+        layer: "smuggled",
+      }),
+    ).toThrow(/does not admit layer/);
+  });
+
+  it("refuses an operator added to the source contract after compilation", () => {
+    const contract = parseDomainContract(testingText, "testing", base);
+    const compiled = compileProfile(base, [contract]);
+    expect(() => {
+      (contract.operators as Record<string, unknown>).smuggled = { name: "smuggled" };
+    }).toThrow(TypeError);
+    expect(Object.keys(compiled.operators)).not.toContain("testing/smuggled");
+  });
+
+  it("holds its tables in frozen null-prototype records", () => {
+    for (const table of [profile.operators, profile.dimensions]) {
+      expect(Object.isFrozen(table)).toBe(true);
+      expect(Object.getPrototypeOf(table)).toBe(null);
+    }
+    expect(Object.isFrozen(profile.sorts)).toBe(true);
+    expect(Object.isFrozen(base.claimGrammar)).toBe(true);
   });
 });
 
