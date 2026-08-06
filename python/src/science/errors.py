@@ -92,8 +92,9 @@ class SubclassRefused(ScienceError):
     `isinstance(x, Claim)` — at which point every downstream reader that trusts a
     `Claim` unconditionally is wrong, and M13's guarantee is gone without a line
     of it having been edited. `ProfileSpec` makes the same claim and needs the
-    same seal; so do the value types a `Claim` holds, whose own field invariants
-    are what make its contents identifiers.
+    same seal, and so does every user-defined value type whose invariant a
+    `Claim` trusts — `Referent`'s own check is what makes a claim's contents
+    identifiers. The scope is that trust relation, not everything a claim holds.
 
     Not a `ClaimError` or a `ProfileError`: nothing is wrong with any claim or
     any profile. What is wrong is the code that was written."""

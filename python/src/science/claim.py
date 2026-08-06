@@ -130,7 +130,8 @@ class Claim:
     code needs a defensive re-check, and none should have one.
 
     The guarantee is worth exactly what `isinstance` is worth, which is why the
-    type is sealed and why the value types it holds are sealed and check their
+    type is sealed, and why every value type whose invariant it *trusts* —
+    `Referent` and `Qualifier`, not `str` or `tuple` — is sealed and checks its
     own fields (§6.3). `object.__new__` and direct attribute writes still reach
     past all of it — that is the same act as a hand-edited file on disk, the
     third row of §6.3's table, and it produces an audit finding rather than a

@@ -1294,9 +1294,12 @@ type-system property in a design that cannot deliver it.
 > | the **value types** the claim holds check nothing | a referent whose `term` is an integer reaches a minted claim, because `term` is the one position in `π_claim` that **nothing downstream checks**: membership is decode's, against a snapshot |
 > | qualifiers are **structurally** typed | any object exposing the right two attributes is stored inside a claim and trusted as one |
 >
-> So the requirement is: seal the type against subclassing **and** every value
-> type it holds — a value type's own invariant is what makes the claim's contents
-> identifiers, so sealing only the claim leaves it reachable one level down — and
+> So the requirement is: seal the type against subclassing **and every
+> user-defined value type whose invariant the claim trusts** — it is a
+> `Referent`'s own check that makes a claim's contents identifiers, so sealing
+> only the claim leaves the invariant reachable one level down. The scope is that
+> trust relation and not "everything the claim holds": a claim also holds strings
+> and tuples, and nothing here is a claim about the language's own types. Then
 > check by type, not by shape. Static `final` states the rule for a checker and
 > enforces nothing at run time, which is the wrong half: the code that would
 > subclass is exactly the code not being type checked.
@@ -1446,6 +1449,23 @@ projection carries identifiers, and the release travels the other channel.
 
 I_claim(c)  =  H( tag_claim ‖ encode(π_claim(c)) )        under science.identity.v1
 ```
+
+> **`tag_claim` is `science.claim.v1`, and its version is the projection's —
+> settled 2026-08-06, while building it.** The line above names `tag_claim`
+> without saying what it is or what moves it, and three candidates were live: the
+> corpus version, the claim grammar's `version` field, and the projection's own
+> shape. The first two are wrong for the same reason, and it is M8's: a grammar
+> bump or a corpus bump would fork every claim ever written, which is what §6.5
+> exists to prevent one paragraph up.
+>
+> So the domain moves when **π_claim's shape** moves, and nothing else moves it.
+> A `science.claim.v2` projection can then never collide with a v1 one — the
+> guarantee `science.identity.v1`'s domain separation is for — and §6.4 rule 4's
+> promise becomes mechanical rather than aspirational: when a later qualifier
+> grammar adds scope order, claims already written in the flat fragment keep the
+> identities they were written with, because their projection's shape did not
+> change. The grammar version stays in the base contract, where it governs what
+> may be *authored*, and stays out of what a claim is *named*.
 
 Five positions, five kinds of name, and none of them prose:
 
