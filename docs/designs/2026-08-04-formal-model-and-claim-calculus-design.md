@@ -285,7 +285,7 @@ it. Gap §2.9 (b).
 | **rule** | authored + fixtures | **rule identity = `(symbol, fixture-set identity)`** | binding frozen into `rule_bindings` at freeze; **refused** on ambiguity or an un-held / fixture-failing name | 5b §6; comp §4.2 |
 | equivalence rule | declared in the spec, frozen with it | versioned rule id | `(original result, replay result) → passed \| failed \| inconclusive` | comp §7.2 |
 | boundary policy | recipe member | names the **scope-derivation rule identity** | governs enforcement; scope is derived, never authored | comp §4.2, §4.4b; 5b §6; **R4** |
-| **belief policy version** | authored | version | the aggregation rule itself (closure member 7) | kernel §5.1 |
+| **belief policy** | authored + fixtures | **`PolicyBinding = (policy rule identity, implementation content identity)`** (amended 2026-08-05, belief-policy §2.2 — M₀ transcribed it as *"belief policy version \| authored \| version"*, which this table's own **rule** row above already contradicted: every other fixture-bound rule carries an exact binding, and the one whose output *is* the belief carried a bare version string) | the aggregation rule itself (closure member 7), bound to the implementation that ran it; supplied as a **required argument** per computation | kernel §5.1; belief-policy §2.2, §2.3 |
 | normative contract **cut** | derived | cut identity over normative rows + executable case identities — **never** the digest the cut produces | discovery from explicit cut + epoch | 5b §4, §5, §9 |
 
 ### 2.8 `Cfg` — corpus and world configuration
@@ -745,7 +745,7 @@ which the value reaches `κ_B`, since almost none of them is committed as itself
 | `observes` bytes | 4 — `observes` content identities | ✅ |
 | ancestry → independence | 5 — lineage snapshot | ✅ |
 | retractions + coverage declaration → standing | 6 — retraction enumeration | ✅ |
-| the aggregation rule | 7 — belief policy version | ✅ |
+| the aggregation rule | 7 — policy binding (`belief policy version` until 2026-08-05) | ✅ |
 | consulted contracts → interpretation | 8 — profile contracts | ✅ |
 
 Every verified semantic dependency of `B` factors through `κ_B`.
