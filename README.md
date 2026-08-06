@@ -38,6 +38,20 @@ amend in place, never renumber.
 
 ## Status
 
-Design complete, implementation not started. The guarantee tables are the
-acceptance criteria — each row must be a failing test before it is a passing
-one.
+Design complete. Implementation started 2026-08-06 with the **conformance cut 1
+vertical slice** (ledger §3, item 10) — typed claim construction, canonical
+projection, identity, decode and cross-language parity. It crosses no
+persistence boundary and computes no belief, which is where the disposition
+record's §5.5 stop rule puts its edge.
+
+The guarantee tables are the acceptance criteria — each row must be a failing
+test before it is a passing one. Cut 1 selects **11 of the 126 rows**, arm by
+arm, and was frozen *before* any code existed so that a row which fails is a
+failure rather than a redefinition.
+
+```
+python/     the implementation (substrate §11 puts the composition root here)
+ts/         the one shared encoding, and nothing else (formal model lim. 9)
+fixtures/   the cross-language parity corpus, owned by neither
+contracts/  the science base contract
+```

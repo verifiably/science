@@ -1,0 +1,38 @@
+[project]
+# The published distribution name is not yet ruled; `nodes` is mid-rename into the
+# `verifiably` namespace and nothing here is published. `science` is the import name
+# fixed by the domain-extension design §9.
+name = "science"
+version = "0.0.0"
+description = "Science: recording scientific belief and the evidence it rests on"
+readme = "README.md"
+license = "MIT"
+authors = [{ name = "Keith Hughitt", email = "keith.hughitt@gmail.com" }]
+requires-python = ">=3.11"
+classifiers = ["Typing :: Typed"]
+dependencies = []
+
+[build-system]
+requires = ["hatchling>=1.30"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/science"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+
+[tool.pyright]
+pythonVersion = "3.11"
+typeCheckingMode = "basic"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0",
+    "ruff>=0.15.7",
+    "pyright>=1.1.390",
+]

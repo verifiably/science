@@ -859,6 +859,34 @@ Each fix was locally right and collapsed a distinction one level over. A value's
 >   payloads under different kinds cannot collide.
 > - **Versioned, and v2 domains are disjoint from v1 by construction.**
 
+> **Amended 2026-08-06, while implementing it.** *"Canonical JSON"* above does
+> not determine the bytes, and two of the choices it leaves open are exactly the
+> kind that fork an identity silently across implementations. Both are now
+> pinned, and neither was discoverable from the prose:
+>
+> - **String escaping is exact.** `"` → `\"`, `\` → `\\`, and the five C0
+>   controls with a short form (`\b \t \n \f \r`) take it; every other C0
+>   control takes `\u00xx` with **lowercase** hex. Nothing else is escaped —
+>   **non-ASCII is emitted as literal UTF-8** and `/` is never escaped. Both of
+>   those are *optional* in JSON, and Python and JavaScript take opposite
+>   defaults, so leaving them optional means two conforming implementations
+>   producing different bytes for one value. **Unpaired surrogates are refused**:
+>   they have no UTF-8 encoding, and a JavaScript string can hold one.
+> - **Object keys sort by code point, never by UTF-16 code unit.** The two orders
+>   disagree above U+FFFF — `U+FF03` precedes `U+1F600` by code point but follows
+>   it by code unit, because the astral character's first unit is `D83D` — and
+>   **JavaScript's default `Array.prototype.sort` uses the code-unit order**.
+>   "Sorted by code point" was already the stated rule; what is new is that it is
+>   a *hazard* rather than a description, and the TypeScript implementation has
+>   to sort explicitly rather than by default.
+>
+> A third rule is a consequence rather than a choice, recorded because a reader
+> will ask: the digest separator is a newline, so the **domain grammar must
+> exclude newlines** or a crafted domain could forge the separator and let one
+> payload digest as another. The grammar is checked — `science.<kind>.v<n>`,
+> lowercase, positive version — which also delivers the disjointness the last
+> bullet above asserts, rather than leaving it to convention.
+
 A tagged encoding (`{"$dec": "0.5"}`) would also be injective and is **rejected**:
 it needs a reserved key namespace, and reserving `$` means every caller's key space
 acquires a rule that only the identity layer knows about.
