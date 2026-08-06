@@ -50,6 +50,10 @@ __all__ = [
 
 DOMAIN_CONTRACT_DOMAIN = "science.contract.v1"
 
+_MINT = object()
+"""The parser's own token — see ``science.contract.base._MINT`` for what a token
+achieves in this language and what it cannot."""
+
 _NAME = re.compile(r"^[a-z][a-z0-9-]*$")
 
 _CONTRACT_FIELDS = frozenset({"contract", "version", "lineage", "sorts", "dimensions", "operators"})
@@ -163,6 +167,20 @@ class DomainContract:
     operators: Mapping[str, OperatorDecl]
     content_identity: str
 
+    base_identity: str
+    """The content identity of the base contract this domain was **typed
+    against**, recorded so that compilation can check it is the same one.
+
+    A domain's layer selections are validated at parse time against a base
+    contract, and nothing else ever revalidates them — the compiled operator
+    carries the layers as facts. So parsing under one base and compiling under
+    another is not a forgery and needs no forged object: both contracts are
+    genuine, both parsers did their jobs, and the result is a claim standing on a
+    layer the compiled base does not declare. What was missing is not a check on
+    either contract but a check **between** them, and this field is what makes
+    that check possible.
+    """
+
     # As in `BaseContract` and `ProfileSpec`: the lock is this method, and
     # `init=False` a backstop — `@dataclass` will not overwrite an `__init__` the
     # class already defines.
@@ -177,6 +195,7 @@ class DomainContract:
     @classmethod
     def _parsed(
         cls,
+        token: object,
         *,
         namespace: str,
         version: int,
@@ -185,7 +204,14 @@ class DomainContract:
         dimensions: dict[str, DimensionDecl],
         operators: dict[str, OperatorDecl],
         content_identity: str,
+        base_identity: str,
     ) -> DomainContract:
+        if token is not _MINT:
+            raise UnparsedContract(
+                "DomainContract._parsed is the parser's own route and takes its mint token; use "
+                "parse_domain_contract(document, source=..., base=..., predecessor=...) or "
+                "load_domain_contract(path, base=...)."
+            )
         contract = object.__new__(cls)
         for name, value in (
             ("namespace", namespace),
@@ -195,6 +221,7 @@ class DomainContract:
             ("dimensions", MappingProxyType(dict(dimensions))),
             ("operators", MappingProxyType(dict(operators))),
             ("content_identity", content_identity),
+            ("base_identity", base_identity),
         ):
             object.__setattr__(contract, name, value)
         return contract
@@ -355,7 +382,27 @@ def parse_domain_contract(
     only on the path that happens to read a file would leave the same contract
     admissible through the path that does not, which is not a weaker guarantee
     but an unstated one.
+
+    **Both dependencies are authenticated.** A parser that takes another parsed
+    artifact and trusts it by shape has the hole its own callers were closed
+    against, one level in: the layer check below is only as good as the base
+    contract handed to it, and the succession check only as good as the
+    predecessor. Which base was used is then recorded on the result, so that
+    compilation can tell whether the contract in front of it was typed against
+    the base it is being compiled with.
     """
+    if not isinstance(base, BaseContract):
+        raise UnparsedContract(
+            f"base is a {type(base).__name__}, not a parsed BaseContract — use parse_base_contract("
+            "document, source=...) or load_base_contract(path). A domain's layers are checked against "
+            "the base contract and against nothing else afterwards."
+        )
+    if predecessor is not None and not isinstance(predecessor, DomainContract):
+        raise UnparsedContract(
+            f"predecessor is a {type(predecessor).__name__}, not a parsed DomainContract. Succession is "
+            "the *never redefine* rule made checkable (§8.3); checked against an authored predecessor it "
+            "certifies nothing, since the thing it compares against was written to pass."
+        )
     root = _mapping(document, source)
     _fields(root, _CONTRACT_FIELDS, frozenset({"description"}), source)
 
@@ -418,6 +465,7 @@ def parse_domain_contract(
         operators[name] = operator
 
     contract = DomainContract._parsed(
+        _MINT,
         namespace=namespace,
         version=version,
         predecessor=_parse_lineage(root["lineage"], f"{source}: lineage"),
@@ -425,6 +473,7 @@ def parse_domain_contract(
         dimensions=dimensions,
         operators=operators,
         content_identity=v1.digest(DOMAIN_CONTRACT_DOMAIN, root),
+        base_identity=base.content_identity,
     )
     check_succession(contract, predecessor)
     return contract

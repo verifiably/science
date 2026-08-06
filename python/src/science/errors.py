@@ -78,6 +78,23 @@ class UnparsedContract(ContractError):
     the normative SSOT (D §6) never opened."""
 
 
+class ContractMismatch(ContractError):
+    """Two contracts, each genuine, that were not typed against one another.
+
+    Distinct from ``UnparsedContract`` and worth its own name: nothing here was
+    forged, no brand was bypassed, and every parser did its job. A domain
+    contract's layer selections are checked **once**, at parse time, against the
+    base contract it was handed, and the compiled operator then carries them as
+    facts — so compiling it against a *different* base yields a claim standing on
+    a layer the compiled base does not declare.
+
+    The general shape, worth remembering because provenance checks do not catch
+    it: authenticating each input separately says nothing about whether they
+    **belong together**. A parser that consumes another parser's output creates a
+    dependency, and a dependency has to be recorded and then re-checked wherever
+    the two are brought back together."""
+
+
 class SuccessionViolation(ContractError):
     """A successor contract that redefines, drops, or misdeclares its lineage.
     Refused at contract **load** — never at claim decode, which sees wire bytes

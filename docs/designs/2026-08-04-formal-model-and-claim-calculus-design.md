@@ -1383,6 +1383,52 @@ type-system property in a design that cannot deliver it.
 > reach the leaves, and in Python it already did: `MappingProxyType` over private
 > copies, with tuples throughout, which is why only the provenance half of this
 > finding applied there.
+>
+> **Provenance is necessary and is not sufficient — recorded 2026-08-06, the
+> round after.** With every link brand-checked, a hole remained that no brand
+> could have caught, because **nothing in it was forged**. A domain contract's
+> layer selections are validated exactly once, at parse time, against the base
+> contract handed to the parser; the compiled operator then carries them as facts
+> that nothing revalidates. So a domain parsed under one base and compiled under
+> another — both documents real, both parsers correct, every brand intact —
+> produces a claim standing on a layer the base in force does not declare.
+>
+> The general statement, which outranks the instance: **authenticating each input
+> separately says nothing about whether the inputs belong together.** A stage that
+> consumes an earlier stage's output creates a dependency, and a dependency must
+> be *recorded on the result* and *re-checked wherever the two are brought back
+> together*. Here the domain contract records the base it was typed against and
+> compilation refuses a mismatch — `ContractMismatch`, deliberately a different
+> error from `UnparsedContract`, because a reader who sees them as one will look
+> for a forgery that does not exist. The same question is now owed at every other
+> seam where one stage's output becomes another's input; decode is the next one.
+>
+> Two smaller corrections from the same round, both worth their space because
+> they are habits rather than incidents:
+>
+> * **A parser must authenticate its own dependencies.** `parse_domain_contract`
+>   took a base contract and a predecessor and trusted both by shape — so its
+>   layer check was worth whatever the base it was handed was worth, and its
+>   succession check was compared against a predecessor written to pass. The rule
+>   applied to a module's callers applies to the module.
+> * **Fixing the language a defect is reported in leaves the other open.** The
+>   TypeScript profile has been brand-checked at `buildClaim` since it became a
+>   class; the Python one was never checked at all, and a duck exposing
+>   `operator` and `claim_grammar` typed a claim against declarations of its own
+>   choosing. Every finding in this block has now appeared in both languages,
+>   usually wearing different clothes.
+>
+> **What a token achieves in Python is less than what a brand achieves in
+> TypeScript, and the difference is the language's.** `#minted` cannot be
+> installed from outside its class body — a forgery is impossible, not merely
+> inconvenient. Python has no module privacy, so `object.__new__` plus
+> `object.__setattr__` reproduces any private constructor in two lines. The mint
+> tokens on `_parsed` and `_compiled` therefore remove an **ordinary** route — a
+> method that merely looked internal, reachable by a caller with no intent to
+> forge anything — and leave the raw write exactly where §6.3's third row already
+> put it, on the audit surface. Stating that plainly is the point: the distinction
+> worth keeping is between a hole and a documented limit, and a design that
+> claimed unforgeable provenance in Python would have neither.
 
 **But the model is not the only thing that produces claims.** Serialized YAML,
 imported records, a restored corpus and a raw write can all *express* a
@@ -2818,7 +2864,7 @@ pass on the other's evidence.
 | **M10** | **Two implementations hash a typed claim identically, over every closed tag** | One shared fixture artifact holding a **vector** of minimal claims, chosen so that **every** closed kernel tag appears at least once — each polarity (`positive`, `negative`, `unsigned`, `inapt`), each quantifier, each layer in the base vocabulary — plus one claim exercising multi-slot args, several qualifier dimensions and a non-ASCII referent identifier. Assert byte-identical projections and equal digests in **both** Python and TypeScript for **every** entry, and assert the vector's tag coverage is **complete against the base contract**, so adding a tag to the grammar forces a vector entry rather than silently going untested. **Sabotage:** change one implementation's map-key sort, slot order, or **a single tag's bytes**, and assert the fixture fails — under a one-claim fixture, changing an unused tag would pass. Follows D §6's precedent of exactly one parity fixture per shared encoding. **What it cannot witness, recorded 2026-08-06 after finding one:** parity compares the implementations against each other, so a defect *both* share is invisible to it — a forged-contract hole present in both produced identical digests for a claim no contract declares, and this row reported agreement. Provenance is M13's, not this row's |
 | **M11** | **`decodeClaim` is a function of its arguments, and refuses rather than repairs** | Same `⟨WireClaim, ProfileSpec, ResolutionSnapshot⟩` decoded twice, in different processes and different checkouts → **identical** result. Then each ill-formed input in turn — a sign on a sign-inapt operator, wrong arity, an undeclared dimension, an inadmissible layer, a missing required contract — → **`Refused`**, with **nothing minted** in every case. **Sabotage:** make availability ambient rather than a parameter and assert two holders now decode the same bytes differently. **Negative:** a raw-written malformed claim is an **audit finding**, not a silent accept and not a decode failure — the boundary was bypassed, not defeated |
 | **M12** | **An untypeable span mints nothing** | **End to end, which is the only form this row can take.** Present a span no operator fits; assert claim typing **refuses**, and assert the extraction path therefore receives **no proposition identity** and mints **no source-assertion** — the span surfaces as a project-scoped typing-work item instead. **Sabotage:** add a fallback that mints a proposition at a placeholder operator; separately, one that mints a source-assertion against a synthesized proposition identity. Assert both fail. **Negative:** the work item must **not** appear in kernel limitation 1's unassessed queue — different membership condition, different owner (§6.6). **Scope:** this row does **not** assert that a source-assertion naming an unresolved proposition identity is unconstructible in general. World addressing tolerates unresolved references, and forbidding them would be a deliberate amendment to source-assertion resolution, which ρ does not make |
-| **M13** | **`Claim` is opaque, and the only route to one is the validated constructor** | Assert `Claim` cannot be built from ambient data: no public field-wise constructor, no cast or coercion from `WireClaim`, no dict/object-literal path. Assert **no function downstream of the boundary accepts a `WireClaim`** — the wire type is confined to the decode module. **Sabotage:** export a raw constructor, or widen one downstream signature from `Claim` to `WireClaim`, and assert the check fails. **Scope, stated because the first draft overreached:** profile-dependent validity — sign-aptness, arity, argument sorts, permitted dimensions, admissible layers — is **runtime** and belongs to **M11**. Operators arrive through `ProfileSpec`, and no Python or TypeScript implementation can vary a constructor's static signature by a runtime value without a code-generation layer this design does not propose. What survives statically is the consequence that actually matters: the check happens **once**, at one place, and downstream code needs no defensive revalidation. **Extended 2026-08-06, twice, on building it:** the guarantee is *"a value of this type was checked"*, and it is a **chain** — assert that `π_claim` refuses a claim its validated constructor did not mint, that the constructor refuses a profile the compiler did not return, and that the compiler refuses a contract no parser produced, each by an unforgeable brand rather than by shape. **Sabotage each link separately, and each link's brand against a prototype-only forgery**, since a plain object literal fails `instanceof` too and a test built only from one cannot tell the two checks apart — that vacuous test was written three times here. Assert also that everything a profile or contract holds is immutable **to the leaves**: rewriting one argument sort inside a compiled operator re-types an operator that is otherwise entirely real |
+| **M13** | **`Claim` is opaque, and the only route to one is the validated constructor** | Assert `Claim` cannot be built from ambient data: no public field-wise constructor, no cast or coercion from `WireClaim`, no dict/object-literal path. Assert **no function downstream of the boundary accepts a `WireClaim`** — the wire type is confined to the decode module. **Sabotage:** export a raw constructor, or widen one downstream signature from `Claim` to `WireClaim`, and assert the check fails. **Scope, stated because the first draft overreached:** profile-dependent validity — sign-aptness, arity, argument sorts, permitted dimensions, admissible layers — is **runtime** and belongs to **M11**. Operators arrive through `ProfileSpec`, and no Python or TypeScript implementation can vary a constructor's static signature by a runtime value without a code-generation layer this design does not propose. What survives statically is the consequence that actually matters: the check happens **once**, at one place, and downstream code needs no defensive revalidation. **Extended 2026-08-06, twice, on building it:** the guarantee is *"a value of this type was checked"*, and it is a **chain** — assert that `π_claim` refuses a claim its validated constructor did not mint, that the constructor refuses a profile the compiler did not return, and that the compiler refuses a contract no parser produced, each by an unforgeable brand rather than by shape. **Sabotage each link separately, and each link's brand against a prototype-only forgery**, since a plain object literal fails `instanceof` too and a test built only from one cannot tell the two checks apart — that vacuous test was written three times here. Assert also that everything a profile or contract holds is immutable **to the leaves**: rewriting one argument sort inside a compiled operator re-types an operator that is otherwise entirely real. **And assert what no brand can reach:** that two *genuine* artifacts which were never typed against one another are refused where they meet — a domain contract parsed under one base contract and compiled under another, which needs no forgery and passes every provenance check there is |
 
 ### 9.1 What M does not cover
 

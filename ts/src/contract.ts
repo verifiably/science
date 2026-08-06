@@ -125,6 +125,26 @@ export class DomainContract {
   readonly dimensions: DeclarationTable<DimensionDecl>;
   readonly operators: DeclarationTable<OperatorDecl>;
 
+  /**
+   * The base contract this domain was **typed against**.
+   *
+   * A domain's layer selections are checked once, here at parse time, and the
+   * compiled operator then carries them as facts that nothing revalidates. So
+   * parsing under one base and compiling under another needs no forgery at all —
+   * both contracts are genuine, both parsers did their jobs — and produces a
+   * claim standing on a layer the compiled base does not declare. The missing
+   * check was never on either contract; it is **between** them, and this field
+   * is what makes it possible.
+   *
+   * Held as the object, compared by reference. Python records the base's content
+   * identity instead, since it computes one and this side deliberately does not
+   * (D §9). Reference equality is the **stricter** of the two — it also refuses
+   * two separate parses of identical bytes — and strictness is the safe
+   * direction for the reduced implementation: it can refuse what Python accepts,
+   * never accept what Python refuses.
+   */
+  readonly base: BaseContract;
+
   constructor(
     token: symbol,
     parts: {
@@ -133,6 +153,7 @@ export class DomainContract {
       sorts: DeclarationTable<SortDecl>;
       dimensions: DeclarationTable<DimensionDecl>;
       operators: DeclarationTable<OperatorDecl>;
+      base: BaseContract;
     },
   ) {
     if (new.target !== DomainContract) {
@@ -149,6 +170,7 @@ export class DomainContract {
     this.sorts = parts.sorts;
     this.dimensions = parts.dimensions;
     this.operators = parts.operators;
+    this.base = parts.base;
     Object.freeze(this);
   }
 
@@ -254,7 +276,20 @@ function declarations(value: unknown, where: string): Record<string, unknown> {
   return value === undefined ? {} : mapping(value, where);
 }
 
+/**
+ * The base contract is **authenticated**, not merely accepted.
+ *
+ * A parser that takes another parser's output and trusts it by shape has the
+ * hole its own callers were closed against, one level in: the layer check below
+ * is worth exactly what the base contract handed to it is worth.
+ */
 export function parseDomainContract(text: string, source: string, base: BaseContract): DomainContract {
+  if (!BaseContract.is(base)) {
+    throw new UnparsedContract(
+      "the base contract was not parsed from its document — use parseBaseContract(text, source). A domain's " +
+        "layers are checked against the base contract and against nothing else afterwards.",
+    );
+  }
   const document = mapping(parseYaml(text), source);
   exactFields(document, ["contract", "version", "lineage"], ["sorts", "dimensions", "operators"], source);
 
@@ -349,5 +384,6 @@ export function parseDomainContract(text: string, source: string, base: BaseCont
     sorts,
     dimensions,
     operators: frozenTable(operatorEntries),
+    base,
   });
 }

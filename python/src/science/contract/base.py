@@ -42,6 +42,26 @@ TAG_ENCODING = "science.identity.v1"
 
 _TAG = re.compile(r"^[a-z][a-z0-9-]*$")
 
+_MINT = object()
+"""The parser's own token, required by ``BaseContract._parsed``.
+
+**What this achieves, stated exactly, because it is less than the TypeScript
+side's brand.** There, ``#minted`` cannot be installed from outside the class
+body — that is a language guarantee, and a forgery is impossible rather than
+inconvenient. Python has no module privacy: ``object.__new__(BaseContract)``
+followed by ``object.__setattr__`` reproduces what ``_parsed`` does, in two
+lines, with nothing here consulted. So this token cannot make provenance
+unforgeable, and does not claim to.
+
+What it does is remove ``_parsed`` from the set of **ordinary** routes. Before
+it, a caller with no intent to forge anything could reach a real ``BaseContract``
+through a method that merely looked internal, and every downstream check would
+believe it. After it, reaching one means reaching for ``object.__new__`` or a
+private module attribute — which is §6.3's raw-write row, where the boundary is
+bypassed rather than defeated, and which belongs to the audit surface. The
+distinction worth keeping is between a hole and a documented limit.
+"""
+
 _CONTRACT_FIELDS = frozenset({"contract", "version", "claim_grammar"})
 _GRAMMAR_FIELDS = frozenset({"version", "tag_encoding", "quantifiers", "polarities", "sign_inapt_tag", "layers"})
 
@@ -113,7 +133,12 @@ class BaseContract:
         )
 
     @classmethod
-    def _parsed(cls, **fields: object) -> BaseContract:
+    def _parsed(cls, token: object, **fields: object) -> BaseContract:
+        if token is not _MINT:
+            raise UnparsedContract(
+                "BaseContract._parsed is the parser's own route and takes its mint token; "
+                "use parse_base_contract(document, source=...) or load_base_contract(path)."
+            )
         contract = object.__new__(cls)
         for name, value in fields.items():
             object.__setattr__(contract, name, value)
@@ -201,6 +226,7 @@ def parse_base_contract(document: object, *, source: str) -> BaseContract:
     )
 
     return BaseContract._parsed(
+        _MINT,
         name=name,
         version=_positive_int(root["version"], f"{source}: version"),
         claim_grammar=claim_grammar,

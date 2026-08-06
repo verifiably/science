@@ -33,7 +33,7 @@
  */
 
 import { BaseContract, type ClaimGrammar, DomainContract } from "./contract.js";
-import { ProfileError, SubclassRefused, UnparsedContract } from "./errors.js";
+import { ContractMismatch, ProfileError, SubclassRefused, UnparsedContract } from "./errors.js";
 
 export interface CompiledOperator {
   readonly term: string;
@@ -127,6 +127,18 @@ export function compileProfile(base: BaseContract, domains: readonly DomainContr
       throw new UnparsedContract(
         "a domain contract was not parsed from its document — use parseDomainContract(text, source, base). " +
           "Operators are domain-issued (§7.1), and an authored contract issues them on no authority.",
+      );
+    }
+    if (contract.base !== base) {
+      // Provenance is not enough on its own: two contracts can each be entirely
+      // genuine and still not belong together. This domain's layers were checked
+      // at parse time against a different base, and nothing revalidates them
+      // afterwards — so compiling it here would put a claim on a layer the base
+      // in force does not declare, with nothing forged anywhere.
+      throw new ContractMismatch(
+        `domain contract ${JSON.stringify(contract.namespace)} was parsed against a different base contract than ` +
+          `the one being compiled with. A domain selects its layers from the base vocabulary and may not extend ` +
+          `it (§7.1); that check ran against another document, so nothing here can stand behind it.`,
       );
     }
     if (seen.has(contract.namespace)) {

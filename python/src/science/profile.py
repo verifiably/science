@@ -37,13 +37,23 @@ from typing import final
 
 from science.contract.base import BaseContract, ClaimGrammar
 from science.contract.domain import DomainContract, OperatorDecl, VocabularyBinding
-from science.errors import DuplicateContribution, ProfileError, UnparsedContract, WithdrawnFromAuthoring
+from science.errors import (
+    ContractMismatch,
+    DuplicateContribution,
+    ProfileError,
+    UnparsedContract,
+    WithdrawnFromAuthoring,
+)
 from science.identity import v1
 from science.sealed import sealed
 
 __all__ = ["CompiledDimension", "CompiledOperator", "CompiledSort", "ProfileSpec", "compile_profile"]
 
 PROFILE_DOMAIN = "science.profile.v1"
+
+_MINT = object()
+"""`compile_profile`'s own token — see `science.contract.base._MINT` for what a
+token achieves in this language and what it cannot."""
 
 
 @dataclass(frozen=True)
@@ -151,7 +161,12 @@ class ProfileSpec:
         )
 
     @classmethod
-    def _compiled(cls, **fields: object) -> ProfileSpec:
+    def _compiled(cls, token: object, **fields: object) -> ProfileSpec:
+        if token is not _MINT:
+            raise ProfileError(
+                "ProfileSpec._compiled is compile_profile's own route and takes its mint token; "
+                "use compile_profile(base, domains)."
+            )
         spec = object.__new__(cls)
         for name, value in fields.items():
             object.__setattr__(spec, name, value)
@@ -286,6 +301,21 @@ def compile_profile(base: BaseContract, domains: Iterable[DomainContract]) -> Pr
                 "load_domain_contract(path, base=...). Operators are domain-issued (§7.1), and an authored "
                 "contract issues them on no authority."
             )
+        # Provenance is not enough on its own: two contracts can each be entirely
+        # genuine and still not belong together. A domain's layer selections are
+        # checked once, at parse, against whatever base it was given, and the
+        # compiled operator then carries them as facts — so a domain parsed under
+        # a wider base and compiled under a narrower one yields a claim standing
+        # on a layer the compiled base does not declare, with no forgery
+        # anywhere. The check that was missing is between the two contracts.
+        if contract.base_identity != base.content_identity:
+            raise ContractMismatch(
+                f"domain contract {contract.namespace!r} was typed against base contract "
+                f"{contract.base_identity[:12]}…, and this profile is being compiled with "
+                f"{base.content_identity[:12]}…. A domain selects its layers from the base vocabulary and "
+                "may not extend it (§7.1); that check ran at parse time against a different document, so "
+                "nothing here can stand behind it."
+            )
 
     seen: dict[str, DomainContract] = {}
     for contract in activated:
@@ -322,6 +352,7 @@ def compile_profile(base: BaseContract, domains: Iterable[DomainContract]) -> Pr
             operators[contract.term(name)] = _compile_operator(contract, operator)
 
     return ProfileSpec._compiled(
+        _MINT,
         claim_grammar=base.claim_grammar,
         # Wrapped so `compiled_identity` cannot come to describe a profile that
         # no longer exists. The `dict()` copy is insurance against a later

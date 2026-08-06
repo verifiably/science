@@ -89,6 +89,23 @@ export class UnparsedContract extends ContractError {}
  */
 export class UncheckableContract extends ContractError {}
 
+/**
+ * Two contracts, each genuine, that were not typed against one another.
+ *
+ * Distinct from `UnparsedContract` and worth its own name: nothing was forged,
+ * no brand was bypassed, every parser did its job. A domain's layer selections
+ * are checked once, at parse, against the base contract it was handed, and the
+ * compiled operator then carries them as facts — so compiling it against a
+ * *different* base yields a claim on a layer that base does not declare.
+ *
+ * The general shape, worth remembering because provenance checks do not catch
+ * it: authenticating each input separately says nothing about whether they
+ * **belong together**. A parser consuming another parser's output creates a
+ * dependency, and a dependency has to be recorded and re-checked wherever the
+ * two are brought back together.
+ */
+export class ContractMismatch extends ContractError {}
+
 export class ProfileError extends ScienceError {}
 
 export class ClaimError extends ScienceError {}

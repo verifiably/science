@@ -47,6 +47,7 @@ from science.errors import (
     InadmissibleLayer,
     MalformedReferent,
     PolarityRefused,
+    ProfileError,
     RestrictionSortMismatch,
     UndeclaredDimension,
     UnknownQuantifier,
@@ -187,7 +188,12 @@ class Claim:
         Every check here is profile-dependent and therefore runtime (§6.3), and
         every one is shared by the authoring route and by decode. Retirement is
         **not** among them — see the module docstring.
+
+        The profile is authenticated **here** and not only in `build_claim`,
+        because this is the other route in: decode will call it directly, and a
+        check on one of two entry points is a check on neither.
         """
+        _require_profile(profile)
         declaration = profile.operator(operator)
 
         if len(args) != declaration.arity:
@@ -286,6 +292,7 @@ def build_claim(
     operator `None` is refused too: a claim that asserts no sign says so with
     `unsigned`, which is a different fact from having no sign to assert.
     """
+    _require_profile(profile)
     selectable = profile.authorable_dimensions(operator)
     permitted = set(profile.operator(operator).dimensions)
     withdrawn = sorted((set(qualifiers) & permitted) - set(selectable))
@@ -296,6 +303,25 @@ def build_claim(
             "historical claim against the frozen declaration."
         )
     return Claim._checked(profile, operator=operator, args=args, qualifiers=qualifiers, polarity=polarity, layer=layer)
+
+
+def _require_profile(value: object) -> None:
+    """Refuse anything that is not a compiled profile.
+
+    `ProfileSpec` is sealed and refuses to be authored, so this is not defending
+    against a second `ProfileSpec` — it is refusing a **duck**. Every check below
+    goes through `profile.operator(...)` and `profile.claim_grammar`, and any
+    object exposing those would type a claim against declarations of its own
+    choosing while the resulting `Claim` is entirely genuine. The TypeScript side
+    has checked this since its profile became a class; this side had not, which
+    is the same asymmetry the last round found in the other direction.
+    """
+    if not isinstance(value, ProfileSpec):
+        raise ProfileError(
+            f"profile is a {type(value).__name__}, not a compiled ProfileSpec — use "
+            "compile_profile(base, domains). Structural similarity is not enough: every check a claim "
+            "passes is read out of this object, so an impostor types a claim against itself."
+        )
 
 
 def _require_referent(value: object, where: str) -> None:

@@ -36,7 +36,14 @@ import {
   parseBaseContract,
   parseDomainContract,
 } from "../src/contract.js";
-import { ClaimError, ProfileError, SubclassRefused, UnparsedContract, UntypedReferent } from "../src/errors.js";
+import {
+  ClaimError,
+  ContractMismatch,
+  ProfileError,
+  SubclassRefused,
+  UnparsedContract,
+  UntypedReferent,
+} from "../src/errors.js";
 import { type CompiledDimension, type CompiledOperator, ProfileSpec, compileProfile } from "../src/profile.js";
 import { claimIdentity, projectClaim } from "../src/projection.js";
 
@@ -291,6 +298,7 @@ describe("a contract that nobody authored cannot be compiled", () => {
           sorts: {},
           dimensions: {},
           operators: {},
+          base,
         }),
     ).toThrow(UnparsedContract);
   });
@@ -302,7 +310,15 @@ describe("a contract that nobody authored cannot be compiled", () => {
       SubclassRefused,
     );
     expect(
-      () => new RogueDomain(Symbol("forged"), { namespace: "x", version: 1, sorts: {}, dimensions: {}, operators: {} }),
+      () =>
+        new RogueDomain(Symbol("forged"), {
+          namespace: "x",
+          version: 1,
+          sorts: {},
+          dimensions: {},
+          operators: {},
+          base,
+        }),
     ).toThrow(SubclassRefused);
   });
 
@@ -414,6 +430,54 @@ describe("neither a compiled profile nor its source contract can be edited after
     }
     expect(Object.isFrozen(profile.sorts)).toBe(true);
     expect(Object.isFrozen(base.claimGrammar)).toBe(true);
+  });
+});
+
+describe("two genuine contracts that were not typed against each other", () => {
+  // Nothing here is forged. Every brand is intact, both parsers ran on real
+  // documents, and the claim that came out stood on a layer the compiled base
+  // does not declare — because a domain's layers are checked **once**, at parse
+  // time, against whatever base it was handed, and the compiled operator then
+  // carries them as facts. Provenance checks cannot see this: they authenticate
+  // each input and say nothing about whether the two belong together.
+  const wideText = baseText.replace(
+    "layers: [causal, structural, statistical, methodological]",
+    "layers: [causal, structural, statistical, methodological, speculative]",
+  );
+  const wideBase = parseBaseContract(wideText, "wide");
+  const speculativeText = testingText.replace("layers: [causal]", "layers: [causal, speculative]");
+
+  it("is refused at compilation", () => {
+    const underWide = parseDomainContract(speculativeText, "testing", wideBase);
+    expect(underWide.operators.affects.layers).toContain("speculative");
+    expect(() => compileProfile(base, [underWide])).toThrow(ContractMismatch);
+  });
+
+  it("compiles under the base it was actually parsed against", () => {
+    const underWide = parseDomainContract(speculativeText, "testing", wideBase);
+    const built = buildClaim(compileProfile(wideBase, [underWide]), {
+      operator: "testing/affects",
+      args: [gene, outcome],
+      qualifiers: new Map(),
+      polarity: "positive",
+      layer: "speculative",
+    });
+    expect(projectClaim(built).layer).toBe("speculative");
+  });
+
+  it("refuses a base contract the parser did not produce", () => {
+    // The parser authenticates its own dependency too: the layer check it runs
+    // is worth exactly what the base handed to it is worth.
+    const forgedBase = { name: "science", version: 1, claimGrammar: FORGED_GRAMMAR };
+    expect(() => parseDomainContract(testingText, "testing", forgedBase as unknown as BaseContract)).toThrow(
+      UnparsedContract,
+    );
+    const prototyped = Object.assign(Object.create(BaseContract.prototype), forgedBase);
+    expect(() => parseDomainContract(testingText, "testing", prototyped as BaseContract)).toThrow(UnparsedContract);
+  });
+
+  it("records the base it was parsed against", () => {
+    expect(parseDomainContract(testingText, "testing", base).base).toBe(base);
   });
 });
 

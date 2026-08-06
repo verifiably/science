@@ -14,8 +14,10 @@ import pytest
 import yaml
 
 import science.profile as profile_module
+from science.claim import Referent, build_claim
 from science.contract import base, domain
 from science.errors import (
+    ContractMismatch,
     DuplicateContribution,
     ProfileError,
     SubclassRefused,
@@ -122,12 +124,20 @@ class TestSemanticEditsRecompileAndEditorialOnesDoNot:
             compile_profile(base_contract, [testing]).compiled_identity
         )
 
-    def test_a_base_contract_edit_recompiles(self, base_contract, base_contract_path, testing):
+    def test_a_base_contract_edit_recompiles(self, base_contract, base_contract_path, parse, testing_document, testing):
         edited = copy.deepcopy(yaml.safe_load(base_contract_path.read_text(encoding="utf-8")))
         edited["claim_grammar"]["layers"] = [*edited["claim_grammar"]["layers"], "computational"]
         successor = base.parse_base_contract(edited, source="<test>")
 
-        assert compile_profile(successor, [testing]).compiled_identity != (
+        # The domain is re-parsed against the edited base, because that is what
+        # loading under it means. Written first without the re-parse — compiling
+        # one base's domain under another — which was the setup the mismatch
+        # check now refuses, and refuses rightly: those layers were validated
+        # against a document that is no longer the one in force.
+        under_successor = domain.parse_domain_contract(
+            testing_document, source="<test>", base=successor, predecessor=None
+        )
+        assert compile_profile(successor, [under_successor]).compiled_identity != (
             compile_profile(base_contract, [testing]).compiled_identity
         )
 
@@ -457,21 +467,6 @@ class TestTheTrustChainStartsAtTheDocument:
     such question in both.
     """
 
-    @pytest.fixture()
-    def forged_base(self):
-        return base.BaseContract._parsed(
-            name="science",
-            version=1,
-            claim_grammar=base.ClaimGrammar(
-                version=1,
-                quantifiers=("whatever",),
-                polarities=("yes",),
-                sign_inapt_tag="no",
-                layers=("made-up",),
-            ),
-            content_identity="0" * 64,
-        )
-
     def test_an_authored_base_contract_cannot_be_constructed(self):
         with pytest.raises(UnparsedContract, match="parse_base_contract"):
             base.BaseContract(
@@ -533,3 +528,200 @@ class TestTheTrustChainStartsAtTheDocument:
         assert isinstance(base_contract, base.BaseContract)
         assert isinstance(testing, domain.DomainContract)
         assert compile_profile(base_contract, [testing]).activated_contracts == {"testing": testing.content_identity}
+
+
+class TestTwoGenuineContractsThatDoNotBelongTogether:
+    """Provenance is necessary and is not sufficient.
+
+    Nothing in this class is forged. Every brand is intact, every parser ran on a
+    real document, and the claim that came out stood on a layer the compiled base
+    contract does not declare. A domain's layer selections are validated
+    **once**, at parse time, against whatever base it was handed, and the
+    compiled operator then carries them as facts that nothing revalidates.
+
+    The general shape is worth more than the instance: authenticating each input
+    separately says nothing about whether the inputs **belong together**. A
+    parser that consumes another parser's output creates a dependency, and a
+    dependency has to be recorded and then re-checked wherever the two meet
+    again.
+    """
+
+    @pytest.fixture()
+    def wide_base(self, base_contract_path):
+        document = copy.deepcopy(yaml.safe_load(base_contract_path.read_text(encoding="utf-8")))
+        document["claim_grammar"]["layers"] = [*document["claim_grammar"]["layers"], "speculative"]
+        return base.parse_base_contract(document, source="<wide>")
+
+    @pytest.fixture()
+    def speculative_document(self, testing_document):
+        document = copy.deepcopy(testing_document)
+        document["operators"]["affects"]["layers"] = ["causal", "speculative"]
+        return document
+
+    def test_a_domain_parsed_under_another_base_is_refused(self, base_contract, wide_base, speculative_document):
+        under_wide = domain.parse_domain_contract(
+            speculative_document, source="<testing>", base=wide_base, predecessor=None
+        )
+        assert "speculative" in under_wide.operators["affects"].layers
+        with pytest.raises(ContractMismatch, match="typed against base contract"):
+            compile_profile(base_contract, [under_wide])
+
+    def test_it_compiles_under_the_base_it_was_parsed_against(self, wide_base, speculative_document):
+        under_wide = domain.parse_domain_contract(
+            speculative_document, source="<testing>", base=wide_base, predecessor=None
+        )
+        claim = build_claim(
+            compile_profile(wide_base, [under_wide]),
+            operator="testing/affects",
+            args=(Referent(sort="testing/entity", term="EX:g"), Referent(sort="testing/outcome", term="EX:o")),
+            layer="speculative",
+            polarity="positive",
+        )
+        assert claim.layer == "speculative"
+
+    def test_the_domain_records_the_base_it_was_typed_against(self, base_contract, testing):
+        assert testing.base_identity == base_contract.content_identity
+
+    def test_the_domain_parser_authenticates_its_base(self, testing_document):
+        class Impostor:
+            name = "science"
+            claim_grammar = base.ClaimGrammar(1, ("generic",), ("positive",), "inapt", ("causal",))
+            content_identity = "0" * 64
+
+        with pytest.raises(UnparsedContract, match="parse_base_contract"):
+            domain.parse_domain_contract(testing_document, source="<t>", base=Impostor(), predecessor=None)  # type: ignore[arg-type]
+
+    def test_the_domain_parser_authenticates_its_predecessor(self, base_contract, testing_document):
+        # Succession is the *never redefine* rule made checkable (§8.3). Checked
+        # against an authored predecessor it certifies nothing, because the thing
+        # it compares against was written to pass.
+        successor = copy.deepcopy(testing_document)
+        successor["version"] = 2
+        successor["lineage"] = {"successor": "0" * 64}
+
+        class Impostor:
+            namespace = "testing"
+            content_identity = "0" * 64
+
+            def claim_vocabulary(self):
+                return {}
+
+            def retired_identifiers(self):
+                return frozenset()
+
+        with pytest.raises(UnparsedContract, match="predecessor"):
+            domain.parse_domain_contract(
+                successor,
+                source="<t>",
+                base=base_contract,
+                predecessor=Impostor(),  # type: ignore[arg-type]
+            )
+
+
+class TestTheOrdinaryRouteToAnUnparsedArtifact:
+    """``_parsed`` and ``_compiled`` are the parsers' own routes, not internal by convention.
+
+    **What a token achieves here is less than the TypeScript brand achieves
+    there, and the difference is a language's and not a design's.** A private
+    field cannot be installed from outside its class body in JavaScript — the
+    forgery is impossible. Python has no module privacy, and
+    ``object.__new__`` plus ``object.__setattr__`` reproduces any of these
+    methods in two lines. So these tests do not assert that provenance is
+    unforgeable here; they assert that reaching an unparsed artifact requires
+    reaching for the audit surface §6.3's third row already names, rather than
+    calling a method that merely looked internal.
+    """
+
+    def test_a_base_contract_cannot_be_minted_without_the_parser_token(self):
+        with pytest.raises(UnparsedContract, match="mint token"):
+            base.BaseContract._parsed(
+                object(),
+                name="science",
+                version=1,
+                claim_grammar=base.ClaimGrammar(1, ("generic",), ("positive",), "inapt", ("causal",)),
+                content_identity="0" * 64,
+            )
+
+    def test_a_domain_contract_cannot_be_minted_without_the_parser_token(self):
+        with pytest.raises(UnparsedContract, match="mint token"):
+            domain.DomainContract._parsed(
+                object(),
+                namespace="forged",
+                version=1,
+                predecessor=None,
+                sorts={},
+                dimensions={},
+                operators={},
+                content_identity="0" * 64,
+                base_identity="0" * 64,
+            )
+
+    def test_a_profile_cannot_be_minted_without_the_compiler_token(self):
+        with pytest.raises(ProfileError, match="mint token"):
+            ProfileSpec._compiled(object(), claim_grammar=None, operators={}, dimensions={}, sorts={})
+
+    def test_the_raw_write_remains_and_is_the_audit_surface(self, base_contract):
+        # Recorded rather than asserted away. This is §6.3's third row — the
+        # boundary bypassed, not defeated — and it is the reason the tokens above
+        # are described as removing an ordinary route rather than closing a hole.
+        forged = object.__new__(base.BaseContract)
+        object.__setattr__(forged, "content_identity", "0" * 64)
+        assert isinstance(forged, base.BaseContract)
+
+
+class TestTheClaimConstructorAuthenticatesItsProfile:
+    """The Python twin of a hole reported against TypeScript and fixed there only.
+
+    `ProfileSpec` is sealed and refuses to be authored, so this is not about a
+    second `ProfileSpec` — it is about a **duck**. Every check a claim passes is
+    read out of the profile object, so an impostor exposing `operator`,
+    `claim_grammar` and `authorable_dimensions` types a claim against
+    declarations of its own choosing, and the `Claim` that results is entirely
+    genuine.
+    """
+
+    class Impostor:
+        claim_grammar = base.ClaimGrammar(1, ("generic",), ("yes",), "no", ("made-up",))
+        dimensions: ClassVar[dict] = {}
+
+        def authorable_dimensions(self, term):
+            return ()
+
+        def operator(self, term):
+            from science.profile import CompiledOperator
+
+            return CompiledOperator(
+                term="forged/op",
+                arity=1,
+                arg_sorts=("forged/sort",),
+                sign_apt=True,
+                layers=("made-up",),
+                dimensions=(),
+                retired=False,
+                contract="forged",
+            )
+
+    def test_build_claim_refuses_an_impostor(self):
+        with pytest.raises(ProfileError, match="compile_profile"):
+            build_claim(
+                self.Impostor(),  # type: ignore[arg-type]
+                operator="forged/op",
+                args=(Referent(sort="forged/sort", term="X:1"),),
+                layer="made-up",
+                polarity="yes",
+            )
+
+    def test_the_decode_route_refuses_it_too(self):
+        # `Claim._checked` is the other entry point, and decode will call it
+        # directly. A check on one of two entry points is a check on neither.
+        from science.claim import Claim
+
+        with pytest.raises(ProfileError, match="compile_profile"):
+            Claim._checked(
+                self.Impostor(),  # type: ignore[arg-type]
+                operator="forged/op",
+                args=(Referent(sort="forged/sort", term="X:1"),),
+                qualifiers={},
+                polarity="yes",
+                layer="made-up",
+            )
