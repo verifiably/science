@@ -84,6 +84,21 @@ class DuplicateContribution(ProfileError):
     resolved last-writer-wins."""
 
 
+class SubclassRefused(ScienceError):
+    """A subclass of a type that must stay closed.
+
+    Opacity is worth exactly what `isinstance` is worth. A subclass can expose a
+    raw constructor and mint an unchecked object that still satisfies
+    `isinstance(x, Claim)` — at which point every downstream reader that trusts a
+    `Claim` unconditionally is wrong, and M13's guarantee is gone without a line
+    of it having been edited. `ProfileSpec` makes the same claim and needs the
+    same seal; so do the value types a `Claim` holds, whose own field invariants
+    are what make its contents identifiers.
+
+    Not a `ClaimError` or a `ProfileError`: nothing is wrong with any claim or
+    any profile. What is wrong is the code that was written."""
+
+
 class WithdrawnFromAuthoring(ScienceError):
     """A retired identifier reached the **authoring** boundary — an operator, one
     of its argument sorts, a selected dimension, or that dimension's restriction
@@ -98,11 +113,12 @@ class WithdrawnFromAuthoring(ScienceError):
 
 
 class ClaimError(ScienceError):
-    """A claim the profile does not admit.
+    """A claim, or a part of one, that is not admissible.
 
-    Raised by the validated constructor. The subclasses stay distinct because M11
-    decodes each ill-formed input *in turn* and asserts a refusal each time; a
-    single `ClaimError` would let one check silently cover for another's absence.
+    Raised by the validated constructor and by the value types it admits. The
+    subclasses stay distinct because M11 decodes each ill-formed input *in turn*
+    and asserts a refusal each time; a single `ClaimError` would let one check
+    silently cover for another's absence.
     """
 
 
@@ -112,6 +128,23 @@ class UntypedReferent(ClaimError):
     §6.2 types a slot as `Referent(ArgSort(op, i))`, so the sort must travel with
     the value. A string carries no sort, which means nothing about it can be
     checked against the slot it was put in (M4)."""
+
+
+class MalformedReferent(ClaimError):
+    """A `Referent` whose sort or term is not an identifier.
+
+    `term` is the one position in a claim that **nothing downstream checks**:
+    the operator, the layer, the dimensions and the sorts are all matched against
+    the profile's own tables, so a non-identifier there refuses on its own, but a
+    referent's term is only checked for *membership* — and that is deferred to
+    decode, against a snapshot. Without this check a `Claim` could be minted
+    holding an integer where an identifier belongs."""
+
+
+class UntypedQualifier(ClaimError):
+    """A qualifier entry that is not a `Qualifier`. Structural typing is not
+    enough here: an arbitrary object exposing `quantifier` and `restriction`
+    would be stored inside a `Claim` and trusted as one."""
 
 
 class ArityMismatch(ClaimError):

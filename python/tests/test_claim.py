@@ -25,11 +25,14 @@ from science.errors import (
     ArityMismatch,
     ClaimError,
     InadmissibleLayer,
+    MalformedReferent,
     PolarityRefused,
     ProfileError,
     RestrictionSortMismatch,
+    SubclassRefused,
     UndeclaredDimension,
     UnknownQuantifier,
+    UntypedQualifier,
     UntypedReferent,
     WithdrawnFromAuthoring,
 )
@@ -143,6 +146,70 @@ class TestTheOnlyRouteIsTheValidatedConstructor:
         )
         authored["testing/setting"] = Qualifier("generic", gene)
         assert set(claim.qualifiers) == {"testing/population"}
+
+
+class TestTheValueTypesOwnTheirInvariants:
+    """What `isinstance` has to be worth for the opacity above to mean anything.
+
+    Each gap here produces a **trusted** `Claim` — one that came through the
+    boundary — holding something that is not a claim's content. Refusing at the
+    boundary is not enough if the values it admits can be malformed or faked.
+    """
+
+    @pytest.mark.parametrize("term", [123, None, b"EX:gene-x", "", ("EX:gene-x",)])
+    def test_a_referent_term_must_be_an_identifier(self, term):
+        # §6.5: every position in the projection is an identifier. `term` is the
+        # only one nothing downstream checks — membership is decode's, against a
+        # snapshot — so an unchecked non-string reaches a minted claim.
+        with pytest.raises(MalformedReferent):
+            Referent(sort="testing/entity", term=term)
+
+    @pytest.mark.parametrize("sort", [123, None, ""])
+    def test_a_referent_sort_must_be_an_identifier(self, sort):
+        with pytest.raises(MalformedReferent):
+            Referent(sort=sort, term="EX:gene-x")
+
+    def test_a_qualifier_restriction_must_be_a_referent(self):
+        with pytest.raises(UntypedReferent):
+            Qualifier("generic", "EX:adults")  # type: ignore[arg-type]
+
+    def test_a_qualifier_impostor_is_refused(self, profile, gene, outcome, adults):
+        # Structural typing would admit this: it has both attributes, and both
+        # hold the right types. It is refused because it is not a `Qualifier`.
+        @dataclasses.dataclass(frozen=True)
+        class Impostor:
+            quantifier: str
+            restriction: Referent
+
+        with pytest.raises(UntypedQualifier):
+            build_claim(
+                profile,
+                operator=AFFECTS,
+                args=(gene, outcome),
+                qualifiers={"testing/population": Impostor("generic", adults)},  # type: ignore[dict-item]
+                polarity="positive",
+                layer="causal",
+            )
+
+    @pytest.mark.parametrize("closed", [Claim, Referent, Qualifier])
+    def test_the_claim_types_cannot_be_subclassed(self, closed):
+        # A subclass could expose a raw constructor and mint an unchecked object
+        # that still satisfies isinstance(x, Claim) — at which point every reader
+        # trusting a Claim unconditionally is wrong, with nothing here edited.
+        with pytest.raises(SubclassRefused):
+
+            class Rogue(closed):
+                pass
+
+    def test_a_subclass_cannot_be_smuggled_in_through_a_value(self, profile, outcome):
+        # The transitive case: `Claim`'s contents are identifiers only because
+        # `Referent` says so, so sealing `Claim` alone would leave the invariant
+        # reachable one level down.
+        with pytest.raises(SubclassRefused):
+
+            class LaxReferent(Referent):
+                def __post_init__(self) -> None:
+                    return None
 
 
 class TestTheCheckIsAgainstTheProfile:

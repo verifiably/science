@@ -1282,6 +1282,30 @@ that survives is the one worth having — the check occurs at exactly one place
 and downstream code never re-validates — and claiming more would put a
 type-system property in a design that cannot deliver it.
 
+> **What *"opaque"* has to mean, concretely — settled 2026-08-06, while building
+> it.** *"No public field-wise constructor"* is necessary and is not sufficient.
+> A validated constructor is worth exactly what `isinstance` is worth, and three
+> further things were each independently enough to put an unchecked object
+> downstream of the boundary while still satisfying `isinstance(x, Claim)`:
+>
+> | hole | what it admits |
+> |---|---|
+> | the type is **subclassable** | a subclass defines its own `__init__`, mints anything, and every reader that trusts a `Claim` unconditionally is wrong — with no line of the checked type edited |
+> | the **value types** the claim holds check nothing | a referent whose `term` is an integer reaches a minted claim, because `term` is the one position in `π_claim` that **nothing downstream checks**: membership is decode's, against a snapshot |
+> | qualifiers are **structurally** typed | any object exposing the right two attributes is stored inside a claim and trusted as one |
+>
+> So the requirement is: seal the type against subclassing **and** every value
+> type it holds — a value type's own invariant is what makes the claim's contents
+> identifiers, so sealing only the claim leaves it reachable one level down — and
+> check by type, not by shape. Static `final` states the rule for a checker and
+> enforces nothing at run time, which is the wrong half: the code that would
+> subclass is exactly the code not being type checked.
+>
+> What remains reachable is `object.__new__` and direct attribute writes, which
+> is the same act as the hand-edited file in the third row of the table below —
+> the boundary was bypassed, not defeated — and it belongs to the audit surface
+> for the same reason.
+
 **But the model is not the only thing that produces claims.** Serialized YAML,
 imported records, a restored corpus and a raw write can all *express* a
 combination the type cannot hold. Unconstructibility eliminates the internal

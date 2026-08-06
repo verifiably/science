@@ -13,7 +13,13 @@ import yaml
 
 import science.profile as profile_module
 from science.contract import base, domain
-from science.errors import DuplicateContribution, ProfileError, SuccessionViolation, WithdrawnFromAuthoring
+from science.errors import (
+    DuplicateContribution,
+    ProfileError,
+    SubclassRefused,
+    SuccessionViolation,
+    WithdrawnFromAuthoring,
+)
 from science.profile import ProfileSpec, compile_profile
 
 
@@ -299,6 +305,15 @@ class TestTheProfileIsCompiledNeverAuthored:
     def test_activated_contracts_is_read_only(self, base_contract, testing):
         with pytest.raises(TypeError):
             compile_profile(base_contract, [testing]).activated_contracts["forged"] = "f" * 64
+
+    def test_the_profile_cannot_be_subclassed(self):
+        # Same rule as `Claim`'s, for the same reason: a subclass could expose a
+        # field-wise constructor and mint a spec whose `compiled_identity`
+        # describes something else, while still passing isinstance().
+        with pytest.raises(SubclassRefused):
+
+            class Rogue(ProfileSpec):
+                pass
 
     def test_the_fields_are_frozen(self, base_contract, testing):
         profile = compile_profile(base_contract, [testing])

@@ -38,24 +38,30 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
+from typing import final
 
 from science.errors import (
     ArgumentSortMismatch,
     ArityMismatch,
     ClaimError,
     InadmissibleLayer,
+    MalformedReferent,
     PolarityRefused,
     RestrictionSortMismatch,
     UndeclaredDimension,
     UnknownQuantifier,
+    UntypedQualifier,
     UntypedReferent,
     WithdrawnFromAuthoring,
 )
 from science.profile import ProfileSpec
+from science.sealed import sealed
 
 __all__ = ["Claim", "Qualifier", "Referent", "build_claim"]
 
 
+@sealed
+@final
 @dataclass(frozen=True)
 class Referent:
     """A bound referent: a term identifier **together with the sort it came from**.
@@ -66,10 +72,15 @@ class Referent:
     value: a bare string cannot occupy a slot at all (M4), because a string
     carries no sort and so there is nothing to compare against the slot.
 
-    Freely constructible, and deliberately so. The opacity M13 requires is
-    `Claim`'s, and it is `Claim` that a downstream reader must be able to trust
-    unconditionally; a `Referent` is an ordinary typed value that is only ever
-    *admitted* by a check, never trusted on its own.
+    Freely constructible: the opacity M13 requires is `Claim`'s, and a `Referent`
+    is an ordinary typed value that a check *admits* rather than trusts. But it
+    owns its own field invariant, because **`term` is the one position in a claim
+    that nothing downstream checks**. The operator, the layer, the dimensions and
+    the sorts are all matched against the profile's tables, so a non-identifier
+    in any of them refuses on its own; a referent's term is checked only for
+    *membership*, and that is deferred to decode against a snapshot. Without the
+    check below, a `Claim` could be minted holding an integer where an identifier
+    belongs — trusted, because it came through the boundary.
     """
 
     sort: str
@@ -78,7 +89,13 @@ class Referent:
     term: str
     """The referent's term identifier within that sort's bound vocabulary."""
 
+    def __post_init__(self) -> None:
+        _require_referent_identifier(self.sort, "a referent's sort")
+        _require_referent_identifier(self.term, "a referent's term")
 
+
+@sealed
+@final
 @dataclass(frozen=True)
 class Qualifier:
     """One entry of the flat fragment: `d ↦ ⟨quantifier, restriction⟩` (§6.4).
@@ -92,10 +109,17 @@ class Qualifier:
     quantifier: str
     restriction: Referent
 
+    def __post_init__(self) -> None:
+        # The quantifier is *not* checked here: it is matched against the
+        # kernel's closed set at construction, so a bad one already refuses.
+        _require_referent(self.restriction, "a qualifier's restriction")
+
 
 _NO_QUALIFIERS: Mapping[str, Qualifier] = MappingProxyType({})
 
 
+@sealed
+@final
 @dataclass(frozen=True, init=False)
 class Claim:
     """**Opaque, and reachable only through a validated construction.**
@@ -104,6 +128,13 @@ class Claim:
     That is M13's whole content, and it is what makes the check happen once: a
     `Claim` in hand has already been typed against a profile, so no downstream
     code needs a defensive re-check, and none should have one.
+
+    The guarantee is worth exactly what `isinstance` is worth, which is why the
+    type is sealed and why the value types it holds are sealed and check their
+    own fields (§6.3). `object.__new__` and direct attribute writes still reach
+    past all of it — that is the same act as a hand-edited file on disk, the
+    third row of §6.3's table, and it produces an audit finding rather than a
+    refusal.
     """
 
     operator: str
@@ -174,6 +205,12 @@ class Claim:
 
         permitted = set(declaration.dimensions)
         for dimension, qualifier in qualifiers.items():
+            if not isinstance(qualifier, Qualifier):
+                raise UntypedQualifier(
+                    f"the qualifier on {dimension!r} is {type(qualifier).__name__}, not a Qualifier. "
+                    "Structural typing is not enough: any object exposing `quantifier` and "
+                    "`restriction` would otherwise be stored inside a Claim and trusted as one."
+                )
             if dimension not in permitted:
                 raise UndeclaredDimension(
                     f"{operator!r} does not permit dimension {dimension!r}; it permits "
@@ -184,7 +221,9 @@ class Claim:
                     f"quantifier {qualifier.quantifier!r} on {dimension!r} is outside the kernel's closed "
                     f"set {list(profile.claim_grammar.quantifiers)} (§6.4)."
                 )
-            _require_referent(qualifier.restriction, f"the restriction on {dimension!r}")
+            # The restriction needs no type check here: `Qualifier` owns that
+            # invariant, and it is sealed, so there is no `Qualifier` whose
+            # restriction is anything else.
             restriction_sort = profile.dimensions[dimension].restriction_sort
             if qualifier.restriction.sort != restriction_sort:
                 raise RestrictionSortMismatch(
@@ -263,4 +302,18 @@ def _require_referent(value: object, where: str) -> None:
         raise UntypedReferent(
             f"{where} holds {type(value).__name__}, not a Referent. A slot is typed Referent(s) (§6.2), "
             "and a bare term carries no sort to check against the one declared."
+        )
+
+
+def _require_referent_identifier(value: object, where: str) -> None:
+    """Every position in the projection is an identifier (§6.5).
+
+    A referent's two fields are the only ones a claim carries that are not
+    matched against a table somewhere, so this is where that sentence has to be
+    made true rather than assumed.
+    """
+    if not isinstance(value, str) or not value:
+        raise MalformedReferent(
+            f"{where} is {value!r}, not a term identifier. Every position in π_claim is an identifier "
+            "(§6.5), and a referent's fields are the only ones no downstream check would catch."
         )

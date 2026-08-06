@@ -33,11 +33,13 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
+from typing import final
 
 from science.contract.base import BaseContract, ClaimGrammar
 from science.contract.domain import DomainContract, OperatorDecl, VocabularyBinding
 from science.errors import DuplicateContribution, ProfileError, WithdrawnFromAuthoring
 from science.identity import v1
+from science.sealed import sealed
 
 __all__ = ["CompiledDimension", "CompiledOperator", "CompiledSort", "ProfileSpec", "compile_profile"]
 
@@ -96,6 +98,8 @@ class CompiledOperator:
         }
 
 
+@sealed
+@final
 @dataclass(frozen=True, init=False)
 class ProfileSpec:
     """**Compiled, never authored.**
