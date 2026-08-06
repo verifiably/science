@@ -68,7 +68,7 @@ class TestNoSecondAuthoredOperatorArtifact:
             "elsewhere/subtype-of",
         }
         for decl in profile.operators.values():
-            assert decl.contract in profile.contract_identities
+            assert decl.contract in profile.activated_contracts
 
     def test_compile_profile_is_the_only_exported_route(self):
         builders = [name for name in profile_module.__all__ if name.islower()]
@@ -145,7 +145,7 @@ class TestMergeOrderIsInert:
         reverse = compile_profile(base_contract, [other, testing])
         assert forward.compiled_identity == reverse.compiled_identity
         assert forward.operators == reverse.operators
-        assert forward.contract_identities == reverse.contract_identities
+        assert forward.activated_contracts == reverse.activated_contracts
 
     def test_the_compiler_contributes_no_input(self, base_contract, testing):
         # No build, version or timestamp is an input to the identity.
@@ -259,31 +259,143 @@ class TestRetirementIsAnAuthoringProperty:
         assert "testing/subtype-of" in profile.authorable_operators()
 
 
-class TestTheProfileIsNotAnIdentityAuthority:
-    """§7.5's sharpest consequence, asserted where it can be checked today.
+class TestTheProfileIsCompiledNeverAuthored:
+    """M7's first clause has a second half the first pass missed.
 
-    The full statement — *"ProfileSpec's identity never appears in π_claim"* — is
-    M8's, and lands with the projection. What is checkable now is the input side:
-    a contract identity is carried for belief and is **not** an input to the
-    compiled identity, so an ontology release cannot reach a claim through it.
+    "No second authored operator artifact" is not only about a roster module. A
+    `ProfileSpec` a caller can build field-wise, or mutate after the fact, *is* an
+    authored profile — and a mutated one carries a `compiled_identity` describing
+    a profile that no longer exists, which is `KIND_DESCRIPTORS`' drift with the
+    two sources inside one object.
     """
 
-    def test_contract_identities_are_carried_for_belief(self, base_contract, testing):
+    def test_the_field_wise_constructor_is_refused(self, base_contract, testing):
+        compiled = compile_profile(base_contract, [testing])
+        with pytest.raises(ProfileError, match="compiled, never authored"):
+            ProfileSpec(
+                claim_grammar=compiled.claim_grammar,
+                operators=dict(compiled.operators),
+                dimensions=dict(compiled.dimensions),
+                sorts=dict(compiled.sorts),
+                base_contract_identity=compiled.base_contract_identity,
+                activated_contracts=dict(compiled.activated_contracts),
+                compiled_identity=compiled.compiled_identity,
+            )
+
+    def test_the_no_argument_constructor_is_refused_too(self):
+        # Otherwise the field-wise route is closed and the empty one is not.
+        with pytest.raises(ProfileError, match="compiled, never authored"):
+            ProfileSpec()
+
+    @pytest.mark.parametrize("section", ["operators", "dimensions", "sorts"])
+    def test_the_mappings_are_read_only(self, base_contract, testing, other, section):
         profile = compile_profile(base_contract, [testing])
-        assert profile.contract_identities["testing"] == testing.content_identity
-        assert profile.contract_identities["science"] == base_contract.content_identity
+        mapping = getattr(profile, section)
+        with pytest.raises(TypeError):
+            mapping["forged"] = next(iter(getattr(compile_profile(base_contract, [other]), section).values()))
+        with pytest.raises(TypeError):
+            del mapping[next(iter(mapping))]
 
-    def test_the_base_contract_is_unconditionally_a_member(self, base_contract):
-        # D §8: membership is unconditional, so no facet-triggered walk may omit
-        # it — not even for a profile with no domains at all.
-        assert compile_profile(base_contract, []).contract_identities == {"science": base_contract.content_identity}
+    def test_activated_contracts_is_read_only(self, base_contract, testing):
+        with pytest.raises(TypeError):
+            compile_profile(base_contract, [testing]).activated_contracts["forged"] = "f" * 64
 
-    def test_the_compiled_identity_is_not_a_contract_identity(self, base_contract, testing):
-        profile = compile_profile(base_contract, [testing])
-        assert profile.compiled_identity not in set(profile.contract_identities.values())
-
-    def test_a_profile_spec_is_frozen(self, base_contract, testing):
+    def test_the_fields_are_frozen(self, base_contract, testing):
         profile = compile_profile(base_contract, [testing])
         with pytest.raises(AttributeError):
             profile.compiled_identity = "forged"  # type: ignore[misc]
-        assert isinstance(profile, ProfileSpec)
+
+
+class TestActivationIsNotConsultation:
+    """D6's conditional arm, guarded at the shape rather than in prose.
+
+    The first pass carried one `contract_identities` mapping with the base
+    contract folded in. Anything computing a digest from its values would have
+    moved a belief because an unrelated domain was switched on — D6's negative
+    arm, committed by the accessor rather than by the walk.
+    """
+
+    def test_the_unconditional_and_the_conditional_are_separate_fields(self, base_contract, testing, other):
+        profile = compile_profile(base_contract, [testing, other])
+        assert profile.base_contract_identity == base_contract.content_identity
+        assert profile.activated_contracts == {
+            "testing": testing.content_identity,
+            "elsewhere": other.content_identity,
+        }
+
+    def test_the_base_contract_is_not_among_the_activated(self, base_contract, testing):
+        # Folding it in is what makes "take every value" look reasonable.
+        profile = compile_profile(base_contract, [testing])
+        assert base_contract.name not in profile.activated_contracts
+        assert profile.base_contract_identity not in set(profile.activated_contracts.values())
+
+    def test_the_base_contract_identity_survives_an_empty_profile(self, base_contract):
+        # D §8: membership is unconditional, so no walk may be able to omit it.
+        profile = compile_profile(base_contract, [])
+        assert profile.base_contract_identity == base_contract.content_identity
+        assert profile.activated_contracts == {}
+
+    def test_no_member_offers_a_consulted_set(self, base_contract, testing):
+        # Belief is outside cut 1. A member named for the consulted set would be
+        # a placeholder that computes the activated one, which is the collapse.
+        profile = compile_profile(base_contract, [testing])
+        assert not [name for name in dir(profile) if "consult" in name.lower()]
+
+    def test_the_compiled_identity_is_not_a_contract_identity(self, base_contract, testing):
+        profile = compile_profile(base_contract, [testing])
+        assert profile.compiled_identity != profile.base_contract_identity
+        assert profile.compiled_identity not in set(profile.activated_contracts.values())
+
+
+class TestRetirementReachesThroughSorts:
+    """§7.3a's authoring boundary, applied to every route into it.
+
+    Checking only the operator's own `retired` flag leaves an operator offered
+    whose slots cannot be filled — the refusal then lands when the author tries
+    to bind a referent, one step past the boundary §7.3a draws.
+    """
+
+    @pytest.fixture()
+    def retire(self, parse, testing_document, base_contract):
+        def _retire(section, name):
+            genesis = parse(testing_document)
+            document = copy.deepcopy(testing_document)
+            document[section][name]["retired"] = True
+            document["lineage"] = {"successor": genesis.content_identity}
+            document["version"] = 2
+            return compile_profile(base_contract, [parse(document, predecessor=genesis)])
+
+        return _retire
+
+    def test_retiring_an_argument_sort_withdraws_the_operator(self, retire):
+        profile = retire("sorts", "outcome")  # affects : entity x outcome
+        assert "testing/affects" not in profile.authorable_operators()
+        assert "testing/subtype-of" in profile.authorable_operators()  # entity x entity
+
+    def test_the_withdrawn_operator_stays_resolvable_for_decode(self, retire):
+        # Historical claims are typed against the frozen declaration; refusing
+        # here would corrupt the history retirement exists to preserve.
+        profile = retire("sorts", "outcome")
+        assert profile.operator("testing/affects").retired is False
+
+    def test_retiring_the_operator_itself_still_withdraws_it(self, retire):
+        assert "testing/affects" not in retire("operators", "affects").authorable_operators()
+
+    def test_retiring_a_permitted_dimension_withdraws_only_that_dimension(self, retire):
+        # §6.2: Dims(op) is the set of dimensions *permitted*, not required, so
+        # the operator remains authorable without it.
+        profile = retire("dimensions", "setting")
+        assert "testing/affects" in profile.authorable_operators()
+        assert profile.authorable_dimensions("testing/affects") == ("testing/population",)
+
+    def test_retiring_a_restriction_sort_withdraws_its_dimension(self, retire):
+        # A restriction is sorted exactly as an argument is, so a retired
+        # restriction sort leaves nothing selectable on that dimension.
+        profile = retire("sorts", "cohort")  # population : restriction_sort cohort
+        assert profile.authorable_dimensions("testing/affects") == ("testing/setting",)
+
+    def test_nothing_is_withdrawn_when_nothing_is_retired(self, base_contract, testing):
+        profile = compile_profile(base_contract, [testing])
+        assert set(profile.authorable_operators()) == {"testing/affects", "testing/subtype-of"}
+        assert profile.authorable_dimensions("testing/affects") == ("testing/population", "testing/setting")
+        assert profile.authorable_dimensions("testing/subtype-of") == ()

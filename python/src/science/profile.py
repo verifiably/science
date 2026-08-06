@@ -32,6 +32,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
+from types import MappingProxyType
 
 from science.contract.base import BaseContract, ClaimGrammar
 from science.contract.domain import DomainContract, OperatorDecl, VocabularyBinding
@@ -95,23 +96,59 @@ class CompiledOperator:
         }
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, init=False)
 class ProfileSpec:
+    """**Compiled, never authored.**
+
+    There is no public field-wise constructor, and the mappings below are read-only
+    views over private copies. Both are the same requirement as M13's for `Claim`,
+    one level up: an authored `ProfileSpec` would be the second per-kind source of
+    truth D §6 retired, and a mutated one would carry a `compiled_identity`
+    describing a profile that no longer exists.
+    """
+
     claim_grammar: ClaimGrammar
     operators: Mapping[str, CompiledOperator]
     dimensions: Mapping[str, CompiledDimension]
     sorts: Mapping[str, CompiledSort]
-    contract_identities: Mapping[str, str]
-    """Namespace → content identity, base contract included.
 
-    D §8 makes the base contract's membership **unconditional**: a derivation
-    reading no base-profile facet at all still consults it, because a base
-    contract can reinterpret a kernel kind or a relation signature. Belief is
-    outside cut 1, so nothing here computes a digest — this is the set such a
-    computation would read, carried so that it is not reconstructed later from a
-    walk that could under-collect (D limitation 2 warns such a walk fails *open*).
+    base_contract_identity: str
+    """Unconditional. D §8: a derivation reading no base-profile facet at all
+    still consults the base contract, because a base contract can reinterpret a
+    kernel kind or a relation signature."""
+
+    activated_contracts: Mapping[str, str]
+    """Namespace → content identity, for the domains **activated** in this
+    profile.
+
+    **Activated is not consulted, and the two must never be conflated.** D6's
+    conditional arm is explicit that an activated-but-unconsulted contract
+    contributes *nothing* to `belief_input_digest`; a computation that took
+    ``activated_contracts.values()`` wholesale would move a belief because an
+    unrelated domain was switched on, which is the exact defect D6's negative arm
+    tests for. This is a **resolution table** — what a claim's identifiers can be
+    resolved against — and the consulted subset is whatever a derivation actually
+    reaches. Nothing here computes it: belief is outside cut 1, and §7.1's
+    amendment widens the walk that would (operator, dimension, sort and
+    vocabulary-binding triggers, not only facet namespaces).
     """
+
     compiled_identity: str
+
+    def __init__(self, *args: object, **kwargs: object) -> None:
+        raise ProfileError(
+            "ProfileSpec is compiled, never authored — use compile_profile(base, domains). "
+            "D §6 closed substrate §12 by retiring the second per-kind source of truth; an "
+            "authored profile would reintroduce it, and one built field-wise could carry a "
+            "compiled_identity that describes a different profile than its own contents."
+        )
+
+    @classmethod
+    def _compiled(cls, **fields: object) -> ProfileSpec:
+        spec = object.__new__(cls)
+        for name, value in fields.items():
+            object.__setattr__(spec, name, value)
+        return spec
 
     def projection(self) -> dict[str, object]:
         """The canonical projection ``compiled_identity`` is taken over.
@@ -137,19 +174,54 @@ class ProfileSpec:
         except KeyError:
             raise ProfileError(
                 f"no operator {term!r} in this profile. Operators are domain-issued (§7.1); "
-                f"activated namespaces are {sorted(self.contract_identities)}."
+                f"activated namespaces are {sorted(self.activated_contracts)}."
             ) from None
 
     def authorable_operators(self) -> tuple[str, ...]:
         """The operators the typed **authoring** constructor may offer.
 
         §7.3a: retirement lives in authoring, not in validation. A retired
-        identifier is still resolvable — decode, import and restore type a
+        identifier is still *resolvable* — decode, import and restore type a
         historical claim against the frozen retired declaration — and refusing it
         at decode would corrupt exactly the history retirement exists to
-        preserve.
+        preserve. So this filter governs authoring only.
+
+        **Retirement reaches an operator through its argument sorts.** Every slot
+        of `Fin(arity(op))` must be filled, so an operator one of whose
+        `arg_sorts` is retired cannot be authored at all: `Referent(s)` for a
+        retired `s` has nothing an author may select. Offering the operator and
+        then refusing every attempt to fill the slot would put the refusal one
+        step too late, at a boundary §7.3a puts squarely in authoring.
+
+        **Permitted dimensions do not reach it.** §6.2 makes `Dims(op)` the set
+        of dimensions *permitted*, not required, so a retired dimension withdraws
+        only itself — see `authorable_dimensions`.
         """
-        return tuple(sorted(term for term, decl in self.operators.items() if not decl.retired))
+        return tuple(sorted(term for term in self.operators if self._operator_is_authorable(term)))
+
+    def _operator_is_authorable(self, term: str) -> bool:
+        operator = self.operators[term]
+        if operator.retired:
+            return False
+        return all(not self.sorts[sort].retired for sort in operator.arg_sorts)
+
+    def authorable_dimensions(self, term: str) -> tuple[str, ...]:
+        """The qualifier dimensions an author may select on ``term``.
+
+        A dimension is withdrawn either by its own retirement or by the
+        retirement of the sort its restrictions bind to: a restriction is sorted
+        exactly as an argument is (§6.2), so a retired restriction sort leaves
+        nothing selectable, and a dimension whose restriction cannot be bound is
+        not a dimension an author can use.
+        """
+        return tuple(
+            sorted(
+                dimension
+                for dimension in self.operator(term).dimensions
+                if not self.dimensions[dimension].retired
+                and not self.sorts[self.dimensions[dimension].restriction_sort].retired
+            )
+        )
 
 
 def compile_profile(base: BaseContract, domains: Iterable[DomainContract]) -> ProfileSpec:
@@ -195,14 +267,18 @@ def compile_profile(base: BaseContract, domains: Iterable[DomainContract]) -> Pr
         for name, operator in contract.operators.items():
             operators[contract.term(name)] = _compile_operator(contract, operator)
 
-    contract_identities = {base.name: base.content_identity, **{ns: c.content_identity for ns, c in seen.items()}}
-
-    return ProfileSpec(
+    return ProfileSpec._compiled(
         claim_grammar=base.claim_grammar,
-        operators=operators,
-        dimensions=dimensions,
-        sorts=sorts,
-        contract_identities=contract_identities,
+        # Wrapped so `compiled_identity` cannot come to describe a profile that
+        # no longer exists. The `dict()` copy is insurance against a later
+        # restructure that wraps something a caller still holds — today these are
+        # compiler locals nobody else can reach, so sabotaging the copy alone
+        # breaks nothing, and no test claims otherwise.
+        operators=MappingProxyType(dict(operators)),
+        dimensions=MappingProxyType(dict(dimensions)),
+        sorts=MappingProxyType(dict(sorts)),
+        base_contract_identity=base.content_identity,
+        activated_contracts=MappingProxyType({ns: c.content_identity for ns, c in seen.items()}),
         compiled_identity=v1.digest(PROFILE_DOMAIN, _projection(base.claim_grammar, operators, dimensions, sorts)),
     )
 

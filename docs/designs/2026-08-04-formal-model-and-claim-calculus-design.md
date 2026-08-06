@@ -1957,11 +1957,30 @@ The enforceable split:
 
 | path | rule |
 |---|---|
-| the typed **authoring** constructor | **cannot select a retired identifier** — it is not offered, on the same US† terms as every other unconstructible combination |
+| the typed **authoring** constructor | **cannot select a retired identifier** — it is not offered, on the same US† terms as every other unconstructible combination. *"Identifier"* is every claim-vocabulary identifier the authoring act reaches, not only the operator's own: see below |
 | **decode / import / restore** | accepts a retired identifier and types the claim against the **frozen retired declaration** |
 
 Retirement therefore lives in authoring, not in validation, which is also the
 only place it can live without a way to distinguish new bytes from old.
+
+> **Which identifiers the authoring rule reaches — settled 2026-08-06, while
+> building it.** Reading *"cannot select a retired identifier"* as the operator's
+> own flag leaves an operator **offered whose slots cannot be filled**, so the
+> refusal lands when the author tries to bind a referent — one step past the
+> boundary this section draws. The rule reaches every identifier the authoring
+> act touches, and §6.2's own typing decides how far:
+>
+> | retired | effect on authoring | why |
+> |---|---|---|
+> | the **operator** | withdrawn | directly |
+> | an **argument sort** | the operator is **withdrawn** | every slot of `Fin(arity(op))` must be filled, and `Referent(s)` for a retired `s` offers nothing to fill it with |
+> | a **permitted dimension** | that dimension alone is withdrawn; the operator remains authorable | `Dims(op)` is the set of dimensions **permitted**, not required |
+> | a dimension's **restriction sort** | that dimension is withdrawn | a restriction is sorted exactly as an argument is, so nothing remains selectable on it |
+>
+> **Decode is untouched by all four.** A retired identifier stays fully
+> resolvable, and a historical claim is typed against the frozen retired
+> declaration exactly as this section requires — the asymmetry is the point, and
+> widening the authoring rule must not narrow the decode one.
 
 **That requires tombstones.** Typing a historical claim against a retired
 operator means the declaration must still be readable, so a successor contract

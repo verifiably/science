@@ -310,6 +310,28 @@ active domain contracts ┘   (compiled)     ├─▶  claim schemas   (added 2
 > second authored operator artifact beside the contracts is a separate
 > obligation with its own oracle, the formal model's **M7**.
 
+> **Two consequences made explicit 2026-08-06, while building the compiled
+> path.** Both were implicit in §6 and neither survived a first implementation.
+>
+> **`ProfileSpec` is compiled, never authored — and that has to be enforced, not
+> stated.** A profile a caller can construct field-wise *is* a second authored
+> per-kind source, arriving through the constructor instead of through a file;
+> a profile whose mappings can be mutated after compilation carries a compiled
+> identity describing a profile that no longer exists. Both are
+> `KIND_DESCRIPTORS`' drift with the two sources inside one object. The
+> compiled artifact therefore exposes no public constructor and hands out
+> read-only views.
+>
+> **Activated is not consulted.** D6's conditional arm already says an
+> activated-but-unconsulted contract contributes nothing to
+> `belief_input_digest`, but a compiled profile that carries one undifferentiated
+> map of contract identities invites a consumer to take all of them — which
+> moves a belief because an unrelated domain was switched on, the exact case
+> D6's negative arm tests. The unconditional base identity and the conditional
+> domain bindings are therefore **separate members**, and the map of activated
+> domains is a **resolution table**: what a claim's identifiers may be resolved
+> against, not what any derivation consulted.
+
 The two roles are distinct and should not both be called "authoritative": the
 **contracts are the normative SSOT** — what a reviewer reads, what a version
 names, what an amendment edits — while **`ProfileSpec` is the sole compiled
