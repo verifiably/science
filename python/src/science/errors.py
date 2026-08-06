@@ -73,6 +73,17 @@ class SuccessionViolation(ContractError):
     backup (§7.3a)."""
 
 
+class ProfileError(ScienceError):
+    """A profile could not be compiled."""
+
+
+class DuplicateContribution(ProfileError):
+    """Two contracts contributing to one namespace. D §8's rule for facets, and
+    the same one here: contributions in *different* namespaces compose, and two
+    contributions to one namespaced identifier are refused at compile, never
+    resolved last-writer-wins."""
+
+
 class TagCollision(ContractError):
     """Two kernel tags that must stay distinct and do not — a duplicate inside a
     closed set, or a ``sign_inapt_tag`` that is also an assertable polarity.

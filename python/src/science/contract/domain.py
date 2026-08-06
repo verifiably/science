@@ -112,12 +112,18 @@ class OperatorDecl:
     retired: bool = False
 
     def schema_projection(self) -> dict[str, object]:
+        # `arg_sorts` is positional and `layers`/`dimensions` are not, and the
+        # difference is §6.2's: `ArgSort(op) : Fin(arity(op)) → Sort` is a
+        # function on slots, while `Dims(op)` and `Layers(op)` are *finite sets*.
+        # Holding a set in the order its author happened to type it would make
+        # reordering one line of YAML a **redefinition**, refused at load — a
+        # false positive at the one place the corpus can least afford one.
         return {
             "arity": self.arity,
             "arg_sorts": list(self.arg_sorts),
             "sign_apt": self.sign_apt,
-            "layers": list(self.layers),
-            "dimensions": list(self.dimensions),
+            "layers": sorted(self.layers),
+            "dimensions": sorted(self.dimensions),
         }
 
 

@@ -1715,6 +1715,20 @@ exactly `arity(op)`, `ArgSort(op)`, `signApt(op)`, `Layers(op)`, `Dims(op)`.
 restated per operator, so two operators sharing `population` cannot disagree
 about what a population restriction is bound to.
 
+> **Consequence made explicit 2026-08-06, while implementing §8.3's succession
+> check.** §6.2 types `Dims(op)` and `Layers(op)` as **finite sets** and
+> `ArgSort(op)` as a function on `Fin(arity(op))`. A canonical schema projection
+> must therefore treat them differently: `arg_sorts` is **ordered**, while
+> `layers` and `dimensions` are **sorted** into a canonical set representation.
+>
+> This is not cosmetic, and the first implementation had it wrong. Holding a
+> declared *set* in the order its author happened to type it makes reordering one
+> line of YAML compare as a **different canonical schema projection** — so §8.3
+> refuses it as a redefinition, on a change that changed nothing, at the one
+> place in the corpus that can least afford a false positive. The converse holds
+> and is why the two cannot be canonicalized alike: swapping `arg_sorts` says
+> something genuinely different about the world, and must be refused.
+
 The **layer set is base-owned but per-operator restricted** — `layers: [causal]`
 selects from the base vocabulary and may not extend it. A domain that could mint
 a layer would be redefining what kind of thing a claim is, which is the boundary
