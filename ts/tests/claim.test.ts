@@ -164,7 +164,7 @@ describe("the profile-dependent checks refuse distinctly", () => {
     const claim = affects({ qualifiers, polarity: "negative" });
     expect(claim.operator).toBe(AFFECTS);
     expect(claim.polarity).toBe("negative");
-    expect(claim.qualifiers.get(POPULATION)?.restriction.term).toBe("EX:adults");
+    expect(claim.qualifiers[POPULATION].restriction.term).toBe("EX:adults");
   });
 });
 

@@ -52,6 +52,17 @@ export class LoneSurrogate extends IdentityError {}
 /** A digest domain that is not a well-formed, versioned domain name. */
 export class MalformedDomain extends IdentityError {}
 
+/**
+ * A subclass of a type that must stay closed.
+ *
+ * The Python side's `sealed` in this language's spelling — and here it closes
+ * only half the hole. A subclass cannot be *constructed* through `super`, but it
+ * can still be *declared*, and `Object.create(Subclass.prototype)` never calls a
+ * constructor at all. The private-field brand on each type is what closes the
+ * other half; see `brand.ts`.
+ */
+export class SubclassRefused extends ScienceError {}
+
 export class ContractError extends ScienceError {}
 
 /** A contract that is structurally wrong — an unknown field, a missing one, a value of the wrong shape. */

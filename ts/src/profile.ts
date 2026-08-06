@@ -10,10 +10,17 @@
  * encoding and no parity obligation reaches it. Computing one here would be a
  * second implementation of something no row requires, and two implementations of
  * an identity nobody compares is how the identity drifts.
+ *
+ * **It is a branded class, not an interface.** A structurally typed profile can
+ * be hand-authored, and a claim typed against a hand-authored profile is typed
+ * against nothing: every operator, sort, layer and dimension in it was invented
+ * by whoever wrote the object, and the contracts — the normative SSOT — were
+ * never opened. The private field below is installed only by `compileProfile`,
+ * so "this came from the contracts" is a runtime fact rather than a shape.
  */
 
 import type { BaseContract, ClaimGrammar, DomainContract } from "./contract.js";
-import { ProfileError } from "./errors.js";
+import { ProfileError, SubclassRefused } from "./errors.js";
 
 export interface CompiledOperator {
   readonly term: string;
@@ -29,11 +36,44 @@ export interface CompiledDimension {
   readonly restrictionSort: string;
 }
 
-export interface ProfileSpec {
+const MINT = Symbol("science.profile.mint");
+
+export class ProfileSpec {
+  #minted = true;
   readonly claimGrammar: ClaimGrammar;
   readonly operators: ReadonlyMap<string, CompiledOperator>;
   readonly dimensions: ReadonlyMap<string, CompiledDimension>;
   readonly sorts: ReadonlySet<string>;
+
+  constructor(
+    token: symbol,
+    parts: {
+      claimGrammar: ClaimGrammar;
+      operators: ReadonlyMap<string, CompiledOperator>;
+      dimensions: ReadonlyMap<string, CompiledDimension>;
+      sorts: ReadonlySet<string>;
+    },
+  ) {
+    if (new.target !== ProfileSpec) {
+      throw new SubclassRefused("ProfileSpec is sealed: a subclass could stand in for a compiled profile");
+    }
+    if (token !== MINT) {
+      throw new ProfileError(
+        "ProfileSpec is compiled, never authored — use compileProfile(base, domains). D §6 retired the " +
+          "second per-kind source of truth; an authored profile would reintroduce it through the constructor.",
+      );
+    }
+    this.claimGrammar = parts.claimGrammar;
+    this.operators = parts.operators;
+    this.dimensions = parts.dimensions;
+    this.sorts = parts.sorts;
+    Object.freeze(this);
+  }
+
+  /** The brand check: did this profile come from `compileProfile`, or merely look like it had? */
+  static is(value: unknown): value is ProfileSpec {
+    return typeof value === "object" && value !== null && #minted in value;
+  }
 }
 
 function term(namespace: string, name: string): string {
@@ -72,7 +112,7 @@ export function compileProfile(base: BaseContract, domains: readonly DomainContr
     }
   }
 
-  return { claimGrammar: base.claimGrammar, operators, dimensions, sorts };
+  return new ProfileSpec(MINT, { claimGrammar: base.claimGrammar, operators, dimensions, sorts });
 }
 
 /**

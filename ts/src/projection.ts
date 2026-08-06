@@ -20,7 +20,8 @@
  * `π_claim`, which is M8's named sabotage.
  */
 
-import type { Claim } from "./claim.js";
+import { Claim } from "./claim.js";
+import { ClaimError } from "./errors.js";
 import { digest } from "./identity/v1.js";
 
 /**
@@ -39,8 +40,14 @@ export interface ClaimProjection {
 }
 
 export function projectClaim(claim: Claim): ClaimProjection {
+  if (!Claim.is(claim)) {
+    // The brand, not `instanceof`: an object given `Claim.prototype` satisfies
+    // the latter without a constructor ever having run on it, and would arrive
+    // here holding whatever its author put in it (see `brand.ts`).
+    throw new ClaimError("projectClaim takes a Claim built by buildClaim; this value never went through it");
+  }
   const qualifiers: Record<string, { quantifier: string; restriction: string }> = {};
-  for (const [dimension, qualifier] of claim.qualifiers) {
+  for (const [dimension, qualifier] of Object.entries(claim.qualifiers)) {
     qualifiers[dimension] = { quantifier: qualifier.quantifier, restriction: qualifier.restriction.term };
   }
   return {

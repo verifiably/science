@@ -3,15 +3,19 @@
  *
  * M13's requirement is that a `Claim` is opaque and reachable only through a
  * validated construction, so that the profile-dependent checks happen **once**
- * and no downstream reader re-validates. That requirement is not Python's; it is
- * the claim's. A TypeScript path that accepted an object literal shaped like a
- * claim, or cast the fixture's components straight to `Claim`, would exercise
- * the encoding and skip the constructor — and the parity run would then be
- * comparing two different four-stage paths, one of them three stages long.
+ * and no downstream reader re-validates. That requirement is the claim's, not
+ * Python's. A TypeScript path that accepted an object shaped like a claim would
+ * exercise the encoding and skip the constructor, and the parity run would then
+ * compare a four-stage path against a three-stage one.
  *
- * `private constructor` states the rule to the compiler and enforces nothing at
- * run time, which is the wrong half for the same reason `typing.final` was on
- * the Python side. The mint token below is the enforcement.
+ * Three things make "opaque" true here, and none of them is `instanceof` — see
+ * `brand.ts` for why that was never a check:
+ *
+ * * a **private-field brand** on each type, installed only by its constructor;
+ * * a **mint token** on `Claim`, so the constructor is unreachable from outside;
+ * * **genuinely immutable storage** — `readonly` and `ReadonlyMap` are erased at
+ *   run time, so the qualifiers are held in a frozen null-prototype record and
+ *   the arguments in a frozen array.
  */
 
 import {
@@ -21,13 +25,15 @@ import {
   InadmissibleLayer,
   MalformedReferent,
   PolarityRefused,
+  ProfileError,
   RestrictionSortMismatch,
+  SubclassRefused,
   UndeclaredDimension,
   UnknownQuantifier,
   UntypedQualifier,
   UntypedReferent,
 } from "./errors.js";
-import { type ProfileSpec, resolveOperator } from "./profile.js";
+import { ProfileSpec, resolveOperator } from "./profile.js";
 
 const MINT = Symbol("science.claim.mint");
 
@@ -37,33 +43,54 @@ const MINT = Symbol("science.claim.mint");
  * `term` is the one position in a claim that nothing downstream checks — every
  * other identifier is matched against the profile's tables, and a referent's
  * term is checked only for membership, which is decode's against a snapshot. So
- * the field invariant lives here.
+ * the field invariant lives here, and the brand is what makes it worth anything.
  */
 export class Referent {
+  #minted = true;
   readonly sort: string;
   readonly term: string;
 
   constructor(sort: string, term: string) {
+    if (new.target !== Referent) {
+      throw new SubclassRefused(
+        "Referent is sealed: a subclass could mint an unchecked value that still passes for one",
+      );
+    }
     requireIdentifier(sort, "a referent's sort");
     requireIdentifier(term, "a referent's term");
     this.sort = sort;
     this.term = term;
     Object.freeze(this);
   }
+
+  /** The brand check. `instanceof` answers a question about prototypes, not about construction. */
+  static is(value: unknown): value is Referent {
+    return typeof value === "object" && value !== null && #minted in value;
+  }
 }
 
 /** One entry of the flat fragment: `d ↦ ⟨quantifier, restriction⟩` (§6.4). */
 export class Qualifier {
+  #minted = true;
   readonly quantifier: string;
   readonly restriction: Referent;
 
   constructor(quantifier: string, restriction: Referent) {
-    if (!(restriction instanceof Referent)) {
+    if (new.target !== Qualifier) {
+      throw new SubclassRefused(
+        "Qualifier is sealed: a subclass could mint an unchecked value that still passes for one",
+      );
+    }
+    if (!Referent.is(restriction)) {
       throw new UntypedReferent("a qualifier's restriction is not a Referent; a bare term carries no sort to check");
     }
     this.quantifier = quantifier;
     this.restriction = restriction;
     Object.freeze(this);
+  }
+
+  static is(value: unknown): value is Qualifier {
+    return typeof value === "object" && value !== null && #minted in value;
   }
 }
 
@@ -76,15 +103,22 @@ export interface ClaimParts {
   readonly layer: string;
 }
 
+/** Dimension term identifier → qualifier. Frozen, with a null prototype so no inherited key can appear. */
+export type QualifierRecord = Readonly<Record<string, Qualifier>>;
+
 export class Claim {
+  #minted = true;
   readonly operator: string;
   readonly args: readonly Referent[];
-  readonly qualifiers: ReadonlyMap<string, Qualifier>;
+  readonly qualifiers: QualifierRecord;
   /** Always a tag, and the base contract's `sign_inapt_tag` where the operator has no sign (§7.5). */
   readonly polarity: string;
   readonly layer: string;
 
   constructor(token: symbol, parts: ClaimParts & { polarity: string }) {
+    if (new.target !== Claim) {
+      throw new SubclassRefused("Claim is sealed: a subclass could mint an unchecked claim that still passes for one");
+    }
     if (token !== MINT) {
       throw new ClaimError(
         "Claim is validated at construction — use buildClaim(profile, parts). A field-wise constructor " +
@@ -94,10 +128,20 @@ export class Claim {
     }
     this.operator = parts.operator;
     this.args = Object.freeze([...parts.args]);
-    this.qualifiers = new Map(parts.qualifiers);
+    // A `ReadonlyMap` is a compile-time fiction: the value is an ordinary `Map`,
+    // and `Object.freeze` does not reach its entries — so a caller holding the
+    // claim could delete a qualifier and move the claim's own identity. A frozen
+    // record cannot be added to, deleted from, or reassigned at run time.
+    const qualifiers: Record<string, Qualifier> = Object.create(null);
+    for (const [dimension, qualifier] of parts.qualifiers) qualifiers[dimension] = qualifier;
+    this.qualifiers = Object.freeze(qualifiers);
     this.polarity = parts.polarity;
     this.layer = parts.layer;
     Object.freeze(this);
+  }
+
+  static is(value: unknown): value is Claim {
+    return typeof value === "object" && value !== null && #minted in value;
   }
 }
 
@@ -113,11 +157,23 @@ function requireIdentifier(value: unknown, where: string): void {
  * The validated constructor. Every check here is profile-dependent, and each one
  * refuses distinctly — M11 decodes each ill-formed input in turn.
  *
- * Retirement is **not** among them: §7.3a puts it in authoring, and this
+ * The **profile is checked first, and by brand**. `ProfileSpec` was structurally
+ * typed, so a hand-authored object could stand in for one — and a claim typed
+ * against a forged profile is typed against nothing, with every operator, layer
+ * and sort in it invented by whoever wrote the object. The contracts are the
+ * normative SSOT (D §6); a profile that did not come from them is not a profile.
+ *
+ * Retirement is not among the checks: §7.3a puts it in authoring, and this
  * implementation refuses a contract carrying a retired declaration outright
  * rather than half-enforcing an authoring boundary it does not own.
  */
 export function buildClaim(profile: ProfileSpec, parts: ClaimParts): Claim {
+  if (!ProfileSpec.is(profile)) {
+    throw new ProfileError(
+      "the profile was not compiled from contracts — use compileProfile(base, domains). A structurally " +
+        "similar object would type a claim against declarations nobody authored.",
+    );
+  }
   const declaration = resolveOperator(profile, parts.operator);
 
   if (parts.args.length !== declaration.arity) {
@@ -126,7 +182,7 @@ export function buildClaim(profile: ProfileSpec, parts: ClaimParts): Claim {
     );
   }
   parts.args.forEach((referent, index) => {
-    if (!(referent instanceof Referent)) {
+    if (!Referent.is(referent)) {
       throw new UntypedReferent(
         `slot ${index} of ${parts.operator} does not hold a Referent. A slot is typed Referent(s) (§6.2), and a bare term carries no sort to check against the one declared.`,
       );
@@ -140,7 +196,7 @@ export function buildClaim(profile: ProfileSpec, parts: ClaimParts): Claim {
 
   const permitted = new Set(declaration.dimensions);
   for (const [dimension, qualifier] of parts.qualifiers) {
-    if (!(qualifier instanceof Qualifier)) {
+    if (!Qualifier.is(qualifier)) {
       throw new UntypedQualifier(
         `the qualifier on ${dimension} is not a Qualifier. Structural typing is not enough: any object exposing \`quantifier\` and \`restriction\` would otherwise be stored inside a Claim and trusted as one.`,
       );

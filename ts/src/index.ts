@@ -18,5 +18,5 @@ export {
 } from "./contract.js";
 export * from "./errors.js";
 export { checkDomain, compareByCodePoint, Decimal, digest, encode, type IdentityValue } from "./identity/v1.js";
-export { type CompiledOperator, compileProfile, type ProfileSpec, resolveOperator } from "./profile.js";
+export { type CompiledOperator, compileProfile, ProfileSpec, resolveOperator } from "./profile.js";
 export { CLAIM_DOMAIN, type ClaimProjection, claimIdentity, projectClaim } from "./projection.js";

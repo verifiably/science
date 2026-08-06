@@ -1308,6 +1308,43 @@ type-system property in a design that cannot deliver it.
 > is the same act as the hand-edited file in the third row of the table below —
 > the boundary was bypassed, not defeated — and it belongs to the audit surface
 > for the same reason.
+>
+> **The three holes above are Python's list, and the second implementation had a
+> fourth — recorded 2026-08-06, on building `ts/`.** The rows above are stated in
+> terms of *"the type is subclassable"* and *"the value types check nothing"*,
+> which is the right shape, but their remedy is not portable: it assumes that a
+> value satisfying a type check went through that type's constructor. **In
+> JavaScript it did not have to.** `instanceof` walks the prototype chain, and a
+> derived constructor may `return` an object *instead of* calling `super`:
+>
+> ```ts
+> class Rogue extends Referent {
+>   constructor() { return Object.create(new.target.prototype); }   // no validation ran
+> }
+> ```
+>
+> The result satisfies `x instanceof Referent`, and a claim built from two of
+> them projected integers where identifiers belong. Two more followed from the
+> same assumption: `readonly` and `ReadonlyMap` are erased at run time, so a
+> caller could delete a qualifier from a claim it was holding and **move that
+> claim's identity**; and a structurally typed `ProfileSpec` could be
+> hand-authored, so a claim could be typed against operators, sorts and layers no
+> contract declares — the normative SSOT bypassed with the type checker satisfied.
+>
+> So the requirement generalizes: **the check must be that the constructor ran,
+> not that the shape matches.** Each checked type carries a private-field brand,
+> installed by its own constructor and readable only inside its own class body,
+> and every validation asks the brand. Sealing against subclassing remains
+> necessary and is no longer sufficient — a subclass can still be *declared*, and
+> `Object.create(Subclass.prototype)` never calls a constructor at all.
+>
+> The asymmetry is worth stating rather than smoothing over. In Python
+> `isinstance` is forgeable only through `object.__new__`, which is the raw-write
+> row; in TypeScript the forge needs no unusual call, so the brand is
+> load-bearing and `Object.freeze` is the decoration. A guarantee stated as
+> *"the type is opaque"* does not survive translation on its own — what survives
+> is *"a value of this type was checked"*, and each language has to be asked
+> separately how that can be faked.
 
 **But the model is not the only thing that produces claims.** Serialized YAML,
 imported records, a restored corpus and a raw write can all *express* a
