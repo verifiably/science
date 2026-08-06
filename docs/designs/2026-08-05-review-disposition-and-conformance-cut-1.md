@@ -264,7 +264,7 @@ Verdicts: **accept** · **accept-mod** (accepted with a stated modification) ·
 | F8 | drop the normative contract's superstructure, keep the oracle tables | **re-litigate** | §4.3, split into parity machinery (deferrable) and SSOT/succession/identity/inventory (not). Note that retiring `instrument-certification` would remove a **tenth kernel kind** cited across several documents — a cross-corpus amendment, not a cut |
 | F9 | world addressing's basis-derived address is unjustified | **re-litigate** | §4.1. Verified: §4 rejects three alternatives and never considers the adjacent one |
 | F10 | world §5's receipt apparatus is 42% of the document and its evidence expires | **re-litigate, folded into F9** | limitations 10 and 11 concede expiry-on-next-commit and inability-to-invalidate. Its fate follows the address ruling |
-| F11 | compound guarantee rows defeat localization | **accept** | W8a is 1,877 words in one cell. Renumbering is banned; **appending is not**, so splitting is free. §5.2 found **five** rows compound enough that cut 1 can reach part of each — M5, M6, M8, D3, N2 — not the one this document first assumed, and not the eight a second draft claimed before D4, D6 and M12 were withdrawn from the cut entirely. Cut 1 works around the five by selecting arms; splitting the banked rows would remove the workaround, and is the cheaper fix if the pattern recurs at cut 2 |
+| F11 | compound guarantee rows defeat localization | **accept** | W8a is 1,877 words in one cell. **Splitting is id-stable but requires a contract amendment** — not free, as an earlier draft of this row claimed. Normative contract §3: *"Extending a table appends; amending a row's meaning mints a successor contract identity under the retained id … renumbering is unspellable."* Appending the new rows does **not** split the compound one; narrowing the original is an amendment to its meaning, so a split costs a successor contract identity plus updates to the exact oracle inventory (5b §4), the ledger's artifact-7 inventory, and the owning design's own obligations. §5.2 found **five** rows compound enough that cut 1 can reach part of each — M5, M6, M8, D3, N2 — not the one this document first assumed, and not the eight a second draft claimed before D4, D6 and M12 were withdrawn from the cut entirely. Cut 1 works around the five by selecting arms, which is why it does not pay that cost now; the amendment is the cheaper fix only if the pattern recurs at cut 2 |
 | F12 | revision archaeology triples reading cost | **accept-mod** | the review blurs two things. The **withdrawal blockquote stays at its site** — that discipline is what caught the migration-rule defect before the last push. The **narrative history** moves to a per-document appendix |
 | F13 | not one outward citation in 11,953 lines | **accept** | verified. A reader cannot distinguish deliberate divergence from ignorance. Each document gains a short related-work note naming what it re-derives and where it diverges: in-toto/SLSA, Certificate Transparency, Sigstore/Rekor, W3C PROV, RFC 8785 |
 | F14 | both ends of the attack are specification | **accept-mod** | true of `science` (11,953 lines, no code). False of the stack: `nodes` is released and parity-tested, `atoms` is real through A5b |
@@ -556,7 +556,11 @@ travel with them.
    prose test cell. A different reader could draw a boundary one clause earlier
    and change which half of M6 or D3 is selectable. This is why §5.3 offers no
    arm count as a denominator, and it is the strongest argument for F11's
-   splitting: a split row makes the boundary a banked fact instead of a reading.
+   splitting: a split row makes the boundary a banked fact instead of a
+   reading. **That argument now has a price attached** — a split is an
+   amendment minting a successor contract identity (F11) — so the trade is a
+   real one, between paying it once and carrying an interpretive boundary
+   through every future cut.
 8. **§5.2 has now been corrected twice, in the same direction both times.** The
    first draft claimed whole-row coverage the declared boundary could not
    deliver. The second kept D4, D6 and M12 as "partly selected" — using the arm
