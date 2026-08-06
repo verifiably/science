@@ -509,7 +509,15 @@ implementation that ran it.
 
 ```text
 science/
-  src/science/          # kernel kinds, cross-node policy, the compiler
+  python/               # kernel kinds, cross-node policy, the compiler
+    src/science/
+    tests/
+  ts/                   # the shared-encoding path only; see below
+    src/
+    tests/
+  fixtures/             # cross-language parity corpus, owned by neither
+  contracts/
+    science/            # the science base contract (formal model §7.1)
   domains/
     biology/
       DOMAIN.yaml       # contract identity, version, namespace
@@ -520,8 +528,33 @@ science/
     statistics/
       PRACTICE.yaml
       skills/
-  docs/  tests/
+  docs/
 ```
+
+> **Amended 2026-08-06, at the cut 1 slice.** The tree above replaces a
+> single-language `src/science/ … docs/ tests/` layout, which predates the
+> cross-language obligation the formal model's **M10** introduced and could not
+> hold two implementations of one encoding. Three changes, and the reason for
+> each:
+>
+> - **`python/` and `ts/` beside each other, mirroring `nodes`.** Science is
+>   Python-primary — substrate §11 puts the composition root there, and formal
+>   model limitation 9 records M10 as the **only** cross-implementation row, so
+>   `ts/` carries the shared-encoding path (`science.identity.v1` and
+>   `π_claim`) and not a second system. That asymmetry is recorded here in
+>   prose rather than encoded as directory depth, because depth would have to be
+>   restated every time the shared surface grows.
+> - **`fixtures/` at the root, owned by neither language.** A parity corpus that
+>   lives inside one implementation's tree is that implementation's fixture with
+>   a second reader, which is the arrangement it exists to prevent. `nodes`
+>   already does this.
+> - **`contracts/science/` is new.** §6 names the base contract as the normative
+>   SSOT and §7.1 gives it a shape, but no banked document sited it. It is
+>   authored data, never a constant compiled into either implementation — *"which
+>   is why it is a contract and not a constant"* (formal model §8).
+>
+> `tests/` moves inside each implementation because a test tree at the root of a
+> two-language repository has to answer which language it tests on every file.
 
 Three organizing rules, each aimed at a specific failure observed in
 `proto-science`:

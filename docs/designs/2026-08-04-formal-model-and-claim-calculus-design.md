@@ -2463,14 +2463,16 @@ amendment list.
 
 **Implementation authorities M\* introduces.** Editing design prose does not
 make two implementations hash a typed claim identically, and none of these
-exists today. Each needs a named home before M\* is buildable:
+exists today. Each needs a named home before M\* is buildable. **All four were
+sited 2026-08-06**, at the start of the conformance cut 1 slice; the homes below
+are where they are being built, and none is yet complete:
 
 | authority | what it must fix | home |
 |---|---|---|
-| the **claim grammar** and the **canonical byte encoding of every kernel tag** — quantifiers, polarities including `sign_inapt_tag`, and the layer vocabulary | the closed sets and their bytes, not their spelling (§7.1, §7.4 row 5) | the `science` **base contract**, which is why it is a contract and not a constant |
-| **`π_claim`'s canonical projection** and its domain-separation tag `tag_claim` | field order, encoding of each position, and the tag itself, as a first-class member of the identity standard | **`science.identity.v1`** (computation §4.3's value contract), extended — a new tag, not a new encoding |
-| **`ProfileSpec` compilation of claim schemas** | that operator, dimension and sort declarations merge and validate into the compiled profile on the same terms as `KindSpec`, with no second authored artifact | D §6's compiled-registry path, widened as above |
-| a shared **Python/TypeScript parity fixture for claim identity** | that one typed claim projects to identical bytes and hashes identically in both implementations | alongside D §6's existing namespaced-facet-key parity fixture, which is the precedent for exactly one such fixture per shared encoding |
+| the **claim grammar** and the **canonical byte encoding of every kernel tag** — quantifiers, polarities including `sign_inapt_tag`, and the layer vocabulary | the closed sets and their bytes, not their spelling (§7.1, §7.4 row 5) | the `science` **base contract**, which is why it is a contract and not a constant — sited at `science/contracts/science/` (D §9, amended 2026-08-06) |
+| **`π_claim`'s canonical projection** and its domain-separation tag `tag_claim` | field order, encoding of each position, and the tag itself, as a first-class member of the identity standard | **`science.identity.v1`** (computation §4.3's value contract), extended — a new tag, not a new encoding. Implemented in **both** trees, since this is the one shared encoding |
+| **`ProfileSpec` compilation of claim schemas** | that operator, dimension and sort declarations merge and validate into the compiled profile on the same terms as `KindSpec`, with no second authored artifact | D §6's compiled-registry path, widened as above — Python only, since compilation is not a shared encoding and no parity obligation reaches it |
+| a shared **Python/TypeScript parity fixture for claim identity** | that one typed claim projects to identical bytes and hashes identically in both implementations | `science/fixtures/`, at the repository root and owned by neither implementation (D §9, amended 2026-08-06) |
 
 The parity fixture is the one that would otherwise be discovered late. `nodes`
 already imposes no facet-key grammar and both implementations accept arbitrary
@@ -2478,6 +2480,31 @@ string keys — D §6 pinned that freedom with a fixture rather than trusting it
 and a typed claim projection has strictly more ways to disagree: slot order,
 map key sorting, tag bytes, and the absent-versus-unit distinction §7.5 exists
 to remove.
+
+> **Correction 2026-08-06 — the cited precedent does not exist.** This section's
+> home column read *"alongside D §6's **existing** namespaced-facet-key parity
+> fixture, which is the precedent for exactly one such fixture per shared
+> encoding."* Measured against the trees, that is wrong twice, and this
+> document's own §8.7 names the class: drift lives wherever a rule is *cited*
+> rather than where it is stated.
+>
+> - **Not existing.** D §6 calls it *"the one shared parity fixture this design
+>   **adds**"*, and D1–D10 await implementation. Nothing was there to sit
+>   alongside.
+> - **Not namespaced.** `nodes/fixtures/gene_phf19.{canonical.json, py-emit.md,
+>   ts-emit.md}` is a genuine cross-language emit fixture, and D1 describes it
+>   accurately as example payload. But its only facet key is `bio-axes` — a
+>   hyphenated **flat** key. It pins nothing about `biology/gene-axis`.
+>
+> What survives is weaker and still useful: `gene_phf19` is a precedent for the
+> **form** — one canonical artifact with a per-language emission beside it — but
+> not for the encoding. **The claim parity fixture is therefore the corpus's
+> first typed parity fixture, not its second**, and it has no shape to inherit.
+> The consequence is a real cost rather than a bookkeeping note: its coverage
+> has to be argued from M10's own text (*"vector coverage asserted complete"*)
+> instead of extended from a fixture that already made those choices. D §6's
+> namespaced-facet-key fixture remains outstanding and is **not** in cut 1 —
+> D4 is fully deferred (disposition record §5.2).
 
 ## 9. Guarantees (M1–M13)
 

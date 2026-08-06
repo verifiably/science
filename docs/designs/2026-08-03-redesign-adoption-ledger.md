@@ -138,7 +138,8 @@ Two standing constraints on 5b:
    **implementation authorities** (the claim grammar and kernel tag bytes, the
    `π_claim` projection under `science.identity.v1`, claim-schema compilation,
    and a cross-language parity fixture) have no home yet and are prerequisites
-   for building M\*, not for banking it.
+   for building M\*, not for banking it. **Sited 2026-08-06** at the start of
+   item 10 (formal model §8, home column); *sited* is not *built*.
 9. **Belief policy** — taken next because the review-disposition record's §5.5
    stop rule puts it ahead of the vertical slice: the slice stops at the last
    fully designed seam, and anything computing belief had no seam to stop at.
@@ -153,6 +154,32 @@ Two standing constraints on 5b:
    propositions return an absence reason that deliberately collapses *not
    attempted* with *no applicable route*, which is uncollapsed by whichever
    arrives first — kernel §11's second route, or a route-applicability predicate.
+10. **The conformance cut 1 vertical slice** — the first code in this
+    repository, and the end of the design-only phase. **Started 2026-08-06.**
+    Both gates the disposition record put in front of it are open: cut 1 froze
+    prospectively (§5, 2026-08-05) and the §5.5 stop rule's belief-policy
+    prerequisite is discharged (item 9). Its acceptance criteria are **cut 1's
+    eleven rows as frozen** — six fully selected, five part-selected — and it
+    adds **no** guarantee table of its own; a slice that minted its own oracles
+    would be grading its own homework, which is what freezing the cut in advance
+    exists to prevent.
+
+    Three things this item is **not**. It is not the world index, a corpus, a
+    run, or a belief — §5.1 puts every persistence boundary outside it, so it
+    waits on neither `atoms` A6–A8 nor the `nodes` contract deltas (items 4 and
+    5), and it can be built and tested standing alone. It is not `KindSpec`
+    compilation — **D4 is fully deferred**, and only the claim-schema half of
+    `ProfileSpec` is in scope. And it is not a second implementation in
+    TypeScript: formal model limitation 9 records **M10 as the only
+    cross-implementation row**, so `ts/` carries the shared encoding and stops.
+
+    One consequence for the order of work. Formal model §8 cited D §6's
+    namespaced-facet-key parity fixture as the **existing** precedent for the
+    claim parity fixture; measured against the trees it is neither existing nor
+    namespaced (§8, corrected 2026-08-06). So M10's fixture is the corpus's
+    **first** typed parity fixture and defines the shape rather than inheriting
+    one — and D §6's own fixture remains outstanding, unblocked by this item and
+    not in cut 1.
 
 ## 4. Invariants and gates to pin when their layer lands
 
