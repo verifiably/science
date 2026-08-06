@@ -173,7 +173,12 @@ class ResolutionSnapshot:
         A **list** of records rather than an object keyed by binding, because a
         binding is a structured value and `science.identity.v1` requires string
         keys. The list is sorted by the binding's own canonical encoding, so the
-        order a caller happened to supply cannot reach the identity.
+        order a caller happened to supply cannot reach the identity — and that is
+        worth exactly the **injectivity** of the key. `sort` is stable, so two
+        distinct bindings encoding alike would be left in insertion order and one
+        snapshot would take two identities. That injectivity is
+        `VocabularyBinding`'s: it enforces D §5's sum at construction and is
+        sealed, so no ordinary route produces a collision.
         """
         entries = [{"binding": binding.projection(), **state.projection()} for binding, state in self.bindings.items()]
         entries.sort(key=lambda entry: v1.encode(entry["binding"]))
@@ -200,6 +205,43 @@ class ResolutionSnapshot:
         return TermOutcome.MEMBER if term in state.terms else TermOutcome.NOT_MEMBER
 
 
+def _require_binding(binding: object) -> None:
+    """A snapshot's keys are `VocabularyBinding`s, and structural is not enough.
+
+    The keys are matched against `profile.sorts[...].vocabulary` by **value**, so
+    a lookalike that compares unequal resolves to `not-consulted` — a snapshot
+    that was told about a vocabulary reporting that nobody looked at it. The
+    binding's own construction is what rules out the ill-formed inhabitants
+    (D §5's sum); this rules out values that never went through it.
+    """
+    if not isinstance(binding, VocabularyBinding):
+        raise ResolutionError(
+            f"a snapshot is keyed by VocabularyBinding, found {type(binding).__name__}. Bindings are compared "
+            "by value against the sort declarations in force, and a lookalike matches none of them — so the "
+            "snapshot would report `not-consulted` for a vocabulary it was handed."
+        )
+
+
+def _require_term(term: object, binding: VocabularyBinding) -> str:
+    """A vocabulary's members are term identifiers — the same predicate `Referent` applies.
+
+    The two have to agree, and this is the sharper direction: a `Referent` cannot
+    carry a non-identifier term, so a snapshot holding one holds a member no claim
+    can ever name. `resolve` would answer `not-member` — the single **refusing**
+    outcome, positive evidence that a vocabulary was read and lacks the term —
+    about a vocabulary that was told it has it. §7.2 exists to keep an absence of
+    evidence from being reported as evidence of absence; this is the same
+    confusion arriving from the other side, and it refuses a well-formed claim.
+    """
+    if not isinstance(term, str) or not term:
+        raise ResolutionError(
+            f"{binding.projection()}: {term!r} is not a term identifier. A `Referent` cannot carry one, so no "
+            "claim could ever name this member, and every claim naming its stringification would be refused "
+            "as `not-member` against a vocabulary that was read and does contain it."
+        )
+    return term
+
+
 def build_snapshot(
     *,
     readable: Mapping[VocabularyBinding, Iterable[str]] | None = None,
@@ -215,8 +257,13 @@ def build_snapshot(
     """
     table: dict[VocabularyBinding, _BoundVocabulary] = {}
     for binding, terms in (readable or {}).items():
-        table[binding] = _BoundVocabulary(readable=True, terms=frozenset(terms))
+        _require_binding(binding)
+        table[binding] = _BoundVocabulary(
+            readable=True,
+            terms=frozenset(_require_term(term, binding) for term in terms),
+        )
     for binding in unreadable:
+        _require_binding(binding)
         if binding in table:
             raise ResolutionError(
                 f"binding {binding.projection()} is given as both readable and unreadable. "

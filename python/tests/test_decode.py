@@ -21,6 +21,7 @@ from typing import ClassVar
 
 import pytest
 
+from science import resolution
 from science.claim import Claim, Referent, build_claim
 from science.contract.domain import VocabularyBinding
 from science.decode import WireClaim, decode_claim
@@ -29,6 +30,7 @@ from science.errors import (
     ClaimError,
     DecodeError,
     InadmissibleLayer,
+    MalformedReferent,
     MalformedWireClaim,
     PolarityRefused,
     ProfileError,
@@ -614,7 +616,41 @@ class TestDecodeInvertsTheProjection:
             )
 
 
-class TestTheWireValueIsCheckedFieldardByField:
+class TestTheWireValueIsCheckedFieldByField:
+    @pytest.mark.parametrize(
+        "body",
+        [
+            {1: "x", "quantifier": "generic", "restriction": ADULTS},
+            {"quantifier": "generic", "restriction": ADULTS, 1: "x"},
+            {1: "x"},
+            {"quantifier": "generic", "restriction": ADULTS, (): "x"},
+            # Two unknown names of different types: this one crashes in `sorted`
+            # rather than in `join`, which is why the guard has to precede the
+            # whole field arithmetic and not merely its message.
+            {"quantifier": "generic", "restriction": ADULTS, 1: "x", "extra": "y"},
+        ],
+    )
+    def test_a_field_name_that_is_not_a_name_refuses_rather_than_crashes(self, profile, readable, body):
+        # The field arithmetic below sorts the unknown names and joins them into
+        # a message, and a non-string key raises `TypeError` in one or the other
+        # — which is not a `DecodeError`, so a caller holding this boundary's
+        # refusing arm gets a crash instead of a refusal, on input this function
+        # exists to refuse. The contract loaders check mapping keys before their
+        # own field arithmetic for the same reason; this is that guard at the
+        # boundary that had skipped it.
+        wire = affects(qualifiers={"testing/population": body})
+        with pytest.raises(MalformedWireClaim):
+            decode_claim(wire, profile=profile, snapshot=readable)
+
+    def test_the_refusal_is_the_declared_arm_and_not_an_incidental_type_error(self, profile, readable):
+        wire = affects(qualifiers={"testing/population": {1: "x", "quantifier": "generic", "restriction": ADULTS}})
+        try:
+            decode_claim(wire, profile=profile, snapshot=readable)
+        except DecodeError:
+            pass
+        except TypeError as exc:  # pragma: no cover - the defect this pins
+            pytest.fail(f"a raw TypeError escaped decodeClaim's refusing arm: {exc}")
+
     def test_an_unknown_qualifier_field_is_refused_never_ignored(self, profile, readable):
         # D5's rule at this boundary: an unrecognized field is refused at load.
         # A wire value carrying one has been written by something that disagrees
@@ -642,3 +678,64 @@ class TestTheSnapshotIdentityIsContentDerived:
 
     def test_readable_and_unreadable_differ(self):
         assert build_snapshot(readable={EX: []}).identity != build_snapshot(unreadable=[EX]).identity
+
+
+class TestTheSnapshotAuthenticatesWhatItIsBuiltFrom:
+    """A snapshot is the third parameter that makes decode a function, and its
+    contents come from the caller — so *it* is where the caller's values are
+    checked. Everything else in this file resolves against a snapshot already
+    built; these are the arms that decide what one may be built from.
+    """
+
+    def test_a_key_that_is_not_a_binding_is_refused(self):
+        # Keys are matched by value against `profile.sorts[...].vocabulary`, so a
+        # lookalike matches nothing and every term under it resolves
+        # `not-consulted` — a snapshot that was handed a vocabulary reporting
+        # that nobody looked at it.
+        with pytest.raises(ResolutionError, match="keyed by VocabularyBinding"):
+            build_snapshot(readable={"EX": [GENE]})  # type: ignore[arg-type]
+
+    def test_a_lookalike_binding_is_refused_before_it_can_be_asked_to_project(self):
+        class Lookalike:
+            def projection(self) -> dict[str, object]:
+                return {"namespace": "EX", "release": "2026-01-01"}
+
+        with pytest.raises(ResolutionError, match="keyed by VocabularyBinding"):
+            build_snapshot(unreadable=[Lookalike()])  # type: ignore[arg-type]
+
+    @pytest.mark.parametrize("term", [1, "", None, ("EX", "gene-x")])
+    def test_a_member_that_is_not_a_term_identifier_is_refused(self, term):
+        with pytest.raises(ResolutionError, match="not a term identifier"):
+            build_snapshot(readable={EX: [term]})
+
+    def test_that_predicate_is_the_one_a_referent_applies(self, profile, readable):
+        # The two have to agree, and this is the sharper direction: a `Referent`
+        # cannot carry a non-identifier term, so a snapshot holding one holds a
+        # member no claim can ever name. `resolve` would then answer
+        # `not-member` — the single *refusing* outcome, positive evidence that a
+        # vocabulary was read and lacks the term — about a vocabulary that was
+        # told it has it. §7.2 keeps an absence of evidence from being reported
+        # as evidence of absence; this is the same confusion from the other side,
+        # and its victim is a well-formed claim.
+        for admitted in [GENE, "1"]:
+            assert Referent(sort="testing/entity", term=admitted).term == admitted
+            build_snapshot(readable={EX: [admitted]})
+        for refused in [1, ""]:
+            with pytest.raises(MalformedReferent):
+                Referent(sort="testing/entity", term=refused)
+            with pytest.raises(ResolutionError):
+                build_snapshot(readable={EX: [refused]})
+
+    def test_the_integer_member_case_end_to_end(self, profile):
+        # What the refusal above prevents, spelled out: the snapshot is told the
+        # vocabulary holds 1, the claim names "1", and the receipt reports
+        # `not-member` — a finding of absence about a term that was supplied.
+        # Built through §6.3's raw route, which stands in for the one now closed.
+        snapshot = ResolutionSnapshot._built(
+            resolution._MINT,
+            bindings={EX: resolution._BoundVocabulary(readable=True, terms=frozenset([1]))},  # type: ignore[arg-type]
+            identity="unchecked",
+        )
+        assert snapshot.resolve(EX, "1") is TermOutcome.NOT_MEMBER
+        with pytest.raises(ResolutionError, match="not a term identifier"):
+            build_snapshot(readable={EX: [1]})  # type: ignore[list-item]

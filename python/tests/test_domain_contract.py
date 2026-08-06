@@ -11,7 +11,8 @@ import pytest
 import yaml
 
 from science.contract import domain
-from science.errors import MalformedContract, SuccessionViolation
+from science.errors import MalformedContract, SubclassRefused, SuccessionViolation
+from science.identity import v1
 
 
 @pytest.fixture()
@@ -71,6 +72,70 @@ class TestVocabularyBindings:
         broken["sorts"]["entity"]["vocabulary"] = "dataset:"
         with pytest.raises(MalformedContract):
             parse(broken)
+
+
+class TestTheBindingIsASumAndNotAProduct:
+    """D §5 says *dataset* **or** *namespace with a release*, and three optional
+    fields say neither. The record admits values off both arms, and ``projection``
+    drops ``namespace``/``release`` on the dataset arm — correctly, since there
+    they carry nothing — so an off-arm value projects as though the namespace were
+    absent. That makes ``projection`` non-injective, and two readers take
+    identities through it: a contract's own content identity, and a
+    `ResolutionSnapshot`'s ordering.
+    """
+
+    def test_a_binding_carrying_both_arms_is_refused(self):
+        with pytest.raises(MalformedContract, match="one arm or the other"):
+            domain.VocabularyBinding(namespace="EX", release="2026-01-01", dataset_identity="0" * 64)
+
+    def test_that_refusal_is_what_makes_the_projection_injective(self):
+        # The pair the constructor now refuses is exactly the collision: two
+        # bindings that differ, are therefore distinct dictionary keys resolved
+        # against different vocabularies, and encode alike.
+        colliding = [
+            {"namespace": "EX", "release": "2026-01-01", "dataset_identity": "0" * 64},
+            {"namespace": "OTHER", "release": "1999-01-01", "dataset_identity": "0" * 64},
+        ]
+        for fields in colliding:
+            with pytest.raises(MalformedContract):
+                domain.VocabularyBinding(**fields)
+
+    def test_distinct_bindings_on_the_arms_that_remain_project_distinctly(self):
+        bindings = [
+            domain.VocabularyBinding(namespace="EX", release="2026-01-01", dataset_identity=None),
+            domain.VocabularyBinding(namespace="EX", release="2027-01-01", dataset_identity=None),
+            domain.VocabularyBinding(namespace="OTHER", release="2026-01-01", dataset_identity=None),
+            domain.VocabularyBinding(namespace=None, release=None, dataset_identity="0" * 64),
+            domain.VocabularyBinding(namespace=None, release=None, dataset_identity="1" * 64),
+        ]
+        encoded = [v1.encode(binding.projection()) for binding in bindings]
+        assert len(set(encoded)) == len(bindings)
+
+    @pytest.mark.parametrize(
+        "fields",
+        [
+            {"namespace": "EX", "release": None, "dataset_identity": None},
+            {"namespace": None, "release": "2026-01-01", "dataset_identity": None},
+            {"namespace": "EX", "release": "", "dataset_identity": None},
+            {"namespace": 1, "release": "2026-01-01", "dataset_identity": None},
+            {"namespace": None, "release": None, "dataset_identity": ""},
+            {"namespace": None, "release": None, "dataset_identity": None},
+        ],
+    )
+    def test_neither_arm_admits_a_partial_or_ill_typed_value(self, fields):
+        with pytest.raises(MalformedContract):
+            domain.VocabularyBinding(**fields)
+
+    def test_the_binding_is_sealed(self):
+        # The constructor check is worth nothing against a subclass that
+        # overrides `projection`, and this is the one declaration type in the
+        # module that callers construct directly — `build_snapshot` takes them as
+        # keys, and `isinstance` there would admit the subclass.
+        with pytest.raises(SubclassRefused):
+
+            class Forged(domain.VocabularyBinding):  # type: ignore[misc]
+                def projection(self) -> dict[str, object]:
+                    return {"dataset": "0" * 64}
 
 
 class TestOperatorDeclarations:

@@ -63,21 +63,65 @@ _DIMENSION_FIELDS = frozenset({"restriction_sort"})
 _SORT_FIELDS = frozenset({"vocabulary"})
 
 
+@sealed
+@final
 @dataclass(frozen=True)
 class VocabularyBinding:
-    """D §5: a held ontology dataset by content identity, or a namespace with an
-    explicit release. **A bare namespace is refused** — the binding is exact or
+    """D §5: a held ontology dataset by content identity, **or** a namespace with
+    an explicit release. **A bare namespace is refused** — the binding is exact or
     it is absent, and a binding without a release would let the same identifier
-    mean different things in two checkouts."""
+    mean different things in two checkouts.
+
+    That *or* is a sum, and three optional fields are a product: the record shape
+    admits inhabitants D §5 does not have, and one of them is dangerous.
+    ``projection`` drops ``namespace`` and ``release`` on the dataset arm — which
+    is correct, since on that arm they carry no information — so a value holding
+    *both* a dataset identity and a namespace projects as though the namespace
+    were not there. Two such bindings that differ, and are therefore distinct keys
+    resolved against different vocabularies, encode identically; any identity
+    taken over a collection of them stops being determined by its contents. So
+    the sum is enforced here, at construction, which is the only place that can
+    make ``projection`` **injective**. Two readers depend on that: a contract's
+    content identity, taken through ``SortDecl.schema_projection``, and a
+    `ResolutionSnapshot`'s, taken over an order the encoded binding determines.
+    Colliding bindings would let two different contracts share one content
+    identity — which is what ``ContractMismatch`` compares — and let one snapshot
+    take two identities depending on the order its bindings were supplied.
+
+    Sealed, and alone among the declaration types in this module in being so. The
+    others are reachable only through the parser, inside a branded contract; this
+    one is **constructed by callers**, at `build_snapshot`, where a subclass
+    overriding ``projection`` would reopen the collision with the constructor
+    check still in place.
+    """
 
     namespace: str | None
     release: str | None
     dataset_identity: str | None
 
+    def __post_init__(self) -> None:
+        if self.dataset_identity is not None:
+            _require_binding_text(self.dataset_identity, "a binding's dataset identity")
+            if self.namespace is not None or self.release is not None:
+                raise MalformedContract(
+                    f"a binding names dataset {self.dataset_identity!r} and also namespace "
+                    f"{self.namespace!r}/{self.release!r}. D §5's binding is one arm or the other; a value "
+                    "carrying both projects as the dataset alone, so two bindings resolved against different "
+                    "vocabularies would encode identically."
+                )
+            return
+        _require_binding_text(self.namespace, "a binding's namespace")
+        _require_binding_text(self.release, "a binding's release")
+
     def projection(self) -> dict[str, object]:
         if self.dataset_identity is not None:
             return {"dataset": self.dataset_identity}
         return {"namespace": self.namespace, "release": self.release}
+
+
+def _require_binding_text(value: object, where: str) -> None:
+    if not isinstance(value, str) or not value:
+        raise MalformedContract(f"{where} is {value!r}, not a non-empty identifier.")
 
 
 @dataclass(frozen=True)

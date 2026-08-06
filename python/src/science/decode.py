@@ -107,6 +107,15 @@ def _wire_parts(wire: WireClaim) -> tuple[str, Sequence[str], Mapping[str, Mappi
         _require_text(dimension, "a qualifier dimension")
         if not isinstance(body, Mapping):
             raise MalformedWireClaim(f"{where}: expected a mapping, found {body!r}")
+        # Before the field arithmetic, not after: `set(body) - {...}` over a
+        # non-string key sorts and joins values that are not strings, and the
+        # `TypeError` that comes out is not a `DecodeError` — so a caller holding
+        # this boundary's refusing arm sees a crash instead of a refusal, on
+        # input that is exactly what this function exists to refuse. The contract
+        # loaders check mapping keys for the same reason before their own
+        # `_fields`; this is that guard, at the boundary that had skipped it.
+        for field in body:
+            _require_text(field, f"{where}: a qualifier field name")
         unknown = sorted(set(body) - {"quantifier", "restriction"})
         if unknown:
             raise MalformedWireClaim(f"{where}: unknown field(s) {', '.join(unknown)}; refused, never ignored")
