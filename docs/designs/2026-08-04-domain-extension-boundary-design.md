@@ -407,16 +407,22 @@ reinterpret `gene-axis` without changing facet bytes, without changing
 assessment bytes, and without moving `belief_input_digest` — two different
 beliefs behind one digest, which is precisely what kernel §5.1's G3 guarantee
 forbids. So **kernel §5.1's closure gains a member**: every profile contract the
-derivation actually interprets, alongside the existing belief-policy version,
-which is the exact precedent — a versioned rule entering the computed view as
-an input rather than being stamped on records.
+derivation actually interprets, alongside the existing belief-policy member —
+`belief policy version` when this was written, and the exact **policy binding**
+since 2026-08-05 (kernel §5.1, belief-policy §2.2) — which is the exact
+precedent: a versioned rule entering the computed view as an input rather than
+being stamped on records.
 
 **The `science` base contract is unconditional; domain contracts are
 conditional.** These are not the same rule, and collapsing them reopens the
 defect.
 
 `science_contract` governs the kernel kinds, the relation signatures that close
-belief, the eligibility predicate, and the unnamespaced base-profile facets. A
+belief, the eligibility predicate, the **outcome-to-sign semantics** (added
+2026-08-05, belief-policy §2.1 — `supported ↦ +1`, `refuted ↦ −1`,
+`inconclusive ↦ 0`, which is base meaning and deliberately **not** a belief
+policy's to choose, since a policy able to map outcomes to signs is a policy able
+to reverse them), and the unnamespaced base-profile facets. A
 Science semantic derivation therefore consults it **always** — interpreting
 `assessment`, `dataset`, or a relation signature *is* consulting it, whether or
 not the closure happens to read a base-profile facet. Making its membership

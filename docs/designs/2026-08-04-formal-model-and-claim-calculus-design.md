@@ -556,6 +556,33 @@ here**"*, which is a computability state and not a belief that happens to be
 unchanged — "reporting an unchanged belief in that situation would assert a
 recomputation nobody performed" (comp §7.1).
 
+**Superseded 2026-08-05 by belief-policy §4. The signature above stands as M₀'s
+transcription and is not rewritten**, per §2's rule that M₀ records the banked
+system as it was. The middle arm is now **`NoBelief(reason)`**, not
+`NotAvailable`:
+
+```text
+B : Ω_valid × Q → Belief(value, belief_input_digest, policy_binding)
+                + NoBelief(NoBeliefReason)
+                + Refused(reason)
+
+NoBeliefReason = Unavailable(PolicyUnheld | FixturesUnheld
+                            | InputUnheld | CorpusAbsent)
+               | NoEligibleAssessment
+               | NoDirectionalOutcome
+```
+
+The arity is unchanged — three arms, with reasons as discriminants inside one of
+them — so §3.4's laws and every row keyed on the `Belief` arm survive
+untouched. What the widening fixes is that `NotAvailable` is **computational**
+here, exactly as this section says, while an empty eligible set is a computation
+that **succeeded** and found nothing. Filing the second under the first collapses
+semantic absence into local unavailability: one is repaired by mounting a corpus,
+the other by doing science. `NoEligibleAssessment` is deliberately named for what
+is computable and **not** `Unassessed`, because nothing distinguishes *not yet
+assessed* from *outside the empirical route* — `ClaimLayer` cannot decide it,
+since `eligible` above reads the run's `observes` edge and not the claim.
+
 ### 3.4 Laws
 
 | law | statement | tested by |

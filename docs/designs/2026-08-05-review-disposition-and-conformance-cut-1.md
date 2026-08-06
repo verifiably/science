@@ -256,7 +256,7 @@ Verdicts: **accept** · **accept-mod** (accepted with a stated modification) ·
 |---|---|---|---|
 | F1 | the claim calculus types the stubs and refuses the science | **accept** | measured in §2 and sharpened: the typed fields exist *only* on stubs (§1 (a)). Sizes formal-model limitation 4; does **not** close limitation 3 (§2.1) |
 | F2 | content-addressability is empty on day one and no ramp is designed | **accept** | 0 of 259 mm30 datasets carry a content hash, so kernel §2.2's *held* predicate and the eligibility gate admit nothing. New obligation: **the admission ramp** — how a corpus goes from zero held inputs to a usable admitted set. No banked document owns it |
-| F3 | belief aggregation has no design and is on no open-questions list | **accept** | the largest hole. **New design opens now**, ahead of the slice (§5's stop rule depends on it). The prior, the belief scale, the displacement metric and "the policy's ordinary rule" are all cited as versioned constants that nothing defines |
+| F3 | belief aggregation has no design and is on no open-questions list | **accept, narrowed — now designed** | the largest hole. The prior, the belief scale, the displacement metric and "the policy's ordinary rule" are all cited as versioned constants that nothing defines. **Designed 2026-08-05** (`2026-08-05-belief-policy-design.md`, P1–P9). The row as written was **too broad**, and the correction is recorded rather than quietly dropped: kernel §4.2.1 designs the aggregation *structure* in depth — dependency graph, maximum-independent-set selection under a three-stage lexicographic objective, contestation as one clamped move inheriting the outer objective, exact-only selection, the addition property — and substrate S6 already carries eight test arms over it. What had no design was every **scalar** that structure is parameterized by, plus the identity pinning them. This closes the prerequisite §5.5 names; **cut 1 is unchanged and still computes no belief** |
 | F4 | sub-problem 6 is undesigned and four documents defer load-bearing questions into it | **accept** | including audit liveness (computation §11: *"nothing here forces an audit ever to run"*) — the universal backstop for every raw-write hole — and kernel §6's divergence table, which the kernel calls the main capability it adds. Recorded as the largest **structural** deferral; not opened in this pass |
 | F5 | non-empirical claims have no route to belief | **accept, elevated** | §2.4 shows it is 11 of 27, not a corner case. Elevated from kernel §11 open question to a **blocking prerequisite for a higher-order argument extension** — and for that alone. It does not gate the adjustment set, quantitative restrictions, or modality, which are ordinary grammar questions (§2.4) |
 | F6 | estimand match is unclosed | **accept as a known deferral** | kernel limitation 5 already names it as the largest survivor of the ten-item scope cluster. Recording it as a *finding* overstates novelty; it stays open, unamended |
@@ -502,6 +502,14 @@ or later (limitation 7).
 > belief, the belief-policy design (F3) is a prerequisite** and the slice must
 > stop short of it. Proposition and source-assertion *construction* is inside
 > the seam; belief, admission and eligibility are outside it.
+
+**The prerequisite is discharged, and the stop rule stands unchanged**
+(2026-08-05, `2026-08-05-belief-policy-design.md`). The rule is preserved
+verbatim above per §5.4's discipline. Discharging it does **not** move the seam:
+cut 1's selection is exactly what it was, it still computes no belief, and P1–P9
+are acceptance criteria for a later slice rather than rows added to this cut. A
+future slice that does compute belief now has a designed seam to stop at, which
+is the only thing that changed.
 
 ---
 

@@ -1,11 +1,12 @@
 # Belief policy — design
 
-**Status:** Drafted 2026-08-05 on branch `belief-policy`, after five review
-rounds. **Not banked**, and the amendment set in §6 is **not yet applied** —
-every site listed there still reads as it did at `4cc91b3`. Discharges the
-prerequisite that the review-disposition record's F3 and §5.5 stop rule place
-ahead of the vertical slice; it does **not** widen conformance cut 1, which
-remains frozen and still computes no belief.
+**Status:** Banked 2026-08-05, after six review rounds; the banking commit
+applies the §6 amendment set across kernel, the formal model, domain extension,
+substrate, the normative contract, the review-disposition record, the ledger and
+the README. Discharges the prerequisite that the disposition record's F3 and
+§5.5 stop rule place ahead of the vertical slice; it does **not** widen
+conformance cut 1, which remains frozen and still computes no belief. P1–P9
+await implementation.
 **Inherits:** kernel §4.2.1 (the dependency-graph aggregation model, its
 selection, contestation and clamping rules, and its four undefined policy
 citations); kernel §5 and §5.1 (the three answers, and `belief policy version`
@@ -374,7 +375,7 @@ typed reference and a commensuration contract that ρO3 leaves open.
 
 ## 6. What this amends
 
-Not applied at this commit. Applied at banking, as one amendment set.
+Applied at banking, as one amendment set.
 
 | site | change |
 |---|---|
@@ -385,9 +386,20 @@ Not applied at this commit. Applied at banking, as one amendment set.
 | formal model §3.3 | codomain `Belief + NotAvailable + Refused` superseded by `Belief \| NoBelief \| Refused`. **M₀ is preserved as the historical snapshot and annotated**, never rewritten |
 | domain-extension §8 | outcome→sign semantics added to the `science_contract`'s meaning-bearing content. **D6 unchanged** |
 | substrate S6(h) | the weak-`D`/strong-`B` case becomes a named acceptance condition for the first weighted successor policy (§3.3) |
-| 5b §4, ledger artifact 7 | the exact oracle inventories gain P1–P9 |
-| disposition record | F3 marked designed. **Cut 1 stays frozen and still computes no belief** |
+| 5b §4, ledger artifact 7 | the exact oracle inventories gain P1–P9, under `P` for the reason §7 gives |
+| ledger §1, §3 | artifact 10 and order item 9 |
+| disposition record | F3 marked designed **and narrowed**; §5.5's stop rule preserved verbatim with its prerequisite recorded as discharged. **Cut 1 stays frozen and still computes no belief** |
 | README | design count and the table |
+
+**One amendment outside the set, found while applying it.** Kernel §5.1 read
+*"A belief state that cannot be recomputed byte-identically from its **digest
+alone** is a defect, not a drift."* A digest is a hash and nothing is
+recomputable from one; G3's own test arm always said the recomputation runs
+*"from the named **closure** alone"*, so the section defining the digest and the
+row testing it disagreed. Corrected to *"from the closure this digest names"*.
+It is listed here rather than folded in silently because it is a change to
+banked text that this design did not set out to make — the same defect P7 was
+written to avoid in the evaluator's own guarantee.
 
 **The successor identity is the contract's, not the row's.** Normative contract
 §3: *"amending a row's meaning mints a successor contract identity under the

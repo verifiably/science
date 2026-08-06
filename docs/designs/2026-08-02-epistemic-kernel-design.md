@@ -589,8 +589,26 @@ that, and every one of the three facts is *demonstrated* — the counterexample
 needs no `not-certified` pair at all.
 
 > **Model.** Aggregation reads a **dependency graph**, not cells. Vertices are
-> all assessments on the proposition, **both directions together**. An undirected
-> edge joins every pair that is **not certified `independent`**.
+> all **directional** assessments on the proposition, **both directions
+> together**. An undirected edge joins every pair that is **not certified
+> `independent`**.
+
+**"Directional" was added 2026-08-05** (belief-policy §3.4). `outcome` has three
+values and this section reasons only about two of them; an `inconclusive`
+assessment has no direction, so it can neither corroborate nor oppose. Admitting
+it as a zero-weight vertex would be strictly worse than excluding it, because
+selection below is **cardinality-first**: a vertex contributing nothing can
+enlarge a maximum independent set and thereby displace a *contributing*
+assessment from the winning selection, moving the value through a channel with
+no evidential content. The exclusion is about the **value** only — an
+inconclusive assessment's keyed facet remains a G3 closure member, so adding one
+moves the digest (belief-policy P8).
+
+**The outcome-to-sign mapping is not the policy's to choose.** `supported ↦ +1`,
+`refuted ↦ −1`, `inconclusive ↦ 0` belongs to base outcome semantics and to the
+`science_contract`'s meaning-bearing content (domain-extension §8), because a
+policy permitted to map those to signs is a policy permitted to reverse them,
+and reinterpreting an outcome is not aggregating it.
 
 Two consequences fall out rather than being legislated:
 
@@ -747,8 +765,25 @@ policy: a fixed neutral state and a distance on the belief scale. Reading "the
 prior" from the last materialized belief would make identical closures yield
 different results by history — and G3 forbids it *structurally*, because
 recomputing it would require a digest member that does not exist. Because both
-are policy constants, `belief policy version` already covers them in §5.1; no new
+are policy constants, the **policy binding** already covers them in §5.1; no new
 digest member is needed.
+
+**All four of this section's policy citations are now defined** (added
+2026-08-05, `2026-08-05-belief-policy-design.md`). The belief scale, the prior,
+the displacement metric and "the policy's ordinary rule" were cited here as
+declared, versioned members of a policy that did not exist. A policy now
+declares a carrier `V`, a `prior ∈ V`, a `distance`, and the evaluator
+`aggregate` — and the **identity fixture-binds `aggregate` end to end**, not a
+decomposition of it, precisely because the selection, contestation, clamp,
+candidate ordering and tie-break specified in this section all change belief: an
+identity covering only the numeric primitives would let the behaviour above move
+without any identity moving. `science.belief.v1` instantiates `V = ℤ` with unit
+weight per directional assessment, so a belief value is a **signed evidence
+balance** and never odds or a probability. It carries no weighting by study
+design or precision, and that is a blocked term rather than a deferred one:
+`estimand` is untyped and `uncertainty` is on the estimate's own scale, so no
+dimensionless magnitude is computable without the typed reference and
+commensuration contract ρO3 leaves open.
 
 Minimizing *displacement* rather than the signed value is what makes the rule
 symmetric: a confidently refuted proposition is a confident state too, so
@@ -819,6 +854,18 @@ reasoning does not, and a clique case belongs in the tests to keep it honest.
 `applicability` is where the estimand-match residue (§8.5) will eventually be
 attacked: it is recorded here, and comparing it against the proposition's own
 scope is the check this kernel makes *possible* but does not yet specify.
+
+**Amended 2026-08-05 (belief-policy §5) — the blocker is now named, and it is
+upstream of this kernel.** No belief policy reads `applicability` for value, and
+none can yet emit a mismatch: `applicability` is untyped prose, not a qualifier
+map, so the canonical map equality M5 pins does not apply to it, and ρO3 defines
+no applicability-match predicate. The rule that would be *right* — narrower
+evidence refutes a universal claim but cannot corroborate it, and the reverse for
+an existential one — needs **term subsumption**, which domain-extension declines
+to supply by design and which the formal model marks `scope` **"defective — no
+order is defined"** for. Refusing on mismatch is separately rejected: it would
+convert a working belief state into an availability failure anyone able to add an
+assessment could trigger, which is the shape this section refuses above.
 
 ### 4.3 Outside the kernel
 
@@ -909,6 +956,19 @@ different answers. That is not a qualifier on G3 — under the unrestricted
 phrasing it is a G3 violation. R5 already tests the held-ness case, unchanged,
 and no G3 arm moves.
 
+**The three answers are now a type** (added 2026-08-05, belief-policy §4):
+`Belief(value, belief_input_digest, policy_binding) | NoBelief(reason) |
+Refused(reason)`. Three top-level arms, as this section already required;
+reasons are discriminants **within** an arm and never a fourth answer. The
+digest accompanies the `Belief` arm alone, which is what ρA8's restriction
+above amounts to once the arms are named. Two boundaries that were previously
+unstated are fixed there and are easy to get backwards: an empty eligible set is
+**`NoBelief(NoEligibleAssessment)`** and not an unavailability, because the
+computation succeeded and found nothing rather than failing to run; and a
+policy implementation that **fails its fixtures refuses**, unlike W8a's
+unresolvable reading, because an exact binding names the implementation and no
+installation can repair a binding that is false.
+
 **G2a is a guarantee about the execution boundary, not about chronology, and
 sub-problem 4 is where that surfaced.** A content hash proves content **equality,
 not chronology**: a spec hash computed today is byte-identical to one that would
@@ -943,11 +1003,15 @@ belief. G3 therefore pins the **transitive semantic closure**, reduced to a sing
 | **`observes` dataset content identities** | the actual bytes assessed |
 | **dataset lineage snapshot** (defined below) | independence is derived from ancestry, which is mutable |
 | **retraction enumeration per closure member** — the found retraction refs, their resolutions, and the coverage declaration the enumeration ran under (added 2026-08-03, correction-lifecycle §6) | standing is computed at read time, so a corpus with a standing retraction and one without must hash differently; the exact corpus states the enumeration ran at are receipt material, never digest members (world §5's semantic-snapshot/receipt split) |
-| belief policy version | the aggregation rule |
+| **policy binding** — `(policy rule identity, implementation content identity)` (amended 2026-08-05, belief-policy §2.2) | the aggregation rule, bound to the exact implementation that ran it. It read *"belief policy version — the aggregation rule"* while the policy was undesigned, which left the member that determines the **value** as the last bare version string in this table: 5b §6 rules that finite fixtures cannot force two conforming implementations to agree outside those fixtures, so two of them could produce different values behind one digest — repro §3.1b's *"versioning a symbol is not versioning behaviour"*, applied to the one rule whose output **is** the belief. World W8a already returns `malformed` for a rule reference that is a bare version string with no fixture binding. The binding is a **required argument** to the computation, with no default and no implicit "latest", for the reason the producer-snapshot member states: any of those would make belief follow the checkout |
 | **consulted profile contracts** — exactly one `science_contract` **unconditionally**, plus each domain contract whose namespaced facets the derivation actually reads (added 2026-08-04, domain-extension-boundary §8) | the rules by which the derivation *interprets* what it read. A successor contract can reinterpret a facet, a kernel kind, or a relation signature without changing one byte of facet or assessment content; without this member the same digest would stand for two different beliefs, which is what this table exists to forbid. The base contract is unconditional because interpreting `assessment`, `dataset`, or `assesses` **is** consulting it — a facet-triggered rule would miss exactly the load-bearing case. Activated-but-unread domains stay out: belief moves when the rules it used move. Cross-corpus closures must agree on every consulted identity, which is what preserves W5 (domain-extension-boundary §8.1) |
 
-A belief state that cannot be recomputed byte-identically from its digest alone
-is a defect, not a drift.
+A belief state that cannot be recomputed byte-identically from **the closure this
+digest names** is a defect, not a drift. It read *"from its digest alone"* until
+2026-08-05; a digest is a hash and nothing is recomputable from one, and G3's own
+test arm always said the recomputation runs *"from the named closure alone"*. The
+looser phrasing was found while designing the belief policy, whose P7 makes the
+same claim about the evaluator (belief-policy §7).
 
 **Keying is also what puts run identity in the digest at all.** An assessment
 identity is `(spec, run, proposition)`, so the first member now carries the run
@@ -1161,6 +1225,18 @@ ordinary terms.
    provenanced computation forces an estimand to be *recorded*. It does not force
    it to *match* the claim it is used for. That is the largest surviving piece of
    the ten-item scope cluster and it needs its own treatment.
+
+   **Amended 2026-08-05 (belief-policy §5) — unchanged in substance, and its
+   blocker is now named.** The residue is not waiting on effort. It is waiting on
+   a **typed reference and a commensuration contract** that no artifact yet owns:
+   `estimand` appears in this document exactly once, as prose, with no value set
+   declared for any of its four components, and `applicability` is prose too.
+   Which artifact should supply them — the claim operator, the estimand, or the
+   interpretation rule — is ρO3's neighbourhood, and a typed endpoint alone would
+   not settle it, since a noninferiority margin is not determined by an endpoint.
+   The same gap is what forces `science.belief.v1` to weight every directional
+   assessment equally, so this limitation and belief-policy limitation 1 are one
+   limitation reached from two directions.
 6. **"Data doesn't lie" has practical limits** beyond fabrication — QA failures,
    batch effects, analytic degrees of freedom. This is why pre-declared
    interpretation rules and estimator certification must survive the rebuild

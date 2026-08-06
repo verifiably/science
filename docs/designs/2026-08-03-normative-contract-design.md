@@ -123,8 +123,20 @@ G2a–G2c, G3–G8; S1–S8 with S1a; W1–W13 with W5a and W8a–W8b; R1–R23;
 X1–X12; **N1–N10** (this document's own table, §9); **L1–L13** (tamper-evident
 log, banked 2026-08-03, omitted from this inventory at its banking and added
 2026-08-04); **D1–D10** (domain extension boundary, banked 2026-08-04);
-**M1–M13** (formal model and claim calculus, banked 2026-08-05): the
+**M1–M13** (formal model and claim calculus, banked 2026-08-05); **P1–P9**
+(belief policy, banked 2026-08-05): the
 exact current inventory, with no base G2 — are permanent names.
+
+**P, not B.** The formal model uses `B` for the belief reading throughout M₀, so
+an oracle table under that letter would recreate exactly the overloading that
+document was written to remove. **P1–P9** covers the exact policy binding and its
+refusal boundaries (P1, P2), the binding as a digest member (P3), the three
+absence states and their distinguishability (P4), unequal weights being
+unspellable under `science.belief.v1` (P5), v1 reading no magnitude-bearing facet
+field (P6), belief as a computed view with an observationally inert cache (P7),
+an `inconclusive` assessment being value-inert but digest-committed (P8), and the
+unholding precedence that keeps R5's recomputation from being overruled by a
+refusal (P9).
 
 **M enters at banking, by that design's own standing obligation.** Both L and N
 reached this inventory *late* — L was omitted at its banking and added a day
