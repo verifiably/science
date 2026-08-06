@@ -2013,6 +2013,29 @@ bytes are lying around — precisely what §6.5's identifier discipline exists t
 prevent. It is emitted on the accepting arm only; the refusing arm produces no
 claim and therefore no receipt.
 
+> **Built 2026-08-06, and two things the interface did not say.**
+>
+> **The receipt also carries the claim identity**, which is beyond this section's
+> letter. Without it a receipt is a set of position labels — `argument:0`,
+> `restriction:testing/population` — with nothing saying whose positions they
+> were, and a diagnostic that cannot be attached to its subject is not much of
+> one. It is also what makes the receipt's own dependency legible: the claim
+> identity fixes the operator, and §7.3 forbids redefining an operator's
+> `arg_sorts` under its own identifier, so the positions cannot be silently
+> reinterpreted. That argument has exactly one hole and it is already open — a
+> parallel `genesis` in the same namespace is compared against nothing (§8.3,
+> ρC1).
+>
+> **Decode maps the polarity position back to the unit inhabitant.** §7.5 always
+> emits the position, so `sign_inapt_tag` is on the wire for an operator whose
+> `Polarity(op)` is the unit type — and §6.3 says an author supplies nothing
+> there. The boundary therefore has to *translate*, not forward: the tag on the
+> wire becomes "there is nothing to supply" inside, while `build_claim` still
+> refuses the same tag from an author. Recorded because forwarding it unmapped
+> passed every arm-by-arm test written at the time; what caught it was decoding
+> M10's frozen vector, where the sign-inapt row round-trips or the digests do not
+> match.
+
 It **reuses the boundary receipt's envelope, and is not the banked artifact.**
 The first draft said "§2.3 already lists that as one of the four non-node
 identity-bearers, so this needs no new kind." That was wrong on three counts

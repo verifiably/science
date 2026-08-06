@@ -111,6 +111,41 @@ class ProfileError(ScienceError):
     """A profile refused — at compilation, at construction, or at resolution."""
 
 
+class ResolutionError(ScienceError):
+    """A snapshot or receipt refused — at construction, never at resolution itself.
+
+    Resolving a term never raises: every one of §7.2's five outcomes is a
+    well-formed answer, including the four that are not `member`. An exception
+    here would be a sixth outcome smuggled in through the control flow, and it
+    would be the one outcome a caller could not record in a receipt."""
+
+
+class DecodeError(ScienceError):
+    """The refusing arm of ``decodeClaim``'s sum type.
+
+    Every subclass, together with the `ClaimError`s the shared constructor
+    raises, is *Refused*: no claim is returned, and no receipt — a receipt
+    records checks that were performed on a claim that exists."""
+
+
+class MalformedWireClaim(DecodeError):
+    """A wire value that is not shaped like a claim at all.
+
+    Distinct from the profile-dependent refusals: this is settled before any
+    contract is consulted, because the typing below it indexes into the value."""
+
+
+class UnboundReferent(DecodeError):
+    """A term that its sort's bound vocabulary was **read** and found not to contain.
+
+    The one outcome of §7.2's five that refuses. It is positive evidence of a bad
+    binding, and admitting it would put an unbindable identifier into an
+    immutable claim identity. The three not-performed outcomes accept, and the
+    distance between this class and them is the whole subject of §7.2 — refusing
+    on `not-consulted` would report *"not in the vocabulary"* on the evidence
+    that nobody looked."""
+
+
 class DuplicateContribution(ProfileError):
     """Two contracts contributing to one namespace. D §8's rule for facets, and
     the same one here: contributions in *different* namespaces compose, and two
