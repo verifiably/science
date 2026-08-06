@@ -1672,6 +1672,33 @@ operators:
     dimensions: [population, condition]
 ```
 
+> **Ruled 2026-08-06, while building it — a tag's canonical bytes are its
+> symbol.** §8 asks this contract to fix *"the closed sets and their bytes, not
+> their spelling"*, and §7.4 row 5 warns against *"an implementation choosing a
+> different serialization for a tag"*. Read as two requirements they conflict;
+> read as one they do not, and the one is: **the bytes must not be an
+> implementation's decision**. So the contract declares the encoding rule
+> alongside the symbols —
+>
+> ```yaml
+> claim_grammar:
+>   version: 1
+>   tag_encoding: science.identity.v1   # a tag's bytes are its symbol, as a string
+> ```
+>
+> — and a loader presented with any other `tag_encoding` **refuses**, rather than
+> encoding the tags under a rule the contract did not name.
+>
+> **The alternative was considered and rejected.** Giving each tag a second,
+> independent encoding beside its symbol would let a tag be *renamed* without
+> re-minting the claim population. It buys renaming across a closed set of ten
+> kernel tags, which nothing needs, and it costs every tag a second name that
+> something must hold in correspondence — a cache that can disagree with what it
+> names, which is the defect §6.5 removed from `render` and D §6 removed from
+> `KIND_DESCRIPTORS`. §7.3 already pairs *authored and stable* with *enters claim
+> identity*, and a tag symbol is exactly that; row 5 then prices a change to one
+> as severe, which is the intended answer rather than a cost to engineer around.
+
 The `population-group` binding is a **placeholder, not a proposal**. No
 population vocabulary has been selected, and none of the obvious candidates is
 one — MONDO is a disease ontology, and appears above bound to `condition`, which
@@ -1884,6 +1911,16 @@ A change that is **purely editorial** — a description, a comment, an example �
 moves the contract identity and therefore `belief_input_digest`, but touches no
 declared schema and so needs no new identifier. That is D limitation 1's drift
 case, inherited unchanged and not improved on here.
+
+> **Corrected 2026-08-06, while building it — the list overstates by one item.**
+> A **comment** does not move the contract identity, because contract identity is
+> derived over the **canonical projection** and a comment does not survive
+> parsing into one. Nor should it: D5 requires that reformatting — *"whitespace,
+> key order, quoting style"* — leave an identity unchanged, and an identity taken
+> over raw bytes to catch comments would make every one of those significant. A
+> comment is on the formatting side of that line. Descriptions and examples are
+> *fields*, survive into the projection, and move the identity exactly as this
+> paragraph says.
 
 **Who owns a term** is then simply: the contract whose namespace issues it. That
 is the answer to the "no owner" half of limitation 4, and it is the same answer

@@ -52,3 +52,22 @@ class LoneSurrogate(IdentityError):
 
 class MalformedDomain(IdentityError):
     """A digest domain that is not a well-formed, versioned domain name."""
+
+
+class ContractError(ScienceError):
+    """A contract was refused at load."""
+
+
+class MalformedContract(ContractError):
+    """A contract that is structurally wrong — an unknown field, a missing one, a
+    value of the wrong shape. Unknown fields are refused rather than ignored: D5
+    is explicit that an unrecognized field is *"refused at load, never ignored and
+    never digested"*, and a contract quietly accepting one would make the reader
+    and the loader disagree about what the document says."""
+
+
+class TagCollision(ContractError):
+    """Two kernel tags that must stay distinct and do not — a duplicate inside a
+    closed set, or a ``sign_inapt_tag`` that is also an assertable polarity.
+    ``inapt`` and ``unsigned`` are different facts (§7.5), and a projection that
+    cannot tell them apart has lost the distinction it exists to carry."""
