@@ -1,0 +1,44 @@
+# A synthetic domain contract, for tests only.
+#
+# Deliberately not a real domain. Shipping `domains/biology/DOMAIN.yaml` is a
+# design act, not a test-support one: §7.1's own biology example would be refused
+# at load, because it binds `population-group` to a placeholder and no population
+# vocabulary has been selected (§11, open). Inventing one here to make a test
+# pass would decide an open question by accident.
+#
+# `subtype-of` is sign-inapt and `affects` is sign-apt, so both inhabitants of
+# §7.5's polarity position are reachable.
+
+contract: testing
+version: 1
+lineage: genesis
+
+sorts:
+  entity:
+    vocabulary: { namespace: EX, release: "2026-01-01" }
+  outcome:
+    vocabulary: { namespace: EX, release: "2026-01-01" }
+  cohort:
+    vocabulary: dataset:0000000000000000000000000000000000000000000000000000000000000000
+
+dimensions:
+  population:
+    restriction_sort: cohort
+  setting:
+    restriction_sort: entity
+
+operators:
+  affects:
+    arity: 2
+    arg_sorts: [entity, outcome]
+    sign_apt: true
+    layers: [causal]
+    dimensions: [population, setting]
+    description: An editorial field. Changing it must move contract identity and nothing else.
+
+  subtype-of:
+    arity: 2
+    arg_sorts: [entity, entity]
+    sign_apt: false
+    layers: [structural]
+    dimensions: []

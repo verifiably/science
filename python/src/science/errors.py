@@ -66,6 +66,13 @@ class MalformedContract(ContractError):
     and the loader disagree about what the document says."""
 
 
+class SuccessionViolation(ContractError):
+    """A successor contract that redefines, drops, or misdeclares its lineage.
+    Refused at contract **load** — never at claim decode, which sees wire bytes
+    and cannot tell a claim being authored now from one being restored from a
+    backup (§7.3a)."""
+
+
 class TagCollision(ContractError):
     """Two kernel tags that must stay distinct and do not — a duplicate inside a
     closed set, or a ``sign_inapt_tag`` that is also an assertable polarity.

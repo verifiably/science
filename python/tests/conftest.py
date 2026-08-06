@@ -22,3 +22,22 @@ def base_contract_path() -> Path:
 @pytest.fixture(scope="session")
 def fixtures_dir() -> Path:
     return REPO_ROOT / "fixtures"
+
+
+@pytest.fixture(scope="session")
+def testing_contract_path() -> Path:
+    return Path(__file__).parent / "contracts" / "testing.yaml"
+
+
+@pytest.fixture(scope="session")
+def base_contract(base_contract_path):
+    from science.contract import load_base_contract
+
+    return load_base_contract(base_contract_path)
+
+
+@pytest.fixture()
+def testing_document(testing_contract_path) -> dict:
+    import yaml
+
+    return yaml.safe_load(testing_contract_path.read_text(encoding="utf-8"))

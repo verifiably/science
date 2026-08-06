@@ -1,0 +1,414 @@
+"""Domain contracts — operators, dimensions and sorts.
+
+§7.1: **operators are domain-issued without exception**, and the base contract
+may not issue one. A domain-neutral relation like ``subtype-of`` belongs to a
+general-purpose domain contract, since nothing requires a "domain" to be a
+natural science.
+
+Two identities, deliberately different in kind (§7.3):
+
+    term identifier     authored, stable, namespaced      enters claim identity
+    contract identity   content-derived, moves on edit    enters belief_input_digest
+
+Succession (§8.3) is the *never redefine* rule made checkable. It compares the
+**canonical schema projection** — the meaning-bearing fields — so an editorial
+edit is free while an `arity` change is refused at load. Two fields are
+deliberately outside that projection:
+
+* ``description``, which is editorial by definition; and
+* ``retired``, because retirement is a status change and putting it in the
+  projection would make **retiring** an identifier a redefinition of it, which
+  is precisely the operation §7.3a requires to be permitted.
+"""
+
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass, field
+from pathlib import Path
+
+import yaml
+
+from science.contract.base import BaseContract
+from science.errors import MalformedContract, SuccessionViolation
+from science.identity import v1
+
+__all__ = [
+    "DimensionDecl",
+    "DomainContract",
+    "OperatorDecl",
+    "SortDecl",
+    "VocabularyBinding",
+    "check_succession",
+    "load_domain_contract",
+    "parse_domain_contract",
+]
+
+DOMAIN_CONTRACT_DOMAIN = "science.contract.v1"
+
+_NAME = re.compile(r"^[a-z][a-z0-9-]*$")
+
+_CONTRACT_FIELDS = frozenset({"contract", "version", "lineage", "sorts", "dimensions", "operators"})
+_OPERATOR_FIELDS = frozenset({"arity", "arg_sorts", "sign_apt", "layers", "dimensions"})
+_OPERATOR_OPTIONAL = frozenset({"description", "retired"})
+_DIMENSION_FIELDS = frozenset({"restriction_sort"})
+_SORT_FIELDS = frozenset({"vocabulary"})
+
+
+@dataclass(frozen=True)
+class VocabularyBinding:
+    """D §5: a held ontology dataset by content identity, or a namespace with an
+    explicit release. **A bare namespace is refused** — the binding is exact or
+    it is absent, and a binding without a release would let the same identifier
+    mean different things in two checkouts."""
+
+    namespace: str | None
+    release: str | None
+    dataset_identity: str | None
+
+    def projection(self) -> dict[str, object]:
+        if self.dataset_identity is not None:
+            return {"dataset": self.dataset_identity}
+        return {"namespace": self.namespace, "release": self.release}
+
+
+@dataclass(frozen=True)
+class SortDecl:
+    name: str
+    vocabulary: VocabularyBinding
+    retired: bool = False
+
+    def schema_projection(self) -> dict[str, object]:
+        return {"vocabulary": self.vocabulary.projection()}
+
+
+@dataclass(frozen=True)
+class DimensionDecl:
+    name: str
+    restriction_sort: str
+    retired: bool = False
+
+    def schema_projection(self) -> dict[str, object]:
+        return {"restriction_sort": self.restriction_sort}
+
+
+@dataclass(frozen=True)
+class OperatorDecl:
+    """§6.2's declared schemas, and nothing else: ``arity``, ``arg_sorts``,
+    ``sign_apt``, ``layers``, ``dimensions`` are exactly ``arity(op)``,
+    ``ArgSort(op)``, ``signApt(op)``, ``Layers(op)``, ``Dims(op)``.
+
+    ``RestrictionSort(op)`` is resolved through the dimension declarations rather
+    than restated per operator, so two operators sharing ``population`` cannot
+    disagree about what a population restriction binds to.
+    """
+
+    name: str
+    arity: int
+    arg_sorts: tuple[str, ...]
+    sign_apt: bool
+    layers: tuple[str, ...]
+    dimensions: tuple[str, ...]
+    retired: bool = False
+
+    def schema_projection(self) -> dict[str, object]:
+        return {
+            "arity": self.arity,
+            "arg_sorts": list(self.arg_sorts),
+            "sign_apt": self.sign_apt,
+            "layers": list(self.layers),
+            "dimensions": list(self.dimensions),
+        }
+
+
+@dataclass(frozen=True)
+class DomainContract:
+    namespace: str
+    version: int
+    predecessor: str | None
+    """``None`` is ``genesis``. §8.3 records that genesis is an escape hatch: the
+    rules enforce immutability **within a declared lineage**, not across a
+    namespace, and closing the parallel-genesis case needs governance this design
+    does not supply (ρC1, open)."""
+    sorts: dict[str, SortDecl] = field(default_factory=dict)
+    dimensions: dict[str, DimensionDecl] = field(default_factory=dict)
+    operators: dict[str, OperatorDecl] = field(default_factory=dict)
+    content_identity: str = ""
+
+    def term(self, local: str) -> str:
+        """The namespaced term identifier — what enters ``π_claim`` (§6.5)."""
+        return f"{self.namespace}/{local}"
+
+    def claim_vocabulary(self) -> dict[str, dict[str, object]]:
+        """Every claim-vocabulary identifier and its canonical schema projection.
+
+        §8.3's scope restriction is deliberate: these rules govern claim
+        vocabulary and nothing else. An unscoped "every identifier" would have
+        this design quietly deciding facet versioning, which D §12 leaves open.
+        """
+        return {
+            **{f"sort:{name}": decl.schema_projection() for name, decl in self.sorts.items()},
+            **{f"dimension:{name}": decl.schema_projection() for name, decl in self.dimensions.items()},
+            **{f"operator:{name}": decl.schema_projection() for name, decl in self.operators.items()},
+        }
+
+
+def _mapping(value: object, where: str) -> dict[str, object]:
+    if not isinstance(value, dict):
+        raise MalformedContract(f"{where}: expected a mapping, found {type(value).__name__}")
+    for key in value:
+        if not isinstance(key, str):
+            raise MalformedContract(f"{where}: key {key!r} is {type(key).__name__}, not a string")
+    return value  # type: ignore[return-value]
+
+
+def _fields(mapping: dict[str, object], required: frozenset[str], optional: frozenset[str], where: str) -> None:
+    unknown = sorted(set(mapping) - required - optional)
+    if unknown:
+        raise MalformedContract(f"{where}: unknown field(s) {', '.join(unknown)}; refused, never ignored")
+    missing = sorted(required - set(mapping))
+    if missing:
+        raise MalformedContract(f"{where}: missing field(s) {', '.join(missing)}")
+
+
+def _name(value: object, where: str) -> str:
+    if not isinstance(value, str) or not _NAME.fullmatch(value):
+        raise MalformedContract(f"{where}: {value!r} is not an identifier; expected lowercase `[a-z][a-z0-9-]*`")
+    return value
+
+
+def _bool(value: object, where: str) -> bool:
+    if not isinstance(value, bool):
+        raise MalformedContract(f"{where}: expected true or false, found {value!r}")
+    return value
+
+
+def _parse_vocabulary(value: object, where: str) -> VocabularyBinding:
+    if isinstance(value, str):
+        if not value.startswith("dataset:") or not value[len("dataset:") :]:
+            raise MalformedContract(f"{where}: {value!r} is not a binding; expected `dataset:<content-identity>`")
+        return VocabularyBinding(namespace=None, release=None, dataset_identity=value[len("dataset:") :])
+    binding = _mapping(value, where)
+    _fields(binding, frozenset({"namespace", "release"}), frozenset(), where)
+    namespace, release = binding["namespace"], binding["release"]
+    if not isinstance(namespace, str) or not namespace or not isinstance(release, str) or not release:
+        raise MalformedContract(
+            f"{where}: a namespace binding needs a non-empty namespace and an explicit release. "
+            "A bare namespace is refused (D §5) — without a release the same identifier can mean "
+            "different things in two checkouts, with no way to tell."
+        )
+    return VocabularyBinding(namespace=namespace, release=release, dataset_identity=None)
+
+
+def _parse_lineage(value: object, where: str) -> str | None:
+    if value == "genesis":
+        return None
+    lineage = _mapping(value, where)
+    _fields(lineage, frozenset({"successor"}), frozenset(), where)
+    predecessor = lineage["successor"]
+    if not isinstance(predecessor, str) or not predecessor:
+        raise MalformedContract(f"{where}: successor must name a predecessor contract identity, found {predecessor!r}")
+    return predecessor
+
+
+def _parse_operator(name: str, value: object, where: str) -> OperatorDecl:
+    body = _mapping(value, where)
+    _fields(body, _OPERATOR_FIELDS, _OPERATOR_OPTIONAL, where)
+
+    arity = body["arity"]
+    if isinstance(arity, bool) or not isinstance(arity, int) or arity < 0:
+        raise MalformedContract(f"{where}: arity must be a non-negative integer, found {arity!r}")
+
+    raw_sorts = body["arg_sorts"]
+    if not isinstance(raw_sorts, list):
+        raise MalformedContract(f"{where}: arg_sorts must be a list, found {raw_sorts!r}")
+    arg_sorts = tuple(_name(item, f"{where}: arg_sorts[{i}]") for i, item in enumerate(raw_sorts))
+    if len(arg_sorts) != arity:
+        raise MalformedContract(
+            f"{where}: arity is {arity} but arg_sorts has {len(arg_sorts)} entries. "
+            "ArgSort(op) is a function on Fin(arity(op)); a mismatch leaves a slot with no sort or a sort with no slot."
+        )
+
+    raw_layers = body["layers"]
+    if not isinstance(raw_layers, list) or not raw_layers:
+        raise MalformedContract(
+            f"{where}: layers must be a non-empty list. §6.2: an operator admitting no layer would make "
+            "Claim uninhabited at that operator."
+        )
+    layers = tuple(_name(item, f"{where}: layers[{i}]") for i, item in enumerate(raw_layers))
+    _no_duplicates(layers, f"{where}: layers")
+
+    raw_dimensions = body["dimensions"]
+    if not isinstance(raw_dimensions, list):
+        raise MalformedContract(f"{where}: dimensions must be a list, found {raw_dimensions!r}")
+    dimensions = tuple(_name(item, f"{where}: dimensions[{i}]") for i, item in enumerate(raw_dimensions))
+    _no_duplicates(dimensions, f"{where}: dimensions")
+
+    return OperatorDecl(
+        name=name,
+        arity=arity,
+        arg_sorts=arg_sorts,
+        sign_apt=_bool(body["sign_apt"], f"{where}: sign_apt"),
+        layers=layers,
+        dimensions=dimensions,
+        retired=_bool(body.get("retired", False), f"{where}: retired"),
+    )
+
+
+def _no_duplicates(values: tuple[str, ...], where: str) -> None:
+    seen: set[str] = set()
+    for value in values:
+        if value in seen:
+            raise MalformedContract(f"{where}: {value!r} appears twice")
+        seen.add(value)
+
+
+def parse_domain_contract(document: object, *, source: str, base: BaseContract) -> DomainContract:
+    """Validate a parsed domain-contract document against the base contract.
+
+    The base contract is a required argument because a domain's layer selections
+    are checked against it: §7.1 makes the layer set **base-owned but
+    per-operator restricted**, and a domain that could mint a layer would be
+    redefining what kind of thing a claim is.
+    """
+    root = _mapping(document, source)
+    _fields(root, _CONTRACT_FIELDS, frozenset({"description"}), source)
+
+    namespace = _name(root["contract"], f"{source}: contract")
+    if namespace == base.name:
+        raise MalformedContract(
+            f"{source}: {namespace!r} is the base contract's namespace. Operators are domain-issued without "
+            "exception (§7.1), and a base-issued operator would sit outside the closure walk every other "
+            "operator goes through."
+        )
+
+    version = root["version"]
+    if isinstance(version, bool) or not isinstance(version, int) or version < 1:
+        raise MalformedContract(f"{source}: version must be a positive integer, found {version!r}")
+
+    sorts = {
+        name: SortDecl(
+            name=name,
+            vocabulary=_parse_vocabulary(
+                _require_sort_body(body, f"{source}: sorts.{name}")["vocabulary"], f"{source}: sorts.{name}: vocabulary"
+            ),
+            retired=_bool(
+                _require_sort_body(body, f"{source}: sorts.{name}").get("retired", False),
+                f"{source}: sorts.{name}: retired",
+            ),
+        )
+        for name, body in _declarations(root["sorts"], f"{source}: sorts").items()
+    }
+
+    dimensions: dict[str, DimensionDecl] = {}
+    for name, body in _declarations(root["dimensions"], f"{source}: dimensions").items():
+        where = f"{source}: dimensions.{name}"
+        decl = _mapping(body, where)
+        _fields(decl, _DIMENSION_FIELDS, frozenset({"description", "retired"}), where)
+        restriction_sort = _name(decl["restriction_sort"], f"{where}: restriction_sort")
+        if restriction_sort not in sorts:
+            raise MalformedContract(
+                f"{where}: restriction_sort {restriction_sort!r} is not a sort this contract declares"
+            )
+        dimensions[name] = DimensionDecl(
+            name=name, restriction_sort=restriction_sort, retired=_bool(decl.get("retired", False), f"{where}: retired")
+        )
+
+    operators: dict[str, OperatorDecl] = {}
+    for name, body in _declarations(root["operators"], f"{source}: operators").items():
+        where = f"{source}: operators.{name}"
+        operator = _parse_operator(name, body, where)
+        for slot, sort in enumerate(operator.arg_sorts):
+            if sort not in sorts:
+                raise MalformedContract(f"{where}: arg_sorts[{slot}] {sort!r} is not a sort this contract declares")
+        for dimension in operator.dimensions:
+            if dimension not in dimensions:
+                raise MalformedContract(f"{where}: {dimension!r} is not a dimension this contract declares")
+        for layer in operator.layers:
+            if layer not in base.claim_grammar.layers:
+                raise MalformedContract(
+                    f"{where}: layer {layer!r} is not in the base contract's layer vocabulary. A domain selects "
+                    "from the base vocabulary and may not extend it (§7.1)."
+                )
+        operators[name] = operator
+
+    return DomainContract(
+        namespace=namespace,
+        version=version,
+        predecessor=_parse_lineage(root["lineage"], f"{source}: lineage"),
+        sorts=sorts,
+        dimensions=dimensions,
+        operators=operators,
+        content_identity=v1.digest(DOMAIN_CONTRACT_DOMAIN, root),
+    )
+
+
+def _require_sort_body(body: object, where: str) -> dict[str, object]:
+    decl = _mapping(body, where)
+    _fields(decl, _SORT_FIELDS, frozenset({"description", "retired"}), where)
+    return decl
+
+
+def _declarations(value: object, where: str) -> dict[str, object]:
+    declarations = _mapping(value, where)
+    for name in declarations:
+        _name(name, f"{where}: {name}")
+    return declarations
+
+
+def check_succession(contract: DomainContract, predecessor: DomainContract | None) -> None:
+    """§8.3's two-contract check, refused at contract **load**, not at claim decode.
+
+    A content-derived identity says what a contract *is* and never what it
+    *succeeds*, which is why the predecessor is passed in rather than derived.
+    """
+    if contract.predecessor is None:
+        if predecessor is not None:
+            raise SuccessionViolation(
+                f"{contract.namespace}: declares genesis but a predecessor was supplied. Genesis means "
+                "compared against nothing; validating it against a contract anyway would report a lineage "
+                "the document does not claim."
+            )
+        return
+
+    if predecessor is None:
+        raise SuccessionViolation(
+            f"{contract.namespace}: declares successor({contract.predecessor}) but no predecessor was supplied. "
+            "The check is a two-contract check and cannot be performed against one; skipping it would let a "
+            "redefinition through on the evidence that nobody looked."
+        )
+    if predecessor.content_identity != contract.predecessor:
+        raise SuccessionViolation(
+            f"{contract.namespace}: declares successor({contract.predecessor}) but the supplied predecessor's "
+            f"content identity is {predecessor.content_identity}"
+        )
+    if predecessor.namespace != contract.namespace:
+        raise SuccessionViolation(
+            f"{contract.namespace}: cannot succeed a contract in namespace {predecessor.namespace!r}"
+        )
+
+    current, prior = contract.claim_vocabulary(), predecessor.claim_vocabulary()
+
+    dropped = sorted(set(prior) - set(current))
+    if dropped:
+        raise SuccessionViolation(
+            f"{contract.namespace}: drops claim-vocabulary declaration(s) {', '.join(dropped)}. A retired "
+            "declaration is retained immutably as a tombstone (§7.3a) — dropping one renders an existing claim "
+            "population untypeable, which is redefinition arriving by another route."
+        )
+
+    for identifier in sorted(set(prior) & set(current)):
+        if prior[identifier] != current[identifier]:
+            raise SuccessionViolation(
+                f"{contract.namespace}: {identifier} has a different canonical schema projection than in its "
+                "predecessor. Redefinition is refused within a declared lineage — retire the identifier and "
+                "issue a new one, which keeps every prior assertion bound to what it actually asserted (§7.3)."
+            )
+
+
+def load_domain_contract(path: Path, *, base: BaseContract) -> DomainContract:
+    try:
+        document = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except yaml.YAMLError as exc:
+        raise MalformedContract(f"{path}: not well-formed YAML: {exc}") from exc
+    return parse_domain_contract(document, source=str(path), base=base)
