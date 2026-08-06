@@ -13,7 +13,7 @@ import yaml
 
 import science.profile as profile_module
 from science.contract import base, domain
-from science.errors import DuplicateContribution, ProfileError, SuccessionViolation
+from science.errors import DuplicateContribution, ProfileError, SuccessionViolation, WithdrawnFromAuthoring
 from science.profile import ProfileSpec, compile_profile
 
 
@@ -380,6 +380,23 @@ class TestRetirementReachesThroughSorts:
 
     def test_retiring_the_operator_itself_still_withdraws_it(self, retire):
         assert "testing/affects" not in retire("operators", "affects").authorable_operators()
+
+    def test_a_withdrawn_operator_offers_no_dimensions_at_all(self, retire):
+        # Not an empty tuple: `subtype-of` legitimately returns one, so an empty
+        # answer here would make "withdrawn" and "permits none" the same fact.
+        for section, name, reason in [
+            ("operators", "affects", "the operator is retired"),
+            ("sorts", "outcome", "argument sorts"),
+        ]:
+            profile = retire(section, name)
+            with pytest.raises(WithdrawnFromAuthoring, match=reason):
+                profile.authorable_dimensions("testing/affects")
+
+    def test_an_unresolvable_operator_is_not_a_withdrawn_one(self, base_contract, testing):
+        # Two different facts, and the profile must not answer one with the other.
+        profile = compile_profile(base_contract, [testing])
+        with pytest.raises(ProfileError, match="no operator"):
+            profile.authorable_dimensions("testing/absent")
 
     def test_retiring_a_permitted_dimension_withdraws_only_that_dimension(self, retire):
         # §6.2: Dims(op) is the set of dimensions *permitted*, not required, so

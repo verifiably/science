@@ -36,7 +36,7 @@ from types import MappingProxyType
 
 from science.contract.base import BaseContract, ClaimGrammar
 from science.contract.domain import DomainContract, OperatorDecl, VocabularyBinding
-from science.errors import DuplicateContribution, ProfileError
+from science.errors import DuplicateContribution, ProfileError, WithdrawnFromAuthoring
 from science.identity import v1
 
 __all__ = ["CompiledDimension", "CompiledOperator", "CompiledSort", "ProfileSpec", "compile_profile"]
@@ -135,6 +135,9 @@ class ProfileSpec:
 
     compiled_identity: str
 
+    # As in `Claim`: the lock is this method. `@dataclass` will not overwrite an
+    # `__init__` the class already defines, so `init=False` is a backstop rather
+    # than the mechanism.
     def __init__(self, *args: object, **kwargs: object) -> None:
         raise ProfileError(
             "ProfileSpec is compiled, never authored — use compile_profile(base, domains). "
@@ -197,10 +200,9 @@ class ProfileSpec:
         of dimensions *permitted*, not required, so a retired dimension withdraws
         only itself — see `authorable_dimensions`.
         """
-        return tuple(sorted(term for term in self.operators if self._operator_is_authorable(term)))
+        return tuple(sorted(term for term, operator in self.operators.items() if self._is_authorable(operator)))
 
-    def _operator_is_authorable(self, term: str) -> bool:
-        operator = self.operators[term]
+    def _is_authorable(self, operator: CompiledOperator) -> bool:
         if operator.retired:
             return False
         return all(not self.sorts[sort].retired for sort in operator.arg_sorts)
@@ -208,20 +210,46 @@ class ProfileSpec:
     def authorable_dimensions(self, term: str) -> tuple[str, ...]:
         """The qualifier dimensions an author may select on ``term``.
 
-        A dimension is withdrawn either by its own retirement or by the
+        **The operator's own authorability is checked first, and a withdrawn
+        operator refuses.** A qualifier is a qualifier *of* a claim, and there is
+        no claim to qualify at an operator that cannot be authored — offering a
+        dimension for one would let an author assemble most of a claim before the
+        boundary refused it, which is the same one-step-too-late failure that
+        made `authorable_operators` reach through argument sorts.
+
+        Refusing is also what keeps two different facts apart. An empty tuple is
+        already the honest answer for a live operator that permits no dimensions
+        — `subtype-of` is one — so returning it here would make *"withdrawn"* and
+        *"has none"* the same answer, which is §7.5's `inapt`/`unsigned` collapse
+        committed one level down.
+
+        A dimension is itself withdrawn either by its own retirement or by the
         retirement of the sort its restrictions bind to: a restriction is sorted
         exactly as an argument is (§6.2), so a retired restriction sort leaves
         nothing selectable, and a dimension whose restriction cannot be bound is
         not a dimension an author can use.
         """
+        operator = self.operator(term)
+        if not self._is_authorable(operator):
+            raise WithdrawnFromAuthoring(
+                f"operator {term!r} is withdrawn from authoring — {self._withdrawal_reason(operator)}. "
+                "§7.3a: it stays resolvable for decode, import and restore, which type a historical claim "
+                "against the frozen declaration."
+            )
         return tuple(
             sorted(
                 dimension
-                for dimension in self.operator(term).dimensions
+                for dimension in operator.dimensions
                 if not self.dimensions[dimension].retired
                 and not self.sorts[self.dimensions[dimension].restriction_sort].retired
             )
         )
+
+    def _withdrawal_reason(self, operator: CompiledOperator) -> str:
+        if operator.retired:
+            return "the operator is retired"
+        retired = sorted({sort for sort in operator.arg_sorts if self.sorts[sort].retired})
+        return f"its argument sorts {retired} are retired, so its slots cannot be filled"
 
 
 def compile_profile(base: BaseContract, domains: Iterable[DomainContract]) -> ProfileSpec:

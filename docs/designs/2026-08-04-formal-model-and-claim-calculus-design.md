@@ -1981,6 +1981,17 @@ only place it can live without a way to distinguish new bytes from old.
 > resolvable, and a historical claim is typed against the frozen retired
 > declaration exactly as this section requires — the asymmetry is the point, and
 > widening the authoring rule must not narrow the decode one.
+>
+> **The rows are ordered, and a withdrawn operator has no dimensions to offer.**
+> Row three narrows an *authorable* operator's selection; it is not an
+> independent question. So asking which dimensions may be selected on an operator
+> withdrawn by row one or row two must **refuse**, not answer *"none"* — an empty
+> selection is already the honest answer for a live operator that permits no
+> dimensions at all (`subtype-of` is one), and returning it for a withdrawn
+> operator collapses two different facts, which is §7.5's `inapt`/`unsigned`
+> collapse committed one position over. It would also let an author assemble most
+> of a claim before the boundary refused it, which is the failure the table above
+> was written to fix.
 
 **That requires tombstones.** Typing a historical claim against a retired
 operator means the declaration must still be readable, so a successor contract

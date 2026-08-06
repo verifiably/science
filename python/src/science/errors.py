@@ -74,7 +74,7 @@ class SuccessionViolation(ContractError):
 
 
 class ProfileError(ScienceError):
-    """A profile could not be compiled."""
+    """A profile refused — at compilation, at construction, or at resolution."""
 
 
 class DuplicateContribution(ProfileError):
@@ -82,6 +82,77 @@ class DuplicateContribution(ProfileError):
     the same one here: contributions in *different* namespaces compose, and two
     contributions to one namespaced identifier are refused at compile, never
     resolved last-writer-wins."""
+
+
+class WithdrawnFromAuthoring(ScienceError):
+    """A retired identifier reached the **authoring** boundary — an operator, one
+    of its argument sorts, a selected dimension, or that dimension's restriction
+    sort.
+
+    Deliberately not a `ContractError`: nothing is wrong with the contract, and
+    nothing is wrong with the claim as a historical record. §7.3a puts retirement
+    in authoring and *only* in authoring, so this refusal must never be reachable
+    from decode, import or restore — which is why it is its own class and not a
+    member of the family those boundaries raise.
+    """
+
+
+class ClaimError(ScienceError):
+    """A claim the profile does not admit.
+
+    Raised by the validated constructor. The subclasses stay distinct because M11
+    decodes each ill-formed input *in turn* and asserts a refusal each time; a
+    single `ClaimError` would let one check silently cover for another's absence.
+    """
+
+
+class UntypedReferent(ClaimError):
+    """A bare string, or any untyped value, in an argument slot or a restriction.
+
+    §6.2 types a slot as `Referent(ArgSort(op, i))`, so the sort must travel with
+    the value. A string carries no sort, which means nothing about it can be
+    checked against the slot it was put in (M4)."""
+
+
+class ArityMismatch(ClaimError):
+    """More or fewer arguments than the operator declares. Arity is per operator
+    because it is not universally 2 (§6.2)."""
+
+
+class ArgumentSortMismatch(ClaimError):
+    """A referent of one sort in a slot declared for another. Inside the model
+    these are different types and neither inhabits the other; here the sorts are
+    runtime values, so the same fact is a refusal."""
+
+
+class UndeclaredDimension(ClaimError):
+    """A qualifier on a dimension the operator does not permit. `Dims(op)` is
+    declared per operator — a population restriction is meaningless for a
+    structural operator (§6.2)."""
+
+
+class RestrictionSortMismatch(ClaimError):
+    """A restriction bound to a referent of the wrong sort. A restriction is
+    sorted exactly as an argument is (§6.2)."""
+
+
+class UnknownQuantifier(ClaimError):
+    """A quantifier outside the kernel's closed set. §6.4 rules the set
+    kernel-owned and closed: `{ generic, universal, existential }`."""
+
+
+class PolarityRefused(ClaimError):
+    """A polarity the operator cannot carry — a sign asserted on a sign-inapt
+    operator, no sign supplied for a sign-apt one, or a tag outside the base
+    contract's closed set. For a sign-inapt operator `Polarity(op)` is the unit
+    type (§6.3), so there is exactly one inhabitant and nothing for an author to
+    choose."""
+
+
+class InadmissibleLayer(ClaimError):
+    """A layer outside the operator's declared set. `Layers(op)` is non-empty by
+    construction — an operator admitting no layer would make `Claim` uninhabited
+    at that operator (§6.2)."""
 
 
 class TagCollision(ContractError):
