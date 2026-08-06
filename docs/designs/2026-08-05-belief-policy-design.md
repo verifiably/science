@@ -254,7 +254,7 @@ BeliefAnswer =
 
 NoBeliefReason =
     Unavailable(PolicyUnheld | FixturesUnheld | InputUnheld | CorpusAbsent)
-  | Unassessed
+  | NoEligibleAssessment
   | NoDirectionalOutcome
 ```
 
@@ -270,7 +270,7 @@ a refusal"*. Reasons are discriminants **within** an arm, never a fourth answer.
 | binding well-formed, implementation or fixtures **not held here** | `NoBelief(Unavailable(PolicyUnheld \| FixturesUnheld))` |
 | corpus holding the records absent | `NoBelief(Unavailable(CorpusAbsent))` (R5) |
 | unholding removes the **last** eligible directional assessment | `NoBelief(Unavailable(InputUnheld))` |
-| no eligible assessments at all | `NoBelief(Unassessed)` |
+| no eligible assessments at all | `NoBelief(NoEligibleAssessment)` |
 | eligible assessments exist, none directional | `NoBelief(NoDirectionalOutcome)` |
 | otherwise | `Belief(...)` |
 
@@ -288,7 +288,7 @@ identity fails the fixtures, the binding asserts something false, and installing
 a conforming implementation beside it cannot make it true. Nothing repairs it,
 so it is not a condition of this checkout.
 
-### 4.2 Why `Unassessed` is not `Unavailable`
+### 4.2 Why `NoEligibleAssessment` is not `Unavailable`
 
 `NotAvailable` in formal model §3.3 is **computational**: required material is
 absent, so the projection cannot be computed. With no eligible assessments the
@@ -297,8 +297,16 @@ computation succeeds and discovers that no belief exists. Filing that under
 states a reader must be able to tell apart, since one is repaired by mounting a
 corpus and the other by doing science.
 
-`Unassessed` and `NoDirectionalOutcome` are likewise distinct: **fifty
-inconclusive assessments are not "unassessed."**
+**The reason is named for what is computable, not for what it probably means.**
+An earlier draft called it `Unassessed`. Withdrawn: the system cannot determine
+whether zero eligible assessments means *not yet assessed* or *outside the
+empirical route entirely*, and `claim_layer` cannot decide it either, because
+eligibility is a property of the run's `observes` edge rather than of the claim.
+Banking `Unassessed` would freeze a knowingly false interpretation into a
+guarantee table. `NoEligibleAssessment` states exactly what was established.
+
+It and `NoDirectionalOutcome` are distinct: **fifty inconclusive assessments are
+not an absence of assessment.**
 
 ### 4.3 Why the empty selection never publishes `Belief(0)`
 
@@ -398,7 +406,7 @@ overloading that document was written to remove.
 | **P1** | The belief evaluator accepts only an exact `PolicyBinding`; resolution happens before the call | Supply nothing → **refusal**; supply the rule identity alone → **refusal**. **Negative — this is a claim about the evaluator, not the resolver:** assert 5b §6's deterministic resolution of a single conforming held implementation is **unaffected**, and that the evaluator still refuses the identity that resolver would have accepted |
 | **P2** | A named implementation failing its fixtures **refuses** | Bind an implementation that fails, assert **refusal**, not `NoBelief`. Then **install a conforming implementation beside it** and assert the original binding **still refuses** — the binding is false, not unresolved. **Negative:** a well-formed binding whose implementation is merely **not held** yields `NoBelief(Unavailable(PolicyUnheld))`, and holding it later makes the same binding compute |
 | **P3** | The binding is a digest member | Change **only** the implementation content identity under one rule identity, with the closure otherwise byte-identical, and assert `belief_input_digest` **differs**. **Negative:** resolve the same binding in a different checkout and assert the digest is **unchanged** |
-| **P4** | The absence states are distinguishable | A balanced directional set publishes **`Belief(0)`**; **no eligible assessments** publishes `NoBelief(Unassessed)`; fifty eligible **inconclusive** assessments publish `NoBelief(NoDirectionalOutcome)` and specifically **not** `Unassessed`. Assert all three are distinguishable from each other and that none is `Unavailable` |
+| **P4** | The absence states are distinguishable | A balanced directional set publishes **`Belief(0)`**; **no eligible assessments** publishes `NoBelief(NoEligibleAssessment)`; fifty eligible **inconclusive** assessments publish `NoBelief(NoDirectionalOutcome)` and specifically **not** `NoEligibleAssessment`. Assert all three are distinguishable from each other and that none is `Unavailable` |
 | **P5** | Unequal weights are **unspellable** under `science.belief.v1` | Attempt to construct two eligible directional assessments contributing different magnitudes; assert no API path and no facet content produces one. **Sabotage:** give one assessment weight 2 in the implementation and assert the fixtures **fail** |
 | **P6** | v1 reads no magnitude-bearing facet field | Change **only** `estimate`, **only** `uncertainty`, **only** `estimand`, and **only** `applicability`, in each case preserving `outcome`, eligibility and the dependency structure; assert the **value is unchanged** and the **digest moves** every time. Assert `applicability` may be **reported** and that **no mismatch finding exists** to be emitted |
 | **P7** | Belief is a computed view | Assert **no** belief record and **no** authoritative current-belief selector is minted; assert the evaluator accepts **no** prior value and **no** prior digest as input; assert recomputation from the same committed projection under the same exact binding is **byte-identical**. Assert any cache is **observationally inert** — clearing it changes no answer |
@@ -412,9 +420,9 @@ overloading that document was written to remove.
    Blocked on a typed reference and a commensuration contract (§3.2, ρO3), not
    on effort.
 2. **Inconclusive results are not evidence of absence.** Fifty of them read as
-   none, for the value. They are distinguished from *unassessed* in the answer
-   (§4) and are digest-committed (P8), so the state is visible; it just does not
-   move the number.
+   none, for the value. They are distinguished from an absence of assessment in
+   the answer (§4) and are digest-committed (P8), so the state is visible; it
+   just does not move the number.
 3. **Applicability is unread for value and has no mismatch predicate** (§5).
    Kernel limitation 5's residue stands unchanged.
 4. **A dependent contradiction can neutralize, never overturn** — §4.2.1's own
@@ -427,7 +435,7 @@ overloading that document was written to remove.
    agreement about what it can establish rather than a contradicting value. Same
    non-purity W8a states for its evaluator.
 6. **Nothing is calibrated, because there is nothing to calibrate against.** On
-   the measured corpus every proposition returns `NoBelief(Unassessed)`. The
+   the measured corpus every proposition returns `NoBelief(NoEligibleAssessment)`. The
    design's answer is to carry exactly one constant — unit weight — so the
    uncalibrated surface is as small as the problem permits.
 7. **This design widens no cut.** Conformance cut 1 is frozen and still computes
@@ -438,12 +446,16 @@ overloading that document was written to remove.
 1. **Non-empirical propositions return the wrong absence.** Kernel §11 calls
    these the single largest open question: math, derivation, algorithm and
    model-conditional claims have no `observes` input and so cannot produce an
-   assessment at all. Under §4 they therefore return `NoBelief(Unassessed)` —
-   which says *nobody has assessed this yet*, when the truth is *this is outside
-   the empirical route entirely*. Either `NoBeliefReason` gains an
-   `OutsideEmpiricalRoute` discriminant, or the second route kernel §11 asks for
-   supplies its own answer type. Recorded here rather than answered, because
-   answering it is that design's job.
+   assessment at all. Under §4 they return `NoBelief(NoEligibleAssessment)`,
+   which is true but **deliberately collapses two states**: *not attempted* and
+   *no applicable route*. §4.2 explains why the collapse is banked rather than
+   resolved — nothing currently computes the distinction, and `claim_layer`
+   cannot supply it because eligibility reads the run's `observes` edge. It is
+   uncollapsed by whichever of these arrives first: the second route kernel §11
+   asks for, supplying its own answer type, or a **route-applicability
+   predicate**, after which `NoBeliefReason` can gain a discriminant that
+   something is able to decide. Adding `OutsideEmpiricalRoute` now would mint a
+   reason no computation could ever return.
 2. **Where estimand typing lands.** ρO3's neighbourhood — a typed reference, a
    contrast, a commensuration contract — could be owned by the claim operator,
    the estimand, or the interpretation rule. Until it has an owner, no weighted
