@@ -13,7 +13,7 @@ reasoning is recorded in the adoption ledger's §0.
 
 ## The designs
 
-Eleven documents in `docs/designs/`, banked 2026-08-02 through 2026-08-05. Read
+Twelve documents in `docs/designs/`, banked 2026-08-02 through 2026-08-05. Read
 them in this order:
 
 | document | what it rules |
@@ -28,6 +28,7 @@ them in this order:
 | `2026-08-03-tamper-evident-log-design.md` | pre-mutation registration and detectable removal (L1–L13) |
 | `2026-08-04-domain-extension-boundary-design.md` | where domain-specific material lives, and how interpretation stays separable from identity (D1–D10) |
 | `2026-08-04-formal-model-and-claim-calculus-design.md` | a formal model of the whole system, and what a claim *is* — typed, with identity over its structure rather than its prose (M1–M13) |
+| `2026-08-05-review-disposition-and-conformance-cut-1.md` | disposition of an external review, measured against the trees, and the frozen first conformance cut |
 | `2026-08-03-redesign-adoption-ledger.md` | dependency order between the above, and the legal partial states in between |
 
 The ledger is the entry point for "what is built, what is not, and what waits on
