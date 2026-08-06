@@ -2361,7 +2361,32 @@ These are normative now, not deferred:
 | a contract declares **`genesis`** or **`successor(<predecessor contract identity>)`** | a first release has no predecessor; requiring one unconditionally would make no contract loadable at all |
 | for **claim-vocabulary declarations only** — operators, dimensions, sorts — every identifier present in both a contract and its predecessor must have an **identical canonical schema projection** | this is *never redefine* made checkable. It compares the **meaning-bearing** fields, not bytes: a description, comment or example may change freely, which is what M6's editorial arm requires |
 | retired claim-vocabulary declarations are **retained immutably as tombstones** | historical claims are typed against them (§7.3a) |
+| **retirement is one-way** — a successor may retire an identifier and may never un-retire one (added 2026-08-06) | see below |
 | a violation of any of the above is **refused at contract load** | RF†, at load, not at claim decode |
+
+> **The fifth rule was missing, and was found while implementing the other
+> four** (2026-08-06). The gap is a direct consequence of a decision the rules
+> above force. `retired` **must** sit outside the canonical schema projection —
+> inside it, the act of retiring an identifier would compare as a redefinition
+> of that identifier and be refused, which would forbid the one operation §7.3a
+> requires to be available. But outside it, the schema comparison cannot see
+> `retired` at all, and the presence check only asks whether a declaration is
+> still *there*. A successor flipping `retired: true` back to `false` therefore
+> satisfied every one of the four rules above.
+>
+> **Why that is not merely untidy.** §7.3a puts retirement in **authoring** —
+> the typed constructor cannot select a retired identifier — so the retired set
+> is what decides whether a claim was authorable at the time it was written. If
+> that set can shrink, it is no longer reconstructible from any point in the
+> lineage, and two contracts in one lineage disagree about whether an existing
+> claim was legitimately authored, with the later one silently winning. That is
+> a change to what already-written records mean, which is what redefinition
+> *is* — arriving through the status field instead of the schema field.
+>
+> So the rule belongs **beside** the schema comparison, not inside it. Omitting
+> the field is the same act as writing `false`, since the default is `false`,
+> and both are refused. A tombstone also remains subject to the schema
+> comparison: retirement freezes a declaration, it does not exempt it.
 
 **The scope restriction is deliberate.** These rules govern claim vocabulary and
 nothing else. Facet contracts keep whatever succession discipline D §12

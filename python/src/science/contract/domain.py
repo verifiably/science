@@ -146,11 +146,24 @@ class DomainContract:
         vocabulary and nothing else. An unscoped "every identifier" would have
         this design quietly deciding facet versioning, which D §12 leaves open.
         """
-        return {
-            **{f"sort:{name}": decl.schema_projection() for name, decl in self.sorts.items()},
-            **{f"dimension:{name}": decl.schema_projection() for name, decl in self.dimensions.items()},
-            **{f"operator:{name}": decl.schema_projection() for name, decl in self.operators.items()},
-        }
+        return {key: decl.schema_projection() for key, decl in self._declarations()}
+
+    def retired_identifiers(self) -> frozenset[str]:
+        """The tombstoned claim-vocabulary identifiers.
+
+        Tracked beside the schema projection rather than inside it. Inside, the
+        act of retiring would read as a redefinition and be refused; outside and
+        unchecked, retirement would be reversible. It is neither: see
+        ``check_succession``.
+        """
+        return frozenset(key for key, decl in self._declarations() if decl.retired)
+
+    def _declarations(self) -> tuple[tuple[str, SortDecl | DimensionDecl | OperatorDecl], ...]:
+        return (
+            *((f"sort:{name}", decl) for name, decl in self.sorts.items()),
+            *((f"dimension:{name}", decl) for name, decl in self.dimensions.items()),
+            *((f"operator:{name}", decl) for name, decl in self.operators.items()),
+        )
 
 
 def _mapping(value: object, where: str) -> dict[str, object]:
@@ -263,13 +276,21 @@ def _no_duplicates(values: tuple[str, ...], where: str) -> None:
         seen.add(value)
 
 
-def parse_domain_contract(document: object, *, source: str, base: BaseContract) -> DomainContract:
-    """Validate a parsed domain-contract document against the base contract.
+def parse_domain_contract(
+    document: object, *, source: str, base: BaseContract, predecessor: DomainContract | None
+) -> DomainContract:
+    """Validate a parsed domain-contract document, or refuse it.
 
-    The base contract is a required argument because a domain's layer selections
-    are checked against it: §7.1 makes the layer set **base-owned but
-    per-operator restricted**, and a domain that could mint a layer would be
-    redefining what kind of thing a claim is.
+    The base contract is required because a domain's layer selections are checked
+    against it: §7.1 makes the layer set **base-owned but per-operator
+    restricted**, and a domain that could mint a layer would be redefining what
+    kind of thing a claim is.
+
+    ``predecessor`` is required for the reason given on ``load_domain_contract``,
+    and the check runs **here** rather than only at the file boundary. Validating
+    only on the path that happens to read a file would leave the same contract
+    admissible through the path that does not, which is not a weaker guarantee
+    but an unstated one.
     """
     root = _mapping(document, source)
     _fields(root, _CONTRACT_FIELDS, frozenset({"description"}), source)
@@ -332,7 +353,7 @@ def parse_domain_contract(document: object, *, source: str, base: BaseContract) 
                 )
         operators[name] = operator
 
-    return DomainContract(
+    contract = DomainContract(
         namespace=namespace,
         version=version,
         predecessor=_parse_lineage(root["lineage"], f"{source}: lineage"),
@@ -341,6 +362,8 @@ def parse_domain_contract(document: object, *, source: str, base: BaseContract) 
         operators=operators,
         content_identity=v1.digest(DOMAIN_CONTRACT_DOMAIN, root),
     )
+    check_succession(contract, predecessor)
+    return contract
 
 
 def _require_sort_body(body: object, where: str) -> dict[str, object]:
@@ -405,10 +428,31 @@ def check_succession(contract: DomainContract, predecessor: DomainContract | Non
                 "issue a new one, which keeps every prior assertion bound to what it actually asserted (§7.3)."
             )
 
+    resurrected = sorted((predecessor.retired_identifiers() - contract.retired_identifiers()) & set(current))
+    if resurrected:
+        raise SuccessionViolation(
+            f"{contract.namespace}: un-retires {', '.join(resurrected)}. Retirement is one-way.\n"
+            "§7.3a puts retirement in **authoring** — the typed constructor cannot select a retired identifier — "
+            "so the retired set is what decides whether a claim was authorable when it was written. If that set "
+            "can shrink, it is not reconstructible from any point in the lineage, and two contracts in one "
+            "lineage disagree about whether an existing claim was legitimately authored, with the later one "
+            "silently winning. That is a change to what already-written records mean, which is exactly what "
+            "redefinition is — arriving through the status field instead of the schema field, which is why "
+            "keeping `retired` out of the schema projection needs this rule beside it and not instead of it."
+        )
 
-def load_domain_contract(path: Path, *, base: BaseContract) -> DomainContract:
+
+def load_domain_contract(path: Path, *, base: BaseContract, predecessor: DomainContract | None) -> DomainContract:
+    """Read, validate and **succession-check** the domain contract at ``path``.
+
+    ``predecessor`` is required and has no default, including for a genesis
+    contract, which passes an explicit ``None``. A default would make the check
+    skippable by omission, and an unperformed check that reports success is the
+    failure mode this corpus names most often: *a failure to look is not a
+    finding of absence.*
+    """
     try:
         document = yaml.safe_load(path.read_text(encoding="utf-8"))
     except yaml.YAMLError as exc:
         raise MalformedContract(f"{path}: not well-formed YAML: {exc}") from exc
-    return parse_domain_contract(document, source=str(path), base=base)
+    return parse_domain_contract(document, source=str(path), base=base, predecessor=predecessor)

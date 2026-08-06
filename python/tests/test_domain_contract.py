@@ -8,6 +8,7 @@ compute, and is not asserted anywhere below.
 import copy
 
 import pytest
+import yaml
 
 from science.contract import domain
 from science.errors import MalformedContract, SuccessionViolation
@@ -15,8 +16,12 @@ from science.errors import MalformedContract, SuccessionViolation
 
 @pytest.fixture()
 def parse(base_contract):
-    def _parse(document: object, source: str = "<test>") -> domain.DomainContract:
-        return domain.parse_domain_contract(document, source=source, base=base_contract)
+    def _parse(
+        document: object,
+        source: str = "<test>",
+        predecessor: domain.DomainContract | None = None,
+    ) -> domain.DomainContract:
+        return domain.parse_domain_contract(document, source=source, base=base_contract, predecessor=predecessor)
 
     return _parse
 
@@ -134,55 +139,55 @@ class TestTheBaseContractIssuesNoOperator:
 
 
 class TestSuccession:
-    """§8.3's adopted rules, refused at contract load."""
+    """§8.3's adopted rules, refused at contract load.
+
+    Every case below goes through `parse_domain_contract`, not through
+    `check_succession` directly. The check being *reachable* is not the property
+    that matters; the property is that no contract reaches a caller without it.
+    """
 
     @pytest.fixture()
     def genesis(self, parse, testing_document):
         return parse(testing_document)
 
-    def successor_of(self, parse, document, predecessor, **edits):
+    @staticmethod
+    def successor_document(document, predecessor, **sections):
         successor = copy.deepcopy(document)
         successor["lineage"] = {"successor": predecessor.content_identity}
         successor["version"] = predecessor.version + 1
-        for path, value in edits.items():
-            cursor = successor
-            *parents, leaf = path.split(".")
-            for step in parents:
-                cursor = cursor[step]
-            cursor[leaf] = value
-        return parse(successor)
+        successor.update(sections)
+        return successor
 
-    def test_genesis_is_compared_against_nothing(self, genesis):
-        domain.check_succession(genesis, None)
+    def test_genesis_is_compared_against_nothing(self, parse, testing_document):
+        assert parse(testing_document, predecessor=None).predecessor is None
 
-    def test_genesis_with_a_predecessor_supplied_is_refused(self, genesis):
+    def test_genesis_with_a_predecessor_supplied_is_refused(self, parse, testing_document, genesis):
         with pytest.raises(SuccessionViolation, match="declares genesis"):
-            domain.check_succession(genesis, genesis)
+            parse(testing_document, predecessor=genesis)
 
     def test_a_successor_with_no_predecessor_supplied_is_refused(self, parse, testing_document, genesis):
         # Skipping the check would let a redefinition through on the evidence
         # that nobody looked — the corpus's own recurring error, inverted.
-        successor = self.successor_of(parse, testing_document, genesis)
+        document = self.successor_document(testing_document, genesis)
         with pytest.raises(SuccessionViolation, match="two-contract check"):
-            domain.check_succession(successor, None)
+            parse(document, predecessor=None)
 
     def test_an_additive_successor_is_accepted(self, parse, testing_document, genesis):
-        added = copy.deepcopy(testing_document["operators"])
-        added["precedes"] = {
+        operators = copy.deepcopy(testing_document["operators"])
+        operators["precedes"] = {
             "arity": 2,
             "arg_sorts": ["entity", "entity"],
             "sign_apt": False,
             "layers": ["structural"],
             "dimensions": [],
         }
-        successor = self.successor_of(parse, testing_document, genesis, operators=added)
-        domain.check_succession(successor, genesis)
+        successor = parse(self.successor_document(testing_document, genesis, operators=operators), predecessor=genesis)
+        assert set(successor.operators) == {"affects", "subtype-of", "precedes"}
 
     def test_an_editorial_change_is_accepted_and_moves_contract_identity(self, parse, testing_document, genesis):
-        edited = copy.deepcopy(testing_document["operators"])
-        edited["affects"]["description"] = "Reworded. Meaning-bearing fields untouched."
-        successor = self.successor_of(parse, testing_document, genesis, operators=edited)
-        domain.check_succession(successor, genesis)
+        operators = copy.deepcopy(testing_document["operators"])
+        operators["affects"]["description"] = "Reworded. Meaning-bearing fields untouched."
+        successor = parse(self.successor_document(testing_document, genesis, operators=operators), predecessor=genesis)
         assert successor.content_identity != genesis.content_identity
 
     @pytest.mark.parametrize(
@@ -196,63 +201,153 @@ class TestSuccession:
         ],
     )
     def test_redefining_a_declared_schema_is_refused(self, parse, testing_document, genesis, field, value):
-        edited = copy.deepcopy(testing_document["operators"])
-        edited["affects"][field] = value
+        operators = copy.deepcopy(testing_document["operators"])
+        operators["affects"][field] = value
         if field == "arity":
-            edited["affects"]["arg_sorts"] = ["entity"]
-        successor = self.successor_of(parse, testing_document, genesis, operators=edited)
+            operators["affects"]["arg_sorts"] = ["entity"]
+        document = self.successor_document(testing_document, genesis, operators=operators)
         with pytest.raises(SuccessionViolation, match="different canonical schema projection"):
-            domain.check_succession(successor, genesis)
+            parse(document, predecessor=genesis)
 
-    def test_retiring_an_identifier_is_permitted(self, parse, testing_document, genesis):
-        # `retired` is deliberately outside the canonical schema projection. Were
-        # it inside, retiring an identifier would itself be a redefinition —
-        # refusing the one operation §7.3a requires to be permitted.
-        retired = copy.deepcopy(testing_document["operators"])
-        retired["affects"]["retired"] = True
-        successor = self.successor_of(parse, testing_document, genesis, operators=retired)
-        domain.check_succession(successor, genesis)
-        assert successor.operators["affects"].retired is True
+    def test_succession_covers_dimensions(self, parse, testing_document, genesis):
+        dimensions = copy.deepcopy(testing_document["dimensions"])
+        dimensions["population"]["restriction_sort"] = "entity"
+        document = self.successor_document(testing_document, genesis, dimensions=dimensions)
+        with pytest.raises(SuccessionViolation, match="dimension:population"):
+            parse(document, predecessor=genesis)
+
+    def test_succession_covers_sorts(self, parse, testing_document, genesis):
+        sorts = copy.deepcopy(testing_document["sorts"])
+        sorts["entity"]["vocabulary"] = {"namespace": "EX", "release": "2027-01-01"}
+        document = self.successor_document(testing_document, genesis, sorts=sorts)
+        with pytest.raises(SuccessionViolation, match="sort:entity"):
+            parse(document, predecessor=genesis)
 
     def test_dropping_a_declaration_is_refused(self, parse, testing_document, genesis):
-        dropped = copy.deepcopy(testing_document["operators"])
-        del dropped["subtype-of"]
-        successor = self.successor_of(parse, testing_document, genesis, operators=dropped)
+        operators = copy.deepcopy(testing_document["operators"])
+        del operators["subtype-of"]
+        document = self.successor_document(testing_document, genesis, operators=operators)
         with pytest.raises(SuccessionViolation, match="drops claim-vocabulary"):
-            domain.check_succession(successor, genesis)
-
-    def test_dropping_a_retired_declaration_is_refused(self, parse, testing_document, genesis):
-        # A tombstone is what makes a historical claim still typeable.
-        retired = copy.deepcopy(testing_document["operators"])
-        retired["affects"]["retired"] = True
-        tombstoned = self.successor_of(parse, testing_document, genesis, operators=retired)
-        dropped = copy.deepcopy(retired)
-        del dropped["affects"]
-        third = copy.deepcopy(testing_document)
-        third["operators"] = dropped
-        third["lineage"] = {"successor": tombstoned.content_identity}
-        third["version"] = 3
-        with pytest.raises(SuccessionViolation, match="drops claim-vocabulary"):
-            domain.check_succession(parse(third), tombstoned)
+            parse(document, predecessor=genesis)
 
     def test_a_mismatched_predecessor_identity_is_refused(self, parse, testing_document, genesis):
-        successor = copy.deepcopy(testing_document)
-        successor["lineage"] = {"successor": "f" * 64}
-        successor["version"] = 2
+        document = copy.deepcopy(testing_document)
+        document["lineage"] = {"successor": "f" * 64}
+        document["version"] = 2
         with pytest.raises(SuccessionViolation, match="content identity is"):
-            domain.check_succession(parse(successor), genesis)
-
-    def test_succession_covers_sorts_and_dimensions_too(self, parse, testing_document, genesis):
-        edited = copy.deepcopy(testing_document["dimensions"])
-        edited["population"]["restriction_sort"] = "entity"
-        successor = self.successor_of(parse, testing_document, genesis, dimensions=edited)
-        with pytest.raises(SuccessionViolation, match="dimension:population"):
-            domain.check_succession(successor, genesis)
+            parse(document, predecessor=genesis)
 
     def test_the_scope_is_claim_vocabulary_and_nothing_else(self, genesis):
         # §8.3's scope restriction: an unscoped "every identifier" would have
         # this design quietly deciding facet versioning, which D §12 leaves open.
         assert all(key.split(":")[0] in {"sort", "dimension", "operator"} for key in genesis.claim_vocabulary())
+
+
+class TestRetirementIsOneWay:
+    """`retired` sits outside the canonical schema projection, so the schema
+    comparison cannot see it. That is correct — inside, retiring an identifier
+    would itself read as a redefinition and be refused — but it means retirement
+    needs a rule of its own beside the schema check, not instead of it.
+    """
+
+    @pytest.fixture()
+    def genesis(self, parse, testing_document):
+        return parse(testing_document)
+
+    @pytest.fixture()
+    def tombstoned(self, parse, testing_document, genesis):
+        operators = copy.deepcopy(testing_document["operators"])
+        operators["affects"]["retired"] = True
+        document = TestSuccession.successor_document(testing_document, genesis, operators=operators)
+        return document, parse(document, predecessor=genesis)
+
+    def test_retiring_is_permitted(self, tombstoned):
+        _, contract = tombstoned
+        assert contract.operators["affects"].retired is True
+        assert contract.retired_identifiers() == frozenset({"operator:affects"})
+
+    def test_un_retiring_is_refused(self, parse, tombstoned):
+        document, contract = tombstoned
+        revived = copy.deepcopy(document)
+        revived["operators"]["affects"]["retired"] = False
+        revived["lineage"] = {"successor": contract.content_identity}
+        revived["version"] = contract.version + 1
+        with pytest.raises(SuccessionViolation, match="un-retires operator:affects"):
+            parse(revived, predecessor=contract)
+
+    def test_dropping_the_retired_field_entirely_is_also_un_retiring(self, parse, tombstoned):
+        # The default is `false`, so an omission is a resurrection written a
+        # second way. Catching only the explicit spelling would leave the easier
+        # one open.
+        document, contract = tombstoned
+        revived = copy.deepcopy(document)
+        del revived["operators"]["affects"]["retired"]
+        revived["lineage"] = {"successor": contract.content_identity}
+        revived["version"] = contract.version + 1
+        with pytest.raises(SuccessionViolation, match="un-retires operator:affects"):
+            parse(revived, predecessor=contract)
+
+    @pytest.mark.parametrize(("section", "name"), [("dimensions", "setting"), ("sorts", "outcome")])
+    def test_it_covers_dimensions_and_sorts_too(self, parse, testing_document, genesis, section, name):
+        retired = copy.deepcopy(testing_document[section])
+        retired[name]["retired"] = True
+        document = TestSuccession.successor_document(testing_document, genesis, **{section: retired})
+        contract = parse(document, predecessor=genesis)
+
+        revived = copy.deepcopy(document)
+        revived[section][name]["retired"] = False
+        revived["lineage"] = {"successor": contract.content_identity}
+        revived["version"] = contract.version + 1
+        with pytest.raises(SuccessionViolation, match=f"un-retires {section[:-1]}:{name}"):
+            parse(revived, predecessor=contract)
+
+    def test_dropping_a_tombstone_is_refused(self, parse, tombstoned):
+        # A tombstone is what makes a historical claim still typeable.
+        document, contract = tombstoned
+        dropped = copy.deepcopy(document)
+        del dropped["operators"]["affects"]
+        dropped["lineage"] = {"successor": contract.content_identity}
+        dropped["version"] = contract.version + 1
+        with pytest.raises(SuccessionViolation, match="drops claim-vocabulary"):
+            parse(dropped, predecessor=contract)
+
+    def test_a_tombstone_may_not_be_redefined(self, parse, tombstoned):
+        # Retirement freezes the declaration; it does not exempt it. A historical
+        # claim is typed against the frozen retired declaration (§7.3a), so an
+        # edit to one changes what that claim means.
+        document, contract = tombstoned
+        edited = copy.deepcopy(document)
+        edited["operators"]["affects"]["arity"] = 1
+        edited["operators"]["affects"]["arg_sorts"] = ["entity"]
+        edited["lineage"] = {"successor": contract.content_identity}
+        edited["version"] = contract.version + 1
+        with pytest.raises(SuccessionViolation, match="different canonical schema projection"):
+            parse(edited, predecessor=contract)
+
+
+class TestTheLoadBoundary:
+    def test_reading_a_file_runs_the_succession_check(self, tmp_path, base_contract, parse, testing_document):
+        # The gap this closes: a loader that parsed without checking would let a
+        # malformed successor through the boundary most callers actually use.
+        genesis = parse(testing_document)
+        operators = copy.deepcopy(testing_document["operators"])
+        operators["affects"]["arity"] = 1
+        operators["affects"]["arg_sorts"] = ["entity"]
+        document = TestSuccession.successor_document(testing_document, genesis, operators=operators)
+
+        path = tmp_path / "successor.yaml"
+        path.write_text(yaml.safe_dump(document), encoding="utf-8")
+        with pytest.raises(SuccessionViolation, match="different canonical schema projection"):
+            domain.load_domain_contract(path, base=base_contract, predecessor=genesis)
+
+    def test_the_predecessor_has_no_default(self, base_contract, testing_contract_path):
+        # An omission must not be spellable: a default would make the check
+        # skippable by saying nothing, and an unperformed check reporting success
+        # is the failure this corpus names most often.
+        with pytest.raises(TypeError):
+            domain.load_domain_contract(testing_contract_path, base=base_contract)  # type: ignore[call-arg]
+        with pytest.raises(TypeError):
+            domain.parse_domain_contract({}, source="<test>", base=base_contract)  # type: ignore[call-arg]
 
 
 class TestParallelGenesis:
@@ -268,7 +363,5 @@ class TestParallelGenesis:
         forked["operators"]["affects"]["arg_sorts"] = ["entity"]
         second = parse(forked)  # also genesis, same namespace, incompatible schema
 
-        domain.check_succession(first, None)
-        domain.check_succession(second, None)
         assert first.namespace == second.namespace
         assert first.claim_vocabulary() != second.claim_vocabulary()
