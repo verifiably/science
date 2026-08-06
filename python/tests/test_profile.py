@@ -67,11 +67,9 @@ class TestNoSecondAuthoredOperatorArtifact:
 
     def test_every_operator_traces_to_a_supplied_contract(self, base_contract, testing, other):
         profile = compile_profile(base_contract, [testing, other])
+        local = {"affects", "subtype-of", "correlates-with", "measured-by"}
         assert set(profile.operators) == {
-            "testing/affects",
-            "testing/subtype-of",
-            "elsewhere/affects",
-            "elsewhere/subtype-of",
+            f"{namespace}/{name}" for namespace in ["testing", "elsewhere"] for name in local
         }
         for decl in profile.operators.values():
             assert decl.contract in profile.activated_contracts
@@ -428,6 +426,8 @@ class TestRetirementReachesThroughSorts:
 
     def test_nothing_is_withdrawn_when_nothing_is_retired(self, base_contract, testing):
         profile = compile_profile(base_contract, [testing])
-        assert set(profile.authorable_operators()) == {"testing/affects", "testing/subtype-of"}
+        assert set(profile.authorable_operators()) == {
+            f"testing/{name}" for name in ["affects", "subtype-of", "correlates-with", "measured-by"]
+        }
         assert profile.authorable_dimensions("testing/affects") == ("testing/population", "testing/setting")
         assert profile.authorable_dimensions("testing/subtype-of") == ()

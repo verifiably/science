@@ -538,6 +538,7 @@ science/
     src/
     tests/
   fixtures/             # cross-language parity corpus, owned by neither
+    contracts/          # the synthetic domain contract the corpus is built from
   contracts/
     science/            # the science base contract (formal model §7.1)
   domains/

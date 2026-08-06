@@ -31,7 +31,7 @@ class TestTheTestingContract:
         contract = parse(testing_document)
         assert contract.namespace == "testing"
         assert contract.predecessor is None  # genesis
-        assert set(contract.operators) == {"affects", "subtype-of"}
+        assert set(contract.operators) == {"affects", "subtype-of", "correlates-with", "measured-by"}
 
     def test_term_identifiers_are_namespaced(self, parse, testing_document):
         # §7.3: authored, stable, namespaced — and it is what enters π_claim.
@@ -182,7 +182,7 @@ class TestSuccession:
             "dimensions": [],
         }
         successor = parse(self.successor_document(testing_document, genesis, operators=operators), predecessor=genesis)
-        assert set(successor.operators) == {"affects", "subtype-of", "precedes"}
+        assert set(successor.operators) == {"affects", "subtype-of", "correlates-with", "measured-by", "precedes"}
 
     def test_an_editorial_change_is_accepted_and_moves_contract_identity(self, parse, testing_document, genesis):
         operators = copy.deepcopy(testing_document["operators"])

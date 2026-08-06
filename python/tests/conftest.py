@@ -26,7 +26,12 @@ def fixtures_dir() -> Path:
 
 @pytest.fixture(scope="session")
 def testing_contract_path() -> Path:
-    return Path(__file__).parent / "contracts" / "testing.yaml"
+    return REPO_ROOT / "fixtures" / "contracts" / "testing.yaml"
+
+
+@pytest.fixture(scope="session")
+def parity_fixture_path() -> Path:
+    return REPO_ROOT / "fixtures" / "claim-identity-v1.json"
 
 
 @pytest.fixture(scope="session")
