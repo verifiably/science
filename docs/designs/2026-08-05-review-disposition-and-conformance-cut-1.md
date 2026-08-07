@@ -441,6 +441,51 @@ executable suite*, which is what cut 1 is — not a second implementation. A cut
 whose own rows were exempt from the discipline they encode would be the first
 thing this corpus should refuse.
 
+**N2 as built (2026-08-06).** Forty arms across the ten other selected rows, each
+declared as data: the row, what the arm asserts, a source mutation that makes it
+false, and the **exact tests** that must fail under it. The harness applies each
+mutation to a copy of the package and runs that arm's checks in a subprocess, so
+nothing touches the working tree.
+
+Three details were not obvious before building it, and each came from the harness
+reporting on its own table:
+
+* **Naming the checks is the whole difference.** Three sessions of hand-run
+  matrices asserted only that *the suite* went red, which cannot see an arm whose
+  mutation breaks something unrelated while its own check stays green. Ten of the
+  first forty arms were defective on the first audit — five vacuous, five stale.
+* **Staleness is a distinct finding, and the one that will actually happen.** A
+  sabotage that no longer matches the code applies nothing, so the checks pass and
+  the arm scores healthy. It is the same false report as vacuity, reached by a
+  route that opens as the code moves under a table nobody re-reads. Both are
+  reported as malformed contract content.
+* **The unsabotaged direction is load-bearing.** `pytest` exits non-zero for a
+  usage error, so a check whose node id has been **renamed away** is
+  indistinguishable from one that failed — the arm most certain to look healthy
+  would be the one that had stopped existing. So every declared check is also run
+  without the sabotage and must resolve and pass.
+
+Two of the ten defects were more interesting than a wrong mutation: the arms were
+pointed at checks the suite's own docstrings already record as **unable to fail**
+(`science.identity.v1` sorts object keys at encode time, so no iteration order
+inside the compiler can reach an identity). Those notes had been written honestly
+and then not consulted when the arm table was drawn up. The harness is what
+connected them.
+
+N2's second clause is discharged by two arms defective **by construction** — one
+vacuous, one stale — which the harness must report rather than pass, and the
+harness itself is sabotaged ten ways.
+
+One of those ten is a rule the build learned the hard way. An arm naming **no**
+check would run `pytest` with no node ids, which collects `testpaths` — including
+the harness file, whose every arm invokes `pytest` again. That is not a weak arm
+but a **fork bomb**, so it is refused twice: `audit` states the rule and reports
+it as a finding, and the runner makes breaking it unspellable. Each guard is what
+makes the other testable. The demonstration was involuntary: the harness's own
+first sabotage script mutated `tests/` in place and restored in a `finally`, and
+a `SIGKILL` during the runaway left two sabotages on disk — the exact practice the
+harness replaces, committed by the tool auditing it.
+
 **Why six-plus-five and not the ~25 the review proposed.** Selection is by
 boundary crossed, arm by arm. A row the slice cannot exercise is not
 strengthened by being listed, and a row listed whole while half of it is
