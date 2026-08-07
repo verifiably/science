@@ -66,6 +66,17 @@ which makes the content-addressability case **weaker** than the truth.
 > (§5) must replace judgment with an executable constructor before any coverage
 > number here is treated as a property of the system rather than of the
 > exercise.
+>
+> **Amended 2026-08-07.** The constructor exists, was run over these 27 records,
+> and **reaches 0 of them** — they carry no `subject`, `predicate` or `object`,
+> and `build_claim` reads front matter
+> (`2026-08-07-multi-corpus-typing-exercise.md` §4). So the condition above is
+> **not satisfiable by any constructor**: the distance between this section's 6
+> and the constructor's 0 *is* limitation 3's extraction error, which the scope
+> rule already said §2 does not close. Both figures below therefore remain
+> hand-computed and remain non-quotable, on the grounds already stated. What the
+> slice did measure is the **307 structured** mm30 propositions this section
+> never examined — a different population, not a validation of this one.
 
 **Protocol, stated so the result is reproducible and its assumptions are
 attackable.**

@@ -11,9 +11,13 @@ had over-stated: the 56-field tally from a bound to a detected measurement
 under value perturbation (§7), divergence from "starts in a domain pack" to
 "out of the base profile" (§4.1), and the admission premise from "independent
 corpora" to "separately evolved histories" (§4).
-**Scope:** evidence for, and one ruling over, what may enter the `science` base
-profile. Amends domain-extension §2 in place and adds item 11 to the ledger's
-order of work. Mints no guarantee table — §7 says why.
+**Amended 2026-08-07** by the typing exercise this document designed
+(`2026-08-07-multi-corpus-typing-exercise.md`): §6.1 records what the run
+measured and which prediction held for the wrong reason, and **9.3** rules
+`mechanistic_narrative` out of the base layer set.
+**Scope:** evidence for, and now three rulings over, what may enter the `science`
+base profile. Amends domain-extension §2 in place and adds item 11 to the
+ledger's order of work. Mints no guarantee table — §7 says why.
 
 ## 1. Why
 
@@ -234,9 +238,11 @@ counterpart in any corpus, which is the collapse §4.2.1 was written to prevent.
 **Literature cannot enter belief by type** — corroborated, and sharply.
 post-acute-infection's evidence is **100% literature**, 95 of 95 evidence-lines,
 and it carries no eligibility field at all. Under **G1** that corpus has *zero*
-belief-eligible evidence. That is the guarantee working, and §6 requires it be
-predicted in writing before item 11 runs, so an empty result reads as a correct
-answer rather than a broken tool.
+belief-eligible evidence. That is the guarantee working, and §6 required it be
+predicted in writing before item 11 ran, so an empty result reads as a correct
+answer rather than a broken tool. **The run did not test it** (§6.1): the corpus
+records no claims at all, so its output is empty upstream of G1 and the
+eligibility gate was never reached.
 
 **Strength: the cost of unit weighting is larger than mm30 suggested — a
 correction.** Belief policy §3.2 weights every directional eligible assessment at
@@ -466,6 +472,14 @@ Recorded here, amended in place where they belong. None reopens a ruling.
 
 ## 6. Item 11 — the multi-corpus typing exercise
 
+> **Run 2026-08-07** — `2026-08-07-multi-corpus-typing-exercise.md`. All three
+> predictions below held; the post-acute-infection one held for a **different
+> reason** than predicted, recorded in §6.1. The exercise also **withdrew** the
+> ledger's claim that it would make the 6-of-16 and 6-of-27 figures measured:
+> those 27 records state their claim in a title, and a constructor reading front
+> matter reaches 0 of them. §6.1 has the results; this section is left as it was
+> written before the run, which is what makes the predictions worth anything.
+
 **Scope.** Compile a claim vocabulary for each of three corpora, then run
 `build_claim` over every proposition in all three, and report what types, what
 does not, and why.
@@ -510,6 +524,36 @@ context in which a plausible-sounding relation gets invented for a single record
 **Stop rule, inherited unchanged from the disposition record's §5.5.** No belief
 computed, no persistence boundary crossed. A typing that would require either is
 recorded as *blocked on A6–A8*, not worked around.
+
+### 6.1 What the run measured
+
+| corpus | propositions | typed | note |
+|---|---|---|---|
+| mm30, one sort | 334 | **307** | every structured proposition; 27 record no claim |
+| mm30, per-slot sorts | 334 | **282** | **25** refuse on argument sort — 8.1% |
+| post-acute-infection | 45 | **0** | no record carries a subject, predicate or object |
+| natural-systems | 5 | **0** | none carries a predicate |
+
+**The three predictions.** mm30's held. natural-systems' held, and the run is
+§9.2's instance rather than its evidence. post-acute-infection's held **in
+outcome and not in mechanism**: the belief output is empty because the corpus
+records *no claims at all*, which is upstream of G1 — so G1's eligibility gate
+was never reached, no belief was computed, and its behaviour on that corpus
+remains untested.
+
+**Two figures nothing was fitted to.** The 25 sort refusals are the calculus
+meeting a corpus that recorded kind prefixes without ever constraining which
+kinds an operator relates. And **no proposition in any of the eight corpora
+records a qualifier** — §6.4's quantifier and restriction apparatus has zero
+authored instances anywhere, so only the flat fragment was reachable to test.
+
+**Where the grammar gaps live.** Every Γ-blocked record the disposition record
+found — adjustment sets, magnitudes, superlatives, modality, disjunction — is in
+the 27 records mm30 never structured. Closing all of them would type **zero**
+additional structured records.
+
+**The admission pass admitted nothing**, and its one genuine candidate is ruled
+in §9.3.
 
 ## 7. Guarantees
 
@@ -618,10 +662,11 @@ recording it as "testable today" was wrong.
    be concentrated in the typed tail rather than in `related` to overturn it, and
    nothing measured says whether it is.
 
-## 9. Two rulings, and what stays open
+## 9. Three rulings, and what stays open
 
 Both questions this survey raised were **decided in session on 2026-08-07**, and
-neither answer is "a better taxonomy."
+neither answer is "a better taxonomy." A third ruling, **9.3**, was added the
+same day from the typing exercise §6 designed here.
 
 **9.1 `related` is not replaced. It is narrowed to one navigation-only edge.**
 Nothing replaces it with a second relation taxonomy — that is what produced 56
@@ -653,7 +698,35 @@ a licensed exception.
 This is what makes §6's post-acute-infection prediction a *pass* rather than a
 special case: an empty belief output is the correct result for a corpus with no
 belief-eligible evidence, and an empty claim set is the correct result for a
-corpus that has authored no claims.
+corpus that has authored no claims. The run measured the second of those, not
+the first (§6.1).
+
+**9.3 `mechanistic_narrative` is refused as a base layer, and 2.6 is not the
+rule that refuses it.** Added 2026-08-07 from the typing exercise, which surfaced
+it as the one genuine admission candidate in three corpora.
+
+It is a **value**, not a field, and the distinction is the ruling. 2.6 governs
+what earns a *field* a place in the base profile. Admitting a value to a **closed
+kernel set** is §7.4 row 5 — it **re-identifies every claim in every corpus**,
+with no migration path, because the identities *are* the bytes. 2.6's evidentiary
+bar is calibrated to a contract field and does not reach that far, so a candidate
+value clearing (a), (b) and even (c) would still not be admitted by it.
+
+On the evidence it is refused twice over. All **13** records carrying it, across
+two corpora, are **unstructured** — not one has a subject, predicate and object —
+so admitting it would type **zero** additional claims at the cost above. And its
+5 mm30 instances are exactly the disposition record's **0003, 0007, 0011, 0014
+and 0015**, every one already ruled **R**: three for being the wrong epistemic
+kind, two blocked on modality. That adjudication was made per record, months
+earlier, without reference to this field. So `mechanistic_narrative` is not a
+missing layer — on every instance available to measure, it marks a record that
+needs **re-homing or a grammar it does not have**, and giving it a layer would
+offer those records a home in the claim calculus instead of the one they were
+ruled to need.
+
+**The condition for revisiting, stated so this is a ruling and not a
+postponement:** a corpus records a **structured** proposition whose `claim_layer`
+is `mechanistic_narrative`. None of the 13 is one.
 
 **Still open:**
 

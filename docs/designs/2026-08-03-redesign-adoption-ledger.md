@@ -201,10 +201,19 @@ Two standing constraints on 5b:
 11. **The multi-corpus typing exercise** — the first consumer of cut 1's slice,
     and the first measurement in this redesign that is not taken over mm30 alone.
     **Designed 2026-08-07**
-    (`2026-08-07-corpus-survey-and-vocabulary-admission-design.md`); awaits
-    implementation. It compiles a claim vocabulary for mm30, natural-systems and
+    (`2026-08-07-corpus-survey-and-vocabulary-admission-design.md`); **run and
+    discharged 2026-08-07** (`2026-08-07-multi-corpus-typing-exercise.md`). It
+    compiles a claim vocabulary for mm30, natural-systems and
     post-acute-infection, then runs `build_claim` over every proposition in all
     three.
+
+    **Result: 307 of 307 structured mm30 propositions type; 0 of 45 and 0 of 5
+    in the other two, because neither records a claim to type.** The two
+    unfitted figures are the **25** records (8.1%) that refuse on argument sort
+    once each operator is given per-slot sorts, and the **zero** qualifiers
+    recorded in any of the eight corpora. Every grammar gap the disposition
+    record found lives in records mm30 never structured, so closing all of them
+    would type no additional structured record.
 
     **Why it is not an mm30 exercise.** A survey of **eight** proto-science
     corpora (6,860 records) measured that of 337 structured propositions across
@@ -215,17 +224,40 @@ Two standing constraints on 5b:
     limitation 3 already bounds its §2.3 figures to *"the mm30 authored set and
     for nothing else"*; what the survey adds is that the bound cannot be lifted
     by finding a second corpus, because no second corpus has a claim vocabulary
-    to measure. One has to be authored. This item is that work, and it is what
-    makes the 6-of-16 expressiveness figure and the 6-of-27 reproduction yield
-    measured rather than hand-computed.
+    to measure. One has to be authored. This item is that work — and the run
+    **confirmed** the bound rather than lifting it: two of the three corpora
+    contributed no typed claim, so the calculus is still exercised against mm30
+    alone.
 
-    Two results are **predicted in writing before the run**, on the same
+    **One claim this entry made is withdrawn** (typing exercise §4). It said the
+    item would make *"the 6-of-16 expressiveness figure and the 6-of-27
+    reproduction yield measured rather than hand-computed."* **No constructor
+    can.** Those 27 records carry no subject, predicate or object — they state
+    their claim in a `title` — and `build_claim` reads front matter, so it
+    reaches **0 of 27**. The gap between 0 and 6 is the extraction step (kernel
+    limitation 3), which is unautomated and untouched here. Both figures stay
+    hand-computed and both stay non-quotable, pending the §2.4 re-homing
+    adjudication and open question 4. The exercise measured a **different
+    population** instead: the 307 structured records the hand-exercise never
+    touched.
+
+    Two results were **predicted in writing before the run**, on the same
     discipline that froze cut 1 prospectively. post-acute-infection's evidence is
     100% literature (95 of 95) with no eligibility field at all, so under **G1**
     its belief output is expected to be **empty** — and an empty result there is a
     **pass**, not a broken tool. natural-systems is at most 26% claim-bearing and
     largely process narrative, so the expected finding is a constraint on the base
     profile: it must not *require* a claim calculus.
+
+    **Both held, and the first held for a different reason than predicted.**
+    post-acute-infection's output is empty because the corpus records **no
+    claims at all** — 0 of 45 propositions carry a subject, predicate or object
+    — so the emptiness is upstream of G1 and **G1's eligibility gate was never
+    reached**. No belief was computed (the stop rule below), so G1's behaviour on
+    that corpus remains untested; the prediction is confirmed in outcome and its
+    mechanism unexamined. natural-systems returned 0 of 5, confirming the base-
+    profile constraint that §9.2 had already ruled — the run is that ruling's
+    instance, not its evidence.
 
     Every candidate vocabulary field the exercise surfaces is run against
     domain-extension **2.6** — agreement and exercise over all **eight** surveyed
@@ -246,6 +278,19 @@ Two standing constraints on 5b:
     disposition record's §5.5 stop rule is inherited unchanged: no belief
     computed, no persistence boundary crossed, and a typing that would need either
     is recorded as *blocked on A6–A8* rather than worked around.
+
+    **The pass ran and admitted nothing** (typing exercise §5). `predicate` is
+    not a base-profile question at all — operators are domain-issued without
+    exception (§7.1). `proxy_directness` and `supports_scope` pass agreement and
+    fail the reader clause, so they **wait**, named, as `strength` does.
+    `identification_strength` is divergent and stays out of the base profile.
+    The one genuine candidate, `mechanistic_narrative`, is a **value** rather
+    than a field, and is **refused**: admitting a value to a closed kernel set
+    re-identifies every claim in every corpus (§7.4 row 5), and all 13 of its
+    records across two corpora are unstructured — the 5 in mm30 are the
+    disposition record's 0003, 0007, 0011, 0014 and 0015, every one already
+    ruled **R**, three of them for being the wrong epistemic kind. It marks
+    records needing re-homing, not a missing layer. No relation kind was minted.
 
     The base profile requires claim **capability**, not claim **instances**
     (corpus survey §9.2): zero claims and zero activated operator contracts is
