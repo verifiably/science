@@ -38,11 +38,11 @@ amend in place, never renumber.
 
 ## Status
 
-Design complete. Implementation started 2026-08-06 with the **conformance cut 1
-vertical slice** (ledger §3, item 10) — typed claim construction, canonical
-projection, identity, decode and cross-language parity. It crosses no
-persistence boundary and computes no belief, which is where the disposition
-record's §5.5 stop rule puts its edge.
+Design complete. The **conformance cut 1 vertical slice** (ledger §3, item 10)
+landed 2026-08-07 — typed claim construction, canonical projection, identity,
+decode and cross-language parity. It crosses no persistence boundary and
+computes no belief, which is where the disposition record's §5.5 stop rule puts
+its edge. Nothing beyond that edge is built.
 
 The guarantee tables are the acceptance criteria — each row must be a failing
 test before it is a passing one. Cut 1 selects **11 of the 126 rows**, arm by

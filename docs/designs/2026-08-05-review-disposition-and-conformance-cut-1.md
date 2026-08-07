@@ -1,6 +1,8 @@
 # External review disposition, and conformance cut 1
 
-**Status.** Draft 2026-08-05. Disposes of an external review of the eleven banked
+**Status.** Draft 2026-08-05; **cut 1's slice was built and merged 2026-08-07**
+(`f81d3a3`), and §5's dated subsections record what building it found — the
+freeze below is unamended. Disposes of an external review of the eleven banked
 designs. Sizes formal-model **limitation 4** against the mm30 corpus under a
 stated manual protocol (§2). Freezes **conformance cut 1** (§5) *before* any
 implementation. Amends nothing in the banked corpus — every finding that would
