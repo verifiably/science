@@ -26,6 +26,12 @@ polarity and `claim_layer` fields. A record cannot refuse on any of them,
 because the contract was written from them. Arity is fitted twice over: a
 subject/object corpus has exactly arity 2 to offer.
 
+*Fitted upstream, which is the harder case to notice.* The predecessor system
+enforces the polarity/predicate partition on construction, again in a corpus
+check, and again by auto-writing the sign-less value. No corpus can hold a
+counterexample, so measuring that partition measures a validator. It is named
+here because an earlier version of this file listed it as tested.
+
 *Tested, because the corpus had no say in it.*
 
 1. **Sorts.** `ArgSort(op) : Fin(arity(op)) → Sort` is one sort per slot. mm30's
@@ -38,10 +44,8 @@ subject/object corpus has exactly arity 2 to offer.
 3. **Whether a claim was recorded at all.** A constructor reads front matter. A
    claim that exists only in a title is not reachable from what the record
    states, and this is where the hand-typed figures and a measured one part.
-4. **The polarity partition.** §7.5 splits `unsigned` (this claim asserts no
-   sign) from `inapt` (this operator has no sign to assert). The corpora were
-   not written against that distinction, so whether their polarity values
-   respect it is measured, not arranged — see the report's own note.
+4. **Whether a qualifier is ever recorded.** No corpus records one, and no plan
+   could make it so — `dimensions: {}` throughout is a measured absence.
 
 **Two sortings, both reported.** For a corpus whose terms carry kind prefixes,
 one plan declares a single sort covering every term and another declares the

@@ -47,6 +47,12 @@ admitted layer sets are read off mm30's own `predicate`, `polarity` and
 `claim_layer` fields. No record can refuse on any of them. Arity is fitted
 twice over: a subject/predicate/object corpus has only arity 2 to offer.
 
+**Fitted upstream, which is worse and was missed on the first pass.** The
+predecessor system *enforces* the polarity/predicate partition on construction,
+in a corpus check, and by auto-writing the sign-less value (§3.4). A violating
+record could never have reached disk, so measuring the partition measures a
+validator. An earlier draft listed it below as tested; it is listed here instead.
+
 **Tested, because the corpus had no say in it.**
 
 1. **Sorts.** `ArgSort(op) : Fin(arity(op)) → Sort` is one sort per slot. mm30's
@@ -59,9 +65,8 @@ twice over: a subject/predicate/object corpus has only arity 2 to offer.
    gives it one. §5.2.
 3. **Whether a claim was recorded at all.** A constructor reads front matter. §4
    is where that parts company with a reader holding the same records.
-4. **The polarity partition.** §7.5 splits `unsigned` (this claim asserts no
-   sign) from `inapt` (this operator has no sign to assert). No corpus was
-   written against that distinction. §3.4.
+4. **Whether a qualifier is ever recorded.** §6.4's restriction apparatus is
+   reachable by no corpus, and nothing in the plans could make it so. §3.5.
 
 **Two sortings, both reported.** `mm30-unsorted` declares one sort covering every
 term, making the sort discipline vacuous, and measures whether the rest of the
@@ -138,7 +143,14 @@ judgment again.
 post-acute-infection records the full epistemic apparatus of claims it never
 wrote down structurally — `claim_layer`, `identification_strength`,
 `proxy_directness` and `supports_scope` on **all 45** — with no subject,
-predicate or object anywhere. The qualifiers are there and the claim is not.
+predicate or object anywhere. **The labels are there and the claim is not.**
+
+Those four fields are **claim-adjacent labels, not qualifiers** in §6.4's sense,
+and an earlier draft called them qualifiers — which contradicted §3.5 two
+sections later. A qualifier is a `d ↦ ⟨quantifier, restriction⟩` entry
+restricting a claim along a declared dimension. None of these four is one, and
+§3.5's finding that **no corpus records a qualifier** stands unqualified,
+including for this corpus.
 
 A vocabulary could have been extracted from the 45 titles and 18
 `measurement_model` prose blocks. Doing so would be the extraction step kernel
@@ -150,7 +162,7 @@ natural-systems: 5 propositions, none with a predicate, and its three recorded
 subject/object values are prose — `KPZ`, `guide morphism vocabulary`,
 `idempotent dequantization` — carrying no `<kind>:` prefix to sort them by.
 
-### 3.4 The polarity partition holds exactly, and nobody arranged it
+### 3.4 The polarity partition is a legacy constraint reproduced exactly
 
 Across all 307 structured mm30 propositions, **polarity values partition exactly
 by predicate**. No predicate carries both `not_applicable` and a signed value:
@@ -159,12 +171,31 @@ by predicate**. No predicate carries both `not_applicable` and a signed value:
     induces-state, is-proxy-for, subtype-of,
     part-of, binds                           not_applicable                    24 records
 
-§7.5's distinction between `unsigned` (the operator has a sign; this claim
-asserts none) and `inapt` (the operator has no sign to assert) was not a
-distinction mm30 was written against. The corpus respects it with **zero
-exceptions**. The `sign_apt` flags in the plan are fitted *from* this partition,
-so they are not evidence — but the partition's existence is measured
-independently of any contract, and it is what licenses them.
+**This is not evidence, and an earlier draft of this section claimed it was.**
+That draft called the partition a property the corpus respected *"with zero
+exceptions"* in a distinction *"nobody arranged."* It was arranged. The
+predecessor system enforces exactly this partition in three places:
+
+- `science_model.propositions.PropositionEntity` validates it on construction —
+  a sign-meaningful predicate **must** carry `positive`/`negative`/`unsigned`, a
+  sign-less one **must** carry `not_applicable`;
+- `science_tool.validate.checks.propositions` repeats it as a corpus check, at
+  ERROR;
+- `science_tool.annotation.synthesize` **auto-writes** `not_applicable` when a
+  sign-less predicate's polarity is omitted.
+
+And `SIGN_MEANINGFUL_PREDICATES` is `{affects, regulates, associates_with}` —
+the same three, named in the predecessor's source.
+
+So mm30 **could not have contained a counterexample**: a violating record fails
+validation before it reaches disk. The zero-exception count measures the
+validator, not the authors, and reporting it as corroboration would be the survey
+§4.1 failure — a rule checked against the data that produced it — committed one
+level down. What the measurement actually shows is that §7.5's `unsigned`/`inapt`
+split **reproduces a distinction the predecessor already drew**, which is a
+reason to think the distinction is workable and no evidence at all that it is
+true. The `sign_apt` flags in the plan are fitted from it, and so is the
+partition.
 
 ### 3.5 No corpus exercises a qualifier
 
@@ -250,16 +281,27 @@ across two corpora** with separately evolved histories — 8 in
 post-acute-infection, 5 in mm30 — nested within `claim_layer`'s agreeing family,
 and discriminating in both.
 
-**Refused, on two independent grounds.**
+**Not admitted: no structured instance justifies it.** All 13 records carrying
+it — 8 in post-acute-infection, 5 in mm30 — are **unstructured**. Not one has a
+subject, predicate and object, so not one would become a typed claim if the layer
+existed. A layer with no claim to admit is a declaration, and 2.6(c)'s reasoning
+applies to a value as readily as to a field: what admits is a reader, and there
+is nothing here to read.
 
-**It is a value admission to a closed kernel set, which 2.6 does not govern and
-which costs incomparably more.** §7.4 row 5: editing a closed set **re-identifies
-every claim in every corpus**, and there is no migration path, because the
-identities *are* the bytes. 2.6's evidentiary bar is calibrated to a field in a
-contract, not to that.
+**What it costs is smaller than an earlier draft of this section claimed, and
+the correction matters.** That draft cited §7.4 **row 5** and said admitting the
+value *"re-identifies every claim in every corpus."* **That is wrong.** Row 5
+covers a **kernel tag's byte encoding changing** — an existing symbol's bytes
+moving under it. Appending a *new* symbol to the layer list touches no existing
+tag, so no `π_claim` position moves and **every existing claim identity is
+unchanged**. The applicable row is **row 1**: the base contract's content
+identity moves, and D6 puts that in `belief_input_digest`, so every derivation
+consulting it re-derives. That is a real cost and a bounded one — beliefs are
+re-derivable and known to be affected; claims do not fork. The refusal does not
+rest on it.
 
-**And every record carrying it is a record already ruled not to be a typed
-claim.** All 5 mm30 instances are unstructured, and they are, exactly:
+**What the mm30 records add, and what they do not.** The 5 mm30 instances are
+the only ones ever adjudicated, and every one was ruled **R**:
 
 | record | disposition record verdict | destination |
 |---|---|---|
@@ -270,14 +312,14 @@ claim.** All 5 mm30 instances are unstructured, and they are, exactly:
 | 0015 | R — A, Γ | decompose; grammar: modality |
 
 Three are **K**, wrong epistemic kind — not claims at all. Two are blocked on
-modality. The hand-adjudication reached that verdict per record, months before
-this field was measured, and without reference to it.
+modality. That adjudication was made per record, months earlier, without
+reference to this field, which is what makes it worth citing.
 
-So `mechanistic_narrative` is not a missing layer. On every instance available to
-measure, it marks a record that needs **re-homing or a grammar it does not
-have** — and admitting it as a layer would give those records a home in the claim
-calculus instead of the one they were ruled to need. Adding it today would
-re-identify every claim in every corpus and type **zero** additional claims.
+**It covers 5 of the 13, and the other 8 were never adjudicated.**
+post-acute-infection's records are unstructured and nothing more is known about
+them; reading them as *also* needing re-homing would be this exercise inferring a
+verdict it did not reach. So the mm30 five are **suggestive of** what the value
+marks, not a finding about all 13.
 
 **The condition for revisiting is stated, so this is a ruling and not a
 postponement:** a corpus records a **structured** proposition — subject,
@@ -348,8 +390,9 @@ more typed records. Both are asserted.
 
 1. **The mm30 contract is fitted and its 307 is close to a tautology.** §2 says
    which parts. The figures that survive the objection are the 25 sort refusals,
-   the 27 and 45 and 5 unreachable records, the polarity partition and the
-   qualifier absence — not the yield.
+   the 27 and 45 and 5 unreachable records, and the qualifier absence — not the
+   yield, and **not** the polarity partition, which review found to be enforced
+   by the predecessor system and therefore unmeasurable here (§3.4).
 2. **The modal sorting rule is arbitrary.** It is *computed* rather than chosen
    per operator, which is the only property claimed for it. A different rule
    gives a different 25, and `binds` (§3.2) shows the rule assigning a sort the

@@ -705,24 +705,29 @@ the first (§6.1).
 rule that refuses it.** Added 2026-08-07 from the typing exercise, which surfaced
 it as the one genuine admission candidate in three corpora.
 
-It is a **value**, not a field, and the distinction is the ruling. 2.6 governs
-what earns a *field* a place in the base profile. Admitting a value to a **closed
-kernel set** is §7.4 row 5 — it **re-identifies every claim in every corpus**,
-with no migration path, because the identities *are* the bytes. 2.6's evidentiary
-bar is calibrated to a contract field and does not reach that far, so a candidate
-value clearing (a), (b) and even (c) would still not be admitted by it.
+It is a **value**, not a field, and the distinction shapes the ruling. 2.6
+governs what earns a *field* a place in the base profile; a value entering a
+closed kernel set is a different act, and 2.6's clauses do not transfer to it
+unchanged. What does transfer is (c)'s reasoning: **what admits is a reader**.
 
-On the evidence it is refused twice over. All **13** records carrying it, across
-two corpora, are **unstructured** — not one has a subject, predicate and object —
-so admitting it would type **zero** additional claims at the cost above. And its
-5 mm30 instances are exactly the disposition record's **0003, 0007, 0011, 0014
-and 0015**, every one already ruled **R**: three for being the wrong epistemic
-kind, two blocked on modality. That adjudication was made per record, months
-earlier, without reference to this field. So `mechanistic_narrative` is not a
-missing layer — on every instance available to measure, it marks a record that
-needs **re-homing or a grammar it does not have**, and giving it a layer would
-offer those records a home in the claim calculus instead of the one they were
-ruled to need.
+**Not admitted, because no structured instance justifies it.** All **13** records
+carrying it, across two corpora, are **unstructured** — not one has a subject,
+predicate and object — so the layer would admit **zero** claims. Its 5 mm30
+instances are the disposition record's **0003, 0007, 0011, 0014 and 0015**, every
+one already ruled **R**: three for being the wrong epistemic kind, two blocked on
+modality, adjudicated per record months earlier without reference to this field.
+That is **5 of the 13**; post-acute-infection's 8 were never adjudicated and are
+unstructured and nothing more. So the mm30 five are suggestive of what the value
+marks and are not a finding about all 13.
+
+**The cost is smaller than this section first stated.** An earlier version cited
+§7.4 **row 5** and said admission *"re-identifies every claim in every corpus."*
+Wrong: row 5 covers an **existing** kernel tag's byte encoding changing.
+Appending a new symbol moves no `π_claim` position, so **every existing claim
+identity is unchanged**; the applicable row is **row 1** — the base contract's
+content identity moves and D6 carries that into `belief_input_digest`, so
+consulting derivations re-derive. Real, bounded, and not what the refusal rests
+on.
 
 **The condition for revisiting, stated so this is a ruling and not a
 postponement:** a corpus records a **structured** proposition whose `claim_layer`

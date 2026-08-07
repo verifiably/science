@@ -24,11 +24,15 @@
 # can refuse on them — and the tool's docstring says which parts of the result
 # are evidence and which are not.
 #
-# `sign_apt` is fitted, but the fact licensing it is not: across all 307
-# structured propositions mm30's polarity values **partition exactly** by
-# predicate. No predicate carries both `not_applicable` and a signed value.
-# §7.5's split between `unsigned` and `inapt` was not a distinction mm30 was
-# written against, and the corpus respects it anyway.
+# `sign_apt` is fitted, and so is the fact that would otherwise license it.
+# mm30's polarity values partition exactly by predicate across all 307 structured
+# propositions — but the predecessor system **enforces** that partition on
+# construction, in a corpus check, and by auto-writing `not_applicable` for a
+# sign-less predicate, over the same three sign-meaningful predicates. A
+# violating record could not have reached disk, so the partition measures a
+# validator rather than the authors. §7.5's `unsigned`/`inapt` split reproduces a
+# distinction the predecessor already drew; that it is workable is all this
+# shows.
 
 contract:
   contract: mm30

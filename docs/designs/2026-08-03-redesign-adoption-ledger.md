@@ -285,12 +285,12 @@ Two standing constraints on 5b:
     fail the reader clause, so they **wait**, named, as `strength` does.
     `identification_strength` is divergent and stays out of the base profile.
     The one genuine candidate, `mechanistic_narrative`, is a **value** rather
-    than a field, and is **refused**: admitting a value to a closed kernel set
-    re-identifies every claim in every corpus (§7.4 row 5), and all 13 of its
-    records across two corpora are unstructured — the 5 in mm30 are the
-    disposition record's 0003, 0007, 0011, 0014 and 0015, every one already
-    ruled **R**, three of them for being the wrong epistemic kind. It marks
-    records needing re-homing, not a missing layer. No relation kind was minted.
+    than a field, and is **not admitted**: all 13 of its records across two
+    corpora are unstructured, so the layer would admit **zero** claims. The 5 in
+    mm30 are the disposition record's 0003, 0007, 0011, 0014 and 0015, every one
+    already ruled **R**, three for being the wrong epistemic kind; the other 8
+    were never adjudicated. Revisit when a corpus records a **structured**
+    proposition carrying it. No relation kind was minted.
 
     The base profile requires claim **capability**, not claim **instances**
     (corpus survey §9.2): zero claims and zero activated operator contracts is

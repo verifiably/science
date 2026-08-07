@@ -187,9 +187,11 @@ class TestTypeRecord:
 
     def test_a_signed_polarity_on_a_sign_inapt_operator_is_refused(self, typed) -> None:
         # §7.5's distinction, exercised: `subtype-of` has no sign to assert, so
-        # asserting one is refused rather than ignored. No mm30 record does this
-        # — the corpus's polarity values partition exactly by predicate — and the
-        # test records that the check would have caught it if one did.
+        # asserting one is refused rather than ignored. No mm30 record does this,
+        # but that is not corroboration — the predecessor system enforces the
+        # same predicate/polarity partition on construction, so a violating
+        # record could never have reached disk. The case is constructed here for
+        # exactly that reason: the corpora cannot supply one.
         record = typed(
             {
                 "subject": "concept:a",
