@@ -68,12 +68,38 @@ found nothing else. Several findings below are fields nobody thought to name.
 a fraction of a denominator, and silently dropping records shrinks denominators.
 All 6,860 records parsed; the unparsed count is zero in all eight corpora.
 
-**One earlier reading is withdrawn.** A regex pass over the same corpora appeared
-to show `evidence_type` written both as `literature` and as `"literature"` in
-post-acute-infection, and that was reported as encoding drift inside one corpus.
-It is not: YAML resolves both spellings to the same string, and the instrument
-reports **no** encoding drift in any corpus. The regex was the defect, and
-preserve/require/normalize gains no support from it.
+### 2.1 Three instrument defects, found and corrected
+
+An instrument that decides a ruling has to be read as adversarially as the ruling.
+Three defects were found — one before banking, two in review — and each changed a
+reported number.
+
+**Encoding drift does not exist; the regex did.** A regex pass appeared to show
+`evidence_type` written both as `literature` and as `"literature"` in
+post-acute-infection, reported as encoding drift inside one corpus. YAML resolves
+both spellings to the same string. The instrument reports **no** encoding drift in
+any corpus, and preserve/require/normalize gains no support from it.
+
+**`nested` was not testing nestedness.** The agreement verdict asked whether *some*
+corpus's value set equalled the union. That is not a chain: `{a,b,c}`, `{a,b}`,
+`{a,c}` has a set equal to the union while `{a,b}` and `{a,c}` each carry a term
+the other lacks. Nestedness requires **every pair comparable by inclusion**.
+`evidence_type` is exactly that shape — mm30 has `expert_judgment`, cycles has
+`simulation`, neither contains the other — and so is
+`identification_strength`, where cycles adds `longitudinal` and cbioportal adds
+`none`. **Both were reported nested and are divergent**, which moves both out of
+the base profile under §4.
+
+**Reference *shape* is not a relation edge.** The link measurement accepted any
+`head:tail` with an alphanumeric head, which admitted every ISO timestamp
+(`2026-08-07T10:49:59` partitions to a perfectly alphanumeric head) and every
+URL; it counted `id`, which is a record naming itself rather than an edge; and for
+a list it added the list's **full length** when a single element matched. The
+corrected measurement requires a lowercase kind-shaped head that is not a URI
+scheme, excludes self-reference, and counts only the elements that are actually
+references. The field tally falls from 67 to **61** and the universal set from 5
+to **3**. §3.5's conclusion survives — `related`'s share moves from 61–83% to
+**61–84%** — but it survives as a measurement rather than as luck.
 
 ## 3. What the corpora show
 
@@ -115,9 +141,9 @@ on its values, and does it **discriminate** within a corpus?
 | `status` | 8 | **divergent**, 4 of 20 | **8 of 8** |
 | `strength` | 4 | nested, 2 of 3 | 3 of 4 — only mm30 collapsed (97% `weak`) |
 | `claim_layer` | 3 | nested, 2 of 4 | 3 of 3 |
-| `identification_strength` | 4 | nested, 2 of 6 | 4 of 4 |
+| `identification_strength` | 4 | **divergent**, 2 of 6 | 4 of 4 |
 | `independence` | 4 | nested, 2 of 3 | 3 of 4 — evolution adds `circular` |
-| `evidence_type` | 5 | nested, 1 of 4 | 4 of 5 |
+| `evidence_type` | 5 | **divergent**, 1 of 4 | 4 of 5 |
 | `evidence_role` | 4 | **divergent**, 2 of 5 | 2 of 4 |
 | `source_class` | 6 | nested, 2 of 3 | 4 of 6 |
 | `proxy_directness` | 3 | nested, 2 of 3 | 3 of 3 |
@@ -196,21 +222,21 @@ prioritizing ρO3's estimand typing.
 
 ### 3.5 The typed relation vocabulary was abandoned, and kept growing anyway
 
-Sixty-seven distinct link-bearing frontmatter fields exist across the eight
-corpora; **five** appear in all of them.
+Sixty-one distinct link-bearing frontmatter fields exist across the eight corpora;
+**three** appear in all of them. (These are the corrected figures — see §2.1.)
 
 | corpus | distinct link fields | via `related` | via every other field | `related` share |
 |---|---|---|---|---|
-| mm30 | 43 | 7,221 | 3,893 | 65% |
-| natural-systems | 34 | 6,664 | 1,351 | **83%** |
-| protein-landscape | 28 | 1,435 | 514 | 74% |
-| cycles | 19 | 2,563 | 1,084 | 70% |
-| post-acute-infection | 27 | 3,372 | 1,930 | 64% |
-| cbioportal | 19 | 1,592 | 877 | 64% |
-| health/meta | 8 | 1,453 | 906 | 62% |
-| evolution | 22 | 1,473 | 944 | 61% |
+| natural-systems | 32 | 6,664 | 1,280 | **84%** |
+| protein-landscape | 24 | 1,435 | 499 | 74% |
+| cycles | 16 | 2,563 | 984 | 72% |
+| mm30 | 40 | 7,221 | 3,648 | 66% |
+| cbioportal | 15 | 1,592 | 808 | 66% |
+| post-acute-infection | 23 | 3,372 | 1,857 | 64% |
+| health/meta | 5 | 1,453 | 899 | 62% |
+| evolution | 20 | 1,473 | 936 | 61% |
 
-One untyped catch-all carries **61–83%** of all links in every corpus without
+One untyped catch-all carries **61–84%** of all links in every corpus without
 exception. The two facts together are the finding: authors did not use the typed
 relations — *and the projects went on minting more of them* (`focus_ref`,
 `focal`, `derivation`, `rival_model_packet`, `identity_context`). Adding a typed
@@ -256,20 +282,42 @@ question this survey raises: **what earns a vocabulary field a place in the
 
 The rule, added to domain-extension §2 as **2.6**:
 
-> **2.6 A base-profile vocabulary is admitted on cross-corpus agreement and
-> demonstrated exercise, never on plausibility.** Across at least **two**
+> **2.6 Cross-corpus agreement and demonstrated exercise are *necessary* for a
+> base-profile vocabulary. They are never sufficient.** Across at least **two**
 > independent corpora carrying at least 20 records each:
 >
-> - **(a) agreement** — the corpora's value sets must be **identical or nested**.
->   A **divergent** pair, where each contributes a term the other lacks, is
->   refused: it is two vocabularies sharing a name.
-> - **(b) exercise** — at least **two** of the declared values must actually
->   occur in each corpus. A value occurring in no corpus is dropped before
->   admission.
+> - **(a) agreement** — the corpora's value sets must be **identical or nested**,
+>   where nested means every pair is comparable by inclusion. A **divergent**
+>   family, where two corpora each carry a term the other lacks, is refused: it is
+>   two vocabularies sharing a name.
+> - **(b) exercise** — at least **two** distinct values must occur across those
+>   corpora, and every value the contract declares must occur in at least one. A
+>   field carrying one value everywhere declares a distinction nobody drew; a
+>   declared value occurring nowhere is dropped before admission.
+> - **(c) a reader** — some rule, projection, invariant or computation in this
+>   system must consume the field. This is the **final** test, and it is the one
+>   that actually admits: (a) and (b) only establish that the field could be
+>   carrying information, never that anything reads it.
 >
 > A field failing (a) starts in a **domain pack** and is promoted only when
-> corpora agree. A field failing (b) is not admitted at all: it declares a
-> distinction nobody drew.
+> corpora agree. A field failing (b) is not admitted at all. A field passing both
+> and failing (c) **waits**, named, until its reader exists.
+
+**Why (c) is the operative clause, not a formality.** `strength` passes agreement
+and exercise: nested across four corpora, three of them discriminating, with a
+`strong` value mm30 never used (§3.4). It still stays out of the base profile,
+because belief policy v1 weights every assessment at 1 and nothing else reads it —
+and weighting is blocked on **ρO3**, not on this ruling. Admitting it would put a
+field in the base contract whose only function is to be carried. When ρO3 makes
+precision computable, `strength` is a candidate again and (a) and (b) are already
+measured for it.
+
+**The two-corpus exercise floor, not a per-corpus one.** An earlier form of (b)
+required two values *in each corpus*, which rejects `polarity`: cbioportal's 24
+claims are all one polarity, and a corpus that happens to hold no negative claims
+is not evidence that polarity is unreal. Taking exercise across the corpora still
+refuses `scope`, `provisional` and `pre_registered`, which carry one value in
+every corpus that has them.
 
 ### 4.1 The rule this replaced, and why the measurement forced it
 
@@ -291,20 +339,31 @@ reads the minority class. **Variety is not agreement**: a field can vary
 beautifully in every corpus and still mean something different in each.
 
 The replacement separates the axes and is checked against the same eight corpora:
-`stance` admitted, `status` and `priority` to domain packs, `scope`/`provisional`/
-`pre_registered` refused outright, `strength` and `claim_layer` admitted. That is
-the intended answer in every case, and none of it was reachable from three
-corpora.
 
-The general lesson, which outlives this rule: **a threshold tuned on the corpora
-that suggested it will pass on those corpora.** The check that matters is the one
-run against data the rule was not drawn from.
+| field | (a) agreement | (b) exercise | (c) reader | outcome |
+|---|---|---|---|---|
+| `stance` | identical | ✓ | eligibility, aggregation | **base profile** |
+| `claim_layer` | nested | ✓ | claim identity | **base profile** |
+| `polarity` | nested | ✓ | claim identity | **base profile** |
+| `strength` | nested | ✓ | **none** — blocked on ρO3 | **waits** |
+| `proxy_directness` | nested | ✓ | none | **waits** |
+| `evidence_type` | **divergent** | ✓ | G1 reads *kind*, not this | domain pack |
+| `identification_strength` | **divergent** | ✓ | none | domain pack |
+| `evidence_role` | **divergent** | ✓ | none | domain pack |
+| `status`, `priority`, `mode`, `focus_type` | **divergent** | ✓ | none | domain pack |
+| `scope`, `provisional`, `pre_registered` | identical | **✗** one value | none | **refused** |
+
+None of this was reachable from three corpora, and two rows moved again when the
+nestedness defect was fixed (§2.1). The general lesson outlives the rule: **a
+threshold tuned on the corpora that suggested it will pass on those corpora**, and
+**an instrument trusted because it produced the expected answer is not evidence**.
 
 ### 4.2 What the rule does not claim
 
-**It is weaker than "this field is meaningful."** Agreement and exercise are
-necessary, not sufficient. Two corpora can agree on a vocabulary and both use it
-wrongly; `independence` (§3.4) is very likely exactly that.
+**It is weaker than "this field is meaningful."** Even all three clauses are a
+floor. Two corpora can agree on a vocabulary, exercise it, have a reader, and both
+use it wrongly; `independence` (§3.4) is very likely exactly that, which is why
+the kernel computes it rather than reading it.
 
 **Its unit is the corpus, not the record count.** Two corpora at 20 records beat
 one corpus at 2,000, because the failure guarded against is a project inventing
@@ -325,7 +384,8 @@ an answer rather than a default.
 
 Recorded here, amended in place where they belong. None reopens a ruling.
 
-1. **Domain-extension §2** gains ruling 2.6.
+1. **Domain-extension §2** gains **2.6** (vocabulary admission) and **2.7** (the
+   single navigation-only edge, §9.1).
 2. **The ledger's §3** gains item 11 (§6).
 3. **The disposition record's §2.3 figures** stand as recorded, under the bound
    its own limitations 2 and 3 already place on them. What §3.6 adds is *why*
@@ -337,10 +397,10 @@ Recorded here, amended in place where they belong. None reopens a ruling.
 4. **Belief policy limitation 1** is corroborated at a larger cost than the
    record carries (§3.4): three corpora discriminate on `strength`. This changes
    no ruling and is the strongest available argument for prioritizing **ρO3**.
-5. **Relation-signature work** inherits §3.5: a typed relation nobody adopts is
-   worse than absent, because it competes with `related` while claiming coverage.
-   Whatever admits a relation signature should answer the adoption question the
-   way 2.6 answers the vocabulary question.
+5. **Relation-signature work** is ruled rather than merely constrained: §9.1 and
+   domain-extension **2.7**. A typed relation nobody adopts is worse than absent,
+   because it competes with `related` while claiming coverage, so relations are
+   added one reader at a time and everything else is `see-also`.
 
 ## 6. Item 11 — the multi-corpus typing exercise
 
@@ -372,8 +432,14 @@ projection without testing the grammar.
   conform **without** a claim calculus.
 
 **Admission pass.** Every candidate vocabulary field the exercise surfaces is run
-against 2.6 — against all eight corpora, not the three being typed, since §4.1 is
-what happens when a rule is checked only against the data that suggested it.
+against 2.6 — agreement and exercise against all eight corpora, not the three
+being typed, since §4.1 is what happens when a rule is checked only against the
+data that suggested it, and then the reader clause, which is the one that admits.
+A field that types beautifully and is read by nothing waits.
+
+**What item 11 must *not* do.** It must not mint a relation kind for anything it
+finds. §9.1 rules one navigation-only edge, and a typing exercise is exactly the
+context in which a plausible-sounding relation gets invented for a single record.
 
 **Stop rule, inherited unchanged from the disposition record's §5.5.** No belief
 computed, no persistence boundary crossed. A typing that would require either is
@@ -392,13 +458,24 @@ Ruling 2.6 is therefore a **review rule**: it binds the authors of the base
 contract and is checked when a contract change is reviewed, not when the suite
 runs. That is a real weakening, stated rather than disguised.
 
-One testable consequence exists, and it belongs to 5b's contract cut rather than
-here: given a **frozen** survey artifact — dated, reviewed and committed the way
-M10's parity fixture is — a check could assert that every vocabulary the base
-contract declares is recorded in that artifact as agreeing and exercised across
-two corpora. That converts 2.6 into an oracle at the cost of carrying a survey
-snapshot. It is worth doing when the base contract has enough vocabulary to be
-worth guarding; it is not worth it for `stance` and `claim_layer` alone.
+Two testable consequences exist, and both belong to 5b's contract cut rather than
+here.
+
+**2.6(a) and (b) can become an oracle** given a **frozen** survey artifact —
+dated, reviewed and committed the way M10's parity fixture is — against which a
+check asserts that every vocabulary the base contract declares is recorded as
+agreeing and exercised. That costs carrying a survey snapshot, and is worth doing
+when the base contract has enough vocabulary to guard; not for `stance`,
+`claim_layer` and `polarity` alone.
+
+**2.6(c) and §9.1 are testable *today*, and are the stronger rows.** That a
+declared field has a reader is a property of this tree, not of anyone else's: a
+mutation removing the field from the base contract must make some test fail, and a
+field whose removal breaks nothing has no reader by construction — which is N2's
+own vacuity argument turned on the contract. Likewise §9.1's *no epistemic effect*
+is directly sabotageable: give `see-also` a belief-moving path and assert
+refusal, and assert that no `see-also` edge appears in a G3 closure. Neither
+needs a corpus.
 
 ## 8. Limitations
 
@@ -417,26 +494,55 @@ worth guarding; it is not worth it for `stance` and `claim_layer` alone.
    two are better — only that they were checked against data they were not drawn
    from.
 5. **Nested is treated as agreement, and that is a judgment.** When one corpus's
-   values are a subset of another's, this rule admits the field. It could equally
-   be read as the smaller corpus not having encountered the distinction yet, or
-   as the larger one having invented terms alone — `identification_strength`
-   (2 shared of 6) is close to that line.
+   values are a subset of another's, the field passes (a). That could equally be
+   read as the smaller corpus not having met the distinction yet, or as the larger
+   one having invented terms alone. `predicate` is the sharp case: nested only
+   because the two corpora beside mm30 use a single operator, `affects`, which is
+   a subset of mm30's eight by having barely any content at all.
 6. **Nothing here measures whether authors understood a vocabulary.** A field can
-   agree and be exercised because two authors used it two different ways.
+   agree, be exercised, and have a reader, while two authors mean different things
+   by it.
+7. **A snapshot cannot see a rule's own effect.** 2.6 and 2.7 will change what
+   future corpora contain, so re-running this instrument later measures a
+   population the rulings shaped. That is not a reason to skip re-running it, but
+   agreement observed after the fact is weaker evidence than agreement observed
+   here.
 
-## 9. Open questions
+## 9. Two rulings, and what stays open
 
-- **What replaces `related`?** §3.5 shows one untyped edge carrying 61–83% of
-  links in every corpus while typed relations went unadopted and kept
-  multiplying. Whether the answer is fewer relation signatures, a different
-  authoring affordance, or accepting an untyped edge as legitimate and typing it
-  later is undecided. It should be settled before relation signatures are
-  implemented.
-- **Does the base profile require a claim at all?** §3.6 and §6's
-  natural-systems prediction point at a base profile under which a corpus may be
-  almost entirely process narrative and still conform. Whether that is a profile
-  variant, a separate contract, or simply what "optional" already means is not
-  ruled here.
+Both questions this survey raised were **decided in session on 2026-08-07**, and
+neither answer is "a better taxonomy."
+
+**9.1 `related` is not replaced. It is narrowed to one navigation-only edge.**
+Nothing replaces it with a second relation taxonomy — that is what produced 61
+link fields and 3 universal ones. There is **one** explicitly navigation-only
+edge, named **`see-also`**, carrying no inference, no closure traversal, no
+symmetry, and **no epistemic effect**. It cannot move belief, cannot enlarge or
+contract an independent set, and cannot participate in a G3 closure. Precise
+relations are added **only** when a reader or an invariant uses them — the same
+consumer test as 2.6(c), applied to edges.
+
+The attributed source→claim connection is **not** a new primitive. It is the
+existing **`source-assertion`** record projected as an edge: it already carries
+the source, the anchored span, the stance, and the claim identity, and G1 already
+rules that it cannot enter belief aggregation by type. Minting an edge kind beside
+it would duplicate a record that exists and re-open the firewall G1 closes.
+
+**9.2 The base profile requires claim *capability*, never claim *instances*.**
+The base contract still owns the claim grammar and the kernel tag bytes. A corpus
+with **zero claims and zero activated operator contracts is conforming** — and
+this needs no profile variant and no activation flag, which are two mechanisms for
+a state that is simply the empty one. What the profile requires is that **if a
+claim exists, it must type**; a proposition that will not type is typing work, not
+a licensed exception.
+
+This is what makes §6's post-acute-infection prediction a *pass* rather than a
+special case: an empty belief output is the correct result for a corpus with no
+belief-eligible evidence, and an empty claim set is the correct result for a
+corpus that has authored no claims.
+
+**Still open:**
+
 - **What happens to a base-profile vocabulary that later diverges or collapses?**
   §4.2 says it is a finding; it does not say whether the field is retired,
   demoted to a domain pack, or kept with the finding recorded. Retirement

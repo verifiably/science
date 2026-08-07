@@ -228,12 +228,22 @@ Two standing constraints on 5b:
     profile: it must not *require* a claim calculus.
 
     Every candidate vocabulary field the exercise surfaces is run against
-    domain-extension **2.6** — over all **eight** surveyed corpora, not the three
-    being typed. That widening is not caution: 2.6's own first draft was checked
-    against three corpora, passed, and inverted against eight (corpus survey
-    §4.1). The disposition record's §5.5 stop rule is inherited unchanged: no
-    belief computed, no persistence boundary crossed, and a typing that would need
-    either is recorded as *blocked on A6–A8* rather than worked around.
+    domain-extension **2.6** — agreement and exercise over all **eight** surveyed
+    corpora, not the three being typed, then the **reader** clause, which is what
+    actually admits. That widening is not caution: 2.6's own first draft was
+    checked against three corpora, passed, and inverted against eight (corpus
+    survey §4.1). The exercise **must not mint relation kinds** for what it finds
+    — **2.7** rules one navigation-only `see-also` edge, and a typing pass is
+    exactly where a plausible relation gets invented for a single record. The
+    disposition record's §5.5 stop rule is inherited unchanged: no belief
+    computed, no persistence boundary crossed, and a typing that would need either
+    is recorded as *blocked on A6–A8* rather than worked around.
+
+    The base profile requires claim **capability**, not claim **instances**
+    (corpus survey §9.2): zero claims and zero activated operator contracts is
+    conforming, with no profile variant and no activation flag. If a claim exists
+    it must type; a proposition that will not type is typing work, not a licensed
+    exception.
 
 ## 4. Invariants and gates to pin when their layer lands
 

@@ -16,11 +16,15 @@ gains every contract reached through a **claim schema**, and D6 gains that arm,
 as does limitation 2 (ρA6); §12's predicate-vocabulary question **closes** —
 yes, a domain contract like any other — and its versioning question records a
 bound plus the parallel-genesis case (ρA5, ρC1).
-**Amended 2026-08-07** by the corpus survey: §2 gains ruling **2.6**, admitting a
-base-profile vocabulary only on **agreement** and **exercise** demonstrated across
-two independent corpora, measured over eight. It adds no guarantee row — 2.6 is a
-review rule, because the corpora it rests on are outside this repository (corpus
-survey §7).
+**Amended 2026-08-07** by the corpus survey (eight corpora, 6,860 records): §2
+gains **2.6**, making cross-corpus **agreement** and **exercise** necessary for a
+base-profile vocabulary and a **reader** the clause that admits it; and **2.7**,
+ruling one navigation-only `see-also` edge with no epistemic effect in place of a
+second relation taxonomy, with the source→claim connection staying the existing
+`source-assertion` record projected as an edge. It adds no guarantee row: 2.6's
+first two clauses are a **review rule**, because the corpora they rest on are
+outside this repository (corpus survey §7). 2.6's reader clause and 2.7's
+no-epistemic-effect clause **are** testable here and belong to 5b's contract cut.
 **Inherits:** substrate §2 (split by nature; the pricing argument;
 defer-and-promote), §4.1/§6.1 (the arity-and-history test), §12 (the
 `KIND_DESCRIPTORS`-versus-`KindSpec` open question, closed here); kernel §4.2
@@ -142,20 +146,29 @@ independently name the exact implementation that executed a check. A per-node
 stamp would duplicate both while inheriting the same bound, since a stamp is
 itself raw-editable.
 
-**2.6 A base-profile vocabulary is admitted on cross-corpus agreement and
-demonstrated exercise, never on plausibility** (added 2026-08-07 — corpus survey
-§4). Across at least **two** independent corpora carrying at least 20 records
-each, a field proposed for the `science` base profile must show:
+**2.6 Cross-corpus agreement and demonstrated exercise are *necessary* for a
+base-profile vocabulary; a reader is what admits it** (added 2026-08-07 — corpus
+survey §4). Across at least **two** independent corpora carrying at least 20
+records each, a field proposed for the `science` base profile must show:
 
-- **agreement** — the corpora's value sets are **identical or nested**. A
-  **divergent** pair, where each contributes a term the other lacks, is refused;
-  it is two vocabularies sharing a name.
-- **exercise** — at least **two** of the declared values actually occur in each
-  corpus. A value occurring in no corpus is dropped before admission.
+- **agreement** — the corpora's value sets are **identical or nested**, where
+  nested means every pair is comparable by inclusion. A **divergent** family, two
+  corpora each carrying a term the other lacks, is refused; it is two
+  vocabularies sharing a name.
+- **exercise** — at least **two** distinct values occur across those corpora, and
+  every value the contract declares occurs in at least one. A value occurring
+  nowhere is dropped before admission.
+- **a reader** — some rule, projection, invariant or computation in this system
+  consumes the field. This is the **final** test and the one that admits.
+  Agreement and exercise establish only that a field *could* be carrying
+  information, never that anything reads it.
 
-A field failing agreement starts in a **domain pack** and is promoted only when
-corpora agree. A field failing exercise is not admitted at all: it declares a
-distinction nobody drew.
+A field failing agreement starts in a **domain pack**, promoted only when corpora
+agree. A field failing exercise is not admitted at all. A field passing both and
+having no reader **waits**, named, until its reader exists — the survey's
+`strength` is the case: nested across four corpora, discriminating in three, and
+still out of the base profile because belief policy v1 weights every assessment at
+1 and weighting is blocked on ρO3.
 
 The unit is the **corpus**, not the record count. Two corpora at 20 records beat
 one corpus at 2,000, because the failure guarded against is a project inventing
@@ -166,23 +179,46 @@ corpus looking entirely reasonable alone. Its `scope`, `provisional` and
 `pre_registered` are the other case: perfect agreement across two corpora on
 **one value each**, over 307–317 records.
 
-**Both halves are required because the first draft of this ruling had only one,
-and it inverted.** That draft admitted on *discrimination* — top value below 90%
-in two corpora — and against eight corpora it rejected `stance`, the one
-vocabulary in the survey that never drifted, while admitting `status`, which
-shares 4 values of 20. Rarity is not uninformativeness, and variety is not
-agreement (corpus survey §4.1).
+Exercise is measured **across** the corpora rather than within each, because a
+corpus that happens to hold no negative claims is not evidence that `polarity` is
+unreal.
 
-This is deliberately weaker than *"this field is meaningful."* Agreement and
-exercise are necessary, not sufficient — two corpora can agree and both be wrong.
-And it is a **review rule**, not a guarantee, for the reason corpus-survey §7
-gives: the corpora are outside this repository, so no oracle can rest on them.
+**Every clause here was forced by a measurement that contradicted a draft.** The
+first draft admitted on *discrimination* — top value below 90% in two corpora —
+and against eight corpora it rejected `stance`, the one vocabulary in the survey
+that never drifted, while admitting `status`, which shares 4 values of 20. Rarity
+is not uninformativeness, and variety is not agreement. The reader clause was
+added after agreement and exercise alone admitted a field nothing consumes
+(corpus survey §4.1).
+
+This remains weaker than *"this field is meaningful"*: two corpora can agree,
+exercise a vocabulary, have a reader, and both use it wrongly. And it is a
+**review rule**, not a guarantee, for the reason corpus-survey §7 gives — the
+corpora are outside this repository, so no oracle can rest on them. The reader
+clause is the exception and is testable here: a declared field whose removal from
+the base contract breaks no test has no reader by construction.
 
 The harder half, stated with it: **admission checks a state, not a permanent
 verdict.** No field is added in order to be constant or to mean two things, so a
 field found divergent or collapsed reports either that its distinctions were
 never real or that authorship stopped making them. Both deserve an answer, and
 neither is reachable without re-measuring.
+
+**2.7 One navigation-only edge, and no second relation taxonomy** (added
+2026-08-07 — corpus survey §9.1). Across eight corpora the untyped `related` edge
+carried **61–84%** of every link while typed relations went unadopted and kept
+multiplying — 61 distinct link-bearing fields, 3 of them universal. The ruling is
+therefore **not** a better taxonomy. There is **one** explicitly navigation-only
+edge, **`see-also`**, carrying no inference, no closure traversal, no symmetry and
+**no epistemic effect**: it cannot move belief, cannot alter an independent set,
+and cannot appear in a G3 closure. A precise relation is added only when a reader
+or an invariant uses it — 2.6's consumer test, applied to edges.
+
+The attributed source→claim connection is **not** a new primitive. It is the
+existing **`source-assertion`** record projected as an edge; it already carries
+source, anchored span, stance and claim identity, and G1 already rules it out of
+belief aggregation by type. An edge kind beside it would duplicate an existing
+record and re-open the firewall G1 closes.
 
 ## 3. The ownership split
 

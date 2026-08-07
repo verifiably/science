@@ -28,6 +28,8 @@ spellings of one term is the finding. Collapsing early would erase it.
 
 from __future__ import annotations
 
+import itertools
+import re
 import sys
 import unicodedata
 from collections import Counter, defaultdict
@@ -63,12 +65,26 @@ VOCABULARY_CEILING = 30
 CLAIM_BEARING = frozenset({"proposition", "evidence-line", "hypothesis", "finding", "interpretation"})
 
 
-# A value naming an entity looks like `<kind>:<id>`. Used only to tell link-bearing
-# fields from scalar ones; the kind list is deliberately not closed, since a corpus
-# may mint kinds this repository has never heard of.
+# A reference names an entity as `<kind>:<id>`. The kind list is deliberately not
+# closed — a corpus may mint kinds this repository has never heard of — so the head
+# is matched by shape instead. The shape has to be tight: an earlier version
+# accepted anything `head:tail` with an alphanumeric head, which admitted every
+# ISO timestamp (`2026-08-07T10:49:59` partitions to a perfectly alphanumeric head)
+# and every URL. Both inflated the link counts.
+KIND_TOKEN = re.compile(r"^[a-z][a-z0-9_-]*$")
+
+# Lowercase scheme-like heads that are not entity kinds. Needed because `https`
+# and `doi` pass KIND_TOKEN on shape alone.
+NON_KIND_HEADS = frozenset({"http", "https", "ftp", "ftps", "doi", "urn", "mailto", "file", "data"})
+
+# A record's own identifier is a reference by shape and not a link by meaning, so
+# it is excluded from the link tally rather than silently inflating it.
+SELF_REFERENCE_KEYS = frozenset({"id"})
+
+
 def _looks_like_reference(value: str) -> bool:
     head, sep, tail = value.partition(":")
-    return bool(sep) and head.replace("-", "").replace("_", "").isalnum() and bool(tail) and " " not in head
+    return bool(sep) and bool(tail.strip()) and bool(KIND_TOKEN.match(head)) and head not in NON_KIND_HEADS
 
 
 def _normalize(value: str) -> str:
@@ -119,9 +135,16 @@ def read_corpus(root: Path) -> Corpus:
         for key, value in front.items():
             if not isinstance(key, str):
                 continue
+            if key in SELF_REFERENCE_KEYS:
+                continue
             if isinstance(value, list):
-                if any(isinstance(v, str) and _looks_like_reference(v) for v in value):
-                    corpus.links[key] += len(value)
+                # Count the elements that are references, not the length of any list
+                # containing one. A mixed list is mostly not links. Guarded because
+                # `Counter[key] += 0` inserts the key, which would report a field
+                # that never held a single link as link-bearing.
+                found = sum(1 for v in value if isinstance(v, str) and _looks_like_reference(v))
+                if found:
+                    corpus.links[key] += found
             elif isinstance(value, str) and value.strip():
                 if _looks_like_reference(value):
                     corpus.links[key] += 1
@@ -143,6 +166,26 @@ def classify(values: Counter[str]) -> str:
     if normalized.most_common(1)[0][1] / total >= COLLAPSE_SHARE:
         return "collapsed"
     return "discriminating"
+
+
+def agreement(sets: list[set[str]]) -> str:
+    """`identical`, `nested`, or `divergent` over a family of value sets.
+
+    **Nested means a chain**: every pair comparable by inclusion. An earlier
+    version asked only whether *some* set equalled the union, which is not the
+    same thing and passes families that plainly disagree — `{a,b,c}`, `{a,b}`,
+    `{a,c}` has a set equal to the union while `{a,b}` and `{a,c}` each carry a
+    term the other lacks. `evidence_type` is exactly that shape in the survey.
+
+    Sorting by size and checking consecutive inclusion is sufficient: if the
+    consecutive inclusions hold, transitivity gives every pair, and if any pair is
+    incomparable no sort can make the consecutive checks pass.
+    """
+    union = set().union(*sets)
+    if all(s == union for s in sets):
+        return "identical"
+    chain = sorted(sets, key=len)
+    return "nested" if all(a <= b for a, b in itertools.pairwise(chain)) else "divergent"
 
 
 def drift(values: Counter[str]) -> list[tuple[str, list[str]]]:
@@ -210,11 +253,7 @@ def report(corpora: list[Corpus]) -> None:
         union = set.union(*sets.values())
         if len(union) > VOCABULARY_CEILING:
             continue
-        verdict = (
-            "identical"
-            if all(s == union for s in sets.values())
-            else ("nested" if any(s == union for s in sets.values()) else "divergent")
-        )
+        verdict = agreement(list(sets.values()))
         print(f"- `{key}` — **{verdict}**; {len(shared)} shared of {len(union)}")
         for name, s in sets.items():
             extra = sorted(s - shared)
