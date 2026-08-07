@@ -1,6 +1,12 @@
-"""Measure what proto-science corpora actually contain. **Run by hand, never by tests.**
+"""Measure what proto-science corpora actually contain. **The survey is run by hand.**
 
     uv run python tools/survey_corpora.py <corpus-dir> [<corpus-dir> ...]
+
+No test runs the survey, because a test asserting a finding would assert
+something CI cannot see. The predicates that *decide* the findings are a
+different matter and are covered by `tests/test_survey_instrument.py`: three
+shipped defects in them each changed a reported number, and two changed a
+ruling.
 
 A corpus directory is one holding `entities/`, whose leaves are Markdown files
 with YAML frontmatter. The corpora live outside this repository and are not
@@ -65,26 +71,41 @@ VOCABULARY_CEILING = 30
 CLAIM_BEARING = frozenset({"proposition", "evidence-line", "hypothesis", "finding", "interpretation"})
 
 
-# A reference names an entity as `<kind>:<id>`. The kind list is deliberately not
-# closed — a corpus may mint kinds this repository has never heard of — so the head
-# is matched by shape instead. The shape has to be tight: an earlier version
-# accepted anything `head:tail` with an alphanumeric head, which admitted every
-# ISO timestamp (`2026-08-07T10:49:59` partitions to a perfectly alphanumeric head)
-# and every URL. Both inflated the link counts.
-KIND_TOKEN = re.compile(r"^[a-z][a-z0-9_-]*$")
+# A reference names an entity as `<kind>:<id>` and is *the whole value*. The kind
+# list is deliberately not closed — a corpus may mint kinds this repository has
+# never heard of — so the head is matched by shape instead. The shape has to be
+# tight, and two rounds of loosening were caught by review:
+#
+#   - accepting any `head:tail` with an alphanumeric head admitted every ISO
+#     timestamp (`2026-08-07T10:49:59` partitions to a perfectly alphanumeric
+#     head) and every URL;
+#   - accepting a tail containing whitespace admitted prose that happens to hold a
+#     colon, which is what titles do. `title: "mm30: a myeloma survival atlas"`
+#     was counted as a link 314 times in one corpus.
+#
+# Hence: no whitespace anywhere, a kind-shaped head, and an id-shaped tail.
+REFERENCE = re.compile(r"^[a-z][a-z0-9_-]*:[A-Za-z0-9][A-Za-z0-9._~/=+-]*$")
 
-# Lowercase scheme-like heads that are not entity kinds. Needed because `https`
-# and `doi` pass KIND_TOKEN on shape alone.
-NON_KIND_HEADS = frozenset({"http", "https", "ftp", "ftps", "doi", "urn", "mailto", "file", "data"})
+# Lowercase scheme-like heads that pass the head shape but never name an entity:
+# URI schemes, identifier authorities, and digest algorithms. `sha256:<hex>` is a
+# content address, not an edge, and it was being counted as one.
+NON_KIND_HEADS = frozenset(
+    {
+        "http", "https", "ftp", "ftps", "mailto", "file", "data", "urn",
+        "doi", "isbn", "issn", "orcid", "pmid", "pmc", "arxiv",
+        "sha1", "sha224", "sha256", "sha384", "sha512", "md5", "blake2b", "blake2s", "blake3", "crc32",
+    }
+)  # fmt: skip
 
-# A record's own identifier is a reference by shape and not a link by meaning, so
-# it is excluded from the link tally rather than silently inflating it.
-SELF_REFERENCE_KEYS = frozenset({"id"})
+# Fields whose value can be reference-*shaped* without being an edge: a record
+# naming itself, a record's display string, and a content address. Excluded by
+# name rather than by shape, because no shape rule separates `mm30:0001` used as
+# an id from the same string used as a target.
+NON_LINK_KEYS = frozenset({"id", "uid", "slug", "title", "name", "label", "content_hash", "hash", "checksum"})
 
 
 def _looks_like_reference(value: str) -> bool:
-    head, sep, tail = value.partition(":")
-    return bool(sep) and bool(tail.strip()) and bool(KIND_TOKEN.match(head)) and head not in NON_KIND_HEADS
+    return bool(REFERENCE.match(value)) and value.partition(":")[0] not in NON_KIND_HEADS
 
 
 def _normalize(value: str) -> str:
@@ -135,21 +156,23 @@ def read_corpus(root: Path) -> Corpus:
         for key, value in front.items():
             if not isinstance(key, str):
                 continue
-            if key in SELF_REFERENCE_KEYS:
-                continue
+            edge_bearing = key not in NON_LINK_KEYS
             if isinstance(value, list):
                 # Count the elements that are references, not the length of any list
                 # containing one. A mixed list is mostly not links. Guarded because
                 # `Counter[key] += 0` inserts the key, which would report a field
                 # that never held a single link as link-bearing.
                 found = sum(1 for v in value if isinstance(v, str) and _looks_like_reference(v))
-                if found:
+                if found and edge_bearing:
                     corpus.links[key] += found
             elif isinstance(value, str) and value.strip():
-                if _looks_like_reference(value):
-                    corpus.links[key] += 1
-                else:
+                if not _looks_like_reference(value):
                     corpus.scalars[key][value] += 1
+                elif edge_bearing:
+                    corpus.links[key] += 1
+                # else: an identity or display field holding a reference-shaped
+                # string. It is neither an edge nor a vocabulary term, so it is
+                # counted nowhere rather than inflating either tally.
             elif isinstance(value, bool):
                 corpus.scalars[key][str(value).lower()] += 1
     return corpus
@@ -271,6 +294,12 @@ def report(corpora: list[Corpus]) -> None:
         print("(none)")
 
     print("\n## Link-bearing fields\n")
+    print(
+        f"A link is a whole value matching `<kind>:<id>` whose head is not a URI scheme, "
+        f"identifier authority or digest algorithm, in a field that is not one of "
+        f"{', '.join(f'`{k}`' for k in sorted(NON_LINK_KEYS))} — those name or display a record "
+        "rather than pointing at another one.\n"
+    )
     union = set().union(*(set(c.links) for c in corpora))
     everywhere = set.intersection(*(set(c.links) for c in corpora))
     print(f"{len(union)} distinct across all corpora; {len(everywhere)} in every one.\n")
@@ -278,8 +307,12 @@ def report(corpora: list[Corpus]) -> None:
     print("|---|---|---|---|")
     for c in corpora:
         rel = c.links.get("related", 0)
-        other = sum(v for k, v in c.links.items() if k not in ("related", "id", "title"))
+        other = sum(v for k, v in c.links.items() if k != "related")
         print(f"| {c.name} | {len(c.links)} | {rel} | {other} |")
+    # Named, not just counted: a tally of 61 fields is only auditable if the reader
+    # can see which fields it is made of and object to one.
+    print(f"\nIn every corpus: {', '.join(f'`{k}`' for k in sorted(everywhere)) or '(none)'}")
+    print(f"\nAll {len(union)}: {', '.join(f'`{k}`' for k in sorted(union))}")
 
     print("\n## Structured claims\n")
     print(

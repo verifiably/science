@@ -232,7 +232,15 @@ Two standing constraints on 5b:
     corpora, not the three being typed, then the **reader** clause, which is what
     actually admits. That widening is not caution: 2.6's own first draft was
     checked against three corpora, passed, and inverted against eight (corpus
-    survey §4.1). The exercise **must not mint relation kinds** for what it finds
+    survey §4.1). Satisfying the reader clause means **naming the check** that
+    consumes the field and showing a value perturbation that flips its result,
+    identity or refusal; that the field's removal breaks a test is not enough,
+    since schema completeness, fixture coverage and a pinned contract digest all
+    fail on the declaration alone (corpus survey §7). A field that fails agreement
+    is out of the **base profile** and nothing more — it does not thereby enter a
+    domain pack, since a domain contract costs ownership, succession and a schema,
+    and a readerless field is not worth one. The exercise **must not mint relation
+    kinds** for what it finds
     — **2.7** rules one navigation-only `see-also` edge, and a typing pass is
     exactly where a plausible relation gets invented for a single record. The
     disposition record's §5.5 stop rule is inherited unchanged: no belief

@@ -68,11 +68,19 @@ found nothing else. Several findings below are fields nobody thought to name.
 a fraction of a denominator, and silently dropping records shrinks denominators.
 All 6,860 records parsed; the unparsed count is zero in all eight corpora.
 
-### 2.1 Three instrument defects, found and corrected
+### 2.1 Four instrument defects, found and corrected
 
 An instrument that decides a ruling has to be read as adversarially as the ruling.
-Three defects were found — one before banking, two in review — and each changed a
-reported number.
+Four defects were found — one before banking, three in review — and each changed a
+reported number. Two changed a ruling. The link measurement was corrected **twice**,
+which is the point of the section: the first correction was checked against the
+cases that motivated it and passed, and a second reading found cases it still let
+through.
+
+The predicates are now covered by `python/tests/test_survey_instrument.py`, with a
+case per defect below. The survey itself is still not run by any test — a test
+asserting a *finding* would assert something CI cannot see — but nothing stops the
+predicates that decide the findings from being tested, and nothing should have.
 
 **Encoding drift does not exist; the regex did.** A regex pass appeared to show
 `evidence_type` written both as `literature` and as `"literature"` in
@@ -90,16 +98,33 @@ the other lacks. Nestedness requires **every pair comparable by inclusion**.
 `none`. **Both were reported nested and are divergent**, which moves both out of
 the base profile under §4.
 
-**Reference *shape* is not a relation edge.** The link measurement accepted any
-`head:tail` with an alphanumeric head, which admitted every ISO timestamp
-(`2026-08-07T10:49:59` partitions to a perfectly alphanumeric head) and every
-URL; it counted `id`, which is a record naming itself rather than an edge; and for
-a list it added the list's **full length** when a single element matched. The
-corrected measurement requires a lowercase kind-shaped head that is not a URI
-scheme, excludes self-reference, and counts only the elements that are actually
-references. The field tally falls from 67 to **61** and the universal set from 5
-to **3**. §3.5's conclusion survives — `related`'s share moves from 61–83% to
-**61–84%** — but it survives as a measurement rather than as luck.
+**Reference *shape* is not a relation edge (first correction).** The link
+measurement accepted any `head:tail` with an alphanumeric head, which admitted
+every ISO timestamp (`2026-08-07T10:49:59` partitions to a perfectly alphanumeric
+head) and every URL; it counted `id`, which is a record naming itself rather than
+an edge; and for a list it added the list's **full length** when a single element
+matched. The correction required a lowercase kind-shaped head that is not a URI
+scheme, excluded self-reference, and counted only the elements that are actually
+references. The field tally fell from 67 to 61 and the universal set from 5 to 3.
+
+**Reference shape is still not a relation edge (second correction).** The first
+correction constrained the *head* and left the tail unconstrained, so any prose
+containing a colon still counted — which is exactly what a title is. `title` was
+counted as a link field **314 times** in mm30. `sha256:` passed too, because a
+content address has a kind-shaped head; `content_hash` was counted three times in
+natural-systems. The measurement now requires the **whole value** to be a
+whitespace-free `<kind>:<id>` token whose head is neither a URI scheme, an
+identifier authority (`doi`, `pmid`, `orcid`, …) nor a digest algorithm, and it
+excludes by name the fields that name or display a record rather than pointing at
+one — `id`, `title`, `name`, `slug`, `content_hash` and their neighbours. Those
+are excluded by name deliberately: no shape rule separates `mm30:0001` used as an
+id from the same string used as a target. The field tally falls again, 61 to
+**56**, and the universal set holds at **3** — now named in the output, so the
+tally can be objected to rather than only counted: `related`, `datasets`,
+`source_refs`.
+
+§3.5's conclusion survives both corrections — `related`'s share moves 61–83% →
+61–84% → **62–84%** — but it survives as a measurement rather than as luck.
 
 ## 3. What the corpora show
 
@@ -222,26 +247,28 @@ prioritizing ρO3's estimand typing.
 
 ### 3.5 The typed relation vocabulary was abandoned, and kept growing anyway
 
-Sixty-one distinct link-bearing frontmatter fields exist across the eight corpora;
-**three** appear in all of them. (These are the corrected figures — see §2.1.)
+**Fifty-six** distinct link-bearing frontmatter fields exist across the eight
+corpora; **three** appear in all of them — `related`, `datasets` and
+`source_refs`. (These are the twice-corrected figures — see §2.1.)
 
 | corpus | distinct link fields | via `related` | via every other field | `related` share |
 |---|---|---|---|---|
-| natural-systems | 32 | 6,664 | 1,280 | **84%** |
-| protein-landscape | 24 | 1,435 | 499 | 74% |
-| cycles | 16 | 2,563 | 984 | 72% |
-| mm30 | 40 | 7,221 | 3,648 | 66% |
-| cbioportal | 15 | 1,592 | 808 | 66% |
-| post-acute-infection | 23 | 3,372 | 1,857 | 64% |
-| health/meta | 5 | 1,453 | 899 | 62% |
-| evolution | 20 | 1,473 | 936 | 61% |
+| natural-systems | 28 | 6,664 | 1,248 | **84%** |
+| protein-landscape | 22 | 1,435 | 496 | 74% |
+| cycles | 14 | 2,562 | 958 | 73% |
+| mm30 | 37 | 7,220 | 3,603 | 67% |
+| cbioportal | 13 | 1,592 | 805 | 66% |
+| post-acute-infection | 20 | 3,342 | 1,810 | 65% |
+| health/meta | 5 | 1,450 | 897 | 62% |
+| evolution | 18 | 1,466 | 913 | 62% |
 
-One untyped catch-all carries **61–84%** of all links in every corpus without
+One untyped catch-all carries **62–84%** of all links in every corpus without
 exception. The two facts together are the finding: authors did not use the typed
-relations — *and the projects went on minting more of them* (`focus_ref`,
-`focal`, `derivation`, `rival_model_packet`, `identity_context`). Adding a typed
-relation did not reduce use of `related`, and nothing measured whether anyone
-adopted it.
+relations — *and the projects went on minting more of them*. The measured tail
+includes `focus_ref`, `focal`, `inquiry_target`, `plan_target`, `commits_to`,
+`absorbs`, `resynthesized_into`, `inquiries_touched` and `orphan_ids`. Adding a
+typed relation did not reduce use of `related`, and nothing measured whether
+anyone adopted it.
 
 ### 3.6 Typed claims exist in three corpora, and one holds 91% of them
 
@@ -284,7 +311,7 @@ The rule, added to domain-extension §2 as **2.6**:
 
 > **2.6 Cross-corpus agreement and demonstrated exercise are *necessary* for a
 > base-profile vocabulary. They are never sufficient.** Across at least **two**
-> independent corpora carrying at least 20 records each:
+> corpora with **separately evolved histories** carrying at least 20 records each:
 >
 > - **(a) agreement** — the corpora's value sets must be **identical or nested**,
 >   where nested means every pair is comparable by inclusion. A **divergent**
@@ -299,9 +326,24 @@ The rule, added to domain-extension §2 as **2.6**:
 >   that actually admits: (a) and (b) only establish that the field could be
 >   carrying information, never that anything reads it.
 >
-> A field failing (a) starts in a **domain pack** and is promoted only when
-> corpora agree. A field failing (b) is not admitted at all. A field passing both
-> and failing (c) **waits**, named, until its reader exists.
+> A field failing (a) is **out of the base profile**; it enters a domain pack only
+> if a domain reader wants it, and otherwise waits. A field failing (b) is not
+> admitted at all. A field passing both and failing (c) **waits**, named, until its
+> reader exists.
+
+**"Separately evolved," not "independent."** The first draft said *independent
+corpora*, which the survey cannot supply and limitation 1 says so outright: all
+eight share one author and one predecessor system. A rule whose own evidence
+cannot satisfy it is not a rule. What the survey can attest, and what 2.6 now
+requires, is that the corpora have **separately evolved histories** — the
+vocabulary choices were made in separate project directories, at separate times,
+with neither corpus's frontmatter copied from the other's. That is materially
+weaker than independence: a shared habit still crosses it, which is exactly
+limitation 1's warning. It is not vacuous, because it is what makes disagreement
+informative — `priority`'s `high`/`medium`/`low` against `p1`/`p2`/`p3` is two
+separately evolved answers to one question, and the same author produced both.
+Agreement under this criterion is therefore weak evidence and **disagreement is
+strong**, which is why (a) is stated as a refusal rather than an admission.
 
 **Why (c) is the operative clause, not a formality.** `strength` passes agreement
 and exercise: nested across four corpora, three of them discriminating, with a
@@ -347,11 +389,21 @@ The replacement separates the axes and is checked against the same eight corpora
 | `polarity` | nested | ✓ | claim identity | **base profile** |
 | `strength` | nested | ✓ | **none** — blocked on ρO3 | **waits** |
 | `proxy_directness` | nested | ✓ | none | **waits** |
-| `evidence_type` | **divergent** | ✓ | G1 reads *kind*, not this | domain pack |
-| `identification_strength` | **divergent** | ✓ | none | domain pack |
-| `evidence_role` | **divergent** | ✓ | none | domain pack |
-| `status`, `priority`, `mode`, `focus_type` | **divergent** | ✓ | none | domain pack |
+| `evidence_type` | **divergent** | ✓ | G1 reads *kind*, not this | out of base |
+| `identification_strength` | **divergent** | ✓ | none | out of base |
+| `evidence_role` | **divergent** | ✓ | none | out of base |
+| `status`, `priority`, `mode`, `focus_type` | **divergent** | ✓ | none | out of base |
 | `scope`, `provisional`, `pre_registered` | identical | **✗** one value | none | **refused** |
+
+**"Out of base" is not "into a domain pack."** Every divergent row above has no
+reader either, and a domain contract is not free: it costs ownership, succession
+and a schema (§3 of the domain-extension design). Divergence establishes exactly
+one thing — the field cannot be in the base profile. Routing it automatically to
+a domain would replace a base-profile vocabulary nobody reads with a domain
+vocabulary nobody reads, and would do it while charging for a contract. A
+divergent field enters a domain **when a domain reader wants it**, and until then
+it waits, in the same state as `strength`. (c) is the admitting clause at every
+level, not just the base.
 
 None of this was reachable from three corpora, and two rows moved again when the
 nestedness defect was fixed (§2.1). The general lesson outlives the rule: **a
@@ -435,7 +487,11 @@ projection without testing the grammar.
 against 2.6 — agreement and exercise against all eight corpora, not the three
 being typed, since §4.1 is what happens when a rule is checked only against the
 data that suggested it, and then the reader clause, which is the one that admits.
-A field that types beautifully and is read by nothing waits.
+Satisfying it means **naming** the check that consumes the field and exhibiting a
+value perturbation that flips that check's verdict (§7) — not showing that the
+field's removal breaks something. A field that types beautifully and is read by
+nothing waits, whether the destination proposed for it is the base profile or a
+domain pack.
 
 **What item 11 must *not* do.** It must not mint a relation kind for anything it
 finds. §9.1 rules one navigation-only edge, and a typing exercise is exactly the
@@ -458,8 +514,8 @@ Ruling 2.6 is therefore a **review rule**: it binds the authors of the base
 contract and is checked when a contract change is reviewed, not when the suite
 runs. That is a real weakening, stated rather than disguised.
 
-Two testable consequences exist, and both belong to 5b's contract cut rather than
-here.
+One testable consequence exists today and one is owed; both belong to 5b's
+contract cut rather than here.
 
 **2.6(a) and (b) can become an oracle** given a **frozen** survey artifact —
 dated, reviewed and committed the way M10's parity fixture is — against which a
@@ -468,22 +524,50 @@ agreeing and exercised. That costs carrying a survey snapshot, and is worth doin
 when the base contract has enough vocabulary to guard; not for `stance`,
 `claim_layer` and `polarity` alone.
 
-**2.6(c) and §9.1 are testable *today*, and are the stronger rows.** That a
-declared field has a reader is a property of this tree, not of anyone else's: a
-mutation removing the field from the base contract must make some test fail, and a
-field whose removal breaks nothing has no reader by construction — which is N2's
-own vacuity argument turned on the contract. Likewise §9.1's *no epistemic effect*
-is directly sabotageable: give `see-also` a belief-moving path and assert
-refusal, and assert that no `see-also` edge appears in a G3 closure. Neither
-needs a corpus.
+**2.6(c) is a property of this tree and can become an oracle — but not the obvious
+one.** The obvious oracle is *remove the field from the base contract and require
+some test to fail*, and it is **insufficient**. Three ways it passes with no reader
+in existence:
+
+- **schema completeness** — a round-trip or schema test enumerates every declared
+  field, so deleting any field breaks it whether or not anything reads the value;
+- **fixture coverage** — a golden fixture contains the field, so removal breaks
+  byte equality for the same reason;
+- **contract identity** — the contract's own digest is pinned, so *any* edit to
+  the contract fails a test by construction.
+
+All three fail on **declaration**, and a reader consumes a **value**. N2's actual
+requirement is sharper than "something fails": every oracle row must name the
+check it is a row of, and that check's *result, identity or refusal* must change
+under a source mutation. Applied here, admission under (c) owes a **named**
+check `C_F` for each declared field `F`, together with a fixture perturbation that
+changes `F`'s **value** and flips `C_F`'s verdict — a different belief, a different
+claim identity, or a refusal where there was none. `stance` has such a check
+(eligibility, then the signed balance); `claim_layer` and `polarity` have one
+(claim identity); `strength` has none, which is the whole reason it waits. A field
+that survives value perturbation with every check's verdict unchanged is carried,
+not read, whatever the schema says.
+
+That check is owed by 5b's contract cut, and it is a stronger row than 2.6(a) and
+(b) because it needs no corpus and no snapshot.
+
+**§9.1's oracle is owed, not available.** `see-also` has no implementation in this
+tree yet, so *no epistemic effect* cannot be sabotaged today — there is nothing to
+sabotage. When the edge surface lands, it lands with two rows: give `see-also` a
+belief-moving path and assert refusal, and assert that no `see-also` edge appears
+in a G3 closure. Recording the rule now and the oracle later is the ordinary case;
+recording it as "testable today" was wrong.
 
 ## 8. Limitations
 
 1. **Eight corpora are not a sample.** They share one author and one predecessor
    system, so agreement among them is weaker evidence than it looks — a shared
    habit is not a shared truth. Disagreement is the stronger signal, which is why
-   §3 leans on it. Roughly seven smaller corpora remain unmeasured; all are below
-   400 records, and the instrument runs over them in minutes.
+   §3 leans on it, and why 2.6's criterion is **separately evolved histories**
+   rather than independence (§4): a rule requiring independent corpora could not
+   be satisfied by the corpora that produced it. Roughly seven smaller corpora
+   remain unmeasured; all are below 400 records, and the instrument runs over them
+   in minutes.
 2. **The instrument reads frontmatter only.** Prose bodies, sidecar files and
    `science.yaml` configuration are outside it. A vocabulary enforced in prose
    and never written to frontmatter is invisible here.
@@ -507,6 +591,14 @@ needs a corpus.
    population the rulings shaped. That is not a reason to skip re-running it, but
    agreement observed after the fact is weaker evidence than agreement observed
    here.
+8. **The link measurement is a shape rule plus a hand-maintained exclusion list.**
+   It counts a whole value matching `<kind>:<id>`, minus URI schemes, identifier
+   authorities, digest algorithms, and nine field names that name or display a
+   record. Both lists are judgments, and a corpus using an unlisted identity field
+   or an unlisted authority prefix would still be counted. §2.1 is the record of
+   what two rounds of getting this wrong cost — the direction of the error was
+   over-counting both times, so **56 is an upper bound** on the relation-field
+   tally and §3.5's argument only gets stronger if it falls again.
 
 ## 9. Two rulings, and what stays open
 
@@ -514,13 +606,17 @@ Both questions this survey raised were **decided in session on 2026-08-07**, and
 neither answer is "a better taxonomy."
 
 **9.1 `related` is not replaced. It is narrowed to one navigation-only edge.**
-Nothing replaces it with a second relation taxonomy — that is what produced 61
+Nothing replaces it with a second relation taxonomy — that is what produced 56
 link fields and 3 universal ones. There is **one** explicitly navigation-only
 edge, named **`see-also`**, carrying no inference, no closure traversal, no
 symmetry, and **no epistemic effect**. It cannot move belief, cannot enlarge or
 contract an independent set, and cannot participate in a G3 closure. Precise
 relations are added **only** when a reader or an invariant uses them — the same
 consumer test as 2.6(c), applied to edges.
+
+The clause is a **rule without an oracle until the edge surface exists** (§7).
+Nothing in this tree implements `see-also`, so *no epistemic effect* cannot be
+sabotaged yet; the two rows are owed by whichever cut lands the surface.
 
 The attributed source→claim connection is **not** a new primitive. It is the
 existing **`source-assertion`** record projected as an edge: it already carries

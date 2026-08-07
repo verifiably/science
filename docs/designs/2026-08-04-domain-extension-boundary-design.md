@@ -23,8 +23,11 @@ ruling one navigation-only `see-also` edge with no epistemic effect in place of 
 second relation taxonomy, with the source→claim connection staying the existing
 `source-assertion` record projected as an edge. It adds no guarantee row: 2.6's
 first two clauses are a **review rule**, because the corpora they rest on are
-outside this repository (corpus survey §7). 2.6's reader clause and 2.7's
-no-epistemic-effect clause **are** testable here and belong to 5b's contract cut.
+outside this repository (corpus survey §7). 2.6's reader clause is testable here
+and belongs to 5b's contract cut — as a **named** per-field check flipped by a
+value perturbation, not as "removal breaks a test," which schema completeness
+alone would satisfy. 2.7's no-epistemic-effect rows are **owed** with the edge
+surface, which does not exist yet.
 **Inherits:** substrate §2 (split by nature; the pricing argument;
 defer-and-promote), §4.1/§6.1 (the arity-and-history test), §12 (the
 `KIND_DESCRIPTORS`-versus-`KindSpec` open question, closed here); kernel §4.2
@@ -148,8 +151,9 @@ itself raw-editable.
 
 **2.6 Cross-corpus agreement and demonstrated exercise are *necessary* for a
 base-profile vocabulary; a reader is what admits it** (added 2026-08-07 — corpus
-survey §4). Across at least **two** independent corpora carrying at least 20
-records each, a field proposed for the `science` base profile must show:
+survey §4). Across at least **two** corpora with **separately evolved histories**
+carrying at least 20 records each, a field proposed for the `science` base profile
+must show:
 
 - **agreement** — the corpora's value sets are **identical or nested**, where
   nested means every pair is comparable by inclusion. A **divergent** family, two
@@ -163,12 +167,27 @@ records each, a field proposed for the `science` base profile must show:
   Agreement and exercise establish only that a field *could* be carrying
   information, never that anything reads it.
 
-A field failing agreement starts in a **domain pack**, promoted only when corpora
-agree. A field failing exercise is not admitted at all. A field passing both and
-having no reader **waits**, named, until its reader exists — the survey's
-`strength` is the case: nested across four corpora, discriminating in three, and
-still out of the base profile because belief policy v1 weights every assessment at
-1 and weighting is blocked on ρO3.
+A field failing exercise is not admitted at all. A field failing agreement is
+**out of the base profile** — and that is *all* divergence establishes. It does
+not route the field into a **domain pack**: a domain contract costs ownership,
+succession and a schema (§3), and every field the survey found divergent has no
+reader either, so automatic routing would buy a contract for a vocabulary nobody
+reads. A field enters a domain when a **domain** reader wants it, and is promoted
+to the base when corpora agree *and* a base reader wants it.
+
+A field passing agreement and exercise but having no reader **waits**, named,
+until its reader exists — the survey's `strength` is the case: nested across four
+corpora, discriminating in three, and still out of the base profile because belief
+policy v1 weights every assessment at 1 and weighting is blocked on ρO3. Waiting
+is the same state a divergent readerless field is in; the reader clause admits at
+every level, not only the base.
+
+**Separately evolved, not independent.** The corpora behind this rule share one
+author and one predecessor system, so "independent" is a standard its own evidence
+fails. The requirement is that the corpora's vocabulary choices were made in
+separate projects, at separate times, with neither's frontmatter copied from the
+other's. Under that weaker criterion agreement is weak evidence and disagreement
+is strong, which is why the agreement clause is written as a refusal.
 
 The unit is the **corpus**, not the record count. Two corpora at 20 records beat
 one corpus at 2,000, because the failure guarded against is a project inventing
@@ -194,9 +213,16 @@ added after agreement and exercise alone admitted a field nothing consumes
 This remains weaker than *"this field is meaningful"*: two corpora can agree,
 exercise a vocabulary, have a reader, and both use it wrongly. And it is a
 **review rule**, not a guarantee, for the reason corpus-survey §7 gives — the
-corpora are outside this repository, so no oracle can rest on them. The reader
-clause is the exception and is testable here: a declared field whose removal from
-the base contract breaks no test has no reader by construction.
+corpora are outside this repository, so no oracle can rest on them.
+
+The reader clause is the exception, and what it owes is narrower than it first
+looks. *Removing the field breaks some test* is **not** the oracle: schema
+completeness, fixture coverage and a pinned contract digest all fail on the
+**declaration**, while a reader consumes a **value**. Under N2, admission owes a
+**named** check per declared field plus a fixture perturbation that changes the
+field's value and flips that check's result, identity or refusal. `stance`,
+`claim_layer` and `polarity` have such checks; `strength` has none, which is why
+it waits.
 
 The harder half, stated with it: **admission checks a state, not a permanent
 verdict.** No field is added in order to be constant or to mean two things, so a
@@ -206,8 +232,8 @@ neither is reachable without re-measuring.
 
 **2.7 One navigation-only edge, and no second relation taxonomy** (added
 2026-08-07 — corpus survey §9.1). Across eight corpora the untyped `related` edge
-carried **61–84%** of every link while typed relations went unadopted and kept
-multiplying — 61 distinct link-bearing fields, 3 of them universal. The ruling is
+carried **62–84%** of every link while typed relations went unadopted and kept
+multiplying — 56 distinct link-bearing fields, 3 of them universal. The ruling is
 therefore **not** a better taxonomy. There is **one** explicitly navigation-only
 edge, **`see-also`**, carrying no inference, no closure traversal, no symmetry and
 **no epistemic effect**: it cannot move belief, cannot alter an independent set,
