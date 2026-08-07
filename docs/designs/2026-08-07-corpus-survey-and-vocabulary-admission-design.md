@@ -1,7 +1,16 @@
 # Corpus survey and vocabulary admission — design
 
 **Date:** 2026-08-07
-**Status:** design, approved in session
+**Status:** Banked 2026-08-07, after three review rounds. The banking commits
+carry the instrument (`python/tools/survey_corpora.py`), its regression suite
+(`python/tests/test_survey_instrument.py`, 25 tests), and the amendments to
+domain-extension §2 and to the ledger. The review rounds corrected **four**
+instrument defects — §2.1 names them — and narrowed four claims this document
+had over-stated: the 56-field tally from a bound to a detected measurement
+(limitation 8), the reader oracle from "removal breaks a test" to a named check
+under value perturbation (§7), divergence from "starts in a domain pack" to
+"out of the base profile" (§4.1), and the admission premise from "independent
+corpora" to "separately evolved histories" (§4).
 **Scope:** evidence for, and one ruling over, what may enter the `science` base
 profile. Amends domain-extension §2 in place and adds item 11 to the ledger's
 order of work. Mints no guarantee table — §7 says why.
