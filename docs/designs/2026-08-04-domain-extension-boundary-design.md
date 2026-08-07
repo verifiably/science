@@ -233,7 +233,7 @@ neither is reachable without re-measuring.
 **2.7 One navigation-only edge, and no second relation taxonomy** (added
 2026-08-07 — corpus survey §9.1). Across eight corpora the untyped `related` edge
 carried **62–84%** of every link while typed relations went unadopted and kept
-multiplying — 56 distinct link-bearing fields, 3 of them universal. The ruling is
+multiplying — 56 detected link-bearing fields, 3 of them universal. The ruling is
 therefore **not** a better taxonomy. There is **one** explicitly navigation-only
 edge, **`see-also`**, carrying no inference, no closure traversal, no symmetry and
 **no epistemic effect**: it cannot move belief, cannot alter an independent set,

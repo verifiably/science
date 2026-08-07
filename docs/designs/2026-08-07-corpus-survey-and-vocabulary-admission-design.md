@@ -247,9 +247,10 @@ prioritizing ρO3's estimand typing.
 
 ### 3.5 The typed relation vocabulary was abandoned, and kept growing anyway
 
-**Fifty-six** distinct link-bearing frontmatter fields exist across the eight
-corpora; **three** appear in all of them — `related`, `datasets` and
-`source_refs`. (These are the twice-corrected figures — see §2.1.)
+The instrument detects **56** distinct link-bearing frontmatter fields across the
+eight corpora; **three** appear in all of them — `related`, `datasets` and
+`source_refs`. (These are the twice-corrected figures — see §2.1 — and a detected
+tally, not a bound: limitation 8 gives the pressure in both directions.)
 
 | corpus | distinct link fields | via `related` | via every other field | `related` share |
 |---|---|---|---|---|
@@ -591,14 +592,22 @@ recording it as "testable today" was wrong.
    population the rulings shaped. That is not a reason to skip re-running it, but
    agreement observed after the fact is weaker evidence than agreement observed
    here.
-8. **The link measurement is a shape rule plus a hand-maintained exclusion list.**
+8. **The link measurement is a shape rule plus a hand-maintained exclusion list,
+   and 56 is the *currently detected tally* — not a bound in either direction.**
    It counts a whole value matching `<kind>:<id>`, minus URI schemes, identifier
    authorities, digest algorithms, and nine field names that name or display a
-   record. Both lists are judgments, and a corpus using an unlisted identity field
-   or an unlisted authority prefix would still be counted. §2.1 is the record of
-   what two rounds of getting this wrong cost — the direction of the error was
-   over-counting both times, so **56 is an upper bound** on the relation-field
-   tally and §3.5's argument only gets stronger if it falls again.
+   record. Both lists are judgments. Known **over-count** pressure: a corpus using
+   an unlisted identity field or an unlisted authority prefix is still counted, and
+   §2.1 records two rounds of exactly that. Known **under-count** pressure, which
+   is *not* symmetric with it and has never been measured: a relation stored as a
+   filesystem path, a bare id with no kind prefix, a mapping rather than a string,
+   or any encoding the detector does not recognize is invisible here, and the
+   corpora are under no obligation to write edges the one way this rule reads. Two
+   over-counts are not evidence that the remaining error is one-sided. §3.5's
+   conclusion rests on `related`'s **share** rather than on the field tally, and
+   the share is the more robust of the two: an unrecognized encoding would have to
+   be concentrated in the typed tail rather than in `related` to overturn it, and
+   nothing measured says whether it is.
 
 ## 9. Two rulings, and what stays open
 
