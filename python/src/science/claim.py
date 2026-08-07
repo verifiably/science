@@ -55,6 +55,7 @@ from science.errors import (
     UntypedReferent,
     WithdrawnFromAuthoring,
 )
+from science.identifiers import not_an_identifier
 from science.profile import ProfileSpec
 from science.sealed import sealed
 
@@ -339,8 +340,9 @@ def _require_referent_identifier(value: object, where: str) -> None:
     matched against a table somewhere, so this is where that sentence has to be
     made true rather than assumed.
     """
-    if not isinstance(value, str) or not value:
+    problem = not_an_identifier(value)
+    if problem is not None:
         raise MalformedReferent(
-            f"{where} is {value!r}, not a term identifier. Every position in π_claim is an identifier "
-            "(§6.5), and a referent's fields are the only ones no downstream check would catch."
+            f"{where}: {problem}. Every position in π_claim is an identifier (§6.5), and a referent's "
+            "fields are the only ones no downstream check would catch."
         )

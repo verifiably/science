@@ -42,6 +42,7 @@ from typing import final
 
 from science.contract.domain import VocabularyBinding
 from science.errors import ResolutionError
+from science.identifiers import canonical, not_a_canonical_identifier
 from science.identity import v1
 from science.sealed import sealed
 
@@ -202,7 +203,7 @@ class ResolutionSnapshot:
             # not, and the two are deliberately not allowed to stand in for each
             # other.
             return TermOutcome.NOT_AVAILABLE
-        return TermOutcome.MEMBER if term in state.terms else TermOutcome.NOT_MEMBER
+        return TermOutcome.MEMBER if canonical(term) in state.terms else TermOutcome.NOT_MEMBER
 
 
 def _require_binding(binding: object) -> None:
@@ -222,6 +223,27 @@ def _require_binding(binding: object) -> None:
         )
 
 
+def _require_terms(terms: object, binding: VocabularyBinding) -> Iterable[object]:
+    """A vocabulary is a **collection** of terms, and a string is not one of those.
+
+    `str` satisfies `Iterable[str]`, so `{binding: "EX:gene"}` type-checks and
+    builds a vocabulary of six characters — none of which is the term the caller
+    named, so the term they were declaring present resolves `not-member`. The wire
+    decoder already refuses a bare string where it wants a sequence of terms, for
+    exactly this reason; a vocabulary needs the same guard, because *iterable of
+    strings* is a shape a string wrongly satisfies in this language.
+    """
+    if isinstance(terms, str | bytes):
+        raise ResolutionError(
+            f"{binding.projection()}: a vocabulary is a collection of terms, and {terms!r} is a single string. "
+            "Iterating it yields its characters, so the term this was meant to declare present would resolve "
+            "`not-member` against a vocabulary that was written to contain it."
+        )
+    if not isinstance(terms, Iterable):
+        raise ResolutionError(f"{binding.projection()}: expected a collection of terms, found {terms!r}")
+    return terms
+
+
 def _require_term(term: object, binding: VocabularyBinding) -> str:
     """A vocabulary's members are term identifiers — the same predicate `Referent` applies.
 
@@ -232,14 +254,20 @@ def _require_term(term: object, binding: VocabularyBinding) -> str:
     about a vocabulary that was told it has it. §7.2 exists to keep an absence of
     evidence from being reported as evidence of absence; this is the same
     confusion arriving from the other side, and it refuses a well-formed claim.
+
+    Canonicity is the same fault with a smaller gap: `resolve` decides membership
+    by string equality while every digest here works on the NFC form, so a member
+    stored non-canonically is `not-member` for the claim that names its canonical
+    spelling — two identifiers to this function and one to `I_claim`.
     """
-    if not isinstance(term, str) or not term:
+    problem = not_a_canonical_identifier(term)
+    if problem is not None:
         raise ResolutionError(
-            f"{binding.projection()}: {term!r} is not a term identifier. A `Referent` cannot carry one, so no "
-            "claim could ever name this member, and every claim naming its stringification would be refused "
-            "as `not-member` against a vocabulary that was read and does contain it."
+            f"{binding.projection()}: {problem}. A `Referent` cannot carry it, so no claim can name this "
+            "member, and a claim naming the identifier it was meant to be would be refused as `not-member` "
+            "against a vocabulary that was read and was written to contain it."
         )
-    return term
+    return term  # type: ignore[return-value]
 
 
 def build_snapshot(
@@ -260,7 +288,7 @@ def build_snapshot(
         _require_binding(binding)
         table[binding] = _BoundVocabulary(
             readable=True,
-            terms=frozenset(_require_term(term, binding) for term in terms),
+            terms=frozenset(_require_term(term, binding) for term in _require_terms(terms, binding)),
         )
     for binding in unreadable:
         _require_binding(binding)

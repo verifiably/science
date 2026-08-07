@@ -34,6 +34,7 @@ import yaml
 
 from science.contract.base import BaseContract
 from science.errors import MalformedContract, SuccessionViolation, UnparsedContract
+from science.identifiers import not_a_canonical_identifier
 from science.identity import v1
 from science.sealed import sealed
 
@@ -81,7 +82,11 @@ class VocabularyBinding:
     resolved against different vocabularies, encode identically; any identity
     taken over a collection of them stops being determined by its contents. So
     the sum is enforced here, at construction, which is the only place that can
-    make ``projection`` **injective**. Two readers depend on that: a contract's
+    make ``projection`` **injective** — and enforcing the sum is only half of it.
+    The fields must also be **canonical**, because the encoding normalizes to NFC
+    and two fields that differ only in normalization are two Python keys and one
+    encoded binding. Same collision, arriving through the text rather than through
+    the shape. Two readers depend on that: a contract's
     content identity, taken through ``SortDecl.schema_projection``, and a
     `ResolutionSnapshot`'s, taken over an order the encoded binding determines.
     Colliding bindings would let two different contracts share one content
@@ -120,8 +125,9 @@ class VocabularyBinding:
 
 
 def _require_binding_text(value: object, where: str) -> None:
-    if not isinstance(value, str) or not value:
-        raise MalformedContract(f"{where} is {value!r}, not a non-empty identifier.")
+    problem = not_a_canonical_identifier(value)
+    if problem is not None:
+        raise MalformedContract(f"{where}: {problem}.")
 
 
 @dataclass(frozen=True)

@@ -30,6 +30,7 @@ from science.errors import (
     ClaimError,
     DecodeError,
     InadmissibleLayer,
+    MalformedContract,
     MalformedReferent,
     MalformedWireClaim,
     PolarityRefused,
@@ -38,6 +39,8 @@ from science.errors import (
     UnboundReferent,
     UndeclaredDimension,
 )
+from science.identifiers import canonical
+from science.identity import v1
 from science.profile import compile_profile
 from science.projection import claim_identity
 from science.resolution import BindingCheckReceipt, ReferentPosition, ResolutionSnapshot, TermOutcome, build_snapshot
@@ -562,14 +565,22 @@ class TestDecodeInvertsTheProjection:
 
     @pytest.fixture()
     def every_term_readable(self, profile, fixture):
-        """A snapshot holding every term the vector mentions, grouped by the binding its sort names."""
+        """A snapshot holding every term the vector mentions, grouped by the binding its sort names.
+
+        The terms are **canonicalized on the way in**, and one row makes that
+        load-bearing: `affects-decomposed-referent` holds its restriction in NFD
+        deliberately, so that an implementation normalizing at parse time fails
+        the fixture. A vocabulary stores canonical members and `resolve`
+        normalizes what it is asked about, which is how a legitimately decomposed
+        claim term resolves `member` against the composed one it names.
+        """
         held: dict[VocabularyBinding, set[str]] = {}
         for row in fixture["vector"]:
             referents = list(row["claim"]["args"])
             referents += [qualifier["restriction"] for qualifier in row["claim"]["qualifiers"].values()]
             for referent in referents:
                 binding = profile.sorts[referent["sort"]].vocabulary
-                held.setdefault(binding, set()).add(referent["term"])
+                held.setdefault(binding, set()).add(canonical(referent["term"]))
         return build_snapshot(readable=held)
 
     def test_every_frozen_row_decodes_back_to_its_own_identity(self, profile, fixture, every_term_readable):
@@ -663,6 +674,85 @@ class TestTheWireValueIsCheckedFieldByField:
             decode_claim(wire, profile=profile, snapshot=readable)
 
 
+class TestMembershipIsDecidedUnderTheSameEquivalenceAsIdentity:
+    """`science.identity.v1` normalizes to NFC **at encode time**, so `"é"` and
+    `"é"` are one identifier to every digest here and two strings to
+    Python. Membership is decided by string comparison, so without care the two
+    relations disagree — and a vocabulary reports `not-member` for a term it
+    holds.
+
+    The resolution is **not** to canonicalize claims. The claim layer preserves
+    what the author wrote, and the `affects-decomposed-referent` fixture row
+    exists to catch an implementation that normalizes at parse time; refusing or
+    folding a decomposed referent would make this implementation the one that row
+    is aimed at. So the snapshot stores canonically and `resolve` normalizes what
+    it is asked about.
+    """
+
+    # The two spellings are written as escapes for the same reason the fixture
+    # artifact holds its non-ASCII referents escaped: written literally, an
+    # editor, merge tool or transfer that normalized this file would silently
+    # delete the assertion, leaving a green test of nothing.
+    COMPOSED: ClassVar[str] = "EX:caf\u00e9-cohort"
+    DECOMPOSED: ClassVar[str] = "EX:cafe\u0301-cohort"
+
+    def test_the_two_spellings_are_one_identifier_to_the_digest(self):
+        assert self.COMPOSED != self.DECOMPOSED
+        assert v1.encode(self.COMPOSED) == v1.encode(self.DECOMPOSED)
+
+    def test_a_referent_may_still_hold_the_decomposed_form(self):
+        # The rule this whole class is arranged around: canonicity is required
+        # where identities are taken over projections, and *not* where an
+        # author's bytes are being recorded.
+        assert Referent(sort="testing/cohort", term=self.DECOMPOSED).term == self.DECOMPOSED
+
+    def test_a_decomposed_term_resolves_against_a_composed_member(self):
+        snapshot = build_snapshot(readable={EX: [self.COMPOSED]})
+        assert snapshot.resolve(EX, self.DECOMPOSED) is TermOutcome.MEMBER
+        assert snapshot.resolve(EX, self.COMPOSED) is TermOutcome.MEMBER
+
+    def test_a_noncanonical_member_is_refused_rather_than_stored(self):
+        # The other half. Stored non-canonically, this member encodes identically
+        # to its canonical spelling — so a vocabulary could hold two members the
+        # projection cannot tell apart, and `resolve` would decide by whichever
+        # spelling happened to be written down.
+        with pytest.raises(ResolutionError, match="not in NFC"):
+            build_snapshot(readable={EX: [self.DECOMPOSED]})
+
+    def test_a_binding_field_that_is_not_canonical_is_refused(self):
+        # `VocabularyBinding` is the other collision: two bindings differing only
+        # in normalization are two dictionary keys and one encoded binding, which
+        # is the sum-versus-product collision arriving through the text.
+        with pytest.raises(MalformedContract, match="not in NFC"):
+            VocabularyBinding(namespace="cafe\u0301", release="2026-01-01", dataset_identity=None)
+        assert VocabularyBinding(namespace="caf\u00e9", release="2026-01-01", dataset_identity=None).namespace
+
+    def test_the_two_would_have_encoded_alike(self):
+        # What that refusal prevents, reached through §6.3's raw route since the
+        # ordinary one is now closed: two unequal bindings, one encoding.
+        one = VocabularyBinding(namespace="caf\u00e9", release="2026-01-01", dataset_identity=None)
+        other = object.__new__(VocabularyBinding)
+        for field, value in (("namespace", "cafe\u0301"), ("release", "2026-01-01"), ("dataset_identity", None)):
+            object.__setattr__(other, field, value)
+        assert one != other
+        assert v1.encode(one.projection()) == v1.encode(other.projection())
+
+    def test_the_whole_thing_end_to_end(self, profile):
+        # A claim whose restriction is decomposed, against a vocabulary holding
+        # the composed form: accepted, checked, and identical in identity to the
+        # composed spelling of the same claim.
+        held = build_snapshot(readable={EX: [GENE, OUTCOME], COHORT_DATASET: [self.COMPOSED]})
+        claims = []
+        for spelling in (self.DECOMPOSED, self.COMPOSED):
+            wire = affects(qualifiers={"testing/population": {"quantifier": "generic", "restriction": spelling}})
+            claim, receipt = decode_claim(wire, profile=profile, snapshot=held)
+            assert receipt.outcomes["restriction:testing/population"] is TermOutcome.MEMBER
+            assert receipt.performed
+            claims.append(claim)
+        assert claims[0].qualifiers["testing/population"].restriction.term == self.DECOMPOSED
+        assert claim_identity(claims[0]) == claim_identity(claims[1])
+
+
 class TestTheSnapshotIdentityIsContentDerived:
     def test_two_snapshots_differing_only_in_terms_have_different_identities(self):
         # Otherwise the receipt's snapshot identity would not pin what was read,
@@ -705,8 +795,24 @@ class TestTheSnapshotAuthenticatesWhatItIsBuiltFrom:
 
     @pytest.mark.parametrize("term", [1, "", None, ("EX", "gene-x")])
     def test_a_member_that_is_not_a_term_identifier_is_refused(self, term):
-        with pytest.raises(ResolutionError, match="not a term identifier"):
+        with pytest.raises(ResolutionError):
             build_snapshot(readable={EX: [term]})
+
+    def test_a_single_string_is_not_a_vocabulary(self):
+        # `str` satisfies `Iterable[str]`, so this type-checks and builds a
+        # vocabulary of six characters — none of them the term it was written to
+        # declare present, which then resolves `not-member`. The wire decoder
+        # already refuses a bare string where it wants a sequence of terms; this
+        # is the same guard, at the boundary that had not carried it over.
+        snapshot = None
+        with pytest.raises(ResolutionError, match="single string"):
+            snapshot = build_snapshot(readable={EX: GENE})
+        assert snapshot is None
+
+    @pytest.mark.parametrize("terms", [None, 7])
+    def test_a_vocabulary_that_is_not_a_collection_is_refused(self, terms):
+        with pytest.raises(ResolutionError, match="collection of terms"):
+            build_snapshot(readable={EX: terms})  # type: ignore[dict-item]
 
     def test_that_predicate_is_the_one_a_referent_applies(self, profile, readable):
         # The two have to agree, and this is the sharper direction: a `Referent`
@@ -737,5 +843,5 @@ class TestTheSnapshotAuthenticatesWhatItIsBuiltFrom:
             identity="unchecked",
         )
         assert snapshot.resolve(EX, "1") is TermOutcome.NOT_MEMBER
-        with pytest.raises(ResolutionError, match="not a term identifier"):
+        with pytest.raises(ResolutionError):
             build_snapshot(readable={EX: [1]})  # type: ignore[list-item]
