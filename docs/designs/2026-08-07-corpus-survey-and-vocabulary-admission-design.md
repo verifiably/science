@@ -701,8 +701,8 @@ belief-eligible evidence, and an empty claim set is the correct result for a
 corpus that has authored no claims. The run measured the second of those, not
 the first (§6.1).
 
-**9.3 `mechanistic_narrative` is refused as a base layer, and 2.6 is not the
-rule that refuses it.** Added 2026-08-07 from the typing exercise, which surfaced
+**9.3 `mechanistic_narrative` is not admitted as a base layer, and 2.6 is not
+the rule that decides it.** Added 2026-08-07 from the typing exercise, which surfaced
 it as the one genuine admission candidate in three corpora.
 
 It is a **value**, not a field, and the distinction shapes the ruling. 2.6
@@ -726,7 +726,7 @@ Wrong: row 5 covers an **existing** kernel tag's byte encoding changing.
 Appending a new symbol moves no `π_claim` position, so **every existing claim
 identity is unchanged**; the applicable row is **row 1** — the base contract's
 content identity moves and D6 carries that into `belief_input_digest`, so
-consulting derivations re-derive. Real, bounded, and not what the refusal rests
+consulting derivations re-derive. Real, bounded, and not what the ruling rests
 on.
 
 **The condition for revisiting, stated so this is a ruling and not a

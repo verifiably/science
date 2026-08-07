@@ -81,10 +81,16 @@ class TestPlanFiles:
 
     @pytest.mark.parametrize("name", ["mm30-unsorted", "mm30-modal-sorted"])
     def test_mm30_plans_do_not_map_a_layer_the_base_contract_lacks(self, name: str) -> None:
-        # `mechanistic_narrative` is on 5 mm30 records and 8 post-acute-infection
-        # ones, and the base layer set is closed. A plan that quietly mapped it
-        # onto `causal` would convert a refusal into a typed claim and report the
-        # exercise's most consequential finding as coverage.
+        # A forward guard, and worth being precise about what it does not do.
+        # Mapping `mechanistic_narrative` onto `causal` today changes **no**
+        # count: all 13 records carrying it lack a triple, and the triple is
+        # checked first, so none reaches the layer lookup. Measured — both
+        # corpora run with the mapping added return their unchanged totals.
+        #
+        # What it guards is the revisit condition. The value is not admitted to
+        # the base layer set precisely because no *structured* record carries it;
+        # if one ever does, a mapped plan would type it as `causal` and hide the
+        # single record that could reopen the ruling.
         import yaml
 
         document = yaml.safe_load((_TOOLS / "vocabularies" / f"{name}.yaml").read_text(encoding="utf-8"))

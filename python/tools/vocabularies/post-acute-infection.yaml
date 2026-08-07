@@ -21,8 +21,10 @@
 #
 # What the corpus *does* record on all 45 is the epistemic apparatus of claims
 # it never wrote down structurally: `claim_layer`, `identification_strength`,
-# `proxy_directness` and `supports_scope` on every record. The qualifiers are
-# there and the claim is not.
+# `proxy_directness` and `supports_scope` on every record. The **labels** are
+# there and the claim is not — labels, not qualifiers: a qualifier is a
+# `d ↦ ⟨quantifier, restriction⟩` entry along a declared dimension, and no
+# corpus records one of those anywhere.
 #
 # **One layer value has no base counterpart.** `mechanistic_narrative` appears on
 # 8 records here and on 5 in mm30 — 13 across two corpora — and the base
@@ -31,9 +33,13 @@
 # so no contract edit reachable from here admits it. It is left unmapped
 # deliberately: the plan never defaults, and mapping it onto `causal` would be a
 # reader's judgment wearing a mapping table's costume. It is carried to the
-# admission pass as a candidate instead, where it is refused — every one of its
-# mm30 instances is a record the disposition record independently ruled is not a
-# typed claim.
+# admission pass as a candidate instead, where it is **not admitted** — all 13
+# of its records are unstructured, so the layer would admit zero claims.
+#
+# Leaving it unmapped changes no count today: every record carrying it fails the
+# triple check first and never reaches the layer lookup. The mapping is withheld
+# as a forward guard, so that a structured record carrying the value — the stated
+# condition for revisiting the ruling — surfaces instead of typing as `causal`.
 
 contract:
   contract: post-acute-infection

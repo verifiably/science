@@ -269,7 +269,7 @@ and the base contract may not issue one. So mm30's eight predicates are a domain
 contract's business, admitted or not by whoever owns that domain. 2.6 governs
 what enters the **base profile**, and an operator vocabulary never can.
 
-### 5.2 `mechanistic_narrative` is refused as a base layer
+### 5.2 `mechanistic_narrative` is not admitted as a base layer
 
 The exercise's one genuine admission question, and it is a **value**, not a
 field. `claim_layer` is already admitted; `mechanistic_narrative` is a fourth
@@ -379,12 +379,24 @@ calculus, that a signed polarity on a sign-inapt operator refuses, and that the
 two mm30 plans differ **only** in their sorts — without which §3.2's gap stops
 being attributable to sorting.
 
-Two rows are load-bearing beyond regression. A tool that reported *"the
-vocabulary is incomplete"* as *"the calculus refused"* would produce a coverage
-figure indistinguishable from a real one, wrong in the direction that flatters
-the design. And a plan that quietly mapped `mechanistic_narrative` onto `causal`
-would convert §5.2 — this exercise's most consequential finding — into eight
-more typed records. Both are asserted.
+One row is load-bearing beyond regression: a tool that reported *"the vocabulary
+is incomplete"* as *"the calculus refused"* would produce a coverage figure
+indistinguishable from a real one, wrong in the direction that flatters the
+design.
+
+**The `mechanistic_narrative` row is not that, and an earlier draft said it
+was.** It claimed a plan mapping the value onto `causal` would produce *"eight
+more typed records."* It would produce **zero** — measured, by running both mm30
+and post-acute-infection with the mapping added: 307 and 0, unchanged. Every
+record carrying the value lacks a triple, and the triple is checked first, so
+none reaches the layer lookup at all.
+
+The row is kept as a **forward** guard, which is what it always was in substance.
+Today the ruling and the mapping are indistinguishable in every count. If a
+structured record carrying the value ever appears — §5.2's stated revisit
+condition — a mapped plan would silently type it as `causal` instead of surfacing
+it, and the one record that could reopen the ruling would be the one record the
+instrument hid.
 
 ## 8. Limitations
 

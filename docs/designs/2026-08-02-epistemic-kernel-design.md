@@ -1,7 +1,11 @@
 # Epistemic kernel — design
 
 **Date:** 2026-08-02
-**Status:** design, approved in session
+**Status:** design, approved in session. **Amended 2026-08-07** — §4.2's
+`mechanism` row cited `claim_layer: mechanistic_narrative` as an existing home
+for it; that value was ruled **not admitted** to the base layer set by the
+typing exercise, and the row is corrected in place. The absorption stands; the
+route does not.
 **Scope:** sub-problem 1 of 7 in the system redesign (see §10)
 
 ## 1. Why
@@ -515,7 +519,7 @@ Eight kinds. Three carry epistemic semantics; five provide operational closure.
 
 | kind | role | absorbs |
 |---|---|---|
-| **proposition** | the one canonical truth-apt statement | `mechanism` (already expressible as `claim_layer: mechanistic_narrative`) |
+| **proposition** | the one canonical truth-apt statement | `mechanism` — **but not by the route this row first gave**; see below |
 | **source-assertion** | a source asserted / denied / hypothesized it | — |
 | **assessment** | run-derived result bearing on a proposition (facet in §4.2.1) | `evidence-line`, `finding`, `observation` |
 | **analysis-spec** | target, estimand, eligible inputs, interpretation rule, equivalence rule — frozen pre-run | `pre-registration`, `plan`, `spec` (as fields/refs, not as identity) |
@@ -523,6 +527,24 @@ Eight kinds. Three carry epistemic semantics; five provide operational closure.
 | **verification** | immutable comparison of two runs: `(scope, verdict)` + equivalence-rule hash + differences (§3.3) | — (new) |
 | **dataset** | held data + manifest + QA — **including a literature corpus** | `data-package`, `research-package` |
 | **source** | a paper / book / talk as a record in a corpus | `paper`, `article`, `book`, `talk`, `prose-source` |
+
+> **Amended 2026-08-07: `mechanism`'s absorption route is withdrawn.** This row
+> said `mechanism` was *"already expressible as `claim_layer:
+> mechanistic_narrative`."* It is not. `mechanistic_narrative` is a value of the
+> **predecessor** system's layer enum; the `science` base contract's layer set is
+> the closed `[causal, structural, statistical, methodological]`, and the typing
+> exercise ruled the value **not admitted** to it — all 13 records carrying it,
+> across two corpora, are unstructured, so the layer would admit zero claims
+> (`2026-08-07-multi-corpus-typing-exercise.md` §5.2, survey §9.3).
+>
+> The absorption itself is **not** withdrawn: `mechanism` is still not a kind,
+> and the two mm30 records that motivated this row — 0014 and 0015 — were
+> independently adjudicated as propositions **blocked on modality**, which is a
+> grammar gap (§6.4) and not a missing kind. What is withdrawn is the claim that
+> a home for them already exists. It does not, and the layer is not where it will
+> be. This is the ordinary case of a banked row citing a vocabulary that later
+> failed admission, and the fix is to say so rather than to widen the layer set
+> to make the sentence true.
 
 There is **one proposition identity**, not a world/discourse pair. Papers assert
 it; reproduced analyses assess it. This is what removes the alignment problem: no
