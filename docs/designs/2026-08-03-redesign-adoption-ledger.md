@@ -198,6 +198,43 @@ Two standing constraints on 5b:
     one — and D §6's own fixture remains outstanding, unblocked by this item and
     not in cut 1.
 
+11. **The multi-corpus typing exercise** — the first consumer of cut 1's slice,
+    and the first measurement in this redesign that is not taken over mm30 alone.
+    **Designed 2026-08-07**
+    (`2026-08-07-corpus-survey-and-vocabulary-admission-design.md`); awaits
+    implementation. It compiles a claim vocabulary for mm30, natural-systems and
+    post-acute-infection, then runs `build_claim` over every proposition in all
+    three.
+
+    **Why it is not an mm30 exercise.** A survey of **eight** proto-science
+    corpora (6,860 records) measured that of 337 structured propositions across
+    all of them, **307 are mm30's** — and the only two other corpora carrying
+    subject/predicate/object use a single operator, `affects`, between them.
+    mm30 is also the corpus every banked design was written while looking at, so
+    it can confirm the calculus and cannot test it. The disposition record's
+    limitation 3 already bounds its §2.3 figures to *"the mm30 authored set and
+    for nothing else"*; what the survey adds is that the bound cannot be lifted
+    by finding a second corpus, because no second corpus has a claim vocabulary
+    to measure. One has to be authored. This item is that work, and it is what
+    makes the 6-of-16 expressiveness figure and the 6-of-27 reproduction yield
+    measured rather than hand-computed.
+
+    Two results are **predicted in writing before the run**, on the same
+    discipline that froze cut 1 prospectively. post-acute-infection's evidence is
+    100% literature (95 of 95) with no eligibility field at all, so under **G1**
+    its belief output is expected to be **empty** — and an empty result there is a
+    **pass**, not a broken tool. natural-systems is at most 26% claim-bearing and
+    largely process narrative, so the expected finding is a constraint on the base
+    profile: it must not *require* a claim calculus.
+
+    Every candidate vocabulary field the exercise surfaces is run against
+    domain-extension **2.6** — over all **eight** surveyed corpora, not the three
+    being typed. That widening is not caution: 2.6's own first draft was checked
+    against three corpora, passed, and inverted against eight (corpus survey
+    §4.1). The disposition record's §5.5 stop rule is inherited unchanged: no
+    belief computed, no persistence boundary crossed, and a typing that would need
+    either is recorded as *blocked on A6–A8* rather than worked around.
+
 ## 4. Invariants and gates to pin when their layer lands
 
 - **Concurrent-merge interleaving.** Single-writer holds per corpus, but two writers in

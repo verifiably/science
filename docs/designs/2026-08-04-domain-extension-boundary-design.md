@@ -16,6 +16,11 @@ gains every contract reached through a **claim schema**, and D6 gains that arm,
 as does limitation 2 (ρA6); §12's predicate-vocabulary question **closes** —
 yes, a domain contract like any other — and its versioning question records a
 bound plus the parallel-genesis case (ρA5, ρC1).
+**Amended 2026-08-07** by the corpus survey: §2 gains ruling **2.6**, admitting a
+base-profile vocabulary only on **agreement** and **exercise** demonstrated across
+two independent corpora, measured over eight. It adds no guarantee row — 2.6 is a
+review rule, because the corpora it rests on are outside this repository (corpus
+survey §7).
 **Inherits:** substrate §2 (split by nature; the pricing argument;
 defer-and-promote), §4.1/§6.1 (the arity-and-history test), §12 (the
 `KIND_DESCRIPTORS`-versus-`KindSpec` open question, closed here); kernel §4.2
@@ -136,6 +141,48 @@ by replay rather than registered — subject to that design's anchor limitations
 independently name the exact implementation that executed a check. A per-node
 stamp would duplicate both while inheriting the same bound, since a stamp is
 itself raw-editable.
+
+**2.6 A base-profile vocabulary is admitted on cross-corpus agreement and
+demonstrated exercise, never on plausibility** (added 2026-08-07 — corpus survey
+§4). Across at least **two** independent corpora carrying at least 20 records
+each, a field proposed for the `science` base profile must show:
+
+- **agreement** — the corpora's value sets are **identical or nested**. A
+  **divergent** pair, where each contributes a term the other lacks, is refused;
+  it is two vocabularies sharing a name.
+- **exercise** — at least **two** of the declared values actually occur in each
+  corpus. A value occurring in no corpus is dropped before admission.
+
+A field failing agreement starts in a **domain pack** and is promoted only when
+corpora agree. A field failing exercise is not admitted at all: it declares a
+distinction nobody drew.
+
+The unit is the **corpus**, not the record count. Two corpora at 20 records beat
+one corpus at 2,000, because the failure guarded against is a project inventing
+its own term, and that failure is invisible inside any single project. The
+survey's `priority` is the case — two corpora, the same concept,
+`high`/`medium`/`low` against `P1`/`P2`/`P3`, **zero** shared values, and each
+corpus looking entirely reasonable alone. Its `scope`, `provisional` and
+`pre_registered` are the other case: perfect agreement across two corpora on
+**one value each**, over 307–317 records.
+
+**Both halves are required because the first draft of this ruling had only one,
+and it inverted.** That draft admitted on *discrimination* — top value below 90%
+in two corpora — and against eight corpora it rejected `stance`, the one
+vocabulary in the survey that never drifted, while admitting `status`, which
+shares 4 values of 20. Rarity is not uninformativeness, and variety is not
+agreement (corpus survey §4.1).
+
+This is deliberately weaker than *"this field is meaningful."* Agreement and
+exercise are necessary, not sufficient — two corpora can agree and both be wrong.
+And it is a **review rule**, not a guarantee, for the reason corpus-survey §7
+gives: the corpora are outside this repository, so no oracle can rest on them.
+
+The harder half, stated with it: **admission checks a state, not a permanent
+verdict.** No field is added in order to be constant or to mean two things, so a
+field found divergent or collapsed reports either that its distinctions were
+never real or that authorship stopped making them. Both deserve an answer, and
+neither is reachable without re-measuring.
 
 ## 3. The ownership split
 
