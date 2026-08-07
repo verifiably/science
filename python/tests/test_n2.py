@@ -7,15 +7,18 @@ directions are needed and neither is decoration.
 * Without the first, a check that can never pass looks like a sound arm.
 * Without the second, the arm asserts nothing about the property it names.
 
-**One check at a time, and only exit code 1 counts.** Both halves of that were
-learned by getting them wrong. Running an arm's checks in a single `pytest`
+**One test function at a time, and only exit code 1 counts.** Every part of that
+was learned by getting it wrong. Running an arm's checks in a single `pytest`
 invocation and reading one exit code makes a failing check cover for a passing
 one — three real arms in this table were carrying a check that passed under their
-own sabotage, and the arm scored sound on the strength of the other. And *"exited
-non-zero"* is not *"the check failed"*: `pytest` exits **4** when it cannot
-collect the node id, so a sabotage coarse enough to break the module's syntax,
-or a check that has been renamed away, scores as a failing check while
-demonstrating only that unimportable code does not import.
+own sabotage, and the arm scored sound on the strength of the other. Splitting
+the invocation is not enough either, because a **class node** is one invocation
+over many tests wearing a node id, and reintroduces the same aggregation through
+the check rather than the runner. And *"exited non-zero"* is not *"the check
+failed"*: `pytest` exits **4** when it cannot collect the node id, so a sabotage
+coarse enough to break the module's syntax, or a check that has been renamed
+away, scores as a failing check while demonstrating only that unimportable code
+does not import.
 
 A sabotage is applied to a **copy** of the package, and the checks run in a
 subprocess against it. Nothing writes to the working tree, which is what makes it
@@ -45,6 +48,8 @@ from pathlib import Path
 import pytest
 from n2_arms import (
     ARMS,
+    CLASS_NODE_BY_CONSTRUCTION,
+    CLASS_NODE_DISAGREEMENT,
     MIXED_BY_CONSTRUCTION,
     STALE_BY_CONSTRUCTION,
     UNCOLLECTED_BY_CONSTRUCTION,
@@ -105,16 +110,25 @@ def _run_check(check: str, package: Path | None) -> CheckRun:
     the unit an arm names. An invocation carrying several node ids reports one
     exit code for all of them, and *"something in there failed"* is precisely the
     claim an arm must not be allowed to make.
+
+    **The unit is a test function**, which is why having a `::` in it is not
+    enough. A class node is a whole invocation wearing a node id: run
+    `test_decode.py::TestM4TypedReferentsAndTheReceipt` under M4's first sabotage
+    and one method fails while the rest pass, behind one class-level exit code —
+    the aggregation defect this function exists to close, one level down. A
+    **parametrized** id is where the rule stops, and deliberately: the parameters
+    of one test function are its data, not separate assertions, so a check that
+    fails on some rows of a vector and not others is a check that failed.
     """
-    module, separator, _ = check.partition("::")
-    if not separator or module == HARNESS:
-        # A check naming a directory or a bare module runs whatever is under it,
-        # and one naming this module re-enters the harness — whose every arm
+    parts = check.split("::")
+    if len(parts) < 2 or parts[0] == HARNESS or not parts[-1].startswith("test_"):
+        # A check naming a directory, a module or a class runs whatever is under
+        # it, and one naming this module re-enters the harness — whose every arm
         # invokes `pytest` again. That is a fork bomb rather than a weak arm, and
         # it is not hypothetical: it is what the first version of this harness's
         # own sabotage script did, and how this guard came to be written.
         raise MalformedArm(
-            f"{check!r} is not a test node id outside {HARNESS}; a check must name the one test it means"
+            f"{check!r} does not name one test function outside {HARNESS}; a check must name the one test it means"
         )
     env = {"PATH": "/usr/bin:/bin", "HOME": str(Path.home())}
     if package is not None:
@@ -304,6 +318,39 @@ class TestOneFailingCheckCannotCoverForAnother:
         assert _run_check(second, package).returncode == PASSED
 
 
+class TestAClassNodeIsTheSameDefectOneLevelDown:
+    """Naming a check per invocation is not enough if a check can *be* one.
+
+    A class node passes any test that only asks for a `::`, and running it is one
+    `pytest` invocation over every method the class holds — the exact aggregation
+    the per-check verdict was written to end, reintroduced by the node id rather
+    than by the runner. So the rule is the unit, not the punctuation: a check
+    names one **test function**.
+    """
+
+    def test_a_class_node_is_refused_rather_than_scored(self, tmp_path):
+        with pytest.raises(MalformedArm, match="one test function"):
+            audit(CLASS_NODE_BY_CONSTRUCTION, tmp_path / "class-node")
+
+    def test_the_class_it_names_holds_methods_that_disagree_under_that_sabotage(self, tmp_path):
+        # Which is what makes the refusal load-bearing rather than tidy. If every
+        # method of the class failed together, a class node would be a clumsy way
+        # of writing a sound arm; these two are in the same class, under the same
+        # sabotage, and only one of them fails.
+        package = _sabotage(CLASS_NODE_BY_CONSTRUCTION, tmp_path / "class-node")
+        assert package is not None
+        fails, passes = CLASS_NODE_DISAGREEMENT
+        assert _run_check(fails, package).returncode == FAILED
+        assert _run_check(passes, package).returncode == PASSED
+
+    def test_no_declared_arm_names_anything_coarser_than_a_test(self):
+        # The runner refuses one; this says the table does not hold one, so the
+        # refusal is a guard rather than a thing the suite routinely trips over.
+        for arm in ARMS:
+            for check in arm.checks:
+                assert check.split("::")[-1].startswith("test_"), f"{arm.label}: {check}"
+
+
 class TestASabotageThatStopsTheCheckRunningIsNotAFailingCheck:
     """Non-zero is not a verdict.
 
@@ -356,8 +403,15 @@ class TestTheArmTableCoversTheCut:
         # about naming the wrong thing, and each is what makes the other
         # survivable. A check that resolves to a whole module — `""`, a bare
         # directory, or this file — collects the harness and re-enters it, which
-        # is a fork bomb and not a slow test.
-        for check in ["", "test_decode.py", f"{HARNESS}::TestEveryArmAssertsSomething"]:
+        # is a fork bomb and not a slow test. The class node is here for the
+        # other reason: it terminates, and is refused anyway.
+        coarse = [
+            "",
+            "test_decode.py",
+            "test_decode.py::TestM4TypedReferentsAndTheReceipt",
+            f"{HARNESS}::TestEveryArmAssertsSomething::test_no_arm_survives_its_own_sabotage",
+        ]
+        for check in coarse:
             with pytest.raises(MalformedArm, match="must name the one test it means"):
                 _run_check(check, package=None)
 

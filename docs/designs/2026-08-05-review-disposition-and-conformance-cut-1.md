@@ -475,6 +475,16 @@ reporting on its own table:
   check, or a sabotage coarse enough to break the module's syntax, scored as a
   failing check while demonstrating only that unimportable code does not import.
   `uncollected` is now its own finding.
+* **The unit is a test function, and splitting the invocation does not by itself
+  say so.** The first fix required a check to *look like* a node id, which a
+  **class** node also does — and a class node is one invocation over every method
+  it holds, so the aggregation returns through the check rather than the runner.
+  Measured: `test_decode.py::TestM4TypedReferentsAndTheReceipt` under M4's first
+  sabotage scores `sound`, with one method failing and the rest passing behind
+  the class-level exit code. The rule is therefore the unit and not the
+  punctuation. It stops at **parametrization**, deliberately: the parameters of
+  one test function are its data rather than separate assertions, so a check that
+  fails on some rows of a vector and passes on others is a check that failed.
 
 The three arms are worth naming individually, because each was repaired
 differently and none of the repairs was *"fix the mutation"*:
@@ -501,11 +511,12 @@ inside the compiler can reach an identity). Those notes had been written honestl
 and then not consulted when the arm table was drawn up. The harness is what
 connected them.
 
-N2's second clause is discharged by four arms defective **by construction** —
-vacuous, stale, mixed (one check fails, one passes), and uncollected — which the
-harness must report rather than pass. The harness itself is sabotaged twelve ways.
+N2's second clause is discharged by five arms defective **by construction** —
+vacuous, stale, mixed (one check fails, one passes), uncollected, and a class
+node — which the harness must report rather than pass. The harness itself is
+sabotaged fifteen ways.
 
-One of those twelve is a rule the build learned the hard way. A check that
+One of those fifteen is a rule the build learned the hard way. A check that
 resolves to a whole module rather than one test — the empty string, a bare
 directory, or the harness file itself — collects `testpaths`, including the
 harness, whose every arm invokes `pytest` again. That is not a weak arm but a

@@ -32,6 +32,8 @@ from dataclasses import dataclass
 
 __all__ = [
     "ARMS",
+    "CLASS_NODE_BY_CONSTRUCTION",
+    "CLASS_NODE_DISAGREEMENT",
     "MIXED_BY_CONSTRUCTION",
     "STALE_BY_CONSTRUCTION",
     "UNCOLLECTED_BY_CONSTRUCTION",
@@ -71,7 +73,11 @@ class Arm:
     """Test node ids, relative to `tests/`, that must **fail** under the sabotage
     and must **pass** without it. Both directions are checked: a node id that no
     longer resolves would make `pytest` exit non-zero for a usage error, which an
-    exit-code-only harness would read as a healthy arm."""
+    exit-code-only harness would read as a healthy arm.
+
+    Each must name **one test function** — a module or a class node is one
+    invocation over many tests, where the one that fails hides the ones that pass.
+    The harness refuses those rather than scoring them."""
 
     @property
     def label(self) -> str:
@@ -673,6 +679,27 @@ _D3 = [
 ]
 
 ARMS: tuple[Arm, ...] = tuple(_M4 + _M5 + _M6 + _M7 + _M8 + _M9 + _M10 + _M11 + _M13 + _D3)
+
+
+CLASS_NODE_BY_CONSTRUCTION = Arm(
+    row="N2",
+    asserts="a check names one test function — a class node is a whole invocation wearing a node id",
+    # M4's first sabotage, checked by the **class** that holds the test which
+    # catches it. `pytest` runs every method under that class and reports one
+    # exit code, so the one that fails hides the ones that pass and the arm reads
+    # as sound. It is the aggregation defect a check-at-a-time verdict was meant
+    # to close, one level further down, and having a `::` in it is not enough to
+    # tell the two apart.
+    sabotage=_M4[0].sabotage,
+    checks=("test_decode.py::TestM4TypedReferentsAndTheReceipt",),
+)
+"""The two methods below are what make that concrete: under the same sabotage the
+first fails and the second passes, and a class-level exit code cannot say so."""
+
+CLASS_NODE_DISAGREEMENT = (
+    "test_decode.py::TestM4TypedReferentsAndTheReceipt::test_a_term_absent_from_a_readable_vocabulary_refuses_and_mints_nothing",
+    "test_decode.py::TestM4TypedReferentsAndTheReceipt::test_a_member_term_is_accepted_with_the_check_performed",
+)
 
 
 VACUOUS_BY_CONSTRUCTION = Arm(
