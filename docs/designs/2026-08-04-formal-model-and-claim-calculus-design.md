@@ -2942,6 +2942,14 @@ to remove.
 > implementations spell the numeric refusal differently, Python refusing `float`
 > and TypeScript refusing `number`, and nothing currently compares what they
 > accept.
+>
+> **Demonstrated, not argued (2026-08-06).** N2's harness carries an arm whose
+> sabotage changes how `science.identity.v1` writes a backslash. It **passes the
+> claim fixture**: no row's values carry a backslash or a quote, so the vector
+> compares the two implementations over tags, slots and keys, and over escaping
+> compares nothing. Only Python's own `identity.v1` unit test catches it, and the
+> TypeScript half would go on agreeing with a Python that had changed. The arm is
+> kept, worded as what it actually asserts, so the gap has a row that states it.
 
 > **Correction 2026-08-06 — the cited precedent does not exist.** This section's
 > home column read *"alongside D §6's **existing** namespaced-facet-key parity

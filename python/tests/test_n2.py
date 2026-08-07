@@ -4,25 +4,33 @@ The harness runs each declared arm twice: once unsabotaged, where its checks mus
 **pass**, and once with its sabotage applied, where they must **fail**. Both
 directions are needed and neither is decoration.
 
-* Without the first, a check that can never pass looks like a sound arm. So does
-  a **typo'd node id** — `pytest` exits non-zero for a usage error, and a harness
-  reading only the exit code would score a name that resolves to nothing as the
-  healthiest arm in the table.
+* Without the first, a check that can never pass looks like a sound arm.
 * Without the second, the arm asserts nothing about the property it names.
 
-A sabotage is applied to a **copy** of the package, and the arm's checks run in a
+**One check at a time, and only exit code 1 counts.** Both halves of that were
+learned by getting them wrong. Running an arm's checks in a single `pytest`
+invocation and reading one exit code makes a failing check cover for a passing
+one — three real arms in this table were carrying a check that passed under their
+own sabotage, and the arm scored sound on the strength of the other. And *"exited
+non-zero"* is not *"the check failed"*: `pytest` exits **4** when it cannot
+collect the node id, so a sabotage coarse enough to break the module's syntax,
+or a check that has been renamed away, scores as a failing check while
+demonstrating only that unimportable code does not import.
+
+A sabotage is applied to a **copy** of the package, and the checks run in a
 subprocess against it. Nothing writes to the working tree, which is what makes it
 safe to run these concurrently and safe to interrupt — the hand-run matrices this
 replaces mutated files in place and restored them in a `finally`, one `SIGINT`
 away from leaving a sabotaged source on disk.
 
-**Three findings, not two.** An arm can be `sound`, `vacuous` — its checks passed
-under its own sabotage — or `stale`, where the sabotage no longer matches the
-code it was written against. Staleness happened twice during this build, and a
-stale sabotage is indistinguishable from a passing arm unless it is looked for:
-the mutation silently does nothing, the checks pass, and the harness reports the
-arm healthy. It is malformed contract content in the same way vacuity is, so it
-is reported the same way.
+**Four findings, not one.** An arm can be `sound`, `vacuous` — a check passed
+under its own sabotage — `uncollected`, where a check never ran at all, or
+`stale`, where the sabotage no longer matches the code it was written against.
+Staleness happened twice during this build, and a stale sabotage is
+indistinguishable from a passing arm unless it is looked for: the mutation
+silently does nothing, the checks pass, and the harness reports the arm healthy.
+Each is malformed contract content in the same way vacuity is, so each is
+reported the same way.
 """
 
 from __future__ import annotations
@@ -35,10 +43,32 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
-from n2_arms import ARMS, STALE_BY_CONSTRUCTION, VACUOUS_BY_CONSTRUCTION, Arm, Sabotage
+from n2_arms import (
+    ARMS,
+    MIXED_BY_CONSTRUCTION,
+    STALE_BY_CONSTRUCTION,
+    UNCOLLECTED_BY_CONSTRUCTION,
+    VACUOUS_BY_CONSTRUCTION,
+    Arm,
+    Sabotage,
+)
 
 PACKAGE = Path(__file__).resolve().parent.parent / "src" / "science"
 TESTS = Path(__file__).resolve().parent
+HARNESS = Path(__file__).name
+
+WORKERS = 8
+
+PASSED = 0
+FAILED = 1
+"""`pytest`'s two deciding exit codes, named because the rest do not decide.
+
+`2`–`5` are interrupted, internal error, usage error and nothing-collected. None
+of them is a verdict about the check: a node id that cannot be collected — either
+because it was renamed away or because the sabotage broke the module it lives
+in — is a **usage error**, and a usage error is not a failing test. They are the
+same non-zero as `FAILED` to anything that only asks whether the run was clean.
+"""
 
 
 class MalformedArm(Exception):
@@ -54,38 +84,53 @@ class MalformedArm(Exception):
 
 
 @dataclass(frozen=True)
+class CheckRun:
+    check: str
+    returncode: int
+
+
+@dataclass(frozen=True)
 class Finding:
     arm: Arm
     verdict: str
-    """`sound`, `vacuous`, or `stale`."""
+    """`sound`, `vacuous`, `uncollected`, or `stale`."""
 
     detail: str = ""
 
 
-def _run_checks(arm: Arm, package: Path | None) -> subprocess.CompletedProcess[str]:
-    """Run this arm's checks, optionally against a sabotaged copy of the package."""
+def _run_check(check: str, package: Path | None) -> CheckRun:
+    """Run one named check, optionally against a sabotaged copy of the package.
+
+    One check per invocation, because the unit a verdict is taken over has to be
+    the unit an arm names. An invocation carrying several node ids reports one
+    exit code for all of them, and *"something in there failed"* is precisely the
+    claim an arm must not be allowed to make.
+    """
+    module, separator, _ = check.partition("::")
+    if not separator or module == HARNESS:
+        # A check naming a directory or a bare module runs whatever is under it,
+        # and one naming this module re-enters the harness — whose every arm
+        # invokes `pytest` again. That is a fork bomb rather than a weak arm, and
+        # it is not hypothetical: it is what the first version of this harness's
+        # own sabotage script did, and how this guard came to be written.
+        raise MalformedArm(
+            f"{check!r} is not a test node id outside {HARNESS}; a check must name the one test it means"
+        )
     env = {"PATH": "/usr/bin:/bin", "HOME": str(Path.home())}
     if package is not None:
         env["PYTHONPATH"] = str(package.parent)
     # Node ids are declared relative to `tests/` and resolved to absolute paths
     # here, so an arm reads as the suite writes it and neither depends on where
     # the harness happened to be invoked from.
-    if not arm.checks:
-        # `pytest` with no node ids collects `testpaths`, which includes **this
-        # file**, whose arms each invoke `pytest` again. One arm with an empty
-        # check list is therefore not a weak arm but a fork bomb, so the refusal
-        # lives here as well as in `audit` — the upstream guard states the rule,
-        # and this makes breaking it unspellable rather than merely wrong.
-        raise MalformedArm("an arm names no check; running pytest with no node ids would collect this file")
-    checks = [f"{TESTS}/{check}" for check in arm.checks]
-    return subprocess.run(
-        [sys.executable, "-m", "pytest", "-q", "--no-header", "-p", "no:cacheprovider", *checks],
+    result = subprocess.run(
+        [sys.executable, "-m", "pytest", "-q", "--no-header", "-p", "no:cacheprovider", f"{TESTS}/{check}"],
         cwd=TESTS.parent,
         capture_output=True,
         text=True,
         env=env,
         check=False,
     )
+    return CheckRun(check, result.returncode)
 
 
 def _sabotage(arm: Arm, into: Path) -> Path | None:
@@ -103,26 +148,32 @@ def _sabotage(arm: Arm, into: Path) -> Path | None:
 def baseline(arm: Arm) -> Finding:
     """The other direction, and it is not a formality.
 
-    A node id that no longer resolves makes `pytest` exit **4** for a usage
-    error. Read as an exit code that is indistinguishable from a check that
-    failed — so a renamed test would leave its arm scoring `sound` forever while
-    asserting nothing at all, and the arm most certain to look healthy would be
-    the one that had stopped existing.
+    A check that does not pass against the real package asserts nothing about
+    what a sabotage does to it, because it was already red. The two directions
+    overlap on a node id that has been renamed away — caught here as `unresolved`
+    and under sabotage as `uncollected` — and diverge on a check that resolves
+    and still fails, which only this direction can see.
     """
-    result = _run_checks(arm, package=None)
-    if result.returncode != 0:
-        return Finding(arm, "unresolved", result.stdout[-4000:])
+    with ThreadPoolExecutor(max_workers=WORKERS) as pool:
+        runs = list(pool.map(lambda check: _run_check(check, None), arm.checks))
+    unresolved = [run for run in runs if run.returncode != PASSED]
+    if unresolved:
+        return Finding(
+            arm,
+            "unresolved",
+            "\n".join(f"{run.check} exited {run.returncode} against the real package" for run in unresolved),
+        )
     return Finding(arm, "resolved")
 
 
 def audit(arm: Arm, workspace: Path) -> Finding:
-    """One arm, one verdict."""
+    """One arm, one verdict, taken over its checks one at a time."""
     if not arm.checks:
         # Refused here rather than asserted over the table, because the table
         # assertion is not sabotageable: weakening `assert all(arm.checks ...)`
         # to `assert True` proves only that a deleted test does not run. An arm
-        # naming no check would also run `pytest` with no node ids, collect the
-        # whole suite, and score by whether *anything* was red.
+        # naming no check runs nothing, and a verdict taken over nothing is
+        # `sound` by the same vacuity the row exists to refuse.
         return Finding(arm, "stale", "an arm that names no check asserts nothing about the property it names")
     package = _sabotage(arm, workspace)
     if package is None:
@@ -132,12 +183,20 @@ def audit(arm: Arm, workspace: Path) -> Finding:
             f"the sabotage does not apply to {arm.sabotage.module} exactly once — it was written against "
             "code that has since changed, and a mutation that does nothing scores as a passing arm",
         )
-    result = _run_checks(arm, package)
-    if result.returncode == 0:
+    runs = [_run_check(check, package) for check in arm.checks]
+    survived = [run for run in runs if run.returncode == PASSED]
+    undecided = [run for run in runs if run.returncode not in (PASSED, FAILED)]
+    if survived or undecided:
         return Finding(
             arm,
-            "vacuous",
-            "every check passed with the sabotage applied, so the arm does not assert the property it names",
+            "vacuous" if survived else "uncollected",
+            "\n".join(
+                [f"{run.check} passed with the sabotage applied" for run in survived]
+                + [
+                    f"{run.check} did not run — pytest exited {run.returncode}, which is not a failing check"
+                    for run in undecided
+                ]
+            ),
         )
     return Finding(arm, "sound")
 
@@ -146,26 +205,34 @@ def audit(arm: Arm, workspace: Path) -> Finding:
 def findings(tmp_path_factory) -> tuple[Finding, ...]:
     """Every declared arm, audited once. Concurrent — each arm owns its own copy."""
     root = tmp_path_factory.mktemp("n2")
-    with ThreadPoolExecutor(max_workers=8) as pool:
+    with ThreadPoolExecutor(max_workers=WORKERS) as pool:
         return tuple(pool.map(lambda pair: audit(pair[1], root / f"arm{pair[0]}"), enumerate(ARMS)))
+
+
+def _report(reason: str, findings: tuple[Finding, ...], verdict: str) -> None:
+    offending = [f for f in findings if f.verdict == verdict]
+    if offending:
+        raise MalformedArm(reason + "\n" + "\n".join(f"  {f.arm.label}\n    {f.detail}" for f in offending))
 
 
 class TestEveryArmAssertsSomething:
     def test_no_arm_survives_its_own_sabotage(self, findings):
-        vacuous = [f for f in findings if f.verdict == "vacuous"]
-        if vacuous:
-            raise MalformedArm(
-                "these arms pass under their own sabotage, which makes them malformed contract content "
-                "rather than failing tests:\n" + "\n".join(f"  {f.arm.label}\n    {f.detail}" for f in vacuous)
-            )
+        _report(
+            "these arms have a check that passes under their own sabotage, which makes them malformed "
+            "contract content rather than failing tests:",
+            findings,
+            "vacuous",
+        )
+
+    def test_no_sabotage_stops_a_check_from_running(self, findings):
+        _report(
+            "these sabotages kept a named check from running at all, so the arm shows only that broken code is broken:",
+            findings,
+            "uncollected",
+        )
 
     def test_no_sabotage_has_gone_stale(self, findings):
-        stale = [f for f in findings if f.verdict == "stale"]
-        if stale:
-            raise MalformedArm(
-                "these sabotages no longer match the code they were written against:\n"
-                + "\n".join(f"  {f.arm.label}\n    {f.detail}" for f in stale)
-            )
+        _report("these sabotages no longer match the code they were written against:", findings, "stale")
 
     def test_every_check_resolves_and_passes_without_the_sabotage(self):
         every = Arm(
@@ -204,15 +271,63 @@ class TestTheHarnessCanSeeAVacuousArm:
         # different finding. This one mutates real code and the check really runs.
         package = _sabotage(VACUOUS_BY_CONSTRUCTION, tmp_path / "real")
         assert package is not None
-        covering = Arm(
-            row="N2",
-            asserts="the check this arm should have named",
-            sabotage=VACUOUS_BY_CONSTRUCTION.sabotage,
-            checks=(
-                "test_decode.py::TestDecodeInvertsTheProjection::test_every_frozen_row_decodes_back_to_its_own_identity",
-            ),
+        covering = (
+            "test_decode.py::TestDecodeInvertsTheProjection::test_every_frozen_row_decodes_back_to_its_own_identity"
         )
-        assert _run_checks(covering, package).returncode != 0
+        assert _run_check(covering, package).returncode == FAILED
+
+
+class TestOneFailingCheckCannotCoverForAnother:
+    """The verdict is taken per check, and this is what that buys.
+
+    An arm naming two checks under one sabotage, where the first fails and the
+    second passes: half the arm asserts what it says and half asserts nothing.
+    Run in a single `pytest` invocation the pair exits non-zero and the arm reads
+    as sound — which is how three arms in this table were sitting when the
+    harness scored a whole invocation at a time.
+    """
+
+    def test_the_passing_check_is_reported_although_the_other_one_failed(self, tmp_path):
+        finding = audit(MIXED_BY_CONSTRUCTION, tmp_path / "mixed")
+        assert finding.verdict == "vacuous", finding.detail
+        assert "test_a_member_term_is_accepted_with_the_check_performed" in finding.detail
+
+    def test_the_two_checks_really_do_disagree(self, tmp_path):
+        # The demonstration is only about coverage if the first check genuinely
+        # fails: an arm where *both* checks passed is the plain vacuous case
+        # above, and would prove nothing about which unit the verdict is taken
+        # over.
+        package = _sabotage(MIXED_BY_CONSTRUCTION, tmp_path / "mixed")
+        assert package is not None
+        first, second = MIXED_BY_CONSTRUCTION.checks
+        assert _run_check(first, package).returncode == FAILED
+        assert _run_check(second, package).returncode == PASSED
+
+
+class TestASabotageThatStopsTheCheckRunningIsNotAFailingCheck:
+    """Non-zero is not a verdict.
+
+    A mutation coarse enough to break the module's syntax makes every check under
+    it uncollectable, and `pytest` reports that as a **usage error**. Read as an
+    exit code alone it is indistinguishable from a check that failed — so the
+    coarsest possible sabotage, which demonstrates the least, would score highest.
+    """
+
+    def test_a_check_that_could_not_run_is_reported(self, tmp_path):
+        finding = audit(UNCOLLECTED_BY_CONSTRUCTION, tmp_path / "uncollected")
+        assert finding.verdict == "uncollected", finding.detail
+
+    def test_it_is_not_reported_as_a_sound_arm(self, tmp_path):
+        finding = audit(UNCOLLECTED_BY_CONSTRUCTION, tmp_path / "uncollected")
+        with pytest.raises(MalformedArm, match="did not run"):
+            TestEveryArmAssertsSomething().test_no_sabotage_stops_a_check_from_running((finding,))
+
+    def test_the_exit_code_is_the_reason_it_had_to_be_looked_for(self, tmp_path):
+        package = _sabotage(UNCOLLECTED_BY_CONSTRUCTION, tmp_path / "uncollected")
+        assert package is not None
+        run = _run_check(UNCOLLECTED_BY_CONSTRUCTION.checks[0], package)
+        assert run.returncode != PASSED  # so "did the run come back clean?" says the arm is fine
+        assert run.returncode != FAILED  # and the check never ran
 
 
 class TestTheArmTableCoversTheCut:
@@ -236,17 +351,15 @@ class TestTheArmTableCoversTheCut:
         empty = Arm(row="N2", asserts="an arm with nothing to check", sabotage=ARMS[0].sabotage, checks=())
         assert audit(empty, tmp_path / "empty").verdict == "stale"
 
-    def test_the_runner_refuses_one_too_and_that_is_not_redundant(self):
-        # `audit` states the rule; the runner makes breaking it unspellable. Both
-        # are needed and each is what makes the other testable: with only the
-        # runner's guard an empty arm would raise instead of being reported, and
-        # with only the auditor's, any other caller reaching the runner would
-        # collect this file and re-enter it — which is a fork bomb, not a slow
-        # test. That is not hypothetical: it is what the first version of this
-        # harness's own sabotage script did.
-        empty = Arm(row="N2", asserts="an arm with nothing to check", sabotage=ARMS[0].sabotage, checks=())
-        with pytest.raises(MalformedArm, match="collect this file"):
-            _run_checks(empty, package=None)
+    def test_the_runner_refuses_a_check_that_would_re_enter_this_file(self):
+        # `audit` states the rule about naming no check; this states the one
+        # about naming the wrong thing, and each is what makes the other
+        # survivable. A check that resolves to a whole module — `""`, a bare
+        # directory, or this file — collects the harness and re-enters it, which
+        # is a fork bomb and not a slow test.
+        for check in ["", "test_decode.py", f"{HARNESS}::TestEveryArmAssertsSomething"]:
+            with pytest.raises(MalformedArm, match="must name the one test it means"):
+                _run_check(check, package=None)
 
 
 class TestTheHarnessCanSeeAStaleArm:
@@ -267,17 +380,16 @@ class TestTheHarnessCanSeeAStaleArm:
         with pytest.raises(MalformedArm, match="no longer match"):
             TestEveryArmAssertsSomething().test_no_sabotage_has_gone_stale((finding,))
 
-    def test_a_check_that_no_longer_resolves_is_caught_before_it_can_score_sound(self, tmp_path):
+    def test_a_check_that_no_longer_resolves_is_caught_from_both_directions(self, tmp_path):
         ghost = Arm(
             row="N2",
             asserts="a check that has been renamed away",
             sabotage=ARMS[0].sabotage,
             checks=("test_decode.py::TestM4TypedReferentsAndTheReceipt::test_renamed_away_at_some_point",),
         )
-        # The trap: under sabotage it scores `sound`, because a usage error and a
-        # failing check are the same exit code.
-        assert audit(ghost, tmp_path / "ghost").verdict == "sound"
-        # And the thing that springs it.
+        # Under sabotage it cannot reach `sound`: an unresolvable node id exits 4.
+        assert audit(ghost, tmp_path / "ghost").verdict == "uncollected"
+        # And the direction that also catches a check which resolves and fails.
         assert baseline(ghost).verdict == "unresolved"
 
     def test_a_sabotage_matching_twice_is_stale_too(self, tmp_path):

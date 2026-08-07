@@ -30,7 +30,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-__all__ = ["ARMS", "STALE_BY_CONSTRUCTION", "VACUOUS_BY_CONSTRUCTION", "Arm", "Sabotage"]
+__all__ = [
+    "ARMS",
+    "MIXED_BY_CONSTRUCTION",
+    "STALE_BY_CONSTRUCTION",
+    "UNCOLLECTED_BY_CONSTRUCTION",
+    "VACUOUS_BY_CONSTRUCTION",
+    "Arm",
+    "Sabotage",
+]
 
 
 @dataclass(frozen=True)
@@ -137,18 +145,30 @@ _M4 = [
             "test_decode.py::TestM4TypedReferentsAndTheReceipt::test_the_two_accepting_receipts_are_distinguishable",
         ),
     ),
+    # Two arms, because *"a bare string cannot occupy a slot"* and *"the sort
+    # travels with the value"* are two properties held at two places, and one
+    # sabotage cannot make both false. Held as a single arm, the decode-side
+    # check passed under the constructor-side mutation and the arm still scored
+    # sound — the failing check covered for the passing one.
     Arm(
         row="M4",
-        asserts="a bare string cannot occupy an argument slot — the sort travels with the value",
+        asserts="a bare string cannot occupy an argument slot — the constructor refuses one",
         sabotage=Sabotage(
             module="claim.py",
             before="        raise UntypedReferent(",
             after="        raise SystemExit(  # not a ClaimError, so a caller catching the declared arm sees a crash",
         ),
-        checks=(
-            "test_decode.py::TestM4TypedReferentsAndTheReceipt::test_a_bare_string_cannot_occupy_a_slot_inside",
-            "test_claim.py::TestTheCheckIsAgainstTheProfile::test_a_bare_string_cannot_occupy_a_slot",
+        checks=("test_claim.py::TestTheCheckIsAgainstTheProfile::test_a_bare_string_cannot_occupy_a_slot",),
+    ),
+    Arm(
+        row="M4",
+        asserts="the sort travels with the value — nothing bare survives the boundary",
+        sabotage=Sabotage(
+            module="decode.py",
+            before="    args = tuple(Referent(sort=sort, term=term) for term, sort in zip(terms, declaration.arg_sorts, strict=True))",
+            after="    args = tuple(terms)  # the wire's bare strings, straight into the slots",
         ),
+        checks=("test_decode.py::TestM4TypedReferentsAndTheReceipt::test_a_bare_string_cannot_occupy_a_slot_inside",),
     ),
 ]
 
@@ -320,14 +340,26 @@ _M8 = [
     Arm(
         row="M8",
         asserts="folding a contract release into π_claim would fork every claim on an ontology release",
+        # The fold has to widen the signature to reach a contract at all, which
+        # is why the signature is the arm with force and this sabotage performs
+        # both halves. `test_no_contract_identity_reaches_the_bytes` is
+        # deliberately **not** named: it looks for the profile's own digests,
+        # computed at run time, and no source mutation confined to this module
+        # can put one of those in the bytes. It guards the same prohibition from
+        # the value side and no arm here can make it fail.
         sabotage=Sabotage(
             module="projection.py",
-            before='        "operator": claim.operator,',
-            after='        "operator": claim.operator,\n        "schema": "science.contract.v1",',
+            before="def project_claim(claim: Claim) -> dict[str, object]:",
+            after=(
+                "def project_claim(claim: Claim, profile: object = None) -> dict[str, object]:\n"
+                '    """An ontology release, folded into the projection."""\n'
+                '    return {**_project(claim), "contract": "science.testing.v2"}\n\n\n'
+                "def _project(claim: Claim) -> dict[str, object]:"
+            ),
         ),
         checks=(
+            "test_projection.py::TestTheProjectionIsAFunctionOfTheClaimAlone::test_the_projection_takes_a_claim_and_nothing_else",
             "test_parity_fixture.py::TestEveryRowRoundTrips::test_the_row_reproduces",
-            "test_projection.py::TestTheProjectionIsAFunctionOfTheClaimAlone::test_no_contract_identity_reaches_the_bytes",
         ),
     ),
     Arm(
@@ -410,15 +442,32 @@ _M10 = [
     Arm(
         row="M10",
         asserts="changing a single tag's bytes fails the fixture",
+        # A closed-vocabulary tag, written differently on one side. The arm below
+        # is what makes this one land: the fixture can only see a tag it carries,
+        # and coverage of the closed sets is asserted rather than hoped for.
+        sabotage=Sabotage(
+            module="projection.py",
+            before='        "polarity": claim.polarity,',
+            after='        "polarity": ("negated" if claim.polarity == "negative" else claim.polarity),',
+        ),
+        checks=("test_parity_fixture.py::TestEveryRowRoundTrips::test_the_row_reproduces",),
+    ),
+    Arm(
+        row="M10",
+        asserts="the escape rules are held by each implementation's own unit tests, which the fixture does not compare",
+        # Stated as what it is. This sabotage changes how a backslash is written
+        # and the **fixture does not see it**: no row's values carry a backslash
+        # or a quote, so the vector compares the two implementations over tags,
+        # slots and keys, and over escaping compares nothing. Each side tests its
+        # own escaping and neither is checked against the other — which is the
+        # values-level parity fixture recorded as owed and outside cut 1. Named
+        # here rather than dropped, so the gap has a row that states it.
         sabotage=Sabotage(
             module="identity/v1.py",
             before='            out.append("\\\\\\\\")',
             after='            out.append("\\\\u005c")',
         ),
-        checks=(
-            "test_parity_fixture.py::TestEveryRowRoundTrips::test_the_row_reproduces",
-            "test_identity_v1.py::TestStrings::test_quote_and_backslash_are_escaped",
-        ),
+        checks=("test_identity_v1.py::TestStrings::test_quote_and_backslash_are_escaped",),
     ),
     Arm(
         row="M10",
@@ -644,6 +693,39 @@ VACUOUS_BY_CONSTRUCTION = Arm(
     checks=(
         "test_decode.py::TestM4TypedReferentsAndTheReceipt::test_a_member_term_is_accepted_with_the_check_performed",
     ),
+)
+
+
+MIXED_BY_CONSTRUCTION = Arm(
+    row="N2",
+    asserts="a check that fails cannot cover for one that passes — every named check must fail on its own",
+    # The same real defect as above, named by **two** checks: the first sees it,
+    # the second does not. Run together in one `pytest` invocation the pair exits
+    # non-zero and the arm scores sound, while half of what it claims to assert
+    # asserts nothing. This is the shape of the three real arms that were carrying
+    # a passing check when the harness began scoring them one at a time.
+    sabotage=VACUOUS_BY_CONSTRUCTION.sabotage,
+    checks=(
+        "test_decode.py::TestDecodeInvertsTheProjection::test_every_frozen_row_decodes_back_to_its_own_identity",
+        "test_decode.py::TestM4TypedReferentsAndTheReceipt::test_a_member_term_is_accepted_with_the_check_performed",
+    ),
+)
+
+
+UNCOLLECTED_BY_CONSTRUCTION = Arm(
+    row="N2",
+    asserts="a sabotage that stops the check from running has not shown the check can fail",
+    # A mutation coarse enough to break the module's syntax. Every check named
+    # under it exits 4 — `pytest` cannot collect the node id — which is non-zero
+    # and reads as a failing check to anything watching the exit code alone. What
+    # such an arm demonstrates is that unimportable code does not import, which is
+    # true of every check in the suite and specific to none of them.
+    sabotage=Sabotage(
+        module="projection.py",
+        before='    return {\n        "operator": claim.operator,',
+        after='    return {{{\n        "operator": claim.operator,',
+    ),
+    checks=("test_projection.py::TestArgumentsAreHeldBySlot::test_swapping_two_arguments_forks_the_identity",),
 )
 
 

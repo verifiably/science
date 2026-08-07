@@ -441,13 +441,13 @@ executable suite*, which is what cut 1 is — not a second implementation. A cut
 whose own rows were exempt from the discipline they encode would be the first
 thing this corpus should refuse.
 
-**N2 as built (2026-08-06).** Forty arms across the ten other selected rows, each
-declared as data: the row, what the arm asserts, a source mutation that makes it
-false, and the **exact tests** that must fail under it. The harness applies each
+**N2 as built (2026-08-06).** Forty-two arms across the ten other selected rows,
+each declared as data: the row, what the arm asserts, a source mutation that makes
+it false, and the **exact tests** that must fail under it. The harness applies each
 mutation to a copy of the package and runs that arm's checks in a subprocess, so
 nothing touches the working tree.
 
-Three details were not obvious before building it, and each came from the harness
+Four details were not obvious before building it, and each came from the harness
 reporting on its own table:
 
 * **Naming the checks is the whole difference.** Three sessions of hand-run
@@ -459,32 +459,67 @@ reporting on its own table:
   the arm scores healthy. It is the same false report as vacuity, reached by a
   route that opens as the code moves under a table nobody re-reads. Both are
   reported as malformed contract content.
-* **The unsabotaged direction is load-bearing.** `pytest` exits non-zero for a
-  usage error, so a check whose node id has been **renamed away** is
-  indistinguishable from one that failed — the arm most certain to look healthy
-  would be the one that had stopped existing. So every declared check is also run
-  without the sabotage and must resolve and pass.
+* **The unsabotaged direction is load-bearing.** A check that does not pass
+  against the real package asserts nothing about what a sabotage does to it,
+  because it was already red. So every declared check is also run without the
+  sabotage and must resolve and pass.
+* **The verdict has to be taken over the unit the arm names, and only exit code 1
+  is a verdict.** Both halves were wrong in the first build and are recorded here
+  because neither is visible from a green suite. An arm's checks run in **one
+  `pytest` invocation per check**: a single invocation carrying several node ids
+  reports one exit code, so a failing check covers for a passing one, and three
+  real arms in this table were sitting exactly that way — the M4 bare-string arm,
+  the M8 contract-identity arm, and the M10 tag-bytes arm each carried a check
+  that passed under their own sabotage. And *"exited non-zero"* is not *"the check
+  failed"*: `pytest` exits **4** when it cannot collect the node id, so a renamed
+  check, or a sabotage coarse enough to break the module's syntax, scored as a
+  failing check while demonstrating only that unimportable code does not import.
+  `uncollected` is now its own finding.
 
-Two of the ten defects were more interesting than a wrong mutation: the arms were
+The three arms are worth naming individually, because each was repaired
+differently and none of the repairs was *"fix the mutation"*:
+
+* **M4** was asserting two properties held at two places — *a bare string cannot
+  occupy a slot* (the constructor) and *the sort travels with the value* (the
+  boundary) — and no single sabotage can make both false. Split into two arms.
+* **M8**'s `test_no_contract_identity_reaches_the_bytes` looks for the profile's
+  own digests, computed at run time, and **no source mutation confined to
+  `projection.py` can put one in the bytes**. It guards the prohibition from the
+  value side and no arm can make it fail; the arm now names the signature test,
+  which the class's own docstring already identified as the one with force.
+* **M10**'s sabotage changed backslash escaping, which the claim parity fixture
+  does not cover — the finding recorded against the owed values-level fixture in
+  the formal model design. The tag-bytes arm now renames one closed-vocabulary
+  polarity tag, which the fixture *must* see because coverage of the closed sets
+  is asserted by the arm beside it; the escaping sabotage is kept as its own arm,
+  worded as what it actually asserts.
+
+Two of the original ten defects were of the same kind as M8's: the arms were
 pointed at checks the suite's own docstrings already record as **unable to fail**
 (`science.identity.v1` sorts object keys at encode time, so no iteration order
 inside the compiler can reach an identity). Those notes had been written honestly
 and then not consulted when the arm table was drawn up. The harness is what
 connected them.
 
-N2's second clause is discharged by two arms defective **by construction** — one
-vacuous, one stale — which the harness must report rather than pass, and the
-harness itself is sabotaged ten ways.
+N2's second clause is discharged by four arms defective **by construction** —
+vacuous, stale, mixed (one check fails, one passes), and uncollected — which the
+harness must report rather than pass. The harness itself is sabotaged twelve ways.
 
-One of those ten is a rule the build learned the hard way. An arm naming **no**
-check would run `pytest` with no node ids, which collects `testpaths` — including
-the harness file, whose every arm invokes `pytest` again. That is not a weak arm
-but a **fork bomb**, so it is refused twice: `audit` states the rule and reports
-it as a finding, and the runner makes breaking it unspellable. Each guard is what
-makes the other testable. The demonstration was involuntary: the harness's own
-first sabotage script mutated `tests/` in place and restored in a `finally`, and
-a `SIGKILL` during the runaway left two sabotages on disk — the exact practice the
-harness replaces, committed by the tool auditing it.
+One of those twelve is a rule the build learned the hard way. A check that
+resolves to a whole module rather than one test — the empty string, a bare
+directory, or the harness file itself — collects `testpaths`, including the
+harness, whose every arm invokes `pytest` again. That is not a weak arm but a
+**fork bomb**, so it is refused twice: `audit` refuses an arm that names no check
+and reports it as a finding, and the runner refuses a check that is not a node id
+outside this file. Each guard is what makes the other survivable. The
+demonstration was involuntary the first time: the harness's own first sabotage
+script mutated `tests/` in place and restored in a `finally`, and a `SIGKILL`
+during the runaway left two sabotages on disk — the exact practice the harness
+replaces, committed by the tool auditing it. The second time was deliberate and
+contained: disabling the runner's guard was run inside a bounded `systemd-run`
+scope, where it detonated as predicted rather than reporting anything, so a
+terminating variant — a guard narrowed to refuse only the empty check — is what
+demonstrates the property cleanly.
 
 **Why six-plus-five and not the ~25 the review proposed.** Selection is by
 boundary crossed, arm by arm. A row the slice cannot exercise is not
