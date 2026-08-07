@@ -310,6 +310,28 @@ active domain contracts ┘   (compiled)     ├─▶  claim schemas   (added 2
 > second authored operator artifact beside the contracts is a separate
 > obligation with its own oracle, the formal model's **M7**.
 
+> **Two consequences made explicit 2026-08-06, while building the compiled
+> path.** Both were implicit in §6 and neither survived a first implementation.
+>
+> **`ProfileSpec` is compiled, never authored — and that has to be enforced, not
+> stated.** A profile a caller can construct field-wise *is* a second authored
+> per-kind source, arriving through the constructor instead of through a file;
+> a profile whose mappings can be mutated after compilation carries a compiled
+> identity describing a profile that no longer exists. Both are
+> `KIND_DESCRIPTORS`' drift with the two sources inside one object. The
+> compiled artifact therefore exposes no public constructor and hands out
+> read-only views.
+>
+> **Activated is not consulted.** D6's conditional arm already says an
+> activated-but-unconsulted contract contributes nothing to
+> `belief_input_digest`, but a compiled profile that carries one undifferentiated
+> map of contract identities invites a consumer to take all of them — which
+> moves a belief because an unrelated domain was switched on, the exact case
+> D6's negative arm tests. The unconditional base identity and the conditional
+> domain bindings are therefore **separate members**, and the map of activated
+> domains is a **resolution table**: what a claim's identifiers may be resolved
+> against, not what any derivation consulted.
+
 The two roles are distinct and should not both be called "authoritative": the
 **contracts are the normative SSOT** — what a reviewer reads, what a version
 names, what an amendment edits — while **`ProfileSpec` is the sole compiled
@@ -509,7 +531,16 @@ implementation that ran it.
 
 ```text
 science/
-  src/science/          # kernel kinds, cross-node policy, the compiler
+  python/               # kernel kinds, cross-node policy, the compiler
+    src/science/
+    tests/
+  ts/                   # the shared-encoding path only; see below
+    src/
+    tests/
+  fixtures/             # cross-language parity corpus, owned by neither
+    contracts/          # the synthetic domain contract the corpus is built from
+  contracts/
+    science/            # the science base contract (formal model §7.1)
   domains/
     biology/
       DOMAIN.yaml       # contract identity, version, namespace
@@ -520,8 +551,33 @@ science/
     statistics/
       PRACTICE.yaml
       skills/
-  docs/  tests/
+  docs/
 ```
+
+> **Amended 2026-08-06, at the cut 1 slice.** The tree above replaces a
+> single-language `src/science/ … docs/ tests/` layout, which predates the
+> cross-language obligation the formal model's **M10** introduced and could not
+> hold two implementations of one encoding. Three changes, and the reason for
+> each:
+>
+> - **`python/` and `ts/` beside each other, mirroring `nodes`.** Science is
+>   Python-primary — substrate §11 puts the composition root there, and formal
+>   model limitation 9 records M10 as the **only** cross-implementation row, so
+>   `ts/` carries the shared-encoding path (`science.identity.v1` and
+>   `π_claim`) and not a second system. That asymmetry is recorded here in
+>   prose rather than encoded as directory depth, because depth would have to be
+>   restated every time the shared surface grows.
+> - **`fixtures/` at the root, owned by neither language.** A parity corpus that
+>   lives inside one implementation's tree is that implementation's fixture with
+>   a second reader, which is the arrangement it exists to prevent. `nodes`
+>   already does this.
+> - **`contracts/science/` is new.** §6 names the base contract as the normative
+>   SSOT and §7.1 gives it a shape, but no banked document sited it. It is
+>   authored data, never a constant compiled into either implementation — *"which
+>   is why it is a contract and not a constant"* (formal model §8).
+>
+> `tests/` moves inside each implementation because a test tree at the root of a
+> two-language repository has to answer which language it tests on every file.
 
 Three organizing rules, each aimed at a specific failure observed in
 `proto-science`:

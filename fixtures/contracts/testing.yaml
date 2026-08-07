@@ -1,0 +1,69 @@
+# A synthetic domain contract, owned by neither implementation.
+#
+# It lives under `fixtures/` rather than beside either language's tests because
+# M10's parity vector is built from it and both implementations must read the
+# same declarations. A contract under `python/tests/` would make the TypeScript
+# side reach into the Python tree for its own oracle.
+#
+# Deliberately not a real domain. Shipping `domains/biology/DOMAIN.yaml` is a
+# design act, not a test-support one: §7.1's own biology example would be refused
+# at load, because it binds `population-group` to a placeholder and no population
+# vocabulary has been selected (§11, open). Inventing one here to make a test
+# pass would decide an open question by accident.
+#
+# The operator set is shaped by M10's coverage requirement: **every closed kernel
+# tag must be reachable**. So each of the base contract's four layers has an
+# operator admitting it, and both inhabitants of §7.5's polarity position are
+# reachable — `affects` and `correlates-with` are sign-apt, `subtype-of` and
+# `measured-by` are not. Adding a layer to the base contract with no operator
+# admitting it will fail the fixture's coverage assertion, which is the point.
+
+contract: testing
+version: 1
+lineage: genesis
+
+sorts:
+  entity:
+    vocabulary: { namespace: EX, release: "2026-01-01" }
+  outcome:
+    vocabulary: { namespace: EX, release: "2026-01-01" }
+  method:
+    vocabulary: { namespace: EX, release: "2026-01-01" }
+  cohort:
+    vocabulary: dataset:0000000000000000000000000000000000000000000000000000000000000000
+
+dimensions:
+  population:
+    restriction_sort: cohort
+  setting:
+    restriction_sort: entity
+
+operators:
+  affects:
+    arity: 2
+    arg_sorts: [entity, outcome]
+    sign_apt: true
+    layers: [causal]
+    dimensions: [population, setting]
+    description: An editorial field. Changing it must move contract identity and nothing else.
+
+  subtype-of:
+    arity: 2
+    arg_sorts: [entity, entity]
+    sign_apt: false
+    layers: [structural]
+    dimensions: []
+
+  correlates-with:
+    arity: 2
+    arg_sorts: [entity, outcome]
+    sign_apt: true
+    layers: [statistical]
+    dimensions: [population]
+
+  measured-by:
+    arity: 2
+    arg_sorts: [outcome, method]
+    sign_apt: false
+    layers: [methodological]
+    dimensions: [setting]

@@ -1282,6 +1282,277 @@ that survives is the one worth having — the check occurs at exactly one place
 and downstream code never re-validates — and claiming more would put a
 type-system property in a design that cannot deliver it.
 
+> **What *"opaque"* has to mean, concretely — settled 2026-08-06, while building
+> it.** *"No public field-wise constructor"* is necessary and is not sufficient.
+> A validated constructor is worth exactly what `isinstance` is worth, and three
+> further things were each independently enough to put an unchecked object
+> downstream of the boundary while still satisfying `isinstance(x, Claim)`:
+>
+> | hole | what it admits |
+> |---|---|
+> | the type is **subclassable** | a subclass defines its own `__init__`, mints anything, and every reader that trusts a `Claim` unconditionally is wrong — with no line of the checked type edited |
+> | the **value types** the claim holds check nothing | a referent whose `term` is an integer reaches a minted claim, because `term` is the one position in `π_claim` that **nothing downstream checks**: membership is decode's, against a snapshot |
+> | qualifiers are **structurally** typed | any object exposing the right two attributes is stored inside a claim and trusted as one |
+>
+> So the requirement is: seal the type against subclassing **and every
+> user-defined value type whose invariant the claim trusts** — it is a
+> `Referent`'s own check that makes a claim's contents identifiers, so sealing
+> only the claim leaves the invariant reachable one level down. The scope is that
+> trust relation and not "everything the claim holds": a claim also holds strings
+> and tuples, and nothing here is a claim about the language's own types. Then
+> check by type, not by shape. Static `final` states the rule for a checker and
+> enforces nothing at run time, which is the wrong half: the code that would
+> subclass is exactly the code not being type checked.
+>
+> What remains reachable is `object.__new__` and direct attribute writes, which
+> is the same act as the hand-edited file in the third row of the table below —
+> the boundary was bypassed, not defeated — and it belongs to the audit surface
+> for the same reason.
+>
+> **The three holes above are Python's list, and the second implementation had a
+> fourth — recorded 2026-08-06, on building `ts/`.** The rows above are stated in
+> terms of *"the type is subclassable"* and *"the value types check nothing"*,
+> which is the right shape, but their remedy is not portable: it assumes that a
+> value satisfying a type check went through that type's constructor. **In
+> JavaScript it did not have to.** `instanceof` walks the prototype chain, and a
+> derived constructor may `return` an object *instead of* calling `super`:
+>
+> ```ts
+> class Rogue extends Referent {
+>   constructor() { return Object.create(new.target.prototype); }   // no validation ran
+> }
+> ```
+>
+> The result satisfies `x instanceof Referent`, and a claim built from two of
+> them projected integers where identifiers belong. Two more followed from the
+> same assumption: `readonly` and `ReadonlyMap` are erased at run time, so a
+> caller could delete a qualifier from a claim it was holding and **move that
+> claim's identity**; and a structurally typed `ProfileSpec` could be
+> hand-authored, so a claim could be typed against operators, sorts and layers no
+> contract declares — the normative SSOT bypassed with the type checker satisfied.
+>
+> So the requirement generalizes: **the check must be that the constructor ran,
+> not that the shape matches.** Each checked type carries a private-field brand,
+> installed by its own constructor and readable only inside its own class body,
+> and every validation asks the brand. Sealing against subclassing remains
+> necessary and is no longer sufficient — a subclass can still be *declared*, and
+> `Object.create(Subclass.prototype)` never calls a constructor at all.
+>
+> The asymmetry is worth stating rather than smoothing over. In Python
+> `isinstance` is forgeable only through `object.__new__`, which is the raw-write
+> row; in TypeScript the forge needs no unusual call, so the brand is
+> load-bearing and `readonly` is the decoration. A guarantee stated as
+> *"the type is opaque"* does not survive translation on its own — what survives
+> is *"a value of this type was checked"*, and each language has to be asked
+> separately how that can be faked.
+>
+> **A brand is worth what its minting function checks, and the chain runs to the
+> authored document — recorded 2026-08-06, one round later.** Closing the three
+> rows above did not end the forgery; it moved it one link up. `ProfileSpec`
+> became branded, so a claim could no longer be typed against a hand-authored
+> profile — but `compileProfile` still accepted structurally typed **contracts**,
+> so a pair of object literals compiled to an entirely genuine `ProfileSpec`,
+> brand and all, resolving an operator and a layer no document declares. The
+> brand certified that a function had run. That was true, and worth nothing.
+>
+> Two properties of that finding decided how the rest of the work was done:
+>
+> * **Both implementations had it, and agreed.** The forged claim's digest was
+>   identical on the two sides. A parity fixture compares implementations against
+>   each other and would have reported perfect agreement about a claim neither
+>   contract declares — so **M10 cannot witness this class of defect at all**, and
+>   nothing in the parity apparatus should be read as if it could.
+> * **The remedies were language-specific and the hole was not.** In TypeScript
+>   the forgery is an object literal; in Python it is a public dataclass
+>   constructor. Asking only the language that reported it would have left the
+>   other open.
+>
+> So the rule is stated as a chain rather than a property of any one type: **each
+> link certifies the link below it, and trust begins at the authored document.**
+> Concretely — the parsers are the only route to a contract, `compileProfile`
+> refuses a contract no parser produced, `buildClaim` refuses a profile
+> `compileProfile` did not return, and `π_claim` refuses a claim `buildClaim` did
+> not mint. A link that certifies only *"some function ran"* is not a link.
+>
+> The same round corrected the sentence above. `Object.freeze` was called
+> decoration on the strength of the claim's scalar fields; it is load-bearing
+> wherever a **collection** is held, and shallowly so. A compiled profile held its
+> operators in a `Map` — `ReadonlyMap` again — and an argument sort in a plain
+> array inside a frozen object, and rewriting either re-typed an operator that was
+> otherwise entirely real, for every claim built afterwards. Immutability has to
+> reach the leaves, and in Python it already did: `MappingProxyType` over private
+> copies, with tuples throughout, which is why only the provenance half of this
+> finding applied there.
+>
+> **Provenance is necessary and is not sufficient — recorded 2026-08-06, the
+> round after.** With every link brand-checked, a hole remained that no brand
+> could have caught, because **nothing in it was forged**. A domain contract's
+> layer selections are validated exactly once, at parse time, against the base
+> contract handed to the parser; the compiled operator then carries them as facts
+> that nothing revalidates. So a domain parsed under one base and compiled under
+> another — both documents real, both parsers correct, every brand intact —
+> produces a claim standing on a layer the base in force does not declare.
+>
+> The general statement, which outranks the instance: **authenticating each input
+> separately says nothing about whether the inputs belong together.** The rule has
+> two conditions, and both must hold before it applies. An artifact is in scope
+> when
+>
+> 1. its **validity is conditional** on a particular upstream artifact — some
+>    check it passed was taken against that one and is not retaken; and
+> 2. it **may later be recombined independently** — it can arrive somewhere
+>    holding a different partner than the one it was checked against.
+>
+> Where both hold, the boundary that recombines them must **either verify a
+> recorded dependency or revalidate the relation**. Recording is the cheaper of
+> the two and is what a compiled profile does here; revalidating is available
+> whenever the boundary still has what it needs to redo the check, and is the
+> better answer when the relation is narrow.
+>
+> Both conditions are load-bearing, and the earlier phrasing of this rule — *"a
+> stage that consumes an earlier stage's output creates a dependency"* — was
+> wrong for want of them. Not every staged transformation needs provenance. A
+> stage that revalidates everything it depends on has no conditional validity to
+> carry; one whose output is never separable from its input cannot be recombined,
+> so there is no second pairing to get wrong. Demanding a recorded dependency at
+> every seam would put a tag on artifacts that cannot be mismatched, which buys
+> nothing and obscures the seams that can.
+>
+> A domain contract meets both: its layers were checked against one base and the
+> compiled operator carries them unrechecked, and it is handed to `compile_profile`
+> separately from any base. So it records, and compilation refuses a mismatch —
+> `ContractMismatch`, deliberately a different error from `UnparsedContract`,
+> because a reader who sees them as one will look for a forgery that does not
+> exist. **Decode is the next boundary owing the question**, and it is owed
+> per-artifact rather than wholesale: a `BindingCheckReceipt` is conditional on
+> the `ResolutionSnapshot` its outcomes were taken against and can travel apart
+> from it, so it is in scope; a `WireClaim` is checked from scratch at decode
+> against whatever profile and snapshot are in force, so it is not.
+>
+> Two smaller corrections from the same round, both worth their space because
+> they are habits rather than incidents:
+>
+> * **A parser must authenticate its own dependencies.** `parse_domain_contract`
+>   took a base contract and a predecessor and trusted both by shape — so its
+>   layer check was worth whatever the base it was handed was worth, and its
+>   succession check was compared against a predecessor written to pass. The rule
+>   applied to a module's callers applies to the module.
+> * **Fixing the language a defect is reported in leaves the other open.** The
+>   TypeScript profile has been brand-checked at `buildClaim` since it became a
+>   class; the Python one was never checked at all, and a duck exposing
+>   `operator` and `claim_grammar` typed a claim against declarations of its own
+>   choosing. Every finding in this block has now appeared in both languages,
+>   usually wearing different clothes.
+>
+> **What a token achieves in Python is less than what a brand achieves in
+> TypeScript, and the difference is the language's.** `#minted` cannot be
+> installed from outside its class body — a forgery is impossible, not merely
+> inconvenient. Python has no module privacy, so `object.__new__` plus
+> `object.__setattr__` reproduces any private constructor in two lines. The mint
+> tokens on `_parsed` and `_compiled` therefore remove an **ordinary** route — a
+> method that merely looked internal, reachable by a caller with no intent to
+> forge anything — and leave the raw write exactly where §6.3's third row already
+> put it, on the audit surface. Stating that plainly is the point: the distinction
+> worth keeping is between a hole and a documented limit, and a design that
+> claimed unforgeable provenance in Python would have neither.
+>
+> **Added 2026-08-06, from the two defects reported against the snapshot and the
+> wire value. Both are about a boundary's *inputs* rather than its provenance,
+> which is why the round above did not reach them.**
+>
+> **A record type standing in for a sum must refuse the inhabitants the sum does
+> not have — and the reason is identity, not tidiness.** `VocabularyBinding` is
+> D §5's *held dataset* **or** *namespace with a release*, written as three
+> optional fields. Its projection drops the namespace on the dataset arm, which is
+> correct there and catastrophic off it: a value carrying both arms projects as
+> the dataset alone, so two bindings that **differ** — distinct keys, resolved
+> against different vocabularies — encode identically. Everything downstream that
+> takes an identity **through** that projection then stops being determined by its
+> contents. Two things do: a snapshot's identity, which is taken over an order the
+> encoded binding decides, so the same snapshot took two identities depending on
+> the order its bindings were supplied; and a **contract's content identity**,
+> which is what `ContractMismatch` compares — two different contracts could have
+> shared one. The general rule: wherever an identity is taken over a projection,
+> that projection must be **injective**, and the only place injectivity can be
+> established is the constructor of the type being projected. A reader cannot
+> check it — by the time the reader has two colliding values it has already lost
+> the distinction. Note also what closing it needed: enforcing the sum at
+> construction is worth nothing against a subclass that overrides `projection`, so
+> the type is **sealed** for the same reason `Claim` is — and it is the one
+> declaration type here that callers construct directly, which is what puts it in
+> `isinstance`'s reach at all.
+>
+> **A refusing arm must be closed over its own input space.** `decodeClaim` refuses
+> a malformed wire value by raising a `DecodeError`; on a wire qualifier whose
+> *field name* was not a string, the field arithmetic raised a raw `TypeError`
+> instead, out of `sorted` or out of the `join` that builds the message. A caller
+> holding the boundary's refusing arm gets a crash rather than a refusal — on
+> exactly the input the boundary exists to refuse — and the sum type's `Refused`
+> is a claim about the whole input space or it is not a claim. The instructive
+> part is that the guard was not a new idea: both contract loaders check mapping
+> keys **before** their field arithmetic, for this reason. **A boundary written
+> later reimplemented the neighbourhood without the neighbourhood's guard**, and
+> nothing pointed that out, because the two are in different modules and the
+> shared discipline lives in neither. This is the one finding in this block with
+> **no twin in the other language**, and the asymmetry is structural rather than
+> accidental: JavaScript object keys are strings by construction, so `Object.keys`
+> cannot hand a comparison two types. Python dictionary keys can be anything
+> hashable, which is why every mapping arriving from outside needs its keys
+> checked before they are sorted, joined, or compared.
+>
+> The same input-space question, asked of the snapshot, produced the other half:
+> `build_snapshot` accepted non-string members. A `Referent` cannot carry one, so
+> the snapshot held a member no claim could ever name — and `resolve` then answered
+> `not-member`, the single **refusing** outcome and positive evidence that a
+> vocabulary was read and lacks the term, about a vocabulary that had been handed
+> it. §7.2 exists to stop an absence of evidence being reported as evidence of
+> absence; this is the same confusion arriving from the other side, and its victim
+> is a well-formed claim. Where two boundaries admit the same kind of value, their
+> predicates have to agree, and the agreement is worth a test in **both**
+> directions.
+>
+> **Same round, second report: injectivity is not only about shape, and the fix
+> that suggests itself is the one the fixture was built to catch.** Two
+> identifiers differing only in Unicode normalization are two Python strings and
+> one encoded identifier, because `science.identity.v1` normalizes to NFC **at
+> encode time**. So the sum enforcement above closed the shape collision and left
+> the text collision open: two `VocabularyBinding`s with NFC-equivalent namespaces
+> are distinct keys with one encoding, and a snapshot again took two identities.
+> The obvious repair — canonicalize identifiers where they enter — is **wrong**,
+> and wrong in an instructive way. The `affects-decomposed-referent` parity row
+> exists to catch an implementation that normalizes at parse time rather than at
+> encode time; an implementation that canonicalized or refused a decomposed
+> referent would *be* that implementation, and would have failed its own fixture.
+> The safeguard caught it here, which is the first time in this build a banked
+> artifact overruled a fix in progress.
+>
+> What the layers actually want is different rules, each for a stated reason:
+>
+> | layer | rule | why |
+> |---|---|---|
+> | claim | **preserve** what the author wrote | §7.3 identifiers are authored, and encode-time normalization is a deliberate, fixture-pinned property |
+> | contract, snapshot | **require** canonical form | not π_claim positions; they are inputs to projections identities are taken over, and D5's *"refused at load"* is already this layer's discipline |
+> | comparison | **normalize** the query | membership must be decided under the same equivalence as `I_claim`, or a vocabulary reports `not-member` for a term it holds |
+>
+> Both halves of the third row are needed. Storing canonically without normalizing
+> the query refuses a legitimately decomposed claim term; normalizing the query
+> without storing canonically lets one vocabulary hold two members the projection
+> cannot tell apart. **The general rule: where a value is stored and later
+> compared, storage and comparison must agree about which equivalence they mean,
+> and neither may be left implicit in a language's `==`.**
+>
+> The third defect of the round is the plainest and is the third instance of one
+> pattern: `build_snapshot` accepted a bare string as a vocabulary, since `str`
+> satisfies `Iterable[str]` — so `{binding: "EX:gene"}` builds a vocabulary of six
+> characters and the term it was written to declare present resolves `not-member`.
+> `decodeClaim` already refuses a bare string where it wants a sequence of terms,
+> for exactly this reason, and the contract loaders already check mapping keys.
+> Three times now a boundary written later has been missing a guard an existing
+> boundary carries. The guards are not hard to find; **nothing points at them**,
+> because each lives in the module that needed it and the discipline lives in
+> none. That is an argument for the sabotage harness to be structural (N2) rather
+> than a list of remembered cases.
+
 **But the model is not the only thing that produces claims.** Serialized YAML,
 imported records, a restored corpus and a raw write can all *express* a
 combination the type cannot hold. Unconstructibility eliminates the internal
@@ -1422,6 +1693,23 @@ projection carries identifiers, and the release travels the other channel.
 
 I_claim(c)  =  H( tag_claim ‖ encode(π_claim(c)) )        under science.identity.v1
 ```
+
+> **`tag_claim` is `science.claim.v1`, and its version is the projection's —
+> settled 2026-08-06, while building it.** The line above names `tag_claim`
+> without saying what it is or what moves it, and three candidates were live: the
+> corpus version, the claim grammar's `version` field, and the projection's own
+> shape. The first two are wrong for the same reason, and it is M8's: a grammar
+> bump or a corpus bump would fork every claim ever written, which is what §6.5
+> exists to prevent one paragraph up.
+>
+> So the domain moves when **π_claim's shape** moves, and nothing else moves it.
+> A `science.claim.v2` projection can then never collide with a v1 one — the
+> guarantee `science.identity.v1`'s domain separation is for — and §6.4 rule 4's
+> promise becomes mechanical rather than aspirational: when a later qualifier
+> grammar adds scope order, claims already written in the flat fragment keep the
+> identities they were written with, because their projection's shape did not
+> change. The grammar version stays in the base contract, where it governs what
+> may be *authored*, and stays out of what a claim is *named*.
 
 Five positions, five kinds of name, and none of them prose:
 
@@ -1672,6 +1960,33 @@ operators:
     dimensions: [population, condition]
 ```
 
+> **Ruled 2026-08-06, while building it — a tag's canonical bytes are its
+> symbol.** §8 asks this contract to fix *"the closed sets and their bytes, not
+> their spelling"*, and §7.4 row 5 warns against *"an implementation choosing a
+> different serialization for a tag"*. Read as two requirements they conflict;
+> read as one they do not, and the one is: **the bytes must not be an
+> implementation's decision**. So the contract declares the encoding rule
+> alongside the symbols —
+>
+> ```yaml
+> claim_grammar:
+>   version: 1
+>   tag_encoding: science.identity.v1   # a tag's bytes are its symbol, as a string
+> ```
+>
+> — and a loader presented with any other `tag_encoding` **refuses**, rather than
+> encoding the tags under a rule the contract did not name.
+>
+> **The alternative was considered and rejected.** Giving each tag a second,
+> independent encoding beside its symbol would let a tag be *renamed* without
+> re-minting the claim population. It buys renaming across a closed set of ten
+> kernel tags, which nothing needs, and it costs every tag a second name that
+> something must hold in correspondence — a cache that can disagree with what it
+> names, which is the defect §6.5 removed from `render` and D §6 removed from
+> `KIND_DESCRIPTORS`. §7.3 already pairs *authored and stable* with *enters claim
+> identity*, and a tag symbol is exactly that; row 5 then prices a change to one
+> as severe, which is the intended answer rather than a cost to engineer around.
+
 The `population-group` binding is a **placeholder, not a proposal**. No
 population vocabulary has been selected, and none of the obvious candidates is
 one — MONDO is a disease ontology, and appears above bound to `condition`, which
@@ -1687,6 +2002,20 @@ exactly `arity(op)`, `ArgSort(op)`, `signApt(op)`, `Layers(op)`, `Dims(op)`.
 `RestrictionSort(op)` is resolved through the dimension declarations rather than
 restated per operator, so two operators sharing `population` cannot disagree
 about what a population restriction is bound to.
+
+> **Consequence made explicit 2026-08-06, while implementing §8.3's succession
+> check.** §6.2 types `Dims(op)` and `Layers(op)` as **finite sets** and
+> `ArgSort(op)` as a function on `Fin(arity(op))`. A canonical schema projection
+> must therefore treat them differently: `arg_sorts` is **ordered**, while
+> `layers` and `dimensions` are **sorted** into a canonical set representation.
+>
+> This is not cosmetic, and the first implementation had it wrong. Holding a
+> declared *set* in the order its author happened to type it makes reordering one
+> line of YAML compare as a **different canonical schema projection** — so §8.3
+> refuses it as a redefinition, on a change that changed nothing, at the one
+> place in the corpus that can least afford a false positive. The converse holds
+> and is why the two cannot be canonicalized alike: swapping `arg_sorts` says
+> something genuinely different about the world, and must be refused.
 
 The **layer set is base-owned but per-operator restricted** — `layers: [causal]`
 selects from the base vocabulary and may not extend it. A domain that could mint
@@ -1780,6 +2109,29 @@ identities from one that does not, which would make `I_claim` depend on what
 bytes are lying around — precisely what §6.5's identifier discipline exists to
 prevent. It is emitted on the accepting arm only; the refusing arm produces no
 claim and therefore no receipt.
+
+> **Built 2026-08-06, and two things the interface did not say.**
+>
+> **The receipt also carries the claim identity**, which is beyond this section's
+> letter. Without it a receipt is a set of position labels — `argument:0`,
+> `restriction:testing/population` — with nothing saying whose positions they
+> were, and a diagnostic that cannot be attached to its subject is not much of
+> one. It is also what makes the receipt's own dependency legible: the claim
+> identity fixes the operator, and §7.3 forbids redefining an operator's
+> `arg_sorts` under its own identifier, so the positions cannot be silently
+> reinterpreted. That argument has exactly one hole and it is already open — a
+> parallel `genesis` in the same namespace is compared against nothing (§8.3,
+> ρC1).
+>
+> **Decode maps the polarity position back to the unit inhabitant.** §7.5 always
+> emits the position, so `sign_inapt_tag` is on the wire for an operator whose
+> `Polarity(op)` is the unit type — and §6.3 says an author supplies nothing
+> there. The boundary therefore has to *translate*, not forward: the tag on the
+> wire becomes "there is nothing to supply" inside, while `build_claim` still
+> refuses the same tag from an author. Recorded because forwarding it unmapped
+> passed every arm-by-arm test written at the time; what caught it was decoding
+> M10's frozen vector, where the sign-inapt row round-trips or the digests do not
+> match.
 
 It **reuses the boundary receipt's envelope, and is not the banked artifact.**
 The first draft said "§2.3 already lists that as one of the four non-node
@@ -1885,6 +2237,16 @@ moves the contract identity and therefore `belief_input_digest`, but touches no
 declared schema and so needs no new identifier. That is D limitation 1's drift
 case, inherited unchanged and not improved on here.
 
+> **Corrected 2026-08-06, while building it — the list overstates by one item.**
+> A **comment** does not move the contract identity, because contract identity is
+> derived over the **canonical projection** and a comment does not survive
+> parsing into one. Nor should it: D5 requires that reformatting — *"whitespace,
+> key order, quoting style"* — leave an identity unchanged, and an identity taken
+> over raw bytes to catch comments would make every one of those significant. A
+> comment is on the formatting side of that line. Descriptions and examples are
+> *fields*, survive into the projection, and move the identity exactly as this
+> paragraph says.
+
 **Who owns a term** is then simply: the contract whose namespace issues it. That
 is the answer to the "no owner" half of limitation 4, and it is the same answer
 D gives for facets, which is the point — the predicate vocabulary is not a
@@ -1906,11 +2268,41 @@ The enforceable split:
 
 | path | rule |
 |---|---|
-| the typed **authoring** constructor | **cannot select a retired identifier** — it is not offered, on the same US† terms as every other unconstructible combination |
+| the typed **authoring** constructor | **cannot select a retired identifier** — it is not offered, on the same US† terms as every other unconstructible combination. *"Identifier"* is every claim-vocabulary identifier the authoring act reaches, not only the operator's own: see below |
 | **decode / import / restore** | accepts a retired identifier and types the claim against the **frozen retired declaration** |
 
 Retirement therefore lives in authoring, not in validation, which is also the
 only place it can live without a way to distinguish new bytes from old.
+
+> **Which identifiers the authoring rule reaches — settled 2026-08-06, while
+> building it.** Reading *"cannot select a retired identifier"* as the operator's
+> own flag leaves an operator **offered whose slots cannot be filled**, so the
+> refusal lands when the author tries to bind a referent — one step past the
+> boundary this section draws. The rule reaches every identifier the authoring
+> act touches, and §6.2's own typing decides how far:
+>
+> | retired | effect on authoring | why |
+> |---|---|---|
+> | the **operator** | withdrawn | directly |
+> | an **argument sort** | the operator is **withdrawn** | every slot of `Fin(arity(op))` must be filled, and `Referent(s)` for a retired `s` offers nothing to fill it with |
+> | a **permitted dimension** | that dimension alone is withdrawn; the operator remains authorable | `Dims(op)` is the set of dimensions **permitted**, not required |
+> | a dimension's **restriction sort** | that dimension is withdrawn | a restriction is sorted exactly as an argument is, so nothing remains selectable on it |
+>
+> **Decode is untouched by all four.** A retired identifier stays fully
+> resolvable, and a historical claim is typed against the frozen retired
+> declaration exactly as this section requires — the asymmetry is the point, and
+> widening the authoring rule must not narrow the decode one.
+>
+> **The rows are ordered, and a withdrawn operator has no dimensions to offer.**
+> Row three narrows an *authorable* operator's selection; it is not an
+> independent question. So asking which dimensions may be selected on an operator
+> withdrawn by row one or row two must **refuse**, not answer *"none"* — an empty
+> selection is already the honest answer for a live operator that permits no
+> dimensions at all (`subtype-of` is one), and returning it for a withdrawn
+> operator collapses two different facts, which is §7.5's `inapt`/`unsigned`
+> collapse committed one position over. It would also let an author assemble most
+> of a claim before the boundary refused it, which is the failure the table above
+> was written to fix.
 
 **That requires tombstones.** Typing a historical claim against a retired
 operator means the declaration must still be readable, so a successor contract
@@ -2324,7 +2716,32 @@ These are normative now, not deferred:
 | a contract declares **`genesis`** or **`successor(<predecessor contract identity>)`** | a first release has no predecessor; requiring one unconditionally would make no contract loadable at all |
 | for **claim-vocabulary declarations only** — operators, dimensions, sorts — every identifier present in both a contract and its predecessor must have an **identical canonical schema projection** | this is *never redefine* made checkable. It compares the **meaning-bearing** fields, not bytes: a description, comment or example may change freely, which is what M6's editorial arm requires |
 | retired claim-vocabulary declarations are **retained immutably as tombstones** | historical claims are typed against them (§7.3a) |
+| **retirement is one-way** — a successor may retire an identifier and may never un-retire one (added 2026-08-06) | see below |
 | a violation of any of the above is **refused at contract load** | RF†, at load, not at claim decode |
+
+> **The fifth rule was missing, and was found while implementing the other
+> four** (2026-08-06). The gap is a direct consequence of a decision the rules
+> above force. `retired` **must** sit outside the canonical schema projection —
+> inside it, the act of retiring an identifier would compare as a redefinition
+> of that identifier and be refused, which would forbid the one operation §7.3a
+> requires to be available. But outside it, the schema comparison cannot see
+> `retired` at all, and the presence check only asks whether a declaration is
+> still *there*. A successor flipping `retired: true` back to `false` therefore
+> satisfied every one of the four rules above.
+>
+> **Why that is not merely untidy.** §7.3a puts retirement in **authoring** —
+> the typed constructor cannot select a retired identifier — so the retired set
+> is what decides whether a claim was authorable at the time it was written. If
+> that set can shrink, it is no longer reconstructible from any point in the
+> lineage, and two contracts in one lineage disagree about whether an existing
+> claim was legitimately authored, with the later one silently winning. That is
+> a change to what already-written records mean, which is what redefinition
+> *is* — arriving through the status field instead of the schema field.
+>
+> So the rule belongs **beside** the schema comparison, not inside it. Omitting
+> the field is the same act as writing `false`, since the default is `false`,
+> and both are refused. A tombstone also remains subject to the schema
+> comparison: retirement freezes a declaration, it does not exempt it.
 
 **The scope restriction is deliberate.** These rules govern claim vocabulary and
 nothing else. Facet contracts keep whatever succession discipline D §12
@@ -2463,14 +2880,16 @@ amendment list.
 
 **Implementation authorities M\* introduces.** Editing design prose does not
 make two implementations hash a typed claim identically, and none of these
-exists today. Each needs a named home before M\* is buildable:
+exists today. Each needs a named home before M\* is buildable. **All four were
+sited 2026-08-06**, at the start of the conformance cut 1 slice; the homes below
+are where they are being built, and none is yet complete:
 
 | authority | what it must fix | home |
 |---|---|---|
-| the **claim grammar** and the **canonical byte encoding of every kernel tag** — quantifiers, polarities including `sign_inapt_tag`, and the layer vocabulary | the closed sets and their bytes, not their spelling (§7.1, §7.4 row 5) | the `science` **base contract**, which is why it is a contract and not a constant |
-| **`π_claim`'s canonical projection** and its domain-separation tag `tag_claim` | field order, encoding of each position, and the tag itself, as a first-class member of the identity standard | **`science.identity.v1`** (computation §4.3's value contract), extended — a new tag, not a new encoding |
-| **`ProfileSpec` compilation of claim schemas** | that operator, dimension and sort declarations merge and validate into the compiled profile on the same terms as `KindSpec`, with no second authored artifact | D §6's compiled-registry path, widened as above |
-| a shared **Python/TypeScript parity fixture for claim identity** | that one typed claim projects to identical bytes and hashes identically in both implementations | alongside D §6's existing namespaced-facet-key parity fixture, which is the precedent for exactly one such fixture per shared encoding |
+| the **claim grammar** and the **canonical byte encoding of every kernel tag** — quantifiers, polarities including `sign_inapt_tag`, and the layer vocabulary | the closed sets and their bytes, not their spelling (§7.1, §7.4 row 5) | the `science` **base contract**, which is why it is a contract and not a constant — sited at `science/contracts/science/` (D §9, amended 2026-08-06) |
+| **`π_claim`'s canonical projection** and its domain-separation tag `tag_claim` | field order, encoding of each position, and the tag itself, as a first-class member of the identity standard | **`science.identity.v1`** (computation §4.3's value contract), extended — a new tag, not a new encoding. Implemented in **both** trees, since this is the one shared encoding |
+| **`ProfileSpec` compilation of claim schemas** | that operator, dimension and sort declarations merge and validate into the compiled profile on the same terms as `KindSpec`, with no second authored artifact | D §6's compiled-registry path, widened as above — Python only, since compilation is not a shared encoding and no parity obligation reaches it |
+| a shared **Python/TypeScript parity fixture for claim identity** | that one typed claim projects to identical bytes and hashes identically in both implementations | `science/fixtures/`, at the repository root and owned by neither implementation (D §9, amended 2026-08-06). **Built and frozen 2026-08-06** — `fixtures/claim-identity-v1.json`, eleven rows, generated by `python/tools/…`, reviewed, and consumed by **both** halves; the eleven rows reproduced byte-identically in TypeScript on the first run |
 
 The parity fixture is the one that would otherwise be discovered late. `nodes`
 already imposes no facet-key grammar and both implementations accept arbitrary
@@ -2478,6 +2897,84 @@ string keys — D §6 pinned that freedom with a fixture rather than trusting it
 and a typed claim projection has strictly more ways to disagree: slot order,
 map key sorting, tag bytes, and the absent-versus-unit distinction §7.5 exists
 to remove.
+
+> **What the fixture had to carry, settled 2026-08-06 on building it.** Three
+> decisions, each one a way the artifact could have looked complete and asserted
+> less than M10 asks.
+>
+> **Every row carries the claim's components, not only its expected projection.**
+> Both implementations build *and project* from the parts. A fixture keyed on the
+> projection alone would pin `science.identity.v1` — the shared *encoding* — while
+> bypassing `π_claim` entirely, which is most of what this row is for: slot order
+> and map-key sorting are encoding properties, but the absent-versus-unit
+> distinction, the argument position emitting `term` and not `sort`, and the
+> constructor supplying the unit inhabitant are all projection properties, and
+> none of them would be exercised.
+>
+> **The artifact is stored pure-ASCII**, with every non-ASCII referent held as a
+> `\uXXXX` escape. The vector deliberately contains a composed non-ASCII
+> identifier and a decomposed one, and `science.identity.v1` normalizes to NFC
+> **at encode time** — so one row's projection holds the decomposed form while its
+> canonical bytes hold the composed one, which is exactly the divergence a second
+> implementation produces by normalizing at parse time or not at all. Stored
+> literally, an editor, merge tool or transfer that normalized the file would
+> silently delete that assertion — the fixture committing the very bug it exists
+> to catch.
+>
+> **Declared limit (DL).** The vector cannot exercise §4.3's amended
+> code-point-versus-UTF-16 key ordering. `π_claim`'s only contract-issued keys are
+> dimension identifiers, and the contract grammar restricts those to
+> `[a-z][a-z0-9-]*`, so no conforming contract can issue a key above U+FFFF. That
+> rule is covered by each language's own `identity.v1` unit tests and is **not**
+> claimed here; a fixture that appeared to cover it would be worse than one that
+> says it does not.
+>
+> **A second obligation this uncovered, and it is owed.** `π_claim` uses strings,
+> arrays and string-keyed objects, so the claim fixture pins the value contract
+> only over those. `science.identity.v1`'s **numeric arms have no cross-language
+> fixture at all** — integers, decimals, the one spelling of zero, the refusal of
+> binary floats, the escape table, and the astral key ordering are each tested
+> twice and compared never. D §6's precedent is one parity fixture per shared
+> *encoding*, and `identity.v1` is a different shared encoding from `π_claim`, so
+> a values-level fixture is the second one that precedent asks for. It is **not**
+> in cut 1 — §5.1 selects one fixture and the stop rule holds — and it should be
+> the first thing added after it. The divergence risk is concrete: the two
+> implementations spell the numeric refusal differently, Python refusing `float`
+> and TypeScript refusing `number`, and nothing currently compares what they
+> accept.
+>
+> **Demonstrated, not argued (2026-08-06).** N2's harness carries an arm whose
+> sabotage changes how `science.identity.v1` writes a backslash. It **passes the
+> claim fixture**: no row's values carry a backslash or a quote, so the vector
+> compares the two implementations over tags, slots and keys, and over escaping
+> compares nothing. Only Python's own `identity.v1` unit test catches it, and the
+> TypeScript half would go on agreeing with a Python that had changed. The arm is
+> kept, worded as what it actually asserts, so the gap has a row that states it.
+
+> **Correction 2026-08-06 — the cited precedent does not exist.** This section's
+> home column read *"alongside D §6's **existing** namespaced-facet-key parity
+> fixture, which is the precedent for exactly one such fixture per shared
+> encoding."* Measured against the trees, that is wrong twice, and this
+> document's own §8.7 names the class: drift lives wherever a rule is *cited*
+> rather than where it is stated.
+>
+> - **Not existing.** D §6 calls it *"the one shared parity fixture this design
+>   **adds**"*, and D1–D10 await implementation. Nothing was there to sit
+>   alongside.
+> - **Not namespaced.** `nodes/fixtures/gene_phf19.{canonical.json, py-emit.md,
+>   ts-emit.md}` is a genuine cross-language emit fixture, and D1 describes it
+>   accurately as example payload. But its only facet key is `bio-axes` — a
+>   hyphenated **flat** key. It pins nothing about `biology/gene-axis`.
+>
+> What survives is weaker and still useful: `gene_phf19` is a precedent for the
+> **form** — one canonical artifact with a per-language emission beside it — but
+> not for the encoding. **The claim parity fixture is therefore the corpus's
+> first typed parity fixture, not its second**, and it has no shape to inherit.
+> The consequence is a real cost rather than a bookkeeping note: its coverage
+> has to be argued from M10's own text (*"vector coverage asserted complete"*)
+> instead of extended from a fixture that already made those choices. D §6's
+> namespaced-facet-key fixture remains outstanding and is **not** in cut 1 —
+> D4 is fully deferred (disposition record §5.2).
 
 ## 9. Guarantees (M1–M13)
 
@@ -2512,16 +3009,16 @@ pass on the other's evidence.
 | **M1** | **Every read that crosses the instrumented resolver is inside the declared closure** | Instrument the resolver so each value read through it is recorded at read time; assert the recorded read-set is contained in the declared closure, for a corpus exercising every closure member. **Sabotage:** add a code path that reads one value outside the closure **through the resolver** — a facet, a contract, a producer set — changing nothing else, and assert the check **fails**. **Scope, and it is a real one (DL):** the row is bounded by the resolver. A read that never crosses it — a module-level constant, an environment lookup, a cached global, a file opened directly — is invisible and passes, so M1 does **not** assert that every undeclared read is detected (limitation 1). Strengthening it to that claim requires an exhaustive capability or sandbox boundary, which this design does not propose. **Why the bounded row is still worth having:** G3's own text records four closure members that "were live holes in earlier revisions," each found by a reviewer noticing. M1 converts the ordinary case from noticing to checking, and names precisely the case it leaves to noticing |
 | **M2** | **Every run input reaches the assessment's carrier identity** | Take an assessment; for each input of its run, **replace that input with a newly minted dataset carrying a different content identity** — inputs are immutable and content-addressed, so the mutation is a substitution, not an edit — and assert the assessment identity **moves** every time. **Sabotage:** attach an input to the run that no declared role partition covers, and assert the attempt is **refused**, not silently ignored. §4.3 finding (a) established that the current path is three hops (the recipe's role-partitioned `inputs` → R2 → assessment identity) and is a **binding** path, not a proven semantic one; this row pins the binding so the fragility is tested rather than argued |
 | **M3** | **`standing` terminates, because the retraction graph is a DAG** | **Termination itself, on valid states:** evaluate `standing` over retraction chains of increasing depth, including counter-retractions and several standing retractions of one target, and assert termination and a stable value. Without this arm a looping implementation passes while its validator is perfectly correct. **The validator, exercised directly** — the only arm that can certify the check exists: hand it an abstract two-cycle and assert a **cycle-specific** result carrying a **witness** (the offending edge set), not a generic failure. Case-split the cycle across the boundary that matters — both records in the **bundle**, and one record in the bundle closing a cycle through the **resolved world context** — and assert import invokes the validator on the **union**, never on the bundle alone. **That import consumes the result:** force a cycle verdict for an otherwise entirely valid bundle and assert the import **refuses with no write**; an importer that calls the validator and ignores its witness must fail this arm. **Ordinary writes:** attempt a retraction whose target does not already resolve and assert refusal (C10), which is what makes a write incapable of closing a cycle. **Merge, both arms (ρA10):** attempt a curator-asserted merge of two **distinct-basis** retractions and assert **refusal** — merge rewrites inbound references, so this is the one sanctioned act that can close a cycle; then consolidate two **equal-basis** replicas of one retraction held in two corpora **while a counter-retraction `R` already targets it**, and assert the merge **succeeds**, that the retraction's content identity is **unchanged**, and that `R` is **not rewritten and not re-minted** — pinning that identity-preserving consolidation is inside `Dom(step)` and starts no cascade (§3.2, ρO5). World §4.3's `duplicate location` state has no other resolution. **Raw writes:** a cyclic configuration is classified **malformed by audit before any standing or belief evaluation** — assert no reading is invoked on it (§3.3, `Ω_valid`). **Explicitly not the test:** refusing a hand-written cyclic *pair* certifies nothing. Each retraction's content-derived address already includes its target identity, so such a pair fails **identity recomputation** on its own, and a generic "import refused" passes whether or not any acyclicity validation exists. That fixture is circular evidence, and an earlier draft of this row used it. **Negative:** no topological rank is stored anywhere; re-evaluate the same state after admitting records in a different order and assert every identity and `belief_input_digest` is unchanged |
-| **M4** | **Every argument and restriction is a typed referent; resolved non-membership refuses, and an unperformed check stays explicit** | Decode a claim whose argument term **is** in the sort's bound vocabulary with that vocabulary readable → accepted, outcome `member`. **Sabotage:** decode one whose term is **not** in a readable vocabulary → **refused**, nothing minted. **Negative — availability is not membership:** make the vocabulary unreadable and decode the same bad term → **accepted**, outcome `not-available`, and assert the two accepting receipts are distinguishable. **Receipt completeness:** on every accepting decode, assert the receipt carries **exactly one outcome per referent position** — no position missing, none duplicated — plus the **`ResolutionSnapshot` identity** it resolved against. **Static:** assert a bare string cannot occupy an argument slot at all. **Scope:** the five outcomes' mutual distinctness is **D3**'s, as amended by ρA7, not this row's |
+| **M4** | **Every argument and restriction is a typed referent; resolved non-membership refuses, and an unperformed check stays explicit** | Decode a claim whose argument term **is** in the sort's bound vocabulary with that vocabulary readable → accepted, outcome `member`. **Sabotage:** decode one whose term is **not** in a readable vocabulary → **refused**, nothing minted. **Negative — availability is not membership:** make the vocabulary unreadable and decode the same bad term → **accepted**, outcome `not-available`, and assert the two accepting receipts are distinguishable. **Receipt completeness:** on every accepting decode, assert the receipt carries **exactly one outcome per referent position** — no position missing, none duplicated — plus the **`ResolutionSnapshot` identity** it resolved against. **Static:** assert a bare string cannot occupy an argument slot at all. **Snapshot inputs, added 2026-08-06 on a reported defect:** a receipt's outcomes are worth exactly what the snapshot's contents are, so assert the snapshot **refuses what it cannot resolve honestly** — a key that is not a `VocabularyBinding` (matched by value against the sort declarations, so a lookalike matches none and every term under it reports `not-consulted`), and a member that is not a term identifier (which no `Referent` can carry, so `resolve` answers `not-member` about a vocabulary that was handed the term). Assert the member predicate is **the same one `Referent` applies**, in both directions, and that a bare string is refused where a collection of terms is wanted. **Canonical equivalence:** assert a member stored non-canonically is **refused**, that a **decomposed** claim term resolves `member` against the composed member it names, and that the two spellings give one claim identity — membership and `I_claim` must decide under the same equivalence. **Sabotage in both directions**, since each half is silently survivable alone: compare the raw query, and normalize the stored side instead of the query. **Negative, and the one that protects a banked decision:** assert the claim layer does **not** canonicalize — a `Referent` may hold a decomposed term, because M10's `affects-decomposed-referent` row exists to catch an implementation that normalizes at parse time. **Scope:** the five outcomes' mutual distinctness is **D3**'s, as amended by ρA7, not this row's |
 | **M5** | **Qualification participates in claim identity** | Two claims differing **only** in a restriction identifier → different `I_claim`; differing **only** in quantifier tag → different; one carrying a dimension the other omits → different. Then the founding case end to end: mint kernel §4.1's *"in adults"* claim, assess it, "edit" to *"in all humans"*, and assert a **new** identity, the prior assessment still bound to the old one, and a `supersedes` link. **Sabotage:** drop the qualifier map from `π_claim` and assert the founding case **collapses to one identity** — the row's whole point. **Negative:** re-serialize the qualifier map with keys in a different order and assert the identity is **unchanged** |
 | **M6** | **Operators are issued, retired, and never redefined within a declared succession** | A successor contract changing `arity`, `arg_sorts`, `sign_apt`, `layers` or `dimensions` under an existing identifier → **refused at contract load**. A successor **dropping** a retired declaration → refused. A successor **adding** a new operator → accepted; assert existing **claim identities are unchanged**, and assert **consulted belief digests move**, because the contract identity moved and D6 puts it in the digest. Adding is additive for identity and never for belief, and a row claiming "no existing claim affected" without that second arm would be false. **Retirement, both paths:** assert the authoring constructor **cannot select** a retired identifier (statically), and that decode/restore of a historical claim at that identifier **succeeds** against the frozen declaration. **Sabotage:** flip `sign_apt` on a live operator and assert load fails; remove the declared predecessor link and assert the redefinition check is **unable to run** rather than silently passing. **Negative:** a purely editorial change is accepted, moves the contract identity, and needs no new identifier. **Declared limit (DL):** a second contract in the same namespace declaring `genesis` and reusing an identifier under a different schema is **not** caught — assert that it loads, and that the gap is the parallel-genesis case recorded in D §12, not a defect in this row |
 | **M7** | **No second authored operator artifact exists** | Assert operator, dimension and sort declarations exist **only** in profile contracts, and every runtime form is compiled from `ProfileSpec`. **Sabotage:** add a hand-authored operator roster beside the contracts and assert it is **refused or unreachable** — never consulted as a parallel source. **Negative:** a grep for operator names is **not** the test and would fail against a conforming tree. The test is a pair of mutations: change a contract's **semantic schema** — an operator's dimension set, say — and assert the compiled schema changes with **no code change**; change only a **description** and assert the compiled schema is **unchanged** while the contract identity moves. D4 does not cover this — it governs per-kind sources, and a claim schema is not a per-kind artifact |
 | **M8** | **Claim identity is independent of contract release and of compilation** | Bump a consulted contract editorially and assert `I_claim` is **unchanged** while `belief_input_digest` **moves** (§7.4 row 1). Recompile `ProfileSpec` — different merge order, different compiler build — and assert `I_claim` is unchanged and `ProfileSpec`'s identity appears in **neither** `π_claim` nor the consulted set. **Sabotage:** fold the contract release into `π_claim` and assert an ontology release now forks every claim, which is the failure this row forbids. **Negative:** bump an **activated but unconsulted** contract and assert both `I_claim` and the digest are unchanged (§7.4 row 3) |
 | **M9** | **`π_claim`'s shape depends on the claim, never on a contract field** | Project a claim at a **sign-inapt** operator; assert the polarity position is **present**, carrying `sign_inapt_tag`. Assert `inapt` and `unsigned` are **distinct byte sequences in the encoding**, asserted **directly against the base contract** rather than inferred from two claim digests — the two tags necessarily occur under **different operators**, so differing digests would prove only that the operators differ. **Sabotage:** omit the position for sign-inapt operators and assert the digest changes — the defect §7.5 corrects, in which a `sign_apt` edit would re-project stored claims. **Negative:** combined with **M6**, an edit that would re-project a stored claim must be **unreachable**, not merely untried |
-| **M10** | **Two implementations hash a typed claim identically, over every closed tag** | One shared fixture artifact holding a **vector** of minimal claims, chosen so that **every** closed kernel tag appears at least once — each polarity (`positive`, `negative`, `unsigned`, `inapt`), each quantifier, each layer in the base vocabulary — plus one claim exercising multi-slot args, several qualifier dimensions and a non-ASCII referent identifier. Assert byte-identical projections and equal digests in **both** Python and TypeScript for **every** entry, and assert the vector's tag coverage is **complete against the base contract**, so adding a tag to the grammar forces a vector entry rather than silently going untested. **Sabotage:** change one implementation's map-key sort, slot order, or **a single tag's bytes**, and assert the fixture fails — under a one-claim fixture, changing an unused tag would pass. Follows D §6's precedent of exactly one parity fixture per shared encoding |
+| **M10** | **Two implementations hash a typed claim identically, over every closed tag** | One shared fixture artifact holding a **vector** of minimal claims, chosen so that **every** closed kernel tag appears at least once — each polarity (`positive`, `negative`, `unsigned`, `inapt`), each quantifier, each layer in the base vocabulary — plus one claim exercising multi-slot args, several qualifier dimensions and a non-ASCII referent identifier. Assert byte-identical projections and equal digests in **both** Python and TypeScript for **every** entry, and assert the vector's tag coverage is **complete against the base contract**, so adding a tag to the grammar forces a vector entry rather than silently going untested. **Sabotage:** change one implementation's map-key sort, slot order, or **a single tag's bytes**, and assert the fixture fails — under a one-claim fixture, changing an unused tag would pass. Follows D §6's precedent of exactly one parity fixture per shared encoding. **What it cannot witness, recorded 2026-08-06 after finding one:** parity compares the implementations against each other, so a defect *both* share is invisible to it — a forged-contract hole present in both produced identical digests for a claim no contract declares, and this row reported agreement. Provenance is M13's, not this row's |
 | **M11** | **`decodeClaim` is a function of its arguments, and refuses rather than repairs** | Same `⟨WireClaim, ProfileSpec, ResolutionSnapshot⟩` decoded twice, in different processes and different checkouts → **identical** result. Then each ill-formed input in turn — a sign on a sign-inapt operator, wrong arity, an undeclared dimension, an inadmissible layer, a missing required contract — → **`Refused`**, with **nothing minted** in every case. **Sabotage:** make availability ambient rather than a parameter and assert two holders now decode the same bytes differently. **Negative:** a raw-written malformed claim is an **audit finding**, not a silent accept and not a decode failure — the boundary was bypassed, not defeated |
 | **M12** | **An untypeable span mints nothing** | **End to end, which is the only form this row can take.** Present a span no operator fits; assert claim typing **refuses**, and assert the extraction path therefore receives **no proposition identity** and mints **no source-assertion** — the span surfaces as a project-scoped typing-work item instead. **Sabotage:** add a fallback that mints a proposition at a placeholder operator; separately, one that mints a source-assertion against a synthesized proposition identity. Assert both fail. **Negative:** the work item must **not** appear in kernel limitation 1's unassessed queue — different membership condition, different owner (§6.6). **Scope:** this row does **not** assert that a source-assertion naming an unresolved proposition identity is unconstructible in general. World addressing tolerates unresolved references, and forbidding them would be a deliberate amendment to source-assertion resolution, which ρ does not make |
-| **M13** | **`Claim` is opaque, and the only route to one is the validated constructor** | Assert `Claim` cannot be built from ambient data: no public field-wise constructor, no cast or coercion from `WireClaim`, no dict/object-literal path. Assert **no function downstream of the boundary accepts a `WireClaim`** — the wire type is confined to the decode module. **Sabotage:** export a raw constructor, or widen one downstream signature from `Claim` to `WireClaim`, and assert the check fails. **Scope, stated because the first draft overreached:** profile-dependent validity — sign-aptness, arity, argument sorts, permitted dimensions, admissible layers — is **runtime** and belongs to **M11**. Operators arrive through `ProfileSpec`, and no Python or TypeScript implementation can vary a constructor's static signature by a runtime value without a code-generation layer this design does not propose. What survives statically is the consequence that actually matters: the check happens **once**, at one place, and downstream code needs no defensive revalidation |
+| **M13** | **`Claim` is opaque, and the only route to one is the validated constructor** | Assert `Claim` cannot be built from ambient data: no public field-wise constructor, no cast or coercion from `WireClaim`, no dict/object-literal path. Assert **no function downstream of the boundary accepts a `WireClaim`** — the wire type is confined to the decode module. **Sabotage:** export a raw constructor, or widen one downstream signature from `Claim` to `WireClaim`, and assert the check fails. **Scope, stated because the first draft overreached:** profile-dependent validity — sign-aptness, arity, argument sorts, permitted dimensions, admissible layers — is **runtime** and belongs to **M11**. Operators arrive through `ProfileSpec`, and no Python or TypeScript implementation can vary a constructor's static signature by a runtime value without a code-generation layer this design does not propose. What survives statically is the consequence that actually matters: the check happens **once**, at one place, and downstream code needs no defensive revalidation. **Extended 2026-08-06, twice, on building it:** the guarantee is *"a value of this type was checked"*, and it is a **chain** — assert that `π_claim` refuses a claim its validated constructor did not mint, that the constructor refuses a profile the compiler did not return, and that the compiler refuses a contract no parser produced, each by an unforgeable brand rather than by shape. **Sabotage each link separately, and each link's brand against a prototype-only forgery**, since a plain object literal fails `instanceof` too and a test built only from one cannot tell the two checks apart — that vacuous test was written three times here. Assert also that everything a profile or contract holds is immutable **to the leaves**: rewriting one argument sort inside a compiled operator re-types an operator that is otherwise entirely real. **And assert what no brand can reach:** that two *genuine* artifacts which were never typed against one another are refused where they meet — a domain contract parsed under one base contract and compiled under another, which needs no forgery and passes every provenance check there is. This last obligation is **scoped, not universal**: it falls on an artifact whose validity is conditional on a particular upstream artifact *and* which can later be recombined independently, and it is discharged by verifying a recorded dependency **or** by revalidating the relation |
 
 ### 9.1 What M does not cover
 
