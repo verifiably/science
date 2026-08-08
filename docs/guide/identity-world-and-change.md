@@ -1,0 +1,146 @@
+---
+title: Identity, world, and change
+status: living
+created: 2026-08-08
+updated: 2026-08-08
+sources:
+  - ../designs/2026-08-02-substrate-consolidation-design.md
+  - ../designs/2026-08-02-world-addressing-design.md
+  - ../designs/2026-08-03-correction-lifecycle-design.md
+  - ../designs/2026-08-03-world-index-packaging-design.md
+  - ../designs/2026-08-03-tamper-evident-log-design.md
+  - ../designs/2026-08-04-formal-model-and-claim-calculus-design.md
+---
+
+# Identity, world, and change
+
+## TL;DR
+
+Science treats identity, location, human names, and historical continuity as
+different things; corrections add immutable records, indexes derive named views,
+and anchored mutation chains make some removals detectable without pretending
+that history is impossible to destroy.
+
+## Why it matters
+
+A content hash alone cannot say whether two records mean the same thing, where
+one is stored, or whether a corrected record continues an earlier scientific
+object. Likewise, overwriting or deleting a disputed result erases the evidence
+needed to understand later conclusions. The redesign assigns each concern an
+explicit mechanism and makes every answer name the world state against which it
+was computed.
+
+## Key ideas
+
+### There is one world; projects are views
+
+The world is the union of admitted corpora and world-level records. A project
+selects and coordinates part of that world but does not create a separate
+epistemic universe. Cross-corpus questions therefore resolve through an
+explicit world index rather than by searching whichever checkout happens to be
+open.
+
+A corpus has an opaque, durable `corpus_id` and a canonical manifest. Its state
+identity commits to the whole manifest and the sorted identities of its nodes.
+Changing a profile, adding a node, or changing a node identity produces a new
+corpus-state identity; the durable corpus identity remains.
+
+### Identity is not one field
+
+The model keeps five ideas separate:
+
+| Concept | Meaning |
+|---|---|
+| Semantic or content identity | The digest of the kind-specific meaning-bearing basis. |
+| Canonical address | The stored lookup key, `kind:<basis-digest>`. |
+| `uid` continuity | Which historical scientific object this record continues. |
+| Alias | A human-facing, non-unique lookup name. |
+| Location | Where bytes happen to be held. It is identity-inert. |
+
+Every kind declares its own identity basis. Presentation fields, cache state,
+filesystem paths, and aliases do not enter that basis. A genuinely different
+scientific object receives a new identity and an explicit relationship to what
+came before. A correction to identity-bearing metadata can change the canonical
+address while preserving `uid` continuity and deprecating the old address.
+
+### The world index is a named, covered view
+
+The world root holds an authoritative registry for corpus admission and
+terminal status. Derived immutable epochs index an explicit set of corpus
+states and world-level records through four maps:
+
+- canonical address to one record;
+- alias to zero or more records;
+- input record to its producers;
+- target record to its retractions.
+
+An epoch identity commits to its coverage and derived contents. A mutable
+“current epoch” pointer is an operational convenience only: belief and other
+scientific answers must bind to an explicit epoch and return that binding. An
+older epoch may answer only inside its stated coverage and state.
+
+### Correction is additive
+
+Records are immutable. **Supersession** says that a replacement continues or
+updates an earlier object. **Retraction** subtracts the target's standing at
+read time without changing the target. Retractions identify their exact target,
+actor, grounds, and authority; their graph must be acyclic across the local
+corpus and imported world context.
+
+A retraction can itself be countered by another retraction. Readers calculate
+standing from the active graph rather than trusting a mutable status bit. The
+enumerated retraction closure and its digest enter derived answers so that
+changing the visible correction history changes the answer identity.
+
+### Mutation history is detectable relative to observers
+
+Each corpus and the world root has a reserved, hash-linked mutation chain.
+Boundary operations append durable stages:
+
+- `registered` before a transaction is applied;
+- `settled(committed|rolled-back)` when it completes;
+- `intent` before a boundary-mediated destructive attempt.
+
+Log entries retain identities and digests, not copies of deleted bytes. Heads
+are anchored outside their own deletable set: corpus heads can be observed by
+the world registry or an epoch, while the world head needs an external export.
+Verification reports `validated`, `refuted`, `unresolvable`, or `malformed`
+against an explicit observer set.
+
+This is deliberately bounded. A surviving anchor can expose truncation or
+rewriting; destruction of a root and every observer cannot be detected from
+nothing. An entry proves that an operation occurred through the boundary, not
+that the operation was scientifically or administratively authorized.
+
+## How it connects
+
+- [Foundations](foundations.md) defines immutable records, ownership, and the
+  transition/refusal boundary.
+- [Claims and belief](claims-and-belief.md) uses semantic succession, standing,
+  and an explicit world epoch in belief input closure.
+- [Computation and reproducibility](computation-and-reproducibility.md) gives
+  runs event identity and uses the mutation boundary to strengthen chronology.
+- [Contracts and adoption](contracts-and-adoption.md) distinguishes these
+  frozen guarantees from the smaller implemented conformance cut.
+
+## Current state
+
+World addressing, correction, index packaging, and the tamper-evident log are
+designed or banked, not implemented by conformance cut 1. The cut implements
+canonical identity for typed claims and profiles only. Durable transactions,
+world indexing, and mutation logging wait on the corresponding atoms-layer
+capabilities.
+
+## Open edges
+
+See [Identity, world, and change](open-questions.md#identity-world-and-change)
+for unresolved questions about merge continuity, authority, epoch retention,
+anchor placement, and observer loss.
+
+## References
+
+- [World addressing guarantees W1–W13](../designs/2026-08-02-world-addressing-design.md#8-frozen-guarantees)
+- [Correction guarantees C1–C10](../designs/2026-08-03-correction-lifecycle-design.md#9-frozen-guarantees)
+- [World-index guarantees X1–X12](../designs/2026-08-03-world-index-packaging-design.md#10-frozen-guarantees)
+- [Mutation-log guarantees L1–L13](../designs/2026-08-03-tamper-evident-log-design.md#10-frozen-guarantees)
+- [Formal identity functions](../designs/2026-08-04-formal-model-and-claim-calculus-design.md#3-identity-functions)
