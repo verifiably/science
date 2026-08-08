@@ -690,7 +690,8 @@ which table N now also guards reflexively (N2).
   Deferred until such a reader exists.
 - **The first cut.** Distilling the banked designs into `CONTRACT.md` v1 is
   implementation-plan work, as is the executable suite's layout. *(Corrected
-  2026-08-08: this read "the six designs", the count at this document's banking.
+  2026-08-08: this read "the six designs" — the corpus as it stood at this
+  document's banking.
   The cut's scope is whatever the ledger's artifact-7 row inventories — eleven
   tables and 135 rows as of 2026-08-08, D, M and P having arrived since. The
   scope is a live number, so the cut names it by reference and not by count.)*

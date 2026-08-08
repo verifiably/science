@@ -3106,9 +3106,10 @@ check and every reader has a reason to re-validate defensively.
     exactly where there is one, and no wider.
 12. **No domain exists**, and this limitation narrows twice (*updated
     2026-08-08*). It read *"nothing here is implemented, and every mechanism in
-    §6–§9 is unexercised."* Conformance cut 1 landed 2026-08-07 and built the
-    selected arms of **M4, M5, M7, M8, M9, M10, M11 and M13** — the claim
-    grammar, `π_claim`/`tag_claim`, decode, opacity and cross-language parity —
+    §6–§9 is unexercised."* Conformance cut 1 landed 2026-08-07 and built
+    **M4, M7, M9, M10, M11 and M13 whole**, plus the selected arms of **M5, M6
+    and M8** — the claim grammar, `π_claim`/`tag_claim`, decode, opacity and
+    cross-language parity —
     so §6 and §7 are exercised where the cut reached and **M1, M2, M3 and M12
     remain unbuilt** (disposition record §5.2, §5.3). What is unchanged is the
     domain half: the operator contract in §7.1 is still illustrative, its
