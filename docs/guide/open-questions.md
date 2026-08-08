@@ -24,6 +24,12 @@ This page groups the material open edges that remain after later designs closed
 or narrowed earlier questions. It is a navigation aid, not a new docket: follow
 the cited source before deciding or implementing an item.
 
+Two things are deliberately **not** here. A **limitation** — a bound the designs
+state and accept, such as finite witnesses proving reachability rather than
+correctness, or code-lineage independence staying an authored claim — is not a
+design uncertainty and is not listed as one. Neither is **deferred
+implementation**: a guarantee row awaiting code is work, not a question.
+
 ## Foundations
 
 - **Non-empirical knowledge route.** Mathematical, algorithmic,
@@ -52,9 +58,12 @@ the cited source before deciding or implementing an item.
   adjustment sets, modality, comparison, and disjunction remain outside the
   flat fragment. Adjustment placement depends separately on scientific target
   and identification method. ([formal-model questions](../designs/2026-08-04-formal-model-and-claim-calculus-design.md#11-open-questions), [adjustment ruling](../designs/2026-08-05-review-disposition-and-conformance-cut-1.md#8-open-questions))
-- **Vocabulary gaps.** A population vocabulary, term-synonym resolution,
-  general-purpose operator ownership, and the actual layer vocabulary remain
-  unsettled. ([formal-model questions](../designs/2026-08-04-formal-model-and-claim-calculus-design.md#11-open-questions))
+- **Vocabulary gaps.** A population vocabulary, term-synonym resolution, and
+  the namespace and ownership of a general-purpose operator contract remain
+  unsettled. The **layer** set is declared — `contracts/science/CONTRACT.yaml`
+  fixes it and editing it re-identifies every claim — so what is open there is
+  admission to it, under the survey's agreement-exercise-reader rule.
+  ([formal-model questions](../designs/2026-08-04-formal-model-and-claim-calculus-design.md#11-open-questions), [admission rule](../designs/2026-08-07-corpus-survey-and-vocabulary-admission-design.md#4-ruling-admission-by-agreement-and-exercise))
 - **Higher-order records.** Eleven authored mm30 records concern claims,
   analyses, decisions, or the record system. Their re-homing must be settled
   before claim arguments widen from external referents to internal records.
@@ -83,12 +92,6 @@ the cited source before deciding or implementing an item.
 
 ## Computation and reproducibility
 
-- **Defective-run subtraction.** What record retracts a run or its epistemic
-  consequence, and what makes such a retraction eligible when removing a
-  refutation could raise belief? ([computation question](../designs/2026-08-02-computation-reproducibility-design.md#13-open-questions))
-- **Rule and equivalence reach.** How should equivalence instruments be
-  certified beyond finite fixtures, and when does code-lineage independence
-  justify `independent-implementation` scope? ([computation question](../designs/2026-08-02-computation-reproducibility-design.md#13-open-questions))
 - **Artifact lifetime.** Held code, environments, inputs, and outputs accumulate;
   pruning cannot silently destroy verification closure. A disk policy remains
   undesigned. ([computation question](../designs/2026-08-02-computation-reproducibility-design.md#13-open-questions))

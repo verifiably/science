@@ -299,20 +299,6 @@ Two standing constraints on 5b:
     it must type; a proposition that will not type is typing work, not a licensed
     exception.
 
-12. **The contributor guide** — a concise, topic-first companion to this corpus.
-    **Designed 2026-08-08** (`2026-08-08-contributor-guide-design.md`), plan
-    written the same day (`docs/plans/2026-08-08-contributor-guide.md`), and
-    **unbuilt**: `docs/guide/` does not exist yet. It is explanatory and never
-    normative — when a summary and a design disagree, the design wins — and it
-    names **this ledger** as the sole authority for implementation state, with
-    the README explicitly not a second one. Two consequences for the order of
-    work. Its freshness trigger is a rule about *this* file: a commit that banks
-    or amends a design updates the affected guide pages in the same commit, and
-    so does a ledger change that alters implementation state. And its §7 checker
-    is the second corpus-level documentation guard, beside
-    `python/tests/test_designs_corpus.py`; the two should not grow overlapping
-    link checks.
-
 **One prerequisite is recorded here and is deliberately not an item** (typing
 exercise §9). A second corpus that exercises the claim calculus **does not exist
 and cannot be measured into existence** — the survey established that no other
