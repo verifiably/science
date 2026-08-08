@@ -11,8 +11,8 @@ route does not.
 ## 1. Why
 
 Science grew organically. It now carries 151,645 LOC across 595 modules, 907 test
-modules, 64 validation checks, 51 CLI groups, 50 core entity kinds (21 epistemic)
-and 23 relation kinds. It imports neither `atoms` (durable atomic filesystem
+modules, 63 validation check modules registering 89 checks, 51 CLI groups, 50 core
+entity kinds (21 epistemic) and 23 relation kinds. It imports neither `atoms` (durable atomic filesystem
 effects) nor `nodes` (the entity/relation kernel) — both of which name
 Science as their consumer in their own architecture docs.
 
