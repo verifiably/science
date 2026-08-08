@@ -1302,7 +1302,14 @@ The shape propagates rather than being unwrapped at each site:
 one that does not exist.** Nothing in this design retires a route, chooses between two,
 or records that one has been shown wrong — that is the same missing machinery as
 §11.13's retraction, reached from a different direction, and it is handed to
-sub-problem 5 with it. Until then a conflicted dataset certifies nothing, permanently.
+sub-problem 5 with it. Until then a conflicted dataset certifies nothing.
+*(Amended 2026-08-03, `2026-08-03-correction-lifecycle-design.md` §4 and C7: the
+route retirement this paragraph says does not exist now does. The word
+"permanently" stood here and is withdrawn — retiring routes leaves the stored
+basis byte-unchanged and computes the **effective** tag over the survivors, so
+one survivor certifies over that route and zero is `not-certified`. Nothing in
+**this** design retires a route, which is what the paragraph is really about, and
+C1–C10 await implementation.)*
 
 **Why the conflict is kept rather than the merge refused**, which would be simpler and
 was the obvious alternative: refusing leaves two records at one world address, which is
@@ -1565,7 +1572,12 @@ is the same error as digesting the lineage the design finds tidiest instead of t
 lineage aggregation reads (kernel §5.1), one layer up.
 
 > **Requirement handed to sub-problem 5**, where certification and conformance
-> already live (§13). A retraction must be **additive** — a new node, never an edit,
+> already live (§13). **Delivered 2026-08-03**
+> (`2026-08-03-correction-lifecycle-design.md`), with all five clauses below
+> intact and one addition this section did not ask for: the eligibility contract
+> is **procedural** — named target, attribution, typed reason, recorded grounds,
+> symmetry — because nothing certifies a retraction true, so the system makes one
+> expensive to issue invisibly instead. A retraction must be **additive** — a new node, never an edit,
 > for kernel §3.3's reason; **attributed and rationale-bearing**, since like every
 > other judgment here it is a claim rather than a computation; a **belief input**, so
 > kernel §5.1's digest must cover it or a retracted and an unretracted corpus would
