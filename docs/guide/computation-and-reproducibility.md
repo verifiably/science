@@ -133,8 +133,8 @@ anchor questions.
 
 ## References
 
-- [Run closure and frozen guarantees R1–R23](../designs/2026-08-02-computation-reproducibility-design.md#11-frozen-guarantees)
-- [Normative run, verification, and assessment contracts](../designs/2026-08-03-normative-contract-design.md#7-run-construction)
-- [Kernel reproduction rule G5](../designs/2026-08-02-epistemic-kernel-design.md#521-reproduction-means-a-separate-execution)
-- [World identity and occurrence tokens](../designs/2026-08-02-world-addressing-design.md#45-occurrence-identity)
-- [Pre-mutation intent and anchoring](../designs/2026-08-03-tamper-evident-log-design.md#6-pre-mutation-registration)
+- [Run closure and guarantees R1–R23](../designs/2026-08-02-computation-reproducibility-design.md#10-guarantees-and-how-each-is-tested)
+- [Normative rule binding](../designs/2026-08-03-normative-contract-design.md#6-rule-binding--one-decision-both-halves)
+- [Kernel reproduction gate and G5](../designs/2026-08-02-epistemic-kernel-design.md#3-reproduction-is-an-eligibility-gate-not-a-ceiling)
+- [World identity bases for runs](../designs/2026-08-02-world-addressing-design.md#42-the-basis-ruled-per-kind)
+- [Mutation registration and intent entries](../designs/2026-08-03-tamper-evident-log-design.md#3-the-chain)

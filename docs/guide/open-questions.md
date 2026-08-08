@@ -1,0 +1,113 @@
+---
+title: Open questions
+status: living
+created: 2026-08-08
+updated: 2026-08-08
+sources:
+  - ../designs/2026-08-02-epistemic-kernel-design.md
+  - ../designs/2026-08-02-substrate-consolidation-design.md
+  - ../designs/2026-08-02-world-addressing-design.md
+  - ../designs/2026-08-02-computation-reproducibility-design.md
+  - ../designs/2026-08-03-correction-lifecycle-design.md
+  - ../designs/2026-08-03-world-index-packaging-design.md
+  - ../designs/2026-08-03-normative-contract-design.md
+  - ../designs/2026-08-03-tamper-evident-log-design.md
+  - ../designs/2026-08-04-domain-extension-boundary-design.md
+  - ../designs/2026-08-04-formal-model-and-claim-calculus-design.md
+  - ../designs/2026-08-05-belief-policy-design.md
+  - ../designs/2026-08-05-review-disposition-and-conformance-cut-1.md
+---
+
+# Open questions
+
+This page groups the material open edges that remain after later designs closed
+or narrowed earlier questions. It is a navigation aid, not a new docket: follow
+the cited source before deciding or implementing an item.
+
+## Foundations
+
+- **Non-empirical knowledge route.** Mathematical, algorithmic,
+  model-conditional, proof, derivation, and simulation claims cannot satisfy the
+  empirical `observes` route. Do they get a second eligibility and answer model,
+  or remain outside computed belief? ([kernel question](../designs/2026-08-02-epistemic-kernel-design.md#11-open-questions))
+- **Empirical-observation facet.** What demonstrates an acquisition boundary,
+  rather than merely asserting that a dataset is observational? This contract is
+  the hinge of empirical eligibility. ([kernel question](../designs/2026-08-02-epistemic-kernel-design.md#11-open-questions))
+- **Kernel-adjacent structures.** Are inquiries, patch definitions, structural
+  chains, and coverage searches new kinds or derived views over existing kinds?
+  ([kernel question](../designs/2026-08-02-epistemic-kernel-design.md#11-open-questions))
+- **Package and durability seam.** Where is the Science profile distributed,
+  and how should Python-only `atoms` capabilities compose with portable
+  Python/TypeScript `nodes` without breaking the layering? ([substrate question](../designs/2026-08-02-substrate-consolidation-design.md#12-open-questions))
+
+## Claims and belief
+
+- **Binding-check lifecycle.** If vocabulary membership is checked separately,
+  where is the receipt stored, how is it discovered or corrected, and may an
+  unchecked claim be assessed? ([ρO1](../designs/2026-08-04-formal-model-and-claim-calculus-design.md#11-open-questions))
+- **Entailment and estimand match.** Can evidence bear across related claims,
+  and is estimand compatibility derived from claim entailment or governed by an
+  independent typed relation? ([ρO3](../designs/2026-08-04-formal-model-and-claim-calculus-design.md#11-open-questions))
+- **Qualifier grammar.** Quantitative restrictions, multiple restrictions,
+  adjustment sets, modality, comparison, and disjunction remain outside the
+  flat fragment. Adjustment placement depends separately on scientific target
+  and identification method. ([formal-model questions](../designs/2026-08-04-formal-model-and-claim-calculus-design.md#11-open-questions), [adjustment ruling](../designs/2026-08-05-review-disposition-and-conformance-cut-1.md#8-open-questions))
+- **Vocabulary gaps.** A population vocabulary, term-synonym resolution,
+  general-purpose operator ownership, and the actual layer vocabulary remain
+  unsettled. ([formal-model questions](../designs/2026-08-04-formal-model-and-claim-calculus-design.md#11-open-questions))
+- **Higher-order records.** Eleven authored mm30 records concern claims,
+  analyses, decisions, or the record system. Their re-homing must be settled
+  before claim arguments widen from external referents to internal records.
+  ([review classification](../designs/2026-08-05-review-disposition-and-conformance-cut-1.md#24-the-eleven-k-records--a-classification-and-a-moratorium))
+- **Weighted belief.** Estimand typing needs an owner before study-design or
+  precision weights can be compared; a successor must also decide whether any
+  constants are global or domain-scoped. ([belief questions](../designs/2026-08-05-belief-policy-design.md#9-open-questions))
+
+## Identity, world, and change
+
+- **Source identifier equivalence.** When a preprint DOI and journal DOI name
+  one work, is the identity basis a set of identifiers or a primary identifier
+  with aliases? ([world question](../designs/2026-08-02-world-addressing-design.md#10-open-questions))
+- **Merge versus exact retraction targets.** Rewriting all inbound references
+  during merge conflicts with immutable retraction identities and can cascade
+  through counter-retractions. Which guarantee yields? ([world question](../designs/2026-08-02-world-addressing-design.md#10-open-questions))
+- **Authority and coordination.** The designs assume one writer and no access
+  control; multi-writer semantics, authority to retract, and propagation of
+  cross-project blockers still need concrete rules. ([review writer question](../designs/2026-08-05-review-disposition-and-conformance-cut-1.md#8-open-questions))
+- **Storage and retention.** Map/log serialization, epoch retention, redirect
+  growth, and garbage collection need measurements before format or pruning
+  rules are chosen. ([index questions](../designs/2026-08-03-world-index-packaging-design.md#12-open-questions), [log questions](../designs/2026-08-03-tamper-evident-log-design.md#12-open-questions))
+- **Observer distribution.** Which independent holders keep world-log anchors,
+  what continuity they attest, and what happens when the last observer is lost
+  wait on a second installation. ([log question](../designs/2026-08-03-tamper-evident-log-design.md#12-open-questions))
+
+## Computation and reproducibility
+
+- **Defective-run subtraction.** What record retracts a run or its epistemic
+  consequence, and what makes such a retraction eligible when removing a
+  refutation could raise belief? ([computation question](../designs/2026-08-02-computation-reproducibility-design.md#13-open-questions))
+- **Rule and equivalence reach.** How should equivalence instruments be
+  certified beyond finite fixtures, and when does code-lineage independence
+  justify `independent-implementation` scope? ([computation question](../designs/2026-08-02-computation-reproducibility-design.md#13-open-questions))
+- **Artifact lifetime.** Held code, environments, inputs, and outputs accumulate;
+  pruning cannot silently destroy verification closure. A disk policy remains
+  undesigned. ([computation question](../designs/2026-08-02-computation-reproducibility-design.md#13-open-questions))
+- **Multi-product workflows.** Dataset-production v1 emits one product. A later
+  shape needs to say whether one differing product fails the whole replay or
+  creates separately verifiable results. ([computation question](../designs/2026-08-02-computation-reproducibility-design.md#13-open-questions))
+
+## Contracts and adoption
+
+- **Admission ramp.** How does a predecessor corpus with no content-addressed
+  inputs reach a useful admitted set without weakening held-ness or inventing a
+  compatibility route? ([review question](../designs/2026-08-05-review-disposition-and-conformance-cut-1.md#8-open-questions))
+- **Contract governance.** Facet-breaking changes, compatibility ranges,
+  parallel `genesis` contracts in one namespace, domain distribution, and
+  Python/TypeScript parity policy remain open. ([domain questions](../designs/2026-08-04-domain-extension-boundary-design.md#12-open-questions))
+- **Normative artifact shape.** Whether a contract cut becomes a world node and
+  how legacy checks pass the adoption gate remain decisions for the first full
+  contract cut. ([normative-contract questions](../designs/2026-08-03-normative-contract-design.md#11-open-questions))
+- **Next conformance expansion.** A later cut should widen only when a designed
+  boundary can exercise complete assertion arms; likely candidates are run
+  capture, world persistence, or belief, each with different prerequisites.
+  ([cut-1 deferrals](../designs/2026-08-05-review-disposition-and-conformance-cut-1.md#53-step-3--fully-deferred-rows-grouped-by-untouched-subsystem))

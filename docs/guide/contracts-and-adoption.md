@@ -1,0 +1,138 @@
+---
+title: Contracts and adoption
+status: living
+created: 2026-08-08
+updated: 2026-08-08
+sources:
+  - ../designs/2026-08-03-normative-contract-design.md
+  - ../designs/2026-08-03-redesign-adoption-ledger.md
+  - ../designs/2026-08-05-review-disposition-and-conformance-cut-1.md
+  - ../designs/2026-08-07-corpus-survey-and-vocabulary-admission-design.md
+  - ../designs/2026-08-07-multi-corpus-typing-exercise.md
+---
+
+# Contracts and adoption
+
+## TL;DR
+
+Frozen guarantee identifiers become executable, mutation-tested obligations in
+immutable contract cuts; adoption proceeds in dependency-ordered slices, and the
+living ledger—not this guide—is the authority for what has actually landed.
+
+## Why it matters
+
+A large design can look complete while its strongest claims remain untested, or
+a partial implementation can quietly redefine success around what was easiest
+to build. Science counters both risks: guarantees keep stable names, every
+conformance check must demonstrate how it fails, and each implementation slice
+is selected prospectively at a fully designed boundary.
+
+## Key ideas
+
+### Designs explain; contract cuts will govern
+
+The design corpus records rationale, alternatives, amendments, and declared
+limits. The normative contract design specifies a smaller immutable artifact
+containing kinds and identities, operations and outcomes, rule bindings,
+conformance oracles, and change policy. Once the first normative contract cut
+exists, drift is resolved in the contract's favor; earlier designs remain the
+history explaining why the rule exists.
+
+A contract identity hashes its exact canonical normative bytes. Any byte change
+mints a successor that names its predecessor. A readable version is only an
+alias. Frozen oracle identifiers—such as G3, W8a, R12, M10, and P4—are never
+renumbered, so reviews and tests can point to the obligation more precisely than
+to a mutable section number.
+
+### Rules bind meaning to the code that ran
+
+A rule identity is `(symbol, fixture-set identity)`: fixtures are the normative
+definition of behavior. A held implementation that passes those fixtures is the
+operational half. The exact pair of rule identity and implementation content
+identity enters every derived result, because finite fixtures cannot guarantee
+that two implementations agree on every unseen input.
+
+Interpretation, equivalence, and scope-derivation instruments may also receive
+an immutable certification. Certification recomputes witnesses showing that a
+specific binding both conforms and reaches all required outcomes. Missing or
+retracted certification does not block use; it caps downstream scope at
+`not-certified`, making the limit visible to admission rules.
+
+### Every oracle must be falsifiable
+
+The guarantee tables are intended to become a conformance suite. Each oracle
+row names a source mutation that should make its exact check fail. A check that
+cannot fail, no longer reaches the mutated code, points to an uncollectable test,
+or was already failing before mutation is malformed contract content—not a
+successful guard.
+
+The first implementation made this discipline executable with an N2 harness.
+It applies each declared mutation to an isolated copy and distinguishes sound
+arms from `vacuous`, `stale`, and `uncollected` ones. Ten of its first forty arms
+were defective, demonstrating why a green ordinary suite alone is not enough.
+
+### Adoption follows legal partial states
+
+The [adoption ledger](../designs/2026-08-03-redesign-adoption-ledger.md#3-order-of-work)
+orders work by actual dependencies. Designs can bank before their dependencies
+are implemented; an implementation slice may cross only the boundaries it can
+exercise and must leave the rest explicitly deferred. The clean-start ruling
+also forbids mechanical predecessor migration and compatibility machinery:
+records are reproduced through the new typed boundaries.
+
+Conformance cut 1 was frozen before implementation. It selected eleven of 126
+then-banked guarantee rows—six wholly and five only at named assertion arms—and
+classified the other 115 by the subsystem that would unblock them. Its stop
+rule was the last fully designed seam: typed claim construction, projection,
+identity, decode, and cross-language parity, with no persistence boundary and no
+belief computation.
+
+### Measurements constrain the next slice
+
+The eight-corpus survey and three-corpus typing exercise are measurements, not
+conformance oracles. They showed that fitted vocabulary can type mm30's 307
+structured propositions, but only one surveyed corpus meaningfully exercises
+the calculus; no surveyed record exercises qualifiers. They also prevented
+readerless or unexercised vocabulary from entering the base profile.
+
+Measurements therefore narrow claims and reveal prerequisites. They do not
+change implementation status, expand a frozen cut after the fact, or turn a
+fitted result into independent validation.
+
+## How it connects
+
+- [Foundations](foundations.md) defines the ownership and transition boundaries
+  to which contracts give executable form.
+- [Claims and belief](claims-and-belief.md) explains M1–M13, P1–P9, and the
+  corpus measurements summarized here.
+- [Identity, world, and change](identity-world-and-change.md) supplies immutable
+  contract succession, standing, epochs, and audit inputs.
+- [Computation and reproducibility](computation-and-reproducibility.md) uses
+  exact rule bindings and instrument certification in runs and verifications.
+
+## Current state
+
+The ledger records conformance cut 1 and the multi-corpus typing exercise as
+landed work. The normative-contract design is banked, but a complete normative
+contract cut, instrument certification, persistence, run capture, world index,
+mutation log, and belief evaluator remain outside cut 1. Consult the ledger for
+the current state rather than carrying these sentences into a status report.
+
+The contributor guide has no ledger artifact of its own. That is deliberate:
+it documents the system, does not implement a system boundary, and no adoption
+item waits on it.
+
+## Open edges
+
+See [Contracts and adoption](open-questions.md#contracts-and-adoption) for the
+writer model, admission ramp, contract/version governance, instrument limits,
+and selection questions that shape later cuts.
+
+## References
+
+- [Normative contract guarantees N1–N10](../designs/2026-08-03-normative-contract-design.md#9-guarantees)
+- [Contract versioning and frozen oracle identifiers](../designs/2026-08-03-normative-contract-design.md#4-versioning--what-mints-what)
+- [Adoption order and landed artifacts](../designs/2026-08-03-redesign-adoption-ledger.md#3-order-of-work)
+- [Prospectively frozen conformance cut 1](../designs/2026-08-05-review-disposition-and-conformance-cut-1.md#5-conformance-cut-1--frozen-prospectively)
+- [Vocabulary admission decision](../designs/2026-08-07-corpus-survey-and-vocabulary-admission-design.md#4-ruling-admission-by-agreement-and-exercise)
+- [Typing exercise results and limits](../designs/2026-08-07-multi-corpus-typing-exercise.md#3-results)

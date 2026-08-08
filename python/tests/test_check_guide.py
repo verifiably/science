@@ -6,6 +6,8 @@ from pathlib import Path
 
 import pytest
 
+from conftest import REPO_ROOT
+
 _SPEC = importlib.util.spec_from_file_location(
     "check_guide", Path(__file__).parents[1] / "tools" / "check_guide.py"
 )
@@ -78,3 +80,7 @@ def test_sources_resolve_and_local_links_are_relative_and_inline(tmp_path: Path)
     assert any("missing source" in error for error in errors)
     assert any("absolute link" in error for error in errors)
     assert any("reference-style links are unsupported" in error for error in errors)
+
+
+def test_repository_guide_is_valid() -> None:
+    assert checker.check(REPO_ROOT / "docs" / "guide") == []

@@ -64,6 +64,5 @@ source wins.
 
 A commit that banks or amends a design, or changes implementation state in the
 ledger, must update the affected guide pages and their `updated` dates in the
-same commit. Keep links inline (`[label](target)`), not reference-style, so
-`python/tools/check_guide.py` can inspect every local target.
-
+same commit. Use inline Markdown links rather than reference-style definitions
+so `python/tools/check_guide.py` can inspect every local target.

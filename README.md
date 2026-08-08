@@ -11,11 +11,15 @@ where the design work below was done and reviewed. Nothing here imports it, and
 records are reproduced under this system rather than migrated into it; the
 reasoning is recorded in the adoption ledger's §0.
 
+Start with the concise [contributor guide](docs/guide/README.md) for the system's
+key ideas, reading paths, glossary, and open questions. Use the design corpus
+below for rationale and frozen guarantees.
+
 ## The designs
 
-Sixteen documents in `docs/designs/`: the redesigns banked 2026-08-02 through
-2026-08-07, their adoption ledger and measurements, and the contributor-guide
-design. Read them in this order:
+Sixteen documents in `docs/designs/`: the banked redesigns, review disposition,
+adoption ledger, measurements, and contributor-guide design written 2026-08-02
+through 2026-08-08. Read them in this order:
 
 | document | what it rules |
 |---|---|
