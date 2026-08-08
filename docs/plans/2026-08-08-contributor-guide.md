@@ -4,7 +4,7 @@
 
 **Goal:** Build a concise, topic-first `docs/guide/` that introduces new contributors to the redesigned Science system while preserving precise routes to its authoritative designs.
 
-**Architecture:** Eight hand-authored Markdown pages synthesize the fifteen pre-guide sources by topic. YAML front matter records freshness and source coverage; a small Python checker validates metadata and relative link targets without generating documentation.
+**Architecture:** Eight hand-authored Markdown pages synthesize the fifteen pre-guide sources by topic. YAML front matter records freshness and source coverage; a small Python checker validates metadata, source paths, and relative link targets without generating documentation.
 
 **Tech Stack:** Markdown, Python 3.11 standard library, existing PyYAML dependency, pytest
 
@@ -17,14 +17,15 @@
 - A banking, amendment, or implementation-state commit must update affected guide pages and `updated` dates in the same commit.
 - Add no dependency and no generated synchronization mechanism.
 - Add no ledger entry: the guide is explanatory documentation with no system artifact, adoption dependency, or implementation state of its own.
+- Use inline Markdown links only; reference-style links are unsupported so every target remains visible to the checker.
 - Keep repository-relative paths in docs and code.
 
 ## File Structure
 
 | File | Responsibility |
 |---|---|
-| `python/tools/check_guide.py` | Validate guide front matter and relative Markdown link targets. |
-| `python/tests/test_check_guide.py` | Guard valid pages plus malformed metadata and broken-link failures. |
+| `python/tools/check_guide.py` | Validate guide front matter, source paths, and relative Markdown link targets. |
+| `python/tests/test_check_guide.py` | Guard metadata and path failures, then keep the real guide under pytest. |
 | `docs/guide/README.md` | Newcomer entry point, conceptual map, and reading paths; links to the ledger for status. |
 | `docs/guide/foundations.md` | Epistemic invariant, kernel, boundaries, profiles, and record categories. |
 | `docs/guide/claims-and-belief.md` | Claims, assessments, eligibility, belief, vocabulary, and corpus measurements. |
@@ -58,6 +59,8 @@ import importlib.util
 import sys
 from pathlib import Path
 
+import pytest
+
 _SPEC = importlib.util.spec_from_file_location(
     "check_guide", Path(__file__).parents[1] / "tools" / "check_guide.py"
 )
@@ -67,13 +70,14 @@ sys.modules[_SPEC.name] = checker
 _SPEC.loader.exec_module(checker)
 
 
-def _page(body: str) -> str:
+def _page(body: str, sources: str = "  - ../source.md") -> str:
     return f"""---
 title: Test
 status: living
 created: 2026-08-08
 updated: 2026-08-08
-sources: []
+sources:
+{sources}
 ---
 {body}
 """
@@ -94,13 +98,47 @@ def test_missing_metadata_and_broken_link_are_reported(tmp_path: Path) -> None:
     errors = checker.check(guide)
     assert any("YAML front matter" in error for error in errors)
     assert any("missing.md" in error for error in errors)
+
+
+@pytest.mark.parametrize(
+    ("frontmatter", "message"),
+    [
+        ("title: Test\nstatus: living\ncreated: 2026-08-08\nupdated: 2026-08-08\nsources: [", "malformed"),
+        ("title: Test\nstatus: living\ncreated: 2026-08-08\nupdated: 2026-08-08", "missing metadata: sources"),
+        (
+            "title: Test\nstatus: living\ncreated: 2026-08-08\nupdated: 2026-08-08\nsources: no",
+            "sources must be a non-empty list",
+        ),
+        (
+            "title: Test\nstatus: living\ncreated: 2026-08-08\nupdated: 2026-08-08\nsources: []",
+            "sources must be a non-empty list",
+        ),
+    ],
+)
+def test_metadata_failures_are_specific(tmp_path: Path, frontmatter: str, message: str) -> None:
+    guide = tmp_path / "guide"
+    guide.mkdir()
+    (guide / "README.md").write_text(f"---\n{frontmatter}\n---\n")
+    assert any(message in error for error in checker.check(guide))
+
+
+def test_sources_resolve_and_local_links_are_relative_and_inline(tmp_path: Path) -> None:
+    guide = tmp_path / "guide"
+    guide.mkdir()
+    (guide / "README.md").write_text(
+        _page("[absolute](/tmp/source.md)\n[reference][source]", "  - ../missing.md")
+    )
+    errors = checker.check(guide)
+    assert any("missing source" in error for error in errors)
+    assert any("absolute link" in error for error in errors)
+    assert any("reference-style links are unsupported" in error for error in errors)
 ```
 
 - [ ] **Step 2: Run the test and verify the tool is absent**
 
 Run: `cd python && uv run pytest tests/test_check_guide.py -q`
 
-Expected: collection fails because `tools/check_guide.py` does not exist.
+Expected: collection fails with `FileNotFoundError` because `tools/check_guide.py` does not exist.
 
 - [ ] **Step 3: Implement the minimal checker**
 
@@ -118,6 +156,7 @@ import yaml
 
 REQUIRED = frozenset({"title", "status", "created", "updated", "sources"})
 LINK = re.compile(r"(?<!!)\[[^]]+]\(([^)]+)\)")
+REFERENCE_LINK = re.compile(r"(?<!!)\[[^]]+]\[[^]]*]")
 DEFAULT_GUIDE = Path(__file__).resolve().parents[2] / "docs" / "guide"
 
 
@@ -128,32 +167,46 @@ def check(root: Path) -> list[str]:
     for path in sorted(root.glob("*.md")):
         text = path.read_text(encoding="utf-8")
         body = text
+        metadata = None
         if not text.startswith("---\n"):
             errors.append(f"{path}: missing YAML front matter")
         else:
             parts = text.split("---", 2)
-            body = parts[2] if len(parts) == 3 else ""
-            try:
-                metadata = yaml.safe_load(parts[1]) if len(parts) == 3 else None
-            except yaml.YAMLError as exc:
-                errors.append(f"{path}: malformed YAML front matter: {exc}")
-                metadata = None
-            if not isinstance(metadata, dict):
-                errors.append(f"{path}: YAML front matter is not a mapping")
+            if len(parts) != 3:
+                errors.append(f"{path}: unterminated YAML front matter")
             else:
-                missing = sorted(REQUIRED - metadata.keys())
-                if missing:
-                    errors.append(f"{path}: missing metadata: {', '.join(missing)}")
-                if not isinstance(metadata.get("sources"), list):
-                    errors.append(f"{path}: sources must be a list")
+                body = parts[2]
+                try:
+                    metadata = yaml.safe_load(parts[1])
+                except yaml.YAMLError as exc:
+                    errors.append(f"{path}: malformed YAML front matter: {exc}")
+        if metadata is not None and not isinstance(metadata, dict):
+            errors.append(f"{path}: YAML front matter is not a mapping")
+        elif isinstance(metadata, dict):
+            missing = sorted(REQUIRED - metadata.keys())
+            if missing:
+                errors.append(f"{path}: missing metadata: {', '.join(missing)}")
+            if "sources" in metadata:
+                sources = metadata["sources"]
+                if not isinstance(sources, list) or not sources:
+                    errors.append(f"{path}: sources must be a non-empty list")
+                else:
+                    for source in sources:
+                        if not isinstance(source, str) or not source or source.startswith("/"):
+                            errors.append(f"{path}: source must be a relative path: {source!r}")
+                        elif not (path.parent / source).exists():
+                            errors.append(f"{path}: missing source: {source}")
         for raw in LINK.findall(body):
             target = raw.split()[0].strip("<>")
             parsed = urlsplit(target)
-            if parsed.scheme or parsed.netloc or not parsed.path or parsed.path.startswith("/"):
+            if parsed.scheme or parsed.netloc or not parsed.path:
                 continue
-            resolved = path.parent / unquote(parsed.path)
-            if not resolved.exists():
+            if parsed.path.startswith("/"):
+                errors.append(f"{path}: absolute link is not allowed: {target}")
+            elif not (path.parent / unquote(parsed.path)).exists():
                 errors.append(f"{path}: missing link target: {target}")
+        if REFERENCE_LINK.search(body):
+            errors.append(f"{path}: reference-style links are unsupported")
     return errors
 
 
@@ -174,7 +227,7 @@ if __name__ == "__main__":
 
 Run: `cd python && uv run pytest tests/test_check_guide.py -q`
 
-Expected: `2 passed`.
+Expected: all focused checker tests pass.
 
 - [ ] **Step 5: Run style checks**
 
@@ -186,7 +239,7 @@ Expected: no errors.
 
 ```bash
 git add python/tools/check_guide.py python/tests/test_check_guide.py
-git commit -m "test: add contributor guide checks"
+git commit -m "feat: add contributor guide checks"
 ```
 
 ### Task 2: Entry point and foundations
@@ -203,17 +256,17 @@ git commit -m "test: add contributor guide checks"
 
 - [ ] **Step 1: Write `docs/guide/README.md`**
 
-Include YAML metadata, the non-authoritative rule, a six-node conceptual map, the newcomer path through the five topic pages, direct-reference links to the glossary and open questions, and a status link to adoption-ledger §3. Do not copy an implementation tally into the page.
+Include YAML metadata, the non-authoritative rule, a six-node conceptual map, the newcomer path through the five topic pages, direct-reference links to the glossary and open questions, and a status link to adoption-ledger §3. Do not copy an implementation tally into the page. Add a maintenance note requiring source banking, amendment, and implementation-state commits to update affected guide pages and `updated` dates in the same commit; require inline Markdown links so the checker can inspect every target.
 
 - [ ] **Step 2: Write `docs/guide/foundations.md`**
 
 Lead with G1's invariant. Summarize held artifacts, records versus computed views, the ten kernel kinds, the `nodes`/`science`/`domains`/`practices`/`atoms` ownership split, profile compilation, and the clean-start rule. Preserve the distinction between mechanism and policy.
 
-- [ ] **Step 3: Check the two pages**
+- [ ] **Step 3: Check the partial guide diff**
 
-Run: `cd python && uv run python tools/check_guide.py`
+Run: `git diff --check`
 
-Expected: no output and exit `0`.
+Expected: no whitespace errors. The whole-guide checker is deliberately deferred until every linked page exists in Task 5.
 
 - [ ] **Step 4: Commit**
 
@@ -236,13 +289,13 @@ Explain the typed claim structure (`Operator`, arguments, sorts, layer, polarity
 
 - [ ] **Step 2: Report measurements within their bounds**
 
-State that the survey covered eight predecessor corpora and 6,860 records; the typing exercise typed 307 structured mm30 propositions, found 25 sort refusals under modal sorts, reached no claims in the two other typed corpora, and observed no qualifiers. Explain that fitted results are not independent validation and that `mechanistic_narrative` was not admitted.
+State that the survey covered eight predecessor corpora and 6,860 records. Separate the typing configurations: the fitted unsorted plan typed 307 of 307 structured mm30 propositions; the modal-sorted plan typed 282 of 307 and refused 25 with `ArgumentSortMismatch`. State that the modal sorting rule was computed rather than independently chosen, a different rule can change the 25, and the 25 survives the fitting objection without becoming independent validation. Also report that the two other typed corpora recorded no claims, no surveyed corpus exercised qualifiers, and `mechanistic_narrative` was not admitted.
 
-- [ ] **Step 3: Check and commit**
+- [ ] **Step 3: Check the partial guide diff and commit**
 
-Run: `cd python && uv run python tools/check_guide.py`
+Run: `git diff --check`
 
-Expected: no output and exit `0`.
+Expected: no whitespace errors. The whole-guide checker remains deferred until Task 5.
 
 ```bash
 git add docs/guide/claims-and-belief.md
@@ -269,11 +322,11 @@ Explain content identity versus world address, aliases, corpus identity, the wor
 
 Explain the analysis spec as preregistration, complete run closure, assessment and dataset-production run shapes, captured code/environment/input identities, imported workflow DAGs, replay eligibility, equivalence rules, derived verification scope, and verification as an artifact rather than mutable state. Preserve replay-eligibility-versus-epistemic-verdict and definition-versus-invocation distinctions.
 
-- [ ] **Step 3: Check and commit**
+- [ ] **Step 3: Check the partial guide diff and commit**
 
-Run: `cd python && uv run python tools/check_guide.py`
+Run: `git diff --check`
 
-Expected: no output and exit `0`.
+Expected: no whitespace errors. The whole-guide checker remains deferred until Task 5.
 
 ```bash
 git add docs/guide/identity-world-and-change.md docs/guide/computation-and-reproducibility.md
@@ -287,6 +340,7 @@ git commit -m "docs: summarize identity and reproducibility"
 - Create: `docs/guide/contracts-and-adoption.md`
 - Create: `docs/guide/open-questions.md`
 - Create: `docs/guide/glossary.md`
+- Modify: `python/tests/test_check_guide.py`
 - Modify: `README.md`
 
 **Source mapping:**
@@ -311,14 +365,31 @@ Alphabetize short definitions for at least: address, alias, analysis spec, ancho
 
 Add cross-links among every guide page. Add a root README link to `docs/guide/README.md`. Replace the sentence classifying all non-ledger documents as redesigns/measurements with wording that explicitly includes the review-disposition record.
 
-- [ ] **Step 5: Check and commit**
+- [ ] **Step 5: Put the real guide under pytest**
+
+Add the import alongside the file's existing imports and the test at the end of
+`python/tests/test_check_guide.py`:
+
+```python
+from conftest import REPO_ROOT
+
+
+def test_repository_guide_is_valid() -> None:
+    assert checker.check(REPO_ROOT / "docs" / "guide") == []
+```
+
+Run: `cd python && uv run pytest tests/test_check_guide.py -q`
+
+Expected: all checker tests, including the real repository guide, pass.
+
+- [ ] **Step 6: Check and commit**
 
 Run: `cd python && uv run python tools/check_guide.py`
 
 Expected: no output and exit `0`.
 
 ```bash
-git add README.md docs/guide
+git add README.md docs/guide python/tests/test_check_guide.py
 git commit -m "docs: complete the contributor guide"
 ```
 
@@ -340,7 +411,7 @@ Search for unresolved placeholders, duplicate glossary headings, implementation 
 
 Run: `cd python && uv run pytest tests/test_check_guide.py -q`
 
-Expected: `2 passed`.
+Expected: all checker tests pass.
 
 Run: `cd python && uv run python tools/check_guide.py`
 
