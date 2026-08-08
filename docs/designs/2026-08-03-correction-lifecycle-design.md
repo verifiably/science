@@ -378,6 +378,14 @@ certified by mutation, per the estimator doctrine — every check must be able t
    receipt. Widening coverage and re-enumerating are the remedies; nothing here
    discovers what no enumeration was asked, or able, to see.
 
+   **The temporal half is settled** (2026-08-03, `2026-08-03-world-index-packaging-design.md`
+   §5.4): an epoch is an explicit, identity-stamped build, every answer it gives
+   carries the epoch's packaging identity and coverage declaration, and a retraction
+   minted after that build is invisible until a later one. The remedy is a rebuild,
+   and the honesty is stated there as well as here — the **bound** is visible, the
+   **actual** staleness is not, so no consumer may read a recent epoch as a fresh
+   world. Nothing about the spatial half changes.
+
 ## 9. Open questions
 
 - **The `source`/`dataset` instantiation.** An upstream withdrawal grounds retractions

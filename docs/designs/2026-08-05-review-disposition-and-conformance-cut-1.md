@@ -21,7 +21,7 @@ or mis-measured its own case.
 
 | claim | verdict | measured |
 |---|---|---|
-| the corpus is specification with no execution | **true of `science` only** | 11,953 lines across eleven designs + README; no source, no test, no build manifest. `nodes` is released (0.1.1, dual-language, parity-tested) and `atoms` is real through A5b, so the *lower* end is not spec-only |
+| the corpus is specification with no execution | **true of `science` only**, and true until 2026-08-07 | 11,953 lines across eleven designs + README; no source, no test, no build manifest. `nodes` is released (0.1.1, dual-language, parity-tested) and `atoms` is real through A5b, so the *lower* end is not spec-only. *(The verdict expired by being acted on: cut 1's slice landed 2026-08-07 and `science` now carries source, tests and a build manifest. `atoms` is through A6 as of 2026-08-08. The row is kept at its date — it is the measurement that motivated the slice.)* |
 | 126 guarantee rows across ten frozen tables | **exact** | G 10, S 9, W 16, R 23, C 10, X 12, N 10, L 13, D 10, M 13 = 126 |
 | mm30 propositions are bimodal, most machine-generated | **understated** | 307 of 334 (92%) are three-token stubs, not "five in six" |
 | the stub predicate set is a small closed enum | **true** | eight terms: `affects` 224, `associates_with` 50, `induces_state` 12, `regulates` 9, `is_proxy_for` 5, `part_of` 4, `subtype_of` 2, `binds` 1 |
@@ -348,8 +348,9 @@ Fairness constraints on the comparison:
   entries, and no carrier for the registry log-head the packaging design
   reserved. Those are the properties the comparison has to defeat, not the hash
   chain itself.
-- Every L row is already gated on unbuilt `atoms` A6–A8, so nothing is unblocked
-  by deciding this sooner, and nothing is lost by deciding it later.
+- Every L row is already gated on unbuilt `atoms` A7–A8 — one stage wider when
+  this was written, since A6 landed 2026-08-08 — so nothing is unblocked by
+  deciding this sooner, and nothing is lost by deciding it later.
 
 ### 4.3 Normative contract — parity machinery versus what survives one implementation
 
@@ -570,9 +571,9 @@ split, because its rows do **not** share a trigger.
 
 | group | rows | n | unblocked by |
 |---|---|---|---|
-| tamper log | L1–L13 | 13 | `atoms` A6–A8 (and §4.2) |
+| tamper log | L1–L13 | 13 | `atoms` A7–A8 (and §4.2) |
 | computation & runs | R1–R23 | 23 | the run boundary |
-| world addressing | W1–W16 | 16 | the world index (and §4.1) |
+| world addressing | W1–W13, W5a, W8a–b | 16 | the world index (and §4.1) |
 | packaging | X1–X12 | 12 | world export |
 | correction lifecycle | C1–C10 | 10 | retraction records |
 | normative contract — **contract cut** | N1, N3 | 2 | the **first contract cut**: succession retaining ids, and rule identity = (symbol, fixture-set identity). Not a second implementation |
@@ -662,6 +663,15 @@ travel with them.
 6. **§5's cut is drawn against a slice that does not exist.** If the slice's
    boundaries turn out differently, the cut is amended under §5.4 — and every
    such amendment is evidence that prospective cutting is harder than it looks.
+
+   **Resolved 2026-08-07, and the answer needs its own caveat.** The slice was
+   built and merged (`f81d3a3`) and the cut required **no** §5.4 amendment: the
+   eleven rows selected prospectively are the eleven the slice exercises, six
+   whole and five in part. That is one clean run on a slice whose boundary the
+   same author drew — weaker evidence for prospective cutting than a clean run
+   looks, for exactly the reason limitation 8 gives. What building it *did* find
+   is recorded in §5's dated subsections and its N2 account, never by editing the
+   selection.
 7. **The arm splits in §5.2 are an interpretation of the banked rows, not a
    property of them.** No banked table enumerates its assertion arms formally,
    so where one arm ends and the next begins is this document's reading of a

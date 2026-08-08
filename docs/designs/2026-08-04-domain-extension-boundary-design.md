@@ -761,9 +761,18 @@ what must not break it.
 4. **Domain contract authorship is unverified.** That a contract's schema
    faithfully describes its field is authored, not checked — the same class as
    kernel limitation 8's acquisition boundary.
-5. **No domain exists yet.** Every mechanism here is unexercised. The first
-   real domain is expected to move details, and the boundary rulings (§2) are
-   what this design commits to — not the file layout.
+5. **No domain exists yet**, and the limitation narrows rather than holding
+   whole (*updated 2026-08-08*). Cut 1 and the typing exercise now exercise
+   contract load, `genesis`/`successor` lineage, operator and sort declaration,
+   and vocabulary binding — through `fixtures/contracts/testing.yaml` and the
+   four plans under `tools/vocabularies/`. Every one of those is **deliberately
+   not a real domain**: shipping `domains/biology/DOMAIN.yaml` is a design act,
+   and §7.1's own biology example would be refused at load because no population
+   vocabulary has been selected (§11, open). So what stays unexercised is
+   **ownership, succession and activation** — a contract with an owner, a
+   corpus manifest pinning it, and a second version of it. The first real domain
+   is expected to move details, and the boundary rulings (§2) are what this
+   design commits to — not the file layout.
 6. **The domain/practice line is a judgment at the margin.** The vocabulary
    test (§3.5) is mechanical, but whether a body of expertise *should* carry a
    vocabulary is not, and misfiling is cheap to fix only before consumers pin

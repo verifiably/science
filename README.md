@@ -53,9 +53,12 @@ computes no belief, which is where the disposition record's §5.5 stop rule puts
 its edge. Nothing beyond that edge is built.
 
 The guarantee tables are the acceptance criteria — each row must be a failing
-test before it is a passing one. Cut 1 selects **11 of the 126 rows**, arm by
-arm, and was frozen *before* any code existed so that a row which fails is a
-failure rather than a redefinition.
+test before it is a passing one. There are **135 rows** across **eleven frozen
+tables** (G, S, W, R, C, X, N, L, D, M, P). Cut 1 selects **11 of the 126 rows**
+across the ten tables that existed when it was drawn — the belief policy's P1–P9
+banked the same day and are acceptance criteria for a later slice — and it was
+frozen *before* any code existed so that a row which fails is a failure rather
+than a redefinition.
 
 ```
 python/     the implementation (substrate §11 puts the composition root here)
