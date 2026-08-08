@@ -1348,8 +1348,8 @@ This document is sub-problem 1. Each of the following gets its own design.
 4. **Computation & reproducibility** — content-addressing primary; workflow DAGs
    imported, not authored.
 5. **Guarantees & verification** — a versioned normative contract with
-   conformance oracles (the `nodes` `STANDARD.md` §11–§12 shape) in place of 64
-   checks.
+   conformance oracles (the `nodes` `STANDARD.md` §11–§12 shape) in place of the
+   predecessor's 63 check modules.
 6. **Agentic surface** — human+agent and autonomous curation; the ratchet
    (`t101`).
 7. **Salvage** — pipelines, notes, bibliographies and results survive; all

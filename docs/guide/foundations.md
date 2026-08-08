@@ -132,7 +132,9 @@ computation remain beyond that slice.
 
 See [Foundations](open-questions.md#foundations) in the consolidated question
 list for the unresolved non-empirical route, the empirical-observation facet
-contract, the kernel-adjacent structures, and the package and durability seam.
+contract, the kernel-adjacent structures, the package and durability seam,
+which layer adopts `atoms` first, and why pre-run fixation is not
+pre-registration.
 
 ## References
 

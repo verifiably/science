@@ -134,8 +134,9 @@ capabilities.
 ## Open edges
 
 See [Identity, world, and change](open-questions.md#identity-world-and-change)
-for unresolved questions about merge continuity, authority, epoch retention,
-anchor placement, and observer loss.
+for unresolved questions about source-identifier equivalence, merge continuity,
+authority, epoch retention, observer loss, whether a dataset's own standing is
+retractable, and what chain verification costs at scale.
 
 ## References
 

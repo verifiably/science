@@ -6,6 +6,7 @@ updated: 2026-08-08
 sources:
   - ../designs/2026-08-08-contributor-guide-design.md
   - ../designs/2026-08-03-redesign-adoption-ledger.md
+  - ../designs/2026-08-02-epistemic-kernel-design.md
 ---
 
 # Science contributor guide
@@ -59,6 +60,17 @@ The guide deliberately does not copy a changing implementation tally. The
 is the sole authority for what is built, what remains design-only, and what
 waits on another artifact. If this guide disagrees with a source design, the
 source wins.
+
+One boundary is worth knowing before you read further, because no page below
+covers it. The redesign was cut into seven sub-problems, and **two of them have
+no design yet**: the *agentic surface* — how humans and agents actually curate,
+including audit liveness and the divergence table — and *salvage*, which asks
+how the predecessor's pipelines, notes, and results are re-situated rather than
+migrated. The first is the corpus's largest structural deferral. Everything the
+five topic pages describe sits below those two, so a question that sounds like
+"but how would anyone use this day to day" is usually landing in the gap rather
+than in something the guide failed to explain.
+([kernel §10](../designs/2026-08-02-epistemic-kernel-design.md#10-not-in-scope--the-remaining-six-sub-problems))
 
 ## Maintaining the guide
 

@@ -45,6 +45,17 @@ implementation**: a guarantee row awaiting code is work, not a question.
 - **Package and durability seam.** Where is the Science profile distributed,
   and how should Python-only `atoms` capabilities compose with portable
   Python/TypeScript `nodes` without breaking the layering? ([substrate question](../designs/2026-08-02-substrate-consolidation-design.md#12-open-questions))
+- **Which layer adopts `atoms` first.** Science waiting for `atoms` A7–A8 is one
+  route; `nodes` adopting `atoms` is the other, and it buys durability without
+  Science depending on `atoms` directly. But `atoms` is Python-only and
+  platform-specific while `nodes` holds normative Python/TypeScript parity, so
+  that route either breaks parity or forces a second `atoms`.
+  ([substrate question](../designs/2026-08-02-substrate-consolidation-design.md#12-open-questions))
+- **Pre-run fixation is not pre-registration.** Science can guarantee that a
+  spec was frozen before its run. Calling that *pre-registered* additionally
+  claims it preceded data access, which needs external evidence. The two must
+  not merge in the user-facing vocabulary.
+  ([kernel question](../designs/2026-08-02-epistemic-kernel-design.md#11-open-questions))
 
 ## Claims and belief
 
@@ -71,6 +82,15 @@ implementation**: a guarantee row awaiting code is work, not a question.
 - **Weighted belief.** Estimand typing needs an owner before study-design or
   precision weights can be compared; a successor must also decide whether any
   constants are global or domain-scoped. ([belief questions](../designs/2026-08-05-belief-policy-design.md#9-open-questions))
+- **Losing the last held copy.** Nothing records the destruction of a final held
+  artifact. The recorded-loss repair was withdrawn as premature and stays
+  withdrawn, so the gap is a stated residue rather than an oversight.
+  ([ρO2](../designs/2026-08-04-formal-model-and-claim-calculus-design.md#11-open-questions))
+- **Whether the nine † labels are adopted.** The formal model froze none of
+  them. Adopting commits the banked tables to a vocabulary; declining leaves the
+  classifications as annotations. Cheap to decide now and expensive once the
+  labels reach oracle prose.
+  ([formal-model questions](../designs/2026-08-04-formal-model-and-claim-calculus-design.md#11-open-questions))
 
 ## Identity, world, and change
 
@@ -89,6 +109,15 @@ implementation**: a guarantee row awaiting code is work, not a question.
 - **Observer distribution.** Which independent holders keep world-log anchors,
   what continuity they attest, and what happens when the last observer is lost
   wait on a second installation. ([log question](../designs/2026-08-03-tamper-evident-log-design.md#12-open-questions))
+- **Whether a dataset's own standing is retractable.** An upstream withdrawal
+  already grounds retractions of dependent assessments. Whether a dataset's
+  empirical-observation standing can be retracted directly is deferred until a
+  concrete case forces it — the eligible-target test admits it with no new
+  mechanism if so. ([correction question](../designs/2026-08-03-correction-lifecycle-design.md#9-open-questions))
+- **Chain verification cost.** Full-timeline replay at mm30 scale sits behind
+  the ledger's measurement gate. A Merkle overlay is the known upgrade path and
+  is deliberately not built on speculation.
+  ([log question](../designs/2026-08-03-tamper-evident-log-design.md#12-open-questions))
 
 ## Computation and reproducibility
 
