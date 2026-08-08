@@ -26,14 +26,25 @@ design disagree, the design wins and the guide should be corrected.
 Every page carries YAML metadata with:
 
 - `title`
-- `status`, initially `evolving`
+- `status`, initially `living`
 - `created`, initially `2026-08-08`
 - `updated`, initially `2026-08-08`
 - `sources`, listing the design documents summarized by that page
 
+YAML front matter is a deliberate departure from the bold-key metadata used by
+`docs/designs/`: the guide needs a parseable source list and freshness dates.
+`living` has the ledger's meaning — the page changes as its source decisions
+and implementation state change — and is not a design-maturity claim.
+
 Guide pages distinguish **design status** from **implementation status**. A
-banked or approved design is not described as implemented unless the repository
-or adoption ledger says it is.
+banked or approved design is not described as implemented unless the adoption
+ledger says it is. The adoption ledger is the authority for
+implementation state; the repository README is not a second authority.
+
+A commit that banks or amends a design updates its affected guide pages and
+their `updated` dates in the same commit. A ledger change that alters
+implementation state does the same. This is the guide's freshness trigger;
+later cleanup is not the normal update path.
 
 ## 3. Organization
 
@@ -41,12 +52,12 @@ or adoption ledger says it is.
 
 | Page | Responsibility |
 |---|---|
-| `README.md` | Introduce Science, show the conceptual map, report overall implementation status, and provide newcomer and reference reading paths. |
+| `README.md` | Introduce Science, show the conceptual map, link to the ledger for implementation status, and provide newcomer and reference reading paths. |
 | `foundations.md` | Explain the epistemic invariant, kernel, ownership boundaries, profiles, and main record categories. |
-| `claims-and-belief.md` | Explain typed claims, assessments, evidence eligibility, belief policy, and domain vocabulary. |
-| `identity-world-and-change.md` | Explain semantic identity, addresses, corpora, the world index, epochs, retraction, and supersession. |
+| `claims-and-belief.md` | Explain typed claims, assessments, evidence eligibility, belief policy, domain vocabulary, and the corpus measurements that tested vocabulary admission and claim typing. |
+| `identity-world-and-change.md` | Explain semantic identity, addresses, corpora, the world index, epochs, retraction, supersession, and the mutation log's pre-mutation registration, chains, anchors, and detectable-removal guarantee. |
 | `computation-and-reproducibility.md` | Explain analysis specs, run closures, replay eligibility, equivalence, and verification. |
-| `contracts-and-adoption.md` | Explain normative contracts, guarantees, conformance, review evidence, implementation cuts, and adoption order. |
+| `contracts-and-adoption.md` | Explain normative contracts, guarantees, conformance, review evidence, implementation cuts, and adoption order; link to living sources for current detail rather than duplicating them. |
 | `open-questions.md` | Consolidate unresolved questions without silently promoting limitations or deferred implementation into design uncertainty. |
 | `glossary.md` | Provide one canonical, alphabetized set of short definitions linked to the relevant topic pages and sources. |
 
@@ -68,8 +79,8 @@ content:
 7. **References** — precise design-document sections and other authoritative
    project sources.
 
-The index and glossary use structures suited to navigation rather than forcing
-this template.
+The index, glossary, and consolidated open-question page use structures suited
+to navigation rather than forcing this template.
 
 ## 5. Editorial rules
 
@@ -80,7 +91,9 @@ this template.
 - Preserve important distinctions such as record versus view, occurrence
   versus authorization, replay eligibility versus epistemic verdict, and
   design status versus implementation status.
-- Link directly to the relevant design section whenever a concise summary
+- Prefer frozen guarantee identifiers such as G3, W8a, R12, M10, and P1 over
+  section numbers. Link to a section when no frozen identifier exists.
+- Link directly to the relevant design passage whenever a concise summary
   necessarily drops qualifications.
 - Carry forward settled amendments rather than repeating superseded wording.
 - Report measurements with their stated scope and limitations.
@@ -90,16 +103,23 @@ this template.
 
 Each of the fifteen redesign documents that predate this guide design will
 appear in at least one guide page's `sources` metadata or reference list. The
-adoption ledger and repository README govern implementation-state claims. Later
-design documents can be incorporated by updating the affected pages and their
-`updated` dates; no generated synchronization mechanism is needed.
+adoption ledger alone governs implementation-state claims. Because the ledger
+and the review-disposition record change as work lands, the guide links to them
+for current detail and summarizes only stable decisions. Later sources follow
+the same update trigger; no generated synchronization mechanism is needed.
 
 ## 7. Verification
 
-The finished guide is checked for:
+One small repository checker validates the two mechanical rules:
 
-- valid relative Markdown links;
-- required metadata on every page;
+- every guide page has well-formed YAML metadata with the required keys;
+- every relative Markdown link resolves.
+
+The checker uses the project's existing Python and YAML dependencies and has a
+focused regression test. It does not generate or rewrite documentation.
+
+Editorial review checks the remaining rules:
+
 - coverage of every existing design document;
 - consistent glossary definitions and internal links;
 - no unresolved placeholders;
