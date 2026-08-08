@@ -26,6 +26,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).parents[2]
 DESIGNS = ROOT / "docs" / "designs"
+GUIDE = ROOT / "docs" / "guide"
 README = ROOT / "README.md"
 
 #: `atoms`' Plan A sub-plans, in delivery order (its authority design §14).
@@ -83,6 +84,9 @@ _ASCII_RANGE = re.compile(rf"(?<![ρ\w])({_STAGE})-({_STAGE})(?![\w])")
 _ROW = re.compile(r"^\|\s*\*{0,2}([GSWRCXNLDMP][0-9]+[a-z]?)\*{0,2}\s*\|", re.MULTILINE)
 _LINK = re.compile(r"\]\(([^)#\s]+\.md)[^)]*\)")
 _BACKTICKED_DOC = re.compile(r"`(20\d\d-\d\d-\d\d-[a-z0-9-]+\.md)`")
+#: The same name unquoted. The guide cites designs in links and `sources` lists,
+#: never in backticks, so the backticked form finds nothing there.
+_DESIGN_FILENAME = re.compile(r"(20\d\d-\d\d-\d\d-[a-z0-9-]+\.md)")
 
 #: Documents this corpus cites that another repository owns. Declared rather than
 #: pattern-matched, so a typo in a science filename cannot hide behind "external",
@@ -92,6 +96,12 @@ EXTERNAL_DOCUMENTS = {
     # §6 for the reserved-path contract. Not on `nodes` main as of 2026-08-08.
     "2026-08-03-nodes-under-the-system-redesign-design.md",
 }
+
+
+#: A label naming a span of one table's rows, as `W1–W13` or `M1–M13`. Both
+#: endpoints must be rows that exist: the disposition record once labelled the
+#: world group `W1–W16`, and there has never been a `W14`.
+_ROW_RANGE = re.compile(r"\b([GSWRCXNLDMP])([0-9]+[a-z]?)–\1?([0-9]+[a-z]?)\b")
 
 
 def design_documents() -> list[Path]:
@@ -198,6 +208,37 @@ def test_the_readme_lists_every_design_document() -> None:
         f"README design table out of step: missing {sorted(present - listed)}, "
         f"stale {sorted(listed - present)}"
     )
+
+
+def test_every_guarantee_range_names_rows_that_exist() -> None:
+    """A range label is read as a count, so an endpoint that is not a row misleads.
+
+    Checked across the designs *and* the guide, because the guide's whole job is
+    to quote these labels at a reader who will not open the table.
+    """
+    bad: list[str] = []
+    for path in design_documents() + sorted(GUIDE.glob("*.md")):
+        for line_no, line in enumerate(_text(path).splitlines(), start=1):
+            for prefix, start, end in _ROW_RANGE.findall(line):
+                rows = GUARANTEE_TABLES[prefix]
+                label = f"{prefix}{start}–{prefix}{end}"
+                for endpoint in (f"{prefix}{start}", f"{prefix}{end}"):
+                    if endpoint not in rows:
+                        bad.append(f"{path.name}:{line_no}: {label} — no {endpoint}")
+    assert not bad, "guarantee ranges naming rows that do not exist:\n  " + "\n  ".join(bad)
+
+
+def test_the_guide_cites_every_design() -> None:
+    """The contributor guide's §6 rule: no design goes unmentioned.
+
+    Banking a design is the moment this can rot, and the rot is silent — the new
+    document is simply absent from the one place a newcomer looks.
+    """
+    cited: set[str] = set()
+    for page in sorted(GUIDE.glob("*.md")):
+        cited |= set(_DESIGN_FILENAME.findall(_text(page)))
+    missing = sorted({p.name for p in design_documents()} - cited)
+    assert not missing, "no guide page cites: " + ", ".join(missing)
 
 
 def test_every_cross_reference_resolves() -> None:

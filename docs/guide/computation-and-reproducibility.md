@@ -128,8 +128,9 @@ run construction, verification, or assessment admission.
 ## Open edges
 
 See [Computation and reproducibility](open-questions.md#computation-and-reproducibility)
-for unresolved environment, workflow, nondeterminism, comparison, and external
-anchor questions.
+for the unresolved questions about artifact lifetime, multi-product workflows,
+publishing a belief-input snapshot, and where the scope-derivation rule is
+versioned.
 
 ## References
 

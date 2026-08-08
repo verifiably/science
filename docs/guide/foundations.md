@@ -131,7 +131,8 @@ computation remain beyond that slice.
 ## Open edges
 
 See [Foundations](open-questions.md#foundations) in the consolidated question
-list for unresolved package, scale, and boundary questions.
+list for the unresolved non-empirical route, the empirical-observation facet
+contract, the kernel-adjacent structures, and the package and durability seam.
 
 ## References
 
