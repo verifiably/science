@@ -42,11 +42,11 @@ decomposition rulings that follow from it.
 
 | # | artifact | owner | waits on it | state |
 |---|---|---|---|---|
-| 1 | **World index** — address/alias/producers maps + producer snapshot, publishable and consumable without the corpora it names | world §5; packaging, write ownership, and staleness are open questions (world §10) | `not-present` resolution, receipt checkability, merge inbound hygiene, `corpus_id` uniqueness refusal, §9 anchor carriage (repro §9 amendment 2026-08-03), and retraction discovery — a fourth derived map, target identity → retraction addresses (5a §4) | **Design banked 2026-08-03** (`2026-08-03-world-index-packaging-design.md`; world §5/W8a/W13/lim. 9/§10 amended in place); build awaits implementation — X1–X12, with X2 gated on `atoms` A6–A8 |
+| 1 | **World index** — address/alias/producers maps + producer snapshot, publishable and consumable without the corpora it names | world §5; packaging, write ownership, and staleness are open questions (world §10) | `not-present` resolution, receipt checkability, merge inbound hygiene, `corpus_id` uniqueness refusal, §9 anchor carriage (repro §9 amendment 2026-08-03), and retraction discovery — a fourth derived map, target identity → retraction addresses (5a §4) | **Design banked 2026-08-03** (`2026-08-03-world-index-packaging-design.md`; world §5/W8a/W13/lim. 9/§10 amended in place); build awaits implementation — X1–X12, with X2 gated on `atoms` A7–A8 |
 | 2 | **Corpus manifests / `corpus_id` minting** | world §5 | world index build; exact corpus-state identity | Per-corpus explicit adoption act; the one place a duplicate can be created is copying a stamped corpus — refused at index build |
 | 3 | **`nodes` contract deltas** — shipped, versioned §11.1 projection; reserved-path contract; recoverable construction; digest-id hazards | `nodes` `2026-08-03-nodes-under-the-system-redesign-design.md` | node content identity and corpus-state identity (world §5, amendment 2026-08-03); manifest safety; audits over damaged corpora | Direction approved; blocks profile *implementation*, not design |
-| 4 | **`atoms` A6–A8** — coherent capture, effect/recovery execution, exerciser | `atoms` authority design §14 | durable multi-file commit; retirement of the single-writer/no-durability profile claims (substrate §7) | Nothing in banked designs waits on them; adoption route is science's composition root (`atoms` §12.2) |
-| 5 | **Tamper-evident mutation log** (repro §9) | `2026-08-03-tamper-evident-log-design.md` — `atoms` owns registration (the A6–A8 executor path), science owns anchor carriage and verification | closing kernel §8.7's four recorded-mutation consequences and strengthening the fifth — chronology — for boundary-mediated executions (G2a/R12's out-of-band negative remains) | **Design banked 2026-08-03** (per-root chains with settlement lifecycle, epoch-cadence anchors + explicit anchor act, surviving-observer bound; kernel §8.7/G2a, comp §3.3/R12/§9, packaging §3/§4/§5/§5.1/§5.2/X9/§12/lim. 1, and `atoms` §15 amended in the banking commit); consumes artifact 1 as anchor carrier; the four-of-five closure lands at implementation (L1–L13) |
+| 4 | **`atoms` A7–A8** — effect/recovery execution, exerciser | `atoms` authority design §14 | durable multi-file commit; retirement of the single-writer/no-durability profile claims (substrate §7) | **A6 — coherent capture — landed 2026-08-08**, so this row lost its first stage; A6 writes only engine-owned paths under `metadata_root` and mutates no project path, so nothing gated on durability moves. **This row is the corpus's single authority for `atoms` implementation state** — a design naming a stage is naming this row, and `python/tests/test_designs_corpus.py` fails any document that still gates on a landed stage. Nothing in banked designs waits on A7–A8; adoption route is science's composition root (`atoms` §12.2) |
+| 5 | **Tamper-evident mutation log** (repro §9) | `2026-08-03-tamper-evident-log-design.md` — `atoms` owns registration (the A7–A8 executor path), science owns anchor carriage and verification | closing kernel §8.7's four recorded-mutation consequences and strengthening the fifth — chronology — for boundary-mediated executions (G2a/R12's out-of-band negative remains) | **Design banked 2026-08-03** (per-root chains with settlement lifecycle, epoch-cadence anchors + explicit anchor act, surviving-observer bound; kernel §8.7/G2a, comp §3.3/R12/§9, packaging §3/§4/§5/§5.1/§5.2/X9/§12/lim. 1, and `atoms` §15 amended in the banking commit); consumes artifact 1 as anchor carrier; the four-of-five closure lands at implementation (L1–L13) |
 | 6 | **Retraction + correction lifecycle** | sub-problem 5a (§2) | four banked limitations that currently say the wrong answer stays computable (comp §5.2/§11.13/§13, world lim. 11) | **Banked 2026-08-03** (`2026-08-03-correction-lifecycle-design.md`; kernel §3.3/G8/§8.7 amended in the banking commit); C1–C10 await implementation |
 | 7 | **Normative contract + conformance oracles + instrument certification** | sub-problem 5b (§2) | disposition of the 63 legacy check modules (principle in 5b §8); homes for G1, G2a–G2c, G3–G8; S1–S8 (S1a); W1–W13 (W5a, W8a–b); R1–R23; C1–C10; X1–X12; N1–N10; L1–L13; D1–D10; M1–M13; P1–P9 (N, L and D added 2026-08-04 — L having been omitted at the §9 banking, and N because 5b §5 puts every oracle table in the suite; **M added 2026-08-05**, on the obligation that design recorded in its own header before drafting, so a third table would not arrive late; **P added 2026-08-05** with the belief policy, under `P` because `B` is the formal model's belief reading) | **Design banked 2026-08-03** (`2026-08-03-normative-contract-design.md`; tenth kind `instrument-certification`, rule-binding recipe member, certification-enumeration receipt — kernel, world §3/§4.2/§5/W8a, comp §4.2/§4.2a/§7.3/§7.3b–c/R18/R19, 5a §3/§4/C10/§9, packaging §5/§5.2/§7/X9/X10/X12 amended in the banking commit); the first contract cut, the executable suite, and N1–N10 await implementation |
 | 8 | **Domain extension boundary** — where domain-specific material lives across `nodes`, `science`, and downstream domains | `2026-08-04-domain-extension-boundary-design.md` | consistent organization of domain material; the first domain pack; the predicate-vocabulary design | **Design banked 2026-08-04** (interpretation as facet conjunction with an explicit promotion trigger; exact vocabulary bindings; `ProfileSpec` as the sole compiled profile with a zero `nodes` delta; manifest `profile` block inside corpus-state identity; consulted profile contracts in G3 — world §5/W13/lim. 9, packaging §6, kernel §5.1, substrate §6.1/§12, and this ledger amended in the banking commit); D1–D10 await implementation |
@@ -117,10 +117,11 @@ Two standing constraints on 5b:
    their own clocks; the design track's next open item is the §9 log design.
 4. **`nodes` contract deltas** land on their own clock; required before profile
    implementation, not before design.
-5. **`atoms` A6–A8** proceed independently; composition-root adoption follows.
+5. **`atoms` A7–A8** proceed independently; composition-root adoption follows.
+   A6 landed 2026-08-08 (artifact 4).
 6. **§9 log design** after the world-index packaging design settles the anchor.
    **Banked 2026-08-03** (`2026-08-03-tamper-evident-log-design.md`);
-   L1–L13 await implementation with A6–A8.
+   L1–L13 await implementation with A7–A8.
 7. **Domain extension boundary** — where domain-specific material lives, and how
    `science` is organized so a later decomposition into packs is a move rather
    than a rewrite. **Banked 2026-08-04**
@@ -183,7 +184,7 @@ Two standing constraints on 5b:
 
     Three things this item is **not**. It is not the world index, a corpus, a
     run, or a belief — §5.1 puts every persistence boundary outside it, so it
-    waits on neither `atoms` A6–A8 nor the `nodes` contract deltas (items 4 and
+    waits on neither `atoms` A7–A8 nor the `nodes` contract deltas (items 4 and
     5), and it can be built and tested standing alone. It is not `KindSpec`
     compilation — **D4 is fully deferred**, and only the claim-schema half of
     `ProfileSpec` is in scope. And it is not a second implementation in
@@ -277,7 +278,7 @@ Two standing constraints on 5b:
     exactly where a plausible relation gets invented for a single record. The
     disposition record's §5.5 stop rule is inherited unchanged: no belief
     computed, no persistence boundary crossed, and a typing that would need either
-    is recorded as *blocked on A6–A8* rather than worked around.
+    is recorded as *blocked on A7–A8* rather than worked around.
 
     **The pass ran and admitted nothing** (typing exercise §5). `predicate` is
     not a base-profile question at all — operators are domain-issued without
@@ -297,6 +298,16 @@ Two standing constraints on 5b:
     conforming, with no profile variant and no activation flag. If a claim exists
     it must type; a proposition that will not type is typing work, not a licensed
     exception.
+
+**One prerequisite is recorded here and is deliberately not an item** (typing
+exercise §9). A second corpus that exercises the claim calculus **does not exist
+and cannot be measured into existence** — the survey established that no other
+surveyed corpus has a claim vocabulary to measure, and item 11 confirmed it with
+counts. It has to be **authored**, which is corpus work rather than design or
+implementation work, and until someone does it the disposition record's
+limitation 3 stands: every claim-calculus figure is bound to the mm30 authored
+set and to nothing else. Recorded so that the absence is a stated position and
+not an oversight.
 
 ## 4. Invariants and gates to pin when their layer lands
 

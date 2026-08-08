@@ -11,8 +11,8 @@ route does not.
 ## 1. Why
 
 Science grew organically. It now carries 151,645 LOC across 595 modules, 907 test
-modules, 64 validation checks, 51 CLI groups, 50 core entity kinds (21 epistemic)
-and 23 relation kinds. It imports neither `atoms` (durable atomic filesystem
+modules, 63 validation check modules registering 89 checks, 51 CLI groups, 50 core
+entity kinds (21 epistemic) and 23 relation kinds. It imports neither `atoms` (durable atomic filesystem
 effects) nor `nodes` (the entity/relation kernel) — both of which name
 Science as their consumer in their own architecture docs.
 
@@ -174,10 +174,11 @@ the discarded attempt never existed durably.
 Strengthening it to the full claim requires every attempt to be registered
 durably *before* execution, in an append-only sequence the author cannot rewrite.
 `atoms` — a write-ahead journaling engine — is the natural home for such a
-registry, but its effect-execution stages (A6–A8) remain unbuilt (as of
-2026-08-02 it prepares durable transaction records under a recovery lease
-without yet mutating project paths), so this is an upgrade path and not a
-present capability. `atoms`' authority design §15 now records the obligation —
+registry, but its effect-execution stages (A7–A8) remain unbuilt (*updated
+2026-08-08*: A6, coherent capture, has since landed, and it writes only
+engine-owned paths — the engine prepares durable transaction records and
+observes the surface they will act on, and still mutates no project path), so
+this is an upgrade path and not a present capability. `atoms`' authority design §15 now records the obligation —
 including that its recovery journal alone is not the registry, since rolled-back
 records are durable but their removal is not yet detectable. Recorded here so
 that a later document does not quietly assume the stronger guarantee.
@@ -1325,7 +1326,20 @@ ordinary terms.
 
 ## 10. Not in scope — the remaining six sub-problems
 
-This document is sub-problem 1. Each of the following gets its own design:
+This document is sub-problem 1. Each of the following gets its own design.
+
+> **Where they stand** (*added 2026-08-08; the ledger is the authority, this is a
+> pointer*). Sub-problems 2, 3 and 4 banked 2026-08-02, and 5 banked 2026-08-03 —
+> split into **5a**, the correction lifecycle, and **5b**, the normative contract
+> and its oracles, in that order and for the reasons the ledger's §2 records.
+> **Sub-problems 6 and 7 are undesigned**, and 6 — the agentic surface, carrying
+> audit liveness and the divergence table — is the corpus's largest structural
+> deferral (disposition record, open question 5). **Five later designs have no
+> number in this list at all** and carry a guarantee table each — world-index
+> packaging (X), the mutation log (L), the domain-extension boundary (D), the
+> formal model and claim calculus (M), and the belief policy (P). Six numbered
+> sub-problems plus those five is where the eleven frozen tables come from; the
+> list below was never the whole roadmap.
 
 2. **Substrate consolidation** — Science as a `nodes` profile over `atoms`.
 3. **World & addressing** — one addressable space; project = view. `h00` already
@@ -1334,8 +1348,8 @@ This document is sub-problem 1. Each of the following gets its own design:
 4. **Computation & reproducibility** — content-addressing primary; workflow DAGs
    imported, not authored.
 5. **Guarantees & verification** — a versioned normative contract with
-   conformance oracles (the `nodes` `STANDARD.md` §11–§12 shape) in place of 64
-   checks.
+   conformance oracles (the `nodes` `STANDARD.md` §11–§12 shape) in place of the
+   predecessor's 63 check modules.
 6. **Agentic surface** — human+agent and autonomous curation; the ratchet
    (`t101`).
 7. **Salvage** — pipelines, notes, bibliographies and results survive; all

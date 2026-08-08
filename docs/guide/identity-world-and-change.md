@@ -134,13 +134,14 @@ capabilities.
 ## Open edges
 
 See [Identity, world, and change](open-questions.md#identity-world-and-change)
-for unresolved questions about merge continuity, authority, epoch retention,
-anchor placement, and observer loss.
+for unresolved questions about source-identifier equivalence, merge continuity,
+authority, epoch retention, observer loss, whether a dataset's own standing is
+retractable, and what chain verification costs at scale.
 
 ## References
 
 - [World addressing guarantees W1–W13](../designs/2026-08-02-world-addressing-design.md#7-guarantees-and-how-each-is-tested)
 - [Correction guarantees C1–C10](../designs/2026-08-03-correction-lifecycle-design.md#7-guarantees)
-- [World-index guarantees X1–X12](../designs/2026-08-03-world-index-packaging-design.md#10-frozen-guarantees)
-- [Mutation-log guarantees L1–L13](../designs/2026-08-03-tamper-evident-log-design.md#10-frozen-guarantees)
+- [World-index guarantees X1–X12](../designs/2026-08-03-world-index-packaging-design.md#10-guarantees)
+- [Mutation-log guarantees L1–L13](../designs/2026-08-03-tamper-evident-log-design.md#10-guarantees)
 - [Per-kind world identity bases](../designs/2026-08-02-world-addressing-design.md#42-the-basis-ruled-per-kind)

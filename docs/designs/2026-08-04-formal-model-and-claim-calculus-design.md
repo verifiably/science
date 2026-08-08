@@ -1065,7 +1065,7 @@ them, and the gap is exactly as wide as that omission predicts.
 | **CA†** construction authority | each value has a **closed set of permitted constructors** — authored, derived, compiled, or boundary-minted — and no other path constructs it | 9 |
 | **PC†** path coherence | two sanctioned paths from equivalent inputs must agree; the square commutes | 4 |
 | **EO†** effect ordering | one effect durably precedes another within a single act | 3 |
-| **DU†** durable atomicity | crash-atomic and survives a persistence cut (gated on atoms A6–A8) | 2 |
+| **DU†** durable atomicity | crash-atomic and survives a persistence cut (gated on atoms A7–A8) | 2 |
 | **OF†** oracle falsifiability | every oracle row must be capable of failing; one that passes under sabotage is defective | 1 |
 
 **RF and US must stay distinct.** Refusal is a runtime answer — the act was
@@ -3104,11 +3104,20 @@ check and every reader has a reason to re-validate defensively.
     rather than being typed as refusals. Identity-preserving replica
     consolidation is exempt and remains fully defined. The model records a gap
     exactly where there is one, and no wider.
-12. **Nothing here is implemented, and no domain exists.** Every mechanism in
-    §6–§9 is unexercised, and the operator contract in §7.1 is illustrative —
-    its `population-group` binding would be refused at load today. This is D
-    limitation 5's position, inherited: the rulings are what this design commits
-    to, not the shapes of the files.
+12. **No domain exists**, and this limitation narrows twice (*updated
+    2026-08-08*). It read *"nothing here is implemented, and every mechanism in
+    §6–§9 is unexercised."* Conformance cut 1 landed 2026-08-07 and built
+    **M4, M7, M9, M10, M11 and M13 whole**, plus the selected arms of **M5, M6
+    and M8** — the claim grammar, `π_claim`/`tag_claim`, decode, opacity and
+    cross-language parity —
+    so §6 and §7 are exercised where the cut reached and **M1, M2, M3 and M12
+    remain unbuilt** (disposition record §5.2, §5.3). What is unchanged is the
+    domain half: the operator contract in §7.1 is still illustrative, its
+    `population-group` binding would still be refused at load, and the contract
+    that *is* loaded — `fixtures/contracts/testing.yaml` — is deliberately not a
+    real domain. This is D limitation 5's position, inherited and now narrowed
+    the same way: the rulings are what this design commits to, not the shapes of
+    the files.
 13. **ρ is applied, and four of its rows are now the only record of what the
     corpus used to say.** §8's amendments landed in the 2026-08-05 banking
     commit, so §8.2 is no longer a proposal — but that inverts the reading
@@ -3191,10 +3200,20 @@ check and every reader has a reason to re-validate defensively.
   get to issue anything the base contract owns. Treating it as "distinguished"
   in any stronger sense would reopen §7.1's uniform rule through the back door,
   which is precisely why that rule is uniform.
-- **The layer vocabulary's actual contents.** §7.1's
-  `[causal, structural, statistical, methodological]` is illustrative and nothing
-  fixes the real set. **This is not kernel §11's non-empirical question, and the
-  two must not be merged:** a non-empirical proposition is blocked by the
+- **The layer vocabulary's actual contents** — *no longer illustrative, and the
+  admission rule now exists* (updated 2026-08-08). `contracts/science/CONTRACT.yaml`
+  declares `layers: [causal, structural, statistical, methodological]`, so the set
+  is authored data in the base contract rather than an example in this section,
+  and editing it re-identifies every claim (§7.4 row 5). What stays open is what
+  *belongs* in it — and that question now has a procedure rather than a taste:
+  the corpus survey's **2.6** (agreement and exercise across the eight surveyed
+  corpora, then the reader clause) is what admits a value, and it has already
+  refused one. `mechanistic_narrative` failed on exercise — all 13 records
+  carrying it are unstructured, so the layer would admit zero claims — and the
+  kernel's §4.2 `mechanism` row was corrected rather than the set widened to make
+  it true (typing exercise §5.2, kernel §4.2 as amended 2026-08-07).
+  **This is not kernel §11's non-empirical question, and the two must not be
+  merged:** a non-empirical proposition is blocked by the
   `observes` eligibility rule, which reads the assessment's run and not the
   claim's layer, so no layer vocabulary can make one assessable. Adding a layer
   changes what a claim can *say*; a second route — proof, derivation, simulation,

@@ -688,8 +688,17 @@ which table N now also guards reflexively (N2).
   stays open is only world-record status: a kind, a §4.2 basis row, and a reason
   for something to read cuts through the resolver rather than the store.
   Deferred until such a reader exists.
-- **The first cut.** Distilling the six designs into `CONTRACT.md` v1 is
-  implementation-plan work, as is the executable suite's layout.
+- **The first cut.** Distilling the banked designs into `CONTRACT.md` v1 is
+  implementation-plan work, as is the executable suite's layout. *(Corrected
+  2026-08-08: this read "the six designs" — the corpus as it stood at this
+  document's banking.
+  The cut's scope is whatever the ledger's artifact-7 row inventories — eleven
+  tables and 135 rows as of 2026-08-08, D, M and P having arrived since. The
+  scope is a live number, so the cut names it by reference and not by count.)*
+  **Not to be confused with `contracts/science/CONTRACT.yaml`**, which exists:
+  that is the *base profile* contract — the kernel-owned claim grammar the formal
+  model §8 sites — and this cut is the *normative conformance* contract. Two
+  artifacts, two jobs, and the shared word is the only thing they share.
 - **Existing instruments certify by succession, or not at all.** A frozen spec
   cannot acquire the witness reference its falsification declaration lacks —
   "retroactive certification" of an immutable identity is unspellable (§7.4).

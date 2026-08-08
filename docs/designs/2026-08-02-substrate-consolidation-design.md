@@ -32,10 +32,13 @@ architecture docs. Measured state:
 - `science` imports neither.
 - **`nodes` does not reference `atoms` either** — its dependencies are `pydantic`
   and `pyyaml`.
-- **`atoms` cannot yet execute effects.** A1–A5b are implemented — as of
-  2026-08-02 the SQLite-WAL metadata store (A5a) and the recovery-resolve lease
-  (A5b) have landed, so the engine prepares durable transaction records — but the
-  effect-execution stages **A6–A8 are not**, so no project path is mutated yet.
+- **`atoms` cannot yet execute effects.** A1–A6 are implemented — the
+  SQLite-WAL metadata store (A5a) and the recovery-resolve lease (A5b) landed
+  2026-08-02, so the engine prepares durable transaction records, and coherent
+  capture (A6) landed 2026-08-08, so it also observes the surface a transaction
+  will act on — but the effect-execution stages **A7–A8 are not**, so no project
+  path is mutated yet. Everything `atoms` writes today is under its own
+  `metadata_root`.
 
 So adopting `nodes` buys **no durability today**, and `nodes` §7 leaves the hole
 explicitly: *"Single-writer assumption. Nothing coordinates concurrent mutation of
@@ -487,7 +490,7 @@ non-normative message is what makes that distinction expressible.
 ## 7. Durability — deferred, with nothing built in the meantime
 
 `atoms` owns durability and concurrency. Until its effect-execution stages
-(A6–A8) exist:
+(A7–A8) exist:
 
 - the profile claims **single-writer operation** and **no crash-safe multi-file
   durability**, matching `nodes` §7 and §13 exactly;
@@ -558,7 +561,7 @@ be read as the strong claim.
 
 ## 11. Limitations
 
-1. **No durability until `atoms` A6–A8.** Single-writer, no crash-safe multi-file
+1. **No durability until `atoms` A7–A8.** Single-writer, no crash-safe multi-file
    commit. Stated, not mitigated.
 2. **Recorded-history completeness** (kernel §8.7) — a coordinated
    fields-plus-hash edit is undetectable.
@@ -584,7 +587,7 @@ be read as the strong claim.
   compatibility layer appears. Note the pricing consequence: because
   contributions merge *upstream* of `Registry.register()`, `nodes` gains
   nothing — a zero runtime and contract delta, with one added parity fixture.
-- **`atoms` consumption order.** Whether Science waits for `atoms` A6–A8 or
+- **`atoms` consumption order.** Whether Science waits for `atoms` A7–A8 or
   `nodes` adopts `atoms` first. The second route is appealing — durability
   without Science depending on `atoms` directly, matching the stated layering —
   but it carries an unstated conflict: **`atoms` is Python-only and
@@ -596,6 +599,7 @@ be read as the strong claim.
   Current recommendation: Science's Python composition root eventually combines
   `nodes` and `atoms`, and portable `nodes` does not depend on `atoms` until a
   language-neutral execution seam exists. Left open rather than ruled, because it
-  turns on `atoms`' A6–A8 interface, which is not yet built (the A5 store and
-  lease interfaces landed 2026-08-02; `atoms`' authority design §12.2 now records
-  the composition-root route as the likely first adoption).
+  turns on `atoms`' A7–A8 interface, which is not yet built (the A5 store and
+  lease interfaces landed 2026-08-02 and coherent capture landed 2026-08-08;
+  `atoms`' authority design §12.2 now records the composition-root route as the
+  likely first adoption).

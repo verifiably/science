@@ -1302,7 +1302,14 @@ The shape propagates rather than being unwrapped at each site:
 one that does not exist.** Nothing in this design retires a route, chooses between two,
 or records that one has been shown wrong — that is the same missing machinery as
 §11.13's retraction, reached from a different direction, and it is handed to
-sub-problem 5 with it. Until then a conflicted dataset certifies nothing, permanently.
+sub-problem 5 with it. Until then a conflicted dataset certifies nothing.
+*(Amended 2026-08-03, `2026-08-03-correction-lifecycle-design.md` §4 and C7: the
+route retirement this paragraph says does not exist now does. The word
+"permanently" stood here and is withdrawn — retiring routes leaves the stored
+basis byte-unchanged and computes the **effective** tag over the survivors, so
+one survivor certifies over that route and zero is `not-certified`. Nothing in
+**this** design retires a route, which is what the paragraph is really about, and
+C1–C10 await implementation.)*
 
 **Why the conflict is kept rather than the merge refused**, which would be simpler and
 was the obvious alternative: refusing leaves two records at one world address, which is
@@ -1565,7 +1572,12 @@ is the same error as digesting the lineage the design finds tidiest instead of t
 lineage aggregation reads (kernel §5.1), one layer up.
 
 > **Requirement handed to sub-problem 5**, where certification and conformance
-> already live (§13). A retraction must be **additive** — a new node, never an edit,
+> already live (§13). **Delivered 2026-08-03**
+> (`2026-08-03-correction-lifecycle-design.md`), with all five clauses below
+> intact and one addition this section did not ask for: the eligibility contract
+> is **procedural** — named target, attribution, typed reason, recorded grounds,
+> symmetry — because nothing certifies a retraction true, so the system makes one
+> expensive to issue invisibly instead. A retraction must be **additive** — a new node, never an edit,
 > for kernel §3.3's reason; **attributed and rationale-bearing**, since like every
 > other judgment here it is a claim rather than a computation; a **belief input**, so
 > kernel §5.1's digest must cover it or a retracted and an unretracted corpus would
@@ -2327,9 +2339,11 @@ and wrong.
 
 ## 9. The `atoms` boundary
 
-`atoms` is at A5b: the SQLite-WAL metadata store and the recovery-resolve lease
-are implemented (2026-08-02), so durable transaction records exist — but the
-effect-execution stages A6–A8 do not, and no project path is mutated yet. This
+`atoms` is at A6: the SQLite-WAL metadata store and the recovery-resolve lease
+are implemented (2026-08-02) and coherent capture landed 2026-08-08, so durable
+transaction records exist and the surface a transaction will act on is observed
+— but the effect-execution stages A7–A8 do not, and no project path is mutated
+yet. This
 design is written so that **nothing in it waits on them**, and so that what would
 change if they arrived is stated rather than assumed.
 
@@ -2337,7 +2351,7 @@ change if they arrived is stated rather than assumed.
 directory is content addressing, available today, and it is what specs, datasets,
 runs and outputs need. `atoms` is required for atomic multi-file commit and for
 tamper evidence — different capabilities, and keeping them apart is what stops
-this design stalling on A5–A8.
+this design stalling on A7–A8.
 
 **What this design builds:** content identity for specs, datasets, runs and outputs
 (`science.identity.v1`, §4.3); the execution boundary and its receipts; the code
@@ -2605,8 +2619,15 @@ the consumer reads, and say which of the two you did.
     than monotone in the belief it produces — retracting a *refuting* assessment
     legitimately raises support — and carrying its own eligibility contract, since
     "remove the evidence against my claim" is subtractive and inflationary at once.
-    §13 hands the mechanism to sub-problem 5; until it exists, review produces
-    attribution and no correction, and limitation 12 should be read with that attached.
+    §13 hands the mechanism to sub-problem 5. **Designed 2026-08-03**
+    (`2026-08-03-correction-lifecycle-design.md`): the `retraction` kind is that
+    mechanism, with the eligibility contract this limitation asks for. Two details
+    of the answer differ from the ask and are worth carrying: the target is
+    whatever a computation **reads**, so a *run* is not retraction-eligible — its
+    readable products are (5a §4) — and a `dataset-production` run's false
+    certification is subtracted through the **`route`** arm. Until C1–C10 are
+    implemented this limitation stands as written: review produces attribution and
+    no correction, and limitation 12 should be read with that attached.
 14. **A divergent producer's deletion restores a certificate** (§5.2, substrate §5
     step 3). Independence reads the dataset's stamped lineage basis, and a producing
     run whose inputs differ from it forces `not-certified` rather than being unioned
@@ -2662,6 +2683,11 @@ the consumer reads, and say which of the two you did.
     one (world limitation 11) — §11.13's retraction again, at a third site. Whether a
     coverage declaration can itself be made accountable — who may narrow one, and whether
     narrowing is visible — is sub-problem 5's, beside retraction eligibility.
+    **Answered 2026-08-03** (5a §4, C9): narrowing is **snapshot succession plus
+    retraction** rather than a separate target class, so it is visible because the
+    retraction is a record and a §5.1 digest member; and *who may narrow* is
+    answered by exposure — anyone who can write, attributably and reviewably — not
+    by permission.
 
 ## 12. What stops being needed
 
@@ -2718,20 +2744,37 @@ guarantees need, and it already verifies on every call.
   packaging question**: world §5's producers map and its coverage declaration are now
   a kernel §5.1 digest member, so one belief input already lives in the index. That is
   an argument for one artifact and not yet a decision.
-- **Equivalence-rule certification** (§11.4) hands to sub-problem 5: a rule that
-  cannot fail is the estimator-doctrine defect in a new position, and conformance
-  oracles are where it belongs. Code-lineage independence (§11.7) goes with it.
+- ~~**Equivalence-rule certification** (§11.4) hands to sub-problem 5.~~
+  **CLOSED 2026-08-03** by `2026-08-03-normative-contract-design.md` §7:
+  `instrument-certification` is the tenth kernel kind, and an instrument certifies
+  by exhibiting witnesses that reach each declared outcome — which is exactly "a
+  rule that cannot fail is a defect", made executable (N4–N9). Code-lineage
+  independence (§11.7) went with it and came back **unchanged**: 5b limitation 3
+  keeps it an authored attestation embedded in the comparison report, the one
+  B-form survivor, because there is nothing executable to demonstrate.
 - **The scope-derivation rule's version identity** (§7.3) participates in every
   verification address. Whether it is versioned with the belief policy, with
   `science.identity.v1`, or on its own is unresolved.
-- **Which binding route rule identities take** (§3.1b). A held content-addressed
-  implementation and a registry-plus-fixtures entry both satisfy the requirement, and
-  they have different costs: the first makes every spec carry executable content, the
-  second needs a normative registry nobody maintains yet. The requirement is settled;
-  the route is not, and it is the same decision for interpretation and equivalence
-  rules, so it should be made once in sub-problem 5.
-- **What retracts a run** (§5.2, §11.13), and it is the largest of these. Every
-  correction mechanism this design has is a *minting* mechanism — a successor spec, a
+- ~~**Which binding route rule identities take** (§3.1b).~~ **CLOSED 2026-08-03**
+  by `2026-08-03-normative-contract-design.md` §6, and by ruling the two routes
+  **halves of one binding rather than alternatives**: a rule identity is
+  `(symbol, fixture-set identity)` — the fixtures are the normative half and are
+  contract content, so the "registry nobody maintains" is the contract itself —
+  and a held implementation in the rules store is the operational half. The
+  decision covers interpretation, equivalence and the scope-derivation rule at
+  once, as this question asked.
+- ~~**What retracts a run** (§5.2, §11.13), and it is the largest of these.~~
+  **CLOSED 2026-08-03** by `2026-08-03-correction-lifecycle-design.md`, and the
+  answer inverts the question: **nothing retracts a run.** One record kind carries
+  all three instantiations with reasons as data (its §2), and the eligible targets
+  are exactly the readable inputs — assessments, verifications, semantic snapshots,
+  instrument certifications, and production routes. A run is not one; "a run
+  happened", and its readable products are what a retraction names. Eligibility is
+  answered **procedurally** — named target, attribution, typed reason, recorded
+  grounds, and symmetry — never as a truth gate. The question as posed follows,
+  preserved rather than edited away:
+
+  Every correction mechanism this design has is a *minting* mechanism — a successor spec, a
   superseding verification, a corrected re-execution — and each of them adds a record
   beside the wrong one rather than removing the wrong one's contribution. That is
   correct for provenance and insufficient for belief: a run established to be

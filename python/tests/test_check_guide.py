@@ -5,7 +5,6 @@ import sys
 from pathlib import Path
 
 import pytest
-
 from conftest import REPO_ROOT
 
 _SPEC = importlib.util.spec_from_file_location(

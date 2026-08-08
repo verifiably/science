@@ -173,9 +173,10 @@ measurements, not conformance oracles.
 
 ## Open edges
 
-See [Claims and belief](open-questions.md#claims-and-belief) for unresolved
-grammar, vocabulary succession, estimand, applicability, and higher-order-claim
-questions.
+See [Claims and belief](open-questions.md#claims-and-belief) for the unresolved
+binding-check lifecycle, entailment and estimand match, qualifier grammar,
+vocabulary gaps, higher-order records, weighted belief, what records the loss of
+a last held copy, and whether the nine † labels are adopted.
 
 ## References
 

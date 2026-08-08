@@ -437,6 +437,15 @@ path — sits on the minting side of the record and none of them is looking here
 > correction lifecycle that would — retiring a route shown to be wrong — does not exist
 > and is handed to sub-problem 5 alongside retraction. A curator merging two disagreeing
 > records is recording a fact, not opening a workflow, and should be told so.
+>
+> **Designed 2026-08-03** (`2026-08-03-correction-lifecycle-design.md`, its `route`
+> target arm and C7). The permanence is **under this design** and no further: a
+> retraction retires a route, the stored basis facet stays byte-unchanged, and the
+> **effective** tag is computed over unretired routes — one survivor certifies over
+> that route, several stay `conflict`, zero is `not-certified` and never a silent
+> `single`. Retirement composes after merge-widening. Nothing above changes: this
+> design still offers no such operation, and until C1–C10 are implemented none
+> exists to call.
 
 Preserving the conflict beats refusing the merge, because refusing leaves two nodes
 at one address — the duplicate-location state §4.3 says must be resolved — and it
@@ -1445,6 +1454,16 @@ so nobody later "optimizes" the world traversal back into a corpus call.
     with them. The bounded claim in the meantime: a validated receipt makes
     completeness **checkable** and a refutation makes a correction **publishable**;
     neither makes the wrong answer unusable.
+
+    **Designed 2026-08-03** (`2026-08-03-correction-lifecycle-design.md`; its §4
+    semantic-snapshot instantiation and C8). A semantic snapshot is a `node`-arm
+    retraction target: a retracted snapshot is refused at import and reported as
+    `retracted` — a fifth evaluator outcome beside
+    `malformed`/`validated`/`refuted`/`unresolvable` — at the three sites that
+    already recompute. The bound narrows rather than disappearing, and 5a says so
+    itself: enforcement is at import, audit and query, so a raw reader can still
+    compute from the bytes. Until C1–C10 are implemented this limitation stands
+    exactly as written.
 
 ## 9. What stops being needed
 

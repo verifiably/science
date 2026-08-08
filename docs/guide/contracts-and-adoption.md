@@ -82,7 +82,9 @@ records are reproduced through the new typed boundaries.
 
 Conformance cut 1 was frozen before implementation. It selected eleven of 126
 then-banked guarantee rows—six wholly and five only at named assertion arms—and
-classified the other 115 by the subsystem that would unblock them. Its stop
+classified the other 115 by the subsystem that would unblock them. The corpus now
+holds 135 rows across eleven frozen tables; the belief policy's P1–P9 banked
+after the cut was drawn and are acceptance criteria for a later slice. Its stop
 rule was the last fully designed seam: typed claim construction, projection,
 identity, decode, and cross-language parity, with no persistence boundary and no
 belief computation.
@@ -125,8 +127,10 @@ item waits on it.
 ## Open edges
 
 See [Contracts and adoption](open-questions.md#contracts-and-adoption) for the
-writer model, admission ramp, contract/version governance, instrument limits,
-and selection questions that shape later cuts.
+admission ramp, contract governance, the normative artifact's shape, certifying
+instruments that already exist, and how the next cut is selected. The writer
+model sits with the other authority questions under
+[Identity, world, and change](open-questions.md#identity-world-and-change).
 
 ## References
 

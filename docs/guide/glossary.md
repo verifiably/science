@@ -24,6 +24,8 @@ context and the linked design references for normative detail.
 - **Analysis spec** — An immutable preregistered plan naming a proposition,
   estimand, interpretation, inputs, parameters, nondeterminism, and equivalence
   rule for an assessment run. ([computation](computation-and-reproducibility.md#the-analysis-spec-freezes-the-scientific-plan))
+- **Applicability** — The scope an estimand licenses, declared in the spec and
+  possibly narrower than the proposition it targets. ([computation](computation-and-reproducibility.md#the-analysis-spec-freezes-the-scientific-plan))
 - **Assessment** — A run-derived result that evaluates one proposition and is
   the only record kind allowed to enter empirical belief. ([claims](claims-and-belief.md#assessments-are-the-only-empirical-route))
 - **Belief** — A policy-bound computed view over a complete set of eligible,
@@ -37,6 +39,10 @@ context and the linked design references for normative detail.
 - **Claim** — The opaque runtime value of a proposition after its operator,
   arguments, qualifiers, polarity, and layer pass the active profile.
   ([claims](claims-and-belief.md#a-claim-is-typed-by-its-operator))
+- **Claim layer** — Which kind of claim a proposition makes — causal,
+  structural, statistical, or methodological. The base contract fixes the set,
+  each operator declares which layers it may inhabit, and the layer enters claim
+  identity. ([claims](claims-and-belief.md#a-claim-is-typed-by-its-operator))
 - **Clean-environment verification** — A passed comparison of equal recipes
   with qualifying fresh-environment and confinement evidence; the only scope
   that can admit an assessment. ([computation](computation-and-reproducibility.md#replay-verification-and-belief-are-different-decisions))
@@ -55,6 +61,14 @@ context and the linked design references for normative detail.
   qualifier dimensions, facets, and vocabulary bindings. ([foundations](foundations.md#contracts-compile-into-profiles))
 - **Epoch** — An immutable world-index publication over explicit corpus states,
   world records, rules, and derivation receipts. ([identity](identity-world-and-change.md#the-world-index-is-a-named-covered-view))
+- **Estimand** — What quantity an analysis estimates, and at what scope. Frozen
+  in the analysis spec and copied into the assessment rather than authored
+  there. ([computation](computation-and-reproducibility.md#the-analysis-spec-freezes-the-scientific-plan))
+- **Facet** — A named block of typed fields carried by a record. Base-profile
+  facets are unnamespaced; domain facets are namespaced and may extend
+  interpretation without redefining kernel relations. A dataset's
+  empirical-observation facet is what lets a run's `observes` edge confer
+  eligibility. ([foundations](foundations.md#contracts-compile-into-profiles))
 - **Held** — Exactly reproducible bytes available on demand under a content
   identity; not a synonym for raw, public, local, or checked into Git.
   ([foundations](foundations.md#the-epistemic-invariant))
@@ -66,6 +80,9 @@ context and the linked design references for normative detail.
 - **Instrument certification** — A recomputable witness that a specific rule and
   implementation binding conforms and can reach its required outcomes.
   ([contracts](contracts-and-adoption.md#rules-bind-meaning-to-the-code-that-ran))
+- **Interpretation rule** — The versioned rule identity, frozen in the spec,
+  that maps a run's result to the assessment's outcome. It is declared before
+  the result exists. ([computation](computation-and-reproducibility.md#the-analysis-spec-freezes-the-scientific-plan))
 - **Mutation log** — A per-root hash-linked chain registering boundary
   transactions and destructive intent, with heads observed outside their own
   deletable set. ([identity](identity-world-and-change.md#mutation-history-is-detectable-relative-to-observers))
@@ -86,6 +103,9 @@ context and the linked design references for normative detail.
   ([foundations](foundations.md#contracts-compile-into-profiles))
 - **Proposition** — An immutable record whose semantic identity is its typed
   claim structure, not its prose rendering. ([claims](claims-and-belief.md#structure-not-prose-determines-identity))
+- **Qualifier** — A restriction on one of an operator's declared dimensions,
+  sorted exactly as an argument is. The v1 fragment is flat: one restriction per
+  dimension, with a quantifier. ([claims](claims-and-belief.md#a-claim-is-typed-by-its-operator))
 - **Reads** — A run-input role for literature, configuration, ontologies, and
   other context that never confers empirical eligibility. ([foundations](foundations.md#closed-routes-inert-by-default))
 - **Refused** — A fail-early boundary outcome for malformed, contradictory, or
@@ -97,6 +117,9 @@ context and the linked design references for normative detail.
   held implementation content identity that executed it. ([contracts](contracts-and-adoption.md#rules-bind-meaning-to-the-code-that-ran))
 - **Run** — A complete immutable execution closure consisting of a recipe,
   result, and occurrence. ([computation](computation-and-reproducibility.md#a-run-has-three-complete-parts))
+- **Sort** — The type of referent a slot admits. Operators declare a sort per
+  argument position and per qualifier dimension, so a term of one sort cannot
+  fill a slot of another. ([claims](claims-and-belief.md#a-claim-is-typed-by-its-operator))
 - **Source assertion** — A record of what a source asserts, denies, or
   hypothesizes about a proposition; it is useful but has no edge into belief.
   ([foundations](foundations.md#the-epistemic-invariant))
