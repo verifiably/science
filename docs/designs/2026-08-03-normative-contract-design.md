@@ -693,7 +693,7 @@ which table N now also guards reflexively (N2).
   2026-08-08: this read "the six designs" — the corpus as it stood at this
   document's banking.
   The cut's scope is whatever the ledger's artifact-7 row inventories — eleven
-  tables and 135 rows as of 2026-08-08, D, M and P having arrived since. The
+  tables and 138 rows as of 2026-08-08, D, M and P having arrived since. The
   scope is a live number, so the cut names it by reference and not by count.)*
   **Not to be confused with `contracts/science/CONTRACT.yaml`**, which exists:
   that is the *base profile* contract — the kernel-owned claim grammar the formal

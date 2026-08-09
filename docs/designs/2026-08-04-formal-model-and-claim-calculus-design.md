@@ -134,7 +134,7 @@ set.
 subject of several identities. The sorts partition the *carrier*; the axes above
 cut across it, which is why each entry carries all seven fields independently.
 
-### 2.1 `Rec` — world records (the ten kernel kinds)
+### 2.1 `Rec` — world records (the eleven kernel kinds)
 
 Each row's **identities** cell lists every commitment the player bears. All ten
 additionally bear a **node-content identity** (moved by any facet or field
@@ -153,6 +153,7 @@ stated once here rather than repeated in every row.
 | `source` | authored record in a corpus | **normalized external identifier** — DOI, PMID, ISBN, accession. A work's identity is issued by the world, not computed by us | authored; `member_of` a dataset (the corpus **is** a dataset) | read by extraction | none directly — only through `source-assertion` | everything in belief | world **§4.2**; kernel §4.1, §4.3 |
 | `retraction` | authored, attributed, immutable | world address; **its identity covers its target's identity** — banked as what makes cycles unconstructible, an argument **ρA9 replaces** | additive: the target stays byte-identical and resolvable. A counter-retraction removes **one** retraction from standing | reads its target; produces a standing subtraction | standing → admission → belief (member 6) | location; alias | correction §3, §4; **C1**, **C6**, **C10** |
 | `instrument-certification` | **content-derived**, no event token — a derived demonstration on the `verification` precedent | content identity over **(contract identity, discriminated subject, implementation content identity, witness evaluations)**; the rule identity inside carries the fixture-set identity | re-deriving unchanged is **idempotent**; a byte-identical re-mint of a retracted certification **stays retracted**. Withdrawal is by **retraction**, corrected by **counter-retraction**; under a **successor cut it is a different record**, so recertification-after-amendment is a new act, never a toggle | certifies executable instruments, never authored lineage claims | rule-binding resolution; verification scope evidence | — | 5b §7.1, §7.2; world §4.2; N-table |
+| `coreference-attestation` | authored, attributed, immutable — added 2026-08-08 (`2026-08-08-world-address-ruling.md` §5.1) | content identity over (**sorted endpoint pair**, **stance**, **actor**, **grounds**, **minted event token**) — the `retraction` shape; sorting makes `{A,B}` one identity regardless of authoring order | additive. A negative attestation **offsets** the pair's derived balance rather than retracting the positive one; both records stand. `retraction` is unused unless individual-attestation invalidation becomes necessary | reads its two endpoints; produces a **derived** balance — `Σ stance` over distinct `(endpoints, stance, actor, grounds)`, the event token deliberately outside the key so duplicate submissions preserve provenance without manufacturing weight | **none** — closure is a query-layer operation and rewrites no stored reference, identity or belief input (§5.3 there) | everything in belief; attester class, which carries **unit weight** for human and agent alike | world §4.2; **W15** |
 
 ### 2.2 Relation signatures and relation instances
 
@@ -589,7 +590,7 @@ since `eligible` above reads the run's `observes` edge and not the claim.
 |---|---|---|
 | **well-definedness** | each reading is a *function* of the configuration — one value, no ambient input | **G3** (recompute from the named closure alone; assert identity) |
 | **order-independence** | `status : 𝒫(RegistryRecord) → RegistryStatus` — registry status is a function of the record **set**, so no arrival order can appear in it | **X6** — *"assert every status is invariant under record arrival order"*, the implementation oracle for that typing |
-| **observational invariance** | `ω ∼_B ω′ ⟹ B(ω,q) = B(ω′,q)`. Declared inert dimensions: location, alias, display fields, availability-with-a-copy-held | **W5**, **R5**, **G7** (converse half), **D2** |
+| **observational invariance** | `ω ∼_B ω′ ⟹ B(ω,q) = B(ω′,q)`. Declared inert dimensions: location, ~~alias~~, display fields, availability-with-a-copy-held — *alias dropped 2026-08-08 (`2026-08-08-world-address-ruling.md` §4): a label is rendered on read and never stored, so there is no alias dimension to be inert in. The cited rows are unaffected — **W5** and **D2** carry no alias arm, and kernel **G3**'s alias mutation is deleted without replacement* | **W5**, **R5**, **G7** (converse half), **D2** |
 | **commitment sensitivity** | a change to a declared semantic projection changes the encoded commitment, up to negligible collision probability | **G3**, **L4**, **D5** |
 | **well-founded recursion** | `standing` terminates on every `ω ∈ Ω_valid` | argued correction §4 by content-address containment — an argument **ρA9 invalidates and replaces** with the retraction graph's **acyclicity invariant**; **no banked row tests it directly** (C5 tests chain-not-toggle and sibling-awareness), which is why **M3** exists |
 | **fail-closure** | `admission` reduces into an **unordered** three-element codomain under **failure-first precedence** | **G2c**, **G8**, **C6** |
@@ -900,11 +901,14 @@ rather than half-blank.
 | W8 | no conflict is resolved by precedence | RF† |
 | W8a | all four index maps are derived, never authoritative | CA† |
 | W8b | `uid` uniqueness is enforced; its two violations are distinguished | **CS** + ED† |
-| W9 | an ambiguous alias refuses and names its candidates | RF† |
+| W9 | an ambiguous **search term** refuses and names its candidates — *restated 2026-08-08; the subject was a stored alias, and there is no longer one* | RF† |
 | W10 | cross-corpus edges are ordinary, not dangling | **OInv** |
 | W11 | a world entity is never addressed by a coordination address, or the reverse | US† |
 | W12 | renaming a project does not break coordination references | **OInv** |
 | W13 | corpus identity is minted, opaque, stable / state identity is over content | **OInv** / **CS** |
+| W14 | the address scheme adds unambiguity **by construction**; labels are rendered, never stored | US† + **OInv** |
+| W15 | a coreference balance is derived, duplication-proof and attester-symmetric; closure rewrites nothing | **CS** + **OInv** + US† |
+| W16 | `consolidate` repairs storage and asserts nothing about identity | RF† + **OInv** |
 
 **R — computation and reproducibility**
 
@@ -1745,7 +1749,7 @@ was supposed to fix it. It splits in two:
 
 | | `render(Claim)` | `display_statement` |
 |---|---|---|
-| produced by | a **deterministic function** `render(Claim, Locale)` of the typed form, the consulted vocabulary, and an **explicit** locale — never an ambient one | **authored** by a human |
+| produced by | a **deterministic function** `render(Claim, Locale)` of the typed form, the consulted vocabulary, and an **explicit** locale — never an ambient one. *Generalized 2026-08-08 to every kind, per **value** rather than per kind: an **authority identifier** renders as `preferred_label(identifier, pinned_authority_release)`; a **record** renders from immutable content, recursively rendering any authority identifiers it holds* | **authored** ~~by a human~~ *— attributed to an attester, human or agent, with no class privileged (2026-08-08)* |
 | stored | **no** — computed on read | yes, optional, may be absent |
 | authority | derived | authored |
 | in `π_claim` | no | no |

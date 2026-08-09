@@ -31,7 +31,7 @@ surface, which does not exist yet.
 **Inherits:** substrate §2 (split by nature; the pricing argument;
 defer-and-promote), §4.1/§6.1 (the arity-and-history test), §12 (the
 `KIND_DESCRIPTORS`-versus-`KindSpec` open question, closed here); kernel §4.2
-(the ten kernel kinds), §4.2.1/§5.1 (the G3 belief-input closure), §4.3
+(the eleven kernel kinds — ten until 2026-08-08), §4.2.1/§5.1 (the G3 belief-input closure), §4.3
 (Referents — `term`, external), limitation 4 (the predicate vocabulary);
 world §4.2 (per-kind identity bases; `dataset` is content identity), §5
 (corpus-state identity), limitation 9 (the manifest is not a node and nothing
@@ -268,7 +268,7 @@ about no domain, no ontology, and no vocabulary.
 
 ### 3.2 `science` — kernel kinds and cross-node policy
 
-`science` owns the ten kernel kinds (kernel §4.2), the relation signatures that
+`science` owns the eleven kernel kinds (kernel §4.2; ten until 2026-08-08), the relation signatures that
 close belief, the eligibility predicate, and every judgment spanning more than
 one node — the arity-and-history test from substrate §4.1/§6.1 is unchanged.
 It also owns the **base profile**: the facet contracts that are scientific

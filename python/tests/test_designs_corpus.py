@@ -45,7 +45,7 @@ _ATOMS_LAST_IMPLEMENTED = _ATOMS_IMPLEMENTED[-1]
 GUARANTEE_TABLES: dict[str, tuple[str, ...]] = {
     "G": ("G1", "G2a", "G2b", "G2c", "G3", "G4", "G5", "G6", "G7", "G8"),
     "S": ("S1", "S1a", "S2", "S3", "S4", "S5", "S6", "S7", "S8"),
-    "W": tuple(f"W{n}" for n in range(1, 14)) + ("W5a", "W8a", "W8b"),
+    "W": tuple(f"W{n}" for n in range(1, 17)) + ("W5a", "W8a", "W8b"),
     "R": tuple(f"R{n}" for n in range(1, 24)),
     "C": tuple(f"C{n}" for n in range(1, 11)),
     "X": tuple(f"X{n}" for n in range(1, 13)),

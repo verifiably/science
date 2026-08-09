@@ -6,6 +6,7 @@ updated: 2026-08-08
 sources:
   - ../designs/2026-08-02-substrate-consolidation-design.md
   - ../designs/2026-08-02-world-addressing-design.md
+  - ../designs/2026-08-08-world-address-ruling.md
   - ../designs/2026-08-03-correction-lifecycle-design.md
   - ../designs/2026-08-03-world-index-packaging-design.md
   - ../designs/2026-08-03-tamper-evident-log-design.md
@@ -126,7 +127,14 @@ that the operation was scientifically or administratively authorized.
 ## Current state
 
 World addressing, correction, index packaging, and the tamper-evident log are
-designed or banked, not implemented by conformance cut 1. The cut implements
+designed or banked, not implemented by conformance cut 1. The address scheme was
+re-litigated and **upheld** on 2026-08-08, with three changes that reach this
+page: a human-readable label is now *computed on read* from a pinned authority
+snapshot rather than stored as an alias; two records believed to name one work
+are related by a graded, attributed **coreference attestation** instead of being
+merged, so nothing collapses and nothing becomes irreversible; and storage
+duplication is repaired by a separate, smaller operation that changes no
+address. The cut implements
 canonical identity for typed claims and profiles only. Durable transactions,
 world indexing, and mutation logging wait on the corresponding atoms-layer
 capabilities.
@@ -140,7 +148,8 @@ retractable, and what chain verification costs at scale.
 
 ## References
 
-- [World addressing guarantees W1–W13](../designs/2026-08-02-world-addressing-design.md#7-guarantees-and-how-each-is-tested)
+- [World addressing guarantees W1–W16](../designs/2026-08-02-world-addressing-design.md#7-guarantees-and-how-each-is-tested)
+- [The address ruling, and what it retired](../designs/2026-08-08-world-address-ruling.md#5-coreference-is-a-graded-claim)
 - [Correction guarantees C1–C10](../designs/2026-08-03-correction-lifecycle-design.md#7-guarantees)
 - [World-index guarantees X1–X12](../designs/2026-08-03-world-index-packaging-design.md#10-guarantees)
 - [Mutation-log guarantees L1–L13](../designs/2026-08-03-tamper-evident-log-design.md#10-guarantees)

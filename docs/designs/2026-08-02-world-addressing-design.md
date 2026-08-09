@@ -154,6 +154,29 @@ is what a human types**, and the second is allowed to be ambiguous precisely
 because it is never the thing stored. Stored refs hold addresses; resolution binds
 an address to the `uid` that carries continuity (§4.1).
 
+> **Amended 2026-08-08 — the stored alias is retired**
+> (`2026-08-08-world-address-ruling.md` §4). The address rule above stands and is
+> upheld; **the alias half does not**. A label is now **computed on read** —
+> `preferred_label(identifier, pinned_authority_release)` for an authority
+> identifier, kind-specific rendering from immutable record content otherwise —
+> and is **never stored as world content**. The alias facet, the world index's
+> `alias → [world address]` map, and the alias arm of `ambiguous` all retire with
+> it. Search terms are authority-provided synonyms resolved against a **pinned
+> snapshot, never a live lookup**; a term matching two identifiers is still a
+> refusal naming candidates (W9, restated), but the ambiguity is now a
+> reproducible property of the pinned snapshot rather than of accumulated
+> authoring.
+>
+> **The three rejected alternatives above share a premise, and it is the defect.**
+> All three ask *where an alias lives*; none asks **whether one is stored at all**.
+> That is the same omission F9 charges against §4 — rejecting the adjacent
+> alternatives while never reaching the one that dissolves the question — recurring
+> one level down, and it is recorded here rather than quietly repaired.
+>
+> The sentence that survives all of it is the last one: **the address is what the
+> system stores, the handle is what a human types.** Retiring the stored alias is
+> that sentence taken literally.
+
 ### 2.2 What `t068` asked, and what closes it
 
 `t068` asks for a cross-project *entity* reference syntax. Under §2 that category
@@ -189,7 +212,7 @@ the line — this document only names it as an addressing rule.
 
 | tier | kinds | identity | scope |
 |---|---|---|---|
-| **World** | the 8 kernel kinds (§4.2): `proposition`, `source-assertion`, `assessment`, `analysis-spec`, `run`, `verification`, `dataset`, `source` — 10 since 2026-08-03, adding `retraction` (correction-lifecycle §3) and `instrument-certification` (normative-contract §7.2) | world-unique address, derived (§4) | one space |
+| **World** | the 8 kernel kinds (§4.2): `proposition`, `source-assertion`, `assessment`, `analysis-spec`, `run`, `verification`, `dataset`, `source` — 10 since 2026-08-03, adding `retraction` (correction-lifecycle §3) and `instrument-certification` (normative-contract §7.2); **11 since 2026-08-08**, adding `coreference-attestation` (world address ruling §5.1) | world-unique address, derived (§4) | one space |
 | **Views** | `hypothesis`, `question`, `theme`, `topic` | project-scoped name over a world query | per project |
 | **Coordination** | `task`, `decision` | project-scoped | per project |
 | **Notes** | `note` — belief-inert prose, including curation stubs (§4.2) and project commentary on a world entity (§4.3) | project-scoped | per project |
@@ -276,19 +299,32 @@ first draft, so each of the eight kernel kinds is ruled individually. The ninth,
 correction-lifecycle design §3: a world kind with a content-derived basis over
 target, reason, grounds, actor, and a minted event token. The tenth,
 `instrument-certification` (normative-contract design §7.1–§7.2, 2026-08-03),
-is ruled in the table below.
+is ruled in the table below. The eleventh, `coreference-attestation`
+(`2026-08-08-world-address-ruling.md` §5.1), is ruled on the `retraction`
+precedent and appears in the table below.
+
+> **The rule this table instances, stated generally (2026-08-08).** Every
+> addressable world entity has the basis declared for its kind: an **intrinsic**
+> basis, or an identifier from an **accepted authority**. A missing basis makes
+> the record a project-scoped **curation note**, not a weakened world entity —
+> and, added with the ruling, **a curation note cannot be the target of a
+> semantic reference**, since belief-inertness constrains what a note may do to
+> belief but not what may point at one. The missing-basis rule below was stated
+> for `source` and `dataset` only; generalizing it is what makes this table a
+> rule rather than a list.
 
 | kind | basis | why not otherwise |
 |---|---|---|
 | `proposition` | kernel §4.1 semantic hash | already ruled |
 | `source-assertion` | hash over **(source identity, anchored span, stance, proposition identity)** | the proposition hash alone would make every paper's assertion of P *the same node*, collapsing the discourse counts §6 of the kernel is built to compute — one assertion where the corpus holds forty |
 | `source` | external identifier — DOI, PMID, ISBN, accession — normalized | a work's identity is issued by the world, not computed by us |
-| `dataset` | **content identity** (manifest/content hash) | a provider identifier names a *programme*, not data — §1.1's DepMap rows are exactly this confusion. Provider identifiers and accessions are **aliases**, not the basis |
+| `dataset` | **content identity** (manifest/content hash) | a provider identifier names a *programme*, not data — §1.1's DepMap rows are exactly this confusion. Provider identifiers and accessions are ~~**aliases**~~ **authority-identifier fields** (`programme`, `release`) carried in the record, not the basis — *amended 2026-08-08 with the alias's retirement; the three levels (programme, release, held bytes) are distinct fields and a normalizer may never collapse them* |
 | `analysis-spec` | content identity | frozen pre-run by the kernel; immutable by construction |
 | `run` | content identity of the execution closure — specified by sub-problem 4 §4.1 as **recipe + result + occurrence** | immutable by construction; the occurrence's minted event token is what keeps two identical executions distinct |
 | `verification` | content identity over (**ordered** run identities, equivalence-rule identity, **comparison-report identity**, **scope-derivation rule identity**, scope, verdict) — **extended** by sub-problem 4 §7.3b | kernel §3.3 states it is immutable; scope depends on evidence outside both runs, and that evidence is carried **inline in the comparison report** — including, since 2026-08-03 (normative-contract §6, §7.6), the exact `(rule identity, implementation content identity)` binding each executed rule ran under and the semantic certification-discovery evidence — so the report's digest is what makes two differently-evidenced verifications two nodes |
 | `assessment` | **(analysis-spec identity, run identity, proposition identity)** | a **key over the derivation's inputs**: sub-problem 4 §5.1 gives the facet one constructor taking the run ref alone, so the triple is exactly what determines every field. The first draft's rationale — preserving "assessment revisions" from a content hash — is **retired with the revision concept** (§5.1 there); the basis is unchanged and now justified by the derivation rather than by a lifecycle that cannot occur. The exact rule binding is inside the triple already: `rule_bindings` is a recipe member (sub-problem 4 §4.2, amended 2026-08-03, 5b §6), so it reaches this basis through `run` |
 | `instrument-certification` | content identity over (**contract identity**, the **discriminated subject** — `equivalence` \| `interpretation` \| `scope-derivation` over a rule binding, or `falsification` over (spec identity, interpretation binding) — the **implementation content identity**, and the **witness evaluations**) — added 2026-08-03, normative-contract design §7.1–§7.2 | a derived demonstration on the `verification` precedent: identical content is identical identity, re-derivation is idempotent, and **no event token** — a retracted certification re-minted byte-identical stays retracted, and under a successor cut it is a different record; the rule identity contains the fixture-set identity, one spelling only (5b §6) |
+| `coreference-attestation` | content identity over (**sorted endpoint pair**, **stance**, **actor**, **grounds**, **minted event token**) — added 2026-08-08, world address ruling §5.1 | the `retraction` precedent exactly. Sorting the pair makes `{A, B}` one identity regardless of authoring order; the event token keeps two genuinely distinct attestation *events* distinct, as the occurrence token does for `run`. The token is deliberately **outside** the balance's deduplication key (§5.2 there), so repeated identical submissions preserve provenance without manufacturing weight |
 
 Two of these correct claims the first draft made against the kernel rather than
 from it. `source-assertion` sharing the proposition's hash would have destroyed
@@ -337,6 +373,38 @@ indistinguishable from a real one everywhere downstream.
 > collisions of §1.1 under a longer name.
 
 ### 4.3 Merge is a claim, and claims are recorded
+
+> **Amended 2026-08-08 — structural merge is retired**
+> (`2026-08-08-world-address-ruling.md` §5). This section's *premise* is upheld and
+> its *mechanism* is withdrawn. Coreference remains a claim, recorded and
+> attributed; it no longer collapses the graph.
+>
+> - **Same-basis coreference** is unchanged and stays mechanical (W2).
+> - **Different-basis coreference** becomes a `coreference-attestation` (§4.2) —
+>   attributed, additive, carrying a signed stance, with a **derived** balance.
+>   Both records stand, both addresses persist, and **no address retires and no
+>   inbound reference is rewritten**. A positive standing balance activates a
+>   semantic coreference edge; zero or negative does not.
+> - **Closure is a query-layer operation.** It never rewrites a stored reference,
+>   an identity, or a belief input — retraction targets, `π_claim` positions,
+>   `belief_input_digest` members and every content-identity basis read **exact
+>   addresses**. This is what stops coreferenced retractions from recreating the
+>   cycle merge could close, and what keeps `dataset` coreference out of belief.
+> - **The duplicate-location exit** — one identity in two corpora, which this
+>   section resolved by an authored merge — moves to **`consolidate`** (ruling
+>   §5.4): one canonical address required, content and location reconciled,
+>   outgoing relations unioned, divergent lineage bases preserved, **no redirect
+>   and no inbound rewrite**. Naming it separately is the point: it is a storage
+>   repair, not an identity claim, and the single word "merge" was hiding the
+>   difference.
+> - **"Curator assertion" is retired as a term of art.** An attestation is
+>   **attributed to an attester**, and no attester class is privileged: human and
+>   agent attestations carry equal unit weight, per the belief policy's ruling
+>   that weighting is blocked on ρO3 rather than deferred by choice. Reliability
+>   is to be *measured* — a `meta/` question — never assumed by category.
+>
+> **Limitation 3 retires with the mechanism**: "merge is recorded, not reversible"
+> described an operation that no longer exists.
 
 Two records of one paper carrying the same normalized DOI should become one node;
 `paper:Chen2023` × 2 must not, because their DOIs differ. Under §4.2 the *bases*
@@ -547,6 +615,32 @@ This is the same mechanism §4.3's merge needs, arrived at from the other
 direction: rename plus `deprecated_ids` plus preserved `uid`. One redirect
 mechanism serves both, which is why neither needs a bespoke one.
 
+> **Amended 2026-08-08** (`2026-08-08-world-address-ruling.md` §5). Two changes,
+> and the second sharpens a distinction this section blurred.
+>
+> **"Only a person can say" is withdrawn.** The judgement is not a derivation —
+> that part stands — but requiring a *human* to make it privileges an attester
+> class by category, which the corpus refuses elsewhere on the same grounds it
+> refuses unjustified evidence weights (belief policy: unit weight, differential
+> weighting blocked on ρO3). What the system requires is that the judgement be
+> **attributed to an attester** and recorded. Human and agent attesters carry
+> equal weight; reliability is a `meta/` question to be measured, not assumed.
+>
+> **The middle case splits, and the split is cleaner than the old second/third
+> boundary.** The question is not "correction or new work" but *how many
+> identifiers legitimately exist*:
+>
+> | case | ruling |
+> |---|---|
+> | **the basis was mis-transcribed** — one identifier ever, recorded wrongly | unchanged: a **rename**. `uid` preserved, node renamed to the corrected address, old address retained in `deprecated_ids`. No coreference is involved because there is only one work *and* only one identifier |
+> | **the authority replaced or corrected the identifier** — two identifiers legitimately exist | a **`coreference-attestation`** (§4.2). Both records stand, both addresses persist, nothing is renamed and nothing retires |
+> | **genuinely different version or work** | unchanged: a new entity, linked to the old |
+>
+> The old table put the first two in one row and made the boundary turn on a
+> judgement about *works*. It turns on a fact about *identifiers*, which an
+> authority snapshot can often settle — and where it cannot, the attestation
+> records who said so.
+
 ## 5. Storage is not identity
 
 One addressable space does **not** mean one directory, one repository, or one
@@ -582,7 +676,7 @@ decision Science has to make anyway.
 > | map | shape | multiplicity |
 > |---|---|---|
 > | **address** | live address **and** every `deprecated_ids` entry → `(corpus, uid)` | singular, by the §4.3 invariant and `nodes`' non-collision rule |
-> | **alias** | alias → `[canonical address]` | **multi-valued by design** (§2.1) |
+> | ~~**alias**~~ | ~~alias → `[canonical address]`~~ | **retired 2026-08-08** — labels are rendered on read, never stored, so no corpus content derives this map. Three maps since (world address ruling §4.3) |
 > | **producers** | dataset address → `[run address]`, every run holding a `produces` edge to it | multi-valued; §5.3 gives a reproduced dataset at least two |
 > | **retraction** | target identity → `[retraction address]` (correction-lifecycle §4) | multi-valued; event tokens permit several retractions of one target |
 >
@@ -1241,8 +1335,8 @@ states with three distinct handlings:
 
 | conflict | meaning | handling |
 |---|---|---|
-| **duplicate location** | one identity, two corpora | the §4.3 migration state: reported, resolved by an authored merge, refused at the write boundary thereafter |
-| **ambiguous alias** | one handle, several identities | ordinary and expected (§2.1); refused *at authoring* with candidates named, never a finding against the corpus |
+| **duplicate location** | one identity, two corpora | the §4.3 migration state: reported, resolved by ~~an authored merge~~ **`consolidate`** *(2026-08-08 — merge retired; `consolidate` repairs storage and asserts nothing about identity, so no address retires and no inbound reference is rewritten)*, refused at the write boundary thereafter |
+| **ambiguous ~~alias~~ search term** | one **search term**, several identities | ordinary and expected; refused *at authoring* with candidates named, never a finding against the corpus. *(2026-08-08: the term resolves against the **pinned authority snapshot**, not against stored aliases, so the ambiguity is reproducible across installations holding that snapshot rather than an artifact of accumulated authoring.)* |
 | **address conflict** | one derived address, disagreeing bases | a digest or corruption failure, not a curation question — the basis derivation is deterministic, so this cannot arise from ordinary authoring |
 
 **None is resolved by precedence.** No first-wins, no project priority, no
@@ -1277,6 +1371,22 @@ elsewhere in the toolkit — reading a failure to look as a finding of absence.
 candidates**, never a selection. A stored world address cannot reach this state,
 which is the point of having two forms: the ambiguity is caught where a human can
 still answer it, rather than resolved silently where nobody is looking.
+
+> **Amended 2026-08-08 — three resolution states, not four**
+> (`2026-08-08-world-address-ruling.md` §4.3). With the stored alias retired, the
+> `applies to` column reads **address** on every surviving row, and `ambiguous`
+> leaves the table: it was the alias-only row, and there is no alias.
+>
+> The refusal it named **survives, relocated**. A **search term** matching more
+> than one identifier in the pinned authority snapshot is still a refusal listing
+> candidates, never a selection — but it is a **search-time** outcome, not a
+> reference-resolution state, because a search term is never stored and so never
+> resolved. W9 is restated on that basis.
+>
+> The paragraph above keeps its force under the new spelling: the ambiguity is
+> still caught where it can be answered rather than resolved silently. What
+> changes is that it is now a reproducible property of a pinned snapshot rather
+> than of what previous authors happened to type.
 
 This requires the world index to be **separable from the content it indexes**: it
 must be publishable and consumable without the corpora it names, or `not-present`
@@ -1352,19 +1462,22 @@ Certified by mutation, per the kernel's §5 discipline.
 | **W1** | Distinct bases never become one node | Load all three colliding `paper:` pairs (`Chen2023`, `Liu2020`, `Shi2025`); assert **six nodes and six distinct world addresses — two per pair** — and that no handle lookup silently picks one |
 | **W2** | A shared basis establishes coreference mechanically | Two records of one source carrying the same normalized DOI; assert one identity, no curator assertion required |
 | **W3** | Creating a world entity without its basis is refused | Attempt to create a `source` with **no accepted external identifier** (no DOI, PMID, ISBN or accession), and a `dataset` holding no content (the §1.1 DepMap case); assert both are **refused** — not silently coerced to notes. Author the curation note as a separate explicit act, then supply the basis and assert the world entity is minted from it. **Negative:** assert no title-and-year fallback exists to be reached |
-| **W4** | A merge is authored, and never derives content by precedence | Merge two records whose bases disagree; assert refusal. Merge with a curator assertion; assert the rationale is stored, the survivor's **outgoing** relations are the union of both, **every retired address resolves to the survivor**, every reachable inbound reference is rewritten, and **no** field-level precedence rule was applied. **Redirect set:** give the removed node a pre-existing deprecated address, merge, and assert that **both pre-merge live addresses and every inherited deprecated address** resolve to the survivor, while the survivor's own live address is **not** in its `deprecated_ids`. **`uid`:** assert the survivor keeps one input `uid` and that **no third `uid` was minted**. **Absent referrer:** hold one referrer's corpus out of the checkout, merge, and assert its untouched old address still resolves — the redirect, not the rewrite, is what carries it. **Absent survivor:** publish the index, remove the *survivor's* corpus, and assert a retired address reports `not-present`, never `unknown`. **Derived fields are not selectable:** merge two dataset records at one content address carrying **different lineage bases** (sub-problem 4 §5.2); assert **both** survive, that no field-selection path offers a choice between them, that the dataset becomes `lineage-divergent` and independence over it `not-certified`, and that the conflict **still stands after deleting either producing run** — pinning that field-by-field authorship governs authored content only, and that this is the one durable form of a divergence whose other form (§11.14 there) is not. **Retractions, both arms (added 2026-08-05 — formal model ρA10):** attempt a curator-asserted merge of two **distinct-basis** retractions and assert **refusal** — merge redirects inbound references, so this is the one sanctioned act that can close a cycle in the retraction graph; then consolidate two **equal-basis** replicas of one retraction held in two corpora **while a counter-retraction `R` already targets it**, and assert the merge **succeeds**, that the retraction's content identity is **unchanged**, and that `R` is **not rewritten and not re-minted** — §5's `duplicate location` state has no other resolution |
+| **W4** | A merge is authored, and never derives content by precedence | Merge two records whose bases disagree; assert refusal. Merge with a curator assertion; assert the rationale is stored, the survivor's **outgoing** relations are the union of both, **every retired address resolves to the survivor**, every reachable inbound reference is rewritten, and **no** field-level precedence rule was applied. **Redirect set:** give the removed node a pre-existing deprecated address, merge, and assert that **both pre-merge live addresses and every inherited deprecated address** resolve to the survivor, while the survivor's own live address is **not** in its `deprecated_ids`. **`uid`:** assert the survivor keeps one input `uid` and that **no third `uid` was minted**. **Absent referrer:** hold one referrer's corpus out of the checkout, merge, and assert its untouched old address still resolves — the redirect, not the rewrite, is what carries it. **Absent survivor:** publish the index, remove the *survivor's* corpus, and assert a retired address reports `not-present`, never `unknown`. **Derived fields are not selectable:** merge two dataset records at one content address carrying **different lineage bases** (sub-problem 4 §5.2); assert **both** survive, that no field-selection path offers a choice between them, that the dataset becomes `lineage-divergent` and independence over it `not-certified`, and that the conflict **still stands after deleting either producing run** — pinning that field-by-field authorship governs authored content only, and that this is the one durable form of a divergence whose other form (§11.14 there) is not. **Retractions, both arms (added 2026-08-05 — formal model ρA10):** attempt a curator-asserted merge of two **distinct-basis** retractions and assert **refusal** — merge redirects inbound references, so this is the one sanctioned act that can close a cycle in the retraction graph; then consolidate two **equal-basis** replicas of one retraction held in two corpora **while a counter-retraction `R` already targets it**, and assert the merge **succeeds**, that the retraction's content identity is **unchanged**, and that `R` is **not rewritten and not re-minted** — §5's `duplicate location` state has no other resolution **Amended 2026-08-08 — structural merge is retired** (`2026-08-08-world-address-ruling.md` §5). The row's premise stands and its mechanism is withdrawn; the arms re-home rather than disappear. Assert **no operation retires an address on coreference grounds**. The **equal-basis consolidation** arm and the **lineage-divergence** arm (both survive, no field-selection path, `lineage-divergent`, conflict standing after either producing run is deleted) move to **W16**, whose union rule now carries them; the **distinct-basis retraction refusal** moves to **W15**'s cycle arm, where it becomes an assertion that no cycle is constructible rather than that one is refused. Every remaining arm — redirect sets, absent referrer, absent survivor, `uid` non-minting — described merge and retires with it |
 | **W5** | Moving an entity between corpora changes only its location | Move a `source` from one corpus to another; assert its **`uid` unchanged**, its **canonical address unchanged**, no entry added to `deprecated_ids`, every inbound reference unchanged, and `belief_input_digest` unchanged. Then move a **dataset** that appears in the producers map, and assert `belief_input_digest` is **still** unchanged even though the address map and **both corpus-state identities** moved, so that re-deriving now mints a **new receipt** naming the same snapshot — this row is what two successive revisions of §5's snapshot identity violated, once through the address map and once through exact coverage states, so it is asserted against a member of the producer enumeration and not only against an unrelated `source` |
 | **W5a** | A basis change is ruled by case, never by default (§4.4) | Re-hold a dataset with a different manifest and assert a **new** entity with prior assessments still bound to the old. Correct a source's identifier and assert **one** entity: `uid` preserved, address renamed, old address resolving through `deprecated_ids`. **Negative:** assert the system does not choose between correction and new-work on its own |
-| **W6** | The four resolution states never collapse | Resolve a ref whose corpus is absent, one that does not exist, and an alias matching two entities; assert three distinct findings. **Negative:** assert removing a corpus from the checkout does **not** convert its ids to `unknown` |
+| **W6** | The four resolution states never collapse | Resolve a ref whose corpus is absent, one that does not exist, and an alias matching two entities; assert three distinct findings. **Negative:** assert removing a corpus from the checkout does **not** convert its ids to `unknown` **Amended 2026-08-08:** **three** states, not four — `ambiguous` leaves with the stored alias (§5.1). Resolve a ref whose corpus is absent and one that does not exist; assert two distinct findings. The ambiguous-term refusal is now **W9**'s, at search time |
 | **W7** | Views see the whole world, not a directory | Evaluate a topic view over an entity stored in another corpus; assert it is found — the `fb-2026-07-30-019` defect, pinned as a test rather than fixed per-consumer |
 | **W8** | No conflict is resolved by precedence | Exercise all three §5 conflicts — duplicate location, ambiguous alias, address conflict; assert each gets its own handling and that **none** applies precedence: not project order, not checkout order, not recency |
 | **W8a** | All four index maps are derived, never authoritative — and the producers map, retraction enumeration, and certification inventory carry their own scope (amended 2026-08-03, packaging §5 / 5a §4 / 5b §7.6) | Delete the world index and rebuild it from the corpora alone; assert the **address**, **alias**, **producers** and **retraction** maps all reconstruct identically. Then edit each map in the index only; assert the rebuild discards every edit. **Amended 2026-08-03 — the retraction map carries its own completeness evidence:** omit an in-coverage retraction and repackage into an internally consistent epoch; assert validation of the **retraction-map derivation receipt** — rebuilding with its fixture-bound rule against corpora at its named states — **refutes** it (packaging §7, X12). **Amended again at 5b's banking — so does the certification inventory:** omit an in-coverage `instrument-certification` from the address map and repackage; assert validation of the **certification-enumeration receipt** — same contract, same rebuild — **refutes** it (normative-contract §7.6, packaging §7, X12). **Coverage is part of the answer, not of the plumbing:** build the index over a **narrower** corpus set with every included corpus byte-identical, and assert (a) the producers map is smaller, (b) the **coverage declaration** differs, and (c) kernel §5.1's `belief_input_digest` **differs** — pinning that an enumeration is bounded by what it consulted and that two coverages are two belief inputs. **Negative — the receipt is beside the identity, not in it:** move an entity between two covered corpora so **both** corpus-state identities change while the producers map and the covered-corpus set do not; assert the **semantic** snapshot identity and `belief_input_digest` are **unchanged**, and that re-deriving mints a **new receipt** at a different receipt identity while the earlier receipt is left intact — W5 holds through the completeness mechanism as well as through the address map. **And the receipt is still required:** import a snapshot with no receipt and assert it is refused as unrecomputable. **Well-formedness before availability:** for a snapshot declaring coverage `{A, B}`, hand import a receipt naming **only `A`** with `A` present and standing at its recorded state; assert it is **refused as malformed** — and specifically that it is **not** evaluated against availability, **not** `unresolvable`, and above all **not `validated`**, which is what a rebuild from `A` alone would have returned for a map omitting every producer in `B`. Repeat with an **extra** corpus outside coverage, a **duplicate** `corpus_id`, and a receipt whose snapshot identity names a different snapshot; assert each is refused. **The values must be identities, not merely present:** hand import a receipt whose state value names a **corpus** rather than an exact corpus-state identity, and one whose rule reference is a **bare version string** with no fixture binding; assert **`malformed`** for both — specifically **not `unresolvable`**, since no corpus mount and no rule installation could ever make either checkable, and an `unresolvable` verdict would have told their author to go find the missing input. Then assert the contrast that fixes the boundary between the two predicates: a **syntactically valid** state identity and a **syntactically valid** rule identity that are simply **not held here** are `unresolvable`, not malformed — *is it an identity* belongs to `well_formed`, *is it held* belongs to `resolvable`. **Negative:** assert every malformedness above is decided **with no corpus present at all** and with **no rule held**, pinning that malformedness is a property of the record while unresolvability is a property of the checkout. **Malformed is an evaluator outcome, not only an import refusal:** **raw-write** a malformed receipt past the import boundary (§11.11), then run an **audit**; assert the evaluator returns **`malformed`** — not `unresolvable`, not `refuted`, and not `validated` — that the audit emits a **malformed finding naming that pair**, and that the same result comes back from the **diagnostic query**, which writes nothing. Assert the snapshot reduction **excludes** it: with that receipt alone, the snapshot is **`unchecked`** and **not `contradicted`**, so a forged record cannot condemn a snapshot; place a **validating** receipt beside it and assert the snapshot is **`checked`**, with the malformed finding **still emitted**. **Negative — the two roads to `unchecked` are distinguishable:** assert an audit over an all-malformed snapshot and one over a snapshot whose corpora are merely absent both report `unchecked`, but that only the first carries malformed findings — pinning that a permanent record defect is not filed as a transient checkout condition. **The rule identity is in the receipt, and its three transitions are distinct:** validate a receipt under an audit, then **(i) install a newer enumeration rule beside the old one** — assert the old receipt **still validates**, since its named implementation is still held and a content-addressed implementation never changes in place; **(ii) stop holding the old rule** — assert the receipt is now **unresolvable**, and **never refuted**, since nothing in any corpus changed; **(iii) re-derive under the new rule** — assert a **new receipt** at a new receipt identity, the old receipt untouched, and a **new snapshot only if the map or coverage differ**, with the semantic identity and `belief_input_digest` **unchanged** when they do not. Assert a rule identity naming an implementation that **fails its fixtures** is not that rule — a `resolvable` failure, since the reference is well formed and the world simply holds no such rule — while a bare version string is **`malformed`**, per the case above. **Two installations agree, with the precondition stated:** assert two installations in the **same availability context** — both resolving the same rule and the same per-corpus states — reach the **same** outcome for one receipt; assert one lacking the rule returns **`unresolvable`**, which is agreement about what it can establish rather than a contradicting verdict. **Negative — unavailable is not malformed:** import a snapshot whose receipt names exact states whose **corpora are absent from this checkout**; assert the import **proceeds**, that an **import finding** records the unchecked derivation, and that **no validation state is written onto either record**. Assert the malformedness refusals above are still refusals under exactly that condition, pinning that "cannot be checked here" and "cannot be checked" are different findings. **The availability transition, which is what must not move belief:** compute belief **naming that snapshot**, then **mount the corpora** and assert the digest and admission are **unchanged** — mounting is not an argument. Assert a computation naming a **different** snapshot **does** produce a different digest, since the identity is itself a belief input; assert the identity is a **required argument** with no default, so a computation naming none has no digest to produce, and that **no implicit "latest" and no stored selector** exists to be reached. Assert an **audit writes only a new snapshot and a new receipt** and by itself changes **no** belief. **A receipt is checkable only against a state that still exists:** validate a receipt under an **audit**, then change a covered corpus so it stands at a **new** state; audit again and assert the receipt is now **unresolvable** rather than refuted, and the snapshot **`unchecked`**. **The quantifier is per corpus:** build a receipt over **two** corpora, move **one** of them to a new state and leave the other untouched; assert the receipt is **unresolvable**, that the still-standing corpus does **not** satisfy the moved one's entry, and that restoring the moved corpus to its recorded state makes the receipt resolvable again. Assert the same for the rule conjunct, so all three ways of failing `resolvable` are covered — asserting specifically that **no stored validation survives**, since the state is an audit-time diagnostic that is evaluated and never written. Assert that a computation naming that **same snapshot identity** yields the **same digest and admission** across the whole transition, and that re-deriving mints a snapshot and receipt that are checkable again. **The evaluating operation is named:** assert **mounting a corpus performs no validation** — no finding, no record mutated, no validation result written — and that the **audit** is what evaluates. Assert import, audit and the diagnostic query all call **one read-only evaluator**, that only the first two are effectful (refusing a write; publishing a correction), and that the diagnostic query **writes nothing and feeds no belief computation**. **Negative:** assert no fourth path evaluates a receipt, and that the three callers **evaluating in the same availability context** return the same result, since they share the function rather than reimplementing it. **Then assert the limit:** the evaluator is **not pure** — assert the *same* `(snapshot, receipt)` returns `unresolvable` before a needed corpus or rule is available and `validated`/`refuted` after, so agreement is guaranteed **within** an availability context and across nothing else. **Per-pair validation and its quantifiers:** first assert the import boundary — hand it a receipt that is **resolvable and refuted right now** and assert it is **refused before any write**, with no file afterwards. Then build the state a refusal cannot produce, by the route §5 names: import a second receipt **while its corpus is absent**, so it enters unresolvable with a finding, then **mount that corpus and run an audit**, which is what evaluates it to **refuted**. **Then the other half of that route:** import a third receipt whose corpora are all present but whose **named rule is not held here**; assert it enters **unresolvable** with a finding rather than being refused, then **install that rule and audit**, and assert it now evaluates — to **refuted** where the rebuild disagrees, **validated** where it agrees. Assert the rule's arrival — which does of course change what is held, since holding the implementation is the point — **mutates neither the snapshot nor the receipt**, writes **no validation result** anywhere, and changes **no** belief; only the subsequent audit may publish a correction. Exactly as the corpus mount does not. With a validating receipt also present, assert the snapshot is **`checked`** and that the refuted outcome attaches to the **pair**, not to the snapshot. Now make the validating receipt unresolvable while the refuting one still resolves, and assert **`contradicted`**; then make **none** resolve and assert **`unchecked`**, **not** contradicted — the vacuous case, which an "every resolvable receipt is refuted" rule would have gotten backwards. Assert the three states are **total and mutually exclusive over the well-formed receipts**, and that adding a malformed receipt to any of the three leaves the state unchanged while adding one finding. **Negative — the boundary is a moment, not an invariant:** assert no rule requires every stored receipt to be non-refuting, that raw-writing a refuting receipt is likewise not refused, and that both are caught only when something evaluates them — otherwise `contradicted` would be a state with no reachable population. As the limit, assert a contradicted snapshot is **not retired** and can still be named by a computation (limitation 11). **Negative — one snapshot, several receipts:** re-derive after a change that leaves the producers map and coverage untouched; assert a **second receipt** at a **different receipt identity** naming the **same** snapshot identity, that neither receipt is overwritten, and that no belief digest moves — pinning that the receipt is its own record and not a mutable field of the snapshot. **Negative — absent is not empty:** hold out a corpus **inside** coverage that holds a producing run, and assert that producer reports **`not-present`** and the dataset does **not** read as undiverged; contrast with a producer outside coverage, which is unsuspected and is sub-problem 4 §11.15's stated limit rather than a detection |
 | **W8b** | World `uid` uniqueness is enforced, and its two violations are distinguished | Place one `uid` under two different canonical addresses; assert **corruption**, and assert no merge is offered. Place one `uid` at the same address in two corpora; assert a **duplicate-location** finding resolvable by merge. **Negative:** assert a single corpus's own `nodes` check reports neither — the invariant is Science's, and no corpus can see it |
-| **W9** | An ambiguous alias refuses and names its candidates | Author `related: [paper:Chen2023]` in a world holding two; assert refusal listing both world addresses, and assert **no** binding was written |
+| **W9** | An ambiguous alias refuses and names its candidates | Author `related: [paper:Chen2023]` in a world holding two; assert refusal listing both world addresses, and assert **no** binding was written **Restated 2026-08-08:** the subject is an ambiguous **search term**, not a stored alias. Search a term the **pinned authority snapshot** maps to two identifiers; assert refusal listing both, and that **no binding was written**. **Negative:** assert the ambiguity is a property of the pinned snapshot — reproducible across two installations holding it — and not of accumulated authoring |
 | **W10** | Cross-corpus edges are ordinary, not dangling | Place a lineage chain spanning two corpora — as `produces` / `transforms` edges on runs, since sub-problem 4 §5.2 makes `derived_from` a **view** composed from them — and assert the world traversal returns the full closure and emits **no** `lineage-incomplete`. Assert the same for a **lineage basis** whose producing run lives in the other corpus. **Negative:** assert the corpus-local closure *does* report both — pinning why lineage must run at the world layer, and that composing the relation raised the number of references that must resolve rather than lowering it |
 | **W11** | A world entity is never addressed by a coordination address, or the reverse | Attempt a qualified `(project, id)` reference to a `source`, and a world address for a task; assert both refused by kind |
 | **W12** | Renaming a project does not break coordination references | Rename a project; assert every `(project identity, local id)` reference still resolves, and that the old name survives only as an alias |
 | **W13** | A corpus identity is minted, opaque and stable; its state identity is over content (§5) | Move a corpus's root directory, rename it, re-clone it and mount it at a second path; assert `corpus_id` is **unchanged** in every case, and that the coverage declaration naming it — and therefore `belief_input_digest` — is unchanged with it. Assert `corpus_id` is **not** derived from the path, directory name, remote URL or project name: change each and assert no effect; and assert **no ordinary API re-mints** it for an existing corpus. **Negative — amended 2026-08-03 (packaging §4): the immutability is the API's; manifest-only re-minting is detected, coordinated forgery is not.** Raw-edit the manifest's `corpus_id`, regenerate the snapshot and receipt consistently, and assert the next index build **refuses** — the presented id has no admission record while the registry still names the original (packaging X7). Then perform the **coordinated** act: raw-forge an admission for the new id while **retaining** the old id's admission — as a legitimate fork's registry would read — and assert **nothing detects it**: every state identity is self-consistent and the registry is well-formed. Under that retained-admission variant, assert the case that *looks* like a detection is not one: keep an **older replica** still resolving the pre-edit states, and assert every receipt naming them is **unresolvable against the edited corpus** (its states all moved with the id), that resolving them against the replica validates **the replica**, that **no assertion ties the new id to the old**, and that the resulting pair is **indistinguishable from a declared fork**. **Separately**, raw-delete an admission record alone and assert both halves: nothing detects the loss, **and** it evades nothing — the re-minted id is still unadmitted and the build still refuses (packaging X7). Assert no finding is emitted for any undetected case — G4/G8/S3's undetectable-history limit, one partial detection deep, needing §9's log for the rest. **Uniqueness:** place two corpora carrying one `corpus_id` in one world and assert the index build reports **corruption** and offers **no merge** — the W8b handling, not the duplicate-location one. **Replica vs fork:** restore a corpus from a backup and mount it in place of the original; assert the id is **retained** and every coverage declaration naming it still resolves. Then copy a corpus as a **fork**; assert a fresh id is minted, that the declaration is **authored** rather than inferred from the bytes, and that an undeclared fork is caught **only** when both corpora are live in one world. **State identity is content, not filesystem:** change a node's content and assert the corpus-state identity moves; **add, remove and retarget a `produces` relation** and assert it moves each time, **while the run's world address and every semantic identity stand still** — the case a subset-based content identity would have missed and the producers map is derived from. Then reformat a non-node file **other than the manifest**, rename a node's **file** without changing its `uid` or content identity, and touch every mtime, and assert the state identity is **unchanged**. **Amended 2026-08-04 (domain-extension-boundary §7): the manifest splits three ways** — reformat `corpus.yaml` (whitespace, key order, quoting) or reorder its `domains` mapping and assert the state identity is **unchanged**, since the member is a canonical projection of the parsed manifest; change any manifest field **semantically** — a pinned `science_contract` or domain contract identity, `corpus_id`, fork provenance — and assert it **moves**; and assert an unknown field, a duplicate `domains` key, or a malformed contract identity is **refused at load** rather than digested. Assert the identity is computed over `nodes`' **canonical JSON projection** (`STANDARD.md` §11.1) including `relations` and `facets`, and that **reordering a node's relations does move it** — the deliberate false positive, since cross-language equality is defined over document order. **Negative — not git:** compute the state identity for a corpus that is **not a repository** and assert it exists; then, in one that is, modify an **untracked** node file and assert the state identity **moves** while `HEAD` does not, and commit with no content change and assert it does **not** move. **Negative — a project identity is not a corpus identity:** point two projects at one corpus and assert one `corpus_id`; repoint a project to another corpus and assert **no** corpus identity changed |
+| **W14** | The address scheme adds what the basis alone does not: a stored reference is unambiguous **by construction**, and no label is ever stored to compete with it (added 2026-08-08) | Author a reference to a record whose label collides with another's; assert the stored ref holds the **canonical identifier** and that **no stored field anywhere** holds the label. Render one record under two locales; assert **two labels, one address, no stored difference, and no identity movement**. **Recursive rendering:** render a `dataset` and assert its `programme` and `release` fields render through the **pinned snapshot** while the dataset itself renders from immutable content — the renderer is per **value**, not per kind. **Sabotage:** persist a rendered label as node content → **refused**, since a stored label is an alias by another name. **Negative — this is not W1/W2:** hold every basis fixed and correct, mutate only the label, and assert nothing observable moves — pinning that W14 tests the *scheme* while W1/W2 test the *encoding*, which is the distinction F9 correctly observed they conflated. **Negative — not an authority-release invariance claim:** assert this row says nothing about whether bumping a consulted release moves `belief_input_digest`; under D6 it legitimately may |
+| **W15** | A coreference balance is derived, ignores duplicate submissions, privileges no attester class, and its closure rewrites nothing (added 2026-08-08) | Post `+1` from a human actor and `+1` from an agent actor over one pair; assert balance **2** and an **active** edge, then **swap the two actors** and assert nothing changes — the symmetry *is* the assertion. Post a `-1`; assert balance **1**, the edge still active, and **both prior records still present** — a negative attestation **offsets**, it does not retract. Post a second `-1` from a distinct actor; assert balance **0** and the edge **inactive**, with every record retained. **Duplication cannot manufacture weight:** submit the same `(endpoints, stance, actor, grounds)` ten times under ten distinct event tokens; assert **balance is unchanged at 1** and that **ten records exist** — provenance is preserved, weight is not, because the token is outside the deduplication key. **Closure does not rewrite:** with an active edge between `A` and `B`, assert a retraction targeting `A` still names `A` **exactly**, that `π_claim`, `belief_input_digest` and every content-identity basis are **byte-unchanged**, and that only **query expansion** observes the edge. **Negative — the cycle route stays shut:** activate coreference between two retractions and assert **no cycle is constructible through closure**; assert that this does **not** discharge the DAG invariant, which **M3**'s import validation over the bundle union the resolved world context still owns, and that a raw-written cycle remains auditable corruption |
+| **W16** | `consolidate` repairs storage and asserts nothing about identity (added 2026-08-08) | Hold one identity in two corpora; `consolidate`; assert **one canonical address**, outgoing relations **unioned**, **`uid` continuity selected and never minted**, **no redirect written**, **no inbound reference rewritten**, and **no `deprecated_ids` entry created** — no address retired, so nothing needs one. **Divergent lineage survives consolidation:** consolidate two dataset records at one content address carrying **different lineage bases**; assert **both** survive, that no field-selection path offers a choice between them, that the dataset is `lineage-divergent` with independence over it `not-certified`, and that the conflict **still stands after deleting either producing run** — the W4 arm, re-homed. **Negative:** attempt `consolidate` on two records at **different** canonical addresses and assert **refusal** — that is a coreference question and `consolidate` must not answer it. **Negative:** assert `consolidate` writes no `coreference-attestation` and moves no balance |
 
 W1/W2 are the same mechanism observed on the two halves of §1.1, which is why
 both are needed: a rule that only ever merges and a rule that only ever splits
@@ -1385,9 +1498,29 @@ so nobody later "optimizes" the world traversal back into a corpus call.
    supplied. The world therefore starts smaller than the corpus and grows as
    identifiers arrive. This is the intended direction but it is not free, and a
    note is not a weaker entity — it is not an entity.
-3. **Merge is recorded, not reversible.** §4.3 requires a rationale; it does not
-   supply an unmerge that restores prior references, and a wrong merge is
+3. ~~**Merge is recorded, not reversible.**~~ §4.3 requires a rationale; it does
+   not supply an unmerge that restores prior references, and a wrong merge is
    discovered downstream of everything bound to it.
+
+   > **Retired 2026-08-08** (`2026-08-08-world-address-ruling.md` §5). This
+   > limitation described an operation that no longer exists: structural merge is
+   > retired, coreference is a graded claim that collapses nothing, and a
+   > mistaken attestation is answered by an offsetting one with both records
+   > retained. **Three limitations replace it**, and they are the honest price of
+   > the trade:
+   >
+   > 3a. **Two addresses persist for one work, permanently.** No operation reduces
+   > them. Query-layer searches expand over active coreference closure; the
+   > records never merge.
+   >
+   > 3b. **Attester reliability is unmeasured.** Unit weight is the honest default,
+   > not a finding that attesters are equally reliable. Until the `meta/`
+   > programme exists, a coordinated set of low-quality attestations outweighs a
+   > single careful one and nothing detects it.
+   >
+   > 3c. **`consolidate` selects continuity.** Where two copies disagree on
+   > content it reconciles, and reconciliation is a judgement recorded rather than
+   > derived — the standing merge had, narrowed to storage repair.
 4. **No access control.** §6 states that a project is not a permission boundary.
    A world in which every reader sees everything is the assumption; multi-actor
    corpora would need a boundary this design does not have.
@@ -1492,6 +1625,22 @@ the plan:**
 Netting these out, this design **removes** ~5,136 lines and **builds** the world
 layer of §5. It is not a reduction in total machinery, and presenting it as one
 would be the same error as calling the world index a thin map.
+
+> **Amended 2026-08-08 — machinery this design proposed and will now not build**
+> (`2026-08-08-world-address-ruling.md`). The table above lists *predecessor*
+> surfaces; these are this design's own, cancelled before implementation and
+> recorded here so the world layer's scope is not over-estimated from the banked
+> text: the **alias facet** and its schema; the world index's **alias map**,
+> reducing four derived maps to three; the **`ambiguous`** resolution state on
+> the reference path; and **structural merge** — the redirect-set, inbound
+> rewrite, absent-referrer and `uid`-selection machinery of §4.3, of which only
+> `consolidate`'s much smaller storage repair survives.
+>
+> Against that, the ruling **adds** an eleventh kind, a derived balance, a
+> query-layer closure, and a pinned-authority renderer whose snapshot artifact is
+> itself undesigned (§10 there, limitation 5). The net is very likely a
+> reduction, and it is deliberately not quantified: this design's own warning
+> against presenting a rebuild as a reduction applies to its amendments too.
 
 The relevant number is not the line count. It is that **39 modules currently have
 to remember that an entity might live elsewhere**, and one of them —
