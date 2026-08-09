@@ -281,3 +281,10 @@ class SignatureRefused(RecordError):
     case being `assesses` from a source-assertion (G1). Refused in the typed
     constructor: inertness is the default, belief-bearing is the declared
     exception, and the exception is declared exactly once."""
+
+
+class MalformedSnapshot(RecordError):
+    """A lineage snapshot value refused at construction — one representation
+    per fact: a `single` basis holds exactly one route, a `conflict` at least
+    two distinct, sorted routes, so a conflict that never occurred cannot be
+    spelled (substrate §5, sub-problem 4 §5.2)."""
