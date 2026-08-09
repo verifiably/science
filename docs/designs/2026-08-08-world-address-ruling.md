@@ -31,6 +31,8 @@ while no published map could supply one, so **§5.5 is added**: the epoch gains 
 **coreference map** — the alias map's replacement, leaving the count at four —
 publishing each pair's *reduced* balance under a declared coverage, and a **third
 edge state, `indeterminate`**, which refuses rather than defaulting to inactive.
+Packaging's receipt contract and **X9, X10, X12** extend to it, so the map is not
+published without the completeness evidence those rows exist to require.
 **W14** contradicted the address map, which resolves every stored
 `deprecated_ids` entry; it now permits canonical addresses live and retired, and
 forbids presentation values. **`consolidate`**'s `uid` rule assumed the inputs
@@ -414,7 +416,8 @@ not enough; the enumeration has to be published **reduced**.
 > address, producers and retraction: **sorted endpoint pair → (derived balance,
 > distinct-key count, edge state)**, reduced at build under the epoch's
 > **declared coverage**, with its own **derivation receipt** on the
-> retraction-map precedent (packaging §7, **X12**). It is **derived, never
+> retraction-map precedent — that contract, and **X9**, **X10** and **X12**, are
+> extended to it in this ruling's commit (packaging §7). It is **derived, never
 > authoritative** (**W8a**), and it is **not a belief input** — §5.3 keeps
 > coreference out of belief, so unlike the producer snapshot it carries no
 > semantic identity and is absent from `belief_input_digest`.
@@ -514,13 +517,12 @@ last item was never F9's to pay.
 | site | amendment |
 |---|---|
 | world §2.1 | the alias facet and the alias map retire; the fourth rejected alternative — not storing handles — is recorded; §2.1's rule that "the former slug survives as a non-unique alias" retires with it |
-| world §3 (`uid`) | `duplicate location` is repaired by `consolidate`, not merge; "a merge selects a `uid`, never mints one" is preserved verbatim under the new name (**W16**) |
 | world §3 | tier table gains `coreference-attestation` |
 | world §4.2 | basis table gains `coreference-attestation`; the missing-basis rule generalizes (§3 here); `dataset`'s provider identifiers stop being "aliases" and become authority-identifier **fields** |
 | world §4.3 | structural merge retires; §5.4's `consolidate` takes its duplicate-location role; "curator assertion" → attester |
 | world §4.4 | the middle case **splits**, and the boundary moves from a judgement about *works* to a fact about *identifiers*: a **mis-transcribed** basis is still a rename with `uid` preserved and the old address in `deprecated_ids`; an **authority replacement** is a coreference attestation; a genuinely different work is unchanged. *"Only a person can say"* is withdrawn here |
 | world §5, §5.1 | the index's map **membership** changes and its count does not: the **alias** map retires and the **coreference** map arrives (§5.5 here), so four stay four. The map table, "Science holds four maps", "all four are derived", the address/alias split argument (which survives one level out, over **search terms**), the derivation sentence and the belief-input exclusion list all follow; `ambiguous` leaves the resolution table and the refusal relocates to search time |
-| world §3 (`uid`), §5 conflicts | **duplicate location is redefined by the address**, not by `uid` equality: two records at one canonical address, in one corpus or two, `uid`s shared or distinct. The continuity row and the conflicts table follow, and **W8b**'s second arm runs both `uid` cases |
+| world §3 (`uid`), §5 conflicts | `duplicate location` is repaired by `consolidate`, not merge, and is **redefined by the address** rather than by `uid` equality: two records at one canonical address, in one corpus or two, `uid`s shared or distinct. The `uid` rule is **not** preserved verbatim — it **splits**: preserve a shared input `uid`, select one of two distinct ones, never mint a third. The continuity row and the conflicts table follow, and **W8b**'s second arm runs both cases |
 | world §5 (elsewhere) | the reverse-adjacency argument stops naming the alias map; §1.1's five collisions become ambiguous **search terms**; the whole-node content-identity sentence and the split-identity argument drop their alias-edit examples |
 | world §10 | **both** open questions close — the `source` basis when identifiers disagree (answered by attestation, which is neither branch the question offered) and merge versus a retraction's immutable exact target (**ρO5**, closed by retirement). The section's closing sentence is rewritten: no question in it remains open |
 | world §5 conflicts | `duplicate location` exits via `consolidate`; "ambiguous alias" → "ambiguous search term" |
@@ -542,10 +544,11 @@ last item was never F9's to pay.
 | formal model **ρO5** | **CLOSED** — by retiring the operation, a fourth route none of its three candidate resolutions listed. Its §10 summary, §9.1 not-covered row and **limitation 11** retire with it |
 | formal model **M3** | the two merge arms restate onto `consolidate` and `attest-coreference`; the distinct-basis arm becomes an unspellability assertion |
 | formal model §8.5 table | the ρA10 adoption row records its own supersession |
-| correction lifecycle §2, §4 | the operation table's `merge` row becomes `consolidate` and gains the coreference distinction; ρA9's merge arm restates onto both successors; the retraction map is the **third** derived map, not the fourth; "merge-widening" becomes "consolidation-widening" |
+| correction lifecycle §2, §4 | the operation table's `merge` row becomes `consolidate` and gains the coreference distinction; ρA9's merge arm restates onto both successors; the retraction map's **ordinal is dropped** — it was "a fourth derived map" counting the alias map, and with alias out and coreference in the index still holds four, so the maps are named rather than numbered; "merge-widening" becomes "consolidation-widening" |
 | computation §5.2, §7.3, §11 | `conflict` arises from **`consolidate`**, not merge, in all five places the operation is named; the `aliases, not the basis` sentence becomes authority-identifier fields; the world §8.3 citation is repointed at limitation 3c |
 | substrate §5 | the lineage-basis note names `consolidate` |
-| packaging §0, §5, §5.1 | the epoch holds **three** maps; the coherent-enumeration view is shared across three; **merge inbound hygiene lapses** as a requirement on the index |
+| packaging §0, §5, §5.1, **§7** | the epoch's four maps change membership — alias out, coreference in — and the coherent-enumeration view is shared across all four; **merge inbound hygiene lapses** as a requirement on the index; and §7's receipt contract gains a **fourth receipt**, the coreference reduction, on the retraction-map contract member for member, with the two ways it differs from its siblings stated — no semantic identity and no belief input, and a failed validation that makes covered edges `indeterminate` rather than only reporting a finding |
+| packaging **X9, X10, X12** | the three receipt rows extend to the coreference reduction: X9's identical-states arm covers four receipts, X10's held-store arm gains the `indeterminate` consequence, and X12 gains both an omitted-attestation arm and a **wrong-balance** arm — the reduction is checked, not only its membership |
 | normative contract §3 | the contract's operation inventory: `merge` → `consolidate` + coreference attestation |
 | domain boundary §8.1 | "move and merge" → "move and consolidate", with a note that an attestation is not a relocation and does not reach the rule |
 | domain boundary §1, §5 | "the ten kernel kinds" ×2 → eleven |
@@ -553,7 +556,7 @@ last item was never F9's to pay.
 | adoption ledger | **artifact 11** (the pinned authority snapshot, owed and undesigned); a §0 note carrying the kind count, the merge retirement and the F9/F10 disposition; artifact 1's map list and its merge-hygiene requirement; artifact 7's oracle inventory → W1–W16; §3's ρO5 pointer; §4's **concurrent-merge interleaving gate lapses** — there is no cross-corpus referrer rewrite left to interleave |
 | README | the design table gains this document, and the world row drops "aliases" and reads W1–W16; the frozen-row count → 138 |
 | guide `foundations.md` | the kind inventory gains `coreference-attestation`; heading, count and one inbound anchor follow |
-| guide `identity-world-and-change.md` | `sources`; "Current state" gains the ruling; the W-range reference → W1–W16; the identity table's **Alias** row becomes **Label**; four index maps become three; the open-edges sentence drops merge continuity |
+| guide `identity-world-and-change.md` | `sources`; "Current state" gains the ruling; the W-range reference → W1–W16; the identity table's **Alias** row becomes **Label**; the four index maps keep their count and change membership — alias out, coreference in; the open-edges sentence drops merge continuity |
 | guide `glossary.md` | **Alias** is deleted; **Label** and **Coreference attestation** are added; `UID` stops citing merge |
 | guide `open-questions.md` | the two closed world questions are replaced by the ruling's three open ones |
 | guide `contracts-and-adoption.md` | the frozen-row count → 138 |
@@ -561,7 +564,11 @@ last item was never F9's to pay.
 
 **Not amended, deliberately:**
 
-- **W1, W2, W5, D2, M3**, and every G (but for G3), S, L, R, C, X, N and P row.
+- **W1, W2, W5, D2, M3**, and every G (but for G3), S, L, R, C, N and P row.
+  **X is no longer among them:** **X9, X10 and X12** extend to the coreference
+  reduction's receipt (§5.5), because a map published under a coverage without a
+  receipt is the completeness gap those three rows exist to close. X1–X8 and X11
+  are untouched.
   W5 and D2 carry **no alias arm** — the formal model's invariance row cited them
   for the *dimension*, which is what changes, not for a test that mentions it.
 - **Correction lifecycle §3.** `retraction`'s basis is the *model* for the new
@@ -624,11 +631,14 @@ are rewritten.
    `indeterminate` state and its refusal are what keep the *unestablished* case
    honest; they do nothing about a narrower coverage that is established and
    simply smaller.
-8. **The coreference map is a fourth artifact the world index must build**, and
-   the alias map's retirement pays for it in count only, not in work. It needs a
-   reduction rule, a derivation receipt, and a place in the build's coherent
-   enumeration — none of which is designed here beyond naming the precedent it
-   follows (packaging §5, §7).
+8. **The coreference map is real work the alias map's retirement does not pay
+   for.** The count is unchanged; the build is not. Its reduction rule, its
+   derivation receipt and its place in the build's coherent enumeration are
+   **designed** — packaging §5, §7, X9, X10 and X12 carry them on the
+   retraction-map contract, amended in this ruling's commit — and **unimplemented**,
+   like every other X row. What is *not* designed is the reduction rule's own
+   fixture set, which arrives with the first contract cut (**N1**) as every
+   enumeration rule's does.
 
 ---
 
