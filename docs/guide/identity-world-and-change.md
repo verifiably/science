@@ -68,11 +68,12 @@ address while preserving `uid` continuity and deprecating the old address.
 
 The world root holds an authoritative registry for corpus admission and
 terminal status. Derived immutable epochs index an explicit set of corpus
-states and world-level records through three maps:
+states and world-level records through four maps:
 
 - canonical address to one record;
 - input record to its producers;
-- target record to its retractions.
+- target record to its retractions;
+- endpoint pair to its coreference balance and edge state.
 
 An epoch identity commits to its coverage and derived contents. A mutable
 “current epoch” pointer is an operational convenience only: belief and other

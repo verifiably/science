@@ -170,9 +170,11 @@ another corpus, while the log's sequence is **per root**, so it cannot order the
 edges most in need of ordering.
 
 **Discovery, bounded.** Retractions are joined through the world index, which gains a
-**third derived map** — the retraction map, target identity → retraction addresses —
-beside address and producers (a *fourth* at this design's banking, beside the alias
-map, which retired 2026-08-08 with the stored alias — `2026-08-08-world-address-ruling.md` §4.3) (world §5; a new consumer requirement for the
+**derived map** — the retraction map, target identity → retraction addresses — beside
+address and producers (*this read "a **fourth** derived map" at banking, counting the
+alias map; the alias map retired 2026-08-08 and a **coreference** map arrived the same
+day, so the index still holds four and the ordinal no longer names anything —
+`2026-08-08-world-address-ruling.md` §4.3, §5.5. The maps are named, not numbered*) (world §5; a new consumer requirement for the
 index packaging design, recorded in the adoption ledger). A computation enumerates it
 over the **same declared coverage and recorded corpus states as its producer
 enumeration**, and the enumeration — the found refs, their resolutions, and the

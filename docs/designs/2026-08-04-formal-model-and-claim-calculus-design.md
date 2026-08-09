@@ -137,7 +137,7 @@ cut across it, which is why each entry carries all seven fields independently.
 
 ### 2.1 `Rec` — world records (the eleven kernel kinds)
 
-Each row's **identities** cell lists every commitment the player bears. All ten
+Each row's **identities** cell lists every commitment the player bears. All eleven
 additionally bear a **node-content identity** (moved by any facet or field
 change) and contribute to their corpus's **corpus-state identity**; those two are
 stated once here rather than repeated in every row.
@@ -298,7 +298,7 @@ it. Gap §2.9 (b).
 | **corpus-state identity** | derived | the **complete canonical manifest projection** + sorted node identities, under `science.identity.v1` | receipt material; **never** a belief-digest member | world §5 (amended 2026-08-04); D §8.1 |
 | `corpus_id` | minted, opaque | stable identity; **never** a path, directory name, or project | admission refuses a duplicate | world §5; packaging §4; **X5** |
 | admission record | authored | registry record | `known := admission record exists`; `live := known ∧ ¬terminal event`; `present := configuration resolves exactly one corpus carrying the id`. `retired` / `departed` are **terminal** | packaging §4; **X4**, **X6**, **X7** |
-| world index (three maps — four until 2026-08-08) | **derived** | packaging identity | derived, never authoritative; carries the producers map, retraction enumeration, and certification inventory | world §5; packaging; **W8a** |
+| world index (four maps; **membership** changed 2026-08-08 — alias out, coreference in) | **derived** | packaging identity | derived, never authoritative; carries the producers map, retraction enumeration, and certification inventory | world §5; packaging; **W8a** |
 | **producer snapshot** | derived | **semantic identity** = producers map + the stable `corpus_id`s of covered corpora | a **required argument** to belief with no default, no implicit "latest", no stored selector — any of those would make belief follow the checkout | kernel §5.1; world §5 |
 | log heads / anchors | appended | per-engine-root hash chains at a reserved in-corpus path | subject-bound anchors; five-step verification under an explicit selected subject | L-design; **L1–L13** |
 
@@ -923,16 +923,16 @@ rather than half-blank.
 | W6 | the four resolution states never collapse | ED† |
 | W7 | views see the whole world, not a directory | *unclassified — direct requirement* |
 | W8 | no conflict is resolved by precedence | RF† |
-| W8a | all **three** index maps are derived, never authoritative — *four until 2026-08-08* | CA† |
+| W8a | all **four** index maps are derived, never authoritative — *membership changed 2026-08-08: alias out, coreference in* | CA† |
 | W8b | `uid` uniqueness is enforced; its two violations are distinguished | **CS** + ED† |
 | W9 | an ambiguous **search term** refuses and names its candidates — *restated 2026-08-08; the subject was a stored alias, and there is no longer one* | RF† |
 | W10 | cross-corpus edges are ordinary, not dangling | **OInv** |
 | W11 | a world entity is never addressed by a coordination address, or the reverse | US† |
 | W12 | renaming a project does not break coordination references | **OInv** |
 | W13 | corpus identity is minted, opaque, stable / state identity is over content | **OInv** / **CS** |
-| W14 | the address scheme adds unambiguity **by construction** — no stored field participates in lookup but the canonical identifier; labels are rendered, never resolved against | US† + **OInv** |
-| W15 | a coreference balance is derived over **typed** endpoints, unmoved by **exact** duplicates and attester-symmetric; closure rewrites nothing | RF† + **CS** + **OInv** + US† |
-| W16 | `consolidate` repairs storage and asserts nothing about identity | RF† + **OInv** |
+| W14 | the address scheme adds unambiguity **by construction** — the only stored values participating in lookup are **canonical addresses, live and retired**, and no presentation value does; labels are rendered, never resolved against | US† + **OInv** |
+| W15 | a coreference balance is derived over **typed** endpoints and a **declared coverage**, unmoved by **exact** duplicates and attester-symmetric; closure rewrites nothing, and an unestablished coverage refuses rather than reading as inactive | RF† + **CS** + **OInv** + US† + **FC** |
+| W16 | `consolidate` repairs storage and asserts nothing about identity; it preserves a shared `uid` or selects one of two distinct ones, and never mints | RF† + **OInv** |
 
 **R — computation and reproducibility**
 
@@ -1046,6 +1046,15 @@ rather than half-blank.
 
 The 113 rows contain **128 assertions**, since a row may state a property in a
 positive arm and pin its limit in a negative one.
+
+> **This tally is a measurement at 2026-08-05 and stays at its date**, under the
+> disposition record's §5.4 discipline. **W14–W16** were added 2026-08-08
+> (`2026-08-08-world-address-ruling.md`), taking the corpus to 116 rows; W15 additionally carries
+> **FC**, which would move that row of the table. Neither the row count nor the
+> per-label counts below have been re-measured, and restating them from
+> arithmetic rather than from a recount is exactly the drift this document warns
+> about elsewhere. The *conclusion* — the taxonomy reaches under half of what the
+> corpus asserts — is unaffected in direction by three rows.
 
 | label | rows | assertions |
 |---|---|---|

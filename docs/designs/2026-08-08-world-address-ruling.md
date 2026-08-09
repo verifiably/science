@@ -19,13 +19,24 @@ README; five contributor-guide pages; and the corpus guard's `W` table. Adds
 the kernel to **eleven kinds**. **Closes ρO5** — by retiring merge, not by ruling
 its cascade — and both of world §10's open questions.
 
-**Corrected 2026-08-09** on review, in six places: §2's kind table omitted
+**Corrected 2026-08-09** on review, in two passes. **First**, in six places: §2's kind table omitted
 `source-assertion` (nine of ten, not eight); the retired alias and merge
 machinery was still normative across eight documents; the W inventory stopped at
 W13 where it is counted at W16; **W15** lacked endpoint typing and overclaimed
 its duplication key; **W14** forbade a string rather than a lookup path; and §4
-called new machinery a reuse. The full site list, and what is deliberately *not*
-amended, is §8.
+called new machinery a reuse.
+
+**Second**, in three more. §5.2's balance summed over an unspecified universe
+while no published map could supply one, so **§5.5 is added**: the epoch gains a
+**coreference map** — the alias map's replacement, leaving the count at four —
+publishing each pair's *reduced* balance under a declared coverage, and a **third
+edge state, `indeterminate`**, which refuses rather than defaulting to inactive.
+**W14** contradicted the address map, which resolves every stored
+`deprecated_ids` entry; it now permits canonical addresses live and retired, and
+forbids presentation values. **`consolidate`**'s `uid` rule assumed the inputs
+shared one — equal bases give an equal *address*, not an equal `uid` — so
+duplicate location is redefined by the address and the `uid` rule splits in two.
+The full site list, and what is deliberately *not* amended, is §8.
 
 ---
 
@@ -260,12 +271,22 @@ All three are larger changes than the eleventh kind.
 ### 5.2 Balance is derived, and exact duplicates cannot manufacture it
 
 ```text
-balance(A, B) = Σ stance over distinct (endpoints, stance, actor, grounds)
+balance(A, B | coverage) = Σ stance over distinct (endpoints, stance, actor, grounds)
+                           taken over attestations in the declared coverage
 ```
 
 The event token preserves event provenance and is deliberately **outside** the
-deduplication key. A positive standing balance activates the semantic coreference
-edge; **zero or negative does not**.
+deduplication key.
+
+**The sum is over a declared coverage, never over "whatever is checked out".**
+An attestation is an ordinary world record and may live in any corpus, so a
+balance computed from the local checkout is a derived enumeration nobody bounded
+— the exact defect world §5's coverage declaration exists to prevent, and the
+reason §7 here keeps that apparatus. The universe is therefore **explicit and
+part of the answer**: §5.5 publishes the map, and a balance whose coverage cannot
+be established is not a balance. A positive standing balance over an established
+coverage activates the semantic coreference edge; **zero or negative does not**;
+and **unestablished coverage is a third outcome, not a default to inactive**.
 
 **What the key does and does not buy.** It defeats exactly one thing: the same
 attester submitting the **same stance on the same grounds** repeatedly, whether
@@ -341,19 +362,91 @@ limitation 11 retires with it.
 
 Retiring merge would otherwise leave §5's `duplicate location` state with no
 resolution, since world §5 records its only exit as *"resolved by an authored
-merge."* Duplicate location is **one identity in two corpora** — same basis, same
-address, same `uid`. That is storage duplication, not coreference, and it needs
-its own named operation rather than a share of a retired one.
+merge."*
+
+> **Duplicate location is defined by the address, not by the `uid`.** Two records
+> at **one canonical address** — in one corpus or two. An earlier draft of this
+> section said *"same basis, same address, same `uid`"* and was wrong on the last
+> conjunct: `uid` is opaque and minted per authoring act, so two corpora that
+> independently authored the same source from the same DOI hold one address and
+> **two** `uid`s. That is the ordinary case, and defining the state by `uid`
+> equality would have excluded it from the only operation that repairs it.
+> Equal basis gives equal address; it does not give equal `uid`.
 
 > **`consolidate`.** Requires **one canonical address**. Reconciles content and
-> location, selecting continuity where necessary. **Unions outgoing relations**
-> and **preserves divergent lineage bases**. Performs **no redirect and no
-> inbound rewrite** — no address retires, so nothing needs rewriting.
+> location. **Unions outgoing relations** and **preserves divergent lineage
+> bases**. Performs **no redirect and no inbound rewrite** — no address retires,
+> so nothing needs rewriting.
+>
+> **`uid`, both cases, one rule: never mint.** Where the inputs **share** a `uid`
+> — a stamped corpus that was copied — it is **preserved**. Where they carry
+> **distinct** `uid`s — independent authoring — `consolidate` **selects one input
+> `uid`**; the other ceases to be live; **no third `uid` is created**. Selection
+> is a recorded judgement, which is limitation 4's whole content.
+
+**This does not weaken W8b, and the two arms stay distinguishable.** One `uid`
+under **two different** canonical addresses is still **corruption** — two entities
+were given one continuity anchor, no authored act produces it, and `consolidate`
+is unavailable there by construction because it requires one address. Two `uid`s
+under **one** canonical address is duplicate location and is repairable. The
+asymmetry is right: an address is derived from a declared basis and equal bases
+*must* collide, while a `uid` is opaque and equal `uid`s can only come from an
+act that assigned them.
 
 W4's equal-basis arm already described an operation of this shape without naming
 it: *"the merge succeeds, the retraction's content identity is unchanged, and `R`
 is not rewritten and not re-minted."* Naming it separates a storage repair from
 an identity claim, which is the distinction the single word "merge" was hiding.
+
+### 5.5 The coreference map, and what a query may conclude without it
+
+§5.2's balance is an enumeration over records that may live anywhere, and §5.3
+puts its consumption at the query layer. Neither states **where the enumeration
+comes from**, and without that the balance is unusable in exactly the situation
+the world layer exists for: a federated corpus set, partially checked out.
+
+**The address map cannot supply it.** It resolves an address to `(corpus, uid)`
+and carries no content, so knowing an attestation *exists* tells a reader nothing
+about its `stance`, `actor` or `grounds` while its corpus is absent. Pointers are
+not enough; the enumeration has to be published **reduced**.
+
+> **Rule.** An epoch publishes a **coreference map** as a derived map beside
+> address, producers and retraction: **sorted endpoint pair → (derived balance,
+> distinct-key count, edge state)**, reduced at build under the epoch's
+> **declared coverage**, with its own **derivation receipt** on the
+> retraction-map precedent (packaging §7, **X12**). It is **derived, never
+> authoritative** (**W8a**), and it is **not a belief input** — §5.3 keeps
+> coreference out of belief, so unlike the producer snapshot it carries no
+> semantic identity and is absent from `belief_input_digest`.
+
+**The map's membership replaces the alias map's; the count is unchanged.** The
+index held four maps before this ruling and holds four after — the alias map
+retires (§4.3) and the coreference map arrives, in the same document. Nothing
+here reopens the ordinal that correction lifecycle §4 used for the retraction
+map; the maps are named, not numbered.
+
+> **Rule — three edge states, and the third is not a default.** An edge is
+> **`active`** (balance > 0 over an established coverage), **`inactive`**
+> (balance ≤ 0 over an established coverage), or **`indeterminate`**: no epoch is
+> named, the named epoch's coverage does not include a corpus the query's world
+> spans, or the coreference map's derivation receipt is anything other than
+> `validated` — `malformed`, `unresolvable` or `refuted` alike, on world §5's
+> existing lattice. **Query expansion over an `indeterminate` edge refuses**,
+> naming what it could not establish. It **never** silently reads as `inactive`.
+
+That last clause is the whole point of the rule. Defaulting an unestablished
+balance to `inactive` reads a **failure to look** as a **finding of absence** —
+`fb-2026-07-27-010`, which world §5.1 already pins as the error separating
+`not-present` from `unknown`. A coreference balance is the same shape of
+enumeration as the producers map and inherits the same discipline: *an
+enumeration is only as good as its stated scope, and the scope has to be part of
+the record.*
+
+**Two coverages are two answers, and that is correct rather than a defect.** A
+balance over a narrower coverage may be smaller, and an edge active under one
+epoch may be inactive under another. Since the balance is outside belief, this
+moves no digest — the property W8a's coverage arm asserts for the producers map,
+here with the belief consequence absent.
 
 ---
 
@@ -426,11 +519,12 @@ last item was never F9's to pay.
 | world §4.2 | basis table gains `coreference-attestation`; the missing-basis rule generalizes (§3 here); `dataset`'s provider identifiers stop being "aliases" and become authority-identifier **fields** |
 | world §4.3 | structural merge retires; §5.4's `consolidate` takes its duplicate-location role; "curator assertion" → attester |
 | world §4.4 | the middle case **splits**, and the boundary moves from a judgement about *works* to a fact about *identifiers*: a **mis-transcribed** basis is still a rename with `uid` preserved and the old address in `deprecated_ids`; an **authority replacement** is a coreference attestation; a genuinely different work is unchanged. *"Only a person can say"* is withdrawn here |
-| world §5, §5.1 | four derived maps become three, in the map table **and** in the surrounding prose — "Science holds four maps", "all four are derived", the address/alias split argument (which survives one level out, over **search terms**), the address-and-alias derivation sentence, and the belief-input exclusion list; `ambiguous` leaves the resolution table and the refusal relocates to search time |
+| world §5, §5.1 | the index's map **membership** changes and its count does not: the **alias** map retires and the **coreference** map arrives (§5.5 here), so four stay four. The map table, "Science holds four maps", "all four are derived", the address/alias split argument (which survives one level out, over **search terms**), the derivation sentence and the belief-input exclusion list all follow; `ambiguous` leaves the resolution table and the refusal relocates to search time |
+| world §3 (`uid`), §5 conflicts | **duplicate location is redefined by the address**, not by `uid` equality: two records at one canonical address, in one corpus or two, `uid`s shared or distinct. The continuity row and the conflicts table follow, and **W8b**'s second arm runs both `uid` cases |
 | world §5 (elsewhere) | the reverse-adjacency argument stops naming the alias map; §1.1's five collisions become ambiguous **search terms**; the whole-node content-identity sentence and the split-identity argument drop their alias-edit examples |
 | world §10 | **both** open questions close — the `source` basis when identifiers disagree (answered by attestation, which is neither branch the question offered) and merge versus a retraction's immutable exact target (**ρO5**, closed by retirement). The section's closing sentence is rewritten: no question in it remains open |
 | world §5 conflicts | `duplicate location` exits via `consolidate`; "ambiguous alias" → "ambiguous search term" |
-| world §7 | W4, W6, W9 restated; **W14–W16** added |
+| world §7 | W4, W6, W8, W8a, W8b, W9 restated; **W14–W16** added |
 | world §8 | limitation 3 retires and **3a–3c** replace it; limitation 7 restates onto `consolidate`; limitation 8 **retires** — there is no inbound rewrite — leaving **8a**, the `deprecated_ids` growth residue that a rename still produces |
 | world §9 | records the machinery this design proposed and will now **not** build, so the world layer's scope is not over-estimated from the banked text |
 | kernel §4.4 | kind inventory and totals: ten → eleven |
@@ -439,7 +533,8 @@ last item was never F9's to pay.
 | formal model §2.1 | heading count, and the player table gains a `coreference-attestation` row |
 | formal model §3.4 | observational invariance drops **alias** from its declared inert dimensions — there is no stored alias to be inert in. The rows it cites are untouched |
 | formal model §6.5 | the `render` row generalizes to a per-**value** renderer; "authored **by a human**" → attributed |
-| formal model W map | W4, W8a, W9, W14, W15 restated; W14–W16 added |
+| formal model W map | W4, W8a, W9, W14, W15, W16 restated; W14–W16 added, W15 gaining **FC** |
+| formal model §5.3 | the 113-row / 128-assertion tally is marked as a **measurement at its date** rather than restated by arithmetic — three rows and one label moved under it, and it has not been re-measured |
 | formal model §1 | the inherited world inventory → **W1–W16** |
 | formal model §2.1 (rows) | four players drop **alias** from their inert dimensions; `dataset`'s provider identifiers become authority-identifier **fields** |
 | formal model §3.2, §3.3 | the transition inventory retires `merge` and gains **`consolidate`** and **`attest-coreference`**; the `Dom(step)` exclusion becomes **empty**, so `Dom(step)` is total; the retraction graph's mutating paths go four → three |
@@ -488,9 +583,9 @@ are rewritten.
 
 | # | Guarantee | Mutation test |
 |---|---|---|
-| **W14** | The address scheme adds a property the basis alone does not: a stored reference is unambiguous **by construction**, because **no stored field participates in reference lookup except the canonical identifier**. Labels are rendered, never resolved against, and rendering is locale-explicit | Author a reference to a record whose label collides with another's; assert the stored ref holds the **canonical identifier**, and that resolution consults **no** other stored field — no alias facet, no handle field, no `deprecated_ids` label arm. Render the same record under two locales; assert **two labels, one address, no stored difference, and no identity movement**. **Recursive rendering:** render a `dataset` and assert its `programme` / `release` fields render through the pinned snapshot while the dataset itself renders from content. **Sabotage:** add a stored field that resolution would consult by label → the corpus must refuse it, since a lookup-bearing label field is an alias by another name. **The boundary, stated as an arm:** author a `display_statement` whose text is **byte-identical to the rendered label** and assert it is **accepted** — an authored, identity-inert, lookup-inert string may coincide with a rendering, and the guarantee is about *participation in lookup*, never about which strings may occur in authored content. Then assert that string resolves **nothing**. **Negative — this is not W1/W2:** hold the bases fixed and correct, mutate only the *handle*, and assert nothing observable moves — pinning that W14 tests the scheme and W1/W2 test the encoding |
-| **W15** | A coreference balance is derived over typed endpoints, is unmoved by **exact** duplicate submissions, and privileges no attester class; closure rewrites nothing | **Endpoint typing, four refusals:** assert refusal for a pair naming one address twice, for a pair of **different kinds**, for an endpoint that does not resolve, and for an endpoint that is a **curation note** (§3). **Balance:** post `+1` from a human actor and `+1` from an agent actor over one valid pair; assert balance `2` and an **active** edge, and assert **swapping the two actors changes nothing** — the symmetry is the assertion. Post a `-1`; assert balance `1`, the edge still active, and **both prior records still present**. Post a second `-1` from a distinct actor; assert balance `0` and the edge **inactive**, with every record retained. **Exact duplicates:** submit the same `(endpoints, stance, actor, grounds)` ten times under ten event tokens; assert **balance is unchanged** and that ten distinct records exist — provenance is kept, weight is not manufactured. **The stated limit of that, asserted as such:** resubmit from the **same actor** with **different `grounds`** and assert the balance **does move** — the key defeats exact duplication only, and per-attester capping is not claimed (§5.2). **Closure does not rewrite:** with an active edge between `A` and `B`, assert a retraction targeting `A` still names `A` exactly, that `π_claim`, `belief_input_digest` and every content-identity basis are **byte-unchanged**, and that only **query expansion** observes the edge. **Negative — the cycle route stays shut:** activate coreference between two retractions and assert **no cycle is constructible**, and that M3's import validation is still what refuses a raw one |
-| **W16** | `consolidate` repairs storage and asserts nothing about identity | Hold one identity in two corpora; `consolidate`; assert **one canonical address**, outgoing relations **unioned**, divergent lineage bases **both preserved**, **no redirect written**, **no inbound reference rewritten**, and `uid` continuity selected rather than minted. **Negative:** attempt `consolidate` on two records at **different** canonical addresses and assert **refusal** — that is a coreference question and `consolidate` must not answer it. **Negative:** assert no `deprecated_ids` entry is created, since no address retired |
+| **W14** | The address scheme adds a property the basis alone does not: a stored reference is unambiguous **by construction**, because **the only stored values that participate in reference lookup are canonical addresses — the live one and its retired predecessors**. No presentation value participates. Labels are rendered, never resolved against, and rendering is locale-explicit | Author a reference to a record whose label collides with another's; assert the stored ref holds a **canonical address**, and that resolution consults **no presentation field** — no alias facet, no handle field, no rendered label. **The permitted set, asserted positively so the rule is not read as narrower than it is:** rename a record under §4.4's mis-transcribed-basis case and assert the **retired** address in `deprecated_ids` still resolves through the address map (**W5a**, world §5). Retired addresses are canonical addresses that stopped being live; they are not aliases, they are singular, and forbidding them would break the redirect the rename depends on. Render the same record under two locales; assert **two labels, one address, no stored difference, and no identity movement**. **Recursive rendering:** render a `dataset` and assert its `programme` / `release` fields render through the pinned snapshot while the dataset itself renders from content. **Sabotage:** add a stored field that resolution would consult **by label** → the corpus must refuse it, since a lookup-bearing label field is an alias by another name. **The boundary, stated as an arm:** author a `display_statement` whose text is **byte-identical to the rendered label** and assert it is **accepted** — an authored, identity-inert, lookup-inert string may coincide with a rendering, and the guarantee is about *participation in lookup*, never about which strings may occur in authored content. Then assert that string resolves **nothing**. **Negative — this is not W1/W2, and the two are independent:** admit a presentation field into lookup while leaving every basis fixed and correctly encoded; assert **W14 fails and W1/W2 still pass**. Then corrupt an encoding while admitting no presentation field; assert the converse. Neither row implies the other |
+| **W15** | A coreference balance is derived over typed endpoints and a **declared coverage**, is unmoved by **exact** duplicate submissions, and privileges no attester class; closure rewrites nothing, and an unestablished coverage refuses rather than reading as inactive | **Endpoint typing, four refusals:** assert refusal for a pair naming one address twice, for a pair of **different kinds**, for an endpoint that does not resolve, and for an endpoint that is a **curation note** (§3). **Balance:** post `+1` from a human actor and `+1` from an agent actor over one valid pair; assert balance `2` and an **active** edge, and assert **swapping the two actors changes nothing** — the symmetry is the assertion. Post a `-1`; assert balance `1`, the edge still active, and **both prior records still present**. Post a second `-1` from a distinct actor; assert balance `0` and the edge **inactive**, with every record retained. **Exact duplicates:** over a **fresh** pair at balance `0`, submit the same `(endpoints, stance, actor, grounds)` ten times under ten distinct event tokens; assert the **first** submission moves the balance `0 → 1` and the **remaining nine move it not at all**, while **ten distinct records exist** — provenance is kept, weight is not manufactured. Stating it as the first-versus-rest transition is the point: "unchanged" alone would be satisfied by an implementation that recorded nothing. **The stated limit of that, asserted as such:** resubmit from the **same actor** with **different `grounds`** and assert the balance **does move** — the key defeats exact duplication only, and per-attester capping is not claimed (§5.2). **Closure does not rewrite:** with an active edge between `A` and `B`, assert a retraction targeting `A` still names `A` exactly, that `π_claim`, `belief_input_digest` and every content-identity basis are **byte-unchanged**, and that only **query expansion** observes the edge. **Missing attestation, which is the arm the map exists for (§5.5):** build an epoch over coverage `{A, B}` where `B` holds the only `-1` on a pair standing at `+2` in `A`; assert the published balance is `1` and the edge **active**. Then hold `B` **out of coverage**, rebuild, and assert the balance is `2` — a different answer under a different declared scope, and **not** an error. Now query against a world spanning `{A, B}` while naming the narrower epoch, and assert **`indeterminate` and a refusal naming the uncovered corpus** — specifically **not** `active`, and above all **not** `inactive`, which is what reading a failure to look as a finding of absence would produce. Assert the same for **no epoch named** and for a coreference map whose **derivation receipt is `unresolvable`**. **Negative — absent is not empty:** assert an attestation whose corpus is merely **unmounted but inside coverage** still contributes, because the map was reduced at build; pinning that the map publishes the *reduction*, not pointers a reader would have to resolve. **Negative — the cycle route stays shut:** activate coreference between two retractions and assert **no cycle is constructible**, and that M3's import validation is still what refuses a raw one |
+| **W16** | `consolidate` repairs storage and asserts nothing about identity | Hold **one canonical address** in two corpora; `consolidate`; assert **one canonical address**, outgoing relations **unioned**, divergent lineage bases **both preserved**, **no redirect written**, and **no inbound reference rewritten**. **`uid`, both cases, since equal basis does not imply equal `uid`:** with inputs **sharing** a `uid`, assert it is **preserved**; with inputs carrying **distinct** `uid`s — the independent-authoring case, and the common one — assert **one input `uid` survives**, the other ceases to be live, and **no third `uid` is minted**. **Negative:** attempt `consolidate` on two records at **different** canonical addresses and assert **refusal** — that is a coreference question and `consolidate` must not answer it. **Negative, and it is W8b's first arm:** one `uid` under two **different** canonical addresses is **corruption**; assert `consolidate` is not offered, refusing on the one-address precondition rather than on a corruption check. **Negative:** assert no `deprecated_ids` entry is created, since no address retired |
 | **W4** | *(rewritten)* A coreference claim is attributed and additive, and never collapses the graph | Assert no operation retires an address on coreference grounds. Its equal-basis consolidation arm moves to **W16**; its distinct-basis retraction refusal moves to **W15**'s cycle arm; its lineage-divergence arm — *"both survive, no field-selection path offers a choice, the dataset becomes `lineage-divergent`"* — moves to **W16**, where the union rule now carries it |
 | **W6** | *(rewritten)* Three resolution states never collapse | `not-present`, `unknown`, `resolved` remain distinct; `ambiguous` is no longer among them. **Negative:** assert removing a corpus does not convert its ids to `unknown` — unchanged |
 | **W9** | *(rewritten)* An ambiguous **search term** refuses and names its candidates | Search a term the pinned snapshot maps to two identifiers; assert refusal listing both, and that **no binding was written**. **Negative:** assert the ambiguity is a property of the **pinned snapshot**, reproducible across installations holding that snapshot — not of accumulated authoring |
@@ -504,21 +599,36 @@ are rewritten.
    worth paying only because all three cheaper realizations (§5.1) are larger
    changes in disguise.
 2. **Two addresses persist for one work, permanently.** There is no longer an
-   operation that reduces them. Query-layer searches expand over active
-   coreference closure; the underlying records never merge.
+   operation that reduces them. Query-layer searches expand over **`active`**
+   coreference closure, refuse over an **`indeterminate`** edge (§5.5), and the
+   underlying records never merge.
 3. **Attester reliability is unmeasured.** Unit weight is the honest default, not
    a finding that attesters are equally reliable. The `meta/` data collection that
    would inform per-source priors does not exist and is not opened here. Until it
    does, a coordinated set of low-quality attestations outweighs a single careful
    one, and nothing detects that.
 4. **`consolidate` selects continuity.** Where two copies disagree on content it
-   reconciles, and reconciliation is a judgement recorded rather than derived —
-   the same standing merge had, narrowed to storage repair.
+   reconciles, and where they carry distinct `uid`s it selects one. Both are
+   judgements recorded rather than derived — the same standing merge had,
+   narrowed to storage repair. Nothing computable says which of two opaque
+   continuity anchors is the right survivor.
 5. **The pinned authority snapshot is a new dependency with no design.** Which
    authorities are accepted, how a snapshot is pinned, versioned, distributed and
    bumped, and whether a bump is an amendment act — none of that is ruled here.
    §4.2 states the discipline; the artifact is owed.
 6. **A claim about a release is not expressible** (§6). Accepted.
+7. **A coreference balance is bounded by coverage, so two epochs can disagree**
+   (§5.5). This is the producers map's property without the belief consequence:
+   the disagreement moves no digest, but a reader who does not look at the
+   coverage declaration will read one epoch's `inactive` as a settled fact. The
+   `indeterminate` state and its refusal are what keep the *unestablished* case
+   honest; they do nothing about a narrower coverage that is established and
+   simply smaller.
+8. **The coreference map is a fourth artifact the world index must build**, and
+   the alias map's retirement pays for it in count only, not in work. It needs a
+   reduction rule, a derivation receipt, and a place in the build's coherent
+   enumeration — none of which is designed here beyond naming the precedent it
+   follows (packaging §5, §7).
 
 ---
 

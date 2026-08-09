@@ -6,10 +6,10 @@ negative, world limitation 9, and world §10's first two questions (closed).
 Amended 2026-08-03 in eight places (§3, §4, §5, §5.1, §5.2, X9, §12,
 limitation 1) at the tamper-evident log design's banking
 (`2026-08-03-tamper-evident-log-design.md`).
-**Inherits:** world §5 (the index maps — four at this design's banking, **three
-since 2026-08-08**, when the alias map retired with the stored alias
-(`2026-08-08-world-address-ruling.md` §4.3) — producer snapshot, corpus manifest,
-derivation receipts), §5.1 (`not-present` vs `unknown`), §10 (the packaging
+**Inherits:** world §5 (the index maps — four at this design's banking and four
+since, with **membership changed 2026-08-08**: the alias map retired with the
+stored alias and the **coreference** map arrived, `2026-08-08-world-address-ruling.md` §4.3 and
+§5.5 — producer snapshot, corpus manifest, derivation receipts), §5.1 (`not-present` vs `unknown`), §10 (the packaging
 question, with receipts and rule-holding folded in); repro §9's amendment (anchor
 placement — the index is the natural carrier); 5a §4 (the retraction map, a fourth
 derived member) and limitation 6 (discovery is enumeration-bounded, temporal half
@@ -161,9 +161,11 @@ identifiers, in the world document, as part of this design's adoption.
 ## 5. Epochs — the derived publications
 
 An explicit **build** enumerates a declared coverage — a set of admitted, live
-`corpus_id`s — and publishes one immutable **epoch** holding the **three** maps
-(address, producers, retraction — *four until 2026-08-08, when the alias map
-retired with the stored alias, world address ruling §4.3*), the producer snapshot with its
+`corpus_id`s — and publishes one immutable **epoch** holding the **four** maps
+(address, producers, retraction, coreference — *the fourth was **alias** until
+2026-08-08, when it retired with the stored alias and the **coreference** map took
+its place: sorted endpoint pair → reduced balance and edge state, world address
+ruling §4.3 and §5.5*), the producer snapshot with its
 derivation receipts, the **retraction-map derivation receipt**, and — added at
 5b's banking (normative-contract §7.6) — the **certification-enumeration
 receipt** (§7), and — added at the tamper-evident log design's banking
@@ -179,7 +181,7 @@ The build is a computation and the publication is a transaction, in that order �
 to the artifact that will one day ride its transactions.
 
 **Coherent enumeration.** Every map in one epoch is derived from **one recorded
-state view per covered corpus**, shared across all three maps and the snapshot.
+state view per covered corpus**, shared across all four maps and the snapshot.
 The load-bearing mechanism is the **lock, not the check**: the build acquires
 each covered corpus's **existing per-corpus write lock** and holds it for the
 entirety of that corpus's capture — state identity, then enumeration — one

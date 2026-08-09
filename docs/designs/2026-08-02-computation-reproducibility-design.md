@@ -1374,9 +1374,12 @@ undurable; not silently ignored, which would assert independence from an absence
 **The divergence test asks a reverse question, and reverse questions have a scope.**
 "Every run producing `D`" is not answerable from the dataset: producing runs live in
 corpora that need not contain it and need not be present, and world §5's index was
-forward-only — address and alias, both answering *where does this live* *(the alias map
-retired 2026-08-08, `2026-08-08-world-address-ruling.md` §4.3; the argument here is about the index being
-forward-only, which the surviving maps still are)*. Enumerated
+forward-only — address and alias, both answering *where does this live* *(dated to this
+design's writing: the index held those two maps and nothing else. The **producers** map
+this section goes on to require is itself the reverse map, and the **retraction** and
+**coreference** maps added since are reverse too, so the index is no longer
+forward-only — which is the argument's outcome, not a contradiction of it. The alias map
+retired 2026-08-08, `2026-08-08-world-address-ruling.md` §4.3)*. Enumerated
 against whatever happened to be checked out, the test silently shrinks: a divergent
 producer in an absent corpus is not seen, `D` reads undiverged, and independence is
 certified from an enumeration nobody bounded — belief depending on the checkout, which
@@ -1541,7 +1544,9 @@ truth.** A false certification — an empirical dataset declared evidentially in
 still omits the edge, still yields false independence, and still inflates belief. What
 changes is that the claim is now *someone's*, recorded with a rationale, frozen into
 an identity, and visible to review. That is the same bargain §7.3 strikes for
-code-lineage independence and world §5.4 for consolidation, and it is the best available
+code-lineage independence and world §5.1's coreference attestation *(2026-08-09: as
+above, `consolidate` records no claim and is the wrong comparand)*, and it is the best
+available
 where nothing computable decides the question. §11 records it as a limitation rather
 than leaving it read as a fix.
 
@@ -2019,9 +2024,12 @@ missing any capability is still a valid run, and simply cannot reach
 `clean-environment`.
 
 **Code-lineage independence is certified by an authored, recorded claim** with a
-rationale — the same shape as world §5.4's `consolidate`, and for the same reason: nothing
-computable distinguishes an independent reimplementation from a copy with the
-comments rewritten. Absent that claim the scope is `not-certified`, never
+rationale — the same shape as world §5's **coreference attestation** *(2026-08-09: this
+cited world §4.3's merge, and the 2026-08-08 sweep repointed it at `consolidate`, which
+is wrong in the other direction — `consolidate` is a storage repair that asserts nothing
+and carries no rationale. The attested claim with recorded grounds is the attestation,
+`2026-08-08-world-address-ruling.md` §5.1)*, and for the same reason: nothing computable distinguishes an
+independent reimplementation from a copy with the comments rewritten. Absent that claim the scope is `not-certified`, never
 optimistically upgraded. §11 records the resulting soft spot honestly.
 
 This keeps kernel §3.1's definition computable — *a second, full execution in a
