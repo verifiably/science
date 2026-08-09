@@ -305,6 +305,43 @@ def test_a_payload_copy_of_a_declared_resource_is_not_unmatched(
     assert dataset.unmatched_payload_files == []
 
 
+def test_a_symlinked_payload_directory_is_refused_not_walked(roots: tuple[Path, Path, Path]) -> None:
+    """The door, not just the children.
+
+    Guarding only the entries *inside* the payload directory leaves the case
+    where the dataset's directory is itself the link: every file behind it then
+    enumerates as though it sat inside the payload root. Here `outside/secret.bin`
+    is reachable that way, and must not appear.
+    """
+    records, payloads, _ = roots
+    outside = payloads.parent / "outside"
+    outside.mkdir()
+    (outside / "secret.bin").write_bytes(b"abc")
+    write_record(records, "d", package={"resources": [{"path": "a.txt"}]})
+    (payloads / "d").symlink_to(outside, target_is_directory=True)
+
+    result = survey(records, payloads)
+
+    [dataset] = result.datasets
+    assert dataset.unmatched_payload_files == [], "a file outside the payload root was enumerated as inside it"
+    assert not any("secret.bin" in name for name in dataset.unmatched_payload_files)
+    # Refused, and said so: a silent skip reads as a dataset with no undeclared
+    # bytes, which is a finding rather than a gap.
+    [failure] = result.failures
+    assert (failure.root, failure.path) == ("payloads", "d")
+    assert "symlink" in failure.reason
+
+
+def test_a_symlinked_record_directory_is_not_walked_either(roots: tuple[Path, Path, Path]) -> None:
+    records, payloads, _ = roots
+    outside = records.parent / "outside-record"
+    outside.mkdir()
+    (outside / "entity.md").write_text("---\nkind: dataset\n---\n")
+    (records / "linked").symlink_to(outside, target_is_directory=True)
+
+    assert survey(records, payloads).datasets == []
+
+
 def test_basis_evidence_records_what_the_record_states(roots: tuple[Path, Path, Path]) -> None:
     records, payloads, _ = roots
     write_record(

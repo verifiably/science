@@ -595,6 +595,10 @@ def survey(record_root: Path, payload_root: Path, probe: Probe | None = None) ->
                 _observe_resource(name, resource, path, record_root, payload_root, record_obs, payload_obs, probe)
             )
 
+        unmatched, walk_failure = _unmatched(payload_root, name, claimed, payload_obs)
+        if walk_failure is not None:
+            failures.append(walk_failure)
+
         datasets.append(
             DatasetObservation(
                 dataset=name,
@@ -604,7 +608,7 @@ def survey(record_root: Path, payload_root: Path, probe: Probe | None = None) ->
                     declared_resources_with_digest=sum(1 for r, _ in declared if recorded_hash(r) is not None),
                     authority_and_provenance=stated,
                 ),
-                unmatched_payload_files=_unmatched(payload_root, name, claimed, payload_obs),
+                unmatched_payload_files=unmatched,
             )
         )
 
@@ -722,11 +726,22 @@ def _untested(
     )
 
 
-def _unmatched(payload_root: Path, dataset: str, claimed: set[str], payload_obs: RootObservations) -> list[str]:
-    """Payload files no declared resource claims. Enumerated, never read."""
+def _unmatched(
+    payload_root: Path, dataset: str, claimed: set[str], payload_obs: RootObservations
+) -> tuple[list[str], Failure | None]:
+    """Payload files no declared resource claims. Enumerated, never read.
+
+    Refuses a symlinked payload directory rather than walking it. Guarding only
+    the children leaves the door itself open: if the dataset's directory *is* the
+    link, every file behind it is enumerated as though it sat inside the payload
+    root. The refusal is reported, not skipped — a silent skip would read as a
+    dataset with no undeclared bytes, which is a finding rather than a gap.
+    """
     directory = payload_root / dataset
+    if directory.is_symlink():
+        return [], Failure("payloads", dataset, "payload directory is a symlink; not walked")
     if not directory.is_dir():
-        return []
+        return [], None
     found: list[str] = []
     for path in sorted(_walk_without_symlinks(directory)):
         relative = path.relative_to(directory)
@@ -735,7 +750,7 @@ def _unmatched(payload_root: Path, dataset: str, claimed: set[str], payload_obs:
         recorded = str(path.relative_to(payload_root))
         payload_obs.record(recorded, path.stat().st_size, None)
         found.append(recorded)
-    return found
+    return found, None
 
 
 def _walk_without_symlinks(directory: Path) -> Iterator[Path]:
