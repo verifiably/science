@@ -1,13 +1,16 @@
 # The admission ramp — design
 
 **Date:** 2026-08-09
-**Status:** **Specified 2026-08-09. Nothing has been run, and no Gate 2 admission
+**Status:** **Gate 1 complete 2026-08-09. No Gate 2 run exists, and no admission
 ruling exists.** One question *is* settled here — §8 closes whether papers are
 run inputs, on a rule already banked elsewhere — but nothing about admission is.
-Gate 1 (§5) is not started. **Every figure in this document is reconnaissance**
-from throwaway shell and Python one-liners — in §2, §2.1 and §7 — is labelled as
-such at each site, and is **superseded wholesale** by the frozen run at Gate 2.
-No figure here is a measurement. §6 names the obligations
+Gate 1 banked the instrument (`python/tools/survey_admission.py`) and its tests
+(`python/tests/test_admission_survey.py`), and settled the reconciliation §2.1
+now records; **the counts in §2 and §2.1 are structural facts about the corpus,
+established by parsing it.** Everything else remains reconnaissance — the §7
+paper figures are from throwaway one-liners and are labelled at their site — and
+**the distribution across the three axes is not published anywhere in this
+document**, because that is Gate 2's single frozen run. §6 names the obligations
 the ruling is expected to touch; it does not say what the ruling will be.
 **Scope:** **will close F2 and conformance cut 1's open question 2 at Gate 2** —
 how a corpus with zero content-addressed inputs reaches a usable admitted set —
@@ -71,46 +74,65 @@ it is not heritage.
 **Datasets — the denominator is stated in three parts, because the third part is
 the hard one.**
 
-| part | count *(reconnaissance)* |
+| part | count |
 |---|---|
 | dataset records | **47** |
-| …declaring resources in a data package | **34**, declaring **113** resources between them |
+| …declaring resources in a data package | **34**, declaring **101** resources between them |
 | …declaring **no** resources at all | **13** |
 
+The resource count is the parsed one, **corrected at Gate 1 from the 113 an
+earlier draft carried** (§2.1).
+
 Every one of the 34 declares at least one resource; the 13 carry no data package
-whatsoever. Reporting per-dataset rather than per-resource would hide partial
-datasets — one record has 1 of its 4 resources present — and dropping the 13
-would delete the hardest cases from the denominator. **Every access-restricted or
-embargoed record in the corpus is among those 13**: the sole `controlled` record,
-the sole `registration` record and both `embargoed` records declare no resources
-at all. One of the 13 also has bytes materialized in the payload root while
-declaring nothing, which is the mirror image of the failure this design exists to
-name. A denominator of 34 would report the corpus as better characterized than it
-is, by excluding precisely the records that characterize it worst.
+whatsoever. **The unit of measurement is the declared resource** because the two
+integrity axes are recorded per resource: a dataset can pin some of its resources
+and not others, and a per-dataset unit would have to round that to a single value
+in one direction or the other. **The 13 stay in the denominator** because they are
+where the corpus's hardest cases sit. Every access-restricted or embargoed record
+is among them: the sole `controlled` record, the sole `registration` record and
+both `embargoed` records declare no resources at all. One of the 13 also has bytes
+materialized in the payload root while declaring nothing, the mirror image of the
+failure this design exists to name. A denominator of 34 would report the corpus as
+better characterized than it is, by excluding precisely the records that
+characterize it worst.
 
 **A DOI, a PMID and a PMCID are external authority identifiers.** They identify a
 work; they do not retrieve that work's exact bytes. This document never treats
 one as a byte locator, in either measurement.
 
-### 2.1 The reconnaissance figures, and why they are not the measurement
+### 2.1 The reconciliation — settled at Gate 1
 
-Two throwaway readings of the same 113 resources disagreed on how many carry a
-recorded hash — **85 against 90** — on regex block-scoping alone. Neither is
-reported as fact. Reconciling that disagreement against a real parse is Gate 1's
-first obligation, and the reconciliation is published rather than quietly
-applied: the corpus survey found four instrument defects, three of them in
-review, and each changed a reported number
+Two throwaway readings disagreed about the same corpus: one counted **113**
+declared resources of which **90** carried a recorded hash, the other **85**
+hashed with **27** of 28 resolved resources pinned. Reconciling them against a
+real parse was Gate 1's first obligation, and the reconciliation is published
+rather than quietly applied — the corpus survey found four instrument defects,
+three of them in review, and each changed a reported number
 (`2026-08-07-corpus-survey-and-vocabulary-admission-design.md` §2.1).
 
-The rest of the reconnaissance, on the same footing: across both roots, **28** of
-the 113 declared resources resolved to bytes; **27** of those carried a recorded
-hash and **all 27 matched**, with **zero mismatches**; the remaining one had
-bytes and no hash to check. **8** of the 34 data-packaged datasets had at least
-one resource present.
+**Both readings were wrong, in different ways, and neither figure survives.**
 
-The shape those numbers suggest — records rich in recorded hashes, thin in
-retrievable bytes — is the motivation for this design. It is not evidence for its
-ruling.
+| reading | claimed | cause | correct |
+|---|---|---|---|
+| `grep '^\s*path:'` | 113 declared resources | counts every `path` key at any depth | **101** |
+| block-split on `name:` | 85 hashed, 27 of 28 pinned | only **13** of 101 resources carry a `name`, so most were folded into a neighbour's block and read that block's `hash` | **90** hashed |
+
+The 12-line gap is fully accounted for rather than estimated: **113 = 101
+`resources[].path` + 3 `sources[].path` + 9 `licenses[].path`.** The two
+non-resource kinds are a dataset-level provenance URL and a license URL — neither
+is a declared resource, and the second is not even a locator for anything the
+corpus holds.
+
+**A third figure fell with them.** An earlier draft justified the per-resource
+unit with *"one record has 1 of its 4 resources present."* That record declares
+**3** resources, not 4 — the fourth `path` was its license — and all three are
+present. §2's justification now rests on the axes being recorded per resource,
+which is true independently of what this corpus happens to contain.
+
+**What Gate 1 does not publish.** The instrument runs and its output is
+diagnostic; the distribution across the three axes is Gate 2's single frozen run
+and appears nowhere in this document yet. Only the reconciliation above, and the
+denominator it corrects, are settled here.
 
 ### 2.2 Two boundaries, and the basis boundary comes first
 
@@ -357,9 +379,11 @@ corpus may hold and no axis value alone expresses:
 
 ## 5. Two gates, and the condition that pauses between them
 
-**Gate 1 — bank the instrument.** The instrument and its tests are committed and
-passing, and every discrepancy between readings — the 85-against-90 among them —
-is reconciled, with the reconciliation written into §2.1.
+**Gate 1 — bank the instrument. Complete 2026-08-09.** The instrument and its
+tests are committed and passing, and every discrepancy between readings — the
+85-against-90 among them — is reconciled, with the reconciliation written into
+§2.1. Three earlier figures did not survive it, including the resource
+denominator itself.
 
 **Gate 1 permits exploratory runs against the real roots, and requires them.**
 A disagreement between two readings of real data cannot be reconciled against
