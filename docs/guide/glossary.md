@@ -2,7 +2,7 @@
 title: Glossary
 status: living
 created: 2026-08-08
-updated: 2026-08-08
+updated: 2026-08-09
 sources:
   - ../designs/2026-08-02-epistemic-kernel-design.md
   - ../designs/2026-08-02-world-addressing-design.md
@@ -10,6 +10,7 @@ sources:
   - ../designs/2026-08-03-normative-contract-design.md
   - ../designs/2026-08-04-formal-model-and-claim-calculus-design.md
   - ../designs/2026-08-05-belief-policy-design.md
+  - ../designs/2026-08-09-admission-ramp-design.md
 ---
 
 # Glossary
@@ -73,8 +74,13 @@ context and the linked design references for normative detail.
   interpretation without redefining kernel relations. A dataset's
   empirical-observation facet is what lets a run's `observes` edge confer
   eligibility. ([foundations](foundations.md#contracts-compile-into-profiles))
+- **Declared** — A dataset carrying a content identity whose bytes are not
+  held anywhere. A world entity, authorable and referenceable, and never
+  belief-eligible; it becomes held only through a matching byte observation.
+  ([foundations](foundations.md#the-epistemic-invariant))
 - **Held** — Exactly reproducible bytes available on demand under a content
-  identity; not a synonym for raw, public, local, or checked into Git.
+  identity; not a synonym for raw, public, local, or checked into Git. Distinct
+  from **declared**, which has the identity and not the bytes.
   ([foundations](foundations.md#the-epistemic-invariant))
 - **Identity basis** — The kind-specific semantic fields whose canonical
   projection determines a record's content identity. ([identity](identity-world-and-change.md#identity-is-not-one-field))

@@ -2,13 +2,14 @@
 title: Foundations
 status: living
 created: 2026-08-08
-updated: 2026-08-08
+updated: 2026-08-09
 sources:
   - ../designs/2026-08-02-epistemic-kernel-design.md
   - ../designs/2026-08-02-substrate-consolidation-design.md
   - ../designs/2026-08-03-redesign-adoption-ledger.md
   - ../designs/2026-08-04-domain-extension-boundary-design.md
   - ../designs/2026-08-04-formal-model-and-claim-calculus-design.md
+  - ../designs/2026-08-09-admission-ramp-design.md
 ---
 
 # Foundations
@@ -40,6 +41,13 @@ An artifact is **held** when its exact bytes can be produced on demand and named
 by content identity. Held does not mean raw, public, inside Git, or present in
 this checkout. A normalized or access-controlled dataset can be held; an
 accession alone is not.
+
+A dataset that records **which bytes it is** without those bytes being held
+anywhere is **declared**: a real world entity, addressable and referenceable,
+and never belief-eligible. Declared is the gap named rather than the gate
+weakened, and a dataset leaves it only through an observation whose digest
+matches what the record already claimed — never by declaring, and never by a
+file merely being present (G9).
 
 The system guarantees representational eligibility and execution replay. It
 does not guarantee honest observations, valid instruments, appropriate models,
@@ -139,7 +147,7 @@ pre-registration.
 
 ## References
 
-- [Epistemic kernel: invariant, structure, and G1–G8](../designs/2026-08-02-epistemic-kernel-design.md#2-the-invariant)
+- [Epistemic kernel: invariant, structure, and G1–G9](../designs/2026-08-02-epistemic-kernel-design.md#2-the-invariant)
 - [Substrate consolidation: S1–S8 and ownership](../designs/2026-08-02-substrate-consolidation-design.md#2-the-boundary-ruling--split-by-nature)
 - [Domain extension: D1–D10 and profile compilation](../designs/2026-08-04-domain-extension-boundary-design.md#3-the-ownership-split)
 - [Formal model: the eleven kinds and M1–M13](../designs/2026-08-04-formal-model-and-claim-calculus-design.md#21-rec--world-records-the-eleven-kernel-kinds)

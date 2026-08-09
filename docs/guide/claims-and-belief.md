@@ -2,7 +2,7 @@
 title: Claims and belief
 status: living
 created: 2026-08-08
-updated: 2026-08-08
+updated: 2026-08-09
 sources:
   - ../designs/2026-08-02-epistemic-kernel-design.md
   - ../designs/2026-08-04-domain-extension-boundary-design.md
@@ -180,7 +180,7 @@ a last held copy, and whether the nine † labels are adopted.
 
 ## References
 
-- [Kernel G1–G8 and assessment aggregation](../designs/2026-08-02-epistemic-kernel-design.md#421-the-assessment-facet)
+- [Kernel G1–G9 and assessment aggregation](../designs/2026-08-02-epistemic-kernel-design.md#421-the-assessment-facet)
 - [Typed claim calculus and M1–M13](../designs/2026-08-04-formal-model-and-claim-calculus-design.md#6-m--the-typed-claim-calculus)
 - [Domain contracts and D1–D10](../designs/2026-08-04-domain-extension-boundary-design.md#3-the-ownership-split)
 - [Belief policy and P1–P9](../designs/2026-08-05-belief-policy-design.md#2-what-a-belief-policy-is)

@@ -11,7 +11,7 @@ README. Two consequential edits fall outside §8.7's table and are recorded here
 basis in passing, and both would otherwise have kept describing an identity over
 prose (ρA1, ρA2).
 
-**Inherits:** the epistemic kernel (G1–G8, §4.1's signatures and semantic
+**Inherits:** the epistemic kernel (**G1–G9** since 2026-08-09, §4.1's signatures and semantic
 identity, §8.7's recorded-history limit, limitation 4's predicate vocabulary),
 substrate consolidation (S1–S8), world addressing (**W1–W16** since 2026-08-08),
 computation and
@@ -864,10 +864,14 @@ readings are where definedness actually enters.
 
 ### 5.1 Method
 
-**113 rows** across nine frozen tables: G (10), S (9), W (16), R (23), C (10),
-X (12), N (10), L (13), D (10).
+**117 rows** across nine frozen tables: G (11), S (9), W (19), R (23), C (10),
+X (12), N (10), L (13), D (10). *(Corrected 2026-08-09. These read 113 rows and
+W (16): the world address ruling added **W14–W16** to §5.2 on 2026-08-08 and left
+the totals behind, and W's count had never included **W5a, W8a and W8b**, which
+§5.2 classifies individually. The admission ramp's **G9** is the fourth new row
+and the occasion for the recount, not its cause.)*
 
-Classification is **per assertion, not per row** — 113 rows, 128 assertions — and a row may carry several
+Classification is **per assertion, not per row** — 117 rows, 135 assertions — and a row may carry several
 labels: many rows state a property in a positive arm and pin its limit in a
 negative arm, and those are different classes. **No id is renamed, renumbered or
 merged.** This section mints nothing — it labels what is already banked.
@@ -895,6 +899,7 @@ rather than half-blank.
 | G6 | `reads` inputs confer no eligibility in any quantity or QA state | **OInv** |
 | G7 | a semantic edit mints a new identity, prior bindings hold, old belief unmoved / a `title` overwrite mints nothing | **CS** + **OInv** / **OInv** |
 | G8 | a failing verification invalidates and forces recomputation; cleared only by resolution or standing retraction / deleting it restores admission | **FC** / **DL** |
+| G9 | a recorded content identity with no bytes is minted and reads `declared`, never `held` / bytes whose digest disagrees do not promote, and the state is derived rather than stored / matching bytes held anywhere, in or out of the repository, promote alike / the path-exists predicate fails **G9** while G2b, R5 and R10 pass (added 2026-08-09) | **FC** / **CS** + **FC** / **OInv** / **DL** |
 
 **S — substrate consolidation**
 

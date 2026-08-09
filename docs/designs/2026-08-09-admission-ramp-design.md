@@ -1,21 +1,21 @@
 # The admission ramp — design
 
 **Date:** 2026-08-09
-**Status:** **Gate 1 complete 2026-08-09. No Gate 2 run exists, and no admission
-ruling exists.** One question *is* settled here — §8 closes whether papers are
-run inputs, on a rule already banked elsewhere — but nothing about admission is.
-Gate 1 banked the instrument (`python/tools/survey_admission.py`) and its tests
-(`python/tests/test_admission_survey.py`), and settled the reconciliation §2.1
-now records; **the counts in §2 and §2.1 are structural facts about the corpus,
-established by parsing it.** Everything else remains reconnaissance — the §7
-paper figures are from throwaway one-liners and are labelled at their site — and
-**the distribution across the three axes is not published anywhere in this
-document**, because that is Gate 2's single frozen run. §6 names the obligations
-the ruling is expected to touch; it does not say what the ruling will be.
-**Scope:** **will close F2 and conformance cut 1's open question 2 at Gate 2** —
-how a corpus with zero content-addressed inputs reaches a usable admitted set —
-narrowed to the part that survives the recreate-not-migrate ruling: **externally
-sourced input**. Neither is closed by this document.
+**Status:** **Both gates complete 2026-08-09. The measurement is frozen (§5.1)
+and the ruling is written (§6).** Gate 1 banked the instrument
+(`python/tools/survey_admission.py`) and its tests
+(`python/tests/test_admission_survey.py`) and settled the reconciliation §2.1
+records. Gate 2 ran the instrument once, froze the unit-level artifact
+(`2026-08-09-admission-ramp-survey.json`, 47 dataset records and 101 declared
+resources), and wrote §6 downstream of those figures. The **§7 paper figures
+remain reconnaissance** and are labelled at their site — they bear on F2 not at
+all. The ruling **amends `W3`** and **appends `G9`**, taking the frozen corpus to
+**139 rows** across eleven tables; §9 is the amendment table.
+**Scope:** **closes F2 and conformance cut 1's open question 2** — how a corpus
+with zero content-addressed inputs reaches a usable admitted set — narrowed to
+the part that survives the recreate-not-migrate ruling: **externally sourced
+input**. F2's premise did not survive the measurement: the surviving population
+does not start at zero (§6.5).
 
 ## 1. What this owes, and what was already cut away
 
@@ -129,10 +129,11 @@ unit with *"one record has 1 of its 4 resources present."* That record declares
 present. §2's justification now rests on the axes being recorded per resource,
 which is true independently of what this corpus happens to contain.
 
-**What Gate 1 does not publish.** The instrument runs and its output is
-diagnostic; the distribution across the three axes is Gate 2's single frozen run
-and appears nowhere in this document yet. Only the reconciliation above, and the
-denominator it corrects, are settled here.
+**What Gate 1 did not publish.** Gate 1's runs were diagnostic and discardable;
+the distribution across the three axes belonged to Gate 2's single frozen run and
+is in §5.1. What this section settles is only the reconciliation above and the
+denominator it corrects — and the frozen run confirmed both, reporting 47 records,
+34 with a data package, 101 declared resources and 90 recorded digests.
 
 ### 2.2 Two boundaries, and the basis boundary comes first
 
@@ -146,8 +147,9 @@ addressable entity carries the basis declared for its kind — intrinsic, or an
 identifier from an accepted authority — and *"if that basis is missing, the
 record is a project-scoped **curation note** — not a weakened world entity."*
 `W3` is the refusal that enforces it, and it names both cases this measurement
-meets: a `source` with no accepted external identifier, and **a `dataset`
-holding no content**. Its new clause is what makes the ordering bite — a curation
+meets: a `source` with no accepted external identifier, and — **as banked when
+this section was written, before §6.4 amended it** — a `dataset` **holding no
+content**. Its new clause is what makes the ordering bite — a curation
 note **cannot be the target of a semantic reference**, so an unbased record is
 not merely weaker, it is unreachable.
 
@@ -189,7 +191,9 @@ now certain rather than contingent.
 This is why the 13 cannot be dropped from the denominator: they are not a
 smaller version of the 34's problem, they are a **different** problem, sitting at
 the other boundary. Whether each of the 13 carries a content basis outside its
-absent data package is a question for the run, not an assumption of this design.
+absent data package was left to the run rather than assumed here — and the run's
+answer was **none of them** (§5.1), which makes all 13 curation notes and puts
+the corpus's largest single gap at the boundary this section had to put first.
 
 ## 3. What is observed: three independent axes
 
@@ -298,8 +302,11 @@ Five properties are load-bearing.
      ruled explicitly, because two defensible foldings give two different
      identities for the same dataset and the instrument has no authority to pick
      one. Until it is ruled, the artifact records the digests present and computes
-     no dataset-level identity from them. **This is a Gate 2 question the run
-     informs and does not settle.**
+     no dataset-level identity from them. **Ruled at Gate 2, in §6.2: they do not
+     fold. A dataset's content identity is the declaration — every declared
+     resource carrying a digest — and no dataset-level digest is minted.** The
+     instrument is unchanged by that ruling, which is the point of having refused
+     to guess it.
 
    The human-readable report **renders from that artifact** rather than being
    computed alongside it, so the prose and the data cannot drift and every figure
@@ -410,7 +417,7 @@ not running the instrument but **publishing any figure from it as a
 measurement**. Exploratory output is diagnostic, may be discarded, and is never
 frozen.
 
-**Gate 2 — one run, frozen, then rule.** A single authoritative run. The frozen
+**Gate 2 — one run, frozen, then rule. Complete 2026-08-09 (§5.1).** A single authoritative run. The frozen
 record carries the unit-level artifact, the counts rendered from it, the run
 date, the instrument's commit, and the identity of both roots. **Root identities
 and relative paths only — never a machine-specific absolute path**, in the
@@ -432,7 +439,109 @@ the ruling is expected to rest on, the normative section is **not** written and
 the finding comes back for a decision first. This remains one document either
 way; a second document would add ceremony, not evidence.
 
-## 6. What the ruling is expected to touch — and what it must not assume
+### 5.1 The frozen run
+
+One run, 2026-08-09, instrument at commit `03165c0`. The unit-level artifact is
+committed beside this document as
+`2026-08-09-admission-ramp-survey.json`; every figure below renders from it, and
+none is re-derived by hand.
+
+| | |
+|---|---|
+| record root identity | `sha256:dc8b597f682bece65ba9dfc0ee9b3f5cbccb18b3e9f922333509c66f7514b495` |
+| payload root identity | `sha256:06568c0fddb9d40d3db4b8d116abdbe4be12f1959871c59b851855872817c532` |
+| probing | **not run** — see below |
+| parse failures | **0** |
+
+**The frozen run does not probe, and that is a decision rather than an
+omission.** Three reasons, in order of weight.
+
+1. **A frozen record must be re-derivable.** Everything above is reproducible
+   from the two root identities and the instrument commit. A probe result is not:
+   it is time-varying evidence, which is exactly why §4's fifth property stamps
+   it. Folding one into the frozen record would make part of the record
+   unreproducible by construction.
+2. **The byte ceiling would misreport the largest resources.** The eleven
+   untested locators total **36.6 GB**, and **three exceed the 512 MB streaming
+   ceiling** — 21.3 GB, 9.9 GB and 5.4 GB. Under the run those three report
+   `retrieval-failed`, which records *a bound this design chose* as a finding
+   about the resource. That is the failure §3 refuses in the other direction.
+3. **A probe is a request to a third party.** It belongs to a dated act of its
+   own, not folded into a structural measurement of a local corpus.
+
+Consequently all eleven byte locators report `byte-locator-untested`, with `no
+probe was run` as the reason — the first of the two silences §3 distinguishes,
+never the second. **A probe run remains available and would be a dated addendum
+to this document, not a re-freeze**; §8 item 1 is the question it would inform.
+
+**Dataset records — 47.**
+
+| | count |
+|---|---|
+| data package `present` | **34** |
+| data package `absent` | **13** |
+| data package `unparseable` | **0** |
+| declaring at least one **pinned** resource | **32** |
+| stating authority or provenance only | **15** |
+| carrying payload files no declared resource claims | **4** (45 files) |
+
+**Declared resources — 101**, of which **90** carry a recorded digest and **101**
+carry a recorded byte count.
+
+| axis | distribution |
+|---|---|
+| byte observation | `local` **28** · `retrieved` **0** · `retrieval-failed` **0** · `byte-locator-untested` **11** · `no-byte-locator` **62** |
+| hash result | `match` **28** · `mismatch` **0** · `absent` **0** · `unchecked` **73** |
+| byte-count result | `match` **28** · `mismatch` **0** · `absent` **0** · `unchecked` **73** |
+
+**Five readings of that distribution, and the fourth was not predicted.**
+
+**Zero mismatches, on both axes, over 28 of 28.** This is the strongest single
+result the run could produce short of a mismatch, and it says the recorded
+digests are load-bearing rather than decorative: every byte this corpus holds
+locally agrees with what its record claims. §3 named a mismatch as the most
+informative possible outcome; its absence is the second most informative.
+
+**The two axes did not separate.** `absent` is **0** on both — no resource has
+bytes present without a recorded digest. §8 item 2 asked whether the run makes
+that state *reachable in practice*: as observed it is **not instantiated**,
+though it is one retrieval away through the eleven unpinned locators. §6.6 rules
+what it is.
+
+**Pinning is all-or-nothing in fact, though nothing enforces it.** Of the 34
+records with a data package, **32 pin every declared resource and 2 pin none** —
+`l1000-cmap` (10 resources) and `sciplex3` (1). **No record pins some and not
+others.** §6.2 rules the boundary case anyway, and §6.2 says why the corpus's
+silence on it is a bound rather than a confirmation.
+
+**Holding is all-or-nothing too, and this was not predicted.** **Eight** records
+have every declared resource present locally — 28 resources, 0.81 GB — and
+**26 have none**. **No record is partly held.** The eight are `assembly-registry`,
+`cptac-gbm-2021-proteogenomics`, `cytoband-hg19`, `gene-crosswalk-hgnc`, `go`,
+`mondo`, `opentargets-associations` and `reactome`: crosswalks, ontologies and
+one proteogenomics release. The other 26 declare **48.44 GB** they do not hold —
+**11.83 GB** of it pinned by a digest, and the remaining 36.61 GB the unpinned
+locators of the paragraph above.
+
+This does **not** retroactively justify a per-dataset unit of measurement. §2's
+justification was rewritten at Gate 1 to rest on the axes being per-resource in
+principle, precisely so it would not depend on what this corpus happens to
+contain — and what a per-dataset unit would round away is a property of the
+population, not of the unit.
+
+**The 13 that declare nothing.** All 13 carry `origin` and an
+`access.source_url`; six also carry accessions. **None carries a digest**, and
+none has any content-basis evidence at all. One of them, `mmrf-commpass`, carries
+**4 payload files with no data package to claim them** — the mirror-image case §2
+predicted from the outside, now observed. The other three unmatched-file records
+have packages: `opentargets-associations` (31), `cptac-gbm-2021-proteogenomics`
+(5) and `reactome` (5).
+
+**The pause condition did not fire.** The distribution does not overturn the
+state model §6 was expected to rest on; it populates it, and the majority state
+is the one the ramp exists to name.
+
+## 6. The ruling
 
 The direction settled before measurement, and recorded here so the measurement
 cannot be read as having discovered it: **`held` is not weakened.** The ramp
@@ -449,30 +558,194 @@ the ruling forbids deriving. So the ramp's new state is available **only** to a
 record that has already cleared `W3` — which is why the ordering is fixed here,
 before the measurement, and not left to be inferred from the distribution.
 
-Three existing rows own this ground, in order, and the ruling is expected to
-**amend rather than append**:
+Both paragraphs above were written before the run. Everything from here is
+written after it.
 
-- **`W3`** — *creating a world entity without its basis is refused* — owns the
-  basis boundary and **is amended, not confirmed**. Its dataset arm narrows from
-  *holding no content* to *having no content identity* (§2.2), because the banked
-  wording makes the ramp's state unreachable. `W3` keeps the boundary and keeps
-  routing an unbased record to an explicit curation note; only the dataset arm's
-  line moves. Its own oracle text names the §1.1 case, which the narrowing still
-  refuses.
+### 6.1 Three states, and the order they are decided in
 
-- **`G2b`** — *an assessment requires held, content-hashed inputs* — is the
-  refusal a declared input must run into.
-- **`R5`** — *belief does not depend on artifact availability in this checkout* —
-  already separates reach from holding, and its negative (a) already asserts that
-  destroying the last held copy makes the input unheld and changes admission.
+| state | the test it passes | standing |
+|---|---|---|
+| **curation note** | no content identity | not a dataset entity at all; **cannot be the target of a semantic reference** (`W3`, as amended) |
+| **declared** | a content identity, with no byte observation matching it | a world entity: addressable, authorable, referenceable — and **never belief-eligible** (`G2b` refuses it) |
+| **held** | a content identity **and** a byte observation matching it | belief-eligible, subject to the rest of kernel §3 |
 
-**No new guarantee row is committed to here.** A successor contract identity is
-certain if `held` semantics change at all, since amending a row's meaning mints
-one under the retained id (`2026-08-03-normative-contract-design.md` §4). A new
-row is added only for a property that is **independently sabotage-able** — one an
-implementation could break while leaving `G2b` and `R5` intact. Whether the ramp
-has such a property is decided at Gate 2, not now, and the frozen row count moves
-only if the answer is yes.
+The order is `W3` first, then holding, exactly as §2.2 fixed it before the run.
+The measurement did not choose this ordering and could not have: 15 of the 47
+records fail the first test, and no quantity of retrieval reaches them.
+
+**The state is derived, never stored.** Nothing writes `declared` or `held` onto
+a record. Two reasons, and the second is a hard constraint rather than a
+preference. Storing the state would make a record's content a function of what is
+mounted where it was written — the stored-derived-value failure the coreference
+ruling refused when it kept edge state out of an immutable epoch
+(`2026-08-08-world-address-ruling.md` §5.5). And `R5` forbids it outright: belief
+must not depend on artifact availability **in this checkout**, so heldness is a
+property of whether a controlled copy is held *anywhere the system can produce
+it*, not of the filesystem under the current process. §5.1's run therefore
+observes one root's state and is **evidence about that root**, not the system's
+answer about any dataset.
+
+### 6.2 What a dataset's content identity is — the declaration, not a fold
+
+§4's second refusal left this open as a ruling the instrument had no authority to
+make. **Ruled: a dataset has a content identity when its data package declares a
+resource set and every declared resource carries a digest. No dataset-level
+digest is minted.**
+
+Two reasons not to fold. Two defensible foldings — which resources participate,
+in what order, combined how — give two different identities for the same dataset,
+and nothing in the corpus prefers one. And a dataset already *has* an identity:
+its canonical address. A second, separately derived identity for the same entity
+is a thing to keep resolving forever, bought for no question anyone has asked.
+
+**The declaration is what fixes the extent**, which is why the rule is
+all-or-nothing: a data package pinning 99 of its 100 declared resources does not
+say which bytes the dataset is, and a hundredth resource is not a rounding error
+in a content identity. Such a dataset is a curation note, and the repair is
+explicit in both available directions — pin the last resource, or narrow the
+declaration to what is pinned.
+
+**That edge is ruled on argument, not on evidence, and the corpus cannot support
+it.** §5.1 found 32 records pinning every resource and 2 pinning none, and **not
+one pinning some**. The population is silent on exactly the case the rule is
+strictest about. That silence is a bound on this ruling and is recorded as one:
+if a partly-pinned dataset later argues that the whole should be reachable, this
+paragraph is where the argument starts, and nothing here was measured against it.
+
+**A byte count is not a content identity.** All 101 declared resources carry one,
+including the 11 that carry no digest. The byte-count axis exists to catch a
+record drifting from its bytes; it pins nothing, and a size is trivially
+reproduced by content that is not the content.
+
+### 6.3 Promotion is by verified observation — `G9`, the one new row
+
+§6 pre-committed the test: a new row is added only for a property that is
+**independently sabotage-able**, one an implementation could break while leaving
+`G2b` and `R5` intact. The ramp has exactly one, and it is the transition the
+ramp is *for*.
+
+**Nothing in the banked corpus says how a dataset becomes held.** `G2b` *consumes*
+heldness — point a run at an unheld input, assert refusal — and passes just as
+well when heldness was established by a lie. `R5` tests the downward transition:
+its negative (a) destroys the last held copy and asserts the input stops being
+held. `R10` refuses a run whose input is a URL, and routes it to acquisition
+without saying what acquisition must verify. `R23` mints a *produced* dataset's
+basis at the execution boundary, which is the other half of the population.
+**For an acquired external dataset, the upward transition is unowned.**
+
+The sabotage is concrete: adopt *the declared path exists* as the promotion
+predicate. `G2b` still refuses unheld inputs, `R5` still holds, `R10` still
+refuses URLs, every banked test passes — and the corpus's content-addressing
+guarantee is void, because nothing ever compared bytes to the digest that was
+supposed to identify them.
+
+> **`G9`.** A dataset reaches **held** only through a byte observation whose
+> digest matches its recorded content identity. Declaration does not promote,
+> presence does not promote, and no API accepts an authored `held`.
+
+Its mutation test is written into the kernel's table (§9). Four of its five arms
+carry the ruling; the fifth pins the limit — the row says nothing about *losing*
+heldness, which is `R5`'s negative (a). *Declaration does not promote:* author a dataset with a content
+identity and no bytes, assert it is a world entity, that it reads `declared`, and
+that `G2b` refuses it as an assessment input. *Presence does not promote:* supply
+bytes whose digest **differs** from the recorded one and assert the dataset stays
+`declared` with the mismatch reported — not promoted, and not reported as a
+failure to retrieve. *Location is not the discriminator:* hold matching bytes
+outside the repository, content-addressed and retrievable, and assert **held**
+all the same — kernel §2.2 is explicit, and a row read as requiring local storage
+would break it. *Independence, asserted directly:* install the path-exists
+predicate above and assert **`G9` fails while `G2b`, `R5` and `R10` pass**, in the
+style `W14` uses against `W1`/`W2`.
+
+`G9` is appended to the kernel table, whose rows are `G1`–`G8` as banked, taking
+the frozen corpus from **138 rows to 139** across the same eleven tables.
+
+### 6.4 What the amendment costs
+
+`W3` is **amended, not confirmed**: its dataset arm narrows from *holding no
+content* to *having no content identity* (§2.2). `W3` keeps the basis boundary and
+keeps routing an unbased record to an explicit curation note; only where its
+dataset arm draws the line moves, and its oracle's own §1.1 case is still refused,
+since a programme with no release pinned has no content identity either.
+
+Amending a row's meaning mints a **successor contract identity under the retained
+id** (`2026-08-03-normative-contract-design.md` §4). That cost was called certain
+before the run and is now incurred. `G2b` and `R5` are **confirmed unchanged** —
+`G2b` is the refusal a declared input runs into, and `R5` already separates reach
+from holding in both directions.
+
+### 6.5 What this answers about F2 — and where its premise failed
+
+F2 was accepted on the finding that *content-addressability is empty on day one*,
+argued from *0 of 259 mm30 datasets carry a content hash*. §1 already discounted
+that figure as a measurement of the predecessor. **The measurement now says the
+premise is false for the population that survives.**
+
+| the corpus, ruled | records | resources |
+|---|---|---|
+| **held** | **8** | 28 (0.81 GB) |
+| **declared** | **24** | 62 (11.83 GB) |
+| **curation note** — no content identity | **15** | 11 declared with no digest; the other 13 records declare nothing |
+
+47 records and 101 resources, each counted once. The 45 unclaimed payload files
+are **not** a fourth column: 41 of them sit under three *held* records and 4 under
+one curation note, which is the point of §6.6's distinction.
+
+The admitted set is not empty. It is **eight datasets**, and they are exactly the
+kind a commons is built on: crosswalks, ontologies, and one release with a
+published manifest.
+
+So the ramp's answer to *how does a corpus reach a usable admitted set* is three
+different answers to three different populations, and conflating them is what
+made F2 look like one problem:
+
+- **The 24 declared records need an acquisition, not a rule change.** They already
+  carry content identities. Each is one verified retrieval from held, and `G9` is
+  what makes that retrieval the thing that promotes them.
+- **The 15 without a content identity need authoring**, and no ramp reaches them.
+  Retrieval cannot pin what nothing declares. This is a **basis** gap sitting at
+  the other boundary, and it is the larger share of the corpus's real distance
+  from admission — a result the pre-run framing, which put the whole question at
+  the holding layer, would have reported as a holding gap.
+- **`held` is not weakened, and did not need to be.** The gap is named, not
+  narrowed: `declared` is a world entity that cannot reach belief.
+
+F2 and conformance cut 1's open question 2 close here.
+
+### 6.6 The unpinned locator, and what repairs it
+
+Eleven resources across `l1000-cmap` and `sciplex3` declare a URL that retrieves
+their exact bytes, and **no digest**. They are the one case where retrievability
+and content identity come apart in the observed corpus, and they are worth ruling
+because the tempting repair is the forbidden one.
+
+**Retrieval does not rescue them.** Bytes obtained against no recorded digest are
+bytes nothing says are the right ones — §8 item 2's state, which §5.1 found
+uninstantiated and which these eleven are one request away from. **Ruled: that is
+not an admission state.** It is the interior of an acquisition. `R10` already puts
+a URL-input on the acquisition side of the boundary; an acquisition **ends** by
+recording the digest of what it retrieved, and a resource that sits there
+indefinitely is an unfinished acquisition, not a dataset in a third condition.
+§8 item 2 closes on that argument, and it closes on semantics, exactly as §8
+required — the observed frequency of zero decides nothing.
+
+**The repair is an authoring act, and it is not the refusal §4 names.** Recording
+the digest of bytes retrieved from a **declared** locator is the acquirer pinning
+what the record already points at. Hashing one of the **45 unclaimed payload
+files** would be something else entirely: manufacturing a declaration the record
+never made, which is the fabricated basis the generalized basis rule refuses at
+every point. The distinction is whether the record declared the resource, not
+whether bytes were available — and `mmrf-commpass`, with four payload files and no
+data package at all, is the case that makes the difference concrete.
+
+### 6.7 What the ruling does not settle
+
+The state is derived (§6.1) from the declaration and the system's record of
+**verified holdings** — and **where that record lives is undesigned**. `G9` says
+promotion requires a verified observation; it does not say where the observation
+is kept, how it is re-checked, or what makes it stale. §8 item 3 carries it, and
+§8 item 1 — how long a probe's evidence lasts — is the same question asked about
+the remote half.
 
 ## 7. What this will not measure
 
@@ -503,21 +776,46 @@ only if the answer is yes.
 5. **Anything about the successor's own corpora.** None exist yet. Every figure
    here describes the predecessor's shared store.
 
-## 8. Open at the time of writing
+## 8. Open after the ruling
 
 1. **How long a probe's evidence of retrievability lasts.** A timestamp is
-   recorded; what admission may do with a six-month-old successful probe is the
-   ruling's to decide.
-2. **Whether bytes-without-a-recorded-hash is its own admission state.** The
-   resource is obtained and unpinned — nothing in the record says which bytes are
-   the right ones, so possession alone does not make it held. **Frequency does not
-   decide this**: a state exists because its semantics differ from every other
-   state, not because the corpus happens to contain many of it. One instance and
-   ten thousand argue equally. What the run contributes is whether the case is
-   *reachable* in practice, not whether it is common.
+   recorded; what admission may do with a six-month-old successful probe is
+   undecided, and §6 does not decide it — `G9` says a matching observation
+   promotes, not for how long the observation stands. The run makes the question
+   concrete rather than hypothetical: the 24 declared records each depend on one,
+   and §5.1 declined to produce any.
+2. **Where verified holdings are recorded.** New, and forced by §6.1: the state
+   is derived from the declaration and the system's record of verified holdings,
+   and that record is undesigned — where it lives, how it is re-checked, and what
+   makes an entry stale. `R5` bounds it from one side (it cannot be a property of
+   this checkout) and `G9` from the other (it cannot be authored). Nothing fills
+   the middle.
+3. **The partly-pinned dataset.** §6.2 rules it a curation note on argument
+   alone. The corpus pins all or none, 32 against 2, and so cannot corroborate or
+   contradict the strictest edge of the rule it is the evidence for.
 
-**Closed rather than left open.** An earlier draft asked whether papers are
-inputs at all. Computation §4.7 answers it: every input to a run is a held
-dataset, an individual paper is a `source`, and a literature corpus would be a
-`dataset` measured as one. The question was already ruled; §7 item 3 records what
-follows for the paper census.
+**Two questions closed rather than left open.** An earlier draft asked whether
+papers are inputs at all; computation §4.7 answers it — every input to a run is a
+held dataset, an individual paper is a `source`, and a literature corpus would be
+a `dataset` measured as one (§7 item 3). And §8's second question — whether
+bytes-without-a-recorded-hash is its own admission state — is **closed by §6.6**:
+it is not a state but the interior of an acquisition, which ends by recording the
+digest. That closure rests on the semantics, as the question demanded; the run's
+count of zero instantiations decided nothing.
+
+## 9. What this changes elsewhere
+
+Applied in the same change as this document, on the world address ruling's
+precedent: a ruling that leaves its amendments untabled leaves the corpus
+disagreeing with itself.
+
+| site | change |
+|---|---|
+| world addressing `W3` | the dataset arm narrows from *holding no content* to *having no content identity*; the `source` arm, the curation-note routing and the no-fallback negative are unchanged (§6.4) |
+| world addressing §4.2, *Dataset, specifically* | the sentence fusing content identity with *data we hold* is split; the §1.1 conclusion stands on the narrowed test |
+| epistemic kernel, `G` table | **`G9` appended** with its mutation test (§6.3) — the first row added to the kernel table since it was frozen |
+| normative contract §4 | frozen-row count **138 → 139**, and the exact current inventory extends to **`G1`–`G9`** — without this the count guard passes while the contract excludes the row it counts |
+| README | frozen-row count **→ 139**; the kernel row reads `G1`–`G9`; this document's table entry stops calling the measurement ungated and unrun |
+| guide `contracts-and-adoption.md` | frozen-row count **→ 139**, with cut 1's own denominator of 126 untouched — `G9` is banked after the cut and is an acceptance criterion for a later slice |
+| guide `open-questions.md` | the admission-ramp entry moves out of the open list and cites this ruling |
+| `python/tests/test_designs_corpus.py` | the guarantee inventory gains `G9`, which is what makes every count above enforced rather than asserted |

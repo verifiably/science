@@ -109,7 +109,9 @@ This is world §4.2 applied to the kind that design already assigned a basis:
 `unknown` component has no content to identify, and an `attested` value is
 supplied by a party we do not trust, which would make a run's **address** partly
 chosen by someone else. The same rule already refuses a `source` with no
-identifier and a `dataset` holding no content; nothing new is being invented.
+identifier and a `dataset` with **no content identity** *(narrowed 2026-08-09,
+admission ramp §6.4; this read "holding no content", which conflated identity
+with holding)*; nothing new is being invented.
 
 **`unknown` is a refusal result, not persisted state.** The tri-state discipline
 may survive at the import/capture boundary, where a capture that fails to observe
