@@ -17,6 +17,7 @@ sources:
   - ../designs/2026-08-05-belief-policy-design.md
   - ../designs/2026-08-05-review-disposition-and-conformance-cut-1.md
   - ../designs/2026-08-09-admission-ramp-design.md
+  - ../designs/2026-08-09-conformance-cut-2.md
 ---
 
 # Open questions
@@ -156,9 +157,13 @@ implementation**: a guarantee row awaiting code is work, not a question.
   checkout) and `G9` from the other (it cannot be authored); nothing fills the
   middle. Two smaller residues travel with it: how long a probe's evidence of
   retrievability lasts, and a partly-pinned dataset's standing, which the ruling
-  decided on argument because the measured corpus pins all or none.
+  decided on argument because the measured corpus pins all or none. Conformance
+  cut 2 restates all three as boundary conditions on its selection and decides
+  none of them — its slice takes verified observations as supplied arguments and
+  stores nothing.
   ([admission ramp ruling](../designs/2026-08-09-admission-ramp-design.md#6-the-ruling),
-  [what stayed open](../designs/2026-08-09-admission-ramp-design.md#8-open-after-the-ruling))
+  [what stayed open](../designs/2026-08-09-admission-ramp-design.md#8-open-after-the-ruling),
+  [cut-2 boundary conditions](../designs/2026-08-09-conformance-cut-2.md#21-the-admission-ramps-three-open-questions-as-boundary-conditions))
 - **Contract governance.** Facet-breaking changes, compatibility ranges,
   parallel `genesis` contracts in one namespace, domain distribution, and
   Python/TypeScript parity policy remain open. ([domain questions](../designs/2026-08-04-domain-extension-boundary-design.md#12-open-questions))
@@ -170,7 +175,11 @@ implementation**: a guarantee row awaiting code is work, not a question.
   certification is unspellable and existing instruments certify only through a
   successor spec. Open is the cadence: sweep, mint on next authored use, or
   never. ([normative-contract questions](../designs/2026-08-03-normative-contract-design.md#11-open-questions))
-- **Next conformance expansion.** A later cut should widen only when a designed
-  boundary can exercise complete assertion arms; likely candidates are run
-  capture, world persistence, or belief, each with different prerequisites.
-  ([cut-1 deferrals](../designs/2026-08-05-review-disposition-and-conformance-cut-1.md#53-step-3--fully-deferred-rows-grouped-by-untouched-subsystem))
+- **The third conformance cut.** Of the three candidates cut 1 left — run
+  capture, world persistence, belief — cut 2 took belief, the one whose seam was
+  fully designed, and was frozen 2026-08-09 before its slice exists. What
+  remains open is which prerequisite falls first: run capture waits on where
+  verified holdings are recorded, world persistence on `atoms` A7–A8 and the
+  `nodes` contract deltas. Cut 2 deliberately does not rank them.
+  ([cut-2 boundary decision](../designs/2026-08-09-conformance-cut-2.md#2-the-boundary-decision--three-candidates-one-designed-seam),
+  [cut-2 deferrals](../designs/2026-08-09-conformance-cut-2.md#5-step-3--fully-deferred-rows-grouped-by-unblocking-subsystem))
