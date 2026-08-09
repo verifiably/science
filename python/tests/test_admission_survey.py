@@ -312,11 +312,17 @@ def test_a_symlinked_payload_directory_is_refused_not_walked(roots: tuple[Path, 
     where the dataset's directory is itself the link: every file behind it then
     enumerates as though it sat inside the payload root. Here `outside/secret.bin`
     is reachable that way, and must not appear.
+
+    The declared side needs the same door guarded. `outside/a.txt` is the file a
+    declared resource names, so resolving through the link reads bytes from
+    outside the root and then cannot say where it read them — an observation the
+    survey has no honest place to record.
     """
     records, payloads, _ = roots
     outside = payloads.parent / "outside"
     outside.mkdir()
     (outside / "secret.bin").write_bytes(b"abc")
+    (outside / "a.txt").write_bytes(b"abc")
     write_record(records, "d", package={"resources": [{"path": "a.txt"}]})
     (payloads / "d").symlink_to(outside, target_is_directory=True)
 
@@ -330,6 +336,13 @@ def test_a_symlinked_payload_directory_is_refused_not_walked(roots: tuple[Path, 
     [failure] = result.failures
     assert (failure.root, failure.path) == ("payloads", "d")
     assert "symlink" in failure.reason
+    # The resource is a question not asked, not a hashed observation: bytes were
+    # behind the link and none were read.
+    [resource] = result.resources
+    assert resource.byte_observation == BYTES_LOCATOR_UNTESTED
+    assert resource.reason == "dataset directory is a symlink"
+    assert resource.observed_hash is None
+    assert resource.hash_result == CHECK_UNCHECKED
 
 
 def test_a_symlinked_record_directory_is_not_walked_either(roots: tuple[Path, Path, Path]) -> None:
@@ -409,6 +422,22 @@ def test_a_symlink_escaping_declared_path_is_refused(tmp_path: Path) -> None:
 
     assert isinstance(refusal, PathRefusal)
     assert "symlink" in refusal.reason
+
+
+def test_a_symlinked_dataset_directory_is_refused_before_the_path_is_joined(tmp_path: Path) -> None:
+    """Resolving the base directory hides the escape: every path under the link
+    resolves *inside* the link's target, so the escape check passes."""
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "a.txt").write_bytes(b"abc")
+    root = tmp_path / "root"
+    root.mkdir()
+    (root / "d").symlink_to(outside, target_is_directory=True)
+
+    refusal = resolve_declared_path(root, "d", "a.txt")
+
+    assert isinstance(refusal, PathRefusal)
+    assert refusal.reason == "dataset directory is a symlink"
 
 
 def test_an_escaping_path_is_untested_rather_than_read(roots: tuple[Path, Path, Path]) -> None:

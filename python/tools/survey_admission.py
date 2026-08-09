@@ -236,14 +236,24 @@ class PathRefusal:
 def resolve_declared_path(root: Path, dataset: str, declared: str) -> Path | PathRefusal:
     """Resolve a declared resource path under one root, refusing every escape.
 
-    Refused before any read: an absolute path, a path traversing upward, and a
-    path that leaves its directory through a symlink. The comparison is made
-    against the resolved directory so a symlinked root is not itself an escape.
+    Refused before any read: an absolute path, a path traversing upward, a
+    dataset directory that is itself a symlink, and a path that leaves its
+    directory through a symlink. The comparison is made against the resolved
+    directory so a symlinked *root* — the operator's own choice of where to
+    point the run — is not itself an escape.
+
+    The dataset directory is a different case, and refusing it is the point:
+    the corpus chooses that name, and resolving through it makes every file
+    behind the link answer as though it sat inside the root. `_unmatched()`
+    refuses the same door for the walk; without this the declared side still
+    reads those bytes, and then fails to state where it read them.
     """
     if declared.startswith("/"):
         return PathRefusal("declared path is absolute")
     if ".." in Path(declared).parts:
         return PathRefusal("declared path traverses upward")
+    if (root / dataset).is_symlink():
+        return PathRefusal("dataset directory is a symlink")
 
     base = (root / dataset).resolve()
     candidate = (base / declared).resolve()
