@@ -51,7 +51,7 @@ from dataclasses import dataclass
 from types import MappingProxyType
 from typing import final
 
-from science.errors import MalformedSnapshot
+from science.errors import BasisTagMismatch, MalformedSnapshot
 from science.sealed import sealed
 
 __all__ = [
@@ -205,12 +205,15 @@ def divergence_state(snapshot: LineageSnapshot, dataset: str) -> str:
     a resolved one's — whether the *run* itself still resolves is
     `lineage-incomplete` ground, and that finding belongs to the traversal
     that walks the basis, not to this comparison.
+
+    Raises `BasisTagMismatch` for a `conflict` basis: the snapshot itself is
+    well-formed, this is a call outside the domain the comparison is defined
+    over, and it stays inside the package's error hierarchy rather than a
+    bare `ValueError` — see that class's docstring.
     """
     basis = snapshot.bases[dataset]
     if basis.tag != "single":
-        # Not a construction-time refusal (`MalformedSnapshot` is reserved for
-        # that): the snapshot is well-formed, this is an out-of-domain call.
-        raise ValueError(
+        raise BasisTagMismatch(
             f"divergence_state is defined only against a `single` basis; {dataset!r} carries {basis.tag!r}"
         )
     route = basis.routes[0]

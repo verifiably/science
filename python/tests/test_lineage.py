@@ -7,7 +7,7 @@ where that run never existed" clause, a store property (cut 2 §4.2).
 
 import pytest
 
-from science.errors import MalformedSnapshot
+from science.errors import BasisTagMismatch, MalformedSnapshot
 from science.lineage import (
     Basis,
     Certification,
@@ -84,6 +84,22 @@ class TestConflictShortCircuits:
         result = certify(snapshot, ("x",), ("y",))
         assert result.state == "not-certified"
         assert "lineage-divergent" in result.findings
+
+
+class TestDivergenceStateIsBasisScoped:
+    def test_a_conflict_basis_refuses_divergence_state(self):
+        # Not in the brief: divergence_state's own domain guard. A conflict
+        # has no one route to compare a producer's transforms against, and
+        # certify's traversal never reaches this call for a conflict dataset
+        # (it short-circuits on the tag first) — call it directly and it
+        # must refuse, in the package's error hierarchy.
+        snapshot = LineageSnapshot(
+            roots=("x",),
+            bases={"x": Basis(tag="conflict", routes=(route("x", "a"), route("x", "b")))},
+            producers={},
+        )
+        with pytest.raises(BasisTagMismatch):
+            divergence_state(snapshot, "x")
 
 
 class TestDivergence:

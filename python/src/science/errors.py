@@ -288,3 +288,15 @@ class MalformedSnapshot(RecordError):
     per fact: a `single` basis holds exactly one route, a `conflict` at least
     two distinct, sorted routes, so a conflict that never occurred cannot be
     spelled (substrate §5, sub-problem 4 §5.2)."""
+
+
+class BasisTagMismatch(RecordError):
+    """A basis-scoped query invoked against the wrong tag.
+
+    Not a value refused at construction — every basis here is already
+    well-formed (`MalformedSnapshot` is what refuses those). This is a *call*
+    outside the domain the query is defined over: `divergence_state` compares
+    a dataset's producers against its `single` basis route, and a `conflict`
+    has no one route to compare against — the divergence question is decided
+    on the tag alone before this is ever reached, and asking it anyway of a
+    `conflict` is what this refuses."""
