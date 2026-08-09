@@ -63,7 +63,7 @@ existed so that a row which fails is a failure rather than a redefinition.
 **Conformance cut 2** was frozen 2026-08-09 on the same discipline, before its
 slice exists: it is drawn at the **belief seam** — the derived admission state,
 the assessment admission gate, the belief input closure digest, and
-`science.belief.v1` under an exact binding — selecting **15 rows in full and 9
+`science.belief.v1` under an exact binding — selecting **13 rows in full and 11
 in part**, including the belief policy's P1–P9 and the admission ramp's G9,
 whose verified-holdings observations enter as supplied arguments because where
 they are recorded remains an open design. Its slice is not yet built.

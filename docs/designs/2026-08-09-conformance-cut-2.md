@@ -3,11 +3,12 @@
 **Status.** Draft 2026-08-09, **frozen before any cut-2 implementation exists**,
 on cut 1's discipline: a cut drawn after implementation is a list of what
 happened to pass. Drawn over the **139-row** corpus — cut 1's frozen denominator
-of **126 is untouched**, and nothing here amends a banked row. Selects **15 rows
-in full and 9 in part**; §5 classifies the other 115 (six of them fully
+of **126 is untouched**, and nothing here amends a banked row. Selects **13 rows
+in full and 11 in part**; §5 classifies the other 115 (six of them fully
 exercised by cut 1 and one part-exercised), and §6 accounts for all 139. The
 second reader cut 1's limitation 8 asked for has read this selection before the
-freeze; §7 records its fourteen findings and what each moved — every arm a
+freeze, and a third reading — the review before merge — followed it; §7 records
+the fourteen findings and the two more, and what each moved — every arm a
 finding moved, it moved **out**, the direction cut 1 predicted. The admission
 ramp's three open questions are **boundary conditions on this cut, restated in
 §2.1, and none of them is decided here.**
@@ -181,20 +182,19 @@ own selection stands, each of the 139 rows is in exactly one of **five**
 states. **"Selected in full" here means every arm not already exercised under
 cut 1** — a deliberate redefinition over cut 1's three states, stated so
 limitation 7's ambiguity does not return through it: under cut 1's reading, M6
-and M8 are partly-selected rows whose remainder this cut completes, and S6
-carries one arm its own amended text withholds from v1.
+and M8 are partly-selected rows whose remainder this cut completes.
 
 | state | rows | n |
 |---|---|---|
-| **selected in full** — every arm not already exercised under cut 1 | G1, G2b, G2c, G6, S6, P2–P9, M6, M8 | **15** |
-| **selected in part** — the arm split stated below | G3, G8, G9, S5, P1, D3, D6, D7, N2 | **9** |
+| **selected in full** — every arm not already exercised under cut 1 | G1, G2b, G6, P2–P9, M6, M8 | **13** |
+| **selected in part** — the arm split stated below | G2c, G3, G8, G9, S5, S6, P1, D3, D6, D7, N2 | **11** |
 | **fully exercised by cut 1** — nothing remains to select | M4, M7, M9, M10, M11, M13 | 6 |
 | **part-exercised by cut 1, remainder still deferred** — cut 2 adds nothing | M5 | 1 |
 | **fully deferred** — no arm in either cut | §5 | 108 |
 
-### 4.1 Selected in full — 15 rows
+### 4.1 Selected in full — 13 rows
 
-Two of the fifteen, **M6** and **M8**, are completions: cut 1 selected most of
+Two of the thirteen, **M6** and **M8**, are completions: cut 1 selected most of
 their arms and deferred exactly the belief-dependent remainder, which is what
 this slice builds. Selecting the remainder makes each row jointly covered by
 the two cuts; nothing cut 1 exercised is re-litigated.
@@ -203,9 +203,7 @@ the two cuts; nothing cut 1 exercised is re-litigated.
 |---|---|
 | **G1** | a source-assertion with every field maximal moves no belief output byte — the **value** half failable by widening the admission gate to read `asserts` edges, the **digest** half failable only because closure membership is computed (§3); an `assesses` edge from a source-assertion is refused **in the typed constructor** — the closed relation signatures of kernel §4.1, M13-style — since the slice has no other authoring surface to refuse at |
 | **G2b** | an assessment whose run names an input that is not `held` — `declared`, or a curation note, under the supplied observations — is refused; so is one whose input carries no digest |
-| **G2c** | every row of the kernel §3.3 lifecycle table walked over verification values: admission only in `clean-environment, passed` with no active `failed`; a passing sibling does not clear an active failure. **"Active" is exercised in its supersession half only**: the standing-retraction clause that correction-lifecycle §7a added to it travels with G8's deferred arm and the C group, and the walk must not be read as covering it |
 | **G6** | a run value whose only inputs are `reads` — a literature corpus and an ontology — admits no assessment regardless of quantity or QA state |
-| **S6** | the kernel §4.2.1 dependency graph, arms (a)–(g): multiplicity 2 on `A={x}, B={x,y}, C={y}`; contestation without selection; addition of a certified-independent-of-nothing assessment; the clique; non-amplification with a moving digest; the double-contest tie; both clamps. Arm **(h)** is **recorded, not run**: its own amended text makes it *"a named acceptance condition binding the first successor policy that admits unequal weights"*, not assertable against `science.belief.v1` — what binds v1 today is P5, which is selected |
 | **P2–P9** | the belief policy's table minus P1's resolver negative (§4.2) — the fixture-failure refusal that installation cannot repair, the digest membership of the binding, the three distinguishable absences, unspellable unequal weights, no magnitude-bearing read, the computed view, the digest-committed value-inert `inconclusive`, and unholding precedence with recomputation from survivors. **P7's slice form is stated now rather than discovered later**: *no belief record, no current-belief selector* is a static assertion over the built code plus the behavioral arms — no prior-value or prior-digest parameter, byte-identical recomputation, observationally inert cache — and *"the same committed projection"* is here the same **supplied** projection. Its full force is re-asserted at the persistence boundary, where a mint path could exist to refuse |
 | **M6** | the arm cut 1 deferred: on an **additive** successor contract, consulted belief digests **move** — now assertable because the digest exists and its consulted set is computed (§3) |
 | **M8** | the arms cut 1 deferred: the `belief_input_digest` half of the editorial-bump arm; the negative arm's digest half (activated-but-unconsulted); and the *"absent from the consulted set"* clause, which needed exactly the consulted-set computation §3 names as a crossing |
@@ -214,6 +212,8 @@ the two cuts; nothing cut 1 exercised is re-litigated.
 
 | row | arms **in** cut 2 | arms **deferred**, and on what |
 |---|---|---|
+| **G2c** | every row of the kernel §3.3 lifecycle table walked over verification values: admission only in `clean-environment, passed` with no active `failed`; a passing sibling does not clear an active failure — with **"active" exercised as *not superseded* only** | the standing-retraction clause that correction-lifecycle §7a added to "active" — the **C group**, beside G8's deferred arm. A walk that exercised the pre-amendment lifecycle while claiming the amended one is exactly the over-count this table exists to prevent |
+| **S6** | the kernel §4.2.1 dependency graph, arms (a)–(g): multiplicity 2 on `A={x}, B={x,y}, C={y}`; contestation without selection; addition of a certified-independent-of-nothing assessment; the clique; non-amplification with a moving digest; the double-contest tie; both clamps | arm **(h)** — **recorded, not run**: its own amended text makes it *"a named acceptance condition binding the first successor policy that admits unequal weights"*, not assertable against `science.belief.v1`; what binds v1 today is P5, which is selected. Unblocked by that successor policy — the one deferral in this cut whose trigger is a future artifact rather than a subsystem |
 | **G3** | recomputation from the named closure is byte-identical; each closure member mutated in turn moves the digest; the keyed-facet **permutation**; the producing-run deletion — stored ref intact, resolution `null`, the pair kernel §5.1 itself defines as how a deletion reaches the digest; the **second producer** addition; the **narrower-coverage** snapshot | the negative *"move an entity between corpora; assert the digest is unchanged"* — the slice has no corpora and no location input, so the arm **cannot fail** here, and N2 refuses an arm that cannot fail. It waits on **world persistence**, where a move exists to perform |
 | **G8** | a failing verification value attached to an admitted assessment invalidates, where invalidation's slice form is stated: the derived admission state flips, and any belief computed thereafter differs — belief is a computed view, so *"forces recomputation"* can mean nothing stronger here; not cleared by recency; not cleared by a passing sibling; the negative — deleting the failing verification value returns the assessment to admitted — whose one in-slice sabotage is **statefulness**, a cross-call memory the N2 table must name, since the banked arm's real target, §3.2's undetectable-history limit in a store, re-arises at persistence | *"cleared by a standing retraction"* (C6) — needs the **correction lifecycle's** retraction records |
 | **G9** | declaration does not promote — a dataset whose declaration clears the basis test takes its address under the **§6.2 projection**, reads `declared`, and `G2b` refuses it; **no API accepts an authored `held`**, and the state is derived, never stored; presence does not promote — mismatching bytes leave it `declared` with the mismatch reported as a mismatch; a proper subset does not promote, in both directions over a three-resource declaration; location is not the discriminator — matching bytes outside the repository read `held`, and making them unreachable here while a controlled copy remains held leaves the **digest and admission halves** of R5's answer unchanged; absence in a declared coverage is not `unheld`; the row says nothing about losing heldness | the *"minted as a world entity"* clause — entity standing is **W3's** property, referenceability included, and needs the world boundary W3 waits on; the **replay-eligibility third** of R5's answer — the run boundary; and the **independence sabotage** — *"assert G9 fails while G2b, R5 and R10 all pass"* — which requires all three named rows to exist as runnable checks, and R10 and R5's replay arm sit at the run boundary. Running it against G2b alone would be a weaker assertion wearing the banked arm's name |
@@ -263,7 +263,7 @@ appear in §4 and not here.
 
 ## 6. Accounting, freeze, and amendment discipline
 
-**15 selected in full + 9 in part + 6 fully exercised by cut 1 + 1
+**13 selected in full + 11 in part + 6 fully exercised by cut 1 + 1
 part-exercised with its remainder deferred + 108 fully deferred = 139.** Every
 banked row is classified into exactly one state. As in cut 1, **no count of
 arms is offered as a denominator**: the banked rows do not enumerate their arms
@@ -317,6 +317,15 @@ re-attribution to the five-way arm, D6's activation-as-pin-set, and D7
 certifying agreement but not resolution. The accounting was verified correct
 as drafted and again after the recategorizations.
 
+**A third reading — the review before merge — moved two more rows the same
+way.** G2c and S6 were classified as selected in full while each carried an
+unexercised aspect: the standing-retraction clause of "active", and arm (h).
+Both moved to partly selected, and §10's phrasing of the partly-pinned question
+was corrected from *standing* — which the ramp ruled — to the empirical
+corroboration that is what actually remains open, a conflation the guide had
+carried too. Three readings, one direction: every classification error found in
+this document ran toward overstating coverage.
+
 **The reader is not an independent human.** It is a separately-instructed
 reading with the draft's rationale withheld, which removes anchoring on this
 document's arguments and removes nothing else. The corpus's own rule is that
@@ -345,11 +354,12 @@ every entry is navigational.
    second had their unblocking event occur at once — but a cause is not a
    defense. The second reading ran against the known failure direction and
    found the draft had over-selected in exactly that direction, three times
-   (§7); what it cannot establish is that it found the last instance.
+   (§7); what it cannot establish is that it found the last instance — and it
+   had not: §7's third reading found two more.
 3. **The F11 pattern recurred, and the trade is now live.** Cut 1 worked around
    five compound rows by selecting arms and recorded that splitting them —
    paying a successor contract identity — *"is the cheaper fix only if the
-   pattern recurs at cut 2."* It recurred: nine rows are arm-split here, two
+   pattern recurs at cut 2."* It recurred: eleven rows are arm-split here, two
    of them (G3, G9) among the corpus's largest cells. The split-versus-carry
    decision is docketed by open question 2 below, not decided by this cut.
 4. **The second reading is one model-instructed pass, not adjudication.** It
@@ -368,11 +378,14 @@ every entry is navigational.
 
 1. **The admission ramp's three questions stand unchanged** — where verified
    holdings are recorded, how long probe evidence lasts, and the partly-pinned
-   dataset's standing. §2.1 states what each makes unselectable; this cut
+   rule's **empirical corroboration**: the standing itself is ruled — a
+   curation note, on argument alone — and what remains open is evidence at the
+   edge the ruling is strictest about. §2.1 states what each makes
+   unselectable; this cut
    decides none of them, and the first is now the corpus's most consequential
    open design: it blocks the run boundary (§2), the G9 independence arm
    (§4.2), and the ramp's own 24 undetermined records.
-2. **Split or carry the compound rows.** Nine arm-splits in this cut, five in
+2. **Split or carry the compound rows.** Eleven arm-splits in this cut, five in
    cut 1. A split is an amendment minting a successor contract identity (F11);
    carrying the interpretive boundary is free until the next cut re-reads it
    differently. One of the two costs is paid once and the other on every cut.

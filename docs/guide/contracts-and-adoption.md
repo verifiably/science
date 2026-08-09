@@ -95,8 +95,8 @@ parity, with no persistence boundary and no belief computation.
 2026-08-09 on the same discipline, before its slice exists, and gives the ten
 post-cut-1 rows their owner. It is drawn at the belief seam — the derived
 admission state, the assessment admission gate, the belief input closure digest,
-and `science.belief.v1` under an exact binding — selecting 15 rows in full and 9
-at named assertion arms, and classifying the remaining 108 deferred rows by the
+and `science.belief.v1` under an exact binding — selecting 13 rows in full and
+11 at named assertion arms, and classifying the remaining 108 deferred rows by the
 subsystem that unblocks them. The admission ramp's three open questions are its
 stated boundary conditions: verified-holdings observations enter as supplied
 arguments precisely because where they are recorded is still undesigned, no arm

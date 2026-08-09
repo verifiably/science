@@ -156,10 +156,11 @@ implementation**: a guarantee row awaiting code is work, not a question.
   `R5` bounds the answer from one side (it cannot be a property of this
   checkout) and `G9` from the other (it cannot be authored); nothing fills the
   middle. Two smaller residues travel with it: how long a probe's evidence of
-  retrievability lasts, and a partly-pinned dataset's standing, which the ruling
-  decided on argument because the measured corpus pins all or none. Conformance
-  cut 2 restates all three as boundary conditions on its selection and decides
-  none of them — its slice takes verified observations as supplied arguments and
+  retrievability lasts, and the partly-pinned rule's empirical corroboration —
+  the standing itself the ruling decided on argument alone, a curation note,
+  because the measured corpus pins all or none and so is silent at the rule's
+  strictest edge. Conformance cut 2 restates all three as boundary conditions
+  on its selection and decides none of them — its slice takes verified observations as supplied arguments and
   stores nothing.
   ([admission ramp ruling](../designs/2026-08-09-admission-ramp-design.md#6-the-ruling),
   [what stayed open](../designs/2026-08-09-admission-ramp-design.md#8-open-after-the-ruling),
