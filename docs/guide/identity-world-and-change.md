@@ -55,11 +55,11 @@ The model keeps five ideas separate:
 | Semantic or content identity | The digest of the kind-specific meaning-bearing basis. |
 | Canonical address | The stored lookup key, `kind:<basis-digest>`. |
 | `uid` continuity | Which historical scientific object this record continues. |
-| Alias | A human-facing, non-unique lookup name. |
+| Label | A human-facing name, computed on read and never stored. |
 | Location | Where bytes happen to be held. It is identity-inert. |
 
 Every kind declares its own identity basis. Presentation fields, cache state,
-filesystem paths, and aliases do not enter that basis. A genuinely different
+filesystem paths, and rendered labels do not enter that basis. A genuinely different
 scientific object receives a new identity and an explicit relationship to what
 came before. A correction to identity-bearing metadata can change the canonical
 address while preserving `uid` continuity and deprecating the old address.
@@ -68,10 +68,9 @@ address while preserving `uid` continuity and deprecating the old address.
 
 The world root holds an authoritative registry for corpus admission and
 terminal status. Derived immutable epochs index an explicit set of corpus
-states and world-level records through four maps:
+states and world-level records through three maps:
 
 - canonical address to one record;
-- alias to zero or more records;
 - input record to its producers;
 - target record to its retractions.
 
@@ -142,9 +141,10 @@ capabilities.
 ## Open edges
 
 See [Identity, world, and change](open-questions.md#identity-world-and-change)
-for unresolved questions about source-identifier equivalence, merge continuity,
-authority, epoch retention, observer loss, whether a dataset's own standing is
-retractable, and what chain verification costs at scale.
+for unresolved questions about which external authorities are accepted, whether a
+coreference balance belongs in any audit, attester reliability, authority, epoch
+retention, observer loss, whether a dataset's own standing is retractable, and
+what chain verification costs at scale.
 
 ## References
 

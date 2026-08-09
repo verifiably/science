@@ -1254,8 +1254,8 @@ and a view is only a record of what remains.
 > ```
 >
 > The boundary mints only `single`. `conflict` arises from exactly one operation —
-> world §4.3's merge of two records at one content address whose routes disagree — and
-> that operation may only **widen**. A `conflict` carrying fewer than two distinct
+> **`consolidate`** of two records at one content address whose routes disagree — and
+> that operation may only **widen**. *(the operation was world §4.3's **merge**, retired 2026-08-08; its equal-basis arm is now **`consolidate`**, which requires one canonical address — `2026-08-08-world-address-ruling.md` §5.4. This case was always the equal-basis one, so nothing about the lineage rule changes)* A `conflict` carrying fewer than two distinct
 > routes is **unconstructible**: it would represent a conflict that never occurred, and
 > a one-route `conflict` beside the corresponding `single` would be two spellings of
 > one fact. **No ordinary API selects, replaces or removes a route**; "not editable" is
@@ -1271,15 +1271,15 @@ and a view is only a record of what remains.
 > and the strong reading promised tamper evidence only §9's log can supply.
 >
 > **And "caught under audit" is itself too strong for one of those.** An audit
-> recomputes against inputs that still exist. Merge `A` and `B` into `conflict([A, B])`,
+> recomputes against inputs that still exist. Consolidate `A` and `B` into `conflict([A, B])`,
 > **delete `B`'s producing run**, then raw-write `single(A)` with a matching hash: the
 > audit finds a well-formed basis whose one route resolves, and nothing surviving in the
 > corpus says `B` was ever a route. **Route removal is detectable while the evidence it
 > removed survives, and undetectable once it does not** — §11.11 and §11.14 composed,
 > and §9's mutation log is the only thing that closes it.
 
-**The tagged shape is what makes the merge rule expressible at all.** A previous
-revision ruled that a merge keeps both bases while this section still defined *the*
+**The tagged shape is what makes the consolidation rule expressible at all.** A previous
+revision ruled that the operation keeps both bases while this section still defined *the*
 basis as one immutable `(run, transforms)` tuple — so "both" had no representation,
 `producer.transforms ≠ dataset.basis` had no meaning against two of them, and kernel
 §5.1's tuple-shaped snapshot member could not hold the result. Ruling an outcome the
@@ -1311,9 +1311,9 @@ one survivor certifies over that route and zero is `not-certified`. Nothing in
 **this** design retires a route, which is what the paragraph is really about, and
 C1–C10 await implementation.)*
 
-**Why the conflict is kept rather than the merge refused**, which would be simpler and
+**Why the conflict is kept rather than the consolidation refused**, which would be simpler and
 was the obvious alternative: refusing leaves two records at one world address, which is
-world §4.3's **duplicate-location** state — reported, refused at the write boundary, and
+world §5's **duplicate-location** state — reported, refused at the write boundary, and
 explicitly a migration state that must be resolvable. It also leaves every reference to
 that address ambiguous, which §2.1 spends its argument preventing. So refusal trades a
 dataset that certifies nothing for a *world* that cannot answer a reference, and the
@@ -1374,7 +1374,9 @@ undurable; not silently ignored, which would assert independence from an absence
 **The divergence test asks a reverse question, and reverse questions have a scope.**
 "Every run producing `D`" is not answerable from the dataset: producing runs live in
 corpora that need not contain it and need not be present, and world §5's index was
-forward-only — address and alias, both answering *where does this live*. Enumerated
+forward-only — address and alias, both answering *where does this live* *(the alias map
+retired 2026-08-08, `2026-08-08-world-address-ruling.md` §4.3; the argument here is about the index being
+forward-only, which the surviving maps still are)*. Enumerated
 against whatever happened to be checked out, the test silently shrinks: a divergent
 producer in an absent corpus is not seen, `D` reads undiverged, and independence is
 certified from an enumeration nobody bounded — belief depending on the checkout, which
@@ -1415,8 +1417,8 @@ differently and retains neither. It is the undetectable-history limit of G4 and 
 stated as such.
 
 There is **one** durable form of the same conflict, and it arrives by a different
-route: world §4.3's merge of two records at one content address whose routes disagree
-widens the survivor's basis to `conflict`. That conflict is stored on the descendant, so
+route: **`consolidate`** of two records at one content address whose routes disagree
+widens the survivor's basis to `conflict`. *(the operation was world §4.3's **merge**, retired 2026-08-08; its equal-basis arm is now **`consolidate`**, which requires one canonical address — `2026-08-08-world-address-ruling.md` §5.4. This case was always the equal-basis one, so nothing about the lineage rule changes)* That conflict is stored on the descendant, so
 it does not evaporate when a run is deleted — the contrast is worth holding onto,
 because it shows the limit above is about *where the record sits*, not about divergence
 being inherently unrecordable.
@@ -1455,8 +1457,9 @@ The manifest is `(logical name, content identity)` pairs, so digesting *it* woul
 the **logical name** into the dataset's world identity: the same bytes emitted as
 `matrix` in one run and `normalized_matrix` in another would mint two different world
 datasets. World §4.2 rules a dataset's basis to be content identity precisely to keep
-nominal handles out — provider identifiers and accessions are **aliases**, not the
-basis, and a logical output name is exactly such a handle. Wrapping it in a digest
+nominal handles out — provider identifiers and accessions are **authority-identifier
+fields**, not the basis *(restated 2026-08-08: they were called aliases, and no alias is
+stored — `2026-08-08-world-address-ruling.md` §4.1)*, and a logical output name is exactly such a handle. Wrapping it in a digest
 does not launder it.
 
 The manifest remains the **run result**, which is what §7.2's equivalence rule
@@ -1538,7 +1541,7 @@ truth.** A false certification — an empirical dataset declared evidentially in
 still omits the edge, still yields false independence, and still inflates belief. What
 changes is that the claim is now *someone's*, recorded with a rationale, frozen into
 an identity, and visible to review. That is the same bargain §7.3 strikes for
-code-lineage independence and world §4.3 for merges, and it is the best available
+code-lineage independence and world §5.4 for consolidation, and it is the best available
 where nothing computable decides the question. §11 records it as a limitation rather
 than leaving it read as a fix.
 
@@ -2016,7 +2019,7 @@ missing any capability is still a valid run, and simply cannot reach
 `clean-environment`.
 
 **Code-lineage independence is certified by an authored, recorded claim** with a
-rationale — the same shape as world §4.3's merge, and for the same reason: nothing
+rationale — the same shape as world §5.4's `consolidate`, and for the same reason: nothing
 computable distinguishes an independent reimplementation from a copy with the
 comments rewritten. Absent that claim the scope is `not-certified`, never
 optimistically upgraded. §11 records the resulting soft spot honestly.
@@ -2563,8 +2566,10 @@ the consumer reads, and say which of the two you did.
 7. **Code-lineage independence is an authored claim.** §7.3 certifies
    `independent-implementation` from a recorded claim with a rationale, because
    nothing computable separates a genuine reimplementation from a copy with the
-   comments rewritten. It is the same class of limit as world §8.3's irreversible
-   merge and kernel §8.8's authored acquisition boundary. **It reaches
+   comments rewritten. It is the same class of limit as world limitation 3c's
+   continuity selection under `consolidate` *(restated 2026-08-08; the citation was
+   world §8's irreversible merge, a limitation that retired with the operation —
+   `2026-08-08-world-address-ruling.md`)* and kernel §8.8's authored acquisition boundary. **It reaches
    classification, not admission** — only `clean-environment, passed` admits
    (kernel §3.3), and a false independence claim therefore mislabels corroboration
    rather than buying eligibility. `not-certified` is the default, so the failure
@@ -2646,7 +2651,7 @@ the consumer reads, and say which of the two you did.
     descendant-side trick cannot reach. The exposure is narrow: a replay's producer
     transforms the same inputs by construction, so divergence needs byte-identical
     output from a genuinely different ancestor set, whose measured population is zero.
-    Narrow is not empty. The **merge** route to the same conflict (world §4.3) is
+    Narrow is not empty. The **`consolidate`** route to the same conflict (world §5.4) is
     durable **under ordinary APIs** and is not covered by this limitation — but the two
     limits **compose**, and the composite is weaker than either alone: raw-write
     `single(A)` over a `conflict([A, B])` **and** delete `B`'s producing run, and an

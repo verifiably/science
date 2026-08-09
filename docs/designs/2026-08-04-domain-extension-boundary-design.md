@@ -616,9 +616,13 @@ row; this would have been the third.
    agreement is required unconditionally** — every corpus in the closure must
    pin the same one, whether or not any base-profile facet is read, since §8
    makes the base contract an unconditional member.
-3. **Move and merge.** Moving or merging a node into a corpus whose profile
-   pins a **different** identity for any namespace the node's facets use is
-   **refused** at the write boundary. For a **Science node**, the receiving
+3. **Move and consolidate.** Moving a node — or bringing two replicas of one
+   node together under `consolidate` — into a corpus whose profile pins a
+   **different** identity for any namespace the node's facets use is **refused**
+   at the write boundary. *(This read "move and merge" until 2026-08-08;
+   structural merge retired and the surviving equal-basis operation is
+   `consolidate` — `2026-08-08-world-address-ruling.md` §5.4. A coreference attestation is not a
+   relocation and does not reach this rule: it moves no node between corpora.)* For a **Science node**, the receiving
    corpus must pin the same `science_contract` regardless of which facets the
    node carries — a node with no domain facets at all is still governed by the
    base contract, so relocation across base-contract identities is refused too.

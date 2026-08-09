@@ -18,9 +18,7 @@ Terms are defined in their Science-specific sense. Follow the topic link for
 context and the linked design references for normative detail.
 
 - **Address** — A canonical lookup key, `kind:<basis-digest>`, distinct from
-  alias, location, and historical continuity. ([identity](identity-world-and-change.md#identity-is-not-one-field))
-- **Alias** — A human-facing, non-unique name that resolves to zero or more
-  records and does not affect identity. ([identity](identity-world-and-change.md#identity-is-not-one-field))
+  label, location, and historical continuity. ([identity](identity-world-and-change.md#identity-is-not-one-field))
 - **Analysis spec** — An immutable preregistered plan naming a proposition,
   estimand, interpretation, inputs, parameters, nondeterminism, and equivalence
   rule for an assessment run. ([computation](computation-and-reproducibility.md#the-analysis-spec-freezes-the-scientific-plan))
@@ -55,6 +53,12 @@ context and the linked design references for normative detail.
   profile-pinning manifest, and identity-changing states. ([identity](identity-world-and-change.md#there-is-one-world-projects-are-views))
 - **Corpus state identity** — A digest of the complete canonical corpus manifest
   plus the sorted identities of its nodes. ([identity](identity-world-and-change.md#there-is-one-world-projects-are-views))
+- **Coreference attestation** — An attributed, additive record that two
+  distinctly identified records of one kind are believed to name one thing. Its
+  stance is `+1` or `-1`, its weight is one regardless of who authored it, and the
+  pair's balance is derived rather than stored. A positive balance activates a
+  query-layer coreference edge; nothing merges.
+  ([identity](identity-world-and-change.md#correction-is-additive))
 - **Dataset-production run** — A run shape that transforms data and produces one
   dataset without a proposition, spec, or assessment. ([computation](computation-and-reproducibility.md#one-run-kind-has-two-shapes))
 - **Domain contract** — A namespaced declaration of domain sorts, operators,
@@ -83,6 +87,10 @@ context and the linked design references for normative detail.
 - **Interpretation rule** — The versioned rule identity, frozen in the spec,
   that maps a run's result to the assessment's outcome. It is declared before
   the result exists. ([computation](computation-and-reproducibility.md#the-analysis-spec-freezes-the-scientific-plan))
+- **Label** — A human-facing name computed on read from immutable record content
+  and a pinned authority snapshot. It is never stored, never part of identity, and
+  never resolved against.
+  ([identity](identity-world-and-change.md#identity-is-not-one-field))
 - **Mutation log** — A per-root hash-linked chain registering boundary
   transactions and destructive intent, with heads observed outside their own
   deletable set. ([identity](identity-world-and-change.md#mutation-history-is-detectable-relative-to-observers))
@@ -130,7 +138,7 @@ context and the linked design references for normative detail.
   unlike retraction, it does not subtract the predecessor's standing.
   ([identity](identity-world-and-change.md#correction-is-additive))
 - **UID** — A durable continuity identifier used when addresses change through
-  correction or merge. ([identity](identity-world-and-change.md#identity-is-not-one-field))
+  correction, or when duplicate storage is consolidated. ([identity](identity-world-and-change.md#identity-is-not-one-field))
 - **Verification** — An immutable comparison of two runs under a frozen
   equivalence rule, with a derived scope and verdict. ([computation](computation-and-reproducibility.md#replay-verification-and-belief-are-different-decisions))
 - **World** — The union of admitted corpora and world-level records; projects

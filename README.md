@@ -25,7 +25,7 @@ through 2026-08-08. Read them in this order:
 |---|---|
 | `2026-08-02-epistemic-kernel-design.md` | what belief is, what may change it, and what the system does not claim (guarantees G1–G8) |
 | `2026-08-02-substrate-consolidation-design.md` | the `nodes`/`atoms` seam and the profile a corpus runs under (S1–S8) |
-| `2026-08-02-world-addressing-design.md` | addresses, aliases, corpora, and the world index (W1–W13) |
+| `2026-08-02-world-addressing-design.md` | addresses, corpora, and the world index (W1–W16) |
 | `2026-08-02-computation-reproducibility-design.md` | runs, recipes, replay, and lineage (R1–R23) |
 | `2026-08-03-correction-lifecycle-design.md` | retraction and correction — subtracting standing without deleting a record (C1–C10) |
 | `2026-08-03-world-index-packaging-design.md` | where the index lives, who writes it, and what freshness a consumer may assume (X1–X12) |

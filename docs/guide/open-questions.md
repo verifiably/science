@@ -94,12 +94,20 @@ implementation**: a guarantee row awaiting code is work, not a question.
 
 ## Identity, world, and change
 
-- **Source identifier equivalence.** When a preprint DOI and journal DOI name
-  one work, is the identity basis a set of identifiers or a primary identifier
-  with aliases? ([world question](../designs/2026-08-02-world-addressing-design.md#10-open-questions))
-- **Merge versus exact retraction targets.** Rewriting all inbound references
-  during merge conflicts with immutable retraction identities and can cascade
-  through counter-retractions. Which guarantee yields? ([world question](../designs/2026-08-02-world-addressing-design.md#10-open-questions))
+- **Which external authorities are accepted, and who decides.** Every rendered
+  label and the ambiguous-search refusal resolve against a pinned local snapshot
+  of an authority. How a snapshot is pinned, versioned, distributed and bumped —
+  and whether a bump is an amendment act — is owed and undesigned.
+  ([ruling question](../designs/2026-08-08-world-address-ruling.md#11-open-questions))
+- **Whether a coreference balance belongs in any audit.** A coreference edge is
+  outside belief by construction, but an active edge standing at `1` with a
+  contested history is a different object from one standing at `12` with none.
+  Nothing currently surfaces the difference.
+  ([ruling question](../designs/2026-08-08-world-address-ruling.md#11-open-questions))
+- **Attester reliability.** Every attestation carries unit weight, which is an
+  honest default rather than a finding that attesters are equally reliable. The
+  data collection that would inform per-source priors does not exist.
+  ([ruling question](../designs/2026-08-08-world-address-ruling.md#11-open-questions))
 - **Authority and coordination.** The designs assume one writer and no access
   control; multi-writer semantics, authority to retract, and propagation of
   cross-project blockers still need concrete rules. ([review writer question](../designs/2026-08-05-review-disposition-and-conformance-cut-1.md#8-open-questions))

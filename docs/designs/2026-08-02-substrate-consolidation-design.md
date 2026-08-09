@@ -327,8 +327,10 @@ reverse orientation would make ancestor deletion invisible.
 > below reads the **basis**, and the view is descriptive only.
 >
 > **The basis is tagged** — `single(route) | conflict([route], ≥2, sorted)`. The
-> boundary mints only `single`; `conflict` arises solely from world §4.3's merge of two
-> records at one content address whose routes disagree.
+> boundary mints only `single`; `conflict` arises solely from **`consolidate`** of two
+> records at one content address whose routes disagree *(the operation was world §4.3's
+> merge, retired 2026-08-08; the equal-basis arm it names is now `consolidate` —
+> `2026-08-08-world-address-ruling.md` §5.4)*.
 >
 > **Independence reads the basis, not the view**, because the view unions every
 > producing run while the durable record attests **one** route for a boundary-minted

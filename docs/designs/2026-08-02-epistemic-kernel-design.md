@@ -1101,7 +1101,9 @@ be part of the record.
 named the index entire — address map, alias map and coverage together — which
 contradicts world W5 outright: moving an entity between corpora changes the address
 map, and W5 requires a move to leave this digest **unchanged**, because location is not
-evidence. An alias edit would do the same. The rule the slip broke is one this design
+evidence. *(The alias map retired 2026-08-08 with the stored alias, `2026-08-08-world-address-ruling.md`
+§4.3; the argument stands on the address map alone, and one fewer map is one fewer way
+to reach it.)* The rule the slip broke is one this design
 states elsewhere in its own words: **a digest member is the thing that is read, not the
 artifact it arrived in.** Belief reads the producer enumeration and its scope; it does
 not read where anything is filed.
