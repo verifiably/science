@@ -468,7 +468,7 @@ way; a second document would add ceremony, not evidence.
 
 ### 5.1 The frozen run
 
-One run, 2026-08-09, instrument at commit `INSTRUMENT_COMMIT`. The unit-level
+One run, 2026-08-09, instrument at commit `ee9ba0c`. The unit-level
 artifact is committed beside this document as
 `2026-08-09-admission-ramp-survey.json`; every figure below renders from it, and
 none is re-derived by hand.
