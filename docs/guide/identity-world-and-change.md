@@ -73,7 +73,7 @@ states and world-level records through four maps:
 - canonical address to one record;
 - input record to its producers;
 - target record to its retractions;
-- endpoint pair to its coreference balance and edge state.
+- endpoint pair to its coreference balance.
 
 An epoch identity commits to its coverage and derived contents. A mutable
 “current epoch” pointer is an operational convenience only: belief and other
