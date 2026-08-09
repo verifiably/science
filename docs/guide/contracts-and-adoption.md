@@ -10,6 +10,7 @@ sources:
   - ../designs/2026-08-07-corpus-survey-and-vocabulary-admission-design.md
   - ../designs/2026-08-07-multi-corpus-typing-exercise.md
   - ../designs/2026-08-09-admission-ramp-design.md
+  - ../designs/2026-08-09-conformance-cut-2.md
 ---
 
 # Contracts and adoption
@@ -86,10 +87,23 @@ then-banked guarantee rows—six wholly and five only at named assertion arms—
 classified the other 115 by the subsystem that would unblock them. The corpus now
 holds 139 rows across eleven frozen tables: the belief policy's P1–P9 banked the
 day the cut was drawn, and the admission ramp appended G9 on 2026-08-09 while
-narrowing W3's dataset arm. All ten sit outside cut 1 and are acceptance criteria
-for a later slice. The cut's stop rule was the last fully designed seam: typed
-claim construction, projection, identity, decode, and cross-language parity, with
-no persistence boundary and no belief computation.
+narrowing W3's dataset arm. The cut's stop rule was the last fully designed seam:
+typed claim construction, projection, identity, decode, and cross-language
+parity, with no persistence boundary and no belief computation.
+
+[Conformance cut 2](../designs/2026-08-09-conformance-cut-2.md) was frozen
+2026-08-09 on the same discipline, before its slice exists, and gives the ten
+post-cut-1 rows their owner. It is drawn at the belief seam — the derived
+admission state, the assessment admission gate, the belief input closure digest,
+and `science.belief.v1` under an exact binding — selecting 13 rows in full and
+11 at named assertion arms, and classifying the remaining 108 deferred rows by the
+subsystem that unblocks them. The admission ramp's three open questions are its
+stated boundary conditions: verified-holdings observations enter as supplied
+arguments precisely because where they are recorded is still undesigned, no arm
+reads an observation's timestamp, and the partly-pinned fixtures exercise a
+ruled boundary without corroborating the ruling. A second reader reviewed the
+selection adversarially before the freeze, and every arm its findings moved,
+they moved out.
 
 ### Measurements constrain the next slice
 
@@ -117,10 +131,11 @@ fitted result into independent validation.
 ## Current state
 
 The ledger records conformance cut 1 and the multi-corpus typing exercise as
-landed work. The normative-contract design is banked, but a complete normative
-contract cut, instrument certification, persistence, run capture, world index,
-mutation log, and belief evaluator remain outside cut 1. Consult the ledger for
-the current state rather than carrying these sentences into a status report.
+landed work. Conformance cut 2 is frozen and its slice is not yet built. The
+normative-contract design is banked, but a complete normative contract cut,
+instrument certification, persistence, run capture, world index, and mutation
+log remain outside both cuts. Consult the ledger for the current state rather
+than carrying these sentences into a status report.
 
 The contributor guide has no ledger artifact of its own. That is deliberate:
 it documents the system, does not implement a system boundary, and no adoption
@@ -141,5 +156,6 @@ model sits with the other authority questions under
 - [Contract versioning and frozen oracle identifiers](../designs/2026-08-03-normative-contract-design.md#4-versioning--what-mints-what)
 - [Adoption order and landed artifacts](../designs/2026-08-03-redesign-adoption-ledger.md#3-order-of-work)
 - [Prospectively frozen conformance cut 1](../designs/2026-08-05-review-disposition-and-conformance-cut-1.md#5-conformance-cut-1--frozen-prospectively)
+- [Conformance cut 2 and its boundary conditions](../designs/2026-08-09-conformance-cut-2.md#21-the-admission-ramps-three-open-questions-as-boundary-conditions)
 - [Vocabulary admission decision](../designs/2026-08-07-corpus-survey-and-vocabulary-admission-design.md#4-ruling-admission-by-agreement-and-exercise)
 - [Typing exercise results and limits](../designs/2026-08-07-multi-corpus-typing-exercise.md#3-results)

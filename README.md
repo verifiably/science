@@ -17,7 +17,7 @@ below for rationale and frozen guarantees.
 
 ## The designs
 
-Eighteen documents in `docs/designs/`: the banked redesigns, review disposition,
+Nineteen documents in `docs/designs/`: the banked redesigns, review disposition,
 adoption ledger, measurements, rulings, and contributor-guide design written
 2026-08-02 through 2026-08-09. Read them in this order:
 
@@ -41,6 +41,7 @@ adoption ledger, measurements, rulings, and contributor-guide design written
 | `2026-08-08-contributor-guide-design.md` | the organization, authority, freshness, and verification rules for the concise contributor guide |
 | `2026-08-08-world-address-ruling.md` | closes docket §4.1: basis-derived addressing upheld, labels rendered rather than stored, coreference graded rather than merged |
 | `2026-08-09-admission-ramp-design.md` | how externally sourced input reaches held — the measurement, and the ruling downstream of it: three states, `W3` narrowed, `G9` appended, F2 closed |
+| `2026-08-09-conformance-cut-2.md` | the second frozen conformance cut, drawn at the belief seam over the 139-row corpus, with the admission ramp's three open questions as boundary conditions |
 
 The ledger is the entry point for "what is built, what is not, and what waits on
 what." Every guarantee table is frozen under its identifiers: designs extend and
@@ -57,11 +58,15 @@ its edge. Nothing beyond that edge is built.
 The guarantee tables are the acceptance criteria — each row must be a failing
 test before it is a passing one. There are **139 rows** across **eleven frozen
 tables** (G, S, W, R, C, X, N, L, D, M, P). Cut 1 selects **11 of the 126 rows**
-across the ten tables that existed when it was drawn — the belief policy's P1–P9
-banked the same day and are acceptance criteria for a later slice — and it was
-frozen *before* any code existed so that a row which fails is a failure rather
-than a redefinition. G9 was appended 2026-08-09 by the admission ramp, which also
-narrowed W3's dataset arm; both sit outside cut 1.
+across the ten tables that existed when it was drawn, frozen *before* any code
+existed so that a row which fails is a failure rather than a redefinition.
+**Conformance cut 2** was frozen 2026-08-09 on the same discipline, before its
+slice exists: it is drawn at the **belief seam** — the derived admission state,
+the assessment admission gate, the belief input closure digest, and
+`science.belief.v1` under an exact binding — selecting **13 rows in full and 11
+in part**, including the belief policy's P1–P9 and the admission ramp's G9,
+whose verified-holdings observations enter as supplied arguments because where
+they are recorded remains an open design. Its slice is not yet built.
 
 ```
 python/     the implementation (substrate §11 puts the composition root here)
