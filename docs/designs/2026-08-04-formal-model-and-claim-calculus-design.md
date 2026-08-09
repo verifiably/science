@@ -11,7 +11,7 @@ README. Two consequential edits fall outside §8.7's table and are recorded here
 basis in passing, and both would otherwise have kept describing an identity over
 prose (ρA1, ρA2).
 
-**Inherits:** the epistemic kernel (G1–G8, §4.1's signatures and semantic
+**Inherits:** the epistemic kernel (**G1–G9** since 2026-08-09, §4.1's signatures and semantic
 identity, §8.7's recorded-history limit, limitation 4's predicate vocabulary),
 substrate consolidation (S1–S8), world addressing (**W1–W16** since 2026-08-08),
 computation and
@@ -150,7 +150,7 @@ stated once here rather than repeated in every row.
 | `analysis-spec` | authored, frozen pre-run | **content identity**, frozen; immutable by construction | authored → **frozen**. The freeze also resolves `rule_bindings`, refusing on ambiguity | declares inputs, parameters, nondeterminism contract, interpretation and equivalence rules; `targets` a proposition | eligibility via **G2a**; belief transitively via assessment identity | — | world §4.2; comp §4.2a; 5b §6; **G2a** |
 | `run` | executed through the boundary | **content identity of the execution closure — recipe + result + occurrence**; the occurrence's minted **event token** is what keeps two identical executions distinct. Moves when **any** closure member changes | begin is **refused** without an already-frozen spec identity, which is recorded first; recipe frozen pre-execution; result and occurrence recorded after | reads datasets by role (`observes`, `reads`, `transforms`), code, environment, workflow definition, parameters, `rule_bindings`; produces outputs manifest and a **nested** boundary receipt | eligibility (≥1 `observes`); belief transitively | availability **in this checkout** while a controlled copy remains held | world **§4.2**; comp §4.1, §4.2, §7.1; **R2**, **R5**; kernel **G2a** |
 | `verification` | **derived** comparison of two runs, immutable | content identity over **(ordered run identities, equivalence-rule identity, comparison-report identity, scope-derivation rule identity, scope, verdict)** — the report's digest is what makes two differently-evidenced verifications two nodes | immutable; superseded by a later verification naming the failure it supersedes; **or** cleared by a standing retraction | reads two runs, the frozen equivalence rule; produces admission input | admission (fail-closed); belief (member 3) | location; ~~alias~~ *(alias dropped 2026-08-08 — no label is stored, so there is no alias dimension to be inert in; world address ruling §4)* | world **§4.2**; kernel §3.3; comp §7.3, §7.3b; **G8**, **R4**, **C6** |
-| `dataset` | authored (acquired) or derived (`produces`) | **content identity** (manifest/content hash). Provider identifiers and accessions are **authority-identifier fields**, never the basis — *restated 2026-08-08: they were called aliases, and there is no alias; `programme` and `release` are fields carrying authority identifiers, rendered through the pinned snapshot (world address ruling §4.1, §6)* | produced by a run; carries a stamped descendant-side **lineage basis**, tagged `single(route) \| conflict([route])` | read by runs under a role; carries facets, incl. `empirical-observation` | eligibility (held-ness + facet); belief (members 4, 5) | availability in this checkout **while a controlled copy remains held**; facet addition leaves the **address** unchanged (**D2**) | world §4.2; kernel §2.2, §4.1; comp §5.2, §7.1; **R5**, **D2** |
+| `dataset` | authored (acquired) or derived (`produces`) | **content identity** over the **dataset basis projection** — every declared resource's digest as `<algorithm>:<hex>`, deduplicated, sorted, newline-joined and hashed; *restated 2026-08-09: this cell said "manifest/content hash", which named no canonical derivation and so let the fold go unruled — the projection excludes names, sizes, order and repetition (admission ramp §6.2; world §4.2; **R23** as amended)*. Provider identifiers and accessions are **authority-identifier fields**, never the basis — *restated 2026-08-08: they were called aliases, and there is no alias; `programme` and `release` are fields carrying authority identifiers, rendered through the pinned snapshot (world address ruling §4.1, §6)* | produced by a run; carries a stamped descendant-side **lineage basis**, tagged `single(route) \| conflict([route])` | read by runs under a role; carries facets, incl. `empirical-observation` | eligibility (held-ness + facet); belief (members 4, 5) | availability in this checkout **while a controlled copy remains held**; facet addition leaves the **address** unchanged (**D2**) | world §4.2; kernel §2.2, §4.1; comp §5.2, §7.1; **R5**, **D2** |
 | `source` | authored record in a corpus | **normalized external identifier** — DOI, PMID, ISBN, accession. A work's identity is issued by the world, not computed by us | authored; `member_of` a dataset (the corpus **is** a dataset) | read by extraction | none directly — only through `source-assertion` | everything in belief | world **§4.2**; kernel §4.1, §4.3 |
 | `retraction` | authored, attributed, immutable | world address; **its identity covers its target's identity** — banked as what makes cycles unconstructible, an argument **ρA9 replaces** | additive: the target stays byte-identical and resolvable. A counter-retraction removes **one** retraction from standing | reads its target; produces a standing subtraction | standing → admission → belief (member 6) | location; ~~alias~~ *(alias dropped 2026-08-08 — no label is stored, so there is no alias dimension to be inert in; world address ruling §4)* | correction §3, §4; **C1**, **C6**, **C10** |
 | `instrument-certification` | **content-derived**, no event token — a derived demonstration on the `verification` precedent | content identity over **(contract identity, discriminated subject, implementation content identity, witness evaluations)**; the rule identity inside carries the fixture-set identity | re-deriving unchanged is **idempotent**; a byte-identical re-mint of a retracted certification **stays retracted**. Withdrawal is by **retraction**, corrected by **counter-retraction**; under a **successor cut it is a different record**, so recertification-after-amendment is a new act, never a toggle | certifies executable instruments, never authored lineage claims | rule-binding resolution; verification scope evidence | — | 5b §7.1, §7.2; world §4.2; N-table |
@@ -864,10 +864,14 @@ readings are where definedness actually enters.
 
 ### 5.1 Method
 
-**113 rows** across nine frozen tables: G (10), S (9), W (16), R (23), C (10),
-X (12), N (10), L (13), D (10).
+**117 rows** across nine frozen tables: G (11), S (9), W (19), R (23), C (10),
+X (12), N (10), L (13), D (10). *(Corrected 2026-08-09. These read 113 rows and
+W (16): the world address ruling added **W14–W16** to §5.2 on 2026-08-08 and left
+the totals behind, and W's count had never included **W5a, W8a and W8b**, which
+§5.2 classifies individually. The admission ramp's **G9** is the fourth new row
+and the occasion for the recount, not its cause.)*
 
-Classification is **per assertion, not per row** — 113 rows, 128 assertions — and a row may carry several
+Classification is **per assertion, not per row** — 117 rows, 135 assertions — and a row may carry several
 labels: many rows state a property in a positive arm and pin its limit in a
 negative arm, and those are different classes. **No id is renamed, renumbered or
 merged.** This section mints nothing — it labels what is already banked.
@@ -895,6 +899,7 @@ rather than half-blank.
 | G6 | `reads` inputs confer no eligibility in any quantity or QA state | **OInv** |
 | G7 | a semantic edit mints a new identity, prior bindings hold, old belief unmoved / a `title` overwrite mints nothing | **CS** + **OInv** / **OInv** |
 | G8 | a failing verification invalidates and forces recomputation; cleared only by resolution or standing retraction / deleting it restores admission | **FC** / **DL** |
+| G9 | a recorded content identity with no bytes is minted and reads `declared`, never `held` / bytes whose digest disagrees do not promote, and the state is derived rather than stored / matching bytes held anywhere, in or out of the repository, promote alike / the path-exists predicate fails **G9** while G2b, R5 and R10 pass (added 2026-08-09) | **FC** / **CS** + **FC** / **OInv** / **DL** |
 
 **S — substrate consolidation**
 

@@ -21,6 +21,7 @@ document it defers to exists is not.
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 
@@ -28,6 +29,9 @@ ROOT = Path(__file__).parents[2]
 DESIGNS = ROOT / "docs" / "designs"
 GUIDE = ROOT / "docs" / "guide"
 README = ROOT / "README.md"
+
+#: A digest as §6.2's projection folds it: the algorithm, then lowercase hex.
+_ALGORITHM_QUALIFIED = re.compile(r"\A[a-z0-9][a-z0-9_-]*:[0-9a-f]+\Z")
 
 #: `atoms`' Plan A sub-plans, in delivery order (its authority design §14).
 ATOMS_STAGES = ("A1", "A2", "A3", "A4a", "A4b", "A5a", "A5b", "A6", "A7", "A8")
@@ -43,7 +47,7 @@ _ATOMS_LAST_IMPLEMENTED = _ATOMS_IMPLEMENTED[-1]
 #: The eleven frozen guarantee tables and the rows each holds. Extending a table
 #: means adding its id here; the corpus's own rule is that ids are never renumbered.
 GUARANTEE_TABLES: dict[str, tuple[str, ...]] = {
-    "G": ("G1", "G2a", "G2b", "G2c", "G3", "G4", "G5", "G6", "G7", "G8"),
+    "G": ("G1", "G2a", "G2b", "G2c", "G3", "G4", "G5", "G6", "G7", "G8", "G9"),
     "S": ("S1", "S1a", "S2", "S3", "S4", "S5", "S6", "S7", "S8"),
     "W": tuple(f"W{n}" for n in range(1, 17)) + ("W5a", "W8a", "W8b"),
     "R": tuple(f"R{n}" for n in range(1, 24)),
@@ -154,9 +158,7 @@ def test_the_ledger_records_the_atoms_boundary_this_file_holds() -> None:
     atoms_rows = [line for line in ledger.splitlines() if "**`atoms` " in line and "—" in line]
     assert atoms_rows, "the ledger no longer carries an `atoms` artifact row"
     row = "\n".join(atoms_rows)
-    assert _ATOMS_LAST_IMPLEMENTED in row, (
-        f"the ledger's `atoms` row does not name {_ATOMS_LAST_IMPLEMENTED} as landed"
-    )
+    assert _ATOMS_LAST_IMPLEMENTED in row, f"the ledger's `atoms` row does not name {_ATOMS_LAST_IMPLEMENTED} as landed"
     assert f"{ATOMS_FIRST_UNIMPLEMENTED}–A8" in row, (
         f"the ledger's `atoms` row does not name {ATOMS_FIRST_UNIMPLEMENTED}–A8 as the remainder"
     )
@@ -195,9 +197,7 @@ def test_the_readme_states_the_corpus_row_total() -> None:
     # The README hard-wraps its prose, so a phrase can straddle a line break.
     readme = re.sub(r"\s+", " ", _text(README))
     assert f"{total} rows" in readme, f"the README does not state the corpus total of {total} rows"
-    assert "eleven frozen tables" in readme, (
-        f"the README does not state that the rows sit in {tables} tables"
-    )
+    assert "eleven frozen tables" in readme, f"the README does not state that the rows sit in {tables} tables"
 
 
 def test_the_readme_lists_every_design_document() -> None:
@@ -205,9 +205,38 @@ def test_the_readme_lists_every_design_document() -> None:
     listed = set(_BACKTICKED_DOC.findall(readme))
     present = {p.name for p in design_documents()}
     assert listed == present, (
-        f"README design table out of step: missing {sorted(present - listed)}, "
-        f"stale {sorted(listed - present)}"
+        f"README design table out of step: missing {sorted(present - listed)}, stale {sorted(listed - present)}"
     )
+
+
+#: How the README spells its design count. Written out, as the prose does.
+_COUNT_WORDS = {
+    16: "Sixteen",
+    17: "Seventeen",
+    18: "Eighteen",
+    19: "Nineteen",
+    20: "Twenty",
+}
+
+
+def test_the_readme_states_how_many_designs_there_are() -> None:
+    """The sentence above the table counts the table, and drifts silently.
+
+    It read "Sixteen documents ... through 2026-08-08" while the table listed
+    eighteen through 2026-08-09 — the test above passes on a complete table with a
+    wrong count, because it never reads the sentence. The newest document's date
+    is checked too: the range's far end rots the same way and for the same reason.
+    """
+    present = design_documents()
+    count = len(present)
+    word = _COUNT_WORDS.get(count)
+    assert word is not None, f"extend _COUNT_WORDS: {count} designs and no spelling for it"
+    readme = re.sub(r"\s+", " ", _text(README))
+    assert f"{word} documents" in readme, (
+        f"the README says something other than '{word} documents' for its {count} designs"
+    )
+    newest = max(p.name[:10] for p in present)
+    assert f"through {newest}" in readme, f"the README's date range does not end at the newest design, {newest}"
 
 
 def test_every_guarantee_range_names_rows_that_exist() -> None:
@@ -258,3 +287,24 @@ def test_every_cross_reference_resolves() -> None:
             if not (path.parent / target).resolve().exists():
                 broken.append(f"{path.name} → {target}")
     assert not broken, "unresolvable references:\n  " + "\n  ".join(sorted(broken))
+
+
+def test_the_frozen_survey_artifact_keeps_every_digest_algorithm_qualified() -> None:
+    """The admission ramp's frozen measurement must yield §6.2's dataset basis
+    projection on its own.
+
+    That projection folds `<algorithm>:<hex>` strings. The first freeze stored bare
+    hex, so the address could only be derived by trusting a sentence in the design
+    or by re-reading source roots the freeze exists to replace — and a 64-character
+    digest is producible by more than one algorithm. This guard is over the frozen
+    file rather than the instrument: a future re-freeze by a changed instrument is
+    exactly the way the fact would be lost again.
+    """
+    artifact = json.loads(_text(DESIGNS / "2026-08-09-admission-ramp-survey.json"))
+    bare = [
+        f"{r['dataset']}/{r['path']}: {field}={r[field]}"
+        for r in artifact["resources"]
+        for field in ("recorded_hash", "observed_hash")
+        if r[field] is not None and not _ALGORITHM_QUALIFIED.match(r[field])
+    ]
+    assert not bare, "digests recorded without their algorithm:\n  " + "\n  ".join(bare)

@@ -2,13 +2,14 @@
 title: Contracts and adoption
 status: living
 created: 2026-08-08
-updated: 2026-08-08
+updated: 2026-08-09
 sources:
   - ../designs/2026-08-03-normative-contract-design.md
   - ../designs/2026-08-03-redesign-adoption-ledger.md
   - ../designs/2026-08-05-review-disposition-and-conformance-cut-1.md
   - ../designs/2026-08-07-corpus-survey-and-vocabulary-admission-design.md
   - ../designs/2026-08-07-multi-corpus-typing-exercise.md
+  - ../designs/2026-08-09-admission-ramp-design.md
 ---
 
 # Contracts and adoption
@@ -83,11 +84,12 @@ records are reproduced through the new typed boundaries.
 Conformance cut 1 was frozen before implementation. It selected eleven of 126
 then-banked guarantee rows—six wholly and five only at named assertion arms—and
 classified the other 115 by the subsystem that would unblock them. The corpus now
-holds 138 rows across eleven frozen tables; the belief policy's P1–P9 banked
-after the cut was drawn and are acceptance criteria for a later slice. Its stop
-rule was the last fully designed seam: typed claim construction, projection,
-identity, decode, and cross-language parity, with no persistence boundary and no
-belief computation.
+holds 139 rows across eleven frozen tables: the belief policy's P1–P9 banked the
+day the cut was drawn, and the admission ramp appended G9 on 2026-08-09 while
+narrowing W3's dataset arm. All ten sit outside cut 1 and are acceptance criteria
+for a later slice. The cut's stop rule was the last fully designed seam: typed
+claim construction, projection, identity, decode, and cross-language parity, with
+no persistence boundary and no belief computation.
 
 ### Measurements constrain the next slice
 
@@ -126,9 +128,10 @@ item waits on it.
 
 ## Open edges
 
-See [Contracts and adoption](open-questions.md#contracts-and-adoption) for the
-admission ramp, contract governance, the normative artifact's shape, certifying
-instruments that already exist, and how the next cut is selected. The writer
+See [Contracts and adoption](open-questions.md#contracts-and-adoption) for
+contract governance, the normative artifact's shape, certifying instruments that
+already exist, how the next cut is selected, and the residue the admission ramp
+left behind when it closed. The writer
 model sits with the other authority questions under
 [Identity, world, and change](open-questions.md#identity-world-and-change).
 
