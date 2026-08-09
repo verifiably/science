@@ -71,6 +71,9 @@ to_artifact = _MODULE.to_artifact
 validate_scratch = _MODULE.validate_scratch
 
 SHA_OF_ABC = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+#: The same three bytes, correctly pinned under an algorithm this instrument does
+#: not compute — so a *correct* record it must refuse rather than mis-report.
+MD5_OF_ABC = "900150983cd24fb0d6963f7d28e17f72"
 
 
 # ---------------------------------------------------------------------------
@@ -241,6 +244,35 @@ def test_a_digest_recorded_without_an_algorithm_is_refused(roots: tuple[Path, Pa
     write_payload(payloads, "d", "a.txt", b"abc")
 
     with pytest.raises(ValueError, match="not <algorithm>:<hex>"):
+        survey(records, payloads)
+
+
+def test_a_digest_under_an_algorithm_this_instrument_cannot_compute_is_refused(
+    roots: tuple[Path, Path, Path],
+) -> None:
+    """The md5 of `abc` is a correct pin, and this instrument still cannot check it.
+
+    Parsing it and comparing it to a sha256 observation reports `mismatch` — which
+    says the bytes disagree with the record, when nothing compared them. Which
+    algorithms the *profile* accepts is open (§6.2); which one this tool observes
+    is settled by its own code, and the two must not be conflated.
+    """
+    records, payloads, _ = roots
+    write_record(records, "d", package={"resources": [{"path": "a.txt", "hash": f"md5:{MD5_OF_ABC}"}]})
+    write_payload(payloads, "d", "a.txt", b"abc")
+
+    with pytest.raises(ValueError, match="this instrument observes only sha256"):
+        survey(records, payloads)
+
+
+def test_a_digest_of_the_wrong_width_is_refused(roots: tuple[Path, Path, Path]) -> None:
+    """`sha256:a` is not a sha256 digest, and the prefix does not make it one.
+    Admitting it would put a dataset on a content basis identifying no bytes."""
+    records, payloads, _ = roots
+    write_record(records, "d", package={"resources": [{"path": "a.txt", "hash": "sha256:a"}]})
+    write_payload(payloads, "d", "a.txt", b"abc")
+
+    with pytest.raises(ValueError, match="1 hex digits, not the 64"):
         survey(records, payloads)
 
 

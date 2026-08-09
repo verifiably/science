@@ -325,6 +325,17 @@ Five properties are load-bearing.
      than assuming sha256 — that assumption is what lost the fact. §5.1 records
      the refreeze.
 
+     **The instrument accepts `sha256:<64 hex>` and refuses every other digest,
+     and that bound is its own rather than the profile's.** Which algorithms the
+     profile accepts as pinning bytes is open (§6.2's algorithm residue) and is
+     not a tool's to settle. Which one this tool can *check* is settled by its
+     code: every observation it makes is a sha256, so parsing a correct `md5` pin
+     and comparing it to one would report `mismatch` — the bytes said to
+     contradict the record when in fact nothing compared them, the coverage error
+     of `fb-2026-07-27-010` reappearing one layer down. A refusal names the tool's
+     limit; a `mismatch` would blame the corpus for it. The width is checked for
+     the same reason under the right prefix: `sha256:a` pins no bytes.
+
    The human-readable report **renders from that artifact** rather than being
    computed alongside it, so the prose and the data cannot drift and every figure
    in the document is re-derivable from one file.
@@ -694,6 +705,15 @@ identity at all. Nothing enumerates the accepted set today; every digest in the
 measured corpus is `sha256`, and the projection's algorithm prefix is what makes
 the set expressible when it is ruled.
 
+**The instrument does not anticipate that ruling, and its refusal is not a vote
+in it.** §4 records that it accepts `sha256:<64 hex>` and refuses the rest —
+because sha256 is the only digest it computes, so it is the only one it can
+compare a record against. An `md5`-recorded resource stops that survey; it does
+not thereby become unpinned. The two questions look alike and are not: *what
+pins bytes* is the profile's, *what this tool can check* is its author's, and
+answering the first with the second is how a tool's limit gets recorded as a
+property of a corpus.
+
 **The empty declaration is unreachable, deliberately.** A dataset with no
 declared resources has no content identity at all (above) and is a curation note,
 so the projection is never applied to an empty set and `sha256` of the empty
@@ -994,7 +1014,7 @@ disagreeing with itself.
 | guide `contracts-and-adoption.md` | frozen-row count **→ 139**, with cut 1's own denominator of 126 untouched — `G9` is banked after the cut and is an acceptance criterion for a later slice; the open-edges pointer stops listing the admission ramp as open |
 | guide `open-questions.md` | the admission-ramp entry moves out of the open list, replaced by the residue it left: where verified holdings are recorded |
 | `python/tests/test_designs_corpus.py` | the guarantee inventory gains `G9`; a new guard binds the README's spelled-out design count to the number of documents, which was stale for a day with nothing to catch it; a second guards the frozen survey artifact's digests as algorithm-qualified, since a re-freeze by a changed instrument is how that fact would be lost again |
-| `python/tools/survey_admission.py` | the recorded digest keeps its algorithm instead of being stripped to bare hex, observed digests are tagged with the algorithm the instrument computed, and a `hash` field that is not `<algorithm>:<hex>` is **refused** rather than assumed to be sha256. Gate 2 is refrozen; §5.1 records that both root identities came back byte-identical |
+| `python/tools/survey_admission.py` | the recorded digest keeps its algorithm instead of being stripped to bare hex, observed digests are tagged with the algorithm the instrument computed, and a digest that is not `sha256:<64 hex>` is **refused** — rather than assumed to be sha256, or parsed and compared against a sha256 observation, which reports a tool's limit as a `mismatch` in the corpus. Gate 2 is refrozen; §5.1 records that both root identities came back byte-identical |
 
 **Not amended, deliberately:** `G2b` and `R5`, which §6.4 confirms unchanged;
 `R10`, which the ruling leans on and does not move; the world address ruling's own

@@ -548,8 +548,13 @@ def byte_locator(resource: dict[str, Any], declared: str) -> str | None:
 _QUALIFIED_DIGEST = re.compile(r"\A(?P<algorithm>[a-z0-9][a-z0-9_-]*):(?P<hex>[0-9a-fA-F]+)\Z")
 
 #: The algorithm the instrument itself computes. Fixed here, never read from a
-#: record — which is why an observed digest needs no parsing, only tagging.
+#: record — which is why an observed digest needs no parsing, only tagging — and
+#: therefore the only algorithm it can check a recorded digest against.
 INSTRUMENT_ALGORITHM = "sha256"
+
+#: How many hex digits `INSTRUMENT_ALGORITHM` produces. A digest of any other
+#: length is not one of its outputs whatever its prefix says.
+INSTRUMENT_HEX_DIGITS = 64
 
 
 def qualify(digest: str) -> str:
@@ -581,13 +586,35 @@ def recorded_hash(resource: dict[str, Any]) -> str | None:
     so. Every digest in the measured corpus is stated as `sha256:<hex>`, so no
     run today reaches this path; the day one does, the record deserves a person
     rather than a default.
+
+    **Only `INSTRUMENT_ALGORITHM`, at its exact width, is accepted here — and that
+    is a bound on this instrument, not the profile's ruling.** Which algorithms
+    the profile accepts as pinning bytes is open (§6.2) and is not this tool's to
+    decide. Which one it can *check* is decided by its own code: every observation
+    it makes is a sha256. Parsing an `md5` digest and handing it to `compare()`
+    against a sha256 observation returns `mismatch` — a claim that the bytes
+    disagree with the record, when the truth is that nothing compared them. The
+    width check refuses the same failure quietly arriving under the right prefix:
+    `sha256:a` is not a sha256 digest, and admitting it as a pin would put a
+    dataset on a content basis that identifies no bytes.
     """
     value = resource.get("hash")
     if value is None:
         return None
     if not isinstance(value, str) or (match := _QUALIFIED_DIGEST.match(value)) is None:
         raise ValueError(f"recorded hash is not <algorithm>:<hex>: {value!r}")
-    return f"{match['algorithm']}:{match['hex'].lower()}"
+    algorithm, digits = match["algorithm"], match["hex"]
+    if algorithm != INSTRUMENT_ALGORITHM:
+        raise ValueError(
+            f"recorded hash is {algorithm}; this instrument observes only "
+            f"{INSTRUMENT_ALGORITHM} and cannot check it: {value!r}"
+        )
+    if len(digits) != INSTRUMENT_HEX_DIGITS:
+        raise ValueError(
+            f"recorded hash is {len(digits)} hex digits, not the "
+            f"{INSTRUMENT_HEX_DIGITS} an {INSTRUMENT_ALGORITHM} digest has: {value!r}"
+        )
+    return f"{algorithm}:{digits.lower()}"
 
 
 def compare(recorded: Any, observed: Any) -> str:
