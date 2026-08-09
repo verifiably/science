@@ -31,7 +31,7 @@ surface, which does not exist yet.
 **Inherits:** substrate §2 (split by nature; the pricing argument;
 defer-and-promote), §4.1/§6.1 (the arity-and-history test), §12 (the
 `KIND_DESCRIPTORS`-versus-`KindSpec` open question, closed here); kernel §4.2
-(the ten kernel kinds), §4.2.1/§5.1 (the G3 belief-input closure), §4.3
+(the eleven kernel kinds — ten until 2026-08-08), §4.2.1/§5.1 (the G3 belief-input closure), §4.3
 (Referents — `term`, external), limitation 4 (the predicate vocabulary);
 world §4.2 (per-kind identity bases; `dataset` is content identity), §5
 (corpus-state identity), limitation 9 (the manifest is not a node and nothing
@@ -268,7 +268,7 @@ about no domain, no ontology, and no vocabulary.
 
 ### 3.2 `science` — kernel kinds and cross-node policy
 
-`science` owns the ten kernel kinds (kernel §4.2), the relation signatures that
+`science` owns the eleven kernel kinds (kernel §4.2; ten until 2026-08-08), the relation signatures that
 close belief, the eligibility predicate, and every judgment spanning more than
 one node — the arity-and-history test from substrate §4.1/§6.1 is unchanged.
 It also owns the **base profile**: the facet contracts that are scientific
@@ -616,9 +616,13 @@ row; this would have been the third.
    agreement is required unconditionally** — every corpus in the closure must
    pin the same one, whether or not any base-profile facet is read, since §8
    makes the base contract an unconditional member.
-3. **Move and merge.** Moving or merging a node into a corpus whose profile
-   pins a **different** identity for any namespace the node's facets use is
-   **refused** at the write boundary. For a **Science node**, the receiving
+3. **Move and consolidate.** Moving a node — or bringing two replicas of one
+   node together under `consolidate` — into a corpus whose profile pins a
+   **different** identity for any namespace the node's facets use is **refused**
+   at the write boundary. *(This read "move and merge" until 2026-08-08;
+   structural merge retired and the surviving equal-basis operation is
+   `consolidate` — `2026-08-08-world-address-ruling.md` §5.4. A coreference attestation is not a
+   relocation and does not reach this rule: it moves no node between corpora.)* For a **Science node**, the receiving
    corpus must pin the same `science_contract` regardless of which facets the
    node carries — a node with no domain facets at all is still governed by the
    base contract, so relocation across base-contract identities is refused too.

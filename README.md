@@ -25,7 +25,7 @@ through 2026-08-08. Read them in this order:
 |---|---|
 | `2026-08-02-epistemic-kernel-design.md` | what belief is, what may change it, and what the system does not claim (guarantees G1–G8) |
 | `2026-08-02-substrate-consolidation-design.md` | the `nodes`/`atoms` seam and the profile a corpus runs under (S1–S8) |
-| `2026-08-02-world-addressing-design.md` | addresses, aliases, corpora, and the world index (W1–W13) |
+| `2026-08-02-world-addressing-design.md` | addresses, corpora, and the world index (W1–W16) |
 | `2026-08-02-computation-reproducibility-design.md` | runs, recipes, replay, and lineage (R1–R23) |
 | `2026-08-03-correction-lifecycle-design.md` | retraction and correction — subtracting standing without deleting a record (C1–C10) |
 | `2026-08-03-world-index-packaging-design.md` | where the index lives, who writes it, and what freshness a consumer may assume (X1–X12) |
@@ -39,6 +39,7 @@ through 2026-08-08. Read them in this order:
 | `2026-08-07-multi-corpus-typing-exercise.md` | the first executable multi-corpus claim-typing measurement and its vocabulary-admission result |
 | `2026-08-03-redesign-adoption-ledger.md` | dependency order between the above, and the legal partial states in between |
 | `2026-08-08-contributor-guide-design.md` | the organization, authority, freshness, and verification rules for the concise contributor guide |
+| `2026-08-08-world-address-ruling.md` | closes docket §4.1: basis-derived addressing upheld, labels rendered rather than stored, coreference graded rather than merged |
 
 The ledger is the entry point for "what is built, what is not, and what waits on
 what." Every guarantee table is frozen under its identifiers: designs extend and
@@ -53,7 +54,7 @@ computes no belief, which is where the disposition record's §5.5 stop rule puts
 its edge. Nothing beyond that edge is built.
 
 The guarantee tables are the acceptance criteria — each row must be a failing
-test before it is a passing one. There are **135 rows** across **eleven frozen
+test before it is a passing one. There are **138 rows** across **eleven frozen
 tables** (G, S, W, R, C, X, N, L, D, M, P). Cut 1 selects **11 of the 126 rows**
 across the ten tables that existed when it was drawn — the belief policy's P1–P9
 banked the same day and are acceptance criteria for a later slice — and it was

@@ -6,6 +6,7 @@ updated: 2026-08-08
 sources:
   - ../designs/2026-08-02-substrate-consolidation-design.md
   - ../designs/2026-08-02-world-addressing-design.md
+  - ../designs/2026-08-08-world-address-ruling.md
   - ../designs/2026-08-03-correction-lifecycle-design.md
   - ../designs/2026-08-03-world-index-packaging-design.md
   - ../designs/2026-08-03-tamper-evident-log-design.md
@@ -54,11 +55,11 @@ The model keeps five ideas separate:
 | Semantic or content identity | The digest of the kind-specific meaning-bearing basis. |
 | Canonical address | The stored lookup key, `kind:<basis-digest>`. |
 | `uid` continuity | Which historical scientific object this record continues. |
-| Alias | A human-facing, non-unique lookup name. |
+| Label | A human-facing name, computed on read and never stored. |
 | Location | Where bytes happen to be held. It is identity-inert. |
 
 Every kind declares its own identity basis. Presentation fields, cache state,
-filesystem paths, and aliases do not enter that basis. A genuinely different
+filesystem paths, and rendered labels do not enter that basis. A genuinely different
 scientific object receives a new identity and an explicit relationship to what
 came before. A correction to identity-bearing metadata can change the canonical
 address while preserving `uid` continuity and deprecating the old address.
@@ -70,9 +71,9 @@ terminal status. Derived immutable epochs index an explicit set of corpus
 states and world-level records through four maps:
 
 - canonical address to one record;
-- alias to zero or more records;
 - input record to its producers;
-- target record to its retractions.
+- target record to its retractions;
+- endpoint pair to its coreference balance.
 
 An epoch identity commits to its coverage and derived contents. A mutable
 “current epoch” pointer is an operational convenience only: belief and other
@@ -126,7 +127,14 @@ that the operation was scientifically or administratively authorized.
 ## Current state
 
 World addressing, correction, index packaging, and the tamper-evident log are
-designed or banked, not implemented by conformance cut 1. The cut implements
+designed or banked, not implemented by conformance cut 1. The address scheme was
+re-litigated and **upheld** on 2026-08-08, with three changes that reach this
+page: a human-readable label is now *computed on read* from a pinned authority
+snapshot rather than stored as an alias; two records believed to name one work
+are related by a graded, attributed **coreference attestation** instead of being
+merged, so nothing collapses and nothing becomes irreversible; and storage
+duplication is repaired by a separate, smaller operation that changes no
+address. The cut implements
 canonical identity for typed claims and profiles only. Durable transactions,
 world indexing, and mutation logging wait on the corresponding atoms-layer
 capabilities.
@@ -134,13 +142,15 @@ capabilities.
 ## Open edges
 
 See [Identity, world, and change](open-questions.md#identity-world-and-change)
-for unresolved questions about source-identifier equivalence, merge continuity,
-authority, epoch retention, observer loss, whether a dataset's own standing is
-retractable, and what chain verification costs at scale.
+for unresolved questions about which external authorities are accepted, whether a
+coreference balance belongs in any audit, attester reliability, authority, epoch
+retention, observer loss, whether a dataset's own standing is retractable, and
+what chain verification costs at scale.
 
 ## References
 
-- [World addressing guarantees W1–W13](../designs/2026-08-02-world-addressing-design.md#7-guarantees-and-how-each-is-tested)
+- [World addressing guarantees W1–W16](../designs/2026-08-02-world-addressing-design.md#7-guarantees-and-how-each-is-tested)
+- [The address ruling, and what it retired](../designs/2026-08-08-world-address-ruling.md#5-coreference-is-a-graded-claim)
 - [Correction guarantees C1–C10](../designs/2026-08-03-correction-lifecycle-design.md#7-guarantees)
 - [World-index guarantees X1–X12](../designs/2026-08-03-world-index-packaging-design.md#10-guarantees)
 - [Mutation-log guarantees L1–L13](../designs/2026-08-03-tamper-evident-log-design.md#10-guarantees)

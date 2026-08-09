@@ -99,7 +99,9 @@ Structure, fixed here; prose deferred to the first cut (an implementation act):
 1. **Kinds and identities** — the kernel kind inventory, per-kind address bases,
    content and state identities, `science.identity.v1`.
 2. **Operations and boundaries** — write boundary, import, audit, diagnostic
-   query; merge, supersession, retraction; the outcome vocabularies
+   query; `consolidate`, coreference attestation, supersession, retraction
+   *(this read "merge" until 2026-08-08, when structural merge retired and split
+   into the first two — `2026-08-08-world-address-ruling.md` §5)*; the outcome vocabularies
    (`validated | refuted | unresolvable | malformed | retracted`, admission
    states, snapshot states).
 3. **Rules and instruments** — rule identity and binding (§6), the instrument
@@ -119,7 +121,8 @@ Four change classes, four different mints, none interchangeable:
 | byte-identical republication of the operational rendering | nothing | the cut and its identity |
 
 **Oracles freeze by `(contract identity, oracle id)`.** The human ids — G1,
-G2a–G2c, G3–G8; S1–S8 with S1a; W1–W13 with W5a and W8a–W8b; R1–R23; C1–C10;
+G2a–G2c, G3–G8; S1–S8 with S1a; **W1–W16** with W5a and W8a–W8b (W14–W16 added
+2026-08-08 by the world address ruling, §9 there); R1–R23; C1–C10;
 X1–X12; **N1–N10** (this document's own table, §9); **L1–L13** (tamper-evident
 log, banked 2026-08-03, omitted from this inventory at its banking and added
 2026-08-04); **D1–D10** (domain extension boundary, banked 2026-08-04);
@@ -693,7 +696,7 @@ which table N now also guards reflexively (N2).
   2026-08-08: this read "the six designs" — the corpus as it stood at this
   document's banking.
   The cut's scope is whatever the ledger's artifact-7 row inventories — eleven
-  tables and 135 rows as of 2026-08-08, D, M and P having arrived since. The
+  tables and 138 rows as of 2026-08-08, D, M and P having arrived since. The
   scope is a live number, so the cut names it by reference and not by count.)*
   **Not to be confused with `contracts/science/CONTRACT.yaml`**, which exists:
   that is the *base profile* contract — the kernel-owned claim grammar the formal

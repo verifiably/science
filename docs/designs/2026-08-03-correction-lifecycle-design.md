@@ -60,7 +60,7 @@ additive, each digest-visible:
 | operation | exists | corrects | by |
 |---|---|---|---|
 | `supersedes` | kernel §4.1 | a proposition's semantic content | minting a successor |
-| merge | world §4.3 | two records of one identity | recording a claim, unioning routes |
+| ~~merge~~ → `consolidate` | world §4.3; **restated 2026-08-08**, `2026-08-08-world-address-ruling.md` §5.4 | two **replicas** of one identity — same basis, same canonical address | reconciling storage and unioning outgoing routes. It records **no** identity claim: structural merge is retired, and a claim that two *differently* identified records name one thing is now a `coreference-attestation` (ruling §5.1), which corrects nothing and collapses nothing |
 | **retraction** | **this design** | a record's **standing** as a read input | subtracting it from the read set |
 
 ## 3. What carries it — the `retraction` kind
@@ -156,7 +156,7 @@ invariant for its own reason:**
 |---|---|
 | an ordinary **write** | **C10** already requires the retraction's target to *already resolve*. A record that existed before the retraction cannot name it, so the new edge runs from an existing node to a newly added one and closes no cycle. Preserved by construction rather than by a check — and this is C10 carrying a termination role it was not previously credited with |
 | an **import** | a bundle carries records with no admission history, so the import validates **the bundle together with the resolved world context** for acyclicity and refuses a bundle for which no topological order exists (§3). Without this arm the argument holds for locally authored corpora and fails silently for imported ones |
-| a **merge** | world §4.3, as amended 2026-08-05: **distinct-basis retractions cannot be curator-merged**, so no merge redirects one retraction's edge onto another act. Equal-basis replicas consolidate, which changes location and not the graph. This arm is needed because merge **redirects** existing references rather than adding one, and is the one sanctioned act the write argument does not cover |
+| ~~a **merge**~~ → a **`consolidate`** or an **`attest-coreference`** | ~~world §4.3, as amended 2026-08-05: distinct-basis retractions cannot be curator-merged~~. **Restated 2026-08-08** (`2026-08-08-world-address-ruling.md` §5): merge is **retired**, so the distinct-basis case is unspellable rather than refused, and **neither successor redirects an edge**. `consolidate` requires one canonical address, changing physical multiplicity and not the graph; an attestation is additive and its closure is a **query-layer** expansion that rewrites no stored reference, so coreferencing two retractions closes no cycle. This arm no longer covers a gap in the write argument — there is none — and is kept because the invariant still needs the import arm above |
 | a **raw write** | nothing is preserved, because nothing checked. A raw-written cycle yields an **inadmissible** state, which **audit** classifies as malformed **before** any standing or belief evaluation — the disposition every other raw-write defect gets (§3). It is not a state whose belief is unknown; it is a corpus with a detected integrity fault |
 
 **The rank is derived per evaluation and never stored.** An authoritative stored rank
@@ -170,8 +170,11 @@ another corpus, while the log's sequence is **per root**, so it cannot order the
 edges most in need of ordering.
 
 **Discovery, bounded.** Retractions are joined through the world index, which gains a
-**fourth derived map** — the retraction map, target identity → retraction addresses —
-beside address, alias, and producers (world §5; a new consumer requirement for the
+**derived map** — the retraction map, target identity → retraction addresses — beside
+address and producers (*this read "a **fourth** derived map" at banking, counting the
+alias map; the alias map retired 2026-08-08 and a **coreference** map arrived the same
+day, so the index still holds four and the ordinal no longer names anything —
+`2026-08-08-world-address-ruling.md` §4.3, §5.5. The maps are named, not numbered*) (world §5; a new consumer requirement for the
 index packaging design, recorded in the adoption ledger). A computation enumerates it
 over the **same declared coverage and recorded corpus states as its producer
 enumeration**, and the enumeration — the found refs, their resolutions, and the
@@ -204,10 +207,11 @@ Per instantiation:
 - **Production route.** Retirement (the `route` target arm, §3) removes a route from
   the lineage closure's read set.
   The stored basis facet is untouched — §5.2 route-preservation holds through this path
-  as it holds through merge — and the **effective** tag is computed over unretired
+  as it holds through **`consolidate`** (*restated 2026-08-08, `2026-08-08-world-address-ruling.md` §5.4;
+  the operation was merge*) — and the **effective** tag is computed over unretired
   routes: exactly one survivor → certifiable over that route; several → still
-  `conflict`; zero → `not-certified`, never silently single. Merge-widening then
-  retirement composes: union the routes, then subtract standing.
+  `conflict`; zero → `not-certified`, never silently single. Consolidation-widening
+  then retirement composes: union the routes, then subtract standing.
 - **Semantic snapshot.** A retracted snapshot is refused at import and reported by the
   evaluator's outcomes (`retracted` joins `malformed`/`validated`/`refuted`/
   `unresolvable`) at the three call sites that already recompute — import, audit,

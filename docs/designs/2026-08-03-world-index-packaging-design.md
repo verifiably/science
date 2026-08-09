@@ -6,8 +6,10 @@ negative, world limitation 9, and world §10's first two questions (closed).
 Amended 2026-08-03 in eight places (§3, §4, §5, §5.1, §5.2, X9, §12,
 limitation 1) at the tamper-evident log design's banking
 (`2026-08-03-tamper-evident-log-design.md`).
-**Inherits:** world §5 (the four maps, producer snapshot, corpus manifest,
-derivation receipts), §5.1 (`not-present` vs `unknown`), §10 (the packaging
+**Inherits:** world §5 (the index maps — four at this design's banking and four
+since, with **membership changed 2026-08-08**: the alias map retired with the
+stored alias and the **coreference** map arrived, `2026-08-08-world-address-ruling.md` §4.3 and
+§5.5 — producer snapshot, corpus manifest, derivation receipts), §5.1 (`not-present` vs `unknown`), §10 (the packaging
 question, with receipts and rule-holding folded in); repro §9's amendment (anchor
 placement — the index is the natural carrier); 5a §4 (the retraction map, a fourth
 derived member) and limitation 6 (discovery is enumeration-bounded, temporal half
@@ -26,8 +28,10 @@ now, the least specified: world §5 defines *what* it holds and §10 admits it n
 said where it lives, who writes it, or what a consumer may assume about its
 freshness. Meanwhile every adjacent design has been depositing requirements on it:
 `not-present` resolution for absent corpora (world §5.1), receipt checkability and
-rule-holding (world §5), merge inbound hygiene and `corpus_id` uniqueness refusal
-(world §4.3, §5), §9 anchor carriage (repro §9, amendment 2026-08-03), and the
+rule-holding (world §5), ~~merge inbound hygiene~~ and `corpus_id` uniqueness
+refusal (world §4.3, §5) — *merge inbound hygiene lapsed 2026-08-08: structural
+merge is retired and `consolidate` rewrites no inbound reference, so the index
+carries no hygiene obligation for it*, §9 anchor carriage (repro §9, amendment 2026-08-03), and the
 retraction map with 5a's temporal discovery bound explicitly deferred to "whatever
 staleness semantics the packaging design settles" (5a limitation 6). This design
 pays those IOUs: it rules the artifact's home, its write discipline, and its
@@ -157,11 +161,16 @@ identifiers, in the world document, as part of this design's adoption.
 ## 5. Epochs — the derived publications
 
 An explicit **build** enumerates a declared coverage — a set of admitted, live
-`corpus_id`s — and publishes one immutable **epoch** holding the four maps
-(address, alias, producers, retraction), the producer snapshot with its
+`corpus_id`s — and publishes one immutable **epoch** holding the **four** maps
+(address, producers, retraction, coreference — *the fourth was **alias** until
+2026-08-08, when it retired with the stored alias and the **coreference** map took
+its place: sorted endpoint pair → reduced balance and distinct-key count, world
+address ruling §4.3 and §5.5*), the producer snapshot with its
 derivation receipts, the **retraction-map derivation receipt**, and — added at
 5b's banking (normative-contract §7.6) — the **certification-enumeration
-receipt** (§7), and — added at the tamper-evident log design's banking
+receipt** (§7), and — added 2026-08-08 with the coreference map (world address
+ruling §5.5) — the **coreference-reduction receipt** (§7), and — added at the
+tamper-evident log design's banking
 (its §5) — the **anchored head members**: sorted
 `(subject, genesis identity, head digest)` triples, one per covered corpus
 chain, plus the **build-start world-chain head**. Nothing else writes into
@@ -354,6 +363,38 @@ state or un-held rule is `unresolvable`; a bare version string is `malformed`.
 The same coherent capture feeds all three receipts, so per-corpus states are
 identical within one epoch (X9).
 
+**The coreference-reduction receipt joins 2026-08-08, on the same contract**
+(`2026-08-08-world-address-ruling.md` §5.5). Its subject is the **coreference map** — sorted endpoint
+pair → derived balance and distinct-key count, reduced under the coverage — the
+**edge state is not a map member**, being a function of the querying world and of
+the receipt's current resolvability, neither of which an immutable epoch knows — with the exact corpus-state identity per covered corpus and the
+fixture-bound enumeration-rule binding. Validation rebuilds the reduction with
+the named binding against corpora at the named states: an omitted in-coverage
+`coreference-attestation`, or a balance that does not recompute, **refutes**
+(X12); an absent state or un-held rule is `unresolvable`; a bare version string
+is `malformed`. **Four receipts now, one capture** — per-corpus states stay
+identical within an epoch (X9).
+
+Two things distinguish this receipt from its three siblings, and both follow
+from coreference sitting outside belief (that ruling's §5.3).
+
+- **It carries no semantic identity and is not a belief input.** The producer
+  snapshot's semantic identity exists because kernel §5.1 digests it; nothing
+  digests a coreference balance, so the map is packaged evidence and nothing
+  more. A build over a narrower coverage may publish a different balance and
+  **must not** move `belief_input_digest`.
+- **Any outcome other than `validated` has a reader-visible consequence the
+  others lack.** A coreference receipt that is `refuted`, `unresolvable` **or
+  `malformed`** makes every edge it covers **`indeterminate`**, and a query
+  expanding over one **refuses** rather than reading the edge as inactive (that
+  ruling's §5.5). All three, not two: `malformed` is the case a
+  consequence-free reading would leave dangling, and it is the one where
+  refusing matters most, since a receipt no corpus mount and no rule
+  installation could ever make checkable is exactly what a forged record looks
+  like. For the retraction and certification receipts a failed validation is a
+  finding about the epoch; here it is also an answer the query layer must give.
+  X10 carries the arm.
+
 **The rules store holds what "held" means.** `rules/` stores enumeration-rule
 implementations content-addressed, each with the fixtures that bind its
 identity (world §5's fixture-bound rule contract). Clarified at 5b's banking
@@ -418,10 +459,10 @@ the claim.
 | X6 | Status is monotone and terminal states are terminal | emit `retired`, attempt any act returning the corpus to live → unspellable; make an admitted, live corpus unreachable, then restore a replica carrying its id → `present` recomputes true with **no new admission record**; assert every status is invariant under record arrival order |
 | X7 | Admission is the cross-root commit point | build a coverage naming a manifest-bearing but unadmitted corpus → refused; admit it → same build proceeds |
 | X8 | Every epoch answer is bound-stamped | assert answers carry packaging identity + coverage declaration through every read API; an answer without them is unconstructible |
-| X9 | An epoch's maps **and its anchored head members** share one coherent state view per corpus, held by the corpus write lock (head/state coherence added 2026-08-03, tamper-evident log design §5) | attempt an API write to a covered corpus while the build holds its lock → **refused**, never queued, never interleaved; start a capture on a corpus whose lock an active writer holds → build **refuses**, never waits; raw-mutate a covered corpus during capture → post-check discards, build retries/refuses; assert no published epoch's receipts name two states of one corpus, and that the producer, retraction, and certification-enumeration receipts (the third added at 5b's banking) name **identical** states per corpus; capture a corpus's chain head outside the lock hold that captured its state → **unconstructible** through the build, and assert each epoch head member and the receipts' corpus-state identity describe **one** view. **Negative (ABA, limitation 7):** raw-move a corpus `A → B → A` within one capture → pre/post identities match and nothing detects the mixed scan — the raw-write bound, which is why the lock, not the check, carries the guarantee |
-| X10 | Receipts — producer, retraction-map, **and** certification-enumeration (amended 2026-08-03 at 5b's banking) — resolve rule bindings against the held store only | for each receipt kind: un-hold its rule implementation → `unresolvable`, not `refuted`; install a newer rule beside it → still validates against the implementation it names, never revalidates against the newcomer (normative-contract §6); bare version string → `malformed` (world §5's contract, packaged) |
+| X9 | An epoch's maps **and its anchored head members** share one coherent state view per corpus, held by the corpus write lock (head/state coherence added 2026-08-03, tamper-evident log design §5) | attempt an API write to a covered corpus while the build holds its lock → **refused**, never queued, never interleaved; start a capture on a corpus whose lock an active writer holds → build **refuses**, never waits; raw-mutate a covered corpus during capture → post-check discards, build retries/refuses; assert no published epoch's receipts name two states of one corpus, and that the producer, retraction, certification-enumeration, and coreference-reduction receipts (the third added at 5b's banking, the fourth 2026-08-08 with the coreference map — `2026-08-08-world-address-ruling.md` §5.5) name **identical** states per corpus; capture a corpus's chain head outside the lock hold that captured its state → **unconstructible** through the build, and assert each epoch head member and the receipts' corpus-state identity describe **one** view. **Negative (ABA, limitation 7):** raw-move a corpus `A → B → A` within one capture → pre/post identities match and nothing detects the mixed scan — the raw-write bound, which is why the lock, not the check, carries the guarantee |
+| X10 | Receipts — producer, retraction-map, certification-enumeration (amended 2026-08-03 at 5b's banking) **and coreference-reduction** (amended 2026-08-08, `2026-08-08-world-address-ruling.md` §5.5) — resolve rule bindings against the held store only | for each receipt kind: un-hold its rule implementation → `unresolvable`, not `refuted`; install a newer rule beside it → still validates against the implementation it names, never revalidates against the newcomer (normative-contract §6); bare version string → `malformed` (world §5's contract, packaged). **For the coreference receipt, assert the extra consequence on the two outcomes this row owns — `unresolvable` and `malformed`:** un-hold its rule → `unresolvable`; raw-write a receipt naming a **bare version string** or a corpus rather than a corpus-state identity → `malformed`, decided with no corpus present and no rule held; and in **each** case assert the covered edges read **`indeterminate`** and a query expanding over one **refuses**. The third outcome, **`refuted`**, is reached only by rebuilding the reduction against the corpora the receipt names, so **X12 owns it** and asserts the same consequence there — this row does not restate that arm. The malformed arm is the one that would otherwise have no consequence anywhere — a permanently uncheckable receipt is the strongest reason to refuse, and reading it as `inactive` would let a forged record silently suppress an edge (that ruling's §5.5) |
 | X11 | GC's two hard rules hold | GC act naming `current`'s epoch → refused; delete another epoch → act's report names the snapshots/receipts severed; before deletion the epoch resolves by identity |
-| X12 | The retraction map and the certification inventory are complete over the epoch's coverage at its recorded states, and their receipts can refute an incomplete one (amended 2026-08-03 at 5b's banking) | standing retraction in-coverage at build → in the map; out-of-coverage → absent, and the coverage declaration states the bound (5a C3's shape, at the artifact layer); an in-coverage `instrument-certification` at build → in the address map and the inventory projection. **The receipt is the completeness check, not the packaging hash:** for each receipted projection — retraction map, certification inventory — omit an in-coverage entry and repackage into an internally consistent epoch → receipt validation, rebuilding with the named binding against corpora at the named states, **refutes** it; a corpus no longer standing at a named state → `unresolvable`, never a pass |
+| X12 | The retraction map, the certification inventory **and the coreference reduction** are complete over the epoch's coverage at its recorded states, and their receipts can refute an incomplete one (amended 2026-08-03 at 5b's banking; **coreference added 2026-08-08**, `2026-08-08-world-address-ruling.md` §5.5) | standing retraction in-coverage at build → in the map; out-of-coverage → absent, and the coverage declaration states the bound (5a C3's shape, at the artifact layer); an in-coverage `instrument-certification` at build → in the address map and the inventory projection. an in-coverage `coreference-attestation` at build → inside the pair's published balance; out-of-coverage → outside it, with the coverage declaration stating the bound. **The receipt is the completeness check, not the packaging hash:** for each receipted projection — retraction map, certification inventory, coreference reduction — omit an in-coverage entry and repackage into an internally consistent epoch → receipt validation, rebuilding with the named binding against corpora at the named states, **refutes** it; a corpus no longer standing at a named state → `unresolvable`, never a pass. **For coreference, assert the reduction is checked and not merely the membership:** leave every attestation in place and publish a **wrong balance** for a pair → the rebuild **refutes**. Then assert the belief boundary — a **refuted** coreference receipt moves **no** `belief_input_digest`, unlike the producer snapshot, and its consequence is that the covered edges read **`indeterminate`** |
 
 ## 11. Limitations
 
