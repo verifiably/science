@@ -2,7 +2,7 @@
 title: Open questions
 status: living
 created: 2026-08-08
-updated: 2026-08-08
+updated: 2026-08-09
 sources:
   - ../designs/2026-08-02-epistemic-kernel-design.md
   - ../designs/2026-08-02-substrate-consolidation-design.md
@@ -16,6 +16,7 @@ sources:
   - ../designs/2026-08-04-formal-model-and-claim-calculus-design.md
   - ../designs/2026-08-05-belief-policy-design.md
   - ../designs/2026-08-05-review-disposition-and-conformance-cut-1.md
+  - ../designs/2026-08-09-admission-ramp-design.md
 ---
 
 # Open questions
@@ -147,9 +148,12 @@ implementation**: a guarantee row awaiting code is work, not a question.
 
 ## Contracts and adoption
 
-- **Admission ramp.** How does a predecessor corpus with no content-addressed
-  inputs reach a useful admitted set without weakening held-ness or inventing a
-  compatibility route? ([review question](../designs/2026-08-05-review-disposition-and-conformance-cut-1.md#8-open-questions))
+- **Admission ramp.** How does a corpus reach a useful admitted set without
+  weakening held-ness or inventing a compatibility route? Now owned and
+  specified, and narrowed to **externally sourced** input — what a corpus cannot
+  re-author. The measurement is gated and **has not been run**, so the question
+  stays open. ([admission ramp design](../designs/2026-08-09-admission-ramp-design.md),
+  [review question](../designs/2026-08-05-review-disposition-and-conformance-cut-1.md#8-open-questions))
 - **Contract governance.** Facet-breaking changes, compatibility ranges,
   parallel `genesis` contracts in one namespace, domain distribution, and
   Python/TypeScript parity policy remain open. ([domain questions](../designs/2026-08-04-domain-extension-boundary-design.md#12-open-questions))

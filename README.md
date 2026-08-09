@@ -40,6 +40,7 @@ through 2026-08-08. Read them in this order:
 | `2026-08-03-redesign-adoption-ledger.md` | dependency order between the above, and the legal partial states in between |
 | `2026-08-08-contributor-guide-design.md` | the organization, authority, freshness, and verification rules for the concise contributor guide |
 | `2026-08-08-world-address-ruling.md` | closes docket §4.1: basis-derived addressing upheld, labels rendered rather than stored, coreference graded rather than merged |
+| `2026-08-09-admission-ramp-design.md` | how externally sourced input reaches held — the measurement specified, gated and not yet run, and the ruling that waits on it |
 
 The ledger is the entry point for "what is built, what is not, and what waits on
 what." Every guarantee table is frozen under its identifiers: designs extend and
