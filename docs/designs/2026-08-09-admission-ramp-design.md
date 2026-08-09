@@ -299,12 +299,20 @@ Five properties are load-bearing.
    the first URL's approval says nothing about where it lands; a hop refused at
    preflight ends the attempt as `byte-locator-untested` with the hop named.
 
-   **The validated address is the one connected to.** Resolving a name, checking
-   the result, and then letting the client resolve it again leaves the check
-   decorative — the second answer can differ from the first. The instrument
-   therefore pins the resolution it validated and connects to that address, or,
-   if it cannot, **says so and reports the private-address check as unenforced
-   rather than claiming a guarantee it does not deliver**.
+   **The validated address is the one connected to, and the check fails closed.**
+   Resolving a name, checking the result, and then letting the client resolve it
+   again leaves the check decorative — the second answer can differ from the
+   first, which is the whole of the rebinding attack. The instrument therefore
+   pins the resolution it validated and connects to **that address**, while
+   preserving hostname and TLS certificate validation against the original name.
+
+   **If it cannot do both, it issues no request.** The locator is
+   `byte-locator-untested`, with the inability to pin the validated address as its
+   reason. Probing while announcing the check as unenforced would keep the
+   exposure and merely document it — a disclosed hole is still a hole, and this
+   corpus refuses rather than degrades. The cost of failing closed is a bucket of
+   untested locators, which is a visible, recoverable measurement gap; the cost of
+   failing open is a request the check was supposed to prevent.
 5. **Every probe outcome is stamped with the time it ran.** Retrievability varies
    over time. An undated probe result asserted as a standing property is the same
    error the coreference ruling refused when it kept edge state out of an
@@ -326,7 +334,7 @@ materially improve readability. Every axis value is exercised — including
 — because those are the arms the real corpus may never produce, and an
 unexercised arm is an unmeasured one.
 
-Five cases are required rather than optional, because each is a shape the real
+Six cases are required rather than optional, because each is a shape the real
 corpus may hold and no axis value alone expresses:
 
 - **no data package, and undeclared payload bytes present** — the dataset row
@@ -341,7 +349,11 @@ corpus may hold and no axis value alone expresses:
   assert the first is `byte-locator-untested` with its reason and the second is
   `retrieval-failed`, so the two are never collapsed;
 - **a declared local path that escapes its root** — absolute, upward-traversing,
-  and symlink-escaping variants each refused before any read.
+  and symlink-escaping variants each refused before any read;
+- **a validated address that cannot be pinned** — assert the outcome is
+  `byte-locator-untested` for that reason and that **no request is issued**, the
+  fail-closed arm of §4. A test that only checks the reported value would pass
+  against an implementation that fetched anyway.
 
 ## 5. Two gates, and the condition that pauses between them
 
