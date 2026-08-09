@@ -188,7 +188,82 @@ def test_bytes_present_with_no_recorded_hash_is_absent_not_match(roots: tuple[Pa
     assert resource.byte_observation == BYTES_LOCAL
     assert resource.hash_result == CHECK_ABSENT
     assert resource.byte_count_result == CHECK_ABSENT
-    assert resource.observed_hash == SHA_OF_ABC
+    assert resource.observed_hash == f"sha256:{SHA_OF_ABC}"
+
+
+# ---------------------------------------------------------------------------
+# Digests keep their algorithm
+# ---------------------------------------------------------------------------
+
+
+def test_both_digests_are_recorded_algorithm_qualified(roots: tuple[Path, Path, Path]) -> None:
+    """The artifact must yield §6.2's projection without an outside assertion.
+
+    That projection folds `<algorithm>:<hex>` strings. An artifact holding bare
+    hex cannot say which algorithm pinned the bytes — a 64-character digest is
+    producible by more than one — so the address would depend on prose or on
+    re-reading source roots that a frozen measurement is meant to replace.
+    """
+    records, payloads, _ = roots
+    write_record(records, "d", package={"resources": [{"path": "a.txt", "hash": f"sha256:{SHA_OF_ABC}"}]})
+    write_payload(payloads, "d", "a.txt", b"abc")
+
+    [resource] = survey(records, payloads).resources
+
+    assert resource.recorded_hash == f"sha256:{SHA_OF_ABC}"
+    assert resource.observed_hash == f"sha256:{SHA_OF_ABC}"
+    assert resource.hash_result == CHECK_MATCH
+
+
+def test_a_digest_recorded_in_uppercase_hex_normalizes_and_still_matches(
+    roots: tuple[Path, Path, Path],
+) -> None:
+    """Hex case is presentation. Two records pinning identical bytes in different
+    case must fold to one basis, or the projection gives the same dataset two
+    addresses."""
+    records, payloads, _ = roots
+    write_record(records, "d", package={"resources": [{"path": "a.txt", "hash": f"sha256:{SHA_OF_ABC.upper()}"}]})
+    write_payload(payloads, "d", "a.txt", b"abc")
+
+    [resource] = survey(records, payloads).resources
+
+    assert resource.recorded_hash == f"sha256:{SHA_OF_ABC}"
+    assert resource.hash_result == CHECK_MATCH
+
+
+def test_a_digest_recorded_without_an_algorithm_is_refused(roots: tuple[Path, Path, Path]) -> None:
+    """Bare hex names no algorithm, and the instrument has none to supply. Calling
+    it sha256 is the assumption that cost the artifact this fact; calling it no
+    digest would drop a declared pin and move the dataset off a content basis
+    silently. Both are unreportable, so the run stops."""
+    records, payloads, _ = roots
+    write_record(records, "d", package={"resources": [{"path": "a.txt", "hash": SHA_OF_ABC}]})
+    write_payload(payloads, "d", "a.txt", b"abc")
+
+    with pytest.raises(ValueError, match="not <algorithm>:<hex>"):
+        survey(records, payloads)
+
+
+def test_a_hash_field_that_is_not_a_digest_is_refused(roots: tuple[Path, Path, Path]) -> None:
+    """A YAML `hash: 12345` parses to an int and used to read as no digest at all."""
+    records, payloads, _ = roots
+    write_record(records, "d", package={"resources": [{"path": "a.txt", "hash": 12345}]})
+    write_payload(payloads, "d", "a.txt", b"abc")
+
+    with pytest.raises(ValueError, match="not <algorithm>:<hex>"):
+        survey(records, payloads)
+
+
+def test_a_retrieval_reporting_no_digest_is_refused(roots: tuple[Path, Path, Path]) -> None:
+    """`retrieved` with the hash axis `unchecked` claims bytes in hand and says
+    nothing about which bytes — the one combination this instrument exists to make
+    unreportable."""
+    records, payloads, _ = roots
+    write_record(records, "d", package=_remote_package("https://a.example/x.bin"))
+    probe = RecordingProbe({"https://a.example/x.bin": ProbeOutcome(BYTES_RETRIEVED, size=3)})
+
+    with pytest.raises(ValueError, match="no digest or size"):
+        survey(records, payloads, probe)
 
 
 def test_a_resource_with_no_bytes_and_no_locator_is_reported_as_such(roots: tuple[Path, Path, Path]) -> None:

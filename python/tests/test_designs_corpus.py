@@ -21,6 +21,7 @@ document it defers to exists is not.
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 
@@ -28,6 +29,9 @@ ROOT = Path(__file__).parents[2]
 DESIGNS = ROOT / "docs" / "designs"
 GUIDE = ROOT / "docs" / "guide"
 README = ROOT / "README.md"
+
+#: A digest as §6.2's projection folds it: the algorithm, then lowercase hex.
+_ALGORITHM_QUALIFIED = re.compile(r"\A[a-z0-9][a-z0-9_-]*:[0-9a-f]+\Z")
 
 #: `atoms`' Plan A sub-plans, in delivery order (its authority design §14).
 ATOMS_STAGES = ("A1", "A2", "A3", "A4a", "A4b", "A5a", "A5b", "A6", "A7", "A8")
@@ -283,3 +287,24 @@ def test_every_cross_reference_resolves() -> None:
             if not (path.parent / target).resolve().exists():
                 broken.append(f"{path.name} → {target}")
     assert not broken, "unresolvable references:\n  " + "\n  ".join(sorted(broken))
+
+
+def test_the_frozen_survey_artifact_keeps_every_digest_algorithm_qualified() -> None:
+    """The admission ramp's frozen measurement must yield §6.2's dataset basis
+    projection on its own.
+
+    That projection folds `<algorithm>:<hex>` strings. The first freeze stored bare
+    hex, so the address could only be derived by trusting a sentence in the design
+    or by re-reading source roots the freeze exists to replace — and a 64-character
+    digest is producible by more than one algorithm. This guard is over the frozen
+    file rather than the instrument: a future re-freeze by a changed instrument is
+    exactly the way the fact would be lost again.
+    """
+    artifact = json.loads(_text(DESIGNS / "2026-08-09-admission-ramp-survey.json"))
+    bare = [
+        f"{r['dataset']}/{r['path']}: {field}={r[field]}"
+        for r in artifact["resources"]
+        for field in ("recorded_hash", "observed_hash")
+        if r[field] is not None and not _ALGORITHM_QUALIFIED.match(r[field])
+    ]
+    assert not bare, "digests recorded without their algorithm:\n  " + "\n  ".join(bare)

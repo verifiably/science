@@ -309,15 +309,21 @@ Five properties are load-bearing.
      dataset has a content identity when every declared resource is pinned, and
      that identity is a minted digest.
 
-     **The instrument is unchanged by the ruling, and that is a choice worth
-     stating.** It computes no dataset address, because the projection is a
-     function of the declaration alone and the artifact already records every
-     declared digest — so an address is derivable from the frozen file rather than
-     needing to be baked into it. One caveat bounds that: the artifact strips a
-     `sha256:` prefix and records bare hex, so re-deriving the projection relies on
-     §5.1's finding that all 90 recorded digests are `sha256`. Refusing to guess
-     the fold is what left the ruling free to be made once, in argument, instead
-     of settled by whichever measurement got there first.
+     **The instrument still computes no dataset address, and that is a choice
+     worth stating.** The projection is a function of the declaration alone, so an
+     address is derivable from the frozen artifact rather than needing to be baked
+     into it — which keeps the ruling amendable without re-running a measurement.
+     Refusing to guess the fold is what left it free to be made once, in argument,
+     instead of settled by whichever measurement got there first.
+
+     **What the ruling did change is what the artifact must carry.** The first
+     freeze stored bare hex, and *derivable* was a claim it could not support: the
+     projection folds `<algorithm>:<hex>` strings, and nothing in the file said
+     which algorithm. The instrument now preserves the recorded digest
+     algorithm-qualified, tags its own observations with the algorithm it computed,
+     and **refuses** a `hash` field it cannot parse as `<algorithm>:<hex>` rather
+     than assuming sha256 — that assumption is what lost the fact. §5.1 records
+     the refreeze.
 
    The human-readable report **renders from that artifact** rather than being
    computed alongside it, so the prose and the data cannot drift and every figure
@@ -462,10 +468,21 @@ way; a second document would add ceremony, not evidence.
 
 ### 5.1 The frozen run
 
-One run, 2026-08-09, instrument at commit `03165c0`. The unit-level artifact is
-committed beside this document as
+One run, 2026-08-09, instrument at commit `INSTRUMENT_COMMIT`. The unit-level
+artifact is committed beside this document as
 `2026-08-09-admission-ramp-survey.json`; every figure below renders from it, and
 none is re-derived by hand.
+
+**Refrozen once, and the reason is worth recording.** The first freeze, at
+instrument commit `03165c0`, stripped the `sha256:` prefix and stored bare hex.
+Every count below was identical, and the loss was still real: §6.2's projection
+folds `<algorithm>:<hex>` strings, so an artifact holding bare hex yields no
+dataset address without an outside assertion about which algorithm pinned the
+bytes — either prose in this document or a re-reading of source roots the freeze
+exists to make unnecessary. Both digests are now stored algorithm-qualified.
+**Both root identities are byte-identical across the two freezes**, which is the
+evidence that the re-run read the same corpus and not merely a similar one; the
+only fields that moved are `recorded_hash` in 90 rows and `observed_hash` in 28.
 
 | | |
 |---|---|
@@ -507,9 +524,10 @@ to this document, not a re-freeze**; §8 item 1 is the question it would inform.
 | carrying payload files no declared resource claims | **4** (45 files) |
 
 **Declared resources — 101**, of which **90** carry a recorded digest and **101**
-carry a recorded byte count. **All 90 digests are `sha256`** — 64 lowercase hex
-characters each, with no algorithm recorded under any other name — which is what
-lets §6.2's projection be re-derived from an artifact that stores bare hex.
+carry a recorded byte count. **All 90 digests are `sha256`**, and the artifact
+says so itself: each is stored as `sha256:<lowercase hex>` exactly as the record
+states it, so §6.2's projection is computable from the frozen file with no
+appeal to this prose and no second reading of the corpus.
 
 | axis | distribution |
 |---|---|
@@ -975,7 +993,8 @@ disagreeing with itself.
 | guide `glossary.md` | **Declared** is added and **Held** cites it; this design joins `sources` |
 | guide `contracts-and-adoption.md` | frozen-row count **→ 139**, with cut 1's own denominator of 126 untouched — `G9` is banked after the cut and is an acceptance criterion for a later slice; the open-edges pointer stops listing the admission ramp as open |
 | guide `open-questions.md` | the admission-ramp entry moves out of the open list, replaced by the residue it left: where verified holdings are recorded |
-| `python/tests/test_designs_corpus.py` | the guarantee inventory gains `G9`, and a new guard binds the README's spelled-out design count to the number of documents — the count above was stale for a day with nothing to catch it |
+| `python/tests/test_designs_corpus.py` | the guarantee inventory gains `G9`; a new guard binds the README's spelled-out design count to the number of documents, which was stale for a day with nothing to catch it; a second guards the frozen survey artifact's digests as algorithm-qualified, since a re-freeze by a changed instrument is how that fact would be lost again |
+| `python/tools/survey_admission.py` | the recorded digest keeps its algorithm instead of being stripped to bare hex, observed digests are tagged with the algorithm the instrument computed, and a `hash` field that is not `<algorithm>:<hex>` is **refused** rather than assumed to be sha256. Gate 2 is refrozen; §5.1 records that both root identities came back byte-identical |
 
 **Not amended, deliberately:** `G2b` and `R5`, which §6.4 confirms unchanged;
 `R10`, which the ruling leans on and does not move; the world address ruling's own

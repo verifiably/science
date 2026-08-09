@@ -46,6 +46,7 @@ import argparse
 import hashlib
 import ipaddress
 import json
+import re
 import socket
 import ssl
 import sys
@@ -199,6 +200,13 @@ class RootObservations:
     **Stated bound.** Unmatched payload files are enumerated and not read, so they
     contribute a path and a size and no digest. A content change to an unmatched
     file that preserves its size does not move the identity.
+
+    **The line's digest stays bare, unlike the artifact's.** Every digest here is
+    one this instrument computed, so the algorithm is `INSTRUMENT_ALGORITHM` by
+    construction rather than something a record states — there is no fact to
+    preserve. Qualifying it would move both published root identities and add
+    nothing, and keeping the line format fixed is what lets a re-run prove it read
+    the same corpus as the frozen one.
     """
 
     def __init__(self) -> None:
@@ -535,11 +543,51 @@ def byte_locator(resource: dict[str, Any], declared: str) -> str | None:
     return ref if is_url(ref) else None
 
 
+#: A digest as a *record* states it. The algorithm is part of the value because
+#: only the record knows which one pinned its bytes.
+_QUALIFIED_DIGEST = re.compile(r"\A(?P<algorithm>[a-z0-9][a-z0-9_-]*):(?P<hex>[0-9a-fA-F]+)\Z")
+
+#: The algorithm the instrument itself computes. Fixed here, never read from a
+#: record — which is why an observed digest needs no parsing, only tagging.
+INSTRUMENT_ALGORITHM = "sha256"
+
+
+def qualify(digest: str) -> str:
+    """Tag a digest the instrument computed with the algorithm that produced it.
+
+    Observed and recorded digests sit side by side in the artifact and are
+    compared to each other, so they are written in one form. Leaving the
+    instrument's own side bare would make a reader consult the source to learn
+    what `hash_result` compared.
+    """
+    return f"{INSTRUMENT_ALGORITHM}:{digest}"
+
+
 def recorded_hash(resource: dict[str, Any]) -> str | None:
+    """Return the recorded digest as `<algorithm>:<lowercase hex>`, or None.
+
+    **The algorithm is kept, not stripped.** An earlier version returned bare
+    hex and so spent a fact the instrument had already read. §6.2's dataset
+    basis projection folds `<algorithm>:<hex>` strings, so an artifact holding
+    bare hex yields no address without an outside assertion about which
+    algorithm pinned the bytes — and a 64-character hex digest is producible by
+    more than one of them, `sha256` and `blake2s-256` among them. A frozen
+    measurement that needs prose to be read is not frozen.
+
+    A `hash` field present but not shaped `<algorithm>:<hex>` **raises**. The two
+    alternatives are both silent: coercing it to sha256 is the assumption that
+    lost the information in the first place, and reporting it as no digest would
+    drop a declared pin and move its dataset off a content basis without saying
+    so. Every digest in the measured corpus is stated as `sha256:<hex>`, so no
+    run today reaches this path; the day one does, the record deserves a person
+    rather than a default.
+    """
     value = resource.get("hash")
-    if not isinstance(value, str):
+    if value is None:
         return None
-    return value.split(":", 1)[1] if value.startswith("sha256:") else value
+    if not isinstance(value, str) or (match := _QUALIFIED_DIGEST.match(value)) is None:
+        raise ValueError(f"recorded hash is not <algorithm>:<hex>: {value!r}")
+    return f"{match['algorithm']}:{match['hex'].lower()}"
 
 
 def compare(recorded: Any, observed: Any) -> str:
@@ -668,10 +716,10 @@ def _observe_resource(
                     dataset=dataset,
                     path=declared,
                     byte_observation=BYTES_LOCAL,
-                    hash_result=compare(recorded, digest),
+                    hash_result=compare(recorded, qualify(digest)),
                     byte_count_result=compare(recorded_bytes, size),
                     recorded_hash=recorded,
-                    observed_hash=digest,
+                    observed_hash=qualify(digest),
                     recorded_bytes=recorded_bytes,
                     observed_bytes=size,
                 )
@@ -696,14 +744,20 @@ def _observe_resource(
     outcome = probe.fetch(locator)
     stamped = datetime.now(UTC).isoformat()
     if outcome.byte_observation == BYTES_RETRIEVED:
+        # A retrieval that produced no digest measured nothing. Letting it through
+        # would report `retrieved` with the hash axis `unchecked` — bytes claimed
+        # to be in hand and no statement about which bytes, the one combination
+        # this instrument exists to make unreportable.
+        if outcome.digest is None or outcome.size is None:
+            raise ValueError(f"probe reported {BYTES_RETRIEVED} for {locator} with no digest or size")
         return ResourceObservation(
             dataset=dataset,
             path=declared,
             byte_observation=BYTES_RETRIEVED,
-            hash_result=compare(recorded, outcome.digest),
+            hash_result=compare(recorded, qualify(outcome.digest)),
             byte_count_result=compare(recorded_bytes, outcome.size),
             recorded_hash=recorded,
-            observed_hash=outcome.digest,
+            observed_hash=qualify(outcome.digest),
             recorded_bytes=recorded_bytes,
             observed_bytes=outcome.size,
             probed_at=stamped,
