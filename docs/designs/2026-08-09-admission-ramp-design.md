@@ -1,9 +1,11 @@
 # The admission ramp — design
 
 **Date:** 2026-08-09
-**Status:** **Specified 2026-08-09. Nothing has been run and nothing is ruled.**
+**Status:** **Specified 2026-08-09. Nothing has been run, and no Gate 2 admission
+ruling exists.** One question *is* settled here — §8 closes whether papers are
+run inputs, on a rule already banked elsewhere — but nothing about admission is.
 Gate 1 (§5) is not started. **Every figure in this document is reconnaissance**
-from throwaway shell and Python one-liners — in §2, §2.1 and §8 — is labelled as
+from throwaway shell and Python one-liners — in §2, §2.1 and §7 — is labelled as
 such at each site, and is **superseded wholesale** by the frozen run at Gate 2.
 No figure here is a measurement. §6 names the obligations
 the ruling is expected to touch; it does not say what the ruling will be.
@@ -139,6 +141,29 @@ first and fails the second.** That is the state the ramp exists to name. **A
 dataset with no content basis fails the first**, and no amount of retrieval
 rescues it, because nothing pins what would be retrieved.
 
+**But that separation does not exist in the banked text yet, and W3 must be
+amended for it to.** World §4.2 currently fuses the two boundaries into one
+sentence:
+
+> **Dataset, specifically.** Content identity means a dataset entity denotes
+> *data we hold* … A descriptive stub naming a programme with no release pinned
+> … holds no content, so it has no basis
+
+Read as written, a content-addressed dataset whose bytes we do not hold **has no
+basis** — so it is a curation note, and the ramp's new state is unreachable by
+construction. `W3`'s dataset arm therefore narrows from **"holding no content"**
+to **"having no content identity."** `W3` keeps ownership of the basis boundary;
+what changes is where its dataset arm draws the line.
+
+**The narrowing does not rescue the case §4.2 was arguing about.** A programme
+named with no release pinned has no content *identity* either — nothing says
+which bytes — so it is still refused, still a curation note, and §1.1's two
+dataset rows are still not world datasets. The amendment separates two properties
+that happened to coincide in every example §4.2 considered, and leaves its
+conclusion standing. Amending a row's meaning mints a successor contract identity
+under the retained id (`2026-08-03-normative-contract-design.md` §4); that cost is
+now certain rather than contingent.
+
 This is why the 13 cannot be dropped from the denominator: they are not a
 smaller version of the 34's problem, they are a **different** problem, sitting at
 the other boundary. Whether each of the 13 carries a content basis outside its
@@ -174,6 +199,13 @@ produce, and it must not be reported as a failure to look.
 `unchecked` and `absent` are likewise distinct: one is a question not asked, the
 other an answer the record cannot give.
 
+**`byte-locator-untested` carries a reason and covers two different silences.**
+No probe was run at all, or a probe was run and the locator was **refused at
+preflight** — an unapproved scheme, a non-public destination, an unsafe local
+path (§4). Both are questions not asked, which is why neither is
+`retrieval-failed`; the reason distinguishes them, and a value without one is
+unreportable.
+
 ## 4. The instrument
 
 `python/tools/survey_admission.py`, on the pattern of its two predecessors
@@ -190,15 +222,14 @@ Five properties are load-bearing.
 2. **Every parse failure is counted and named, never skipped.** Every share is a
    fraction of a stated denominator, and dropping an unreadable record shrinks
    the denominator silently.
-3. **The frozen artifact holds every unit-level observation, in three
-   collections plus a failure list.** One row per resource is not enough: the 13
-   records declaring nothing would contribute no rows at all and vanish from the
-   artifact — the same deletion §2 refuses in the denominator. The collections
-   are:
+3. **The frozen artifact holds every unit-level observation, in two collections
+   and a failure list.** One row per resource is not enough: the 13 records
+   declaring nothing would contribute no rows at all and vanish from the artifact
+   — the same deletion §2 refuses in the denominator.
 
    | collection | one row per | fields |
    |---|---|---|
-   | **dataset records** | dataset record, all of them | data package `present` · `absent` · `unparseable`; declared-resource count; **payload files present under the record's payload directory that no declared resource claims** |
+   | **dataset records** | dataset record, all of them | data package `present` · `absent` · `unparseable`; declared-resource count; **basis evidence** (below); **payload files present under the record's payload directory that no declared resource claims** |
    | **declared resources** | declared resource | the three axes of §3 |
    | **parse failures** | unreadable file | path relative to its root, and the reason |
 
@@ -206,7 +237,29 @@ Five properties are load-bearing.
    with **no data package and bytes on disk anyway** produces a dataset row with
    `absent`, a count of zero, and a non-empty unmatched list — while contributing
    nothing to the resource collection. That combination is a required test case
-   (§4, tests).
+   (tests, below).
+
+   **Basis evidence, recorded and never resolved.** §2.2 makes the basis boundary
+   the first question, and the artifact must be able to answer it for the 13 —
+   which package state, resource count and unmatched payloads cannot. Each dataset
+   row therefore also carries **what the record itself states about its content
+   identity**: which identity-bearing fields are present and what they hold, and
+   how many declared resources carry a recorded digest.
+
+   Two refusals bound that field, and they are the point of it:
+
+   - **A basis is never derived from undeclared bytes.** Hashing an unmatched
+     payload file would manufacture an identity the record does not claim — the
+     fabricated-identity failure the generalized basis rule refuses outright,
+     since *no fallback basis is derived at any point*.
+   - **Whether per-resource digests collectively constitute a dataset's content
+     identity is a ruling, not an inference.** If they do, the canonical
+     derivation — which resources participate, in what order, folded how — must be
+     ruled explicitly, because two defensible foldings give two different
+     identities for the same dataset and the instrument has no authority to pick
+     one. Until it is ruled, the artifact records the digests present and computes
+     no dataset-level identity from them. **This is a Gate 2 question the run
+     informs and does not settle.**
 
    The human-readable report **renders from that artifact** rather than being
    computed alongside it, so the prose and the data cannot drift and every figure
@@ -218,15 +271,40 @@ Five properties are load-bearing.
    descendant of either, as its location.** *Network side*, because scratch
    safety bounds none of it:
 
-   - only **approved schemes** are fetched, and the approved set is `https` —
-     anything else is `retrieval-failed` with the scheme named, never attempted;
-   - **every redirect hop is revalidated** against the same rules, since the
-     first URL's approval says nothing about where it lands;
-   - destinations resolving to **loopback, link-local, private or otherwise
-     non-public addresses are rejected** before any request is issued;
-   - a **timeout** and a **maximum byte count** bound every fetch, and exceeding
-     either is `retrieval-failed` with the bound named, never a truncated body
-     silently hashed.
+   **A preflight refusal is not a retrieval failure.** A locator rejected before
+   any request is issued was never attempted, and reporting it as
+   `retrieval-failed` would record a refusal to look as a finding about the
+   resource. Preflight refusals are **`byte-locator-untested`, carrying the
+   refusal reason**; `retrieval-failed` is reserved for a request that was
+   actually made and did not yield the bytes.
+
+   *Refused at preflight → `byte-locator-untested`:*
+
+   - any scheme outside the approved set, which is `https` alone, with the scheme
+     named as the reason;
+   - a destination resolving to a loopback, link-local, private or otherwise
+     non-public address;
+   - a declared local path that is **absolute**, that **traverses upward**, or
+     that **escapes its root through a symlink** — resolved and compared against
+     the root before any read.
+
+   *Attempted and failed → `retrieval-failed`:*
+
+   - a request that exceeds its **timeout**;
+   - a response that exceeds its **streaming byte ceiling**, reported with the
+     bound named — never a truncated body silently hashed;
+   - any other transport or status failure.
+
+   **Every redirect hop is revalidated** against the same preflight rules, since
+   the first URL's approval says nothing about where it lands; a hop refused at
+   preflight ends the attempt as `byte-locator-untested` with the hop named.
+
+   **The validated address is the one connected to.** Resolving a name, checking
+   the result, and then letting the client resolve it again leaves the check
+   decorative — the second answer can differ from the first. The instrument
+   therefore pins the resolution it validated and connects to that address, or,
+   if it cannot, **says so and reports the private-address check as unenforced
+   rather than claiming a guarantee it does not deliver**.
 5. **Every probe outcome is stamped with the time it ran.** Retrievability varies
    over time. An undated probe result asserted as a standing property is the same
    error the coreference ruling refused when it kept edge state out of an
@@ -248,16 +326,22 @@ materially improve readability. Every axis value is exercised — including
 — because those are the arms the real corpus may never produce, and an
 unexercised arm is an unmeasured one.
 
-Three cases are required rather than optional, because each is a shape the real
+Five cases are required rather than optional, because each is a shape the real
 corpus may hold and no axis value alone expresses:
 
 - **no data package, and undeclared payload bytes present** — the dataset row
   reads `absent` with a zero count and a non-empty unmatched list, and the
-  resource collection gains nothing;
+  resource collection gains nothing; assert also that **no basis is derived from
+  those bytes**;
 - **an unparseable data package** — a dataset row reading `unparseable` *and* a
   parse-failure row, never a silent skip that shrinks the denominator;
 - **a declared resource whose bytes are present and whose recorded hash is
-  absent** — obtained and unpinned, distinct from both `match` and `mismatch`.
+  absent** — obtained and unpinned, distinct from both `match` and `mismatch`;
+- **a preflight refusal and a retrieval failure over the same resource** —
+  assert the first is `byte-locator-untested` with its reason and the second is
+  `retrieval-failed`, so the two are never collapsed;
+- **a declared local path that escapes its root** — absolute, upward-traversing,
+  and symlink-escaping variants each refused before any read.
 
 ## 5. Two gates, and the condition that pauses between them
 
@@ -314,10 +398,13 @@ before the measurement, and not left to be inferred from the distribution.
 Three existing rows own this ground, in order, and the ruling is expected to
 **amend rather than append**:
 
-- **`W3`** — *creating a world entity without its basis is refused* — already
-  names the `dataset` holding no content, and already routes it to an explicit
-  curation note rather than a weakened entity. Nothing about `declared` changes
-  that boundary; the ruling must confirm it is untouched.
+- **`W3`** — *creating a world entity without its basis is refused* — owns the
+  basis boundary and **is amended, not confirmed**. Its dataset arm narrows from
+  *holding no content* to *having no content identity* (§2.2), because the banked
+  wording makes the ramp's state unreachable. `W3` keeps the boundary and keeps
+  routing an unbased record to an explicit curation note; only the dataset arm's
+  line moves. Its own oracle text names the §1.1 case, which the narrowing still
+  refuses.
 
 - **`G2b`** — *an assessment requires held, content-hashed inputs* — is the
   refusal a declared input must run into.
