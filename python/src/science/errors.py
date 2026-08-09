@@ -263,3 +263,14 @@ class TagCollision(ContractError):
     closed set, or a ``sign_inapt_tag`` that is also an assertable polarity.
     ``inapt`` and ``unsigned`` are different facts (§7.5), and a projection that
     cannot tell them apart has lost the distinction it exists to carry."""
+
+
+class RecordError(ScienceError):
+    """A kernel record value refused at construction — the belief seam's
+    analogue of ``ClaimError``. Subclasses stay distinct for the same reason."""
+
+
+class MalformedRecord(RecordError):
+    """A field that is not what the kernel's tables declare — a digest that is
+    not ``<algorithm>:<lowercase hex>``, an outcome or scope outside its closed
+    set, a role outside ``observes | reads | transforms``."""
