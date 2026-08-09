@@ -7,9 +7,7 @@ from pathlib import Path
 import pytest
 from conftest import REPO_ROOT
 
-_SPEC = importlib.util.spec_from_file_location(
-    "check_guide", Path(__file__).parents[1] / "tools" / "check_guide.py"
-)
+_SPEC = importlib.util.spec_from_file_location("check_guide", Path(__file__).parents[1] / "tools" / "check_guide.py")
 assert _SPEC is not None and _SPEC.loader is not None
 checker = importlib.util.module_from_spec(_SPEC)
 sys.modules[_SPEC.name] = checker
