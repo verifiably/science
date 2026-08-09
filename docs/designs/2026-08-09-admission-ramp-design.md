@@ -211,6 +211,14 @@ does not qualify. A DOI does not qualify. The definition is what makes
 `no-byte-locator` an honest bucket rather than an empty one, and it is the single
 place where a generous reading would flatter the result most.
 
+**Narrow is not the same as local.** A resource may declare its *path* as a URL,
+in which case that URL is its byte locator — the resource is not stored beside
+the record at all, and the path names the exact bytes remotely. Reading a
+declared path as necessarily local was a defect the instrument shipped with and
+Gate 1 caught: it reported every remotely declared resource in the corpus as
+carrying no locator, which is the strictness the definition warns about running
+in the wrong direction.
+
 **`mismatch` is never folded into `retrieval-failed`.** A retrieval that succeeds
 and disagrees with the record is not a network problem — it is a successful
 observation that contradicts the record, and the recorded digest is the only
@@ -261,14 +269,24 @@ Five properties are load-bearing.
    nothing to the resource collection. That combination is a required test case
    (tests, below).
 
-   **Basis evidence, recorded and never resolved.** §2.2 makes the basis boundary
-   the first question, and the artifact must be able to answer it for the 13 —
-   which package state, resource count and unmatched payloads cannot. Each dataset
-   row therefore also carries **what the record itself states about its content
-   identity**: which identity-bearing fields are present and what they hold, and
-   how many declared resources carry a recorded digest.
+   **Basis evidence, recorded and never resolved — and split in two.** §2.2 makes
+   the basis boundary the first question, and the artifact must be able to answer
+   it for the 13, which package state, resource count and unmatched payloads
+   cannot. Each dataset row therefore carries basis evidence in **two separate
+   fields, because content basis and authority identity are different things**:
 
-   Two refusals bound that field, and they are the point of it:
+   | field | holds | bears on the basis boundary? |
+   |---|---|---|
+   | **declared resources with a digest** | a count | **yes** — a recorded digest is the only thing here that pins bytes |
+   | **authority and provenance** | `origin`, `accessions`, `access.source_url`, `datapackage`, `derivation`, as stated | **no** — preserved as observations |
+
+   An accession names a *work* at a registry, `origin` says where a dataset came
+   from, a `source_url` names a page. None of them says which bytes. Merging them
+   into one "states an identity field" flag makes every record in the corpus look
+   based, including every record that declares nothing at all — which is the
+   opposite of what the boundary is for.
+
+   Two refusals bound the content-basis side, and they are the point of it:
 
    - **A basis is never derived from undeclared bytes.** Hashing an unmatched
      payload file would manufacture an identity the record does not claim — the

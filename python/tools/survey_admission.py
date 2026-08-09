@@ -55,7 +55,7 @@ from datetime import UTC, datetime
 from http.client import HTTPSConnection
 from pathlib import Path
 from typing import Any, Protocol
-from urllib.parse import urlsplit
+from urllib.parse import urljoin, urlsplit
 
 import yaml
 
@@ -72,12 +72,11 @@ DEFAULT_MAX_BYTES = 512 * 1024 * 1024
 #: Read size for hashing and for streaming a probe body.
 CHUNK = 1024 * 1024
 
-#: Frontmatter fields that say something about a dataset's identity. Recorded as
-#: evidence; nothing here is combined into a basis. `origin` says whether the
-#: record claims external provenance at all, `accessions` and `access.source_url`
-#: are authority-side identifiers, `datapackage` and `derivation` say where the
-#: record claims its content is described.
-IDENTITY_FIELDS = ("origin", "accessions", "datapackage", "derivation")
+#: Frontmatter fields recording provenance or authority-side identity. **None of
+#: them is a content basis**: an accession names a work at a registry, `origin`
+#: says where a dataset came from, `source_url` names a page. Only a recorded
+#: digest pins bytes, and that is counted separately.
+AUTHORITY_FIELDS = ("origin", "accessions", "datapackage", "derivation")
 
 # ---------------------------------------------------------------------------
 # Axis values (§3 of the design)
@@ -144,13 +143,22 @@ class ResourceObservation:
 
 @dataclass(frozen=True)
 class BasisEvidence:
-    """What the record states about its own content identity. Never resolved."""
+    """What the record states about its identity, with the two kinds kept apart.
 
-    #: Identity-bearing frontmatter fields the record carries, and what they hold.
-    stated: dict[str, Any]
-    #: How many declared resources carry a recorded digest. A count, not a fold:
-    #: whether per-resource digests constitute a dataset identity is a ruling.
+    **Content basis and authority identity are different things**, and merging
+    them makes the report claim more than the corpus says. An accession names a
+    *work* at a registry; `origin: external` says where a dataset came from; a
+    `source_url` names a page. None of them pins bytes. Only a recorded digest
+    does, and only per resource — whether those digests fold into a dataset-level
+    identity is a ruling, so this is a count and never a fold.
+    """
+
+    #: How many declared resources carry a recorded digest. The only evidence here
+    #: that bears on *content* identity.
     declared_resources_with_digest: int
+    #: Provenance and authority-side fields the record carries, and what they
+    #: hold. Preserved as observations; they are not content basis.
+    authority_and_provenance: dict[str, Any]
 
 
 @dataclass(frozen=True)
@@ -317,6 +325,12 @@ class Probe(Protocol):
     def fetch(self, url: str) -> ProbeOutcome: ...
 
 
+#: How a probe obtains a connection to an approved address. Injected so the
+#: pinning behaviour is exercised directly and the fail-closed arm is reachable
+#: without reaching into the probe's internals.
+ConnectionFactory = Callable[["Approved", float], HTTPSConnection]
+
+
 class PinnedHTTPSConnection(HTTPSConnection):
     """Connects to a validated address while validating the certificate's hostname.
 
@@ -353,12 +367,14 @@ class NetworkProbe:
         timeout: float = DEFAULT_TIMEOUT_SECONDS,
         max_bytes: int = DEFAULT_MAX_BYTES,
         max_redirects: int = 5,
+        connect: ConnectionFactory | None = None,
     ) -> None:
         self._scratch = scratch
         self._resolver = resolver
         self._timeout = timeout
         self._max_bytes = max_bytes
         self._max_redirects = max_redirects
+        self._connect = connect or pinned_connection
 
     def fetch(self, url: str) -> ProbeOutcome:
         seen = 0
@@ -380,18 +396,14 @@ class NetworkProbe:
                 seen += 1
                 if seen > self._max_redirects:
                     return ProbeOutcome(BYTES_RETRIEVAL_FAILED, reason="too many redirects")
-                current = location
+                # A Location may be relative. Joining it against the URL it came
+                # from is what makes the next preflight examine the real target.
+                current = urljoin(current, location)
                 continue
             return response
 
     def _request(self, approved: Approved) -> tuple[ProbeOutcome, str | None]:
-        context = ssl.create_default_context()
-        if not context.check_hostname:
-            raise PinningUnavailable("cannot pin the validated address with hostname validation intact")
-
-        connection = PinnedHTTPSConnection(
-            approved.host, approved.address, approved.port, self._timeout, context
-        )
+        connection = self._connect(approved, self._timeout)
         try:
             connection.request("GET", approved.path, headers={"Host": approved.host})
             response = connection.getresponse()
@@ -428,7 +440,20 @@ class NetworkProbe:
 
 
 class PinningUnavailable(RuntimeError):
-    """Raised when the validated address cannot be used with validation intact."""
+    """Raised when the validated address cannot be used with validation intact.
+
+    The caller reports the locator untested and issues no request. Probing while
+    announcing the check as unenforced would keep the exposure and merely
+    document it.
+    """
+
+
+def pinned_connection(approved: Approved, timeout: float) -> HTTPSConnection:
+    """Build a connection to the validated address that still validates the name."""
+    context = ssl.create_default_context()
+    if not context.check_hostname or context.verify_mode != ssl.CERT_REQUIRED:
+        raise PinningUnavailable("cannot pin the validated address with hostname validation intact")
+    return PinnedHTTPSConnection(approved.host, approved.address, approved.port, timeout, context)
 
 
 # ---------------------------------------------------------------------------
@@ -472,23 +497,32 @@ def declared_resources(package: dict[str, Any]) -> Iterator[tuple[dict[str, Any]
         yield entry, str(path)
 
 
-def byte_locator(resource: dict[str, Any]) -> str | None:
+def is_url(value: object) -> bool:
+    return isinstance(value, str) and bool(urlsplit(value).scheme) and "://" in value
+
+
+def byte_locator(resource: dict[str, Any], declared: str) -> str | None:
     """The locator that retrieves *this resource's exact bytes*, or nothing.
 
     Narrow by design. A dataset landing page, an API base and an accession all
-    fail it. In practice a resource carries one only when it names a non-local
-    source whose ref is a URL; a `{type: local, ref: ...}` source is acquisition
-    provenance for the build, not a way to retrieve the published resource.
+    fail it. Two things pass:
+
+    * **A declared `path` that is itself a URL.** The resource is not stored
+      beside the record at all; the path names the exact bytes remotely. Missing
+      this was a measurement-changing defect — every remote resource in the
+      predecessor's store reads its bytes from such a path, and all of them were
+      reported as carrying no locator at all.
+    * **A non-local `source.ref` that is a URL.** A `{type: local, ref: ...}`
+      source is acquisition provenance for the build, not a way to retrieve the
+      published resource, so it does not qualify.
     """
+    if is_url(declared):
+        return declared
     source = resource.get("source")
-    if not isinstance(source, dict):
-        return None
-    if source.get("type") == "local":
+    if not isinstance(source, dict) or source.get("type") == "local":
         return None
     ref = source.get("ref")
-    if not isinstance(ref, str) or "://" not in ref:
-        return None
-    return ref
+    return ref if is_url(ref) else None
 
 
 def recorded_hash(resource: dict[str, Any]) -> str | None:
@@ -518,7 +552,7 @@ def survey(record_root: Path, payload_root: Path, probe: Probe | None = None) ->
     record_obs = RootObservations()
     payload_obs = RootObservations()
 
-    for directory in sorted(p for p in record_root.iterdir() if p.is_dir()):
+    for directory in sorted(p for p in record_root.iterdir() if p.is_dir() and not p.is_symlink()):
         name = directory.name
         stated: dict[str, Any] = {}
         entity = directory / "entity.md"
@@ -529,7 +563,7 @@ def survey(record_root: Path, payload_root: Path, probe: Probe | None = None) ->
             except (MalformedRecord, yaml.YAMLError) as exc:
                 failures.append(Failure("records", f"{name}/entity.md", str(exc)))
             else:
-                stated = {key: frontmatter[key] for key in IDENTITY_FIELDS if key in frontmatter}
+                stated = {key: frontmatter[key] for key in AUTHORITY_FIELDS if key in frontmatter}
                 access = frontmatter.get("access")
                 if isinstance(access, dict) and access.get("source_url"):
                     stated["access.source_url"] = access["source_url"]
@@ -552,14 +586,14 @@ def survey(record_root: Path, payload_root: Path, probe: Probe | None = None) ->
             else:
                 package_state = PACKAGE_PRESENT
 
-        claimed: set[Path] = set()
+        # Claims are the *declared* relative paths, normalized. Recording the
+        # absolute file that happened to win resolution would report a payload
+        # copy as unmatched whenever the record-root copy was found first.
+        claimed = {_normalized_claim(path) for _, path in declared}
         for resource, path in declared:
-            observation, resolved = _observe_resource(
-                name, resource, path, record_root, payload_root, record_obs, payload_obs, probe
+            resources.append(
+                _observe_resource(name, resource, path, record_root, payload_root, record_obs, payload_obs, probe)
             )
-            resources.append(observation)
-            if resolved is not None:
-                claimed.add(resolved)
 
         datasets.append(
             DatasetObservation(
@@ -567,8 +601,8 @@ def survey(record_root: Path, payload_root: Path, probe: Probe | None = None) ->
                 package_state=package_state,
                 declared_resource_count=len(declared),
                 basis_evidence=BasisEvidence(
-                    stated=stated,
                     declared_resources_with_digest=sum(1 for r, _ in declared if recorded_hash(r) is not None),
+                    authority_and_provenance=stated,
                 ),
                 unmatched_payload_files=_unmatched(payload_root, name, claimed, payload_obs),
             )
@@ -600,21 +634,23 @@ def _observe_resource(
     record_obs: RootObservations,
     payload_obs: RootObservations,
     probe: Probe | None,
-) -> tuple[ResourceObservation, Path | None]:
+) -> ResourceObservation:
     recorded = recorded_hash(resource)
     recorded_bytes = resource.get("bytes") if isinstance(resource.get("bytes"), int) else None
 
-    refusal: PathRefusal | None = None
-    for root, root_obs in ((record_root, record_obs), (payload_root, payload_obs)):
-        resolved = resolve_declared_path(root, dataset, declared)
-        if isinstance(resolved, PathRefusal):
-            refusal = resolved
-            continue
-        if resolved.is_file():
-            digest, size = digest_file(resolved)
-            root_obs.record(str(resolved.relative_to(root.resolve())), size, digest)
-            return (
-                ResourceObservation(
+    # A declared path that is a URL names no local file. Trying to resolve it as
+    # one would report a refusal about a path the record never claimed was local.
+    if not is_url(declared):
+        refusal: PathRefusal | None = None
+        for root, root_obs in ((record_root, record_obs), (payload_root, payload_obs)):
+            resolved = resolve_declared_path(root, dataset, declared)
+            if isinstance(resolved, PathRefusal):
+                refusal = resolved
+                continue
+            if resolved.is_file():
+                digest, size = digest_file(resolved)
+                root_obs.record(str(resolved.relative_to(root.resolve())), size, digest)
+                return ResourceObservation(
                     dataset=dataset,
                     path=declared,
                     byte_observation=BYTES_LOCAL,
@@ -624,68 +660,50 @@ def _observe_resource(
                     observed_hash=digest,
                     recorded_bytes=recorded_bytes,
                     observed_bytes=size,
-                ),
-                resolved,
-            )
+                )
+        if refusal is not None:
+            return _untested(dataset, declared, recorded, recorded_bytes, refusal.reason)
 
-    if refusal is not None:
-        return (
-            _untested(dataset, declared, recorded, recorded_bytes, refusal.reason),
-            None,
-        )
-
-    locator = byte_locator(resource)
+    locator = byte_locator(resource, declared)
     if locator is None:
-        return (
-            ResourceObservation(
-                dataset=dataset,
-                path=declared,
-                byte_observation=BYTES_NO_LOCATOR,
-                hash_result=CHECK_UNCHECKED,
-                byte_count_result=CHECK_UNCHECKED,
-                recorded_hash=recorded,
-                recorded_bytes=recorded_bytes,
-            ),
-            None,
-        )
-
-    if probe is None:
-        return (
-            _untested(dataset, declared, recorded, recorded_bytes, "no probe was run"),
-            None,
-        )
-
-    outcome = probe.fetch(locator)
-    stamped = datetime.now(UTC).isoformat()
-    if outcome.byte_observation == BYTES_RETRIEVED:
-        return (
-            ResourceObservation(
-                dataset=dataset,
-                path=declared,
-                byte_observation=BYTES_RETRIEVED,
-                hash_result=compare(recorded, outcome.digest),
-                byte_count_result=compare(recorded_bytes, outcome.size),
-                recorded_hash=recorded,
-                observed_hash=outcome.digest,
-                recorded_bytes=recorded_bytes,
-                observed_bytes=outcome.size,
-                probed_at=stamped,
-            ),
-            None,
-        )
-    return (
-        ResourceObservation(
+        return ResourceObservation(
             dataset=dataset,
             path=declared,
-            byte_observation=outcome.byte_observation,
+            byte_observation=BYTES_NO_LOCATOR,
             hash_result=CHECK_UNCHECKED,
             byte_count_result=CHECK_UNCHECKED,
             recorded_hash=recorded,
             recorded_bytes=recorded_bytes,
-            reason=outcome.reason,
+        )
+
+    if probe is None:
+        return _untested(dataset, declared, recorded, recorded_bytes, "no probe was run")
+
+    outcome = probe.fetch(locator)
+    stamped = datetime.now(UTC).isoformat()
+    if outcome.byte_observation == BYTES_RETRIEVED:
+        return ResourceObservation(
+            dataset=dataset,
+            path=declared,
+            byte_observation=BYTES_RETRIEVED,
+            hash_result=compare(recorded, outcome.digest),
+            byte_count_result=compare(recorded_bytes, outcome.size),
+            recorded_hash=recorded,
+            observed_hash=outcome.digest,
+            recorded_bytes=recorded_bytes,
+            observed_bytes=outcome.size,
             probed_at=stamped,
-        ),
-        None,
+        )
+    return ResourceObservation(
+        dataset=dataset,
+        path=declared,
+        byte_observation=outcome.byte_observation,
+        hash_result=CHECK_UNCHECKED,
+        byte_count_result=CHECK_UNCHECKED,
+        recorded_hash=recorded,
+        recorded_bytes=recorded_bytes,
+        reason=outcome.reason,
+        probed_at=stamped,
     )
 
 
@@ -704,20 +722,41 @@ def _untested(
     )
 
 
-def _unmatched(payload_root: Path, dataset: str, claimed: set[Path], payload_obs: RootObservations) -> list[str]:
+def _unmatched(payload_root: Path, dataset: str, claimed: set[str], payload_obs: RootObservations) -> list[str]:
     """Payload files no declared resource claims. Enumerated, never read."""
     directory = payload_root / dataset
     if not directory.is_dir():
         return []
-    base = payload_root.resolve()
     found: list[str] = []
-    for path in sorted(directory.rglob("*")):
-        if not path.is_file() or path.resolve() in claimed:
+    for path in sorted(_walk_without_symlinks(directory)):
+        relative = path.relative_to(directory)
+        if _normalized_claim(str(relative)) in claimed:
             continue
-        relative = str(path.resolve().relative_to(base))
-        payload_obs.record(relative, path.stat().st_size, None)
-        found.append(relative)
+        recorded = str(path.relative_to(payload_root))
+        payload_obs.record(recorded, path.stat().st_size, None)
+        found.append(recorded)
     return found
+
+
+def _walk_without_symlinks(directory: Path) -> Iterator[Path]:
+    """Yield regular files under `directory`, never following a symlink.
+
+    A symlinked directory can point anywhere, so descending into one would let a
+    file outside the payload root be reported as inside it — the same escape the
+    declared-path rules refuse, arriving by a different door.
+    """
+    for entry in sorted(directory.iterdir()):
+        if entry.is_symlink():
+            continue
+        if entry.is_dir():
+            yield from _walk_without_symlinks(entry)
+        elif entry.is_file():
+            yield entry
+
+
+def _normalized_claim(declared: str) -> str:
+    """A declared path in the one spelling both sides of the comparison use."""
+    return str(Path(declared)) if not is_url(declared) else declared
 
 
 # ---------------------------------------------------------------------------
@@ -756,9 +795,16 @@ def render_report(artifact: dict[str, Any]) -> str:
         lines.append(f"  data package {state:<12} {count}")
     with_unmatched = sum(1 for d in datasets if d["unmatched_payload_files"])
     unmatched_total = sum(len(d["unmatched_payload_files"]) for d in datasets)
+    pinned = sum(1 for d in datasets if d["basis_evidence"]["declared_resources_with_digest"])
+    authority_only = sum(
+        1
+        for d in datasets
+        if not d["basis_evidence"]["declared_resources_with_digest"] and d["basis_evidence"]["authority_and_provenance"]
+    )
     lines += [
         f"  with unmatched payload files  {with_unmatched} ({unmatched_total} files)",
-        f"  stating at least one identity field  {sum(1 for d in datasets if d['basis_evidence']['stated'])}",
+        f"  declaring at least one pinned resource  {pinned}",
+        f"  stating authority or provenance only    {authority_only}",
         "",
         f"Declared resources: {len(resources)}",
         "  byte observation",
@@ -809,9 +855,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     validate_scratch(args.scratch, args.records, args.payloads)
-    probe = (
-        NetworkProbe(args.scratch, timeout=args.timeout, max_bytes=args.max_bytes) if args.probe else None
-    )
+    probe = NetworkProbe(args.scratch, timeout=args.timeout, max_bytes=args.max_bytes) if args.probe else None
     artifact = to_artifact(survey(args.records, args.payloads, probe))
     if args.artifact:
         args.artifact.write_text(json.dumps(artifact, indent=2, sort_keys=True, default=str), encoding="utf-8")

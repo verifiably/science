@@ -22,6 +22,7 @@ one:
 from __future__ import annotations
 
 import importlib.util
+import ssl
 import sys
 from pathlib import Path
 from typing import Any
@@ -55,6 +56,8 @@ PACKAGE_PRESENT = _MODULE.PACKAGE_PRESENT
 PACKAGE_UNPARSEABLE = _MODULE.PACKAGE_UNPARSEABLE
 Approved = _MODULE.Approved
 NetworkProbe = _MODULE.NetworkProbe
+PinnedHTTPSConnection = _MODULE.PinnedHTTPSConnection
+pinned_connection = _MODULE.pinned_connection
 PathRefusal = _MODULE.PathRefusal
 ProbeOutcome = _MODULE.ProbeOutcome
 Refused = _MODULE.Refused
@@ -144,6 +147,35 @@ def test_the_two_integrity_axes_are_independent(roots: tuple[Path, Path, Path]) 
     assert resource.byte_count_result == CHECK_MATCH
 
 
+def test_a_byte_count_can_disagree_while_the_digest_agrees(roots: tuple[Path, Path, Path]) -> None:
+    """The mirror of the case above, and the reason the count is its own axis.
+
+    A recorded byte count that contradicts bytes whose digest matches is a defect
+    in the record, not in the bytes — and folding the two axes together would
+    report it as agreement.
+    """
+    records, payloads, _ = roots
+    write_record(records, "d", package={"resources": [{"path": "a.txt", "hash": f"sha256:{SHA_OF_ABC}", "bytes": 99}]})
+    write_payload(payloads, "d", "a.txt", b"abc")
+
+    [resource] = survey(records, payloads).resources
+
+    assert resource.hash_result == CHECK_MATCH
+    assert resource.byte_count_result == CHECK_MISMATCH
+    assert resource.observed_bytes == 3
+
+
+def test_a_probe_reports_a_byte_count_mismatch_too(roots: tuple[Path, Path, Path]) -> None:
+    records, payloads, _ = roots
+    write_record(records, "d", package=_remote_package("https://a.example/x.bin"))
+    probe = RecordingProbe({"https://a.example/x.bin": ProbeOutcome(BYTES_RETRIEVED, digest=SHA_OF_ABC, size=99)})
+
+    [resource] = survey(records, payloads, probe).resources
+
+    assert resource.hash_result == CHECK_MATCH
+    assert resource.byte_count_result == CHECK_MISMATCH
+
+
 def test_bytes_present_with_no_recorded_hash_is_absent_not_match(roots: tuple[Path, Path, Path]) -> None:
     """Required case 3. Obtained and unpinned is neither a match nor a mismatch:
     nothing in the record says which bytes are the right ones."""
@@ -210,7 +242,7 @@ def test_no_package_with_undeclared_payload_bytes(roots: tuple[Path, Path, Path]
     # No basis is derived from the undeclared bytes: the evidence reports only
     # what the record states, and it states no digest.
     assert dataset.basis_evidence.declared_resources_with_digest == 0
-    assert dataset.basis_evidence.stated == {"origin": "external"}
+    assert dataset.basis_evidence.authority_and_provenance == {"origin": "external"}
 
 
 def test_an_unparseable_package_yields_a_dataset_row_and_a_failure(roots: tuple[Path, Path, Path]) -> None:
@@ -255,6 +287,24 @@ def test_declared_bytes_are_not_reported_as_unmatched(roots: tuple[Path, Path, P
     assert dataset.unmatched_payload_files == ["d/b.txt"]
 
 
+def test_a_payload_copy_of_a_declared_resource_is_not_unmatched(
+    roots: tuple[Path, Path, Path],
+) -> None:
+    """Claims are declared relative paths, not the file that won resolution.
+
+    With copies under both roots the record-root copy resolves first; recording
+    that absolute path as the claim left the payload copy looking undeclared.
+    """
+    records, payloads, _ = roots
+    directory = write_record(records, "d", package={"resources": [{"path": "crosswalk.csv"}]})
+    directory.joinpath("crosswalk.csv").write_bytes(b"abc")
+    write_payload(payloads, "d", "crosswalk.csv", b"abc")
+
+    [dataset] = survey(records, payloads).datasets
+
+    assert dataset.unmatched_payload_files == []
+
+
 def test_basis_evidence_records_what_the_record_states(roots: tuple[Path, Path, Path]) -> None:
     records, payloads, _ = roots
     write_record(
@@ -271,7 +321,9 @@ def test_basis_evidence_records_what_the_record_states(roots: tuple[Path, Path, 
 
     [dataset] = survey(records, payloads).datasets
 
-    assert dataset.basis_evidence.stated == {
+    # An accession and a source URL are authority-side, not content basis: they
+    # name a work and a page, and neither pins bytes.
+    assert dataset.basis_evidence.authority_and_provenance == {
         "origin": "external",
         "accessions": ["GEO: GSE1"],
         "access.source_url": "https://example.org/study",
@@ -287,7 +339,7 @@ def test_an_unreadable_entity_still_yields_a_dataset_row(roots: tuple[Path, Path
     result = survey(records, payloads)
 
     assert len(result.datasets) == 1
-    assert result.datasets[0].basis_evidence.stated == {}
+    assert result.datasets[0].basis_evidence.authority_and_provenance == {}
     assert result.failures[0].path == "d/entity.md"
 
 
@@ -429,9 +481,7 @@ def test_a_preflight_refusal_and_a_retrieval_failure_are_never_collapsed(
 def test_a_successful_probe_is_compared_and_stamped(roots: tuple[Path, Path, Path]) -> None:
     records, payloads, _ = roots
     write_record(records, "d", package=_remote_package("https://a.example/x.bin"))
-    probe = RecordingProbe(
-        {"https://a.example/x.bin": ProbeOutcome(BYTES_RETRIEVED, digest=SHA_OF_ABC, size=3)}
-    )
+    probe = RecordingProbe({"https://a.example/x.bin": ProbeOutcome(BYTES_RETRIEVED, digest=SHA_OF_ABC, size=3)})
 
     [resource] = survey(records, payloads, probe).resources
 
@@ -469,47 +519,110 @@ def test_without_a_probe_a_remote_locator_is_untested_and_never_fetched(
 def test_a_local_source_ref_is_not_a_byte_locator() -> None:
     """`{type: local, ref: ...}` is acquisition provenance for the build, not a
     way to retrieve the published resource."""
-    assert byte_locator({"source": {"type": "local", "ref": "/build/out/a.bin"}}) is None
-    assert byte_locator({"source": {"type": "remote", "ref": "not-a-url"}}) is None
-    assert byte_locator({"source": {"type": "remote", "ref": "https://a.example/x"}}) == "https://a.example/x"
+    assert byte_locator({"source": {"type": "local", "ref": "/build/out/a.bin"}}, "a.bin") is None
+    assert byte_locator({"source": {"type": "remote", "ref": "not-a-url"}}, "a.bin") is None
+    assert byte_locator({"source": {"type": "remote", "ref": "https://a.example/x"}}, "a.bin") == "https://a.example/x"
+
+
+def test_a_url_valued_declared_path_is_the_resource_s_byte_locator() -> None:
+    """The defect this guards cost every remote resource in the predecessor's
+    store its locator: they are declared by URL in `path`, not in `source`."""
+    url = "https://ftp.example.org/series/GSE1_matrix.txt.gz"
+    assert byte_locator({}, url) == url
+    # And it wins over a source that says nothing useful.
+    assert byte_locator({"source": {"type": "local", "ref": "/build/x"}}, url) == url
+
+
+def test_the_pinned_connection_dials_the_validated_address_and_validates_the_name(
+    monkeypatch: Any,
+) -> None:
+    """The whole point of pinning, asserted against the real connection code.
+
+    Connecting to the validated address is worthless if the TLS handshake then
+    validates against that address instead of the name, and validating the name
+    is worthless if the socket dials whatever a second resolution returns. Both
+    halves are checked here, on `PinnedHTTPSConnection.connect` itself.
+    """
+    dialled: list[tuple[str, int]] = []
+    wrapped: list[str] = []
+    sentinel = object()
+
+    class FakeContext:
+        check_hostname = True
+        verify_mode = ssl.CERT_REQUIRED
+
+        def wrap_socket(self, sock: Any, *, server_hostname: str) -> Any:
+            assert sock is sentinel
+            wrapped.append(server_hostname)
+            return sentinel
+
+    monkeypatch.setattr(
+        _MODULE.socket, "create_connection", lambda address, timeout: dialled.append(address) or sentinel
+    )
+
+    connection = PinnedHTTPSConnection("host.example", "93.184.216.34", 443, 5.0, FakeContext())
+    connection.connect()
+
+    assert dialled == [("93.184.216.34", 443)], "the socket must dial the address preflight validated"
+    assert wrapped == ["host.example"], "TLS must still validate the certificate against the name"
+
+
+@pytest.mark.parametrize(
+    "check_hostname,verify_mode",
+    [(False, ssl.CERT_REQUIRED), (True, ssl.CERT_NONE), (False, ssl.CERT_NONE)],
+)
+def test_a_context_that_would_skip_validation_refuses_to_pin(
+    monkeypatch: Any, check_hostname: bool, verify_mode: Any
+) -> None:
+    """Fail closed at construction. A context that would drop either half of the
+    guarantee is not a connection to make; it is a locator to leave untested."""
+
+    class Lax:
+        pass
+
+    context = Lax()
+    context.check_hostname = check_hostname  # type: ignore[attr-defined]
+    context.verify_mode = verify_mode  # type: ignore[attr-defined]
+    monkeypatch.setattr(_MODULE.ssl, "create_default_context", lambda: context)
+
+    approved = Approved(host="host.example", port=443, path="/a.bin", address="93.184.216.34")
+    with pytest.raises(PinningUnavailable):
+        pinned_connection(approved, 5.0)
 
 
 def test_a_validated_address_that_cannot_be_pinned_issues_no_request(monkeypatch: Any, tmp_path: Path) -> None:
     """Required case 6, and the assertion that matters is the second one.
 
     A test checking only the reported value would pass against an implementation
-    that fetched anyway, which is exactly the failure being guarded.
+    that fetched anyway, which is exactly the failure being guarded. The refusal
+    is injected through the connection seam, so the probe's own request path runs.
     """
-    attempts: list[Any] = []
+    dialled: list[Any] = []
 
-    def refuse_to_pin(*args: Any, **kwargs: Any) -> None:
+    def refuse_to_pin(approved: Any, timeout: float) -> Any:
         raise PinningUnavailable("cannot pin the validated address with hostname validation intact")
 
     def forbidden(*args: Any, **kwargs: Any) -> None:
-        attempts.append(args)
-        raise AssertionError("a request was issued after pinning was unavailable")
+        dialled.append(args)
+        raise AssertionError("a socket was opened after pinning was unavailable")
 
-    monkeypatch.setattr(NetworkProbe, "_request", refuse_to_pin)
-    monkeypatch.setattr("survey_admission.socket.create_connection", forbidden)
+    monkeypatch.setattr(_MODULE.socket, "create_connection", forbidden)
 
-    probe = NetworkProbe(tmp_path / "scratch", resolver=lambda _h, _p: ["93.184.216.34"])
+    probe = NetworkProbe(tmp_path / "scratch", resolver=lambda _h, _p: ["93.184.216.34"], connect=refuse_to_pin)
     outcome = probe.fetch("https://host.example/a.bin")
 
     assert outcome.byte_observation == BYTES_LOCATOR_UNTESTED
     assert "pin the validated address" in (outcome.reason or "")
-    assert attempts == []
+    assert dialled == []
 
 
 def test_a_refused_redirect_hop_ends_the_attempt_as_untested(tmp_path: Path) -> None:
     """The first URL's approval says nothing about where it lands."""
-    hops = iter([("https://a.example/one", "http://a.example/two")])
-
-    class Redirecting(NetworkProbe):
-        def _request(self, approved: Approved) -> tuple[ProbeOutcome, str | None]:
-            _, location = next(hops)
-            return ProbeOutcome(BYTES_RETRIEVAL_FAILED), location
-
-    probe = Redirecting(tmp_path / "scratch", resolver=lambda _h, _p: ["93.184.216.34"])
+    probe = NetworkProbe(
+        tmp_path / "scratch",
+        resolver=lambda _h, _p: ["93.184.216.34"],
+        connect=lambda approved, timeout: _RedirectingConnection("http://a.example/two"),
+    )
     outcome = probe.fetch("https://a.example/one")
 
     assert outcome.byte_observation == BYTES_LOCATOR_UNTESTED
@@ -588,3 +701,47 @@ def test_the_report_renders_from_the_artifact(roots: tuple[Path, Path, Path]) ->
     artifact["resources"] = []
     artifact["datasets"] = []
     assert "Mismatches: 0" in render_report(artifact)
+
+
+class _RedirectingConnection:
+    """A connection that answers every request with one relative redirect."""
+
+    def __init__(self, location: str) -> None:
+        self._location = location
+
+    def request(self, method: str, path: str, headers: dict[str, str]) -> None:
+        del method, path, headers
+
+    def getresponse(self) -> Any:
+        return _Response(302, {"Location": self._location})
+
+    def close(self) -> None:
+        pass
+
+
+class _Response:
+    def __init__(self, status: int, headers: dict[str, str]) -> None:
+        self.status = status
+        self._headers = headers
+
+    def getheader(self, name: str) -> str | None:
+        return self._headers.get(name)
+
+
+def test_a_relative_redirect_is_resolved_before_it_is_revalidated(tmp_path: Path) -> None:
+    """A bare `Location: /two` is not a URL. Revalidating it unjoined would test
+    a string with no scheme and no host, so every relative redirect would look
+    like an unapproved locator rather than being followed to its real target."""
+    probe = NetworkProbe(
+        tmp_path / "scratch",
+        resolver=lambda _h, _p: ["93.184.216.34"],
+        connect=lambda approved, timeout: _RedirectingConnection("/two"),
+        max_redirects=1,
+    )
+
+    outcome = probe.fetch("https://a.example/one")
+
+    # Joined against its origin the hop is https://a.example/two, which clears
+    # preflight and is followed until the redirect budget runs out.
+    assert outcome.byte_observation == BYTES_RETRIEVAL_FAILED
+    assert outcome.reason == "too many redirects"
