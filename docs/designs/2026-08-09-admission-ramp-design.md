@@ -9,8 +9,9 @@ records. Gate 2 ran the instrument once, froze the unit-level artifact
 (`2026-08-09-admission-ramp-survey.json`, 47 dataset records and 101 declared
 resources), and wrote §6 downstream of those figures. The **§7 paper figures
 remain reconnaissance** and are labelled at their site — they bear on F2 not at
-all. The ruling **amends `W3`** and **appends `G9`**, taking the frozen corpus to
-**139 rows** across eleven tables; §9 is the amendment table.
+all. The ruling **amends `W3`** and **`R23`**, **appends `G9`**, and rules the
+**dataset basis projection** the address is derived from, taking the frozen
+corpus to **139 rows** across eleven tables; §9 is the amendment table.
 **Scope:** **closes F2 and conformance cut 1's open question 2** — how a corpus
 with zero content-addressed inputs reaches a usable admitted set — narrowed to
 the part that survives the recreate-not-migrate ruling: **externally sourced
@@ -427,10 +428,20 @@ downstream of figures already fixed.
 **Root identity, for a root that is not a repository.** The record root may be
 under version control; the payload root is not, and has no commit to name. Its
 identity is therefore **a digest over the sorted relative-path observations the
-run actually used** — each relative path with the size and content digest
-observed for it — so that two runs over the same payload state carry the same
-identity, a changed or added payload file changes it, and nothing about where the
-root sits on any machine enters it. The same construction is applied to the
+run actually used** — each relative path with the size and, where the run read
+the bytes, the content digest — so that two runs over the same payload state
+carry the same identity and nothing about where the root sits on any machine
+enters it.
+
+**What moves it, exactly** *(corrected 2026-08-09: this read "a changed or added
+payload file changes it", which overstates the instrument's own bound)*. An added
+or removed file moves it, as does any change to a file the run **read** — every
+declared resource resolved locally. An **unmatched** payload file is enumerated
+and never read, so it contributes a path and a size and no digest: a content
+change to one that **preserves its size** does not move the identity. That is the
+bound the instrument states in its own docstring, and it is a bound on this
+document's root identities too — 45 files across four records are unmatched in
+§5.1. The same construction is applied to the
 record root, so the two are named the same way and neither depends on version
 control being present.
 
@@ -503,10 +514,10 @@ locally agrees with what its record claims. §3 named a mismatch as the most
 informative possible outcome; its absence is the second most informative.
 
 **The two axes did not separate.** `absent` is **0** on both — no resource has
-bytes present without a recorded digest. §8 item 2 asked whether the run makes
-that state *reachable in practice*: as observed it is **not instantiated**,
+bytes present without a recorded digest. The pre-ruling §8 asked whether the run
+makes that state *reachable in practice*: as observed it is **not instantiated**,
 though it is one retrieval away through the eleven unpinned locators. §6.6 rules
-what it is.
+what it is, and closes the question.
 
 **Pinning is all-or-nothing in fact, though nothing enforces it.** Of the 34
 records with a data package, **32 pin every declared resource and 2 pin none** —
@@ -514,14 +525,23 @@ records with a data package, **32 pin every declared resource and 2 pin none** �
 others.** §6.2 rules the boundary case anyway, and §6.2 says why the corpus's
 silence on it is a bound rather than a confirmation.
 
-**Holding is all-or-nothing too, and this was not predicted.** **Eight** records
-have every declared resource present locally — 28 resources, 0.81 GB — and
-**26 have none**. **No record is partly held.** The eight are `assembly-registry`,
-`cptac-gbm-2021-proteogenomics`, `cytoband-hg19`, `gene-crosswalk-hgnc`, `go`,
-`mondo`, `opentargets-associations` and `reactome`: crosswalks, ontologies and
-one proteogenomics release. The other 26 declare **48.44 GB** they do not hold —
-**11.83 GB** of it pinned by a digest, and the remaining 36.61 GB the unpinned
-locators of the paragraph above.
+**Observed holding is all-or-nothing too, and this was not predicted.** **Eight**
+records have every declared resource present and matching **in this coverage** —
+28 resources, 0.81 GB — and **26 have none**. **No record is partly observed.**
+The eight are `assembly-registry`, `cptac-gbm-2021-proteogenomics`,
+`cytoband-hg19`, `gene-crosswalk-hgnc`, `go`, `mondo`, `opentargets-associations`
+and `reactome`: crosswalks, ontologies and one proteogenomics release. The other
+26 declare **48.44 GB** unobserved here — **11.83 GB** of it pinned by a digest,
+and the remaining 36.61 GB the unpinned locators of the paragraph above.
+
+**"Unobserved here" is not "unheld."** The two roots are a **coverage**, and this
+run looked in them and nowhere else. Kernel §2.2 puts heldness outside any one
+checkout — data outside the repository is held if content-addressed and
+retrievable — so a record whose bytes this run did not see may still be held
+somewhere it did not look. Reading absence in a declared coverage as a finding of
+absence is `fb-2026-07-27-010`'s error, which the coreference ruling refused by
+answering `indeterminate` rather than `inactive`. §6.5 carries the distinction
+into the ruling rather than rounding it away here.
 
 This does **not** retroactively justify a per-dataset unit of measurement. §2's
 justification was rewritten at Gate 1 to rest on the axes being per-resource in
@@ -566,8 +586,14 @@ written after it.
 | state | the test it passes | standing |
 |---|---|---|
 | **curation note** | no content identity | not a dataset entity at all; **cannot be the target of a semantic reference** (`W3`, as amended) |
-| **declared** | a content identity, with no byte observation matching it | a world entity: addressable, authorable, referenceable — and **never belief-eligible** (`G2b` refuses it) |
-| **held** | a content identity **and** a byte observation matching it | belief-eligible, subject to the rest of kernel §3 |
+| **declared** | a content identity, without a matching observation of **every** declared resource | a world entity: addressable, authorable, referenceable — and **never belief-eligible** (`G2b` refuses it) |
+| **held** | a content identity **and** a matching byte observation for **every** declared resource | belief-eligible, subject to the rest of kernel §3 |
+
+**Held is quantified over the whole declaration**, and the quantifier is
+load-bearing. §6.2 makes the declaration the identity, so a dataset one of whose
+five resources has been observed is not four-fifths held — it is `declared`, and
+an implementation promoting it on one match would admit an assessment over bytes
+it never saw.
 
 The order is `W3` first, then holding, exactly as §2.2 fixed it before the run.
 The measurement did not choose this ordering and could not have: 15 of the 47
@@ -585,18 +611,72 @@ it*, not of the filesystem under the current process. §5.1's run therefore
 observes one root's state and is **evidence about that root**, not the system's
 answer about any dataset.
 
-### 6.2 What a dataset's content identity is — the declaration, not a fold
+### 6.2 What a dataset's content identity is — the declaration, and the projection that addresses it
 
 §4's second refusal left this open as a ruling the instrument had no authority to
 make. **Ruled: a dataset has a content identity when its data package declares a
-resource set and every declared resource carries a digest. No dataset-level
-digest is minted.**
+resource set and every declared resource carries a digest under an accepted
+algorithm.** A resource whose digest is missing, or recorded under an algorithm
+the profile does not accept, is unpinned, and one unpinned resource leaves the
+dataset without a content identity.
 
-Two reasons not to fold. Two defensible foldings — which resources participate,
-in what order, combined how — give two different identities for the same dataset,
-and nothing in the corpus prefers one. And a dataset already *has* an identity:
-its canonical address. A second, separately derived identity for the same entity
-is a thing to keep resolving forever, bought for no question anyone has asked.
+**A fold is not optional, and an earlier draft of this section wrongly said it
+was.** World §2.1's rule is that a world entity's stored address is
+`kind:<basis-digest>`, derived from its identity basis (§4.2) — so declaring the basis
+to be the resource set while minting no digest over it leaves the dataset with no
+address, which is not a state the addressing scheme has. What the earlier draft
+was right about is the *danger*: two defensible foldings give two identities, so
+the projection has to be **ruled**, exactly once, rather than left to whichever
+implementation gets there first.
+
+> **The dataset basis projection.** Take the recorded digest of every declared
+> resource, normalized to `<algorithm>:<lowercase hex>`. **Deduplicate**, **sort
+> byte-wise**, join with `\n` and terminate with `\n`. UTF-8 encode. The
+> **basis-digest** is the sha256 of those bytes, and the address is
+> `dataset:sha256:<hex>`.
+
+Four exclusions, each of which an implementation would otherwise be free to
+decide differently:
+
+- **Declared paths and names do not participate.** `R23`'s negative (a) already
+  rules this for a produced dataset — byte-identical output under two logical
+  names is **one** address, *"pinning that the address is not the manifest digest,
+  which carries the name."* A declared dataset must answer the same way, or
+  renaming a file re-identifies the dataset and the same bytes arriving by
+  acquisition and by production take two addresses that `consolidate` (`W16`)
+  could never merge.
+- **Byte counts do not participate.** The digest already pins the bytes. Adding
+  the size gives a second name for one fact, and correcting a mistyped `bytes`
+  field would re-mint the address of a dataset whose content never moved.
+- **Declaration order does not participate** — sorting removes it, on `W16`'s
+  precedent that sorting an endpoint pair makes one identity of two authoring
+  orders.
+- **Repetition does not participate.** Two declared resources carrying the same
+  digest are the same bytes, and a content identity answers *which bytes*, not
+  *how many times they were listed*. The consequence is stated rather than
+  hidden: a dataset declaring a file and a copy of it is addressed as the dataset
+  declaring it once.
+
+**Which digest algorithms are accepted is owed to the profile, and is a real
+dependency of this projection.** Two implementations disagreeing about whether an
+`md5`-recorded resource is pinned disagree about whether its dataset has an
+identity at all. Nothing enumerates the accepted set today; every digest in the
+measured corpus is `sha256`, and the projection's algorithm prefix is what makes
+the set expressible when it is ruled.
+
+**The empty declaration is unreachable, deliberately.** A dataset with no
+declared resources has no content identity at all (above) and is a curation note,
+so the projection is never applied to an empty set and `sha256` of the empty
+string is never an address.
+
+**This amends `R23`'s positive phrasing, and nothing else.** `R23` reads that a
+produced dataset's address **is** the single output entry's content identity;
+under a uniform projection it is the fold over a one-entry set, which is a
+different digest. The alternative — making cardinality 1 a special case that
+returns the resource's digest unfolded — puts a discontinuity inside an identity
+function, which is precisely where two implementations diverge silently. Every
+one of `R23`'s arms survives the change, including negative (a), which the
+projection satisfies by excluding names. §9 tables it.
 
 **The declaration is what fixes the extent**, which is why the rule is
 all-or-nothing: a data package pinning 99 of its 100 declared resources does not
@@ -639,18 +719,31 @@ refuses URLs, every banked test passes — and the corpus's content-addressing
 guarantee is void, because nothing ever compared bytes to the digest that was
 supposed to identify them.
 
-> **`G9`.** A dataset reaches **held** only through a byte observation whose
-> digest matches its recorded content identity. Declaration does not promote,
-> presence does not promote, and no API accepts an authored `held`.
+> **`G9`.** A dataset reaches **held** only when **every** resource its
+> declaration names has a byte observation whose digest matches the digest
+> recorded for it. Declaration does not promote, presence does not promote, a
+> proper subset does not promote, and no API accepts an authored `held`.
 
-Its mutation test is written into the kernel's table (§9). Four of its five arms
-carry the ruling; the fifth pins the limit — the row says nothing about *losing*
-heldness, which is `R5`'s negative (a). *Declaration does not promote:* author a dataset with a content
+**The quantifier is the row's second job.** An earlier draft said *a* matching
+observation, which promotes a five-resource dataset on one match and lets an
+assessment run over four resources nobody looked at. §6.2 makes the whole
+declaration the identity; `G9` has to be quantified over the same declaration or
+the two rulings disagree about what the dataset is.
+
+Its mutation test is written into the kernel's table (§9). Five of its six arms
+carry the ruling; the sixth pins the limit — the row says nothing about *losing*
+heldness, which is `R5`'s negative (a).
+
+*Declaration does not promote:* author a dataset with a content
 identity and no bytes, assert it is a world entity, that it reads `declared`, and
 that `G2b` refuses it as an assessment input. *Presence does not promote:* supply
 bytes whose digest **differs** from the recorded one and assert the dataset stays
 `declared` with the mismatch reported — not promoted, and not reported as a
-failure to retrieve. *Location is not the discriminator:* hold matching bytes
+failure to retrieve. *A proper subset does not promote:* over a dataset declaring
+three resources, supply matching bytes for two and assert it is **still
+`declared`**; supply the third and assert **held** — the arm an implementation
+quantifying existentially would fail while passing every other arm here.
+*Location is not the discriminator:* hold matching bytes
 outside the repository, content-addressed and retrievable, and assert **held**
 all the same — kernel §2.2 is explicit, and a row read as requiring local storage
 would break it. *Independence, asserted directly:* install the path-exists
@@ -681,27 +774,50 @@ argued from *0 of 259 mm30 datasets carry a content hash*. §1 already discounte
 that figure as a measurement of the predecessor. **The measurement now says the
 premise is false for the population that survives.**
 
-| the corpus, ruled | records | resources |
-|---|---|---|
-| **held** | **8** | 28 (0.81 GB) |
-| **declared** | **24** | 62 (11.83 GB) |
-| **curation note** — no content identity | **15** | 11 declared with no digest; the other 13 records declare nothing |
+**Two of the three findings are about the corpus; the third is about the
+coverage, and saying otherwise would be the error this ruling refuses
+elsewhere.** The run looked in two roots. What it establishes there is not
+symmetric across the three states, and the table says which is which.
+
+| the corpus, ruled | records | resources | what the run establishes |
+|---|---|---|---|
+| **held in this coverage** | **8** | 28 (0.81 GB) | a **positive** fact, and coverage-independent: matching bytes were produced and hashed, so these are held wherever else they may or may not also sit |
+| **based, unobserved in this coverage** | **24** | 62 (11.83 GB) | that they clear `W3` and that **this run saw no matching bytes**. Whether they are `declared` or held somewhere it did not look is **not** established |
+| **curation note** — no content identity | **15** | 11 declared with no digest; the other 13 records declare nothing | a **positive** fact about the records themselves, needing no coverage: nothing in them says which bytes |
 
 47 records and 101 resources, each counted once. The 45 unclaimed payload files
 are **not** a fourth column: 41 of them sit under three *held* records and 4 under
 one curation note, which is the point of §6.6's distinction.
 
-The admitted set is not empty. It is **eight datasets**, and they are exactly the
-kind a commons is built on: crosswalks, ontologies, and one release with a
-published manifest.
+**The middle row is a measurement of the coverage, not of the datasets.** Kernel
+§2.2 puts heldness outside any one checkout, and §6.1 derives the state from the
+system's record of verified holdings rather than from a filesystem — so a run
+over two roots cannot conclude *unheld*, only *not observed here*. An earlier
+draft of this section did conclude it, and called the 24 `declared` and in need of
+an acquisition. That is the `fb-2026-07-27-010` error committed by the document
+that quotes it: **a failure to look reported as a finding of absence.** The
+corrected claim is narrower and still worth having.
+
+**And the gap it exposes is the ruling's own residue.** The reason the run cannot
+answer for the 24 is that **nothing in the system records a verified holding** —
+if such a record existed, the question would be a lookup rather than a search.
+§8 item 2 owns it, and this is the concrete cost of its absence: 24 of 47 records
+whose state no measurement can currently determine.
+
+The admitted set is not empty. It is **at least eight datasets**, and they are
+exactly the kind a commons is built on: crosswalks, ontologies, and one release
+with a published manifest.
 
 So the ramp's answer to *how does a corpus reach a usable admitted set* is three
 different answers to three different populations, and conflating them is what
 made F2 look like one problem:
 
-- **The 24 declared records need an acquisition, not a rule change.** They already
-  carry content identities. Each is one verified retrieval from held, and `G9` is
-  what makes that retrieval the thing that promotes them.
+- **The 24 based-but-unobserved records need an acquisition *or* a holdings
+  record** — and which one is not knowable today. They already carry content
+  identities, so none of them needs a rule change; each is at most one verified
+  acquisition from held, meaning a matching observation of **every** resource it
+  declares, and `G9` is what makes those observations the thing that promotes
+  it.
 - **The 15 without a content identity need authoring**, and no ramp reaches them.
   Retrieval cannot pin what nothing declares. This is a **basis** gap sitting at
   the other boundary, and it is the larger share of the corpus's real distance
@@ -710,7 +826,8 @@ made F2 look like one problem:
 - **`held` is not weakened, and did not need to be.** The gap is named, not
   narrowed: `declared` is a world entity that cannot reach belief.
 
-F2 and conformance cut 1's open question 2 close here.
+F2 and conformance cut 1's open question 2 close here — on the state model, the
+projection and `G9`, none of which depended on the middle row's ambiguity.
 
 ### 6.6 The unpinned locator, and what repairs it
 
@@ -720,13 +837,14 @@ and content identity come apart in the observed corpus, and they are worth rulin
 because the tempting repair is the forbidden one.
 
 **Retrieval does not rescue them.** Bytes obtained against no recorded digest are
-bytes nothing says are the right ones — §8 item 2's state, which §5.1 found
-uninstantiated and which these eleven are one request away from. **Ruled: that is
-not an admission state.** It is the interior of an acquisition. `R10` already puts
+bytes nothing says are the right ones — the state the pre-ruling §8 asked about,
+which §5.1 found uninstantiated and which these eleven are one request away from.
+**Ruled: that is not an admission state.** It is the interior of an
+acquisition. `R10` already puts
 a URL-input on the acquisition side of the boundary; an acquisition **ends** by
 recording the digest of what it retrieved, and a resource that sits there
 indefinitely is an unfinished acquisition, not a dataset in a third condition.
-§8 item 2 closes on that argument, and it closes on semantics, exactly as §8
+That question closes on this argument, and it closes on semantics, exactly as it
 required — the observed frequency of zero decides nothing.
 
 **The repair is an authoring act, and it is not the refusal §4 names.** Recording
@@ -743,9 +861,10 @@ data package at all, is the case that makes the difference concrete.
 The state is derived (§6.1) from the declaration and the system's record of
 **verified holdings** — and **where that record lives is undesigned**. `G9` says
 promotion requires a verified observation; it does not say where the observation
-is kept, how it is re-checked, or what makes it stale. §8 item 3 carries it, and
+is kept, how it is re-checked, or what makes it stale. §8 item 2 carries it, and
 §8 item 1 — how long a probe's evidence lasts — is the same question asked about
-the remote half.
+the remote half. §6.5's middle row is what the gap costs today: for 24 of 47
+records, no measurement can currently say which state they are in.
 
 ## 7. What this will not measure
 
@@ -782,8 +901,8 @@ the remote half.
    recorded; what admission may do with a six-month-old successful probe is
    undecided, and §6 does not decide it — `G9` says a matching observation
    promotes, not for how long the observation stands. The run makes the question
-   concrete rather than hypothetical: the 24 declared records each depend on one,
-   and §5.1 declined to produce any.
+   concrete rather than hypothetical: the 24 based-but-unobserved records each
+   depend on one, and §5.1 declined to produce any.
 2. **Where verified holdings are recorded.** New, and forced by §6.1: the state
    is derived from the declaration and the system's record of verified holdings,
    and that record is undesigned — where it lives, how it is re-checked, and what
@@ -811,11 +930,24 @@ disagreeing with itself.
 
 | site | change |
 |---|---|
-| world addressing `W3` | the dataset arm narrows from *holding no content* to *having no content identity*; the `source` arm, the curation-note routing and the no-fallback negative are unchanged (§6.4) |
+| world addressing `W3` | the dataset arm narrows from *holding no content* to *having no content identity*, and gains a positive arm asserting that a content-addressed dataset with unheld bytes is **minted**; the `source` arm, the curation-note routing and the no-fallback negative are unchanged (§6.4) |
 | world addressing §4.2, *Dataset, specifically* | the sentence fusing content identity with *data we hold* is split; the §1.1 conclusion stands on the narrowed test |
-| epistemic kernel, `G` table | **`G9` appended** with its mutation test (§6.3) — the first row added to the kernel table since it was frozen |
+| world addressing §4.2, the identity-basis table | the `dataset` row's basis becomes the **§6.2 projection** rather than *"manifest/content hash"*, which named no canonical derivation and so gave two implementations two addresses for one dataset |
+| epistemic kernel, `G` table | **`G9` appended** with its mutation test (§6.3) — the first row added to the kernel table since it was frozen — plus a paragraph below the table on why the corpus had no owner for the upward transition |
+| computation **`R23`** | the positive phrasing *"the address **is** the single output entry's content identity"* becomes the **§6.2 projection over the output manifest's content identities**, so a produced dataset and an acquired one naming the same bytes take one address. Every arm survives, negative (a) included — the projection excludes names, which is what that arm asserts |
+| computation §3, the `unknown`-closure argument | *"a `dataset` holding no content"* → *no content identity*, the same conflation in a citing document |
+| adoption ledger, artifact 7 | the oracle inventory's kernel homes extend to **`G3`–`G9`** |
+| formal model, *Inherits* and §5.1–§5.2 | the inherited kernel range → **`G1`–`G9`**, and the classification gains a `G9` row. Its header counts are corrected in passing from *113 rows / 128 assertions / W (16)* to **117 / 135 / W (19)** — stale since the world address ruling added `W14`–`W16` on 2026-08-08 without moving the totals, and never having counted `W5a`, `W8a`, `W8b` |
 | normative contract §4 | frozen-row count **138 → 139**, and the exact current inventory extends to **`G1`–`G9`** — without this the count guard passes while the contract excludes the row it counts |
-| README | frozen-row count **→ 139**; the kernel row reads `G1`–`G9`; this document's table entry stops calling the measurement ungated and unrun |
-| guide `contracts-and-adoption.md` | frozen-row count **→ 139**, with cut 1's own denominator of 126 untouched — `G9` is banked after the cut and is an acceptance criterion for a later slice |
-| guide `open-questions.md` | the admission-ramp entry moves out of the open list and cites this ruling |
-| `python/tests/test_designs_corpus.py` | the guarantee inventory gains `G9`, which is what makes every count above enforced rather than asserted |
+| README | frozen-row count **→ 139**; the kernel row reads `G1`–`G9`; the design count **sixteen → eighteen** and its date range to 2026-08-09, both stale since 2026-08-08; this document's table entry stops calling the measurement ungated and unrun |
+| guide `foundations.md` | the `held` section gains **`declared`** and `G9`; the kernel range → `G1`–`G9`; this design joins `sources` |
+| guide `claims-and-belief.md` | the kernel range → `G1`–`G9` |
+| guide `glossary.md` | **Declared** is added and **Held** cites it; this design joins `sources` |
+| guide `contracts-and-adoption.md` | frozen-row count **→ 139**, with cut 1's own denominator of 126 untouched — `G9` is banked after the cut and is an acceptance criterion for a later slice; the open-edges pointer stops listing the admission ramp as open |
+| guide `open-questions.md` | the admission-ramp entry moves out of the open list, replaced by the residue it left: where verified holdings are recorded |
+| `python/tests/test_designs_corpus.py` | the guarantee inventory gains `G9`, and a new guard binds the README's spelled-out design count to the number of documents — the count above was stale for a day with nothing to catch it |
+
+**Not amended, deliberately:** `G2b` and `R5`, which §6.4 confirms unchanged;
+`R10`, which the ruling leans on and does not move; the world address ruling's own
+*135 → 138* amendment table, which is a true statement about what that ruling did;
+and cut 1's frozen denominator of 126, which `G9` post-dates.

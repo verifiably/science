@@ -42,12 +42,14 @@ by content identity. Held does not mean raw, public, inside Git, or present in
 this checkout. A normalized or access-controlled dataset can be held; an
 accession alone is not.
 
-A dataset that records **which bytes it is** without those bytes being held
-anywhere is **declared**: a real world entity, addressable and referenceable,
-and never belief-eligible. Declared is the gap named rather than the gate
-weakened, and a dataset leaves it only through an observation whose digest
-matches what the record already claimed — never by declaring, and never by a
-file merely being present (G9).
+A dataset that records **which bytes it is** without those bytes being in hand is
+**declared**: a real world entity, addressable and referenceable, and never
+belief-eligible. Declared is the gap named rather than the gate weakened. A
+dataset leaves it only when **every resource its declaration names** has an
+observation whose digest matches what the record already claimed — never by
+declaring, and never by a file merely being present (G9). A dataset's content
+identity is that declaration, projected canonically: the declared digests,
+deduplicated, sorted and digested, which is also its address.
 
 The system guarantees representational eligibility and execution replay. It
 does not guarantee honest observations, valid instruments, appropriate models,

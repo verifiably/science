@@ -210,6 +210,38 @@ def test_the_readme_lists_every_design_document() -> None:
     )
 
 
+#: How the README spells its design count. Written out, as the prose does.
+_COUNT_WORDS = {
+    16: "Sixteen",
+    17: "Seventeen",
+    18: "Eighteen",
+    19: "Nineteen",
+    20: "Twenty",
+}
+
+
+def test_the_readme_states_how_many_designs_there_are() -> None:
+    """The sentence above the table counts the table, and drifts silently.
+
+    It read "Sixteen documents ... through 2026-08-08" while the table listed
+    eighteen through 2026-08-09 — the test above passes on a complete table with a
+    wrong count, because it never reads the sentence. The newest document's date
+    is checked too: the range's far end rots the same way and for the same reason.
+    """
+    present = design_documents()
+    count = len(present)
+    word = _COUNT_WORDS.get(count)
+    assert word is not None, f"extend _COUNT_WORDS: {count} designs and no spelling for it"
+    readme = re.sub(r"\s+", " ", _text(README))
+    assert f"{word} documents" in readme, (
+        f"the README says something other than '{word} documents' for its {count} designs"
+    )
+    newest = max(p.name[:10] for p in present)
+    assert f"through {newest}" in readme, (
+        f"the README's date range does not end at the newest design, {newest}"
+    )
+
+
 def test_every_guarantee_range_names_rows_that_exist() -> None:
     """A range label is read as a count, so an endpoint that is not a row misleads.
 

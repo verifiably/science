@@ -74,9 +74,10 @@ context and the linked design references for normative detail.
   interpretation without redefining kernel relations. A dataset's
   empirical-observation facet is what lets a run's `observes` edge confer
   eligibility. ([foundations](foundations.md#contracts-compile-into-profiles))
-- **Declared** — A dataset carrying a content identity whose bytes are not
-  held anywhere. A world entity, authorable and referenceable, and never
-  belief-eligible; it becomes held only through a matching byte observation.
+- **Declared** — A dataset carrying a content identity without a matching byte
+  observation of every resource it declares. A world entity, authorable and
+  referenceable, and never belief-eligible. Not the same as *unheld*: a run that
+  looked in one place and found nothing has measured its own coverage.
   ([foundations](foundations.md#the-epistemic-invariant))
 - **Held** — Exactly reproducible bytes available on demand under a content
   identity; not a synonym for raw, public, local, or checked into Git. Distinct
