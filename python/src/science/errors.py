@@ -274,3 +274,10 @@ class MalformedRecord(RecordError):
     """A field that is not what the kernel's tables declare — a digest that is
     not ``<algorithm>:<lowercase hex>``, an outcome or scope outside its closed
     set, a role outside ``observes | reads | transforms``."""
+
+
+class SignatureRefused(RecordError):
+    """An edge outside kernel §4.1's closed relation signatures — the sharp
+    case being `assesses` from a source-assertion (G1). Refused in the typed
+    constructor: inertness is the default, belief-bearing is the declared
+    exception, and the exception is declared exactly once."""
