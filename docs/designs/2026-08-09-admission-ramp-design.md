@@ -303,11 +303,21 @@ Five properties are load-bearing.
      ruled explicitly, because two defensible foldings give two different
      identities for the same dataset and the instrument has no authority to pick
      one. Until it is ruled, the artifact records the digests present and computes
-     no dataset-level identity from them. **Ruled at Gate 2, in §6.2: they do not
-     fold. A dataset's content identity is the declaration — every declared
-     resource carrying a digest — and no dataset-level digest is minted.** The
-     instrument is unchanged by that ruling, which is the point of having refused
-     to guess it.
+     no dataset-level identity from them. **Ruled at Gate 2, in §6.2: they do
+     fold, under one projection** — every declared resource's digest normalized to
+     `<algorithm>:<hex>`, deduplicated, sorted, newline-joined and hashed. A
+     dataset has a content identity when every declared resource is pinned, and
+     that identity is a minted digest.
+
+     **The instrument is unchanged by the ruling, and that is a choice worth
+     stating.** It computes no dataset address, because the projection is a
+     function of the declaration alone and the artifact already records every
+     declared digest — so an address is derivable from the frozen file rather than
+     needing to be baked into it. One caveat bounds that: the artifact strips a
+     `sha256:` prefix and records bare hex, so re-deriving the projection relies on
+     §5.1's finding that all 90 recorded digests are `sha256`. Refusing to guess
+     the fold is what left the ruling free to be made once, in argument, instead
+     of settled by whichever measurement got there first.
 
    The human-readable report **renders from that artifact** rather than being
    computed alongside it, so the prose and the data cannot drift and every figure
@@ -497,7 +507,9 @@ to this document, not a re-freeze**; §8 item 1 is the question it would inform.
 | carrying payload files no declared resource claims | **4** (45 files) |
 
 **Declared resources — 101**, of which **90** carry a recorded digest and **101**
-carry a recorded byte count.
+carry a recorded byte count. **All 90 digests are `sha256`** — 64 lowercase hex
+characters each, with no algorithm recorded under any other name — which is what
+lets §6.2's projection be re-derived from an artifact that stores bare hex.
 
 | axis | distribution |
 |---|---|
@@ -814,10 +826,16 @@ made F2 look like one problem:
 
 - **The 24 based-but-unobserved records need an acquisition *or* a holdings
   record** — and which one is not knowable today. They already carry content
-  identities, so none of them needs a rule change; each is at most one verified
-  acquisition from held, meaning a matching observation of **every** resource it
-  declares, and `G9` is what makes those observations the thing that promotes
-  it.
+  identities, so none of them needs a rule change: what promotes each is a
+  matching observation of **every** resource it declares, and `G9` is what makes
+  those observations the thing that promotes it. **How near an acquisition
+  actually is, though, splits them.** Not one of their 62 declared resources
+  carries a byte locator, so the route runs through the dataset's authority
+  fields, and those are present for only **14** of the 24 — a `source_url`, in the
+  four accession-bearing cases alongside an accession. The other **10** record
+  neither, so nothing in them says where the bytes are: for those, an acquisition
+  first requires authoring a locator, and a holdings record is the only route that
+  does not. §8 item 1 records the consequence for probing.
 - **The 15 without a content identity need authoring**, and no ramp reaches them.
   Retrieval cannot pin what nothing declares. This is a **basis** gap sitting at
   the other boundary, and it is the larger share of the corpus's real distance
@@ -900,9 +918,20 @@ records, no measurement can currently say which state they are in.
 1. **How long a probe's evidence of retrievability lasts.** A timestamp is
    recorded; what admission may do with a six-month-old successful probe is
    undecided, and §6 does not decide it — `G9` says a matching observation
-   promotes, not for how long the observation stands. The run makes the question
-   concrete rather than hypothetical: the 24 based-but-unobserved records each
-   depend on one, and §5.1 declined to produce any.
+   promotes, not for how long the observation stands.
+
+   **This run makes the question less concrete, not more, and an earlier draft
+   claimed the opposite.** It said the 24 based-but-unobserved records each depend
+   on a probe. They do not: **all 62 of their declared resources are
+   `no-byte-locator`**, so no probe can be issued for any of them — what they need
+   is a locator or a holdings record (item 2), and a probe is downstream of a
+   locator that does not exist. The 11 probeable resources belong to exactly two
+   records, `l1000-cmap` and `sciplex3`, and **neither has a basis** — they pin
+   nothing, so a successful probe there records a digest for the first time, which
+   §6.6 rules to be the interior of an acquisition rather than the verification of
+   a declaration. Not one record in this corpus is one probe away from promoting.
+   The question stands on the semantics of `G9` alone; the population supplies no
+   instance of it.
 2. **Where verified holdings are recorded.** New, and forced by §6.1: the state
    is derived from the declaration and the system's record of verified holdings,
    and that record is undesigned — where it lives, how it is re-checked, and what
@@ -937,6 +966,7 @@ disagreeing with itself.
 | computation **`R23`** | the positive phrasing *"the address **is** the single output entry's content identity"* becomes the **§6.2 projection over the output manifest's content identities**, so a produced dataset and an acquired one naming the same bytes take one address. Every arm survives, negative (a) included — the projection excludes names, which is what that arm asserts |
 | computation §3, the `unknown`-closure argument | *"a `dataset` holding no content"* → *no content identity*, the same conflation in a citing document |
 | adoption ledger, artifact 7 | the oracle inventory's kernel homes extend to **`G3`–`G9`** |
+| formal model §2.1, the `dataset` player row | its **identities** cell said *"content identity (manifest/content hash)"* — the same underivable phrase as world §4.2's basis table, in the document that inventories what every player's identity is over. It now names the §6.2 projection and its four exclusions. Missing this row is what let the ruling read as complete while the model still licensed the fold it replaced |
 | formal model, *Inherits* and §5.1–§5.2 | the inherited kernel range → **`G1`–`G9`**, and the classification gains a `G9` row. Its header counts are corrected in passing from *113 rows / 128 assertions / W (16)* to **117 / 135 / W (19)** — stale since the world address ruling added `W14`–`W16` on 2026-08-08 without moving the totals, and never having counted `W5a`, `W8a`, `W8b` |
 | normative contract §4 | frozen-row count **138 → 139**, and the exact current inventory extends to **`G1`–`G9`** — without this the count guard passes while the contract excludes the row it counts |
 | README | frozen-row count **→ 139**; the kernel row reads `G1`–`G9`; the design count **sixteen → eighteen** and its date range to 2026-08-09, both stale since 2026-08-08; this document's table entry stops calling the measurement ungated and unrun |

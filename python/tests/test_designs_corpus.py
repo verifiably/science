@@ -154,9 +154,7 @@ def test_the_ledger_records_the_atoms_boundary_this_file_holds() -> None:
     atoms_rows = [line for line in ledger.splitlines() if "**`atoms` " in line and "—" in line]
     assert atoms_rows, "the ledger no longer carries an `atoms` artifact row"
     row = "\n".join(atoms_rows)
-    assert _ATOMS_LAST_IMPLEMENTED in row, (
-        f"the ledger's `atoms` row does not name {_ATOMS_LAST_IMPLEMENTED} as landed"
-    )
+    assert _ATOMS_LAST_IMPLEMENTED in row, f"the ledger's `atoms` row does not name {_ATOMS_LAST_IMPLEMENTED} as landed"
     assert f"{ATOMS_FIRST_UNIMPLEMENTED}–A8" in row, (
         f"the ledger's `atoms` row does not name {ATOMS_FIRST_UNIMPLEMENTED}–A8 as the remainder"
     )
@@ -195,9 +193,7 @@ def test_the_readme_states_the_corpus_row_total() -> None:
     # The README hard-wraps its prose, so a phrase can straddle a line break.
     readme = re.sub(r"\s+", " ", _text(README))
     assert f"{total} rows" in readme, f"the README does not state the corpus total of {total} rows"
-    assert "eleven frozen tables" in readme, (
-        f"the README does not state that the rows sit in {tables} tables"
-    )
+    assert "eleven frozen tables" in readme, f"the README does not state that the rows sit in {tables} tables"
 
 
 def test_the_readme_lists_every_design_document() -> None:
@@ -205,8 +201,7 @@ def test_the_readme_lists_every_design_document() -> None:
     listed = set(_BACKTICKED_DOC.findall(readme))
     present = {p.name for p in design_documents()}
     assert listed == present, (
-        f"README design table out of step: missing {sorted(present - listed)}, "
-        f"stale {sorted(listed - present)}"
+        f"README design table out of step: missing {sorted(present - listed)}, stale {sorted(listed - present)}"
     )
 
 
@@ -237,9 +232,7 @@ def test_the_readme_states_how_many_designs_there_are() -> None:
         f"the README says something other than '{word} documents' for its {count} designs"
     )
     newest = max(p.name[:10] for p in present)
-    assert f"through {newest}" in readme, (
-        f"the README's date range does not end at the newest design, {newest}"
-    )
+    assert f"through {newest}" in readme, f"the README's date range does not end at the newest design, {newest}"
 
 
 def test_every_guarantee_range_names_rows_that_exist() -> None:
