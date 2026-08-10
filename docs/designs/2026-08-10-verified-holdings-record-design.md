@@ -81,7 +81,7 @@ Canonical facet:
 | field | content |
 |---|---|
 | `kind` | `holdings-observation` |
-| `location` | a **typed, canonical** byte locator: `store(store identity, relative path)` for bytes in a managed store, or `url(canonical absolute URL)` for remote bytes. Each type carries its canonicalization rule, applied **at construction**. For `store`: path normalization. For `url`, the **exact profile**: scheme and host lowercased, default port elided, an empty path written as `/` — `https://host` and `https://host/` are one location, not two — dot-segments resolved, percent-encoding normalized **in the path component only** (uppercase hex, unreserved characters decoded), query preserved byte-exact — its percent-encoding untouched, since an origin may distinguish spellings there and normalizing would merge locations it does not — and **no fragment, no userinfo — both refused at construction**. A fragment never participates in an HTTP request, so spellings differing only there would name one retrieval as two locations; userinfo is a credential, and a credential must never enter immutable world content. The obligation reaches past what a parser can check, so it is stated on the acts: a signed or otherwise authenticated URL names an **access grant**, not a location — the location is the credential-free form, and authentication material (a signed query, a token) is supplied **out of band** by the acting boundary, never persisted in a record — equality is field equality of the canonical form, and everything keyed "per location" (§4) keys on it. An opaque string cannot do this job: the same path spelling names different bytes in different stores, and one URL has many spellings, which would break dereferencing, the same-location refusal, and `H2` at once. The two types are the two every §3 act already dereferences; adding a locator type is an amendment (§7) |
+| `location` | a **typed, canonical** byte locator: `store(store identity, relative path)` for bytes in a managed store, or `url(canonical absolute URL)` for remote bytes. Each type carries its canonicalization rule, applied **at construction**. For `store`, the relative path is validated under the `atoms` coordinator's **project-relative path grammar, reused rather than redefined**: non-empty, UTF-8-encodable, no NUL byte, not absolute, no trailing separator, `/`-separated with no empty, `.`, or `..` component, reserved-sigil aliases refused. That grammar **refuses rather than normalizes** — `a/../b` is refused, never rewritten — so the canonical form is the accepted spelling itself, equality is byte equality, and a locator is well-formed exactly where the store's own mutations would accept the path. For `url`, the **exact profile**: scheme and host lowercased, default port elided, an empty path written as `/` — `https://host` and `https://host/` are one location, not two — dot-segments resolved, percent-encoding normalized **in the path component only** (uppercase hex, unreserved characters decoded), query preserved byte-exact — its percent-encoding untouched, since an origin may distinguish spellings there and normalizing would merge locations it does not — and **no fragment, no userinfo — both refused at construction**. A fragment never participates in an HTTP request, so spellings differing only there would name one retrieval as two locations; userinfo is a credential, and a credential must never enter immutable world content. The obligation reaches past what a parser can check, so it is stated on the acts: a signed or otherwise authenticated URL names an **access grant**, not a location — the location is the credential-free form, and authentication material (a signed query, a token) is supplied **out of band** by the acting boundary, never persisted in a record — equality is field equality of the canonical form, and everything keyed "per location" (§4) keys on it. An opaque string cannot do this job: the same path spelling names different bytes in different stores, and one URL has many spellings, which would break dereferencing, the same-location refusal, and `H2` at once. The two types are the two every §3 act already dereferences; adding a locator type is an amendment (§7) |
 | `outcome` | `found` with an **algorithm-qualified** digest `<algorithm>:<hex>`, or `absent`. Both are **established findings**: `found` means the act hashed the bytes it dereferenced; `absent` means the dereference completed and answered that the location holds nothing — today establishable **for a `store` locator only**: the identified root enumerated, the path missing. A `url` locator cannot currently mint `absent`: the inherited boundary classifies every transport and status failure — a 404 included — as `retrieval-failed`, and no qualifying authoritative negative is defined; defining one would be a ramp-boundary amendment, not a record change (§3). An attempt that established neither mints no observation (§3). **Qualification is the invariant, not the algorithm — and qualification is canonical**: the ramp's basis projection already normalizes every digest to `<algorithm>:<lowercase hex>`, and the record adopts that form at construction — lowercase canonical algorithm identifier, lowercase hex, the algorithm's exact width (64 for `sha256`) — refusing an unqualified digest (the survey instrument's rule, made a record invariant, because losing the algorithm is what broke the first freeze) and refusing a non-canonical spelling, since `sha256:AB` and `sha256:ab` would otherwise mint two records of one fact and miss every whole-digest join (§5). None of this freezes the accepted set — canonical form is per-algorithm, and the record stays **algorithm-generic**. Which algorithms may pin bytes is the profile's open residue (ramp §6.2), and the ramp is explicit that the instrument's own sha256-only bound "is its own rather than the profile's" — a capability limit of one tool. Freezing that limit here would make a future accepted declaration unobservable by construction: a basis it could carry, an observation it could never have |
 | `expected` | optional: the algorithm-qualified digest the act *expected* at this location — an acquisition retrieving against a declaration records what it was retrieving *for*. This is the explicit expectation link that lets a first-contact mismatch surface at derivation (§5): `found(D′)` with `expected = D` joins to every declaration naming `D`. Promotion never reads it — held is decided by `outcome` alone, so the field adds an association, never an assertion. **With a `found` outcome, `expected` must share the found digest's algorithm — refused at construction otherwise**: an act whose instrument cannot hash in its expectation's algorithm established nothing about that expectation, so it omits the field and reports the unchecked expectation through its own channel — the ramp's rule, a refusal names the tool's limit where a `mismatch` would blame the corpus for it. The constraint is what makes every derivation-time mismatch a same-algorithm comparison (§5) |
 | `observer` | the attester's identity — human or agent, equally weighted; reliability is `meta/`'s to measure, never this record's to assert |
@@ -130,7 +130,8 @@ declarations are affected; the join does.
 
 ## 3. Creation acts
 
-Exactly three acts mint a holdings observation:
+A holdings observation is minted along **exactly three routes** — the first
+an orchestration of holdings acts, the other two holdings acts themselves:
 
 1. **An acquisition ending.** `R10` routes URL-valued inputs to acquisition
    and ramp §6.6 rules that an acquisition *ends by recording the digest of
@@ -149,7 +150,11 @@ Exactly three acts mint a holdings observation:
    per canonical location (below). The **store-mutation act** writes the
    bytes and mints the observation at the **destination store location** —
    the mutation its intent (below) covers, under its own minted
-   `event_token`. The **source-URL observation act** is the dereference of
+   `event_token` — and its `found` digest comes from **reopening and hashing
+   the destination bytes after the write**, under the same consistent-read
+   boundary the act already holds (below), never copied from the source
+   stream's hash: a truncated or transformed write would otherwise attest
+   bytes the store never held, exactly what H1 reserves `found` against. The **source-URL observation act** is the dereference of
    the source: a look that happened and established `found` there, so H4
    gives it an audit's duty — it mints the `found` observation at the source
    `url` locator under its own distinct token, a pure look with no intent
@@ -219,8 +224,11 @@ serializes through. That lease is **package-private today**, entered by the
 coordinator only on behalf of an approved project transaction, and `atoms`
 ships no consumer-facing command for it — those were tabled as authority
 §12.1's — so consuming it here is a named **adoption obligation on
-`atoms`**: a store read-lease command in that family, tabled with the
-engine in §7, never assumed built. Under the lease an observation is of **a
+`atoms`**: a coordinator command in that family that performs the
+dereference-and-hash **on the consumer's behalf under the private lease** —
+A5b's boundary preserved, no consumer ever receiving a `Lease` — tabled
+with the engine in §7 and recorded against the adoption ledger's `atoms`
+authority row (§8), never assumed built. Under the lease an observation is of **a
 stable store state as boundary-mediated writers produce it**: never a mixed
 stream hashed while a serialized replacement was mid-flight, never a
 transient absence caught between a boundary-mediated remove and write. The
@@ -349,9 +357,14 @@ The structure is stated, not assumed:
   Traversal never trusts termination it has not checked.
 - **Forks happen and are legal.** Two concurrent audits of one location
   cannot name each other, so both are heads. Heads whose outcomes **agree** —
-  the same `found` digest, or both `absent` — coalesce into one claim: two
-  auditors agreeing is corroboration, not conflict, and refusing it would
-  make concurrent audit an error. Heads whose outcomes **disagree** make the
+  the same `found` digest, or both `absent` — coalesce **in conflict
+  classification only**: the location is uncontested, two auditors agreeing
+  being corroboration, not conflict, and refusing it would make concurrent
+  audit an error. **Every agreeing head remains a record in the active
+  set** — coalescing selects no winner and discards nothing, because
+  agreeing heads are not interchangeable downstream: two `found(D)` heads
+  with different `expected` values carry different associations for §5's
+  expectation join, and each is a distinct corroborating act. Heads whose outcomes **disagree** make the
   location **contested**, and a contested location is **blocked** (below) —
   the existential held-rule must never silently let `found` outvote
   `absent`. The repair is an act: a re-check that supersedes *every* standing
@@ -374,12 +387,22 @@ The structure is stated, not assumed:
 **Blocking is scoped to what depends on it; corruption is not.** A contested
 or unsettled location is **blocked**: its records leave the active set, and
 the projection's **blocked set** — an output reported, and receipt-committed
-(§5), beside the active set — gains an **entry**: the canonical location,
-the blocking status (`contested` or `unsettled`), and the **identities of
-the records blocked there** — the heads the walk would otherwise have
-yielded active. The entry carries its records because the adapter must join
-over them (§5 step 3): the reducer's two outputs plus the declarations are
-the adapter's whole input, never a re-enumeration beside the receipt. An
+(§5), beside the active set — gains an **entry**: the canonical location;
+the **blocking reasons**, a deduplicated sequence sorted canonically —
+`contested`, `unsettled`, either or both, since one location can hold
+disagreeing heads *and* an unmatched mutating intent at once and a single
+status could not say so; and, per blocked head, the **join projection §5
+step 3 reads** — the head's identity, its outcome, its `expected`, and the
+outcome and `expected` of every record its `supersedes` walk reached inside
+the coverage. Identities alone would not do: an address cannot be joined on
+without resolving content, which would smuggle exact-state resolution in as
+an unnamed adapter input. The entry carries the projection because the
+adapter must join over it (§5 step 3): the reducer's two outputs plus the
+declarations are the adapter's whole input, never a re-enumeration beside
+the receipt. The encoding is deterministic on §2's own precedent: record
+references and the entries themselves sort by canonical reference bytes,
+exactly as `supersedes` does, so one blocked state has one byte form under
+the receipt. An
 unsettled entry may carry **no records at all** — the mutation crashed
 before any observation ever existed there — and such an entry refuses
 nothing: no evidence, no dependent. The **dataset-scoped
@@ -511,8 +534,9 @@ middle" — is a **projection over a declared coverage**:
    `no-matching-observation-in-coverage`: true, in the checkable sense — no
    observation exists that can answer for it. The adapter also owns the
    blocked set's reach (§4): before answering a dataset, it runs the same
-   three joins over each blocked entry's records — carried in the entry by
-   identity (§4), so the adapter's inputs stay exactly the declarations
+   three joins over each blocked entry's join projection — outcome,
+   `expected`, and reached history, carried in the entry (§4), so the
+   adapter's inputs stay exactly the declarations
    plus the reducer's two receipt-committed outputs — and a hit **refuses
    that dataset's answer** — blocked evidence never enters a tuple, and
    never silently vanishes from one either.
@@ -536,7 +560,7 @@ middle" — is a **projection over a declared coverage**:
    string is `malformed`, and an implementation that fails its fixtures **is
    not that rule**. Validating a receipt is re-running: resolve the binding,
    re-reduce the named states under the named heads, and land in the
-   vocabulary the corpus already has — **`validated`** (the named active and blocked sets reproduce, blocked entries record-for-record), **`refuted`**
+   vocabulary the corpus already has — **`validated`** (the named active and blocked sets reproduce, blocked entries byte-for-byte under §4's canonical encoding), **`refuted`**
    (it does not), **`unresolvable`** (a named corpus state, a named
    chain head, or the implementation is not resolvable here — a
    computability state, never an epistemic one, and never reported as
@@ -586,9 +610,9 @@ banked row still passes. Four candidates were tested; four survive.
 > holdings observation exists only as the recorded outcome of an act that
 > dereferenced its location and **established** what it records — `found` by
 > hashing the bytes, `absent` by a completed dereference that answered
-> nothing is there: an acquisition ending, an audit, a boundary-mediated
-> deletion. Nothing mints one from a declaration, a directory listing, or an
-> attempt that established neither.
+> nothing is there — along §3's three routes: an acquisition ending, an
+> audit, a boundary-mediated deletion. Nothing mints one from a declaration,
+> a directory listing, or an attempt that established neither.
 
 *Sabotage, first arm:* back-fill `found` records from a directory listing,
 copying each declared digest into a record without hashing anything. Every
@@ -597,7 +621,11 @@ read records, so `G9`'s path-exists arm is satisfied — and the
 content-addressing guarantee is void one layer up: the path-exists predicate
 has been laundered through the record store. Creation is the unowned half of
 the record's lifecycle exactly as promotion was the unowned transition before
-`G9`, and H1 owns it. *Sabotage, second arm:* hash a store path outside the
+`G9`, and H1 owns it. The same arm owns the acquisition shortcut: mint the
+destination observation from the source stream's digest without reopening
+the destination (§3) — a truncated or transformed write now reads as held
+bytes no act ever hashed at that location, and every other row passes,
+since a real act really dereferenced the source. *Sabotage, second arm:* hash a store path outside the
 consistent-read boundary, mid-replacement. The mixed stream mints `found`
 with a digest **no stable store state ever held** — or the transient gap
 between a remove and a write mints a false `absent` — and every banked row
@@ -614,7 +642,8 @@ out-of-band bound, beside raw `rm`.
 > resolved by walking each canonical location's `supersedes` graph from its
 > heads, with acyclicity validated as an **admissibility invariant** on every
 > walk (ρA9's discipline). No derivation orders records by `observed_at`; no
-> record supersedes across locations; agreeing heads coalesce; **disagreeing
+> record supersedes across locations; agreeing heads coalesce in conflict
+> classification only, every head staying active (§4); **disagreeing
 > heads block the location** rather than letting any outcome win; a mutating
 > intent left unmatched — or **qualification-unresolved, blocking as
 > itself** — leaves its location unsettled and blocked until a later
@@ -754,10 +783,14 @@ that builds the persistence seam; none is claimed exercised by this document.
    every operational duty (who runs audits, on what cadence) wait on `atoms`
    A7–A8 and the composition root, as everything durable does. §3's
    consistent-read boundary adds one **named item** to that bill: a
-   consumer-facing store read-lease command on the `atoms` coordinator, in
-   authority §12.1's family — today's lease is package-private and entered
-   only on behalf of an approved project transaction, so the dereference
-   contract is unbuildable until `atoms` ships it.
+   consumer-facing coordinator command on `atoms`, in authority §12.1's
+   family, performing dereference-and-hash under the coordinator's private
+   lease — never handing the `Lease` out, which is A5b's boundary kept
+   whole. Today's lease is package-private and entered only on behalf of an
+   approved project transaction, so the dereference contract is unbuildable
+   until `atoms` ships the command; the obligation is recorded where
+   `atoms` state is authoritative — the adoption ledger's artifact 4 row
+   (§8) — not only here.
 
 ## 8. What this changes elsewhere
 
@@ -776,11 +809,12 @@ disagreeing with itself.
 | guide `foundations.md` | the `held` section gains the record: heldness is derived from active holdings observations under a declared coverage; the kind inventory gains `holdings-observation`; this design joins `sources` |
 | guide `contracts-and-adoption.md` | frozen-row count **139 → 143**, tables **eleven → twelve**; the open-edges pointer moves the holdings question to its residue |
 | epistemic kernel, kind inventory | a world record is a kernel kind, and the counts move with it: the kernel is **eleven kinds today** — eight as designed, then `retraction` (correction lifecycle), `instrument-certification` (5b), `coreference-attestation` (world address ruling, 2026-08-08) — and **`holdings-observation` joins as the twelfth**, on the same appending precedent, the sequence preserved; the §4.4 accounting discipline extends to it. The count sites are amended as an **exact inventory, not a sweep**: the domain extension design's two "eleven kernel kinds — ten until 2026-08-08" clauses (its §1 inherits line and its §5 ownership line); the adoption ledger's docket note ("the kernel is **eleven kinds**, not ten"); the admission ramp §2.2's "binds all eleven kinds"; the world address ruling §3's "now bind all eleven kinds"; the formal model §2.1 heading "(the eleven kernel kinds)" with its "All eleven" lead — `foundations.md`'s anchor link to that heading moves with it; and `foundations.md`'s "the formal inventory contains eleven kernel kinds". The world address ruling's *historical* statements — "an eleventh kernel kind", "taking the kernel to eleven kinds" — record what that ruling did, remain true, and are deliberately untouched |
-| tamper-evident log design | five sites, one amendment. **§3's `intent` union**: "the one consumer named today is the assessment-run intent" gains the **holdings intent**, appended by every store-dereferencing act — mutating or re-check — before it acts (§3 here); payload: canonical location, act kind, boundary-minted `event_token` (reused per the log's not-a-second-attempt-id rule), actor. **§6's qualification reduction**: a qualifying fulfillment of a holdings intent is a committed registration publishing a holdings observation for the intent's location carrying its `event_token`, under the same reduction — a non-qualifying pointer never matches, an unresolved one proves nothing. **`fulfills` construction**: the boundary constructs the link from its own holdings intent; no caller-supplied path — the rule restated, not relaxed. **`L7`**: "intent claims are exactly as wide as stated" now quantifies over both intent kinds, its arms instantiated for the holdings shape — a wrong-location observation, a wrong token, or a publication creating no observation each **fails qualification**; a kill between intent append and mutation reads attempt-without-recorded-outcome, exactly as stated. **§9's ownership split**: the science-side obligations gain the boundary writing holdings intents and constructing their `fulfills`, on the `atoms` intent API as built — the **log's** `atoms` machinery changes nothing, though `atoms` is not wholly unchanged: §3's store read-lease command is a separate, named adoption obligation, tabled in §7 item 6 |
+| tamper-evident log design | five sites, one amendment. **§3's `intent` union**: "the one consumer named today is the assessment-run intent" gains the **holdings intent**, appended by every store-dereferencing act — mutating or re-check — before it acts (§3 here); payload: canonical location, act kind, boundary-minted `event_token` (reused per the log's not-a-second-attempt-id rule), actor. **§6's qualification reduction**: a qualifying fulfillment of a holdings intent is a committed registration publishing a holdings observation for the intent's location carrying its `event_token`, under the same reduction — a non-qualifying pointer never matches, an unresolved one proves nothing. **`fulfills` construction**: the boundary constructs the link from its own holdings intent; no caller-supplied path — the rule restated, not relaxed. **`L7`**: "intent claims are exactly as wide as stated" now quantifies over both intent kinds, its arms instantiated for the holdings shape — a wrong-location observation, a wrong token, or a publication creating no observation each **fails qualification**; a kill between intent append and mutation reads attempt-without-recorded-outcome, exactly as stated. **§9's ownership split**: the science-side obligations gain the boundary writing holdings intents and constructing their `fulfills`, on the `atoms` intent API as built — the **log's** `atoms` machinery changes nothing, though `atoms` is not wholly unchanged: §3's dereference-and-hash coordinator command is a separate, named adoption obligation, tabled in §7 item 6 and recorded on the ledger's artifact 4 row |
 | world addressing §4.2, the identity-basis table | gains the **`holdings-observation`** row: basis is the content identity of the §2 canonical facet under `science.holdings-observation.v1` — every field participating, the minted `event_token` among them on the `retraction` shape's precedent, `supersedes` hashing as its sorted ref sequence — so the kind has a banked address basis rather than an implied one |
-| formal model §2.1 | gains the **holdings observation** player row: content identity over the §2 facet under `science.holdings-observation.v1`, event token included; minted by the three acts; revised by supersession only; read by the coverage projection |
+| formal model §2.1 | gains the **holdings observation** player row: content identity over the §2 facet under `science.holdings-observation.v1`, event token included; minted along §3's three routes — an acquisition ending (an orchestration of per-location holdings acts), an audit or re-check, a boundary-mediated deletion; revised by supersession only; read by the coverage projection |
 | formal model, tables | reproduces the **H** table, as it reproduces every other |
 | normative contract §4 | the exact current inventory extends to twelve tables and 143 rows; the count guard moves in the same change |
+| adoption ledger, artifact 4 | the `atoms` authority row gains the holdings prerequisite: a consumer-facing coordinator command performing dereference-and-hash under the private lease (§3 here, authority §12.1's family), with A5b's boundary preserved — the coordinator acts on the consumer's behalf and no consumer ever receives a `Lease`. That row declares itself the corpus's single authority for `atoms` implementation state, so the obligation must live there, not only in §7 |
 | adoption ledger, artifact 7 | the oracle inventory extends to the **H** table |
 | README | row count **→ 143**, tables **→ twelve**; the design table gains this document's row; the spelled-out design count and date range move per the existing corpus guard |
 | `python/tests/test_designs_corpus.py` | `TABLE_OWNERS` gains `H → 2026-08-10-verified-holdings-record-design.md`; the "eleven frozen tables" README assertion becomes twelve via the guard's own machinery |
