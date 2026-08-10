@@ -10,7 +10,7 @@ import pytest
 from science.claim import Referent, build_claim
 from science.consulted import CorpusPins, consulted_contracts
 from science.contract import domain
-from science.errors import ContractDisagreement
+from science.errors import ContractDisagreement, MalformedRecord
 from science.profile import compile_profile
 
 
@@ -64,6 +64,16 @@ class TestTheWalk:
             claims={}, profile=profile, node_corpus={}, pins={"c1": with_extra}, closure_nodes=()
         )
         assert all(namespace != "unrelated" for namespace, _ in consulted)
+
+    def test_a_node_attributed_to_a_corpus_with_no_pins_is_malformed(self, profile):
+        with pytest.raises(MalformedRecord, match="c2"):
+            consulted_contracts(
+                claims={},
+                profile=profile,
+                node_corpus={"n1": "c2"},
+                pins={"c1": pins()},
+                closure_nodes=("n1",),
+            )
 
 
 class TestAgreement:

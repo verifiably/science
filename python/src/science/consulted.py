@@ -52,6 +52,12 @@ def consulted_contracts(
     corpora = sorted({node_corpus[node] for node in closure_nodes if node in node_corpus}) or sorted(pins)
     if not corpora:
         raise MalformedRecord("a derivation consults at least one corpus's pins")
+    unpinned_corpora = sorted(set(corpora) - set(pins))
+    if unpinned_corpora:
+        raise MalformedRecord(
+            f"corpus/corpora {unpinned_corpora} hold a closure node but have no entry in pins; "
+            "a node attributed to a corpus whose pins were not supplied is a malformed walk input"
+        )
 
     # Exactly one science_contract, always — agreement unconditional, whether
     # or not any base-profile facet is read (D §8).
