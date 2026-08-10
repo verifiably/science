@@ -142,7 +142,10 @@ _G2c = [
 
 # --- G1 --------------------------------------------------------------------
 # A source-assertion can assert, deny or hypothesize — never assess — and
-# moves no belief output byte, value or digest.
+# moves no belief output byte, value or digest. Four arms: the constructor
+# refusal, the value half, the digest half's closed signature (the parameter
+# does not exist to be threaded), and the digest half live (folding a source
+# assertion into what closure.py digests, at the one call site that could).
 
 _G1 = [
     Arm(
@@ -187,6 +190,25 @@ _G1 = [
             after="    binding: tuple[str, str],\n    source_assertions: tuple[object, ...] = (),\n) -> Closure:",
         ),
         checks=("test_closure.py::test_the_same_binding_resolves_identically_elsewhere",),
+    ),
+    Arm(
+        row="G1",
+        asserts=(
+            "the digest half, live: source assertions are failable only because closure membership is "
+            "computed — folding them into the consulted member at the build_closure call site moves the digest"
+        ),
+        sabotage=Sabotage(
+            module="belief.py",
+            before="        consulted=consulted,\n        binding=(binding.rule, binding.implementation),",
+            after=(
+                "        consulted=consulted + tuple((sa.ref, sa.relation) for sa in "
+                "records.source_assertions),\n"
+                "        binding=(binding.rule, binding.implementation),"
+            ),
+        ),
+        checks=(
+            "test_belief.py::TestG1ASourceAssertionMovesNothing::test_every_field_maximal_moves_no_belief_output_byte",
+        ),
     ),
 ]
 
