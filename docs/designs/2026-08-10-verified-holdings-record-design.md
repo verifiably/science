@@ -74,12 +74,13 @@ Canonical facet:
 | field | content |
 |---|---|
 | `kind` | `holdings-observation` |
-| `location` | a byte locator — a path in a store, a URL, any string another party with access could dereference. Non-empty. What grammar locators take beyond that is open (§7); the field is opaque to every derivation |
+| `location` | a **typed, canonical** byte locator: `store(store identity, relative path)` for bytes in a managed store, or `url(canonical absolute URL)` for remote bytes. Each type carries its canonicalization rule (path normalization for `store`; scheme-and-host lowering, default-port and dot-segment removal for `url`), applied **at construction** — equality is field equality of the canonical form, and everything keyed "per location" (§4) keys on it. An opaque string cannot do this job: the same path spelling names different bytes in different stores, and one URL has many spellings, which would break dereferencing, the same-location refusal, and `H2` at once. The two types are the two every §3 act already dereferences; adding a locator type is an amendment (§7) |
 | `outcome` | `found` with an algorithm-qualified digest `sha256:<64 hex>`, or `absent`. The algorithm must be in the accepted set (`sha256`); a digest that is not algorithm-qualified is **refused at construction** — the survey instrument's rule, made a record invariant |
+| `expected` | optional: the algorithm-qualified digest the act *expected* at this location — an acquisition retrieving against a declaration records what it was retrieving *for*. This is the explicit expectation link that lets a first-contact mismatch surface at derivation (§5): `found(D′)` with `expected = D` joins to every declaration naming `D`. Promotion never reads it — held is decided by `outcome` alone, so the field adds an association, never an assertion |
 | `observer` | the attester's identity — human or agent, equally weighted; reliability is `meta/`'s to measure, never this record's to assert |
 | `instrument` | the identity of the tool that hashed or dereferenced — the survey instrument's commit-pinning discipline, generalized |
 | `observed_at` | when the act ran. **Recorded as data, never read by a derivation** (§4) |
-| `supersedes` | optional: the identity of the prior holdings observation **for the same location**. Constructing a record whose `supersedes` names a record with a different location is refused — chains are per-location by construction, not by convention |
+| `supersedes` | zero or more identities of prior holdings observations, **every one for the same canonical location**. Constructing a record naming a predecessor at a different location is refused — the per-location discipline is by construction, not convention. The set form is what lets a later act resolve a fork: concurrent observers cannot name each other, so one location can grow parallel heads, and the resolving re-check supersedes every head it replaces (§4) |
 
 Identity is the content identity of this facet under a new domain,
 **`science.holdings-observation.v1`**, through `science.identity.v1`'s
@@ -97,11 +98,12 @@ the fabricated-basis rule is untouched — ramp §6.6's line stands, hashing
 bytes a record never declared must never seed a declaration.
 
 **A mismatch is not a record kind.** An act that found bytes hashing to `D′`
-where a declaration says `D` records `found(D′)` — the truth about the bytes.
-The mismatch is *computed* at derivation, against each declaration that names
-`D`, and reported as the ramp's `G9` arm requires: not promoted, and not
-reported as a failure to retrieve. The record layer does not know which
-declaration the observer had in mind, and does not need to.
+where it expected `D` records `found(D′)` with `expected = D` — the truth
+about the bytes, plus the association that makes the disagreement reportable.
+The mismatch itself is *computed* at derivation (§5), against each declaration
+naming `D`, and reported as the ramp's `G9` arm requires: not promoted, and
+not reported as a failure to retrieve. The record layer never decides which
+declarations are affected; the join does.
 
 ## 3. Creation acts
 
@@ -143,10 +145,32 @@ carry.
 
 ## 4. Supersession and staleness
 
-**Active** means: not named by any later record's `supersedes` within its
-location chain. Ordering is by explicit reference only — a chain is walked,
-never sorted. `observed_at` orders nothing, decides nothing, and expires
-nothing (**H2**).
+**Active** means: not named by any enumerated record's `supersedes`. Ordering
+is by explicit reference only — the records for one canonical location form a
+DAG walked from its heads, never a list sorted by time. `observed_at` orders
+nothing, decides nothing, and expires nothing (**H2**).
+
+The structure is stated, not assumed:
+
+- **Cycles are structurally impossible.** A record's identity is the content
+  identity of its facet, `supersedes` included — naming a record requires that
+  record to already have an identity, so a cycle would require a hash
+  fixpoint. A record set that nonetheless *presents* one (forged identities)
+  is malformed and refuses the projection; traversal never trusts termination
+  it has not checked.
+- **Forks happen and are legal.** Two concurrent audits of one location
+  cannot name each other, so both are heads. Heads whose outcomes **agree** —
+  the same `found` digest, or both `absent` — coalesce into one claim: two
+  auditors agreeing is corroboration, not conflict, and refusing it would
+  make concurrent audit an error. Heads whose outcomes **disagree** make the
+  location **contested**, and a contested location **refuses the projection**
+  — the existential held-rule must never silently let `found` outvote
+  `absent`. The repair is an act: a re-check that supersedes *every* standing
+  head (the set-valued `supersedes` of §2) and records what is actually
+  there.
+- **A dangling predecessor is not an error.** A head whose `supersedes` names
+  a record outside the enumerated coverage is still a head; the unseen tail
+  is the §5 coverage bound doing its job.
 
 The derived facts, over a set of active observations:
 
@@ -165,15 +189,21 @@ act supersedes it: a re-check that found matching bytes refreshes the chain, a
 re-check that found different bytes or nothing demotes through it, a
 boundary-mediated deletion closes it.
 
-**This closes ramp §8 item 1 at the record layer, and hands the remainder to
-the policy layer, typed.** "What may admission do with a six-month-old
-probe" splits: the record layer answers *the observation stands until
-superseded* — six months old and active is active. Whether a **belief policy**
-discounts old evidence is a policy parameter: `observed_at` is in the facet
-precisely so a future policy *can* read it as data and weigh it, the way
-`science.belief.v1` weighs directions today. No current policy does, and this
-design mints none; the question is now a well-typed parameter on a seam that
-exists rather than a floating doubt about a record that didn't.
+**This closes ramp §8 item 1 at the record layer, and names the seam that
+owns the remainder — which is not the belief policy.** "What may admission do
+with a six-month-old probe" splits: the record layer answers *the observation
+stands until superseded* — six months old and active is active. Whether
+anything ever discounts old evidence is a question about **heldness**, and
+heldness is decided before admission, which is decided before the belief
+policy ever runs — `science.belief.v1` aggregates already-admitted
+directional inputs and receives neither observations nor `observed_at`, so
+recency can never be its parameter without amending the closure itself. The
+seam that *can* own it is the **projection rule** (§5): the derivation
+receipt pins the rule's identity, so a future recency-bearing projection rule
+is a successor rule identity, pinned and visible in every receipt it signs —
+never an ambient reinterpretation of the same records. `observed_at` is in
+the facet so that successor *can* read it as data. No current rule does, and
+this design mints none.
 
 **The out-of-band bound, restated rather than hidden.** Bytes destroyed
 without the boundary — a raw `rm` in a store — leave a stale `found` active
@@ -204,11 +234,40 @@ middle" — is a **projection over a declared coverage**:
    instead of a silent error; and a declared corpus that cannot be enumerated
    **refuses the whole projection** — a partial enumeration reported as a
    result would be the silent shrink the declaration exists to prevent.
-3. The active set is precisely the `observations` argument cut 2's seam
-   already consumes — `admission_state`, the admission gate, the evaluator's
-   availability context. Nothing downstream changes shape.
-4. The projection also yields a **derivation receipt**: the coverage
-   declaration plus the content identity of the active set it produced.
+3. A **dataset-scoped adapter** turns the active set into cut 2's argument.
+   The seam is already dataset-keyed — the evaluator's availability context
+   maps each dataset address to its own `ByteObservation` tuple, and
+   `admission_state` reports a supplied observation matching no declared
+   digest as a `mismatch` — so the adapter's whole job is deciding **which
+   heads enter a dataset's tuple**. Three joins, each explicit:
+   - **by outcome** — a head whose `found` digest matches a declared resource
+     digest enters. This is promotion, and it is the only join `held` reads.
+   - **by expectation** — a `found` head whose `expected` digest matches a
+     declared resource digest enters, whatever digest it actually found. A
+     first-contact acquisition that retrieved wrong bytes surfaces here, and
+     the existing seam reports it as the `mismatch` it is. (An `absent` head
+     never enters a tuple — it has no digest to enter with; what it
+     contributes is the absence of anything, and the resource reads
+     `no-matching-observation-in-coverage`.)
+   - **by history** — a head enters if any record it transitively supersedes
+     would have entered by outcome or expectation. Bytes that drifted since a
+     matching observation surface here: the head's differing digest arrives
+     as a `mismatch`, an `absent` head contributes nothing and the resource
+     reads `no-matching-observation-in-coverage` — the ramp's distinction
+     between *different bytes* and *no bytes*, preserved by construction.
+   A head none of the three joins reaches belongs to no dataset in question
+   and enters nothing — declaration-independence at work, not a gap.
+4. The projection also yields a **derivation receipt**, on the contract world
+   §5 already set for enumerations that feed belief: the **exact corpus-state
+   identities** enumerated (not just corpus names — the states), the
+   **identity of the projection rule** that reduced them (joins, coalescing,
+   contested-refusal and all — the rule a recency-bearing successor would
+   replace, §4), and the content identity of the **active set** it produced.
+   A receipt naming coverage and output alone would validate nothing: a wrong
+   or incomplete reduction could sign a perfectly consistent receipt. Naming
+   the source states and the rule is what makes the receipt checkable —
+   re-run the named rule over the named states, get the named set or find the
+   defect (**H3**'s second arm, §6).
 
 **A derivation with no declared coverage is refused** (**H3**). This is world
 §5's producer-snapshot argument applied to its second population: enumerated
@@ -249,27 +308,40 @@ is void one layer up: the path-exists predicate has been laundered through the
 record store. Creation is the unowned half of the record's lifecycle exactly
 as promotion was the unowned transition before `G9`, and H1 owns it.
 
-> **H2 — supersession is by explicit reference, per location.** Active-ness is
-> resolved by walking `supersedes` chains, each chain confined to one
-> location. No derivation orders records by `observed_at`; no record
-> supersedes across locations.
+> **H2 — supersession is by explicit reference, per location, and a contested
+> location refuses.** Active-ness is resolved by walking each canonical
+> location's `supersedes` DAG from its heads. No derivation orders records by
+> `observed_at`; no record supersedes across locations; agreeing heads
+> coalesce; **disagreeing heads refuse the projection** rather than letting
+> any outcome win.
 
-*Sabotage:* resolve "current" by latest timestamp. Every banked row passes —
-none speaks to ordering — and active-ness now moves with clock skew between
-observers: two records, neither superseding the other, flip precedence with
-no node recorded, which is admission changing because of a clock, the
-act-bound violation in its subtlest form.
+*Sabotage, first arm:* resolve "current" by latest timestamp. Every banked
+row passes — none speaks to ordering — and active-ness now moves with clock
+skew between observers: two records, neither superseding the other, flip
+precedence with no node recorded, which is admission changing because of a
+clock, the act-bound violation in its subtlest form. *Sabotage, second arm:*
+on disagreeing heads — an active `found` beside an active `absent` — let the
+existential held-rule quietly count the `found`. Every banked row passes, and
+a location whose own evidence is in open conflict promotes a dataset as if it
+were not; H2's refusal is what makes the conflict a caller's problem instead
+of a silent vote.
 
-> **H3 — the derivation refuses an undeclared coverage.** Every heldness
-> answer names the corpora it enumerated, by stable identity. "Whatever is
-> checked out" is not a coverage.
+> **H3 — the derivation refuses an undeclared coverage, and its receipt is
+> checkable.** Every heldness answer names the corpus states it enumerated
+> and the rule that reduced them; "whatever is checked out" is not a
+> coverage, and a receipt the named rule over the named states does not
+> reproduce is a defect, not a disagreement.
 
-*Sabotage:* default the coverage to the corpora currently present. `G9`
-passes (records are consulted), and `R5`'s banked arms pass — they test copy
-loss, not enumeration scope — while unmounting an observing corpus silently
-demotes every dataset it vouched for: belief depending on the checkout, the
-producer-snapshot defect on the holdings side, with no banked arm positioned
-to see it.
+*Sabotage, first arm:* default the coverage to the corpora currently present.
+`G9` passes (records are consulted), and `R5`'s banked arms pass — they test
+copy loss, not enumeration scope — while unmounting an observing corpus
+silently demotes every dataset it vouched for: belief depending on the
+checkout, the producer-snapshot defect on the holdings side, with no banked
+arm positioned to see it. *Sabotage, second arm:* enumerate half the declared
+coverage — or reduce with a rule other than the one named — and sign the
+receipt anyway. The receipt stays internally consistent, every banked row
+passes, and the completeness claim is void; H3's second arm is what makes
+"re-run the named rule over the named states" a test instead of a hope.
 
 > **H4 — no silent act.** An act records its outcome whatever it is: `found`,
 > `found` with an unexpected digest, `absent`. An act that cannot record its
@@ -308,16 +380,21 @@ that builds the persistence seam; none is claimed exercised by this document.
 
 **Open, deliberately:**
 
-1. **Recency as a policy parameter.** Whether any belief policy discounts old
-   observations, and by what curve — now a typed question on `observed_at`
-   (§4), owned by the belief-policy layer.
+1. **Recency as a successor projection rule.** Whether anything ever
+   discounts old observations, and by what curve — now a typed question on
+   `observed_at`, owned by the projection-rule seam whose identity every
+   derivation receipt pins (§4, §5). Explicitly **not** a belief-policy
+   parameter: the belief policy runs after admission and never sees an
+   observation.
 2. **The partly-pinned rule's empirical corroboration** — ramp §8 item 3,
    evidence not design, untouched here.
 3. **Whether the derivation receipt joins the belief-input closure** — owed
    to the persistence cut (§5).
-4. **The locator grammar.** `location` is an opaque non-empty string to every
-   derivation; whether locators deserve a grammar or a registry is deferred
-   until an act needs to dereference one it did not author.
+4. **Further locator types.** §2 fixes two — `store(store identity, relative
+   path)` and `url(canonical absolute URL)` — because those are the two the
+   creation acts dereference today. A third scheme (an object store's native
+   addressing, say) arrives by amendment, with its canonicalization rule, or
+   not at all.
 5. **Observer reliability weighting.** Observations are equally weighted at
    derivation; `meta/` measures reliability, and whether any consumer reads
    that measurement is that consumer's design, not this record's.
@@ -339,8 +416,11 @@ disagreeing with itself.
 | conformance cut 2 | **Status append only:** one sentence recording that the design its §10 item 1 named as the most consequential open question landed 2026-08-10 |
 | guide `open-questions.md` | the *where verified holdings are recorded* entry is replaced by its residue: recency as a policy parameter and the partly-pinned corroboration; the *third conformance cut* entry's run-capture arm gains *unblocked by the holdings design, 2026-08-10* |
 | guide `glossary.md` | **Holdings observation** added; **Held** and **Declared** cite it |
-| guide `foundations.md` | the `held` section gains the record: heldness is derived from active holdings observations under a declared coverage; this design joins `sources` |
+| guide `foundations.md` | the `held` section gains the record: heldness is derived from active holdings observations under a declared coverage; the kind inventory gains `holdings-observation`; this design joins `sources` |
 | guide `contracts-and-adoption.md` | frozen-row count **139 → 143**, tables **eleven → twelve**; the open-edges pointer moves the holdings question to its residue |
+| epistemic kernel, kind inventory | a world record is a kernel kind, and the counts move with it: the kernel's kind roll — 8 as designed, **9 since `retraction`** (correction lifecycle, the precedent for a design appending one) — gains **`holdings-observation` as the tenth**, and the §4.4 accounting discipline extends to it; every site quoting the kind count is amended in the same change, on the same argument the ramp used for its row counts |
+| world addressing §4.2, the identity-basis table | gains the **`holdings-observation`** row: basis is the content identity of the §2 canonical facet under `science.holdings-observation.v1` — every field participating, `supersedes` hashing as refs — so the kind has a banked address basis rather than an implied one |
+| domain extension boundary design | the identity-domain inventory gains **`science.holdings-observation.v1`**; whether cut 2's three domains (`science.assessment.v1`, `science.assessment-facet.v1`, `science.belief-input.v1`) are already inventoried is checked in the same change, and any absence is corrected rather than compounded |
 | formal model §2.1 | gains the **holdings observation** player row: content identity over the §2 facet under `science.holdings-observation.v1`; minted by the three acts; revised by supersession only; read by the coverage projection |
 | formal model, tables | reproduces the **H** table, as it reproduces every other |
 | normative contract §4 | the exact current inventory extends to twelve tables and 143 rows; the count guard moves in the same change |
