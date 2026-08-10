@@ -100,6 +100,12 @@ class ContractMismatch(ContractError):
     whose output never travels apart from its input, owes neither."""
 
 
+class ContractDisagreement(ContractError):
+    """Two corpora in one closure pinning different identities for one
+    consulted namespace — refused, never merged, never preferred by recency
+    (D §8.1). The evaluator returns this as `Refused`, D7 unchanged."""
+
+
 class SuccessionViolation(ContractError):
     """A successor contract that redefines, drops, or misdeclares its lineage.
     Refused at contract **load** — never at claim decode, which sees wire bytes
