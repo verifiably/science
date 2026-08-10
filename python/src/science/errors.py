@@ -100,6 +100,12 @@ class ContractMismatch(ContractError):
     whose output never travels apart from its input, owes neither."""
 
 
+class ContractDisagreement(ContractError):
+    """Two corpora in one closure pinning different identities for one
+    consulted namespace — refused, never merged, never preferred by recency
+    (D §8.1). The evaluator returns this as `Refused`, D7 unchanged."""
+
+
 class SuccessionViolation(ContractError):
     """A successor contract that redefines, drops, or misdeclares its lineage.
     Refused at contract **load** — never at claim decode, which sees wire bytes
@@ -263,3 +269,40 @@ class TagCollision(ContractError):
     closed set, or a ``sign_inapt_tag`` that is also an assertable polarity.
     ``inapt`` and ``unsigned`` are different facts (§7.5), and a projection that
     cannot tell them apart has lost the distinction it exists to carry."""
+
+
+class RecordError(ScienceError):
+    """A kernel record value refused at construction — the belief seam's
+    analogue of ``ClaimError``. Subclasses stay distinct for the same reason."""
+
+
+class MalformedRecord(RecordError):
+    """A field that is not what the kernel's tables declare — a digest that is
+    not ``<algorithm>:<lowercase hex>``, an outcome or scope outside its closed
+    set, a role outside ``observes | reads | transforms``."""
+
+
+class SignatureRefused(RecordError):
+    """An edge outside kernel §4.1's closed relation signatures — the sharp
+    case being `assesses` from a source-assertion (G1). Refused in the typed
+    constructor: inertness is the default, belief-bearing is the declared
+    exception, and the exception is declared exactly once."""
+
+
+class MalformedSnapshot(RecordError):
+    """A lineage snapshot value refused at construction — one representation
+    per fact: a `single` basis holds exactly one route, a `conflict` at least
+    two distinct, sorted routes, so a conflict that never occurred cannot be
+    spelled (substrate §5, sub-problem 4 §5.2)."""
+
+
+class BasisTagMismatch(RecordError):
+    """A basis-scoped query invoked against the wrong tag.
+
+    Not a value refused at construction — every basis here is already
+    well-formed (`MalformedSnapshot` is what refuses those). This is a *call*
+    outside the domain the query is defined over: `divergence_state` compares
+    a dataset's producers against its `single` basis route, and a `conflict`
+    has no one route to compare against — the divergence question is decided
+    on the tag alone before this is ever reached, and asking it anyway of a
+    `conflict` is what this refuses."""

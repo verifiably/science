@@ -26,14 +26,17 @@ safe to run these concurrently and safe to interrupt — the hand-run matrices t
 replaces mutated files in place and restored them in a `finally`, one `SIGINT`
 away from leaving a sabotaged source on disk.
 
-**Four findings, not one.** An arm can be `sound`, `vacuous` — a check passed
-under its own sabotage — `uncollected`, where a check never ran at all, or
-`stale`, where the sabotage no longer matches the code it was written against.
-Staleness happened twice during this build, and a stale sabotage is
-indistinguishable from a passing arm unless it is looked for: the mutation
-silently does nothing, the checks pass, and the harness reports the arm healthy.
-Each is malformed contract content in the same way vacuity is, so each is
-reported the same way.
+**Five findings, not one.** An arm can be `sound`, `vacuous` — every named check
+passed under its own sabotage — `mixed` — some checks passed and some failed,
+so half the arm asserts nothing while the passing half hides it — `uncollected`,
+where a check never ran at all, or `stale`, where the sabotage no longer
+matches the code it was written against. Staleness happened twice during this
+build, and a stale sabotage is indistinguishable from a passing arm unless it
+is looked for: the mutation silently does nothing, the checks pass, and the
+harness reports the arm healthy. `mixed` is the defect three real cut-1 arms
+actually had, found only once the verdict was taken over checks one at a time
+rather than over a whole invocation. Each is malformed contract content in the
+same way vacuity is, so each is reported the same way.
 """
 
 from __future__ import annotations
@@ -57,6 +60,7 @@ from n2_arms import (
     Arm,
     Sabotage,
 )
+from n2_arms_cut2 import CUT2_ARMS
 
 PACKAGE = Path(__file__).resolve().parent.parent / "src" / "science"
 TESTS = Path(__file__).resolve().parent
@@ -98,7 +102,7 @@ class CheckRun:
 class Finding:
     arm: Arm
     verdict: str
-    """`sound`, `vacuous`, `uncollected`, or `stale`."""
+    """`sound`, `vacuous`, `mixed`, `uncollected`, or `stale`."""
 
     detail: str = ""
 
@@ -201,9 +205,15 @@ def audit(arm: Arm, workspace: Path) -> Finding:
     survived = [run for run in runs if run.returncode == PASSED]
     undecided = [run for run in runs if run.returncode not in (PASSED, FAILED)]
     if survived or undecided:
+        if survived and len(survived) == len(runs):
+            verdict = "vacuous"  # every check survived
+        elif survived:
+            verdict = "mixed"  # some failed, some survived — a passing check hides a failing one
+        else:
+            verdict = "uncollected"
         return Finding(
             arm,
-            "vacuous" if survived else "uncollected",
+            verdict,
             "\n".join(
                 [f"{run.check} passed with the sabotage applied" for run in survived]
                 + [
@@ -217,10 +227,12 @@ def audit(arm: Arm, workspace: Path) -> Finding:
 
 @pytest.fixture(scope="session")
 def findings(tmp_path_factory) -> tuple[Finding, ...]:
-    """Every declared arm, audited once. Concurrent — each arm owns its own copy."""
+    """Every declared arm — cut 1's and cut 2's — audited once. Concurrent —
+    each arm owns its own copy."""
     root = tmp_path_factory.mktemp("n2")
+    all_arms = (*ARMS, *CUT2_ARMS)
     with ThreadPoolExecutor(max_workers=WORKERS) as pool:
-        return tuple(pool.map(lambda pair: audit(pair[1], root / f"arm{pair[0]}"), enumerate(ARMS)))
+        return tuple(pool.map(lambda pair: audit(pair[1], root / f"arm{pair[0]}"), enumerate(all_arms)))
 
 
 def _report(reason: str, findings: tuple[Finding, ...], verdict: str) -> None:
@@ -238,6 +250,13 @@ class TestEveryArmAssertsSomething:
             "vacuous",
         )
 
+    def test_no_arm_mixes_a_passing_check_with_a_failing_one(self, findings):
+        _report(
+            "these arms name a check that passes while a sibling fails — half the arm asserts nothing:",
+            findings,
+            "mixed",
+        )
+
     def test_no_sabotage_stops_a_check_from_running(self, findings):
         _report(
             "these sabotages kept a named check from running at all, so the arm shows only that broken code is broken:",
@@ -253,7 +272,7 @@ class TestEveryArmAssertsSomething:
             row="N2",
             asserts="every declared check resolves and passes against the real package",
             sabotage=ARMS[0].sabotage,
-            checks=tuple(dict.fromkeys(check for arm in ARMS for check in arm.checks)),
+            checks=tuple(dict.fromkeys(check for arm in (*ARMS, *CUT2_ARMS) for check in arm.checks)),
         )
         finding = baseline(every)
         assert finding.verdict == "resolved", finding.detail
@@ -303,8 +322,13 @@ class TestOneFailingCheckCannotCoverForAnother:
 
     def test_the_passing_check_is_reported_although_the_other_one_failed(self, tmp_path):
         finding = audit(MIXED_BY_CONSTRUCTION, tmp_path / "mixed")
-        assert finding.verdict == "vacuous", finding.detail
+        assert finding.verdict == "mixed", finding.detail
         assert "test_a_member_term_is_accepted_with_the_check_performed" in finding.detail
+
+    def test_the_report_is_malformed_contract_content_not_a_failing_test(self, tmp_path):
+        finding = audit(MIXED_BY_CONSTRUCTION, tmp_path / "mixed")
+        with pytest.raises(MalformedArm, match="half the arm asserts nothing"):
+            TestEveryArmAssertsSomething().test_no_arm_mixes_a_passing_check_with_a_failing_one((finding,))
 
     def test_the_two_checks_really_do_disagree(self, tmp_path):
         # The demonstration is only about coverage if the first check genuinely
@@ -414,6 +438,55 @@ class TestTheArmTableCoversTheCut:
         for check in coarse:
             with pytest.raises(MalformedArm, match="must name the one test it means"):
                 _run_check(check, package=None)
+
+
+class TestTheCut2ArmTableCoversTheCut:
+    """Cut 2's row selection, asserted the same way cut 1's is above."""
+
+    SELECTED = frozenset(
+        {
+            "G1",
+            "G2b",
+            "G2c",
+            "G3",
+            "G6",
+            "G8",
+            "G9",
+            "S5",
+            "S6",
+            "P1",
+            "P2",
+            "P3",
+            "P4",
+            "P5",
+            "P6",
+            "P7",
+            "P8",
+            "P9",
+            "M6",
+            "M8",
+            "D3",
+            "D6",
+            "D7",
+        }
+    )
+    # N2 is the 24th selected row; its arm is the harness itself (cut 1's rule).
+    # M6 and M8 here are the completions — cut-1's arms for them stand in ARMS.
+
+    def test_every_selected_row_has_at_least_one_arm(self):
+        assert {arm.row for arm in CUT2_ARMS} == self.SELECTED
+
+    def test_no_arm_claims_a_row_the_cut_defers(self):
+        deferred = {"G2a", "G4", "G5", "G7", "S1", "S1a", "S7", "S8", "R5", "R10", "C6", "D4", "D5", "W3"}
+        assert not {arm.row for arm in CUT2_ARMS} & deferred
+
+    def test_every_arm_names_at_least_one_check(self):
+        assert all(arm.checks for arm in CUT2_ARMS)
+
+    def test_no_declared_arm_names_anything_coarser_than_a_test(self):
+        for arm in CUT2_ARMS:
+            for check in arm.checks:
+                assert check.split("::")[-1].startswith("test_"), f"{arm.label}: {check}"
 
 
 class TestTheHarnessCanSeeAStaleArm:

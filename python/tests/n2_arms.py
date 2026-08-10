@@ -24,6 +24,10 @@ silent skip.
 code would assert that the code does what the code does. What an arm asserts
 comes from the design; the checks are the reading of it that this suite commits
 to.
+
+Cut 2's own selected arms live in `n2_arms_cut2.py`, imported and audited
+alongside `ARMS` by `test_n2.py` — this module and its table are cut 1's, held
+exactly as cut 1 left them.
 """
 
 from __future__ import annotations

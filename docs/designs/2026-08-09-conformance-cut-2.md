@@ -11,7 +11,10 @@ freeze, and a third reading — the review before merge — followed it; §7 rec
 the fourteen findings and the two more, and what each moved — every arm a
 finding moved, it moved **out**, the direction cut 1 predicted. The admission
 ramp's three open questions are **boundary conditions on this cut, restated in
-§2.1, and none of them is decided here.**
+§2.1, and none of them is decided here.** The slice was built 2026-08-09; the
+selection required no amendment, and S6(f)'s tie-break clause — structurally
+unsabotageable under `science.belief.v1` in this suite — is recorded rather
+than hidden (`python/tests/n2_arms_cut2.py`, S6).
 
 ---
 
