@@ -18,17 +18,24 @@ changes because a node was recorded); world §5's producer snapshot (enumeration
 bounded by a coverage declaration naming corpora by stable identity, because
 enumeration against whatever is checked out is the R5 violation); the
 correction lifecycle (revision by superseding record, never by edit); the
-tamper-evident log design (its own table `L`; guarantees stated at the strength
-they have until `atoms` A7–A8 land); conformance cut 2
+ramp's §4 retrieval boundary (preflight refusals, retrieval bounds, and the
+`byte-locator-untested` / `retrieval-failed` vocabulary, reused as the acts'
+dereference contract, §3); the tamper-evident log design (its own table `L`;
+its `intent`/settlement discipline, reused by the two mutating acts, §3;
+guarantees stated at the strength they have until `atoms` A7–A8 land);
+conformance cut 2
 (`2026-08-09-conformance-cut-2.md`) §2.1 item 1 — the slice consumes byte
 observations as supplied arguments and settles nothing about their store, "an
 argument's type is not a storage design."
 **Constraints:** the frozen tables stay frozen under their identifiers; this
 design adds its own table (**H**, §6), taking the corpus from eleven frozen
 tables and 139 rows to **twelve and 143**. The cut-2 document is frozen: it is
-amended by Status append only. No timestamps enter any derivation; no new
-attester class is privileged (`meta/` measures reliability, nothing assumes
-it).
+amended by Status append only. No timestamp enters any derivation **under the
+current projection rule** — the one sanctioned successor (§4) would read
+`observed_at` and an explicit reference instant only as pinned,
+receipt-committed derivation inputs, and lands by amending this constraint,
+never by an ambient clock. No new attester class is privileged (`meta/`
+measures reliability, nothing assumes it).
 
 ## 1. The gap, and the box already drawn around it
 
@@ -75,11 +82,12 @@ Canonical facet:
 |---|---|
 | `kind` | `holdings-observation` |
 | `location` | a **typed, canonical** byte locator: `store(store identity, relative path)` for bytes in a managed store, or `url(canonical absolute URL)` for remote bytes. Each type carries its canonicalization rule (path normalization for `store`; scheme-and-host lowering, default-port and dot-segment removal for `url`), applied **at construction** — equality is field equality of the canonical form, and everything keyed "per location" (§4) keys on it. An opaque string cannot do this job: the same path spelling names different bytes in different stores, and one URL has many spellings, which would break dereferencing, the same-location refusal, and `H2` at once. The two types are the two every §3 act already dereferences; adding a locator type is an amendment (§7) |
-| `outcome` | `found` with an algorithm-qualified digest `sha256:<64 hex>`, or `absent`. The algorithm must be in the accepted set (`sha256`); a digest that is not algorithm-qualified is **refused at construction** — the survey instrument's rule, made a record invariant |
+| `outcome` | `found` with an **algorithm-qualified** digest `<algorithm>:<hex>`, or `absent`. Both are **established findings**: `found` means the act hashed the bytes it dereferenced; `absent` means the dereference completed and answered that the location holds nothing — a store root enumerated with the path missing, an authoritative negative from a URL's origin. An attempt that established neither mints no observation (§3). **Qualification is the invariant, not the algorithm**: a digest that is not algorithm-qualified is refused at construction — the survey instrument's rule, made a record invariant, because losing the algorithm is what broke the first freeze — but the record is **algorithm-generic**. Which algorithms may pin bytes is the profile's open residue (ramp §6.2), and the ramp is explicit that the instrument's own sha256-only bound "is its own rather than the profile's" — a capability limit of one tool. Freezing that limit here would make a future accepted declaration unobservable by construction: a basis it could carry, an observation it could never have |
 | `expected` | optional: the algorithm-qualified digest the act *expected* at this location — an acquisition retrieving against a declaration records what it was retrieving *for*. This is the explicit expectation link that lets a first-contact mismatch surface at derivation (§5): `found(D′)` with `expected = D` joins to every declaration naming `D`. Promotion never reads it — held is decided by `outcome` alone, so the field adds an association, never an assertion |
 | `observer` | the attester's identity — human or agent, equally weighted; reliability is `meta/`'s to measure, never this record's to assert |
 | `instrument` | the identity of the tool that hashed or dereferenced — the survey instrument's commit-pinning discipline, generalized |
-| `observed_at` | when the act ran. **Recorded as data, never read by a derivation** (§4) |
+| `event_token` | minted by the act, one per act — the `retraction` / `coreference-attestation` / `run` precedent, whose token is what "keeps two genuinely distinct … events distinct". Without it, two identical findings by one observer at one location in one clock tick collapse into one identity — a piece of corroborating evidence silently lost — and `observed_at` cannot carry the guarantee: a timestamp has resolution, a mint does not. For the two mutating acts (§3) this token is the **same one their intent carries** — reused, never a second attempt id, the tamper log's own rule — which is what correlates an observation to the intent it settles |
+| `observed_at` | when the act ran, in **one canonical encoding** — an RFC 3339 UTC instant, `Z`-suffixed, fixed precision — so one instant has one byte form under the facet hash. **Recorded as data, never read by a derivation** (§4). It carries no uniqueness: distinctness of acts is `event_token`'s job, never the clock's |
 | `supersedes` | zero or more identities of prior holdings observations, **every one for the same canonical location**. Constructing a record naming a predecessor at a different location is refused — the per-location discipline is by construction, not convention. The plural form is what lets a later act resolve a fork: concurrent observers cannot name each other, so one location can grow parallel heads, and the resolving re-check supersedes every head it replaces (§4). **Canonical representation, because `science.identity.v1` refuses sets:** the facet encodes `supersedes` as a **deduplicated sequence sorted by canonical reference bytes** before hashing — one predecessor set, one identity; anything else would mint one fork-resolution under several addresses, or none |
 
 **The `store identity` a `store` locator names is not left undesigned — it
@@ -99,8 +107,9 @@ surfaces as the conflict it is, instead of hiding in an ambiguous locator.
 Identity is the content identity of this facet under a new domain,
 **`science.holdings-observation.v1`**, through `science.identity.v1`'s
 `v1.digest`. Every field participates: two acts that found the same bytes at
-the same location at different times are two records, which is correct — each
-is a distinct piece of evidence, and §4 says what "current" means.
+the same location are two records **because each bears its own minted
+`event_token`** — distinct evidence stays distinct however the clock reads,
+including two acts in one clock tick — and §4 says what "current" means.
 
 **Observations are declaration-independent.** A record says *bytes at L hash
 to D* (or *L holds nothing*); it names no dataset. The join to datasets
@@ -129,12 +138,15 @@ Exactly three acts mint a holdings observation:
    every acquisition is minting the `found` observation for each resource it
    retrieved. An acquisition that has not minted its observations has not
    ended — the "unfinished acquisition" of §6.6, now visible as the absence of
-   its records.
+   its records. A resource the acquisition *failed* to retrieve is an
+   inconclusive attempt (below), not an `absent` — it mints nothing.
 2. **An audit, or any explicit re-check.** The admission-ramp survey is the
    existing example: an instrument dereferenced locations, hashed bytes, and
    reported. Under this design such a run mints observations — `found` with
-   whatever digest the bytes have, or `absent` — each superseding the prior
-   record for its location, if one exists.
+   whatever digest the bytes have, or `absent` where the look completed and
+   established nothing is there — each superseding the prior record for its
+   location, if one exists; a look that established neither reports and mints
+   nothing (below).
 3. **A boundary-mediated deletion.** Destroying bytes through the execution
    boundary mints `absent` superseding the `found` it invalidates. This is
    `R5`'s negative (a) — destroy the last held copy, heldness ends — enacted
@@ -145,6 +157,60 @@ import of somebody's claim that bytes exist. `G9`'s "no API accepts an
 authored `held`" extends naturally: no API accepts an authored *observation* —
 construction is reserved to acts that dereferenced and hashed, and **H1** (§6)
 is what makes that reservation independently checkable.
+
+**An inconclusive attempt is not a finding.** A retrieval refusal, a timeout,
+a transport failure, unreadable bytes — each proves neither `found` nor
+`absent`, and computation §7.1's line — *a failure to look is not a finding of
+absence* — binds the acts themselves, not just the drafts the ramp held to it.
+Such an attempt mints **no observation**. It lands in the act's own report
+under the ramp's existing vocabulary, reused rather than reinvented: a locator
+refused before any request was made is **`byte-locator-untested`** with the
+refusal reason, a request that was made and did not yield the bytes is
+**`retrieval-failed`**. The record layer is untouched: the prior observation,
+if any, stays active, because no act established otherwise. `absent` is
+reserved for a completed dereference that answered — and **H4** (§6) is what
+makes the reservation sabotage-able in both directions.
+
+**Dereferencing is the ramp's boundary, reused — not a second one.** Every act
+above consumes an untrusted locator, and §2's canonical form is an equality
+contract, not a safety contract. A `store` locator dereferences by resolving
+its store identity to a supplied root **whose genesis record must carry that
+identity** — verified before any read, a mismatch refusing exactly as the
+`world_id` contract refuses a re-mint — and then resolving the relative path
+under the ramp's local preflight: an absolute path, an upward traversal, or a
+symlink escape from the root is refused, **resolved and compared against the
+root before any read**. A `url` locator inherits the ramp's network boundary
+whole, not paraphrased: the `https`-only scheme set, the non-public-address
+refusal, per-hop redirect revalidation, the timeout and the streaming byte
+ceiling, and the pin-the-validated-resolution rule with hostname and TLS
+validation preserved — *"if it cannot do both, it issues no request."* The
+classification above comes with the boundary: every one of these refusals and
+failures is an inconclusive attempt, never an `absent`.
+
+**The two mutating acts run under the tamper log's intent discipline, because
+they span roots.** An acquisition ending and a boundary-mediated deletion each
+mutate a store while their observation lands in the observer's corpus — two
+roots — and the inherited log is per-root, its registration never publishing
+across roots. Record-first could attest a mutation that never happened;
+mutate-first could crash and leave a stale `found` active with nothing marking
+it. So the ordering is pinned, reusing the log's existing `intent` consumer
+shape rather than inventing a protocol: **(1)** the boundary durably appends a
+**holdings intent** in the observer's corpus root — the root the settlement
+will land in, so intent and settlement share one chain and the log's own
+same-root rule is satisfied — naming the canonical location, the act kind, and
+the act's minted `event_token`; **(2)** the store mutation runs; **(3)** the
+observation is minted as that intent's **settlement**, correlated by the
+token. An intent with no settlement proves exactly what the log says an
+unmatched intent proves — *a boundary-mediated attempt with no recorded
+outcome*, crash and cancellation indistinguishable — and its consequence is
+§4's: the named location is **unsettled**, refusing the projection until a
+re-check act observes what is actually there and supersedes through it. A
+phantom attestation cannot arise (the observation is minted only after the
+mutation completed), and a stale `found` cannot silently survive a crash (the
+unmatched intent marks it). A pure re-check mutates nothing and needs no
+intent: a crashed audit is a look that never became a finding, which **H4**
+makes the act's failure, not the record's. Adding the holdings intent to the
+log's named consumer list is an amendment, tabled in §8.
 
 **The forgery bound, stated at the strength it has.** A hand-forged
 observation — a record written to look like an act's output — stands until an
@@ -188,6 +254,14 @@ The structure is stated, not assumed:
 - **A dangling predecessor is not an error.** A head whose `supersedes` names
   a record outside the enumerated coverage is still a head; the unseen tail
   is the §5 coverage bound doing its job.
+- **An unsettled location refuses, like a contested one.** A holdings intent
+  (§3) enumerable in the coverage with no settling observation marks its
+  canonical location **unsettled**: some boundary-mediated mutation has no
+  recorded outcome, so the location's active records may describe a world
+  that no longer exists. The projection refuses the location until a re-check
+  act settles what is there. Unsettled is contested's sibling — both name
+  evidence in a state only an act can repair, and both make it the caller's
+  problem instead of a silent guess.
 
 The derived facts, over a set of active observations:
 
@@ -255,7 +329,11 @@ middle" — is a **projection over a declared coverage**:
    it — the coverage declaration is what makes that a bounded, stated claim
    instead of a silent error; and a declared corpus that cannot be enumerated
    **refuses the whole projection** — a partial enumeration reported as a
-   result would be the silent shrink the declaration exists to prevent.
+   result would be the silent shrink the declaration exists to prevent. The
+   enumeration also carries the coverage's **unmatched holdings intents**
+   (§3): a location one names is unsettled and refuses (§4). An intent outside
+   the coverage is invisible exactly as its would-be settlement is — the same
+   bounded claim, stated once.
 3. A **dataset-scoped adapter** turns the active set into cut 2's argument.
    The seam is already dataset-keyed — the evaluator's availability context
    maps each dataset address to its own `ByteObservation` tuple, and
@@ -278,15 +356,25 @@ middle" — is a **projection over a declared coverage**:
      reads `no-matching-observation-in-coverage` — the ramp's distinction
      between *different bytes* and *no bytes*, preserved by construction.
    A head none of the three joins reaches belongs to no dataset in question
-   and enters nothing — declaration-independence at work, not a gap.
+   and enters nothing — declaration-independence at work, not a gap. And
+   every join compares **algorithm-qualified digests as wholes** — same
+   algorithm, same hex, or no join. A `found` under one algorithm neither
+   matches nor mismatches a declaration pinned under another: nothing
+   compared them, and reporting `mismatch` would be the survey's own coverage
+   error — the bytes said to contradict the record when in fact nothing
+   checked them — recurring at the seam. An incommensurable head enters
+   nothing, and the resource reads `no-matching-observation-in-coverage`:
+   true, in the checkable sense — no observation exists that can answer for
+   it.
 4. The projection also yields a **derivation receipt**, on the contract world
    §5 and `W8a` already set for enumerations that feed belief — adopted
    whole, not paraphrased. The receipt names the **exact corpus-state
    identities** enumerated (a receipt naming corpora rather than states is
    **`malformed`**), and the **exact rule binding**: the fixture-bound
-   identity of the projection rule (joins, coalescing, contested- and
-   cycle-refusal and all — the rule a recency-bearing successor would
-   replace, §4) *together with* the content identity of the implementation
+   identity of the **active-set reducer** — steps 1 and 2 whole: enumeration,
+   the supersession walk, coalescing, and the contested-, cycle- and
+   unsettled-refusals; the rule a recency-bearing successor would replace
+   (§4) — *together with* the content identity of the implementation
    that ran, resolved from the held store — a bare identity or version
    string is `malformed`, and an implementation that fails its fixtures **is
    not that rule**. Validating a receipt is re-running: resolve the binding,
@@ -298,6 +386,17 @@ middle" — is a **projection over a declared coverage**:
    receipt could never be checked by anyone). A receipt naming coverage and
    output alone would validate nothing — a wrong or incomplete reduction
    could sign a perfectly consistent one — which is `H3`'s second arm (§6).
+
+**The receipt's claim ends at the active set.** The dataset-scoped adapter
+(step 3) is deliberately outside the binding: its other input is the dataset
+declarations, and a receipt that claimed the dataset-keyed tuples without
+naming those declarations as inputs would let a wrong adapter reproduce the
+active set and still validate — a receipt certifying what it never checked.
+The adapter answers instead at the seam it feeds: its output *is* cut 2's
+argument, and a mis-join is `G9`'s arms' business at the admission seam,
+where the declarations are first-class. One receipt, one claim, checkable in
+full — widening it to the tuples is a decision for the cut that would also
+put declarations into the receipt's input set, not a default.
 
 **A derivation with no declared coverage is refused** (**H3**). This is world
 §5's producer-snapshot argument applied to its second population: enumerated
@@ -324,11 +423,13 @@ than appending to `G`. The ramp's pre-commitment governs: a row exists only
 for a property that is **independently sabotage-able** — breakable while every
 banked row still passes. Four candidates were tested; four survive.
 
-> **H1 — creation is reserved to acts.** A holdings observation exists only as
-> the recorded outcome of an act that dereferenced its location: an
-> acquisition ending, an audit, a boundary-mediated deletion. Nothing mints
-> one from a declaration, a directory listing, or any state the act did not
-> hash.
+> **H1 — creation is reserved to acts, and to established outcomes.** A
+> holdings observation exists only as the recorded outcome of an act that
+> dereferenced its location and **established** what it records — `found` by
+> hashing the bytes, `absent` by a completed dereference that answered
+> nothing is there: an acquisition ending, an audit, a boundary-mediated
+> deletion. Nothing mints one from a declaration, a directory listing, or an
+> attempt that established neither.
 
 *Sabotage:* back-fill `found` records from a directory listing, copying each
 declared digest into a record without hashing anything. Every banked arm,
@@ -383,17 +484,32 @@ unheld implementation is **`unresolvable`** — never reported as refutation —
 and a receipt naming corpora-not-states or a bare version string is
 **`malformed`**, refused rather than trusted.
 
-> **H4 — no silent act.** An act records its outcome whatever it is: `found`,
-> `found` with an unexpected digest, `absent`. An act that cannot record its
-> outcome **fails**; it does not report transiently and drop the record.
+> **H4 — no silent act, and no laundered non-answer.** An act records every
+> outcome it **established** — `found`, `found` with an unexpected digest,
+> `absent` — and an act that established an outcome but cannot record it
+> **fails**; it does not report transiently and drop the record. An
+> inconclusive attempt records **no observation**: it reports through the
+> act's own channel (`byte-locator-untested`, `retrieval-failed`) and never
+> mints `absent`. A mutating act runs inside its intent–settlement ordering
+> (§3) or fails; it never mutates outside it.
 
-*Sabotage:* an audit that finds a mismatch prints it and mints nothing. The
-stale `found` stays active, the dataset stays held, and every banked arm
-passes — `G9`'s mismatch arm, exercised over *supplied* observations, never
-sees an observation that was never recorded. H4 is computation §7.1's "a
-failure to look is not a finding of absence" — the framing the ramp holds its
-own drafts to — made an obligation on the acts themselves: a look that
-happened must become a finding.
+*Sabotage, first arm:* an audit that finds a mismatch prints it and mints
+nothing. The stale `found` stays active, the dataset stays held, and every
+banked arm passes — `G9`'s mismatch arm, exercised over *supplied*
+observations, never sees an observation that was never recorded. *Sabotage,
+second arm:* a timed-out retrieval recorded as `absent` — the non-answer
+laundered into established absence. The fresh `absent` supersedes the
+standing `found`, a held dataset demotes on evidence of nothing, and every
+banked row passes; computation §7.1's *a failure to look is not a finding of
+absence* is banked as prose, and H4 is its only enforcement at this seam.
+*Sabotage, third arm:* a deletion that mutates first and skips the intent. A
+crash before minting leaves the stale `found` active with nothing marking the
+location unsettled; the log's banked rows are per-root and never knew a
+holdings act existed; every banked row passes, and H4 alone demands the
+ordering that makes the window visible. H4 is computation §7.1 — the framing
+the ramp holds its own drafts to — made an obligation on the acts themselves:
+a look that established something must become a finding, and a look that
+established nothing never may.
 
 `H1`–`H4` take the frozen corpus from **139 rows across eleven tables to 143
 across twelve**. Their arms are acceptance criteria for the conformance cut
@@ -459,9 +575,10 @@ disagreeing with itself.
 | guide `glossary.md` | **Holdings observation** added; **Held** and **Declared** cite it |
 | guide `foundations.md` | the `held` section gains the record: heldness is derived from active holdings observations under a declared coverage; the kind inventory gains `holdings-observation`; this design joins `sources` |
 | guide `contracts-and-adoption.md` | frozen-row count **139 → 143**, tables **eleven → twelve**; the open-edges pointer moves the holdings question to its residue |
-| epistemic kernel, kind inventory | a world record is a kernel kind, and the counts move with it: the kernel is **eleven kinds today** — eight as designed, then `retraction` (correction lifecycle), `instrument-certification` (5b), `coreference-attestation` (world address ruling, 2026-08-08) — and **`holdings-observation` joins as the twelfth**, on the same appending precedent, the sequence preserved; the §4.4 accounting discipline extends to it, and every site quoting the kind count (the domain design's "eleven kernel kinds", the ledger's docket note among them) is amended in the same change, on the argument the ramp used for its row counts |
-| world addressing §4.2, the identity-basis table | gains the **`holdings-observation`** row: basis is the content identity of the §2 canonical facet under `science.holdings-observation.v1` — every field participating, `supersedes` hashing as refs — so the kind has a banked address basis rather than an implied one |
-| formal model §2.1 | gains the **holdings observation** player row: content identity over the §2 facet under `science.holdings-observation.v1`; minted by the three acts; revised by supersession only; read by the coverage projection |
+| epistemic kernel, kind inventory | a world record is a kernel kind, and the counts move with it: the kernel is **eleven kinds today** — eight as designed, then `retraction` (correction lifecycle), `instrument-certification` (5b), `coreference-attestation` (world address ruling, 2026-08-08) — and **`holdings-observation` joins as the twelfth**, on the same appending precedent, the sequence preserved; the §4.4 accounting discipline extends to it. The count sites are amended as an **exact inventory, not a sweep**: the domain extension design's two "eleven kernel kinds — ten until 2026-08-08" clauses (its §1 inherits line and its §5 ownership line); the adoption ledger's docket note ("the kernel is **eleven kinds**, not ten"); the admission ramp §2.2's "binds all eleven kinds"; the world address ruling §3's "now bind all eleven kinds"; the formal model §2.1 heading "(the eleven kernel kinds)" with its "All eleven" lead — `foundations.md`'s anchor link to that heading moves with it; and `foundations.md`'s "the formal inventory contains eleven kernel kinds". The world address ruling's *historical* statements — "an eleventh kernel kind", "taking the kernel to eleven kinds" — record what that ruling did, remain true, and are deliberately untouched |
+| tamper-evident log design, the `intent` consumer list | "the one consumer named today is the assessment-run intent" gains its second: the **holdings intent** (§3) — the two mutating acts register pre-mutation in the observer's corpus root and settle by observation, correlated by the act's `event_token`, reused per the log's own not-a-second-attempt-id rule |
+| world addressing §4.2, the identity-basis table | gains the **`holdings-observation`** row: basis is the content identity of the §2 canonical facet under `science.holdings-observation.v1` — every field participating, the minted `event_token` among them on the `retraction` shape's precedent, `supersedes` hashing as its sorted ref sequence — so the kind has a banked address basis rather than an implied one |
+| formal model §2.1 | gains the **holdings observation** player row: content identity over the §2 facet under `science.holdings-observation.v1`, event token included; minted by the three acts; revised by supersession only; read by the coverage projection |
 | formal model, tables | reproduces the **H** table, as it reproduces every other |
 | normative contract §4 | the exact current inventory extends to twelve tables and 143 rows; the count guard moves in the same change |
 | adoption ledger, artifact 7 | the oracle inventory extends to the **H** table |
@@ -472,6 +589,8 @@ disagreeing with itself.
 instantiation, not its revision; `R5` and `R10`, leaned on and unmoved; cut 2's
 selection, frozen and untouched beyond the Status append; the belief policy —
 confirmed a **non-owner** of recency (§4), so nothing arrives there, not even a
-question; the domain extension boundary design — it governs domain contracts,
-not core digest namespaces, and `science.holdings-observation.v1` is accounted
-for where identity is accounted: world §4.2 and the formal model.
+question; the domain extension boundary design's *governance* — it rules
+domain contracts, not core digest namespaces, so no namespace registration is
+owed there and `science.holdings-observation.v1` is accounted for where
+identity is accounted (world §4.2 and the formal model); its two kind-count
+quotes move with every other count site, per the kernel row above.
