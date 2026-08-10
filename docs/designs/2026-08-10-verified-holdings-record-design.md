@@ -97,12 +97,20 @@ at fresh initialization, preserved verbatim by replica, restore and cold
 bootstrap, and a configuration/genesis mismatch **refuses** rather than
 silently re-minting. A store's identity is that contract applied to a store:
 minted at store initialization, carried in the store's genesis record,
-surviving every move and replica *because it is data, not a path*. The
-failure mode the contract cannot prevent — two replicas of one genesis
-diverging into different bytes at one relative path — needs no new machinery:
-the diverging observations are **disagreeing heads at one canonical
-location**, which is precisely the contested state §4 blocks. A fork
-surfaces as the conflict it is, instead of hiding in an ambiguous locator.
+surviving every move and replica *because it is data, not a path*. And replicas are
+ruled **single-writer**, because the inherited chain model already decided
+this: the log permits one genesis-connected sequence with exactly one tip,
+declares a sibling branch malformed, and requires a replica or restore to
+carry the chain **unchanged** — so two writable replicas of one `store_id`
+would not be an ordinary holdings conflict, they would be the log's own
+malformed state. A replica is a **read-only carrier**; making a copy
+writable is a **fork act** that mints a new `store_id` and a new genesis,
+the log's corpus-fork precedent applied to stores — parent and fork are
+separate chains, never one chain with incomparable heads — and bytes
+written under the fork are observations at a **different canonical
+location**, since the store identity differs. What §4's contested
+machinery owns is concurrent observers of **one** store: forks of
+evidence, never forks of the store.
 
 Identity is the content identity of this facet under a new domain,
 **`science.holdings-observation.v1`**, through `science.identity.v1`'s
@@ -155,7 +163,17 @@ each per canonical location:
    symmetric half — minting an `absent` that is **established, never
    inferred from its own return code**; this is `R5`'s negative (a) —
    destroy the last held copy, heldness ends — enacted the only way the
-   act-bound ruling permits: because a record was recorded.
+   act-bound ruling permits: because a record was recorded. A **move** —
+   `atoms`' `MoveNoClobber`, one engine effect over a source and a
+   destination — is one effect carrying **two holdings acts' evidence**,
+   because a holdings act is per canonical location and one intent cannot
+   name two: the boundary appends **two intents before mutating**, one per
+   location, each with its own token; the single post-state capture
+   establishes **both** findings before the lease releases — source
+   verified absent, destination reopened and hashed; and two observations
+   publish, each fulfilling its own intent. A crash midway leaves both
+   intents unmatched and both locations unsettled (§4), which is the truth
+   of a move that may or may not have happened.
 
 **An acquisition is orchestration over these shapes, never a third one.**
 `R10` routes URL-valued inputs to acquisition and ramp §6.6 rules that an
@@ -273,12 +291,22 @@ limits are not inherited**: the timeout and the byte ceiling are each
 instrument's **explicit inputs, recorded in the attempt report** beside any
 `retrieval-failed` they cause — the ramp itself records that its own 512 MB
 ceiling is an instrument choice that would misreport its three largest
-resources, a bound this design must not promote into the profile. The
+resources, a bound this design must not promote into the profile. And the
+boundary's redirect checks were designed for unauthenticated probes, so the
+**access grant's scope is stated rather than inherited**: a grant is bound
+to the origin and request the caller named; it is **never forwarded across
+origins** — a redirect to another origin proceeds only under a separate
+grant for that origin, and without one the attempt is inconclusive, never a
+silently re-authenticated request; and a grant that would **select
+different bytes** rather than merely authorize access to the location's
+bytes is refused — the location names the bytes, the grant only opens the
+door. The
 classification above comes with the boundary: every one of these refusals and
 failures is an inconclusive attempt, never an `absent`.
 
 **Managed mutations run under the tamper log's intent discipline, because
-they span roots.** A store write and a boundary-mediated deletion each
+they span roots.** A store write, a move, and a boundary-mediated deletion
+each
 mutate a store while their observation lands in the observer's corpus — two
 roots — and the inherited log is per-root, its registration never publishing
 across roots. Record-first could attest a mutation that never happened;
@@ -918,7 +946,7 @@ disagreeing with itself.
 | guide `foundations.md` | the `held` section gains the record: heldness is derived from active holdings observations under a declared coverage; the kind inventory gains `holdings-observation`; this design joins `sources` |
 | guide `contracts-and-adoption.md` | frozen-row count **139 → 143**, tables **eleven → twelve**; the open-edges pointer moves the holdings question to its residue |
 | epistemic kernel, kind inventory | a world record is a kernel kind, and the counts move with it: the kernel is **eleven kinds today** — eight as designed, then `retraction` (correction lifecycle), `instrument-certification` (5b), `coreference-attestation` (world address ruling, 2026-08-08) — and **`holdings-observation` joins as the twelfth**, on the same appending precedent, the sequence preserved; the §4.4 accounting discipline extends to it. The count sites are amended as an **exact inventory, not a sweep**: the domain extension design's two "eleven kernel kinds — ten until 2026-08-08" clauses (its §1 inherits line and its §5 ownership line); the adoption ledger's docket note ("the kernel is **eleven kinds**, not ten"); the admission ramp §2.2's "binds all eleven kinds"; the world address ruling §3's "now bind all eleven kinds"; the formal model §2.1 heading "(the eleven kernel kinds)" with its "All eleven" lead — `foundations.md`'s anchor link to that heading moves with it; and `foundations.md`'s "the formal inventory contains eleven kernel kinds". The world address ruling's *historical* statements — "an eleventh kernel kind", "taking the kernel to eleven kinds" — record what that ruling did, remain true, and are deliberately untouched |
-| tamper-evident log design | six sites, one amendment. **§3's root inventory and genesis union**: "one chain per engine root: every corpus, and the world root itself" gains the managed payload-store root, and genesis gains a third arm — `store(store_id)`, minted at store initialization, preserved verbatim by replica and restore, a configuration/genesis mismatch refusing exactly as `world(world_id)` does (§2 here) — with the baseline committed over the store's registered payload surface at registration, the registered surface being the boundary-mediated store mutations §3's acts perform, and the anchoring policy (epoch cadence, explicit anchor act) applying to store chains unchanged; without this arm, §4's "eventual strengthening" (detectable removal in a store) would name a chain the log never defined. **§3's `intent` union**: "the one consumer named today is the assessment-run intent" gains the **holdings intent**, appended by every store-dereferencing act — mutating or re-check — before it acts (§3 here); payload: canonical location, act kind, boundary-minted `event_token` (reused per the log's not-a-second-attempt-id rule), actor. **§6's qualification reduction**: a qualifying fulfillment of a holdings intent is a committed registration publishing a holdings observation for the intent's location carrying its `event_token`, under the same reduction — a non-qualifying pointer never matches, an unresolved one proves nothing. **`fulfills` construction**: the boundary constructs the link from its own holdings intent; no caller-supplied path — the rule restated, not relaxed. **`L7`**: "intent claims are exactly as wide as stated" now quantifies over both intent kinds, its arms instantiated for the holdings shape — a wrong-location observation, a wrong token, or a publication creating no observation each **fails qualification**; a kill between intent append and mutation reads attempt-without-recorded-outcome, exactly as stated. **§9's ownership split**: the science-side obligations gain the boundary writing holdings intents and constructing their `fulfills`, on the `atoms` intent API as built — the **log's** `atoms` machinery changes nothing, though `atoms` is not wholly unchanged: §3's read command, mutating-command post-state capture, and payload-store root kind are separate, named adoption obligations, tabled in §7 item 7 and recorded on the ledger's artifact 4 row |
+| tamper-evident log design | six sites, one amendment. **§3's root inventory and genesis union**: "one chain per engine root: every corpus, and the world root itself" gains the managed payload-store root, and genesis gains a third arm — `store(store_id, forked_from?)`, minted at store initialization, preserved verbatim by replica and restore, a configuration/genesis mismatch refusing exactly as `world(world_id)` does, and `forked_from` present iff a writable copy was minted by the fork act (§2 here: replicas are read-only carriers; a writable fork is a new genesis, the corpus-fork precedent). The **registered surface is a stable projection** — the log's one-projection rule applied to a store: every path in the store's payload namespace, excluding engine bookkeeping (the reserved log path and the engine's metadata) — never "the paths acts happen to mutate", which no registration-time baseline could state and which would put a raw-created payload file outside the surface; under the stable projection a raw-created payload file is **inside** it, and replay refutes a disk surface the timeline never produced, exactly as for a raw-created record. **Store chains anchor through the registry log-head records and the explicit anchor act, never through epochs**: the registry record's subject union gains `store(store_id)` beside `corpus(corpus_id)` — no self-anchoring arises, since the registry lives in the world root and a store root is not it, so the L11 concern stays confined to the `world` subject — the explicit anchor act names stores as it names corpora, and §6's sole-anchor-filter rule binds a store anchor by `store_id` unchanged; epoch head members stay `corpus | world`, an epoch being built over corpora, which a store is not. Without this arm and a carrier that can hold it, §4's "eventual strengthening" (detectable removal in a store) would name a chain the log never defined — or one nothing could anchor. **§3's `intent` union**: "the one consumer named today is the assessment-run intent" gains the **holdings intent**, appended by every store-dereferencing act — mutating or re-check — before it acts (§3 here); payload: canonical location, act kind, boundary-minted `event_token` (reused per the log's not-a-second-attempt-id rule), actor. **§6's qualification reduction**: a qualifying fulfillment of a holdings intent is a committed registration publishing a holdings observation for the intent's location carrying its `event_token`, under the same reduction — a non-qualifying pointer never matches, an unresolved one proves nothing. **`fulfills` construction**: the boundary constructs the link from its own holdings intent; no caller-supplied path — the rule restated, not relaxed. **`L7`**: "intent claims are exactly as wide as stated" now quantifies over both intent kinds, its arms instantiated for the holdings shape — a wrong-location observation, a wrong token, or a publication creating no observation each **fails qualification**; a kill between intent append and mutation reads attempt-without-recorded-outcome, exactly as stated. **§9's ownership split**: the science-side obligations gain the boundary writing holdings intents and constructing their `fulfills`, on the `atoms` intent API as built — the **log's** `atoms` machinery changes nothing, though `atoms` is not wholly unchanged: §3's read command, mutating-command post-state capture, and payload-store root kind are separate, named adoption obligations, tabled in §7 item 7 and recorded on the ledger's artifact 4 row |
 | world addressing §4.2, the identity-basis table | gains the **`holdings-observation`** row: basis is the content identity of the §2 canonical facet under `science.holdings-observation.v1` — every field participating, the minted `event_token` among them on the `retraction` shape's precedent, `supersedes` hashing as its sorted ref sequence — so the kind has a banked address basis rather than an implied one |
 | formal model §2.1 | gains the **holdings observation** player row: content identity over the §2 facet under `science.holdings-observation.v1`, event token included; minted by §3's two act shapes — a pure dereference and a managed mutation recording its captured post-state — under whatever orchestration (acquisition, audit, deletion) runs them; revised by supersession only; read by the coverage projection |
 | formal model, tables | reproduces the **H** table, as it reproduces every other |
