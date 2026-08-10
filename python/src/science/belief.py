@@ -124,8 +124,12 @@ class Refused:
 @final
 @dataclass(frozen=True)
 class Records:
-    """The belief-input record pool, unfiltered — `evaluate` and the closure
-    it builds each do their own filtering to `proposition`."""
+    """The belief-input record pool, unfiltered — `evaluate` filters
+    `assessments`, `runs` and `verifications` to `proposition` internally (as
+    does the closure it builds), and reads at most **one** entry of `claims`:
+    the derivation's own claim, keyed by `proposition` itself, never the
+    whole pool — an unrelated claim present here must move neither the value
+    nor the digest."""
 
     claims: Mapping[str, Claim]
     assessments: tuple[AssessmentValue, ...]
@@ -203,11 +207,17 @@ def evaluate(
 
     # 2. The consulted-contract walk, over the closure's assessment nodes
     # (D7, unchanged: a cross-corpus disagreement refuses, never merges).
+    # `claims` is narrowed to the derivation's own claim — at most one entry,
+    # keyed by `proposition` — never the whole record pool: membership in a
+    # digested closure member must come from what this derivation reads, not
+    # from whatever else the caller happened to pass in `records.claims`. A
+    # proposition with no claim record consults only the base contract.
     matched = tuple(a for a in records.assessments if a.proposition == proposition)
     closure_nodes = tuple(a.identity() for a in matched)
+    read_claims = {proposition: records.claims[proposition]} if proposition in records.claims else {}
     try:
         consulted = consulted_contracts(
-            claims=records.claims,
+            claims=read_claims,
             profile=profile,
             node_corpus=context.node_corpus,
             pins=context.pins,
@@ -238,17 +248,16 @@ def evaluate(
     # were held" (unheld_only) — the latter needs its own verification-state
     # check, since `admit` never reaches that check for an input-not-held
     # refusal.
-    admissions = {
-        a.identity(): admit(a, records.runs[a.run], availability.observations, records.verifications) for a in matched
-    }
-    eligible = [a for a in matched if isinstance(admissions[a.identity()], Admitted)]
-    unheld_only = [
-        a
-        for a in matched
-        if isinstance(admissions[a.identity()], AdmissionRefused)
-        and admissions[a.identity()].reason.startswith("input-not-held")
-        and lifecycle_state(tuple(v for v in records.verifications if v.assessment == a.identity())) == ADMITTED
-    ]
+    eligible: list[AssessmentValue] = []
+    unheld_only: list[AssessmentValue] = []
+    for a in matched:
+        admission = admit(a, records.runs[a.run], availability.observations, records.verifications)
+        if isinstance(admission, Admitted):
+            eligible.append(a)
+        elif isinstance(admission, AdmissionRefused) and admission.reason.startswith("input-not-held"):
+            own_verifications = tuple(v for v in records.verifications if v.assessment == a.identity())
+            if lifecycle_state(own_verifications) == ADMITTED:
+                unheld_only.append(a)
 
     # 6. Directional eligibility, and the absence precedence (belief-policy
     # §4, P4, P9): a withheld directional input outranks plain absence of

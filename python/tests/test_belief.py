@@ -56,6 +56,19 @@ CLAIM = build_claim(
 )
 PROPOSITION = claim_identity(CLAIM)
 
+# A second, unrelated claim — same testing namespace (the fixture set carries
+# no second domain contract to reach a genuinely different one), but a
+# different operator and different args, and never named by any assessment
+# under test. Nothing below evaluates a proposition equal to this claim's
+# identity, so it exercises "present in `records.claims`, read by nobody".
+OTHER_CLAIM = build_claim(
+    profile=PROFILE,
+    operator="testing/subtype-of",
+    args=(Referent(sort="testing/entity", term="EX:gene-x"), Referent(sort="testing/entity", term="EX:gene-z")),
+    layer="structural",
+)
+OTHER_PROPOSITION = claim_identity(OTHER_CLAIM)
+
 
 def _dataset(letter: str) -> DatasetDeclaration:
     return DatasetDeclaration(resources=(ResourceDeclaration(name=f"r-{letter}", digest=f"sha256:{letter * 64}"),))
@@ -404,6 +417,16 @@ class TestD7AtTheEvaluator:
         result = evaluate(**scenario(context=context))
         assert isinstance(result, Refused)
         assert result.reason.startswith("consulted-contracts-disagree")
+
+    def test_an_unrelated_claim_moves_neither_value_nor_digest(self):
+        baseline = evaluate(**scenario())
+        kwargs = scenario()
+        claims = {**kwargs["records"].claims, OTHER_PROPOSITION: OTHER_CLAIM}
+        records = replace(kwargs["records"], claims=claims)
+        mutated = evaluate(**scenario(records=records))
+        assert isinstance(baseline, Belief) and isinstance(mutated, Belief)
+        assert mutated.value == baseline.value
+        assert mutated.belief_input_digest == baseline.belief_input_digest
 
 
 class TestS6eTheDigestHalf:
