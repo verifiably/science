@@ -53,7 +53,7 @@ Design complete. The **conformance cut 1 vertical slice** (ledger §3, item 10)
 landed 2026-08-07 — typed claim construction, canonical projection, identity,
 decode and cross-language parity. It crosses no persistence boundary and
 computes no belief, which is where the disposition record's §5.5 stop rule puts
-its edge. Nothing beyond that edge is built.
+its edge. Cut 1 itself built nothing beyond that edge.
 
 The guarantee tables are the acceptance criteria — each row must be a failing
 test before it is a passing one. There are **139 rows** across **eleven frozen
@@ -61,12 +61,14 @@ tables** (G, S, W, R, C, X, N, L, D, M, P). Cut 1 selects **11 of the 126 rows**
 across the ten tables that existed when it was drawn, frozen *before* any code
 existed so that a row which fails is a failure rather than a redefinition.
 **Conformance cut 2** was frozen 2026-08-09 on the same discipline, before its
-slice exists: it is drawn at the **belief seam** — the derived admission state,
+slice existed: it is drawn at the **belief seam** — the derived admission state,
 the assessment admission gate, the belief input closure digest, and
 `science.belief.v1` under an exact binding — selecting **13 rows in full and 11
 in part**, including the belief policy's P1–P9 and the admission ramp's G9,
 whose verified-holdings observations enter as supplied arguments because where
-they are recorded remains an open design. Its slice is not yet built.
+they are recorded remains an open design. Its slice landed 2026-08-09: derived
+admission state, the assessment admission gate, the belief input closure
+digest, and `science.belief.v1` under an exact binding now compute.
 
 ```
 python/     the implementation (substrate §11 puts the composition root here)

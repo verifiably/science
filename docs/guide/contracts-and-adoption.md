@@ -92,8 +92,9 @@ typed claim construction, projection, identity, decode, and cross-language
 parity, with no persistence boundary and no belief computation.
 
 [Conformance cut 2](../designs/2026-08-09-conformance-cut-2.md) was frozen
-2026-08-09 on the same discipline, before its slice exists, and gives the ten
-post-cut-1 rows their owner. It is drawn at the belief seam — the derived
+2026-08-09 on the same discipline, before its slice was built, and gives the
+ten post-cut-1 rows their owner. Its slice landed the same day, and the
+selection required no amendment. It is drawn at the belief seam — the derived
 admission state, the assessment admission gate, the belief input closure digest,
 and `science.belief.v1` under an exact binding — selecting 13 rows in full and
 11 at named assertion arms, and classifying the remaining 108 deferred rows by the
@@ -131,7 +132,9 @@ fitted result into independent validation.
 ## Current state
 
 The ledger records conformance cut 1 and the multi-corpus typing exercise as
-landed work. Conformance cut 2 is frozen and its slice is not yet built. The
+landed work. Conformance cut 2 is frozen and its slice landed 2026-08-09: the
+derived admission state, the assessment admission gate, the belief input
+closure digest, and `science.belief.v1` under an exact binding. The
 normative-contract design is banked, but a complete normative contract cut,
 instrument certification, persistence, run capture, world index, and mutation
 log remain outside both cuts. Consult the ledger for the current state rather

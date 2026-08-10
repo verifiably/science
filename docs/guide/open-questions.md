@@ -178,8 +178,9 @@ implementation**: a guarantee row awaiting code is work, not a question.
   never. ([normative-contract questions](../designs/2026-08-03-normative-contract-design.md#11-open-questions))
 - **The third conformance cut.** Of the three candidates cut 1 left — run
   capture, world persistence, belief — cut 2 took belief, the one whose seam was
-  fully designed, and was frozen 2026-08-09 before its slice exists. What
-  remains open is which prerequisite falls first: run capture waits on where
+  fully designed, and was frozen 2026-08-09 before its slice was built; the
+  slice landed the same day. What remains open is which prerequisite falls
+  first for a third cut: run capture waits on where
   verified holdings are recorded, world persistence on `atoms` A7–A8 and the
   `nodes` contract deltas. Cut 2 deliberately does not rank them.
   ([cut-2 boundary decision](../designs/2026-08-09-conformance-cut-2.md#2-the-boundary-decision--three-candidates-one-designed-seam),
