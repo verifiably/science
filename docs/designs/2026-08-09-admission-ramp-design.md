@@ -143,8 +143,9 @@ wrong, and it mattered: a record can fail to be a world entity **before** the
 question of whether its bytes are in hand is reachable.
 
 The world address ruling's generalized basis rule
-(`2026-08-08-world-address-ruling.md` §3) binds all twelve kinds (eleven
-until 2026-08-10): every addressable entity carries the basis declared for
+(`2026-08-08-world-address-ruling.md` §3) binds all thirteen kinds (eleven
+until 2026-08-10, twelve until 2026-08-11): every addressable entity carries
+the basis declared for
 its kind — intrinsic, or an
 identifier from an accepted authority — and *"if that basis is missing, the
 record is a project-scoped **curation note** — not a weakened world entity."*

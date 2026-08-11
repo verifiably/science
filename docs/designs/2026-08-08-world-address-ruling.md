@@ -119,8 +119,8 @@ the per-kind table a rule rather than a list.
 > authority**. If that basis is missing, the record is a project-scoped
 > **curation note** — not a weakened world entity.
 
-Two clauses carry over unchanged from §4.2 and now bind all twelve kinds
-(eleven at this ruling; `holdings-observation` joined 2026-08-10): the refusal
+Two clauses carry over unchanged from §4.2 and now bind all thirteen kinds
+(eleven at this ruling; `holdings-observation` joined 2026-08-10, `act-report` 2026-08-11): the refusal
 and the note are **two operations**, never a silent coercion; and **no
 fallback basis is derived at any point**, because a fabricated identity is
 indistinguishable from a real one everywhere downstream.

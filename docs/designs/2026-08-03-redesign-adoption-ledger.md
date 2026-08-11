@@ -58,7 +58,8 @@ decomposition rulings that follow from it.
 > Basis-derived world addressing is **upheld** and **F9 closes**. Three
 > consequences reach this ledger: the kernel is **eleven kinds**, not ten
 > (twelve since 2026-08-10 — `holdings-observation`, the verified-holdings
-> record design §2) — `coreference-attestation` joins on the `retraction`
+> record design §2; thirteen since 2026-08-11 — `act-report`, the act-report
+> design §2) — `coreference-attestation` joins on the `retraction`
 > precedent; **structural
 > merge is retired**, so nothing in artifact 1's world-index build performs a
 > reference rewrite on coreference grounds; and **F10 is un-coupled from F9** and
