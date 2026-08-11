@@ -2,7 +2,7 @@
 title: Foundations
 status: living
 created: 2026-08-08
-updated: 2026-08-10
+updated: 2026-08-11
 sources:
   - ../designs/2026-08-02-epistemic-kernel-design.md
   - ../designs/2026-08-02-substrate-consolidation-design.md
@@ -11,6 +11,7 @@ sources:
   - ../designs/2026-08-04-formal-model-and-claim-calculus-design.md
   - ../designs/2026-08-09-admission-ramp-design.md
   - ../designs/2026-08-10-verified-holdings-record-design.md
+  - ../designs/2026-08-11-act-report-design.md
 ---
 
 # Foundations
@@ -76,9 +77,9 @@ role-typed:
 This makes inertness the default. Adding a record kind or domain facet does not
 accidentally create a new route to belief.
 
-### The twelve world-record kinds
+### The thirteen world-record kinds
 
-The formal inventory contains twelve kernel kinds:
+The formal inventory contains thirteen kernel kinds:
 
 | Group | Kinds | Purpose |
 |---|---|---|
@@ -87,6 +88,7 @@ The formal inventory contains twelve kernel kinds:
 | Materials | `dataset`, `source`, `holdings-observation` | Hold data or a literature corpus, and identify works within a corpus; and record, act-by-act, what was found at each held location. |
 | Change and conformance | `retraction`, `instrument-certification` | Subtract standing without deletion and demonstrate that an executable instrument conforms to a contract. |
 | Identity | `coreference-attestation` | Record, with attribution, that two differently-identified records are believed to name one thing — a graded claim, not a merge. |
+| Operations | `act-report` | Record, inertly, one boundary operation's member acts and their outcomes — the terminal record of an opened operation, or the refusal record of a run request rejected before one can open. |
 
 Computed beliefs, world indexes, hypotheses, questions, tasks, and other views
 are not additional kernel kinds. A view has no independent authority: it is a
@@ -157,5 +159,5 @@ pre-registration.
 - [Epistemic kernel: invariant, structure, and G1–G9](../designs/2026-08-02-epistemic-kernel-design.md#2-the-invariant)
 - [Substrate consolidation: S1–S8 and ownership](../designs/2026-08-02-substrate-consolidation-design.md#2-the-boundary-ruling--split-by-nature)
 - [Domain extension: D1–D10 and profile compilation](../designs/2026-08-04-domain-extension-boundary-design.md#3-the-ownership-split)
-- [Formal model: the twelve kinds and M1–M13](../designs/2026-08-04-formal-model-and-claim-calculus-design.md#21-rec--world-records-the-twelve-kernel-kinds)
+- [Formal model: the thirteen kinds and M1–M13](../designs/2026-08-04-formal-model-and-claim-calculus-design.md#21-rec--world-records-the-thirteen-kernel-kinds)
 - [Adoption ledger: clean-start ruling](../designs/2026-08-03-redesign-adoption-ledger.md#0-the-clean-start-ruling-2026-08-04)

@@ -2,7 +2,7 @@
 title: Contracts and adoption
 status: living
 created: 2026-08-08
-updated: 2026-08-10
+updated: 2026-08-11
 sources:
   - ../designs/2026-08-03-normative-contract-design.md
   - ../designs/2026-08-03-redesign-adoption-ledger.md
@@ -11,6 +11,7 @@ sources:
   - ../designs/2026-08-07-multi-corpus-typing-exercise.md
   - ../designs/2026-08-09-admission-ramp-design.md
   - ../designs/2026-08-09-conformance-cut-2.md
+  - ../designs/2026-08-11-act-report-design.md
 ---
 
 # Contracts and adoption
@@ -84,13 +85,14 @@ records are reproduced through the new typed boundaries.
 
 Conformance cut 1 was frozen before implementation. It selected eleven of 126
 then-banked guarantee rows—six wholly and five only at named assertion arms—and
-classified the other 115 by the subsystem that would unblock them. The corpus now
-holds 143 rows across twelve frozen tables: the belief policy's P1–P9 banked the
-day the cut was drawn, the admission ramp appended G9 on 2026-08-09 while
-narrowing W3's dataset arm, and the verified-holdings record design banked
-H1–H4 on 2026-08-10. The cut's stop rule was the last fully designed seam:
-typed claim construction, projection, identity, decode, and cross-language
-parity, with no persistence boundary and no belief computation.
+classified the other 115 by the subsystem that would unblock them. The corpus
+now holds 151 rows across thirteen frozen tables: the belief policy's P1–P9
+banked the day the cut was drawn, the admission ramp appended G9 on 2026-08-09
+while narrowing W3's dataset arm, the verified-holdings record design banked
+H1–H4 on 2026-08-10, and the act-report design banked T1–T8 on 2026-08-11. The
+cut's stop rule was the last fully designed seam: typed claim construction,
+projection, identity, decode, and cross-language parity, with no persistence
+boundary and no belief computation.
 
 [Conformance cut 2](../designs/2026-08-09-conformance-cut-2.md) was frozen
 2026-08-09 on the same discipline, before its slice was built, and gives the

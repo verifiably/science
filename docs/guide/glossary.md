@@ -2,7 +2,7 @@
 title: Glossary
 status: living
 created: 2026-08-08
-updated: 2026-08-10
+updated: 2026-08-11
 sources:
   - ../designs/2026-08-02-epistemic-kernel-design.md
   - ../designs/2026-08-02-world-addressing-design.md
@@ -11,6 +11,7 @@ sources:
   - ../designs/2026-08-04-formal-model-and-claim-calculus-design.md
   - ../designs/2026-08-05-belief-policy-design.md
   - ../designs/2026-08-09-admission-ramp-design.md
+  - ../designs/2026-08-11-act-report-design.md
 ---
 
 # Glossary
@@ -18,6 +19,13 @@ sources:
 Terms are defined in their Science-specific sense. Follow the topic link for
 context and the linked design references for normative detail.
 
+- **Act report** — The boundary-minted terminal record of one opened
+  operation — acquisition, audit, import, re-check, or a run attempt that
+  minted no run — or the refusal record of a run request rejected before
+  an operation can open. Inert by type; its entries record each member
+  act's subject, explicit instrument inputs, and outcome in that act
+  kind's own vocabulary, citable as (act-report ref, entry index).
+  ([act-report design](../designs/2026-08-11-act-report-design.md))
 - **Address** — A canonical lookup key, `kind:<basis-digest>`, distinct from
   label, location, and historical continuity. ([identity](identity-world-and-change.md#identity-is-not-one-field))
 - **Analysis spec** — An immutable preregistered plan naming a proposition,
@@ -27,6 +35,12 @@ context and the linked design references for normative detail.
   possibly narrower than the proposition it targets. ([computation](computation-and-reproducibility.md#the-analysis-spec-freezes-the-scientific-plan))
 - **Assessment** — A run-derived result that evaluates one proposition and is
   the only record kind allowed to enter empirical belief. ([claims](claims-and-belief.md#assessments-are-the-only-empirical-route))
+- **Audit wrapper** — The boundary operation that runs the read-only
+  audit evaluator and publishes its findings as entries in an inert act
+  report, under the wrapper's own operation intent. The evaluator's
+  contract is unchanged: it inspects any configuration, returns
+  validation or findings, and mints nothing.
+  ([act-report design](../designs/2026-08-11-act-report-design.md))
 - **Belief** — A policy-bound computed view over a complete set of eligible,
   directional, independence-filtered assessments; v1 returns a signed integer.
   ([claims](claims-and-belief.md#a-belief-is-a-reproducible-view))
@@ -45,6 +59,12 @@ context and the linked design references for normative detail.
 - **Clean-environment verification** — A passed comparison of equal recipes
   with qualifying fresh-environment and confinement evidence; the only scope
   that can admit an assessment. ([computation](computation-and-reproducibility.md#replay-verification-and-belief-are-different-decisions))
+- **Completion reading** — The three-valued, derived, never stored state
+  of a boundary operation, read per root from its operation intent under
+  the log's reduction: unfinished (unmatched intent), indeterminate
+  (qualification unresolved — never collapsed into unfinished), and
+  closed (fulfilled).
+  ([act-report design](../designs/2026-08-11-act-report-design.md))
 - **Conformance cut** — A prospectively selected subset of guarantee assertion
   arms that one implementation slice can exercise without crossing an
   undesigned boundary. ([adoption](contracts-and-adoption.md#adoption-follows-legal-partial-states))
@@ -113,6 +133,12 @@ context and the linked design references for normative detail.
 - **NoBelief** — A successful answer saying belief cannot be produced because
   inputs are unavailable, no assessment is eligible, or only non-directional
   outcomes remain. ([claims](claims-and-belief.md#a-belief-is-a-reproducible-view))
+- **Operation intent** — The tamper log's third intent consumer: appended
+  once per boundary operation, after the observer-corpus root freezes and
+  before any member act, carrying the operation kind, the minted event
+  token, and the actor. It blocks nothing — completion visibility only —
+  and its qualifying fulfillment is the operation's terminal record.
+  ([act-report design](../designs/2026-08-11-act-report-design.md))
 - **Operator** — A contract-declared claim predicate whose arity, argument
   sorts, qualifiers, polarity aptitude, and layers determine valid claims.
   ([claims](claims-and-belief.md#a-claim-is-typed-by-its-operator))

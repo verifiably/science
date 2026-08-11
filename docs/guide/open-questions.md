@@ -2,7 +2,7 @@
 title: Open questions
 status: living
 created: 2026-08-08
-updated: 2026-08-10
+updated: 2026-08-11
 sources:
   - ../designs/2026-08-02-epistemic-kernel-design.md
   - ../designs/2026-08-02-substrate-consolidation-design.md
@@ -18,6 +18,7 @@ sources:
   - ../designs/2026-08-05-review-disposition-and-conformance-cut-1.md
   - ../designs/2026-08-09-admission-ramp-design.md
   - ../designs/2026-08-09-conformance-cut-2.md
+  - ../designs/2026-08-11-act-report-design.md
 ---
 
 # Open questions
@@ -175,10 +176,25 @@ implementation**: a guarantee row awaiting code is work, not a question.
 - **The third conformance cut.** Of the three candidates cut 1 left — run
   capture, world persistence, belief — cut 2 took belief, the one whose seam was
   fully designed, and was frozen 2026-08-09 before its slice was built; the
-  slice landed the same day. What remains open is which prerequisite falls
-  first for a third cut: run capture's holdings prerequisite was designed
-  2026-08-10 (unblocked by the holdings design), world persistence waits on
-  `atoms` A7–A8 and the `nodes` contract deltas. Cut 2 deliberately does not
-  rank them.
-  ([cut-2 boundary decision](../designs/2026-08-09-conformance-cut-2.md#2-the-boundary-decision--three-candidates-one-designed-seam),
+  slice landed the same day. What remains open is which prerequisite falls first
+  for a third cut: run capture's seam is now fully designed — the holdings
+  prerequisite 2026-08-10, and completion, act reports and the look's non-report
+  2026-08-11 (the act-report design) — while world persistence waits on `atoms`
+  A7–A8 and the `nodes` contract deltas. Cut 2 deliberately does not rank them.
+  ([act-report design](../designs/2026-08-11-act-report-design.md),
+  [cut-2 boundary decision](../designs/2026-08-09-conformance-cut-2.md#2-the-boundary-decision--three-candidates-one-designed-seam),
   [cut-2 deferrals](../designs/2026-08-09-conformance-cut-2.md#5-step-3--fully-deferred-rows-grouped-by-unblocking-subsystem))
+- **The act-report's residue.** The act-report design (2026-08-11) closed
+  the run boundary's report seam: the boundary-minted terminal record of
+  an opened operation — or the pre-intent refusal record of a rejected
+  run request — the operation intent's three-valued completion reading
+  (unfinished, indeterminate, closed), and the durable home of a look's
+  non-report. Five things stay open, deliberately: cross-root publication
+  of a dataset's provenance reference and its acquiring report (refused
+  today); a compaction protocol that must preserve intent-qualification
+  resolvability and fulfillment evidence (the rule today is retain); new
+  operation kinds (the enum is closed at five); the agentic surface —
+  audit scheduling and liveness, kernel sub-problem 6; and the engine,
+  with everything durable still waiting on `atoms` A7–A8.
+  ([act-report design](../designs/2026-08-11-act-report-design.md),
+  [what stays open](../designs/2026-08-11-act-report-design.md#6-what-this-unblocks-and-what-stays-open))
