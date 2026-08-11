@@ -68,7 +68,8 @@ discipline of the holdings design §7):
 
 - **`operation`** — the kind, from the enum above.
 - **`event_token`** — the operation's own, minted at open and carried in its
-  intent (§3), never any member act's.
+  intent (§3), never any member act's. For a pre-intent refusal (§3.2) it is
+  minted at the refusal itself and carried in no intent.
 - **`actor`**, **`observer`**, **`instrument`** — the holdings observation's
   attribution discipline, reused.
 - **`opened_at`**, **`closed_at`** — `observed_at`'s exact timestamp
@@ -77,12 +78,18 @@ discipline of the holdings design §7):
   entry per member act, in act order.
 
 Each entry carries: the **act kind** — `pure-look` | `managed-mutation` |
-`declaration-pin` | `subject-evaluation` | `record-import` — the act's own
-`event_token` where the record layer minted one, the act's **subject** (a
-canonical location, a record ref, or a spec identity), the **explicit
-instrument inputs** where the boundary requires them (the timeout and the
-streaming byte ceiling the admission ramp refuses to let become ambient,
-recorded beside any failure they cause), and the act's **outcome**.
+`declaration-pin` | `subject-evaluation` | `record-import` | `run-attempt` —
+the act's own `event_token` where the record layer minted one, the act's
+**subject** — a canonical location (a pure look or managed mutation), a
+record ref (a declaration pin, subject evaluation, or record import), a
+frozen **spec identity** (an assessment run attempt), a dataset-production
+**recipe identity** (a dataset-production run attempt), or, for a
+missing-spec refusal, the spec ref the request named, **as supplied and
+unresolved**, recorded as absent where the request named none — the
+**explicit instrument inputs** where the boundary requires them (the timeout
+and the streaming byte ceiling the admission ramp refuses to let become
+ambient, recorded beside any failure they cause), and the act's
+**outcome**.
 
 ### 2.2 Outcomes, per act kind, in native vocabularies
 
@@ -113,8 +120,9 @@ is borrowed across kinds.
   closure member named.
 
 **A finding is an entry outcome, not a separate structure.** Its citation is
-the pair **(act-report ref, entry index)** into the canonical sequence —
-one entry per citation, out-of-range refused at the citing site (T6).
+the pair **(act-report ref, entry index)** into the canonical sequence — the
+index **zero-based and unsigned**, index 0 naming the first entry; one entry
+per citation, out-of-range refused at the citing site (T6).
 
 ### 2.3 Identity, lifecycle, inertness
 
@@ -135,10 +143,13 @@ coverage projection; everything in belief is inert under it. Referenced
 products retain their own semantics — the reference conveys neither
 protection nor force (T4).
 
-An explicit import may carry another observer's act-reports. They enter as
-that observer's evidence, unvalidated — a report derives nothing, so there
-is nothing to recompute — and, being inert by type, they weigh nothing
-anywhere. Attribution is preserved; no attester class is privileged.
+An explicit import may carry another observer's act-reports. They enter
+**structurally validated but not operation-authenticated**: kind and facet
+are checked as any import checks them, while nothing can establish that a
+boundary operation produced the record — a report derives nothing, so there
+is nothing to recompute, and no mutable validation state exists to record a
+verdict on. Being inert by type, they weigh nothing anywhere. Attribution
+is preserved; no attester class is privileged.
 
 ## 3. The completion discipline — the operation intent
 
@@ -197,7 +208,11 @@ request refused for lacking one is refused **before any intent can exist**.
 A surviving boundary publishes an **unfulfilling** act-report recording the
 refusal — it fulfills nothing, because there is nothing to fulfill — and a
 crash before that publication leaves no trace. That is kernel G4's bound,
-inherited and stated, not fought.
+inherited and stated, not fought. The refusal report's `event_token` is
+minted **at the refusal itself** and enters no intent, and the refused
+request has **no completion reading**: none of §3.3's three states applies,
+because no intent exists to reduce over — it is a refused request's record,
+not an operation's.
 
 **A dataset-production run has no spec**, and the assessment-run intent
 therefore excludes it. It opens the **operation intent** (kind
@@ -267,6 +282,16 @@ produce one. A future survey run as a boundary-mediated audit reports as an
 act-report because it *is* a boundary operation — a different thing, not a
 migration.
 
+**The audit evaluator stays read-only; its wrapper reports.** The formal
+contract is untouched: `audit : Ω → Validated + Findings` mints nothing
+(formal model §3.2; 5b §7.6) — the evaluator produces no configuration, no
+corrective record, and no epistemic record. The act-report of an `audit`
+operation is published by the **boundary wrapper** that ran the evaluator,
+under the wrapper's own operation intent, and it is inert like every
+report. Findings become citable entry outcomes by being **recorded by the
+wrapper** — never by the evaluator acquiring a write. Detection stays split
+from correction, now with the detection durably reported.
+
 **Sub-problem 6 stays excluded.** This design gives audit outputs a durable
 home; it gives audits no scheduler. Liveness, cadence, and who runs what
 remain the agentic surface's, and every operational duty still waits on the
@@ -295,8 +320,8 @@ fail.
 
 | # | Guarantee | Mutation test |
 |---|---|---|
-| **T1** | Only the boundary mints an act-report | Attempt to author one through every construction path — direct authoring, and any API taking report fields as input; assert no such path exists. Explicitly import another observer's report and assert it enters **unvalidated, attributed, and inert** — nothing derivable exists to recompute. **Negative:** raw-write a self-consistent report; assert it is not detected on read, and that an audit detects it **only with the tamper log implemented and a valid anchored observer set** — otherwise the raw write remains undetectable, and the design text claims no more |
-| **T2** | One started operation, one intent, one terminal record — and no act precedes the intent | Run each operation kind to success; assert exactly one qualifying fulfillment: the `run` where one is minted, the act-report otherwise. **Positive:** a post-intent attempt that mints no run closes through **exactly one** qualifying act-report. Attempt a second fulfilling registration on one intent → **malformed**, the log's rule as built. Make root selection fail, then the intent append fail; assert in each case **no act began** — no request issued, no lease taken, nothing minted. **Negative (a):** a missing-spec run request refuses **pre-intent**; assert a surviving boundary publishes an *unfulfilling* act-report, that it fulfills nothing, and that a crash there leaves no trace. **Negative (b):** a complete non-conforming execution mints a **run**, never an act-report. **Negative (c):** a dataset-production attempt opens the **operation intent** — assert the assessment-run intent cannot be spelled without a `spec_identity` |
+| **T1** | Only the boundary mints an act-report | Attempt to author one through every construction path — direct authoring, and any API taking report fields as input; assert no such path exists. Explicitly import another observer's report and assert it enters **structurally validated, not operation-authenticated, attributed, and inert** — nothing derivable exists to recompute, and no validation state is written. **Negative:** raw-write a self-consistent report; assert it is not detected on read, and that an audit detects it **only with the tamper log implemented and a valid anchored observer set** — otherwise the raw write remains undetectable, and the design text claims no more |
+| **T2** | One started operation, one intent, one terminal record — and no act precedes the intent | Run each operation kind to success; assert exactly one qualifying fulfillment: the `run` where one is minted, the act-report otherwise. **Positive:** a post-intent attempt that mints no run closes through **exactly one** qualifying act-report. Attempt a second fulfilling registration on one intent → **malformed**, the log's rule as built. Make root selection fail, then the intent append fail; assert in each case **no act began** — no request issued, no lease taken, **no record minted** (an `event_token` generated in memory and carried by no intent and no record is not a mint). **Negative (a):** a missing-spec run request refuses **pre-intent**; assert a surviving boundary publishes an *unfulfilling* act-report, that it fulfills nothing, and that a crash there leaves no trace. **Negative (b):** a complete non-conforming execution mints a **run**, never an act-report. **Negative (c):** a dataset-production attempt opens the **operation intent** — assert the assessment-run intent cannot be spelled without a `spec_identity` |
 | **T3** | Completion is three-valued and derived, never stored | Build all three states: an unmatched intent reads **unfinished**; an unreadable fulfillment pointer reads **indeterminate**, never collapsed into unfinished; a fulfilled intent reads **closed**. Assert no status field is spellable on any record — report, intent payload, or run. Assert deleting a published report moves its operation **closed → indeterminate**, not unfinished — the retention cost of §4, made checkable |
 | **T4** | The report layer is inert by type | Add and remove reports and entries; assert the belief digest, admission, eligibility, and the coverage projection are byte-unchanged. Assert an **unfinished operation blocks nothing**: a location with no unmatched holdings intent projects normally while its operation's intent stands unmatched. **Negative:** delete an observation a report references; assert exactly the record-layer consequences occur — the active set and projection move as the holdings design says — while the report is unchanged and confers no protection |
 | **T5** | Outcome vocabularies are reserved per act kind | Attempt `byte-locator-untested` on a managed-mutation, record-import, and subject-evaluation entry; assert each is unspellable. Attempt it on a locator act whose request **began**; assert refusal — that is `retrieval-failed`'s territory. Assert a preflight refusal and a deliberate post-stop skip both spell `byte-locator-untested` with distinct reasons. Assert no entry outcome constructs an observation — reports reference products and never mint them |
@@ -372,10 +397,16 @@ citation naming this design and the section that rules it — the form
    player row for `act-report` per §2 of this design — boundary-minted
    terminal record; content identity over the facet including the operation
    `event_token`; immutable, never superseded, retained; affects nothing;
-   inert under everything in belief; banked: this design, T1–T8. §5.1's
-   extension totals move from 121 rows / ten tables to **129 rows / eleven
-   tables**, with the assertion total recomputed from the final T arms as
-   banked; §5.2 gains the **T block** with per-row arm counts.
+   inert under everything in belief; banked: this design, T1–T8. §3.2's
+   `audit` signature gains a dated note — the evaluator's type is unchanged
+   and still mints nothing; the `audit` operation's act-report is the
+   boundary wrapper's (§4 of this design). §3.2's transition table narrows
+   the `begin` (run) row to **assessment runs** and records
+   dataset-production's operation-intent route beside it (§3.2 of this
+   design). §5.1's extension totals move from 121 rows / ten tables to
+   **129 rows / eleven tables**, with the assertion total recomputed from
+   the final T arms as banked; §5.2 gains the **T block** with per-row arm
+   counts.
 4. **Tamper-evident log** (`2026-08-03-tamper-evident-log-design.md`), named
    at every touched site: **§3's intent union** gains its third consumer,
    the **operation intent** — payload (operation kind, minted
@@ -390,7 +421,9 @@ citation naming this design and the section that rules it — the form
    restated for the new consumer — no caller-selected `fulfills` exists;
    **L7**'s arm extends to the operation intent's width; **§9's
    science/`atoms` ownership split** records the operation intent on the
-   science side, the `atoms` intent API unchanged.
+   science side, the `atoms` intent API unchanged. An `audit` operation's
+   intent is the **boundary wrapper's**, never the evaluator's — the
+   read-only evaluator appends nothing (§4).
 5. **Computation** (`2026-08-02-computation-reproducibility-design.md`):
    §4.7's acquisition provenance gains the act-report reference member —
    existing fields authoritative; same transaction, same root (§4, T7).
@@ -403,6 +436,10 @@ citation naming this design and the section that rules it — the form
    argument still refused, and deleting the cited report invalidating
    nothing. A dated note beside **R12**'s boundary-mediated arm records
    that cooperative no-run closure now exists, the formal claim unchanged.
+   **§7.3c/R19's** "the audit … mints nothing" language gains a dated
+   note: the audit's finding is recorded as an entry in the boundary
+   wrapper's inert act-report, the evaluator still minting nothing
+   epistemic (§4).
 6. **Verified-holdings record**
    (`2026-08-10-verified-holdings-record-design.md`): §3's two "owed to the
    run/report design" passages and §7 item 6 gain dated closure notes
@@ -414,7 +451,9 @@ citation naming this design and the section that rules it — the form
 8. **World addressing** (`2026-08-02-world-addressing-design.md`): §4.2's
    identity-basis table gains the `act-report` row.
 9. **Normative contract** (`2026-08-03-normative-contract-design.md`): §4
-   and §11 counts — **thirteen tables, 151 rows** (143 + T1–T8).
+   and §11 counts — **thirteen tables, 151 rows** (143 + T1–T8). §7.6's
+   "audit mints nothing" ruling gains the wrapper distinction as a dated
+   note — the evaluator unchanged, the act-report the wrapper's (§4).
 10. **Adoption ledger** (`2026-08-03-redesign-adoption-ledger.md`): the
     log-consumer notes gain the operation intent (science-side consumer
     rules amended; the `atoms` intent API unchanged); **artifact 7 extends
@@ -427,11 +466,13 @@ citation naming this design and the section that rules it — the form
     thirteen kinds); open-questions — the third-cut entry updated to "run
     capture's seam fully designed", and a residue entry for §6's five
     opens; glossary — `act-report`, the operation intent, the three
-    completion states; contracts-and-adoption as touched; `updated:`
-    frontmatter and `sources:` entries per convention.
+    completion states, and the audit evaluator/wrapper distinction;
+    contracts-and-adoption as touched; `updated:` frontmatter and
+    `sources:` entries per convention.
 13. **README and corpus guards** (`README.md`,
     `python/tests/test_designs_corpus.py`): twenty-one documents through
     2026-08-11; the design-table row; **151 rows across thirteen tables**;
     `GUARANTEE_TABLES` and `TABLE_OWNERS` gain **T**; the `_ROW` and
-    `_ROW_RANGE` classes extend to `[GSWRCXNLDMPHT]`; `table_words[13]` is
+    `_ROW_RANGE` classes extend to `[GSWRCXNLDMPHT]`;
+    `_COUNT_WORDS[21] = "twenty-one"` is added; `table_words[13]` is
     already in place from the holdings banking.
