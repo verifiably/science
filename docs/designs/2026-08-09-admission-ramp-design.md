@@ -902,6 +902,9 @@ acquisition. `R10` already puts
 a URL-input on the acquisition side of the boundary; an acquisition **ends** by
 recording the digest of what it retrieved, and a resource that sits there
 indefinitely is an unfinished acquisition, not a dataset in a third condition.
+*(Amended 2026-08-11, the act-report design §3.3: "unfinished acquisition" is
+now the acquisition operation intent's **unmatched** state under the three-valued
+completion reading — unfinished, indeterminate, closed.)*
 That question closes on this argument, and it closes on semantics, exactly as it
 required — the observed frequency of zero decides nothing.
 

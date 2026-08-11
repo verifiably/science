@@ -266,7 +266,9 @@ record layer can give is exact: a crashed mutation is durably visible as
 its unmatched intent (§4); an intent-free URL attempt that never reported
 cannot be made durably visible by this design, and that non-report is
 precisely what the run/report seam exists to record — no claim otherwise is
-made here.
+made here. *(Designed 2026-08-11: the act-report design — the operation intent,
+the three-valued completion reading, and the act-report whose entries record
+the look's non-report.)*
 
 Nothing else mints one. Not a declaration, not a directory listing, not an
 import of somebody's claim that bytes exist. `G9`'s "no API accepts an
@@ -403,6 +405,8 @@ transaction *fulfills* an intent:
   reported — and whether *the acquisition* has ended is orchestration
   state, the run/report design's to record (§3); an act short of its
   terminus is what leaves it the unfinished acquisition §6.6 already names.
+  *(Designed 2026-08-11, the act-report design §3: whether the acquisition has
+  ended is now the operation intent's derived three-valued reading.)*
 - **The intent.** Before mutating, the boundary durably appends a **holdings
   intent** in the observer's corpus root — the root the observation will be
   published through, so the log's same-root rule holds — with payload: the
@@ -995,7 +999,10 @@ that builds the persistence seam; none is claimed exercised by this document.
 6. **Acquisition completion as orchestration state.** §3 binds each act's
    own terminus; whether an acquisition as a whole has ended — and the
    durable home of a look's non-report — belongs to the run/report design,
-   alongside the act reports it owns.
+   alongside the act reports it owns. *Closed 2026-08-11 by the act-report
+   design: completion is the operation intent's derived three-valued reading
+   (§3 there), and the look's non-report lands in the closing report's entries
+   — or, operator-crashed, as the durable unmatched intent.*
 7. **The engine.** Persistence, the tamper-evident log's strengthening, and
    every operational duty (who runs audits, on what cadence) wait on `atoms`
    A7–A8 and the composition root, as everything durable does. §3's
