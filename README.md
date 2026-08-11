@@ -17,9 +17,9 @@ below for rationale and frozen guarantees.
 
 ## The designs
 
-Nineteen documents in `docs/designs/`: the banked redesigns, review disposition,
+Twenty documents in `docs/designs/`: the banked redesigns, review disposition,
 adoption ledger, measurements, rulings, and contributor-guide design written
-2026-08-02 through 2026-08-09. Read them in this order:
+2026-08-02 through 2026-08-10. Read them in this order:
 
 | document | what it rules |
 |---|---|
@@ -42,6 +42,7 @@ adoption ledger, measurements, rulings, and contributor-guide design written
 | `2026-08-08-world-address-ruling.md` | closes docket §4.1: basis-derived addressing upheld, labels rendered rather than stored, coreference graded rather than merged |
 | `2026-08-09-admission-ramp-design.md` | how externally sourced input reaches held — the measurement, and the ruling downstream of it: three states, `W3` narrowed, `G9` appended, F2 closed |
 | `2026-08-09-conformance-cut-2.md` | the second frozen conformance cut, drawn at the belief seam over the 139-row corpus, with the admission ramp's three open questions as boundary conditions |
+| `2026-08-10-verified-holdings-record-design.md` | where verified holdings are recorded: a per-location world record in the observer's corpus, act-minted, superseded never expired, projected under a declared coverage — H1–H4 |
 
 The ledger is the entry point for "what is built, what is not, and what waits on
 what." Every guarantee table is frozen under its identifiers: designs extend and
@@ -56,8 +57,8 @@ computes no belief, which is where the disposition record's §5.5 stop rule puts
 its edge. Cut 1 itself built nothing beyond that edge.
 
 The guarantee tables are the acceptance criteria — each row must be a failing
-test before it is a passing one. There are **139 rows** across **eleven frozen
-tables** (G, S, W, R, C, X, N, L, D, M, P). Cut 1 selects **11 of the 126 rows**
+test before it is a passing one. There are **143 rows** across **twelve frozen
+tables** (G, S, W, R, C, X, N, L, D, M, P, H). Cut 1 selects **11 of the 126 rows**
 across the ten tables that existed when it was drawn, frozen *before* any code
 existed so that a row which fails is a failure rather than a redefinition.
 **Conformance cut 2** was frozen 2026-08-09 on the same discipline, before its
@@ -66,9 +67,10 @@ the assessment admission gate, the belief input closure digest, and
 `science.belief.v1` under an exact binding — selecting **13 rows in full and 11
 in part**, including the belief policy's P1–P9 and the admission ramp's G9,
 whose verified-holdings observations enter as supplied arguments because where
-they are recorded remains an open design. Its slice landed 2026-08-09: derived
-admission state, the assessment admission gate, the belief input closure
-digest, and `science.belief.v1` under an exact binding now compute.
+they are recorded was, at the freeze, an open design — closed 2026-08-10 by the
+verified-holdings record design. Its slice landed 2026-08-09: derived admission
+state, the assessment admission gate, the belief input closure digest, and
+`science.belief.v1` under an exact binding now compute.
 
 ```
 python/     the implementation (substrate §11 puts the composition root here)

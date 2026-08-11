@@ -1,8 +1,8 @@
 # Verified holdings record — design
 
 **Date:** 2026-08-10
-**Status:** design, approved in session. The amendment set of §8 applies in the
-banking commit; nothing here is implemented, and no conformance arm is claimed —
+**Status:** banked 2026-08-10; §8's amendment set applied in the banking change.
+Nothing here is implemented, and no conformance arm is claimed —
 the G9 independence arm and the record's code stay owed to the cut that draws
 the persistence seam (§7).
 **Inherits:** the admission ramp (`2026-08-09-admission-ramp-design.md`) §6.1
@@ -935,6 +935,18 @@ ordering that makes the window visible. H4 is computation §7.1 — the framing
 the ramp holds its own drafts to — made an obligation on the acts themselves:
 a look that established something must become a finding, and a look that
 established nothing never may.
+
+The table below is this section's index, machine-checked against the corpus's
+guarantee-row inventory (`python/tests/test_designs_corpus.py`); each row's
+normative statement and sabotage arms are the paragraphs above, not this
+compression.
+
+| # | guarantee | sabotage arms |
+|---|---|---|
+| **H1** | creation is reserved to acts, and to established outcomes | back-filling `found` from a listing or a source digest is unmintable / a hash outside the consistent-read boundary established nothing, and raw concurrent mutation stays out-of-band / `absent` comes only from a post-delete look, never a return code |
+| **H2** | supersession is by explicit reference, per location, over a checked DAG, and a contested, incommensurable, or unsettled location is blocked | active-ness is walked per location over a checked DAG, never ordered by `observed_at` / disagreeing heads block the location rather than any outcome winning / acyclicity is validated on every walk / an unmatched or qualification-unresolved mutating intent leaves its location unsettled, blocking as itself / every agreeing head stays active under coalescence / an algorithm-mixed `found` pair blocks as `incommensurable`, forced into neither box |
+| **H3** | the derivation refuses an undeclared coverage, and its receipt is checkable | "whatever is checked out" is not a coverage — enumeration is by declared stable identity / a receipt the bound rule over the named inputs does not reproduce is `refuted`, an absent input `unresolvable`, corpora-not-states is `malformed` / log chain heads are coherently captured, committed inputs, never read ambiently |
+| **H4** | no silent act, and no laundered non-answer | an act records every outcome it established or fails, never a transient report and a dropped record / an inconclusive attempt reports through its own channel and never mints `absent` / a mutating act runs inside its intent–fulfillment ordering or fails |
 
 `H1`–`H4` take the frozen corpus from **139 rows across eleven tables to 143
 across twelve**. Their arms are acceptance criteria for the conformance cut

@@ -44,7 +44,7 @@ ATOMS_FIRST_UNIMPLEMENTED = "A7"
 _ATOMS_IMPLEMENTED = ATOMS_STAGES[: ATOMS_STAGES.index(ATOMS_FIRST_UNIMPLEMENTED)]
 _ATOMS_LAST_IMPLEMENTED = _ATOMS_IMPLEMENTED[-1]
 
-#: The eleven frozen guarantee tables and the rows each holds. Extending a table
+#: The twelve frozen guarantee tables and the rows each holds. Extending a table
 #: means adding its id here; the corpus's own rule is that ids are never renumbered.
 GUARANTEE_TABLES: dict[str, tuple[str, ...]] = {
     "G": ("G1", "G2a", "G2b", "G2c", "G3", "G4", "G5", "G6", "G7", "G8", "G9"),
@@ -58,6 +58,7 @@ GUARANTEE_TABLES: dict[str, tuple[str, ...]] = {
     "D": tuple(f"D{n}" for n in range(1, 11)),
     "M": tuple(f"M{n}" for n in range(1, 14)),
     "P": tuple(f"P{n}" for n in range(1, 10)),
+    "H": ("H1", "H2", "H3", "H4"),
 }
 
 #: Which design owns each table. The formal model reproduces every other table in
@@ -74,6 +75,7 @@ TABLE_OWNERS = {
     "D": "2026-08-04-domain-extension-boundary-design.md",
     "M": "2026-08-04-formal-model-and-claim-calculus-design.md",
     "P": "2026-08-05-belief-policy-design.md",
+    "H": "2026-08-10-verified-holdings-record-design.md",
 }
 
 #: `A6` is also the formal model's refinement-row prefix (`ρA6`), so a bare stage
@@ -85,7 +87,7 @@ _RANGE = re.compile(rf"(?<![ρ\w])({_STAGE})–({_STAGE})")
 _ASCII_RANGE = re.compile(rf"(?<![ρ\w])({_STAGE})-({_STAGE})(?![\w])")
 
 #: Row ids run to `G2c` and `W8b`, so the suffix is a letter and not just `a`/`b`.
-_ROW = re.compile(r"^\|\s*\*{0,2}([GSWRCXNLDMP][0-9]+[a-z]?)\*{0,2}\s*\|", re.MULTILINE)
+_ROW = re.compile(r"^\|\s*\*{0,2}([GSWRCXNLDMPH][0-9]+[a-z]?)\*{0,2}\s*\|", re.MULTILINE)
 _LINK = re.compile(r"\]\(([^)#\s]+\.md)[^)]*\)")
 _BACKTICKED_DOC = re.compile(r"`(20\d\d-\d\d-\d\d-[a-z0-9-]+\.md)`")
 #: The same name unquoted. The guide cites designs in links and `sources` lists,
@@ -105,7 +107,7 @@ EXTERNAL_DOCUMENTS = {
 #: A label naming a span of one table's rows, as `W1–W13` or `M1–M13`. Both
 #: endpoints must be rows that exist: the disposition record once labelled the
 #: world group `W1–W16`, and there has never been a `W14`.
-_ROW_RANGE = re.compile(r"\b([GSWRCXNLDMP])([0-9]+[a-z]?)–\1?([0-9]+[a-z]?)\b")
+_ROW_RANGE = re.compile(r"\b([GSWRCXNLDMPH])([0-9]+[a-z]?)–\1?([0-9]+[a-z]?)\b")
 
 
 def design_documents() -> list[Path]:
@@ -197,7 +199,10 @@ def test_the_readme_states_the_corpus_row_total() -> None:
     # The README hard-wraps its prose, so a phrase can straddle a line break.
     readme = re.sub(r"\s+", " ", _text(README))
     assert f"{total} rows" in readme, f"the README does not state the corpus total of {total} rows"
-    assert "eleven frozen tables" in readme, f"the README does not state that the rows sit in {tables} tables"
+    table_words = {11: "eleven", 12: "twelve", 13: "thirteen"}
+    assert f"{table_words[tables]} frozen tables" in readme, (
+        f"the README does not state that the rows sit in {tables} tables"
+    )
 
 
 def test_the_readme_lists_every_design_document() -> None:
