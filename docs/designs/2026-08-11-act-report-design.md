@@ -58,8 +58,9 @@ checkable for observations, extended to reports. Its guarantee table takes
 the letter **T** (**A** already denotes the `atoms` adoption arms and is
 not reused).
 
-An act-report is the terminal record of one **operation**. The operation
-kinds are a closed enum, extended only by amendment (the locator-type
+An act-report is the terminal record of one **opened operation**, or the
+refusal record of a run request rejected before an operation can open
+(§3.2). The operation kinds are a closed enum, extended only by amendment (the locator-type
 discipline of the holdings design §7):
 
 > `acquisition` | `audit` | `import` | `re-check` | `run-attempt`
@@ -67,9 +68,10 @@ discipline of the holdings design §7):
 ### 2.1 The facet
 
 - **`operation`** — the kind, from the enum above.
-- **`event_token`** — the operation's own, minted at open and carried in its
-  intent (§3), never any member act's. For a pre-intent refusal (§3.2) it is
-  minted at the refusal itself and carried in no intent.
+- **`event_token`** — the report occurrence's own, minted at open and
+  carried in the operation's intent (§3), never any member act's. For a
+  pre-intent refusal (§3.2) it is minted at the refusal itself and carried
+  in no intent.
 - **`actor`**, **`observer`**, **`instrument`** — the holdings observation's
   attribution discipline, reused.
 - **`opened_at`**, **`closed_at`** — `observed_at`'s exact timestamp
@@ -395,7 +397,8 @@ citation naming this design and the section that rules it — the form
 3. **Formal model** (`2026-08-04-formal-model-and-claim-calculus-design.md`):
    §2.1's heading renamed to *the thirteen kernel kinds*; a thirteenth
    player row for `act-report` per §2 of this design — boundary-minted
-   terminal record; content identity over the facet including the operation
+   terminal or pre-intent refusal record; content identity over the facet
+   including the operation
    `event_token`; immutable, never superseded, retained; affects nothing;
    inert under everything in belief; banked: this design, T1–T8. §3.2's
    `audit` signature gains a dated note — the evaluator's type is unchanged
