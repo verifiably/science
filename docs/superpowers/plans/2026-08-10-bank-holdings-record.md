@@ -364,7 +364,7 @@ git commit -m "docs(designs): append the cut-2 status note for the holdings desi
 
      to
 
-     `verified-holdings observations enter as supplied arguments precisely because where they are recorded was still undesigned at the freeze (designed 2026-08-10, the verified-holdings record design; the frozen selection is unchanged), no arm reads an observation's timestamp,`
+     `verified-holdings observations enter as supplied arguments precisely because where they are recorded had not yet been designed at the freeze (designed 2026-08-10, the verified-holdings record design; the frozen selection is unchanged), no arm reads an observation's timestamp,`
 
      Re-wrap to the file's hard-wrap width.
   3. Open edges (~line 147): where the section points at the open-questions page, ensure the holdings question is referenced as its **residue** (recency projection rule + corroboration), consistent with Step 1's rewritten entry — if the section lists specific open items, move the holdings line to the residue phrasing; if it only links to `open-questions.md#contracts-and-adoption`, no edit is needed beyond confirming.
@@ -465,7 +465,7 @@ git commit -m "docs(guide): propagate the holdings record across the guide"
   - `uv run --frozen pyright src` → clean.
   - `uv run --frozen python tools/check_guide.py; echo "exit=$?"` → exit 0.
   - From the repo root: `git diff --check` → clean.
-  - Sweep for stragglers: `grep -rn "eleven frozen tables\|139 rows across eleven" README.md docs/guide/` → no hits; `grep -rn "eleven kernel kinds" docs/guide/ docs/designs/2026-08-04-domain-extension-boundary-design.md` → no hits (historical "eleven kinds" statements in the world ruling and ramp §-history remain, by design); `grep -rn "remains an open design\|still undesigned" README.md docs/guide/` → no hits (the holdings location is now designed, and both former claims are recast historically).
+  - Sweep for stragglers: `rg -n "eleven frozen tables|139 rows across eleven" README.md docs/guide/` → no hits; `rg -n "eleven kernel kinds" docs/guide/ docs/designs/2026-08-04-domain-extension-boundary-design.md` → no hits (historical "eleven kinds" statements in the world ruling and ramp §-history remain, by design); `rg -n "remains an open design|still undesigned" README.md docs/guide/` → no hits (the holdings location is now designed, and both recast claims say "had not yet been designed at the freeze" — wording chosen so this sweep stays clean).
 
 - [ ] **Step 6: Commit.**
 
