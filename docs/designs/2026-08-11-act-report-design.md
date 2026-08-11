@@ -1,7 +1,6 @@
 # The act-report — the terminal record of a boundary operation
 
-**Status:** approved 2026-08-11; not yet banked — §7's amendment set is
-unapplied.
+**Status:** banked 2026-08-11; §7's amendment set applied in the banking change. Nothing here is implemented, and no conformance arm is claimed.
 
 ## 1. The gap, and the box already drawn around it
 
