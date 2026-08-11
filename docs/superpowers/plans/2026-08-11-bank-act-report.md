@@ -18,7 +18,7 @@
 - **Historical statements stay untouched.** The world address ruling's "an eleventh kernel kind" statements, the ramp/cut-2 "139 rows across eleven tables" statements, world addressing's §3 table cell "11 since 2026-08-08", and every "what this amendment changed" count in a banked doc record what was true at their writing. Only the sites a task enumerates change.
 - Guarantee ids are never renamed or renumbered. The new table is **T**, rows `T1`–`T8`, owner `2026-08-11-act-report-design.md`. The letter A is not used — it denotes the `atoms` adoption arms.
 - Never write an adoption-arm range ending at `A8` that starts anywhere but `A7` — the corpus guard `test_no_design_gates_on_an_implemented_atoms_stage` fails any other range. Prefer "`atoms` A7–A8" verbatim.
-- Verification commands (run from `python/`, always in the frozen `uv` environment — never ambient `python`): `uv run --frozen pytest tests/test_designs_corpus.py -q` and `uv run --frozen python tools/check_guide.py; echo "exit=$?"` (exit 0 = pass; it prints nothing on success). Also `git diff --check` from the worktree root before every commit. The final task closes with the full gates from `python/README.md`: `uv run --frozen pytest -q`, `uv run --frozen ruff check .`, `uv run --frozen pyright src`.
+- Verification commands (run from `python/`, always in the frozen `uv` environment — never ambient `python`): `uv run --frozen pytest tests/test_designs_corpus.py -q` and `uv run --frozen python tools/check_guide.py` (expected exit 0; it prints nothing on success). Also `git diff --check` from the worktree root before every commit. The final task closes with the full gates from `python/README.md`: `uv run --frozen pytest -q`, `uv run --frozen ruff check .`, `uv run --frozen pyright src`.
 - Line numbers below are approximate anchors — locate each edit by the quoted text, not the number.
 
 ---
@@ -106,7 +106,7 @@
 
   ``Two clauses carry over unchanged from §4.2 and now bind all thirteen kinds (eleven at this ruling; `holdings-observation` joined 2026-08-10, `act-report` 2026-08-11): the refusal``
 
-- [ ] **Step 7: Verify.** From `python/`: `uv run --frozen pytest tests/test_designs_corpus.py -q` → exactly the three known failures, no new ones. `uv run --frozen python tools/check_guide.py; echo "exit=$?"` → exit 0. From the worktree root: `git diff --check` → clean.
+- [ ] **Step 7: Verify.** From `python/`: `uv run --frozen pytest tests/test_designs_corpus.py -q` → exactly the three known failures, no new ones. `uv run --frozen python tools/check_guide.py` → expected exit 0. From the worktree root: `git diff --check` → clean.
 
 - [ ] **Step 8: Commit.**
 
@@ -164,7 +164,7 @@ git commit -m "docs(designs): take the kernel to thirteen kinds and thirteen tab
 
 - [ ] **Step 3: L7 — the operation intent's width.** Anchor: the L7 row (~line 569), which currently ends `...exactly as stated *(amended 2026-08-10, the verified-holdings record design §8)*`. Before the row's closing `|`, extend the cell:
 
-  `; the guarantee now quantifies over the **operation intent** too — instantiated for its shape, a report carrying another operation's token, a wrong-kind terminal (an act-report where a `run` was minted, a `run` where the operation takes a report), or a registration publishing no terminal record each **fails qualification**, and a kill between the operation intent's append and its first act reads attempt-without-recorded-outcome, exactly as stated *(amended 2026-08-11, the act-report design §3)*`
+  `; the guarantee now quantifies over the **operation intent** too — instantiated for its shape, a report carrying another operation's token, a report of the wrong kind, a run publication for a non-run operation, or a registration publishing no terminal record each **fails qualification** (a second fulfilling registration on one intent stays the chain's **malformed**, classified before qualification — T2's arm), and a kill between the operation intent's append and its first act reads attempt-without-recorded-outcome, exactly as stated *(amended 2026-08-11, the act-report design §3)*`
 
 - [ ] **Step 4: §9 ownership split — the science side.** Anchor: the **science** obligations paragraph (~lines 532–541), ending `on the` `` `atoms` intent API as built (the verified-holdings record design §3)`` `*(amended 2026-08-10, the verified-holdings record design §8)*.` Extend the sentence before its dated note, or append a sibling clause after it:
 
@@ -288,7 +288,7 @@ git commit -m "docs(designs): add act-report to world addressing and the formal 
 
   to
 
-  `the **ordered run refs**, an **optional code-lineage certification**, an **optional acquisition report-position citation** — added 2026-08-11 (the act-report design §4): the cited finding's resolved content embeds inline in the comparison report with **(act-report ref, entry index)** as provenance, and the code-lineage certification remains the **only** authored claim input — and — added 2026-08-03 (5b §7.6) — the **explicitly selected contract identity and epoch** for certification discovery — nothing else.`
+  `the **ordered run refs**, an **optional code-lineage certification**, an **optional report-position citation** — added 2026-08-11 (the act-report design §4): the cited finding's resolved content embeds inline in the comparison report with **(act-report ref, entry index)** as provenance, and the code-lineage certification remains the **only** authored claim input — and — added 2026-08-03 (5b §7.6) — the **explicitly selected contract identity and epoch** for certification discovery — nothing else.`
 
   Re-wrap the blockquote after editing.
 
@@ -302,11 +302,11 @@ git commit -m "docs(designs): add act-report to world addressing and the formal 
 
 - [ ] **Step 5: R18 note.** At the end of the R18 row's mutation-test cell (~line 2474), before the closing `|`, append:
 
-  ` *(Amended 2026-08-11, the act-report design §4: an acquisition report-position citation embeds on this same discipline — resolved content inline, **(act-report ref, entry index)** as provenance — and deleting the cited report leaves the verification unchanged and still valid, T6's R18 arm.)*`
+  ` *(Amended 2026-08-11, the act-report design §4: a report-position citation embeds on this same discipline — resolved content inline, **(act-report ref, entry index)** as provenance — and deleting the cited report leaves the verification unchanged and still valid, T6's R18 arm.)*`
 
 - [ ] **Step 6: R19 note.** At the end of the R19 row's mutation-test cell (~line 2475), before the closing `|`, append:
 
-  ` *(Amended 2026-08-11, the act-report design §4: the constructor's closed list gains one member — the optional acquisition report-position citation. Every other extra argument is still refused, deleting the cited report invalidates nothing, and the audit arm is unchanged: the evaluator mints nothing, its finding recorded as an entry in the boundary wrapper's inert act-report.)*`
+  ` *(Amended 2026-08-11, the act-report design §4: the constructor's closed list gains one member — the optional report-position citation. Every other extra argument is still refused, deleting the cited report invalidates nothing, and the audit arm is unchanged: the evaluator mints nothing, its finding recorded as an entry in the boundary wrapper's inert act-report.)*`
 
 - [ ] **Step 7: Verify + commit.** Same checks (three known failures only).
 
@@ -439,7 +439,8 @@ git commit -m "docs(designs): record the operation intent and the T table in the
   ```markdown
   - **The act-report's residue.** The act-report design (2026-08-11) closed
     the run boundary's report seam: the boundary-minted terminal record of
-    one operation, the operation intent's three-valued completion reading
+    an opened operation — or the pre-intent refusal record of a rejected
+    run request — the operation intent's three-valued completion reading
     (unfinished, indeterminate, closed), and the durable home of a look's
     non-report. Five things stay open, deliberately: cross-root publication
     of a dataset's provenance reference and its acquiring report (refused
@@ -452,9 +453,9 @@ git commit -m "docs(designs): record the operation intent and the T table in the
     [what stays open](../designs/2026-08-11-act-report-design.md#6-what-this-unblocks-and-what-stays-open))
   ```
 
-  Before writing the second link, confirm the design's §6 heading anchor by reading its actual heading text (`## 6. What this unblocks, and what stays open`); adjust the fragment to match. Update the frontmatter `updated:` date.
+  Before writing the second link, confirm the design's §6 heading anchor by reading its actual heading text (`## 6. What this unblocks, and what stays open`); adjust the fragment to match. Update the frontmatter `updated:` date and add `  - ../designs/2026-08-11-act-report-design.md` to the page's `sources:` list.
 
-- [ ] **Step 4: glossary.md.** Four insertions, each in alphabetical position, plus frontmatter `updated:`:
+- [ ] **Step 4: glossary.md.** Four insertions, each in alphabetical position, plus frontmatter: update `updated:` and add `  - ../designs/2026-08-11-act-report-design.md` to the `sources:` list:
 
   Before **Address**:
 
@@ -512,7 +513,7 @@ git commit -m "docs(designs): record the operation intent and the T table in the
   2. Frontmatter: `updated: 2026-08-10` → `updated: 2026-08-11`; `sources:` gains `  - ../designs/2026-08-11-act-report-design.md`.
   3. Confirm no other sentence on the page claims the run/report seam is undesigned (`rg -n "run capture|run/report" docs/guide/contracts-and-adoption.md`) — the "remain outside both cuts" sentence is about cut selection, not design state, and stands unchanged.
 
-- [ ] **Step 6: Verify.** From `python/`: `uv run --frozen python tools/check_guide.py; echo "exit=$?"` → exit 0. `uv run --frozen pytest tests/test_designs_corpus.py -q` → now exactly **two** failures (the README pair); `test_the_guide_cites_every_design` passes. `git diff --check` clean.
+- [ ] **Step 6: Verify.** From `python/`: `uv run --frozen python tools/check_guide.py` → expected exit 0. `uv run --frozen pytest tests/test_designs_corpus.py -q` → now exactly **two** failures (the README pair); `test_the_guide_cites_every_design` passes. `git diff --check` clean.
 
 - [ ] **Step 7: Commit.**
 
@@ -574,7 +575,7 @@ git commit -m "docs(guide): propagate the act-report across the guide"
   1. ~Line 20: `Twenty documents in `docs/designs/`: …` → `Twenty-one documents in `docs/designs/`: …` and in the same sentence `2026-08-02 through 2026-08-10` → `2026-08-02 through 2026-08-11`.
   2. Design table: after the `2026-08-10-verified-holdings-record-design.md` row, append:
 
-     ``| `2026-08-11-act-report-design.md` | the run boundary's report seam: the act-report, boundary-minted terminal record of one operation; the operation intent's derived three-valued completion reading; the durable home of a look's non-report — T1–T8 |``
+     ``| `2026-08-11-act-report-design.md` | the run boundary's report seam: the act-report, boundary-minted terminal record of an opened operation or pre-intent refusal record of a rejected run request; the operation intent's derived three-valued completion reading; the durable home of a look's non-report — T1–T8 |``
   3. ~Lines 60–61: `There are **143 rows** across **twelve frozen` `tables** (G, S, W, R, C, X, N, L, D, M, P, H).` → `There are **151 rows** across **thirteen frozen tables** (G, S, W, R, C, X, N, L, D, M, P, H, T).` (T appends last, matching the guard's insertion order; keep the hard wrap.)
 
 - [ ] **Step 4: Status flip.** In the act-report design's Status header, change
@@ -589,7 +590,7 @@ git commit -m "docs(guide): propagate the act-report across the guide"
   - `uv run --frozen pytest -q` → **the whole suite passes**.
   - `uv run --frozen ruff check .` → clean.
   - `uv run --frozen pyright src` → clean.
-  - `uv run --frozen python tools/check_guide.py; echo "exit=$?"` → exit 0.
+  - `uv run --frozen python tools/check_guide.py` → expected exit 0.
   - From the worktree root: `git diff --check` → clean.
   - Cut 2 untouched: `git diff main -- docs/designs/2026-08-09-conformance-cut-2.md` → empty.
   - Sweep for stragglers: `rg -n "twelve frozen tables|143 rows" README.md docs/guide/ python/tests/` → no hits; `rg -n "twelve kernel kinds|twelve world-record kinds" docs/guide/` → no hits (historical "twelve" statements inside banked designs' dated notes remain, by design); `rg -n "owed to the run/report design" docs/guide/` → no hits (the design docs' occurrences now carry closure notes and stay).
