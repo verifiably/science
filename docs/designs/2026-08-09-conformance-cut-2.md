@@ -14,7 +14,9 @@ ramp's three open questions are **boundary conditions on this cut, restated in
 §2.1, and none of them is decided here.** The slice was built 2026-08-09; the
 selection required no amendment, and S6(f)'s tie-break clause — structurally
 unsabotageable under `science.belief.v1` in this suite — is recorded rather
-than hidden (`python/tests/n2_arms_cut2.py`, S6).
+than hidden (`python/tests/n2_arms_cut2.py`, S6). *Status append 2026-08-10:
+the design §10 item 1 named as the most consequential open question landed —
+`2026-08-10-verified-holdings-record-design.md`.*
 
 ---
 
