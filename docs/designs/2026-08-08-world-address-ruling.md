@@ -120,7 +120,8 @@ the per-kind table a rule rather than a list.
 > **curation note** — not a weakened world entity.
 
 Two clauses carry over unchanged from §4.2 and now bind all thirteen kinds
-(eleven at this ruling; `holdings-observation` joined 2026-08-10, `act-report` 2026-08-11): the refusal
+(eleven at this ruling; `holdings-observation` joined 2026-08-10,
+`act-report` 2026-08-11): the refusal
 and the note are **two operations**, never a silent coercion; and **no
 fallback basis is derived at any point**, because a fabricated identity is
 indistinguishable from a real one everywhere downstream.
