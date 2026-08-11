@@ -17,14 +17,14 @@
 - Banked designs are amended **in place with dated notes** citing this design — the corpus precedent is the italic `*(restated 2026-08-09 …)*` style (see the formal model's dataset row for the shape). The cut-2 document is **frozen: Status append only** — one sentence, nothing else in that file changes.
 - **Historical statements stay untouched.** The world address ruling's "an eleventh kernel kind", "taking the kernel to eleven kinds" (its lines ~7, ~19, ~233, ~272, ~550, ~622) record what that ruling did and are correct. Ramp/cut-2 statements of "139 rows across eleven tables" record what was true at their writing and are equally untouched. Only the sites enumerated in a task change.
 - Guarantee ids are never renamed or renumbered. The new table is `H`, rows `H1`–`H4`, owner `2026-08-10-verified-holdings-record-design.md`.
-- Verification commands (run from `python/`): `python -m pytest tests/test_designs_corpus.py -q` and `python tools/check_guide.py; echo "exit=$?"` (exit 0 = pass; it prints nothing on success). Also `git diff --check` from the repo root before every commit.
+- Verification commands (run from `python/`, always in the frozen `uv` environment — never ambient `python`): `uv run --frozen pytest tests/test_designs_corpus.py -q` and `uv run --frozen python tools/check_guide.py; echo "exit=$?"` (exit 0 = pass; it prints nothing on success). Also `git diff --check` from the repo root before every commit. The final task closes with the full gates from `python/README.md`: `uv run --frozen pytest -q`, `uv run --frozen ruff check .`, `uv run --frozen pyright src`.
 - Line numbers below are approximate anchors — locate each edit by the quoted text, not the number.
 
 ---
 
 ### Task 1: Kernel kind count → twelve across the exact inventory
 
-§8 row: *"epistemic kernel, kind inventory"* — the count sites are amended as an **exact inventory, not a sweep**. This task covers every non-guide count site (the two guide sites are Task 7's).
+§8 row: *"epistemic kernel, kind inventory"* — the count sites are amended as an **exact inventory, not a sweep**. This task covers every non-guide count site (the two guide sites are Task 7's), plus the kernel's one live **table**-count pointer: §10's "Where they stand" note, which counts the unnumbered table-bearing designs and must gain the holdings record (H).
 
 **Files:**
 - Modify: `docs/designs/2026-08-02-epistemic-kernel-design.md` (§4.4, ~line 915)
@@ -93,13 +93,23 @@
 
   `Two clauses carry over unchanged from §4.2 and now bind all twelve kinds (eleven at this ruling; `holdings-observation` joined 2026-08-10): the`
 
-- [ ] **Step 6: Verify.** From `python/`: `python -m pytest tests/test_designs_corpus.py -q` → exactly the three known failures, no new ones. `python tools/check_guide.py; echo "exit=$?"` → exit 0. From repo root: `git diff --check` → clean.
+- [ ] **Step 6: Kernel §10 table pointer.** In §10's `> **Where they stand**` note (~line 1345), three phrase edits in one sentence pair:
 
-- [ ] **Step 7: Commit.**
+  `**Five later designs have no number in this list at all**` → `**Six later designs have no number in this list at all**`
+
+  `the formal model and claim calculus (M), and the belief policy (P).` → `the formal model and claim calculus (M), the belief policy (P), and the verified-holdings record (H) *(amended 2026-08-10, the verified-holdings record design §8)*.`
+
+  `Six numbered sub-problems plus those five is where the eleven frozen tables come from;` → `Six numbered sub-problems plus those six is where the twelve frozen tables come from;`
+
+  Re-wrap the paragraph to the file's hard-wrap width after editing.
+
+- [ ] **Step 7: Verify.** From `python/`: `uv run --frozen pytest tests/test_designs_corpus.py -q` → exactly the three known failures, no new ones. `uv run --frozen python tools/check_guide.py; echo "exit=$?"` → exit 0. From repo root: `git diff --check` → clean.
+
+- [ ] **Step 8: Commit.**
 
 ```bash
 git add docs/designs/2026-08-02-epistemic-kernel-design.md docs/designs/2026-08-04-domain-extension-boundary-design.md docs/designs/2026-08-03-redesign-adoption-ledger.md docs/designs/2026-08-09-admission-ramp-design.md docs/designs/2026-08-08-world-address-ruling.md
-git commit -m "docs(designs): take the kernel kind count to twelve across the exact inventory"
+git commit -m "docs(designs): take the kernel to twelve kinds and twelve tables across the exact inventory"
 ```
 
 ---
@@ -346,11 +356,20 @@ git commit -m "docs(designs): append the cut-2 status note for the holdings desi
   3. The kind inventory: heading `### The eleven world-record kinds` → `### The twelve world-record kinds`; lead `The formal inventory contains eleven kernel kinds:` → `The formal inventory contains twelve kernel kinds:`; in the table's `Materials` row, change kinds to `` `dataset`, `source`, `holdings-observation` `` and extend the purpose cell with `; and record, act-by-act, what was found at each held location`.
   4. References (~line 155): update the formal-model link text and anchor: `[Formal model: the eleven kinds and M1–M13](…#21-rec--world-records-the-eleven-kernel-kinds)` → `[Formal model: the twelve kinds and M1–M13](../designs/2026-08-04-formal-model-and-claim-calculus-design.md#21-rec--world-records-the-twelve-kernel-kinds)` — the fragment must match Task 3's final heading exactly.
 
-- [ ] **Step 5: contracts-and-adoption.md.** Two edits:
+- [ ] **Step 5: contracts-and-adoption.md.** Three edits:
   1. ~Line 88: change `The corpus now holds 139 rows across eleven frozen tables: the belief policy's P1–P9 banked the day the cut was drawn, and the admission ramp appended G9 on 2026-08-09 while narrowing W3's dataset arm.` to `The corpus now holds 143 rows across twelve frozen tables: the belief policy's P1–P9 banked the day the cut was drawn, the admission ramp appended G9 on 2026-08-09 while narrowing W3's dataset arm, and the verified-holdings record design banked H1–H4 on 2026-08-10.`
-  2. Open edges (~line 147): where the section points at the open-questions page, ensure the holdings question is referenced as its **residue** (recency projection rule + corroboration), consistent with Step 1's rewritten entry — if the section lists specific open items, move the holdings line to the residue phrasing; if it only links to `open-questions.md#contracts-and-adoption`, no edit is needed beyond confirming.
+  2. ~Line 101–103: the cut-2 paragraph still claims the holdings location is open. Recast it historically — it was open at the freeze and was designed 2026-08-10, the cut's frozen selection unchanged. Change
 
-- [ ] **Step 6: Verify.** From `python/`: `python tools/check_guide.py; echo "exit=$?"` → exit 0. `python -m pytest tests/test_designs_corpus.py -q` → now exactly **two** failures (the README pair); `test_the_guide_cites_every_design` passes. `git diff --check` clean.
+     `verified-holdings observations enter as supplied arguments precisely because where they are recorded is still undesigned, no arm reads an observation's timestamp,`
+
+     to
+
+     `verified-holdings observations enter as supplied arguments precisely because where they are recorded was still undesigned at the freeze (designed 2026-08-10, the verified-holdings record design; the frozen selection is unchanged), no arm reads an observation's timestamp,`
+
+     Re-wrap to the file's hard-wrap width.
+  3. Open edges (~line 147): where the section points at the open-questions page, ensure the holdings question is referenced as its **residue** (recency projection rule + corroboration), consistent with Step 1's rewritten entry — if the section lists specific open items, move the holdings line to the residue phrasing; if it only links to `open-questions.md#contracts-and-adoption`, no edit is needed beyond confirming.
+
+- [ ] **Step 6: Verify.** From `python/`: `uv run --frozen python tools/check_guide.py; echo "exit=$?"` → exit 0. `uv run --frozen pytest tests/test_designs_corpus.py -q` → now exactly **two** failures (the README pair); `test_the_guide_cites_every_design` passes. `git diff --check` clean.
 
 - [ ] **Step 7: Commit.**
 
@@ -366,7 +385,7 @@ git commit -m "docs(guide): propagate the holdings record across the guide"
 §8 rows: *"README"*, *"`python/tests/test_designs_corpus.py`"* — plus the user rule that a landed design's Status is corrected in the same change. This task takes the suite fully green.
 
 **Files:**
-- Modify: `python/tests/test_designs_corpus.py` (GUARANTEE_TABLES ~line 50; TABLE_OWNERS ~line 65; the `eleven frozen tables` assertion ~line 200)
+- Modify: `python/tests/test_designs_corpus.py` (GUARANTEE_TABLES ~line 50; TABLE_OWNERS ~line 65; the `_ROW` regex ~line 88 and `_ROW_RANGE` regex ~line 108; the `eleven frozen tables` assertion ~line 200)
 - Modify: `README.md` (count sentence ~line 20; row-total sentence ~line 59; design table ~lines 36–45)
 - Modify: `docs/designs/2026-08-10-verified-holdings-record-design.md` (Status header, lines 4–7)
 
@@ -385,7 +404,19 @@ git commit -m "docs(guide): propagate the holdings record across the guide"
   "H": "2026-08-10-verified-holdings-record-design.md",
   ```
 
-  Update the dict's leading comment `The eleven frozen guarantee tables` → `The twelve frozen guarantee tables`. Then make the table-count assertion machinery-driven instead of a second hardcoded word: replace
+  Update the dict's leading comment `The eleven frozen guarantee tables` → `The twelve frozen guarantee tables`.
+
+  **Extend the row parsers — without this the H rows are invisible to the suite.** Both regex character classes exclude `H`: `_ROW` (~line 88) is how the completeness test finds a table's rows in its owner document, and `_ROW_RANGE` (~line 108) is how span labels like `H1–H4` get validated against rows that exist. Change `[GSWRCXNLDMP]` → `[GSWRCXNLDMPH]` in **both**:
+
+  ```python
+  _ROW = re.compile(r"^\|\s*\*{0,2}([GSWRCXNLDMPH][0-9]+[a-z]?)\*{0,2}\s*\|", re.MULTILINE)
+  ```
+
+  ```python
+  _ROW_RANGE = re.compile(r"\b([GSWRCXNLDMPH])([0-9]+[a-z]?)–\1?([0-9]+[a-z]?)\b")
+  ```
+
+  Then make the table-count assertion machinery-driven instead of a second hardcoded word: replace
 
   ```python
   assert "eleven frozen tables" in readme, f"the README does not state that the rows sit in {tables} tables"
@@ -400,14 +431,23 @@ git commit -m "docs(guide): propagate the holdings record across the guide"
   )
   ```
 
-- [ ] **Step 2: Run the suite to see the guards bite.** `python -m pytest tests/test_designs_corpus.py -q` → the row-total test now demands `143 rows` and `twelve frozen tables`; the README tests still fail. Expected: 3 failures (row total, design count, design table), guide test green.
+- [ ] **Step 2: Run the suite to see the guards bite.** `uv run --frozen pytest tests/test_designs_corpus.py -q` → the row-total test now demands `143 rows` and `twelve frozen tables`; the README tests still fail. Expected: 3 failures (row total, design count, design table), guide test green — the completeness test finds `H1`–`H4` in the holdings design via the extended `_ROW` and passes.
 
-- [ ] **Step 3: README.** Three edits:
+- [ ] **Step 3: README.** Four edits:
   1. ~Line 20: `Nineteen documents in `docs/designs/`: …` → `Twenty documents in `docs/designs/`: …` and in the same sentence `2026-08-02 through 2026-08-09` → `2026-08-02 through 2026-08-10`.
   2. Design table: after the `2026-08-09-conformance-cut-2.md` row, append:
 
      `| `2026-08-10-verified-holdings-record-design.md` | where verified holdings are recorded: a per-location world record in the observer's corpus, act-minted, superseded never expired, projected under a declared coverage — H1–H4 |`
-  3. ~Line 59: `There are **139 rows** across **eleven frozen` → `There are **143 rows** across **twelve frozen` (keep the rest of the sentence and its hard-wrap).
+  3. ~Lines 59–60: the row-total sentence spans a hard-wrap **and carries the table list**, which gains H. `There are **139 rows** across **eleven frozen tables** (G, S, W, R, C, X, N, L, D, M, P).` → `There are **143 rows** across **twelve frozen tables** (G, S, W, R, C, X, N, L, D, M, P, H).` (H appends last, matching the guard's insertion order; keep the hard-wrap.)
+  4. ~Lines 68–69: the cut-2 sentence still claims the holdings location is open. Change
+
+     `whose verified-holdings observations enter as supplied arguments because where they are recorded remains an open design.`
+
+     to
+
+     `whose verified-holdings observations enter as supplied arguments because where they are recorded was, at the freeze, an open design — closed 2026-08-10 by the verified-holdings record design.`
+
+     Re-wrap to the file's hard-wrap width; the following sentence (`Its slice landed 2026-08-09: …`) stands unchanged.
 
 - [ ] **Step 4: Status flip.** In the holdings design's Status header, change
 
@@ -419,11 +459,13 @@ git commit -m "docs(guide): propagate the holdings record across the guide"
 
   (the rest of the header sentence stands unchanged).
 
-- [ ] **Step 5: Full verification.** From `python/`:
-  - `python -m pytest tests/test_designs_corpus.py -q` → **all tests pass**.
-  - `python tools/check_guide.py; echo "exit=$?"` → exit 0.
+- [ ] **Step 5: Full verification.** From `python/`, in the frozen `uv` environment — this is the full gate set from `python/README.md`, not just the corpus tests:
+  - `uv run --frozen pytest -q` → **the whole suite passes**.
+  - `uv run --frozen ruff check .` → clean.
+  - `uv run --frozen pyright src` → clean.
+  - `uv run --frozen python tools/check_guide.py; echo "exit=$?"` → exit 0.
   - From the repo root: `git diff --check` → clean.
-  - Sweep for stragglers: `grep -rn "eleven frozen tables\|139 rows across eleven" README.md docs/guide/` → no hits; `grep -rn "eleven kernel kinds" docs/guide/ docs/designs/2026-08-04-domain-extension-boundary-design.md` → no hits (historical "eleven kinds" statements in the world ruling and ramp §-history remain, by design).
+  - Sweep for stragglers: `grep -rn "eleven frozen tables\|139 rows across eleven" README.md docs/guide/` → no hits; `grep -rn "eleven kernel kinds" docs/guide/ docs/designs/2026-08-04-domain-extension-boundary-design.md` → no hits (historical "eleven kinds" statements in the world ruling and ramp §-history remain, by design); `grep -rn "remains an open design\|still undesigned" README.md docs/guide/` → no hits (the holdings location is now designed, and both former claims are recast historically).
 
 - [ ] **Step 6: Commit.**
 
@@ -437,5 +479,5 @@ git commit -m "docs: bank the verified-holdings record and extend the corpus gua
 ## Completion criteria
 
 1. Every §8 row of the holdings design maps to a landed edit (Tasks 1–8); the "Not amended, deliberately" sites are untouched.
-2. `python -m pytest tests/test_designs_corpus.py -q` fully green; `python tools/check_guide.py` exit 0; `git diff --check` clean; worktree clean.
+2. The full gates pass in the frozen environment: `uv run --frozen pytest -q` fully green, `uv run --frozen ruff check .` clean, `uv run --frozen pyright src` clean, `uv run --frozen python tools/check_guide.py` exit 0; `git diff --check` clean; worktree clean.
 3. Nothing pushed. The branch is then ready for `superpowers:finishing-a-development-branch` (base: `main`).
