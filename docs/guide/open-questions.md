@@ -18,6 +18,7 @@ sources:
   - ../designs/2026-08-05-review-disposition-and-conformance-cut-1.md
   - ../designs/2026-08-09-admission-ramp-design.md
   - ../designs/2026-08-09-conformance-cut-2.md
+  - ../designs/2026-08-10-verified-holdings-record-design.md
   - ../designs/2026-08-11-act-report-design.md
 ---
 
