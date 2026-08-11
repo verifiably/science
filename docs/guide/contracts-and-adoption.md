@@ -2,7 +2,7 @@
 title: Contracts and adoption
 status: living
 created: 2026-08-08
-updated: 2026-08-09
+updated: 2026-08-10
 sources:
   - ../designs/2026-08-03-normative-contract-design.md
   - ../designs/2026-08-03-redesign-adoption-ledger.md
@@ -85,9 +85,10 @@ records are reproduced through the new typed boundaries.
 Conformance cut 1 was frozen before implementation. It selected eleven of 126
 then-banked guarantee rows—six wholly and five only at named assertion arms—and
 classified the other 115 by the subsystem that would unblock them. The corpus now
-holds 139 rows across eleven frozen tables: the belief policy's P1–P9 banked the
-day the cut was drawn, and the admission ramp appended G9 on 2026-08-09 while
-narrowing W3's dataset arm. The cut's stop rule was the last fully designed seam:
+holds 143 rows across twelve frozen tables: the belief policy's P1–P9 banked the
+day the cut was drawn, the admission ramp appended G9 on 2026-08-09 while
+narrowing W3's dataset arm, and the verified-holdings record design banked
+H1–H4 on 2026-08-10. The cut's stop rule was the last fully designed seam:
 typed claim construction, projection, identity, decode, and cross-language
 parity, with no persistence boundary and no belief computation.
 
@@ -100,9 +101,11 @@ and `science.belief.v1` under an exact binding — selecting 13 rows in full and
 11 at named assertion arms, and classifying the remaining 108 deferred rows by the
 subsystem that unblocks them. The admission ramp's three open questions are its
 stated boundary conditions: verified-holdings observations enter as supplied
-arguments precisely because where they are recorded is still undesigned, no arm
-reads an observation's timestamp, and the partly-pinned fixtures exercise a
-ruled boundary without corroborating the ruling. A second reader reviewed the
+arguments precisely because where they are recorded had not yet been
+designed at the freeze (designed 2026-08-10, the verified-holdings record
+design; the frozen selection is unchanged), no arm reads an observation's
+timestamp, and the partly-pinned fixtures exercise a ruled boundary without
+corroborating the ruling. A second reader reviewed the
 selection adversarially before the freeze, and every arm its findings moved,
 they moved out.
 

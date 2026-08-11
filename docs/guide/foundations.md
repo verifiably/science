@@ -2,7 +2,7 @@
 title: Foundations
 status: living
 created: 2026-08-08
-updated: 2026-08-09
+updated: 2026-08-10
 sources:
   - ../designs/2026-08-02-epistemic-kernel-design.md
   - ../designs/2026-08-02-substrate-consolidation-design.md
@@ -10,6 +10,7 @@ sources:
   - ../designs/2026-08-04-domain-extension-boundary-design.md
   - ../designs/2026-08-04-formal-model-and-claim-calculus-design.md
   - ../designs/2026-08-09-admission-ramp-design.md
+  - ../designs/2026-08-10-verified-holdings-record-design.md
 ---
 
 # Foundations
@@ -40,7 +41,11 @@ edge. Literature remains useful for orientation, extraction, and corpus QA.
 An artifact is **held** when its exact bytes can be produced on demand and named
 by content identity. Held does not mean raw, public, inside Git, or present in
 this checkout. A normalized or access-controlled dataset can be held; an
-accession alone is not.
+accession alone is not. Since 2026-08-10, heldness is derived: an artifact is
+held under a declared coverage when an active **holdings observation** — a
+world record minted by an act that dereferenced and hashed — matches its
+declared digest. The record is superseded, never expired; no age or clock
+participates in the derivation.
 
 A dataset that records **which bytes it is** without those bytes being in hand is
 **declared**: a real world entity, addressable and referenceable, and never
@@ -71,15 +76,15 @@ role-typed:
 This makes inertness the default. Adding a record kind or domain facet does not
 accidentally create a new route to belief.
 
-### The eleven world-record kinds
+### The twelve world-record kinds
 
-The formal inventory contains eleven kernel kinds:
+The formal inventory contains twelve kernel kinds:
 
 | Group | Kinds | Purpose |
 |---|---|---|
 | Epistemic | `proposition`, `source-assertion`, `assessment` | Represent a typed claim, what a source said about it, and a run-derived result that may bear on it. |
 | Computation | `analysis-spec`, `run`, `verification` | Predeclare an analysis, capture one complete execution, and compare two executions immutably. |
-| Materials | `dataset`, `source` | Hold data or a literature corpus, and identify works within a corpus. |
+| Materials | `dataset`, `source`, `holdings-observation` | Hold data or a literature corpus, and identify works within a corpus; and record, act-by-act, what was found at each held location. |
 | Change and conformance | `retraction`, `instrument-certification` | Subtract standing without deletion and demonstrate that an executable instrument conforms to a contract. |
 | Identity | `coreference-attestation` | Record, with attribution, that two differently-identified records are believed to name one thing — a graded claim, not a merge. |
 
@@ -152,5 +157,5 @@ pre-registration.
 - [Epistemic kernel: invariant, structure, and G1–G9](../designs/2026-08-02-epistemic-kernel-design.md#2-the-invariant)
 - [Substrate consolidation: S1–S8 and ownership](../designs/2026-08-02-substrate-consolidation-design.md#2-the-boundary-ruling--split-by-nature)
 - [Domain extension: D1–D10 and profile compilation](../designs/2026-08-04-domain-extension-boundary-design.md#3-the-ownership-split)
-- [Formal model: the eleven kinds and M1–M13](../designs/2026-08-04-formal-model-and-claim-calculus-design.md#21-rec--world-records-the-eleven-kernel-kinds)
+- [Formal model: the twelve kinds and M1–M13](../designs/2026-08-04-formal-model-and-claim-calculus-design.md#21-rec--world-records-the-twelve-kernel-kinds)
 - [Adoption ledger: clean-start ruling](../designs/2026-08-03-redesign-adoption-ledger.md#0-the-clean-start-ruling-2026-08-04)

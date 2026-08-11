@@ -2,7 +2,7 @@
 title: Open questions
 status: living
 created: 2026-08-08
-updated: 2026-08-09
+updated: 2026-08-10
 sources:
   - ../designs/2026-08-02-epistemic-kernel-design.md
   - ../designs/2026-08-02-substrate-consolidation-design.md
@@ -149,22 +149,18 @@ implementation**: a guarantee row awaiting code is work, not a question.
 
 ## Contracts and adoption
 
-- **Where verified holdings are recorded.** The admission ramp closed F2 on
-  2026-08-09 — a dataset with a content identity and no bytes is `declared`,
-  `held` was not weakened, and `G9` makes a matching byte observation the only
-  route between them. What it did not settle is where that observation is kept.
-  `R5` bounds the answer from one side (it cannot be a property of this
-  checkout) and `G9` from the other (it cannot be authored); nothing fills the
-  middle. Two smaller residues travel with it: how long a probe's evidence of
-  retrievability lasts, and the partly-pinned rule's empirical corroboration —
-  the standing itself the ruling decided on argument alone, a curation note,
-  because the measured corpus pins all or none and so is silent at the rule's
-  strictest edge. Conformance cut 2 restates all three as boundary conditions
-  on its selection and decides none of them — its slice takes verified observations as supplied arguments and
-  stores nothing.
-  ([admission ramp ruling](../designs/2026-08-09-admission-ramp-design.md#6-the-ruling),
-  [what stayed open](../designs/2026-08-09-admission-ramp-design.md#8-open-after-the-ruling),
-  [cut-2 boundary conditions](../designs/2026-08-09-conformance-cut-2.md#21-the-admission-ramps-three-open-questions-as-boundary-conditions))
+- **Recency and corroboration — the holdings record's residue.** The
+  verified-holdings record design (2026-08-10) closed where verified
+  holdings are recorded: a world record in the observer's corpus,
+  per-location, act-minted, superseded never expired, projected under a
+  declared coverage. What remains open is smaller: whether anything ever
+  discounts an old observation — a possible recency-bearing **successor
+  projection rule**, pinned in every derivation receipt with an explicit
+  reference instant, and never a belief-policy parameter — and the
+  partly-pinned rule's empirical corroboration, which the ramp holds as
+  evidence-not-design.
+  ([holdings design](../designs/2026-08-10-verified-holdings-record-design.md),
+  [what stayed open](../designs/2026-08-10-verified-holdings-record-design.md#7-what-this-unblocks-and-what-stays-open))
 - **Contract governance.** Facet-breaking changes, compatibility ranges,
   parallel `genesis` contracts in one namespace, domain distribution, and
   Python/TypeScript parity policy remain open. ([domain questions](../designs/2026-08-04-domain-extension-boundary-design.md#12-open-questions))
@@ -180,8 +176,9 @@ implementation**: a guarantee row awaiting code is work, not a question.
   capture, world persistence, belief — cut 2 took belief, the one whose seam was
   fully designed, and was frozen 2026-08-09 before its slice was built; the
   slice landed the same day. What remains open is which prerequisite falls
-  first for a third cut: run capture waits on where
-  verified holdings are recorded, world persistence on `atoms` A7–A8 and the
-  `nodes` contract deltas. Cut 2 deliberately does not rank them.
+  first for a third cut: run capture's holdings prerequisite was designed
+  2026-08-10 (unblocked by the holdings design), world persistence waits on
+  `atoms` A7–A8 and the `nodes` contract deltas. Cut 2 deliberately does not
+  rank them.
   ([cut-2 boundary decision](../designs/2026-08-09-conformance-cut-2.md#2-the-boundary-decision--three-candidates-one-designed-seam),
   [cut-2 deferrals](../designs/2026-08-09-conformance-cut-2.md#5-step-3--fully-deferred-rows-grouped-by-unblocking-subsystem))

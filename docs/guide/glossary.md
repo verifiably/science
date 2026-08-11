@@ -2,7 +2,7 @@
 title: Glossary
 status: living
 created: 2026-08-08
-updated: 2026-08-09
+updated: 2026-08-10
 sources:
   - ../designs/2026-08-02-epistemic-kernel-design.md
   - ../designs/2026-08-02-world-addressing-design.md
@@ -77,12 +77,21 @@ context and the linked design references for normative detail.
 - **Declared** — A dataset carrying a content identity without a matching byte
   observation of every resource it declares. A world entity, authorable and
   referenceable, and never belief-eligible. Not the same as *unheld*: a run that
-  looked in one place and found nothing has measured its own coverage.
+  looked in one place and found nothing has measured its own coverage. The
+  route out is a matching holdings observation (G9).
   ([foundations](foundations.md#the-epistemic-invariant))
 - **Held** — Exactly reproducible bytes available on demand under a content
   identity; not a synonym for raw, public, local, or checked into Git. Distinct
-  from **declared**, which has the identity and not the bytes.
+  from **declared**, which has the identity and not the bytes. Derived from
+  active **holdings observations** under a declared coverage since
+  2026-08-10.
   ([foundations](foundations.md#the-epistemic-invariant))
+- **Holdings observation** — A world record of what one act found at one
+  canonical location: `found` with an algorithm-qualified digest, or
+  `absent` where a completed dereference answered. Act-minted, append-only,
+  revised only by supersession, never expired by age; heldness is derived
+  from the active observations under a declared coverage.
+  ([holdings design](../designs/2026-08-10-verified-holdings-record-design.md))
 - **Identity basis** — The kind-specific semantic fields whose canonical
   projection determines a record's content identity. ([identity](identity-world-and-change.md#identity-is-not-one-field))
 - **Independence** — A pairwise, three-valued judgment derived from complete
