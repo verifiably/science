@@ -135,12 +135,14 @@ set.
 subject of several identities. The sorts partition the *carrier*; the axes above
 cut across it, which is why each entry carries all seven fields independently.
 
-### 2.1 `Rec` — world records (the eleven kernel kinds)
+### 2.1 `Rec` — world records (the twelve kernel kinds)
 
-Each row's **identities** cell lists every commitment the player bears. All eleven
+Each row's **identities** cell lists every commitment the player bears. All twelve
 additionally bear a **node-content identity** (moved by any facet or field
 change) and contribute to their corpus's **corpus-state identity**; those two are
 stated once here rather than repeated in every row.
+*(Extended 2026-08-10: `holdings-observation` joined — the verified-holdings
+record design §2, §8.)*
 
 | player | construction | identities (πᵢ) | lifecycle | reads / produces | affects | inert under | banked |
 |---|---|---|---|---|---|---|---|
@@ -155,6 +157,7 @@ stated once here rather than repeated in every row.
 | `retraction` | authored, attributed, immutable | world address; **its identity covers its target's identity** — banked as what makes cycles unconstructible, an argument **ρA9 replaces** | additive: the target stays byte-identical and resolvable. A counter-retraction removes **one** retraction from standing | reads its target; produces a standing subtraction | standing → admission → belief (member 6) | location; ~~alias~~ *(alias dropped 2026-08-08 — no label is stored, so there is no alias dimension to be inert in; world address ruling §4)* | correction §3, §4; **C1**, **C6**, **C10** |
 | `instrument-certification` | **content-derived**, no event token — a derived demonstration on the `verification` precedent | content identity over **(contract identity, discriminated subject, implementation content identity, witness evaluations)**; the rule identity inside carries the fixture-set identity | re-deriving unchanged is **idempotent**; a byte-identical re-mint of a retracted certification **stays retracted**. Withdrawal is by **retraction**, corrected by **counter-retraction**; under a **successor cut it is a different record**, so recertification-after-amendment is a new act, never a toggle | certifies executable instruments, never authored lineage claims | rule-binding resolution; verification scope evidence | — | 5b §7.1, §7.2; world §4.2; N-table |
 | `coreference-attestation` | authored, attributed, immutable — added 2026-08-08 (`2026-08-08-world-address-ruling.md` §5.1) | content identity over (**sorted endpoint pair**, **stance**, **actor**, **grounds**, **minted event token**) — the `retraction` shape; sorting makes `{A,B}` one identity regardless of authoring order | additive. A negative attestation **offsets** the pair's derived balance rather than retracting the positive one; both records stand. `retraction` is unused unless individual-attestation invalidation becomes necessary | reads its two endpoints; produces a **derived** balance — `Σ stance` over distinct `(endpoints, stance, actor, grounds)`, the event token deliberately outside the key so duplicate submissions preserve provenance without manufacturing weight | **none** — closure is a query-layer operation and rewrites no stored reference, identity or belief input (§5.3 there) | everything in belief; attester class, which carries **unit weight** for human and agent alike | world §4.2; **W15** |
+| `holdings-observation` | minted by an act — a pure dereference or a managed mutation recording its captured post-state (holdings design §3) — under whatever orchestration (acquisition, audit, a move, deletion) runs it; added 2026-08-10 | content identity over the §2 facet under `science.holdings-observation.v1` — location, outcome, `expected`, observer, instrument, minted **event token**, `observed_at`, `supersedes` as a deduplicated sorted reference sequence | append-only; revised by **supersession only** — a later record names its predecessors; never expired by age | reads the bytes it dereferenced; produces the active/blocked sets and coverage projection the dataset admission state derives from | admission (heldness under a declared coverage) → belief transitively | `observed_at` (recorded, never read by a derivation); location of the *record*; everything in belief | holdings design §2–§5; **H1–H4** |
 
 ### 2.2 Relation signatures and relation instances
 
@@ -870,6 +873,10 @@ W (16): the world address ruling added **W14–W16** to §5.2 on 2026-08-08 and 
 the totals behind, and W's count had never included **W5a, W8a and W8b**, which
 §5.2 classifies individually. The admission ramp's **G9** is the fourth new row
 and the occasion for the recount, not its cause.)*
+*(Extended 2026-08-10: the verified-holdings record design banked **H (4)** —
+the classified inventory is now **121 rows** across ten tables and **150
+assertions**. The assertion count moves with H's arms; the classification is
+per assertion, as ever.)*
 
 Classification is **per assertion, not per row** — 117 rows, 135 assertions — and a row may carry several
 labels: many rows state a property in a positive arm and pin its limit in a
@@ -1046,6 +1053,15 @@ rather than half-blank.
 | D8 | domain contributions compose; same-namespace collisions refuse | RF† + **WD** |
 | D9 | a practice declaring a vocabulary or schema is refused | RF† |
 | D10 | no API retracts, supersedes or attributes an individual facet payload | US† |
+
+**H — verified holdings record** *(added 2026-08-10, the verified-holdings record design §6)*
+
+| id | assertions | classes |
+|---|---|---|
+| H1 | a holdings observation is minted only by an act that dereferenced and **established** its outcome — back-filling `found` from a directory listing or a source stream's digest is unmintable / a hash outside the consistent-read boundary established no stable state, and raw concurrent mutation stays the out-of-band bound / `absent` is established by a post-delete look that answered, never inferred from a return code | RF† / RF† + **DL** / **FC** |
+| H2 | active-ness is walked per location over a checked DAG, never ordered by `observed_at` / disagreeing heads block the location rather than any outcome winning / acyclicity is validated on every walk / an unmatched or qualification-unresolved mutating intent leaves its location unsettled, blocking as itself / every agreeing head stays active under coalescence / an algorithm-mixed `found` pair blocks as `incommensurable`, forced into neither box | **OInv** / **FC** / **WF** / **WD** + **FC** / **CS** / **FC** |
+| H3 | "whatever is checked out" is not a coverage — enumeration is by declared stable identity / a receipt the bound rule over the named inputs does not reproduce is `refuted`, an absent input `unresolvable`, a receipt naming corpora-not-states `malformed` / the log chain heads are coherently captured, committed inputs, never read ambiently | RF† / **WD** + **FC** / **WD** |
+| H4 | an act records every outcome it established or **fails** — never a transient report and a dropped record / an inconclusive attempt reports through its own channel and never mints `absent` / a mutating act runs inside its intent–fulfillment ordering or fails | **FC** / RF† / EO† |
 
 ### 5.3 What the existing taxonomy covers
 
