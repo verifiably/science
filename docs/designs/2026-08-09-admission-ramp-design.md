@@ -923,6 +923,8 @@ is kept, how it is re-checked, or what makes it stale. §8 item 2 carries it, an
 the remote half. §6.5's middle row is what the gap costs today: for 24 of 47
 records, no measurement can currently say which state they are in.
 
+*The record is designed: `2026-08-10-verified-holdings-record-design.md`.*
+
 ## 7. What this will not measure
 
 1. **Closure completeness.** Most data-packaged datasets carry a recipe
@@ -971,12 +973,22 @@ records, no measurement can currently say which state they are in.
    a declaration. Not one record in this corpus is one probe away from promoting.
    The question stands on the semantics of `G9` alone; the population supplies no
    instance of it.
+
+   *Closed at the record layer 2026-08-10 — an observation stands until
+   superseded; what remains is a possible recency-bearing **successor
+   projection rule**, pinned in every derivation receipt with an explicit
+   reference instant, and it is **not** a belief-policy parameter (the holdings
+   design §4).*
 2. **Where verified holdings are recorded.** New, and forced by §6.1: the state
    is derived from the declaration and the system's record of verified holdings,
    and that record is undesigned — where it lives, how it is re-checked, and what
    makes an entry stale. `R5` bounds it from one side (it cannot be a property of
    this checkout) and `G9` from the other (it cannot be authored). Nothing fills
    the middle.
+
+   *Designed 2026-08-10 (`2026-08-10-verified-holdings-record-design.md`): the
+   record is a world record in the observer's corpus, per-location, act-minted,
+   superseded never expired, projected under a declared coverage.*
 3. **The partly-pinned dataset.** §6.2 rules it a curation note on argument
    alone. The corpus pins all or none, 32 against 2, and so cannot corroborate or
    contradict the strictest edge of the rule it is the evidence for.
