@@ -920,7 +920,7 @@ appears exactly once.
 
 | Destination | Kinds |
 |---|---|
-| **Kernel (8; 10 since 2026-08-03; 11 since 2026-08-08)** | `proposition`, `source-assertion`*, `assessment`, `analysis-spec`*, `run`*, `verification`*, `dataset`, `source`* — plus `retraction` (correction-lifecycle), `instrument-certification` (normative-contract 5b §7.2) and `coreference-attestation` (world address ruling §5.1), which absorb nothing |
+| **Kernel (8; 10 since 2026-08-03; 11 since 2026-08-08; 12 since 2026-08-10)** | `proposition`, `source-assertion`*, `assessment`, `analysis-spec`*, `run`*, `verification`*, `dataset`, `source`* — plus `retraction` (correction-lifecycle), `instrument-certification` (normative-contract 5b §7.2), and `coreference-attestation` (world address ruling §5.1), then `holdings-observation` (verified-holdings record design §2, 2026-08-10), which absorb nothing |
 | Absorbed into `assessment` | `evidence-line`, `finding`, `observation` |
 | Absorbed into `proposition` | `mechanism` |
 | Absorbed into `analysis-spec` (as fields/refs, not identity — see §11) | `pre-registration`, `plan`, `spec`, `method`, `assumption`, `falsification` |
@@ -1347,12 +1347,13 @@ This document is sub-problem 1. Each of the following gets its own design.
 > and its oracles, in that order and for the reasons the ledger's §2 records.
 > **Sub-problems 6 and 7 are undesigned**, and 6 — the agentic surface, carrying
 > audit liveness and the divergence table — is the corpus's largest structural
-> deferral (disposition record, open question 5). **Five later designs have no
+> deferral (disposition record, open question 5). **Six later designs have no
 > number in this list at all** and carry a guarantee table each — world-index
 > packaging (X), the mutation log (L), the domain-extension boundary (D), the
-> formal model and claim calculus (M), and the belief policy (P). Six numbered
-> sub-problems plus those five is where the eleven frozen tables come from; the
-> list below was never the whole roadmap.
+> formal model and claim calculus (M), the belief policy (P), and the
+> verified-holdings record (H) *(amended 2026-08-10, the verified-holdings
+> record design §8)*. Six numbered sub-problems plus those six is where the
+> twelve frozen tables come from; the list below was never the whole roadmap.
 
 2. **Substrate consolidation** — Science as a `nodes` profile over `atoms`.
 3. **World & addressing** — one addressable space; project = view. `h00` already

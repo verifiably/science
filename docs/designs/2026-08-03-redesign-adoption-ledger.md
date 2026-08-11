@@ -56,8 +56,10 @@ decomposition rulings that follow from it.
 
 > **Docket §4.1 ruled 2026-08-08** (`2026-08-08-world-address-ruling.md`).
 > Basis-derived world addressing is **upheld** and **F9 closes**. Three
-> consequences reach this ledger: the kernel is **eleven kinds**, not ten —
-> `coreference-attestation` joins on the `retraction` precedent; **structural
+> consequences reach this ledger: the kernel is **eleven kinds**, not ten
+> (twelve since 2026-08-10 — `holdings-observation`, the verified-holdings
+> record design §2) — `coreference-attestation` joins on the `retraction`
+> precedent; **structural
 > merge is retired**, so nothing in artifact 1's world-index build performs a
 > reference rewrite on coreference grounds; and **F10 is un-coupled from F9** and
 > returns to the docket as its own item, since world §5's receipt apparatus turns
