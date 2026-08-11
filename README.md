@@ -17,9 +17,9 @@ below for rationale and frozen guarantees.
 
 ## The designs
 
-Twenty documents in `docs/designs/`: the banked redesigns, review disposition,
+Twenty-one documents in `docs/designs/`: the banked redesigns, review disposition,
 adoption ledger, measurements, rulings, and contributor-guide design written
-2026-08-02 through 2026-08-10. Read them in this order:
+2026-08-02 through 2026-08-11. Read them in this order:
 
 | document | what it rules |
 |---|---|
@@ -43,6 +43,7 @@ adoption ledger, measurements, rulings, and contributor-guide design written
 | `2026-08-09-admission-ramp-design.md` | how externally sourced input reaches held — the measurement, and the ruling downstream of it: three states, `W3` narrowed, `G9` appended, F2 closed |
 | `2026-08-09-conformance-cut-2.md` | the second frozen conformance cut, drawn at the belief seam over the 139-row corpus, with the admission ramp's three open questions as boundary conditions |
 | `2026-08-10-verified-holdings-record-design.md` | where verified holdings are recorded: a per-location world record in the observer's corpus, act-minted, superseded never expired, projected under a declared coverage — H1–H4 |
+| `2026-08-11-act-report-design.md` | the run boundary's report seam: the act-report, boundary-minted terminal record of an opened operation or pre-intent refusal record of a rejected run request; the operation intent's derived three-valued completion reading; the durable home of a look's non-report — T1–T8 |
 
 The ledger is the entry point for "what is built, what is not, and what waits on
 what." Every guarantee table is frozen under its identifiers: designs extend and
@@ -57,8 +58,8 @@ computes no belief, which is where the disposition record's §5.5 stop rule puts
 its edge. Cut 1 itself built nothing beyond that edge.
 
 The guarantee tables are the acceptance criteria — each row must be a failing
-test before it is a passing one. There are **143 rows** across **twelve frozen
-tables** (G, S, W, R, C, X, N, L, D, M, P, H). Cut 1 selects **11 of the 126 rows**
+test before it is a passing one. There are **151 rows** across **thirteen frozen
+tables** (G, S, W, R, C, X, N, L, D, M, P, H, T). Cut 1 selects **11 of the 126 rows**
 across the ten tables that existed when it was drawn, frozen *before* any code
 existed so that a row which fails is a failure rather than a redefinition.
 **Conformance cut 2** was frozen 2026-08-09 on the same discipline, before its

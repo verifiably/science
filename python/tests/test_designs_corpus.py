@@ -8,7 +8,7 @@ lives in many documents while being owned by none of them:
   those sentences became false at once. The stage boundary is now a single constant
   here; landing a stage means moving it, and this file then names every document
   that still disagrees.
-* **The guarantee-row inventory.** Eleven frozen tables carry the acceptance
+* **The guarantee-row inventory.** Thirteen frozen tables carry the acceptance
   criteria. Their counts are quoted in the README and in the review-disposition
   record, and nothing recomputed them when the belief policy added a table.
 * **Cross-references.** Designs cite each other by filename. A rename or a typo is
@@ -44,7 +44,7 @@ ATOMS_FIRST_UNIMPLEMENTED = "A7"
 _ATOMS_IMPLEMENTED = ATOMS_STAGES[: ATOMS_STAGES.index(ATOMS_FIRST_UNIMPLEMENTED)]
 _ATOMS_LAST_IMPLEMENTED = _ATOMS_IMPLEMENTED[-1]
 
-#: The twelve frozen guarantee tables and the rows each holds. Extending a table
+#: The thirteen frozen guarantee tables and the rows each holds. Extending a table
 #: means adding its id here; the corpus's own rule is that ids are never renumbered.
 GUARANTEE_TABLES: dict[str, tuple[str, ...]] = {
     "G": ("G1", "G2a", "G2b", "G2c", "G3", "G4", "G5", "G6", "G7", "G8", "G9"),
@@ -59,6 +59,7 @@ GUARANTEE_TABLES: dict[str, tuple[str, ...]] = {
     "M": tuple(f"M{n}" for n in range(1, 14)),
     "P": tuple(f"P{n}" for n in range(1, 10)),
     "H": ("H1", "H2", "H3", "H4"),
+    "T": ("T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8"),
 }
 
 #: Which design owns each table. The formal model reproduces every other table in
@@ -76,6 +77,7 @@ TABLE_OWNERS = {
     "M": "2026-08-04-formal-model-and-claim-calculus-design.md",
     "P": "2026-08-05-belief-policy-design.md",
     "H": "2026-08-10-verified-holdings-record-design.md",
+    "T": "2026-08-11-act-report-design.md",
 }
 
 #: `A6` is also the formal model's refinement-row prefix (`ρA6`), so a bare stage
@@ -87,7 +89,7 @@ _RANGE = re.compile(rf"(?<![ρ\w])({_STAGE})–({_STAGE})")
 _ASCII_RANGE = re.compile(rf"(?<![ρ\w])({_STAGE})-({_STAGE})(?![\w])")
 
 #: Row ids run to `G2c` and `W8b`, so the suffix is a letter and not just `a`/`b`.
-_ROW = re.compile(r"^\|\s*\*{0,2}([GSWRCXNLDMPH][0-9]+[a-z]?)\*{0,2}\s*\|", re.MULTILINE)
+_ROW = re.compile(r"^\|\s*\*{0,2}([GSWRCXNLDMPHT][0-9]+[a-z]?)\*{0,2}\s*\|", re.MULTILINE)
 _LINK = re.compile(r"\]\(([^)#\s]+\.md)[^)]*\)")
 _BACKTICKED_DOC = re.compile(r"`(20\d\d-\d\d-\d\d-[a-z0-9-]+\.md)`")
 #: The same name unquoted. The guide cites designs in links and `sources` lists,
@@ -107,7 +109,7 @@ EXTERNAL_DOCUMENTS = {
 #: A label naming a span of one table's rows, as `W1–W13` or `M1–M13`. Both
 #: endpoints must be rows that exist: the disposition record once labelled the
 #: world group `W1–W16`, and there has never been a `W14`.
-_ROW_RANGE = re.compile(r"\b([GSWRCXNLDMPH])([0-9]+[a-z]?)–\1?([0-9]+[a-z]?)\b")
+_ROW_RANGE = re.compile(r"\b([GSWRCXNLDMPHT])([0-9]+[a-z]?)–\1?([0-9]+[a-z]?)\b")
 
 
 def design_documents() -> list[Path]:
@@ -221,6 +223,7 @@ _COUNT_WORDS = {
     18: "Eighteen",
     19: "Nineteen",
     20: "Twenty",
+    21: "Twenty-one",
 }
 
 

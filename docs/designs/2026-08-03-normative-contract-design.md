@@ -129,8 +129,9 @@ log, banked 2026-08-03, omitted from this inventory at its banking and added
 **M1–M13** (formal model and claim calculus, banked 2026-08-05); **P1–P9**
 (belief policy, banked 2026-08-05); **H1–H4** (added 2026-08-10, the
 verified-holdings record design §6 — the H table joins the suite on the same
-rule that added N, L and D): the exact current inventory, with no base G2 —
-are permanent names.
+rule that added N, L and D); **T1–T8** (added 2026-08-11, the act-report
+design §5 — the T table joins on the same rule): the exact current inventory,
+with no base G2 — are permanent names.
 
 **P, not B.** The formal model uses `B` for the belief reading throughout M₀, so
 an oracle table under that letter would recreate exactly the overloading that
@@ -503,9 +504,13 @@ the epoch — never the complete selection pair — and in
 the contradicted-core case no usable epoch need exist at all. Audit
 therefore **emits the refutation finding and mints nothing**; the
 superseding verification is a separate, explicit constructor act, supplied
-with its own cut and epoch selection like any other derivation (N7). At
-banking this amends comp §7.3c's audit consequence and R19 alongside the
-signature amendment already queued. This bound is exact, not loose: a closure that omits a
+with its own cut and epoch selection like any other derivation (N7).
+*(Amended 2026-08-11, the act-report design §4: the evaluator is unchanged
+and still mints nothing — the finding's durable home is an entry in the
+boundary wrapper's inert act-report, published under the wrapper's own
+operation intent.)* At banking this amends comp §7.3c's audit consequence
+and R19 alongside the signature amendment already queued. This bound is
+exact, not loose: a closure that omits a
 retraction agrees only with captures **predating** it, and such a record is
 byte-identical to an honest derivation over that earlier retained epoch —
 the record tells no lie, and "derived from the newer epoch" is a claim that
@@ -697,9 +702,10 @@ which table N now also guards reflexively (N2).
   implementation-plan work, as is the executable suite's layout. *(Corrected
   2026-08-08: this read "the six designs" — the corpus as it stood at this
   document's banking.
-  The cut's scope is whatever the ledger's artifact-7 row inventories — twelve
-  tables and 143 rows as of 2026-08-10, D, M, P and H having arrived since, and
-  the kernel table now running **G1–G9** after the admission ramp appended G9.
+  The cut's scope is whatever the ledger's artifact-7 row inventories —
+  thirteen tables and 151 rows as of 2026-08-11, D, M, P, H and T having
+  arrived since, and the kernel table now running **G1–G9** after the
+  admission ramp appended G9.
   The scope is a live number, so the cut names it by reference and not by
   count.)*
   **Not to be confused with `contracts/science/CONTRACT.yaml`**, which exists:
