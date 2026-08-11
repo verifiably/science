@@ -135,14 +135,15 @@ set.
 subject of several identities. The sorts partition the *carrier*; the axes above
 cut across it, which is why each entry carries all seven fields independently.
 
-### 2.1 `Rec` — world records (the twelve kernel kinds)
+### 2.1 `Rec` — world records (the thirteen kernel kinds)
 
-Each row's **identities** cell lists every commitment the player bears. All twelve
+Each row's **identities** cell lists every commitment the player bears. All thirteen
 additionally bear a **node-content identity** (moved by any facet or field
 change) and contribute to their corpus's **corpus-state identity**; those two are
 stated once here rather than repeated in every row.
 *(Extended 2026-08-10: `holdings-observation` joined — the verified-holdings
 record design §2, §8.)*
+*(Extended 2026-08-11: `act-report` joined — the act-report design §2, §7.)*
 
 | player | construction | identities (πᵢ) | lifecycle | reads / produces | affects | inert under | banked |
 |---|---|---|---|---|---|---|---|
@@ -158,6 +159,7 @@ record design §2, §8.)*
 | `instrument-certification` | **content-derived**, no event token — a derived demonstration on the `verification` precedent | content identity over **(contract identity, discriminated subject, implementation content identity, witness evaluations)**; the rule identity inside carries the fixture-set identity | re-deriving unchanged is **idempotent**; a byte-identical re-mint of a retracted certification **stays retracted**. Withdrawal is by **retraction**, corrected by **counter-retraction**; under a **successor cut it is a different record**, so recertification-after-amendment is a new act, never a toggle | certifies executable instruments, never authored lineage claims | rule-binding resolution; verification scope evidence | — | 5b §7.1, §7.2; world §4.2; N-table |
 | `coreference-attestation` | authored, attributed, immutable — added 2026-08-08 (`2026-08-08-world-address-ruling.md` §5.1) | content identity over (**sorted endpoint pair**, **stance**, **actor**, **grounds**, **minted event token**) — the `retraction` shape; sorting makes `{A,B}` one identity regardless of authoring order | additive. A negative attestation **offsets** the pair's derived balance rather than retracting the positive one; both records stand. `retraction` is unused unless individual-attestation invalidation becomes necessary | reads its two endpoints; produces a **derived** balance — `Σ stance` over distinct `(endpoints, stance, actor, grounds)`, the event token deliberately outside the key so duplicate submissions preserve provenance without manufacturing weight | **none** — closure is a query-layer operation and rewrites no stored reference, identity or belief input (§5.3 there) | everything in belief; attester class, which carries **unit weight** for human and agent alike | world §4.2; **W15** |
 | `holdings-observation` | minted by an act — a pure dereference or a managed mutation recording its captured post-state (holdings design §3) — under whatever orchestration (acquisition, audit, a move, deletion) runs it; added 2026-08-10 | content identity over the §2 facet under `science.holdings-observation.v1` — location, outcome, `expected`, observer, instrument, minted **event token**, `observed_at`, `supersedes` as a deduplicated sorted reference sequence | append-only; revised by **supersession only** — a later record names its predecessors; never expired by age | reads the bytes it dereferenced; produces the active/blocked sets and coverage projection the dataset admission state derives from | admission (heldness under a declared coverage) → belief transitively | `observed_at` (recorded, never read by a derivation); location of the *record*; everything in belief | holdings design §2–§5; **H1–H4** |
+| `act-report` | minted only by the boundary — the terminal record of one opened operation (`acquisition`, `audit`, `import`, `re-check`, or a run attempt that minted no `run`), or the pre-intent refusal record of a run request rejected before an operation can open (act-report design §2–§3); added 2026-08-11 | content identity over the whole facet under `science.act-report.v1` — operation kind, the report occurrence's minted **event token**, actor, observer, instrument, timestamps, and `entries` as a canonical sequence, order identity-bearing | immutable; **never superseded**, retained — no ordinary API edits, supersedes, or deletes one | records member acts and their outcomes in per-kind native vocabularies; a finding is citable as **(act-report ref, entry index)** | nothing — inert by type: no eligibility predicate, no admission derivation, no belief closure member, no coverage projection | everything in belief; `opened_at`/`closed_at` (recorded, never read by a derivation); referenced products retain their own semantics | act-report design §2–§5; **T1–T8** |
 
 ### 2.2 Relation signatures and relation instances
 
@@ -385,6 +387,10 @@ outside `Ω_valid`. So `audit` takes all of `Ω`, returns either a validation th
 the configuration is in `Ω_valid` or the findings explaining why it is not, and
 **mints nothing** (5b §7.6): it is read-only, it produces no `ω′`, and it never
 repairs. Detection stays split from correction.
+*(Amended 2026-08-11, the act-report design §4: the type is unchanged and the
+evaluator still mints nothing — the `audit` operation's inert act-report is
+published by the boundary wrapper that ran the evaluator, under the wrapper's
+own operation intent.)*
 
 A relation `ω →ᵃ ω′` cannot simultaneously make refusal a value, because a
 refused act has no `ω′` to relate to — the first draft wrote both and meant only
@@ -453,7 +459,7 @@ configuration whose validity has not been established (§3.3).
 |---|---|---|
 | `write` | kind and facet validation under the compiled profile | substrate §6; D §6 |
 | `freeze` (spec) | resolves `rule_bindings` to exactly one held conforming implementation; **refuses** on ambiguity or a fixture-failing name | 5b §6 |
-| `begin` (run) | **refuses** without an already-frozen spec identity, and records it before any other observation | kernel **G2a** |
+| `begin` (run) | for **assessment runs**: **refuses** without an already-frozen spec identity, and records it before any other observation; a `dataset-production` run carries no spec and opens the **operation intent** instead *(amended 2026-08-11, the act-report design §3.2)* | kernel **G2a** |
 | `derive` | mints assessments, verifications, index maps. Divergence is **computed, never authored** | kernel **G5**; **W8a** |
 | `supersede` | a later record naming what it supersedes | kernel §3.3, §4.1 |
 | `retract` / `counter-retract` | additive; target stays byte-identical and resolvable | correction §4; **C1** |
@@ -877,6 +883,10 @@ and the occasion for the recount, not its cause.)*
 the classified inventory is now **121 rows** across ten tables and **150
 assertions**. The assertion count moves with H's arms; the classification is
 per assertion, as ever.)*
+*(Extended 2026-08-11: the act-report design banked **T (8)** — the classified
+inventory is now **129 rows** across eleven tables and **180 assertions**. The
+assertion count moves with T's arms; the classification is per assertion, as
+ever.)*
 
 Classification is **per assertion, not per row** — 117 rows, 135 assertions — and a row may carry several
 labels: many rows state a property in a positive arm and pin its limit in a
@@ -1062,6 +1072,19 @@ rather than half-blank.
 | H2 | active-ness is walked per location over a checked DAG, never ordered by `observed_at` / disagreeing heads block the location rather than any outcome winning / acyclicity is validated on every walk / an unmatched or qualification-unresolved mutating intent leaves its location unsettled, blocking as itself / every agreeing head stays active under coalescence / an algorithm-mixed `found` pair blocks as `incommensurable`, forced into neither box | **OInv** / **FC** / **WF** / **WD** + **FC** / **CS** / **FC** |
 | H3 | "whatever is checked out" is not a coverage — enumeration is by declared stable identity / a receipt the bound rule over the named inputs does not reproduce is `refuted`, an absent input `unresolvable`, a receipt naming corpora-not-states `malformed` / the log chain heads are coherently captured, committed inputs, never read ambiently | RF† / **WD** + **FC** / **WD** |
 | H4 | an act records every outcome it established or **fails** — never a transient report and a dropped record / an inconclusive attempt reports through its own channel and never mints `absent` / a mutating act runs inside its intent–fulfillment ordering or fails | **FC** / RF† / EO† |
+
+**T — act-report** *(added 2026-08-11, the act-report design §5)*
+
+| id | assertions | classes |
+|---|---|---|
+| T1 | no construction path authors an act-report — boundary-minted only, no API takes report fields as input / an imported report enters structurally validated but not operation-authenticated, attributed and inert, with no validation state written / a raw-written self-consistent report is undetected on read, and an audit detects it only with the tamper log implemented and a valid anchored observer set | CA† + US† / **DL** / **DL** |
+| T2 | one started operation carries one intent and exactly one qualifying terminal — the `run` where one is minted, the act-report otherwise / a post-intent attempt minting no run closes through exactly one qualifying act-report / a second fulfilling registration on one intent is malformed / a root-selection or intent-append failure means no act began and no record was minted — an in-memory `event_token` carried by no intent and no record is not a mint / a pre-intent missing-spec refusal publishes an unfulfilling report that fulfills nothing, a crash there leaving no trace / a complete non-conforming execution mints a `run`, never an act-report / a dataset-production attempt opens the operation intent, the assessment-run intent unspellable without a `spec_identity` | **WD** + **CS** / **WD** / **ED†** / **FC** + EO† / **DL** + **FC** / **ED†** / US† |
+| T3 | an unmatched intent reads unfinished / an unreadable fulfillment pointer reads indeterminate, never collapsed into unfinished / a fulfilled intent reads closed / no status field is spellable on any record — report, intent payload, or run / deleting a published report moves its operation closed → indeterminate, not unfinished | **WD** / **WD** + **FC** / **WD** / US† / **CS** |
+| T4 | adding and removing reports and entries leaves the belief digest, admission, eligibility and the coverage projection byte-unchanged / an unfinished operation blocks nothing — a location with no unmatched holdings intent projects normally while its operation's intent stands unmatched / deleting an observation a report references has exactly the record-layer consequences, the report unchanged and conferring no protection | **OInv** / **OInv** / **OInv** + **DL** |
+| T5 | `byte-locator-untested` is unspellable on a managed-mutation, record-import, or subject-evaluation entry / it is refused on a locator act whose request began — `retrieval-failed`'s territory / a preflight refusal and a deliberate post-stop skip both spell it, with distinct reasons / no entry outcome constructs an observation — reports reference products and never mint them | US† / RF† / **ED†** / US† |
+| T6 | permuting two entries moves the report identity — order is identity-bearing / an (act-report ref, entry index) citation resolves to exactly one entry, an out-of-range index refused at the citing site / deleting the cited report leaves the verification unchanged and still valid, its embedded content intact — the R18 arm | **CS** / **WD** + RF† / **OInv** |
+| T7 | a successful acquisition's provenance reference and act-report publish in one registered transaction in one root, the split attempt refused, never half-ordered / mutating the report moves the dataset's record bytes — its node-content identity — and the corpus-state identity, while the dataset **address** is byte-unchanged (the §6.2 basis excludes provenance) | RF† + EO† / **CS** + **OInv** |
+| T8 | two operations with equal actors, timestamps and entries but distinct operation `event_token`s are two report identities / mutating each facet member in turn moves the identity every time / no ordinary API edits, supersedes, or deletes a report | **CS** / **CS** / US† |
 
 ### 5.3 What the existing taxonomy covers
 
