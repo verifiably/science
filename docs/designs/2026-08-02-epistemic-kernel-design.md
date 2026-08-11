@@ -1353,7 +1353,7 @@ This document is sub-problem 1. Each of the following gets its own design.
 > formal model and claim calculus (M), the belief policy (P), the
 > verified-holdings record (H) *(amended 2026-08-10, the verified-holdings
 > record design §8)*, and the act-report (T) *(amended 2026-08-11, the
-> act-report design §7)*. Seven numbered sub-problems plus those seven is where
+> act-report design §7)*. Six numbered sub-problems plus those seven is where
 > the thirteen frozen tables come from; the list below was never the whole
 > roadmap.
 
