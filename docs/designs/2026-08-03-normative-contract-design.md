@@ -127,8 +127,10 @@ X1–X12; **N1–N10** (this document's own table, §9); **L1–L13** (tamper-ev
 log, banked 2026-08-03, omitted from this inventory at its banking and added
 2026-08-04); **D1–D10** (domain extension boundary, banked 2026-08-04);
 **M1–M13** (formal model and claim calculus, banked 2026-08-05); **P1–P9**
-(belief policy, banked 2026-08-05): the
-exact current inventory, with no base G2 — are permanent names.
+(belief policy, banked 2026-08-05); **H1–H4** (added 2026-08-10, the
+verified-holdings record design §6 — the H table joins the suite on the same
+rule that added N, L and D): the exact current inventory, with no base G2 —
+are permanent names.
 
 **P, not B.** The formal model uses `B` for the belief reading throughout M₀, so
 an oracle table under that letter would recreate exactly the overloading that
@@ -695,10 +697,11 @@ which table N now also guards reflexively (N2).
   implementation-plan work, as is the executable suite's layout. *(Corrected
   2026-08-08: this read "the six designs" — the corpus as it stood at this
   document's banking.
-  The cut's scope is whatever the ledger's artifact-7 row inventories — eleven
-  tables and 139 rows as of 2026-08-09, D, M and P having arrived since, and the
-  kernel table now running **G1–G9** after the admission ramp appended G9. The
-  scope is a live number, so the cut names it by reference and not by count.)*
+  The cut's scope is whatever the ledger's artifact-7 row inventories — twelve
+  tables and 143 rows as of 2026-08-10, D, M, P and H having arrived since, and
+  the kernel table now running **G1–G9** after the admission ramp appended G9.
+  The scope is a live number, so the cut names it by reference and not by
+  count.)*
   **Not to be confused with `contracts/science/CONTRACT.yaml`**, which exists:
   that is the *base profile* contract — the kernel-owned claim grammar the formal
   model §8 sites — and this cut is the *normative conformance* contract. Two
