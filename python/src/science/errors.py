@@ -331,3 +331,17 @@ class UnreferencedSuccessor(RecordError):
     """Reserved for the revise path's internal guard; the boundary-facing
     verdict is the ``SuccessorRefused`` value (G4 is an outcome over value
     state, not an exception)."""
+
+
+class MalformedClosure(RecordError):
+    """A closure that cannot be completed — a missing member, an unknown- or
+    attested-valued component, a bare lockfile digest as environment identity,
+    an input role outside the shape's partition, a manifest disagreeing with
+    the declaration. §2: this is not a weaker run; it is not a run."""
+
+
+class UnsafeInvocation(RecordError):
+    """The boundary's own input-safety construction, not confinement (cut 3
+    §3): an option-like engine target, an entrypoint that does not resolve to
+    a regular file inside the captured bundle, an absolute or root-escaping
+    declared output."""

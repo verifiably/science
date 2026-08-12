@@ -5,6 +5,9 @@ import inspect
 from decimal import Decimal
 
 import pytest
+from fixtures_cut3 import seed_plan as plan
+from fixtures_cut3 import spec_draft as draft
+from fixtures_cut3 import spec_rules as held_rules
 
 from science.errors import MalformedRecord, MalformedSpec, RuleUnbound, UnfreezableSpec
 from science.identity import v1
@@ -29,48 +32,6 @@ from science.spec import (
     freeze,
     revise,
 )
-
-
-def plan(streams=("model-initialization",), roots=None, stream_roots=None) -> SeedPlan:
-    roots = roots if roots is not None else {"root-a": 11}
-    stream_roots = stream_roots if stream_roots is not None else {s: "root-a" for s in streams}
-    return SeedPlan(
-        derivation_rule="seed-derivation/v1", streams=streams, roots=roots, stream_roots=stream_roots
-    )
-
-
-def held_rules() -> dict[str, RuleImplementation]:
-    return {
-        "median-difference/v1": RuleImplementation(
-            identity="impl-interp-1",
-            evaluate=lambda manifest: {"outcome": "supported"},
-            fixtures=(RuleFixture(arguments=(None,), expected={"outcome": "supported"}),),
-        ),
-        "content-identity-equality/v1": RuleImplementation(
-            identity="impl-eq-1",
-            evaluate=lambda a, b: "passed" if a == b else "failed",
-            fixtures=(RuleFixture(arguments=(1, 1), expected="passed"),),
-        ),
-    }
-
-
-def draft(**overrides) -> SpecDraft:
-    fields = {
-        "target": "prop-1",
-        "estimand": "the effect of x on y",
-        "method": "fit the model",
-        "assumptions": "iid draws",
-        "falsification": "a null effect",
-        "input_roles": (SpecInput(role="observes", dataset="dataset:sha256:" + "aa" * 32),),
-        "applicability": "the sampled population",
-        "interpretation_rule": "median-difference/v1",
-        "equivalence_rule": "content-identity-equality/v1",
-        "parameters": {"alpha": Decimal("0.05")},
-        "nondeterminism": Seeded(plan=plan()),
-    }
-    fields.update(overrides)
-    return SpecDraft(**fields)
-
 
 # --- R20: the union's type refusals -----------------------------------------
 
