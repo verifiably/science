@@ -282,6 +282,18 @@ class MalformedRecord(RecordError):
     set, a role outside ``observes | reads | transforms``."""
 
 
+class OutcomeRefused(RecordError):
+    """An entry outcome outside its act kind's reserved vocabulary — the sharp
+    case being `byte-locator-untested` on a non-locator entry. No
+    classification is borrowed across kinds (act-report §2.2, T5)."""
+
+
+class CitationRefused(RecordError):
+    """A citation names exactly one entry by zero-based unsigned index into
+    the canonical sequence; out-of-range — negative included — is refused at
+    the citing site (act-report §2.2, T6)."""
+
+
 class SignatureRefused(RecordError):
     """An edge outside kernel §4.1's closed relation signatures — the sharp
     case being `assesses` from a source-assertion (G1). Refused in the typed

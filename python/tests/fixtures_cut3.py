@@ -2,6 +2,7 @@
 boundary invocation helper (Task 6) are appended by their tasks."""
 
 from decimal import Decimal
+from typing import cast
 
 from science.recipe import (
     BoundaryPolicy,
@@ -15,6 +16,10 @@ from science.recipe import (
     RunClosure,
     TraceJob,
 )
+
+# Tests build fixture values through the private constructor deliberately —
+# the public surface must not offer one, and Task 11 pins that (T1).
+from science.report import Entry, LocatorEntry, PublishedObservation, RunAttemptEntry, RunRefusal, _mint_report
 from science.spec import (
     RealizedSeeds,
     RuleFixture,
@@ -154,3 +159,30 @@ def closure(**overrides) -> RunClosure:
     }
     fields.update(overrides)
     return RunClosure(**fields)
+
+
+def report(**overrides):
+    fields: dict[str, object] = {
+        "operation": "acquisition",
+        "event_token": "tok-1",
+        "actor": "tester",
+        "observer": "observer-1",
+        "instrument": "instrument-1",
+        "opened_at": "2026-08-12T00:00:00Z",
+        "closed_at": "2026-08-12T00:05:00Z",
+        "entries": (
+            LocatorEntry(subject="url://example/data", outcome=PublishedObservation(ref="obs-1")),
+            RunAttemptEntry(subject="absent", outcome=RunRefusal(missing_member="spec_identity")),
+        ),
+    }
+    fields.update(overrides)
+    return _mint_report(
+        operation=cast(str, fields["operation"]),
+        event_token=cast(str, fields["event_token"]),
+        actor=cast(str, fields["actor"]),
+        observer=cast(str, fields["observer"]),
+        instrument=cast(str, fields["instrument"]),
+        opened_at=cast(str, fields["opened_at"]),
+        closed_at=cast(str, fields["closed_at"]),
+        entries=cast(tuple[Entry, ...], fields["entries"]),
+    )
