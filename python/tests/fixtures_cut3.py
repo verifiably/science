@@ -417,3 +417,52 @@ def run_production(
         scratch_base=tmp_path / "scratch",
         cores=cores,
     )
+
+
+def replay_of(
+    original,
+    tmp_path,
+    *,
+    snakefile=SNAKEFILE_DETERMINISTIC,
+    host_realization="host-a",
+    held_inputs=None,
+):
+    from science.replay import replay
+
+    code, held = stage(tmp_path, snakefile=snakefile)
+    supplied = (
+        held_inputs
+        if held_inputs is not None
+        else {
+            DATA_ADDRESS: held / "data.txt",
+            READS_ADDRESS: held / "palette.txt",
+        }
+    )
+    spec = None
+    if original.run.recipe.shape == "assessment":
+        spec = freeze(
+            spec_draft(nondeterminism=original.run.recipe.nondeterminism),
+            held_rules=spec_rules(),
+        )
+    return replay(
+        original,
+        spec=spec,
+        definition=definition(
+            snakefile=snakefile,
+            family_streams=(
+                {"transform": original.run.recipe.nondeterminism.plan.streams}
+                if isinstance(original.run.recipe.nondeterminism, Seeded)
+                else {}
+            ),
+        ),
+        code_roots=(code,),
+        held_inputs=supplied,
+        entrypoint="code/workflow/Snakefile",
+        targets=original.run.recipe.invocation.targets,
+        declared_outputs=original.run.recipe.invocation.declared_outputs,
+        actor="tester",
+        observer="observer-1",
+        started_at="2026-08-12T00:00:00Z",
+        host_realization=host_realization,
+        scratch_base=tmp_path / "scratch",
+    )

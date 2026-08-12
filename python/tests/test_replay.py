@@ -1,0 +1,337 @@
+"""R4's partial walk, R5's retained arms, R6, R9's three inconclusive
+checks, R16's evaluator and scope arms, G9's replay-eligibility third.
+Deferred: R4's clean-environment row and negative (d), R9's admission
+conjunct, R16's nothing-is-admitted conjunct (confinement-capable boundary
+policy); R5 negative (a) (persistence seam) — cut 3 §4.2/§7.1.
+"""
+
+import dataclasses
+import inspect
+
+import pytest
+from fixtures_cut3 import (
+    D_IN,
+    DATA_ADDRESS,
+    READS_ADDRESS,
+    SNAKEFILE_DETERMINISTIC,
+    SNAKEFILE_SEED_VIOLATING,
+    closure_kwargs,
+    replay_of,
+    run_assessment,
+    spec_draft,
+    spec_rules,
+)
+
+from science.admission import admit
+from science.belief import Belief
+from science.boundary import RunMinted, RunRefused, execute_assessment_run
+from science.closure import build_closure
+from science.dataset import ByteObservation, DatasetDeclaration, ResourceDeclaration, dataset_address
+from science.errors import MalformedRecord
+from science.recipe import ResultManifest
+from science.record import AssessmentValue, RunInput, RunValue
+from science.replay import (
+    AVAILABLE,
+    CONFORMING,
+    CONTENT_EQUALITY,
+    DATASET_CONTENT_EQUALITY,
+    NOT_AVAILABLE,
+    CodeLineageCertification,
+    EquivalenceImplementation,
+    byte_tolerance_rule,
+    conformance,
+    derive_scope,
+    replay_eligibility,
+)
+from science.spec import Deterministic, RealizedSeeds, StochasticUnseeded, freeze
+from science.verification import Verification, lifecycle_state
+
+
+@pytest.fixture(scope="module")
+def pair(tmp_path_factory):
+    base = tmp_path_factory.mktemp("replay")
+    original = run_assessment(base / "original")
+    replayed = replay_of(original, base / "replayed")
+    assert isinstance(original, RunMinted) and isinstance(replayed, RunMinted)
+    return original, replayed
+
+
+def test_a_replay_runs_in_a_fresh_scratch_root_with_an_equal_recipe(pair):
+    original, replayed = pair
+    assert original.run.recipe.identity() == replayed.run.recipe.identity()
+    assert original.run.occurrence.receipt.scratch_mapping != replayed.run.occurrence.receipt.scratch_mapping
+
+
+def test_a_replay_refuses_a_reconstructed_recipe_mismatch(tmp_path):
+    original = run_assessment(tmp_path / "original")
+    changed = SNAKEFILE_DETERMINISTIC.replace(
+        "import json, pathlib, random",
+        "import json, pathlib, random  # changed recipe",
+    )
+    attempt = replay_of(original, tmp_path / "changed", snakefile=changed)
+    assert isinstance(attempt, RunRefused)
+    assert "reconstructed recipe differs" in attempt.reason
+
+
+# --- R6 -----------------------------------------------------------------------
+def existing_assessment_state(original):
+    existing = AssessmentValue(
+        spec="s",
+        run=original.run.address(),
+        proposition="p",
+        outcome="supported",
+        interpretation_rule="r",
+    )
+    admitting = (
+        Verification(
+            ref="v1",
+            assessment=existing.identity(),
+            scope="clean-environment",
+            verdict="passed",
+        ),
+    )
+    return admitting, lifecycle_state(admitting)
+
+
+def test_r6_an_unreplayable_run_creates_no_verification_and_changes_no_state(pair, tmp_path):
+    original, _ = pair
+    admitting, before = existing_assessment_state(original)
+    assert replay_eligibility(original.run, resolvable_here=frozenset(), attributions={}) == NOT_AVAILABLE
+    attempt = replay_of(
+        original,
+        tmp_path / "gone",
+        held_inputs={
+            DATA_ADDRESS: tmp_path / "gone" / "missing" / "data.txt",
+            READS_ADDRESS: tmp_path / "gone" / "missing" / "palette.txt",
+        },
+    )
+    assert isinstance(attempt, RunRefused)
+    verifications: tuple = ()
+    assert verifications == ()
+    assert lifecycle_state(admitting) == before
+
+
+def test_r6_restoring_availability_changes_nothing_until_a_replay_actually_runs(pair, tmp_path):
+    original, _ = pair
+    admitting, before = existing_assessment_state(original)
+    everything = frozenset(
+        {
+            original.run.recipe.code_identity,
+            original.run.recipe.environment.identity(),
+            original.run.recipe.workflow_definition_identity,
+            *(i.content for i in original.run.recipe.inputs),
+        }
+    )
+    assert (
+        replay_eligibility(
+            original.run,
+            resolvable_here=everything,
+            attributions={original.run.address(): "corpus-1"},
+        )
+        == AVAILABLE
+    )
+    assert lifecycle_state(admitting) == before
+    replayed = replay_of(original, tmp_path / "again")
+    assert isinstance(replayed, RunMinted)
+
+
+# --- R9 -----------------------------------------------------------------------
+def test_r9_a_missing_output_yields_inconclusive(pair):
+    original, replayed = pair
+    rule = byte_tolerance_rule(store={})
+    assert rule.evaluate(original.run.result, replayed.run.result) == "inconclusive"
+
+
+def test_r9_an_unreadable_output_yields_inconclusive(pair):
+    original, replayed = pair
+    digests = [d for _, d in original.run.result.outputs] + [d for _, d in replayed.run.result.outputs]
+    rule = byte_tolerance_rule(store={d: b"HELLO-not-a-number" for d in digests})
+    assert rule.evaluate(original.run.result, replayed.run.result) == "inconclusive"
+
+
+def test_r9_a_reader_error_yields_inconclusive(pair):
+    original, replayed = pair
+
+    class Exploding(dict):
+        def __getitem__(self, key):
+            raise OSError("reader failure")
+
+    assert byte_tolerance_rule(Exploding()).evaluate(original.run.result, replayed.run.result) == "inconclusive"
+
+
+def test_a_byte_tolerance_rule_compares_numeric_payloads():
+    left = ResultManifest(outputs=(("result", "left"),))
+    close = ResultManifest(outputs=(("result", "close"),))
+    far = ResultManifest(outputs=(("result", "far"),))
+    rule = byte_tolerance_rule({"left": b"1", "close": b"1.000001", "far": b"1.000002"})
+    assert rule.evaluate(left, close) == "passed"
+    assert rule.evaluate(left, far) == "failed"
+
+
+# --- R16's evaluator and scope arms -------------------------------------------
+def test_r16_no_equivalence_rule_can_read_an_occurrence():
+    with pytest.raises(MalformedRecord):
+        EquivalenceImplementation(
+            identity="impl-bad",
+            evaluate=lambda a, b, occurrence: "passed",
+            fixtures=(),
+        )
+    for held in (CONTENT_EQUALITY, DATASET_CONTENT_EQUALITY):
+        assert len(inspect.signature(held.evaluate).parameters) == 2
+
+
+def test_r16_a_seed_violating_run_is_non_conforming_and_derives_not_certified(tmp_path):
+    violating = run_assessment(tmp_path / "v", snakefile=SNAKEFILE_SEED_VIOLATING)
+    clean = replay_of(violating, tmp_path / "r", snakefile=SNAKEFILE_SEED_VIOLATING)
+    assert conformance(violating.run).startswith("non-conforming")
+    assert derive_scope(violating.run, clean.run, certification=None) == "not-certified"
+
+
+def test_conformance_enforces_each_nondeterminism_contract(pair):
+    original, _ = pair
+    assert conformance(original.run) == CONFORMING
+
+    deterministic_recipe = dataclasses.replace(original.run.recipe, nondeterminism=Deterministic())
+    no_seeds = dataclasses.replace(
+        original.run,
+        recipe=deterministic_recipe,
+        occurrence=dataclasses.replace(
+            original.run.occurrence,
+            realized_seeds=RealizedSeeds(seeds={}),
+        ),
+    )
+    assert conformance(no_seeds) == CONFORMING
+    assert conformance(dataclasses.replace(no_seeds, occurrence=original.run.occurrence)).startswith("non-conforming")
+
+    unconstrained = dataclasses.replace(
+        original.run,
+        recipe=dataclasses.replace(
+            original.run.recipe,
+            nondeterminism=StochasticUnseeded(rationale="external entropy"),
+        ),
+    )
+    assert conformance(unconstrained) == CONFORMING
+
+
+def test_seeded_conformance_requires_exact_stream_coverage(pair):
+    original, _ = pair
+    realized = original.run.occurrence.realized_seeds
+    extra = RealizedSeeds(seeds={job: {**streams, "undeclared": 1} for job, streams in realized.seeds.items()})
+    changed = dataclasses.replace(
+        original.run,
+        occurrence=dataclasses.replace(original.run.occurrence, realized_seeds=extra),
+    )
+    assert conformance(changed).startswith("non-conforming")
+
+
+# --- R4 -----------------------------------------------------------------------
+def test_r4_no_authored_scope_parameter_exists():
+    assert "scope" not in inspect.signature(derive_scope).parameters
+    assert "scope" not in inspect.signature(execute_assessment_run).parameters
+
+
+def test_r4_equal_recipes_without_a_receipt_derive_same_environment(pair):
+    original, replayed = pair
+    assert derive_scope(original.run, replayed.run, certification=None) == "same-environment"
+
+
+def test_r4_negative_a_a_hostname_change_stays_same_environment(tmp_path):
+    a = run_assessment(tmp_path / "a", host_realization="host-x")
+    b = replay_of(a, tmp_path / "b", host_realization="host-y")
+    assert derive_scope(a.run, b.run, certification=None) == "same-environment"
+    assert a.run.occurrence.receipt.capabilities == ()
+
+
+def test_r4_negative_b_a_comment_change_is_not_certified_never_independent(tmp_path):
+    a = run_assessment(tmp_path / "a")
+    commented = SNAKEFILE_DETERMINISTIC.replace(
+        "import json, pathlib, random",
+        "import json, pathlib, random  # a comment",
+    )
+    b = run_assessment(tmp_path / "b", snakefile=commented)
+    assert a.run.recipe.code_identity != b.run.recipe.code_identity
+    assert derive_scope(a.run, b.run, certification=None) == "not-certified"
+
+
+def test_r4_independent_implementation_needs_all_four_conditions(tmp_path):
+    a = run_assessment(tmp_path / "a")
+    reimplemented = SNAKEFILE_DETERMINISTIC.replace("text.upper()", "text.upper() + ''")
+    b = run_assessment(tmp_path / "b", snakefile=reimplemented)
+    certified = CodeLineageCertification(rationale="independent rewrite", attribution="tester")
+    assert derive_scope(a.run, b.run, certification=certified) == "independent-implementation"
+    assert derive_scope(a.run, b.run, certification=None) == "not-certified"
+
+
+def test_r4_negative_c_a_different_spec_identity_is_not_certified(tmp_path):
+    a = run_assessment(tmp_path / "a")
+    other_spec = freeze(spec_draft(estimand="a different question"), held_rules=spec_rules())
+    b = run_assessment(tmp_path / "b", spec=other_spec)
+    certified = CodeLineageCertification(rationale="claim", attribution="tester")
+    assert derive_scope(a.run, b.run, certification=certified) == "not-certified"
+
+
+def test_code_lineage_certification_is_strict_and_immutable():
+    certification = CodeLineageCertification(rationale="independent rewrite", attribution="tester")
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        certification.rationale = "changed"
+    with pytest.raises(MalformedRecord):
+        CodeLineageCertification(rationale="", attribution="tester")
+
+
+def test_clean_environment_has_no_reachable_branch():
+    source = inspect.getsource(derive_scope)
+    assert "clean-environment" not in source
+
+
+# --- R5 / G9 ------------------------------------------------------------------
+def test_r5_g9_unreachable_bytes_with_a_held_copy_move_none_of_the_three(pair):
+    original, _ = pair
+    d = DatasetDeclaration(resources=(ResourceDeclaration(name="r", digest=D_IN),))
+    run = RunValue(ref="run-1", spec="spec-1", inputs=(RunInput(role="observes", dataset=d),))
+    assessment = AssessmentValue(
+        spec="spec-1",
+        run="run-1",
+        proposition="prop-1",
+        outcome="supported",
+        interpretation_rule="r",
+    )
+    admitting = (
+        Verification(
+            ref="v1",
+            assessment=assessment.identity(),
+            scope="clean-environment",
+            verdict="passed",
+        ),
+    )
+    local = {dataset_address(d): (ByteObservation(digest=D_IN, location="repo://data"),)}
+    far = {dataset_address(d): (ByteObservation(digest=D_IN, location="https://mirror.example/data"),)}
+    kwargs = closure_kwargs((assessment,), {"run-1": run})
+    before_digest = build_closure(**kwargs).digest()
+    before_admission = admit(assessment, run, local, admitting)
+    after_digest = build_closure(**kwargs).digest()
+    after_admission = admit(assessment, run, far, admitting)
+    assert after_digest == before_digest
+    assert not {"observations", "availability", "resolvable"} & set(inspect.signature(build_closure).parameters)
+    assert after_admission == before_admission
+    reading = replay_eligibility(
+        original.run,
+        resolvable_here=frozenset(),
+        attributions={original.run.address(): "corpus-1"},
+    )
+    assert reading == NOT_AVAILABLE
+    assert reading not in ("unverified", "failed")
+
+
+def test_r5_negative_b_removing_the_corpus_attribution_reads_not_available_never_an_unchanged_belief(pair):
+    original, _ = pair
+    everything = frozenset(
+        {
+            original.run.recipe.code_identity,
+            original.run.recipe.environment.identity(),
+            original.run.recipe.workflow_definition_identity,
+            *(i.content for i in original.run.recipe.inputs),
+        }
+    )
+    reading = replay_eligibility(original.run, resolvable_here=everything, attributions={})
+    assert reading == NOT_AVAILABLE
+    assert not isinstance(reading, Belief)
