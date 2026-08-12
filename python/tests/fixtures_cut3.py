@@ -242,6 +242,18 @@ rule transform:
         pathlib.Path(output[0]).write_text(text.upper())
 """
 
+SNAKEFILE_TWO_NAMES = """\
+import pathlib
+
+rule transform:
+    input: "inputs/data.txt"
+    output: "outputs/a.txt", "outputs/b.txt"
+    run:
+        text = pathlib.Path(input[0]).read_text().upper()
+        pathlib.Path(output[0]).write_text(text)
+        pathlib.Path(output[1]).write_text(text)
+"""
+
 # Writes a random-content scratch intermediate beside the declared output —
 # R21's intermediates-excluded arm.
 SNAKEFILE_SCRATCHY = SNAKEFILE_DETERMINISTIC.replace(
