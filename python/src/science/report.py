@@ -415,11 +415,10 @@ def completion(intent: Intent, registrations: tuple[Registration, ...], held: Ma
     for registration in registrations:
         if registration.intent_token != intent.event_token:
             continue
-        try:
-            value = held[registration.pointer]
-        except KeyError:
+        if registration.pointer not in held:
             unresolved = True
             continue
+        value = held[registration.pointer]
         if type(value) is ActReport and value.event_token == intent.event_token:
             return CLOSED
         if (

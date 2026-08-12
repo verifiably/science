@@ -5,6 +5,7 @@ and preflight-versus-post-stop distinctions (the acquisition operation), and
 T5's no-observation negative (the persistence seam) — cut 3 §4.2."""
 
 import dataclasses
+from collections import defaultdict
 
 import pytest
 from fixtures_cut3 import report
@@ -66,6 +67,14 @@ def test_t3_an_unreadable_fulfillment_pointer_reads_indeterminate_never_unfinish
     intent = OperationIntent(kind="acquisition", event_token="tok-1", actor="tester")
     reading = completion(intent, (Registration(intent_token="tok-1", pointer="gone"),), held={})
     assert reading == INDETERMINATE
+
+
+def test_t3_a_mapping_cannot_fabricate_a_missing_fulfillment_pointer():
+    intent = OperationIntent(kind="acquisition", event_token="tok-1", actor="tester")
+    held: defaultdict[str, object] = defaultdict(object)
+    registrations = (Registration(intent_token="tok-1", pointer="gone"),)
+    assert completion(intent, registrations, held) == INDETERMINATE
+    assert "gone" not in held
 
 
 def test_t3_a_fulfilled_intent_reads_closed():
