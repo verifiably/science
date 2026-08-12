@@ -231,6 +231,22 @@ def bind_rules(named: tuple[str, ...], held: Mapping[str, RuleImplementation]) -
     return tuple(sorted(bound.items()))
 
 
+def _freeze_parameter_value(value: object) -> object:
+    if isinstance(value, Mapping):
+        return MappingProxyType({key: _freeze_parameter_value(member) for key, member in value.items()})
+    if isinstance(value, (list, tuple)):
+        return tuple(_freeze_parameter_value(member) for member in value)
+    return value
+
+
+def _project_parameter_value(value: object) -> object:
+    if isinstance(value, Mapping):
+        return {key: _project_parameter_value(member) for key, member in value.items()}
+    if isinstance(value, tuple):
+        return [_project_parameter_value(member) for member in value]
+    return value
+
+
 @sealed
 @final
 @dataclass(frozen=True)
@@ -248,9 +264,13 @@ class SpecDraft:
     nondeterminism: Deterministic | Seeded | StochasticUnseeded
 
     def __post_init__(self) -> None:
-        if not all(isinstance(entry, SpecInput) for entry in self.input_roles):
+        if not isinstance(self.input_roles, tuple) or not all(isinstance(entry, SpecInput) for entry in self.input_roles):
             raise MalformedSpec("input_roles holds SpecInput values only")
-        object.__setattr__(self, "parameters", MappingProxyType(dict(self.parameters)))
+        object.__setattr__(
+            self,
+            "parameters",
+            MappingProxyType({key: _freeze_parameter_value(value) for key, value in self.parameters.items()}),
+        )
 
 
 @sealed
@@ -273,7 +293,13 @@ class FrozenSpec:
     identity: str
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "parameters", MappingProxyType(dict(self.parameters)))
+        if not isinstance(self.input_roles, tuple) or not all(isinstance(entry, SpecInput) for entry in self.input_roles):
+            raise MalformedSpec("input_roles holds SpecInput values only")
+        object.__setattr__(
+            self,
+            "parameters",
+            MappingProxyType({key: _freeze_parameter_value(value) for key, value in self.parameters.items()}),
+        )
 
 
 @sealed
@@ -317,7 +343,7 @@ def _facet_projection(draft: SpecDraft, rule_bindings, supersedes) -> dict[str, 
         "applicability": draft.applicability,
         "interpretation_rule": draft.interpretation_rule,
         "equivalence_rule": draft.equivalence_rule,
-        "parameters": dict(draft.parameters),
+        "parameters": _project_parameter_value(draft.parameters),
         "nondeterminism": draft.nondeterminism.projection(),
         "rule_bindings": [list(pair) for pair in rule_bindings],
     }

@@ -7,7 +7,9 @@ from decimal import Decimal
 import pytest
 
 from science.errors import MalformedRecord, MalformedSpec, RuleUnbound, UnfreezableSpec
+from science.identity import v1
 from science.spec import (
+    SPEC_DOMAIN,
     Deterministic,
     ExclusionCertification,
     FrozenSpec,
@@ -134,6 +136,11 @@ def test_r20_two_stream_two_root_seeds_cannot_be_keyed_by_job_alone():
     assert nested.seeds["transform"]["resample-draws"] == 9
 
 
+def test_spec_input_roles_are_a_tuple_of_spec_inputs():
+    with pytest.raises(MalformedSpec):
+        draft(input_roles=[SpecInput(role="observes", dataset="dataset:x")])  # type: ignore[arg-type]
+
+
 # --- rule binding over supplied implementations ------------------------------
 
 
@@ -170,6 +177,78 @@ def test_the_identity_is_over_the_normative_facet():
     b = freeze(draft(estimand="a different quantity"), held_rules=held_rules())
     assert a.identity != b.identity
     assert freeze(draft(), held_rules=held_rules()).identity == a.identity  # recomputable
+
+
+def test_the_identity_matches_the_hand_authored_complete_normative_projection():
+    spec = freeze(draft(), held_rules=held_rules())
+    assert spec.identity == v1.digest(
+        SPEC_DOMAIN,
+        {
+            "target": "prop-1",
+            "estimand": "the effect of x on y",
+            "method": "fit the model",
+            "assumptions": "iid draws",
+            "falsification": "a null effect",
+            "input_roles": [{"role": "observes", "dataset": "dataset:sha256:" + "aa" * 32}],
+            "applicability": "the sampled population",
+            "interpretation_rule": "median-difference/v1",
+            "equivalence_rule": "content-identity-equality/v1",
+            "parameters": {"alpha": Decimal("0.05")},
+            "nondeterminism": {
+                "variant": "seeded",
+                "plan": {
+                    "derivation_rule": "seed-derivation/v1",
+                    "streams": ["model-initialization"],
+                    "roots": {"root-a": 11},
+                    "stream_roots": {"model-initialization": "root-a"},
+                },
+            },
+            "rule_bindings": [
+                ["content-identity-equality/v1", "impl-eq-1"],
+                ["median-difference/v1", "impl-interp-1"],
+            ],
+        },
+    )
+
+
+def test_a_frozen_spec_keeps_nested_parameters_immutable_after_freeze():
+    parameters = {"nested": {"values": ["before"]}}
+    spec = freeze(draft(parameters=parameters), held_rules=held_rules())
+    parameters["nested"]["values"].append("after")
+    assert spec.parameters == {"nested": {"values": ("before",)}}
+
+
+def test_supersedes_is_in_the_hand_authored_normative_projection():
+    spec = freeze(draft(), held_rules=held_rules(), supersedes="spec:prior")
+    assert spec.identity == v1.digest(
+        SPEC_DOMAIN,
+        {
+            "target": "prop-1",
+            "estimand": "the effect of x on y",
+            "method": "fit the model",
+            "assumptions": "iid draws",
+            "falsification": "a null effect",
+            "input_roles": [{"role": "observes", "dataset": "dataset:sha256:" + "aa" * 32}],
+            "applicability": "the sampled population",
+            "interpretation_rule": "median-difference/v1",
+            "equivalence_rule": "content-identity-equality/v1",
+            "parameters": {"alpha": Decimal("0.05")},
+            "nondeterminism": {
+                "variant": "seeded",
+                "plan": {
+                    "derivation_rule": "seed-derivation/v1",
+                    "streams": ["model-initialization"],
+                    "roots": {"root-a": 11},
+                    "stream_roots": {"model-initialization": "root-a"},
+                },
+            },
+            "rule_bindings": [
+                ["content-identity-equality/v1", "impl-eq-1"],
+                ["median-difference/v1", "impl-interp-1"],
+            ],
+            "supersedes": "spec:prior",
+        },
+    )
 
 
 def test_the_exclusion_certification_is_spellable_only_on_a_reads_declaration():
@@ -239,6 +318,7 @@ def test_the_derivation_rule_is_a_pure_function_of_its_three_arguments():
     assert derive_seed(11, "transform", "model-initialization") == derive_seed(11, "transform", "model-initialization")
     assert derive_seed(11, "transform", "model-initialization") != derive_seed(11, "transform", "resample-draws")
     assert derive_seed(11, "transform", "model-initialization") != derive_seed(12, "transform", "model-initialization")
+    assert derive_seed(11, "transform", "model-initialization") != derive_seed(11, "resample", "model-initialization")
 
 
 def test_revise_is_the_only_edit_path_and_freeze_takes_drafts_only():
