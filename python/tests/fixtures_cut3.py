@@ -1,8 +1,10 @@
 """Shared cut-3 fixtures: value builders and held Snakefile definitions."""
 
 from decimal import Decimal
+from hashlib import sha256
 from typing import cast
 
+from science.boundary import execute_assessment_run, execute_production_run
 from science.recipe import (
     BoundaryPolicy,
     BoundaryReceipt,
@@ -20,6 +22,7 @@ from science.recipe import (
 # the public surface must not offer one, and Task 11 pins that (T1).
 from science.report import Entry, LocatorEntry, PublishedObservation, RunAttemptEntry, RunRefusal, _mint_report
 from science.spec import (
+    Deterministic,
     RealizedSeeds,
     RuleFixture,
     RuleImplementation,
@@ -27,6 +30,7 @@ from science.spec import (
     SeedPlan,
     SpecDraft,
     SpecInput,
+    freeze,
 )
 
 D_IN = "sha256:" + "aa" * 32
@@ -250,3 +254,101 @@ def definition(snakefile: str = SNAKEFILE_DETERMINISTIC, family_streams=None):
     from science.adapter import WorkflowDefinition
     streams = family_streams if family_streams is not None else {"transform": ("model-initialization",)}
     return WorkflowDefinition(snakefile=snakefile.encode("utf-8"), family_streams=streams)
+
+
+def stage(tmp_path, *, snakefile=SNAKEFILE_DETERMINISTIC, data="hello"):
+    code = tmp_path / "code"
+    (code / "workflow").mkdir(parents=True)
+    (code / "workflow" / "Snakefile").write_bytes(snakefile.encode())
+    (code / "helper.py").write_text("VALUE = 1\n")
+    held = tmp_path / "held"
+    held.mkdir()
+    (held / "data.txt").write_text(data)
+    (held / "palette.txt").write_text("a fixture auxiliary input")
+    return code, held
+
+
+def run_assessment(
+    tmp_path,
+    *,
+    snakefile=SNAKEFILE_DETERMINISTIC,
+    spec=None,
+    started_at="2026-08-12T00:00:00Z",
+    host_realization="host-a",
+    cores=1,
+    data="hello",
+    held_inputs=None,
+):
+    code, held = stage(tmp_path, snakefile=snakefile, data=data)
+    spec = spec if spec is not None else freeze(spec_draft(), held_rules=spec_rules())
+    supplied = held_inputs if held_inputs is not None else {
+        DATA_ADDRESS: held / "data.txt",
+        READS_ADDRESS: held / "palette.txt",
+    }
+    return execute_assessment_run(
+        spec=spec,
+        definition=definition(snakefile=snakefile),
+        code_roots=(code,),
+        held_inputs=supplied,
+        entrypoint="code/workflow/Snakefile",
+        targets=("outputs/result.txt",),
+        declared_outputs=("outputs/result.txt",),
+        actor="tester",
+        observer="observer-1",
+        started_at=started_at,
+        host_realization=host_realization,
+        scratch_base=tmp_path / "scratch",
+        cores=cores,
+    )
+
+
+def run_production(
+    tmp_path,
+    *,
+    snakefile=SNAKEFILE_PRODUCTION,
+    inputs=None,
+    parameters=None,
+    nondeterminism=None,
+    targets=None,
+    declared_outputs=None,
+    held_inputs=None,
+    started_at="2026-08-12T00:00:00Z",
+    host_realization="host-a",
+    cores=1,
+    data="hello",
+):
+    code, held = stage(tmp_path, snakefile=snakefile, data=data)
+    supplied = held_inputs if held_inputs is not None else {
+        DATA_ADDRESS: held / "data.txt",
+        READS_ADDRESS: held / "palette.txt",
+    }
+    authored = inputs if inputs is not None else (
+        RecipeInput(
+            role="transforms",
+            dataset=DATA_ADDRESS,
+            content="sha256:" + sha256(supplied[DATA_ADDRESS].read_bytes()).hexdigest(),
+        ),
+    )
+    contract = nondeterminism if nondeterminism is not None else Deterministic()
+    family_streams = (
+        {"transform": contract.plan.streams} if isinstance(contract, Seeded) else {}
+    )
+    return execute_production_run(
+        inputs=authored,
+        parameters=parameters if parameters is not None else {},
+        nondeterminism=contract,
+        definition=definition(snakefile=snakefile, family_streams=family_streams),
+        code_roots=(code,),
+        held_inputs=supplied,
+        entrypoint="code/workflow/Snakefile",
+        targets=targets if targets is not None else ("outputs/result.txt",),
+        declared_outputs=(
+            declared_outputs if declared_outputs is not None else ("outputs/result.txt",)
+        ),
+        actor="tester",
+        observer="observer-1",
+        started_at=started_at,
+        host_realization=host_realization,
+        scratch_base=tmp_path / "scratch",
+        cores=cores,
+    )
