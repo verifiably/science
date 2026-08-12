@@ -2,7 +2,7 @@
 title: Open questions
 status: living
 created: 2026-08-08
-updated: 2026-08-11
+updated: 2026-08-12
 sources:
   - ../designs/2026-08-02-epistemic-kernel-design.md
   - ../designs/2026-08-02-substrate-consolidation-design.md
@@ -20,6 +20,7 @@ sources:
   - ../designs/2026-08-09-conformance-cut-2.md
   - ../designs/2026-08-10-verified-holdings-record-design.md
   - ../designs/2026-08-11-act-report-design.md
+  - ../designs/2026-08-11-conformance-cut-3.md
 ---
 
 # Open questions
@@ -174,17 +175,17 @@ implementation**: a guarantee row awaiting code is work, not a question.
   certification is unspellable and existing instruments certify only through a
   successor spec. Open is the cadence: sweep, mint on next authored use, or
   never. ([normative-contract questions](../designs/2026-08-03-normative-contract-design.md#11-open-questions))
-- **The third conformance cut.** Of the three candidates cut 1 left — run
-  capture, world persistence, belief — cut 2 took belief, the one whose seam was
-  fully designed, and was frozen 2026-08-09 before its slice was built; the
-  slice landed the same day. What remains open is which prerequisite falls first
-  for a third cut: run capture's seam is now fully designed — the holdings
-  prerequisite 2026-08-10, and completion, act reports and the look's non-report
-  2026-08-11 (the act-report design) — while world persistence waits on `atoms`
-  A7–A8 and the `nodes` contract deltas. Cut 2 deliberately does not rank them.
-  ([act-report design](../designs/2026-08-11-act-report-design.md),
-  [cut-2 boundary decision](../designs/2026-08-09-conformance-cut-2.md#2-the-boundary-decision--three-candidates-one-designed-seam),
-  [cut-2 deferrals](../designs/2026-08-09-conformance-cut-2.md#5-step-3--fully-deferred-rows-grouped-by-unblocking-subsystem))
+- **The third conformance cut is drawn; what cut 4 is remains open.** Cut 3
+  was frozen 2026-08-11 at the run boundary, taking run capture — the seam the
+  verified-holdings record (2026-08-10) and the act-report design (2026-08-11)
+  finished designing. What remains open is what its §5 defers: the persistence
+  seam (the holdings store, H1–H4, T7, the tamper log), world persistence on
+  `atoms` A7–A8 and the `nodes` contract deltas, and the subsystems behind
+  them. The persistence candidates are no longer independent — the first cut
+  that crosses a persistence boundary will take several of those groups at
+  once, and whether that is one cut or two is deliberately not ruled.
+  ([conformance cut 3](../designs/2026-08-11-conformance-cut-3.md),
+  [its deferrals](../designs/2026-08-11-conformance-cut-3.md#5-step-3--fully-deferred-rows-grouped-by-unblocking-subsystem))
 - **The act-report's residue.** The act-report design (2026-08-11) closed
   the run boundary's report seam: the boundary-minted terminal record of
   an opened operation — or the pre-intent refusal record of a rejected

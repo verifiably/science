@@ -17,7 +17,7 @@ below for rationale and frozen guarantees.
 
 ## The designs
 
-Twenty-one documents in `docs/designs/`: the banked redesigns, review disposition,
+Twenty-two documents in `docs/designs/`: the banked redesigns, review disposition,
 adoption ledger, measurements, rulings, and contributor-guide design written
 2026-08-02 through 2026-08-11. Read them in this order:
 
@@ -44,6 +44,7 @@ adoption ledger, measurements, rulings, and contributor-guide design written
 | `2026-08-09-conformance-cut-2.md` | the second frozen conformance cut, drawn at the belief seam over the 139-row corpus, with the admission ramp's three open questions as boundary conditions |
 | `2026-08-10-verified-holdings-record-design.md` | where verified holdings are recorded: a per-location world record in the observer's corpus, act-minted, superseded never expired, projected under a declared coverage — H1–H4 |
 | `2026-08-11-act-report-design.md` | the run boundary's report seam: the act-report, boundary-minted terminal record of an opened operation or pre-intent refusal record of a rejected run request; the operation intent's derived three-valued completion reading; the durable home of a look's non-report — T1–T8 |
+| `2026-08-11-conformance-cut-3.md` | the third frozen conformance cut, drawn at the run boundary over the 151-row corpus: 15 rows selected in full and 19 in part, amended across three readings with the frozen text preserved verbatim, and the persistence seam's H1–H4 and T7 deferred on the holdings design's own assignment |
 
 The ledger is the entry point for "what is built, what is not, and what waits on
 what." Every guarantee table is frozen under its identifiers: designs extend and
@@ -72,6 +73,13 @@ they are recorded was, at the freeze, an open design — closed 2026-08-10 by th
 verified-holdings record design. Its slice landed 2026-08-09: derived admission
 state, the assessment admission gate, the belief input closure digest, and
 `science.belief.v1` under an exact binding now compute.
+
+**Conformance cut 3** was frozen 2026-08-11, before any of its implementation
+existed, at the **run boundary**: spec freezing and closure construction, the
+execution boundary through the minimal Snakemake adapter, dataset production,
+replay and verification-as-value, and the completion and report layer —
+selecting **15 rows in full and 19 in part**, with every H arm and T7 deferred
+to the persistence seam. Its slice is not yet built.
 
 ```
 python/     the implementation (substrate §11 puts the composition root here)

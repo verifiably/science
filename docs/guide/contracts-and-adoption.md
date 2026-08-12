@@ -2,7 +2,7 @@
 title: Contracts and adoption
 status: living
 created: 2026-08-08
-updated: 2026-08-11
+updated: 2026-08-12
 sources:
   - ../designs/2026-08-03-normative-contract-design.md
   - ../designs/2026-08-03-redesign-adoption-ledger.md
@@ -12,6 +12,7 @@ sources:
   - ../designs/2026-08-09-admission-ramp-design.md
   - ../designs/2026-08-09-conformance-cut-2.md
   - ../designs/2026-08-11-act-report-design.md
+  - ../designs/2026-08-11-conformance-cut-3.md
 ---
 
 # Contracts and adoption
@@ -110,6 +111,18 @@ timestamp, and the partly-pinned fixtures exercise a ruled boundary without
 corroborating the ruling. A second reader reviewed the
 selection adversarially before the freeze, and every arm its findings moved,
 they moved out.
+
+[Conformance cut 3](../designs/2026-08-11-conformance-cut-3.md) was frozen
+2026-08-11 at the run boundary, again before any of its implementation
+existed. It selects 15 rows in full and 19 at named assertion arms — spec
+freezing and closure construction, the execution boundary through a minimal
+Snakemake adapter, dataset production, replay and verification-as-value, and
+the completion and report layer. Of the twelve rows banked after cut 2, seven
+— T1–T6 and T8 — gain their first arms, while H1–H4 and T7 wait on the
+persistence seam: the holdings design's own assignment. The selection was
+amended across three adversarial readings before merge, with the frozen text
+preserved verbatim, and a scratch root is staging by location, not
+confinement — no arm of this cut reaches `clean-environment`.
 
 ### Measurements constrain the next slice
 
