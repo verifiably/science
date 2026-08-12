@@ -1,5 +1,4 @@
-"""Shared cut-3 fixtures: value builders now; Snakefile texts (Task 5) and the
-boundary invocation helper (Task 6) are appended by their tasks."""
+"""Shared cut-3 fixtures: value builders and held Snakefile definitions."""
 
 from decimal import Decimal
 from typing import cast
@@ -186,3 +185,68 @@ def report(**overrides):
         closed_at=cast(str, fields["closed_at"]),
         entries=cast(tuple[Entry, ...], fields["entries"]),
     )
+
+
+SNAKEFILE_DETERMINISTIC = """\
+import json, pathlib, random
+
+rule transform:
+    input: "inputs/data.txt"
+    output: "outputs/result.txt"
+    run:
+        seed = int(config["seed_model_initialization"])
+        rng = random.Random(seed)  # the computation USES the seed it reports
+        salt = "".join(rng.choice("0123456789abcdef") for _ in range(8))
+        pathlib.Path(".seeds").mkdir(exist_ok=True)
+        pathlib.Path(".seeds/transform.json").write_text(
+            json.dumps({"transform": {"model-initialization": seed}}))
+        text = pathlib.Path(input[0]).read_text()
+        pathlib.Path(output[0]).write_text(text.upper() + ":" + salt)
+"""
+
+# Disobeys its rendered configuration: USES and REPORTS seed+1 — the honest
+# record of a genuinely violating execution, not a doctored sidecar. A
+# complete closure the execution violated — R16's mint arm, R21 negative (e).
+SNAKEFILE_SEED_VIOLATING = SNAKEFILE_DETERMINISTIC.replace(
+    'seed = int(config["seed_model_initialization"])',
+    'seed = int(config["seed_model_initialization"]) + 1')
+
+# Byte-nondeterministic output, urandom staying inside the scratch root. Used
+# with a stochastic-unseeded production recipe (R11) and, declared
+# deterministic, as the honest way to obtain a failing assessment replay (R8).
+SNAKEFILE_NONDETERMINISTIC = """\
+import os, pathlib
+
+rule transform:
+    input: "inputs/data.txt"
+    output: "outputs/result.txt"
+    run:
+        text = pathlib.Path(input[0]).read_text()
+        pathlib.Path(output[0]).write_text(text.upper() + os.urandom(8).hex())
+"""
+
+# A seed-free deterministic production transform: a Deterministic contract
+# renders no seed config, so the production default cannot read one.
+SNAKEFILE_PRODUCTION = """\
+import pathlib
+
+rule transform:
+    input: "inputs/data.txt"
+    output: "outputs/result.txt"
+    run:
+        text = pathlib.Path(input[0]).read_text()
+        pathlib.Path(output[0]).write_text(text.upper())
+"""
+
+# Writes a random-content scratch intermediate beside the declared output —
+# R21's intermediates-excluded arm.
+SNAKEFILE_SCRATCHY = SNAKEFILE_DETERMINISTIC.replace(
+    'pathlib.Path(output[0]).write_text(text.upper() + ":" + salt)',
+    'pathlib.Path("scratch.tmp").write_text(__import__("os").urandom(8).hex())\n'
+    '        pathlib.Path(output[0]).write_text(text.upper() + ":" + salt)')
+
+
+def definition(snakefile: str = SNAKEFILE_DETERMINISTIC, family_streams=None):
+    from science.adapter import WorkflowDefinition
+    streams = family_streams if family_streams is not None else {"transform": ("model-initialization",)}
+    return WorkflowDefinition(snakefile=snakefile.encode("utf-8"), family_streams=streams)

@@ -1,0 +1,283 @@
+"""R13's capture arms and the boundary's three input-safety rules.
+Confinement is not here: R13's import-resolution negative and R15 defer whole
+to the confinement-capable boundary policy (cut 3 §3)."""
+
+import importlib.metadata
+import inspect
+import os
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
+from fixtures_cut3 import SNAKEFILE_DETERMINISTIC, SNAKEFILE_NONDETERMINISTIC, definition
+
+from science.adapter import (
+    LOG_HANDLER_SCRIPT,
+    WorkflowDefinition,
+    build_argv,
+    capture_bundle,
+    capture_environment,
+    create_scratch_root,
+    distribution_digest,
+    read_realized_seeds,
+    read_trace,
+    require_executing_environment,
+    run_engine,
+    tree_digest,
+    validate_entrypoint,
+)
+from science.errors import MalformedClosure, UnsafeInvocation
+from science.recipe import EnvironmentManifest
+
+
+def make_code_root(tmp_path: Path) -> Path:
+    root = tmp_path / "code"
+    (root / "workflow").mkdir(parents=True)
+    (root / "workflow" / "Snakefile").write_bytes(SNAKEFILE_DETERMINISTIC.encode())
+    (root / "helper.py").write_text("VALUE = 1\n")
+    return root
+
+
+def test_r13_modifying_an_untracked_file_changes_code_identity(tmp_path):
+    root = make_code_root(tmp_path)
+    subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+    subprocess.run(["git", "add", "helper.py"], cwd=root, check=True)
+    (root / "untracked.py").write_text("X = 1\n")  # never added
+    before = capture_bundle((root,), tmp_path / "b1")
+    (root / "untracked.py").write_text("X = 2\n")
+    after = capture_bundle((root,), tmp_path / "b2")
+    assert before != after  # the capture is real — the bundle covers what ran
+
+
+def test_r13_modifying_a_tracked_but_uncommitted_file_does_the_same(tmp_path):
+    root = make_code_root(tmp_path)
+    subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+    subprocess.run(["git", "add", "-A"], cwd=root, check=True)
+    before = capture_bundle((root,), tmp_path / "b1")
+    (root / "helper.py").write_text("VALUE = 2\n")  # the tree changed; no commit moved
+    after = capture_bundle((root,), tmp_path / "b2")
+    assert before != after
+
+
+def test_an_option_like_target_is_rejected_before_any_argv_is_built(tmp_path):
+    with pytest.raises(UnsafeInvocation):
+        build_argv(snakefile=tmp_path / "Snakefile", scratch=tmp_path,
+                   targets=("--unlock",), config={}, log_handler=tmp_path / "h.py", cores=1)
+
+
+def test_a_config_key_cannot_become_an_option_shaped_argument(tmp_path):
+    with pytest.raises(UnsafeInvocation):
+        build_argv(snakefile=tmp_path / "Snakefile", scratch=tmp_path, targets=(),
+                   config={"--config-injection": "1"}, log_handler=tmp_path / "h.py", cores=1)
+    with pytest.raises(UnsafeInvocation):
+        build_argv(snakefile=tmp_path / "Snakefile", scratch=tmp_path, targets=(),
+                   config={"seed=extra": "1"}, log_handler=tmp_path / "h.py", cores=1)
+
+
+def test_the_entrypoint_must_be_a_regular_file_inside_the_bundle(tmp_path):
+    root = make_code_root(tmp_path)
+    bundle = tmp_path / "bundle"
+    capture_bundle((root,), bundle)
+    assert validate_entrypoint(bundle, "code/workflow/Snakefile").is_file()
+    with pytest.raises(UnsafeInvocation):
+        validate_entrypoint(bundle, "../outside/Snakefile")
+    with pytest.raises(UnsafeInvocation):
+        validate_entrypoint(bundle, "code/workflow")  # a directory is not an entrypoint
+
+
+def test_execution_is_direct_argv_with_shell_false(tmp_path):
+    argv = build_argv(snakefile=tmp_path / "Snakefile", scratch=tmp_path,
+                      targets=("outputs/result.txt",),
+                      config={"seed_model_initialization": "7"},
+                      log_handler=tmp_path / "handler.py", cores=1)
+    assert argv[0] == sys.executable and argv[1:3] == ("-m", "snakemake")
+    assert "--log-handler-script" in argv
+    assert argv[argv.index("--") + 1:] == ("outputs/result.txt",)  # targets after the delimiter, always
+    source = inspect.getsource(run_engine)  # the N2 sabotage target
+    assert "shell=False" in source and "shell=True" not in source
+
+
+def engine_run(scratch, entry, trace_dir, *, config):
+    # One invocation with the handler channel wired up. The events file lives
+    # in a boundary-owned directory outside the scratch root as staging
+    # tidiness — the channel is trusted by convention, not enforced: this
+    # suite's fixtures never touch it, and tampering defers with confinement.
+    trace_dir.mkdir(exist_ok=True)
+    handler = trace_dir / "handler.py"
+    handler.write_text(LOG_HANDLER_SCRIPT)
+    events = trace_dir / "events.jsonl"
+    argv = build_argv(snakefile=entry, scratch=scratch, targets=("outputs/result.txt",),
+                      config=config, log_handler=handler, cores=1)
+    code, log = run_engine(argv, cwd=scratch,
+                           env={**os.environ, "SCIENCE_TRACE_FILE": str(events)})
+    return code, log, events
+
+
+def test_the_adapter_executes_the_held_definition_and_observes_the_trace(tmp_path):
+    # The smoke test: one real subprocess through Snakemake 8.11.4.
+    root = make_code_root(tmp_path)
+    bundle, scratch = tmp_path / "bundle", create_scratch_root(tmp_path / "scratch-base")
+    capture_bundle((root,), bundle)
+    (scratch / "inputs").mkdir()
+    (scratch / "inputs" / "data.txt").write_text("hello")
+    entry = validate_entrypoint(bundle, "code/workflow/Snakefile")
+    code, log, events = engine_run(scratch, entry, tmp_path / "trace",
+                                   config={"seed_model_initialization": "7"})
+    assert code == 0, log
+    assert (scratch / "outputs" / "result.txt").read_text().startswith("HELLO:")
+    trace = read_trace(events)
+    assert [job.rule for job in trace] == ["transform"]
+    assert all(job.job_id for job in trace)  # engine-reported, never an ordinal
+    seeds = read_realized_seeds(scratch)
+    assert seeds.seeds["transform"]["model-initialization"] == 7
+
+
+def test_the_computation_derives_from_the_seed_it_reports(tmp_path):
+    # The sidecar is not decoration: two rendered seeds, two different output
+    # bytes — a fixture reporting one seed while computing from another would
+    # break this and the replay-equality arms together.
+    outputs = {}
+    for seed in ("7", "8"):
+        root = make_code_root(tmp_path / f"code-{seed}")
+        bundle = tmp_path / f"bundle-{seed}"
+        capture_bundle((root,), bundle)
+        scratch = create_scratch_root(tmp_path / f"scratch-{seed}")
+        (scratch / "inputs").mkdir()
+        (scratch / "inputs" / "data.txt").write_text("hello")
+        entry = validate_entrypoint(bundle, "code/workflow/Snakefile")
+        code, log, _ = engine_run(scratch, entry, tmp_path / f"trace-{seed}",
+                                  config={"seed_model_initialization": seed})
+        assert code == 0, log
+        outputs[seed] = (scratch / "outputs" / "result.txt").read_text()
+    assert outputs["7"] != outputs["8"]
+
+
+def test_a_malformed_trace_or_seed_report_refuses_capture(tmp_path):
+    events = tmp_path / "events.jsonl"
+    events.write_text("this is not json\n")
+    with pytest.raises(MalformedClosure):
+        read_trace(events)
+    events.write_text('{"level": "job_info", "name": "transform"}\n')  # no jobid — and no ordinal fallback
+    with pytest.raises(MalformedClosure):
+        read_trace(events)
+    events.write_text('{"level": "job_info", "name": "transform", "jobid": 0}\n')
+    with pytest.raises(MalformedClosure):
+        read_trace(events)  # input/output/wildcards required too — never silently defaulted
+    scratch = create_scratch_root(tmp_path / "s")
+    (scratch / ".seeds").mkdir()
+    (scratch / ".seeds" / "a.json").write_text('{"transform": {"model-initialization": 7}}')
+    (scratch / ".seeds" / "b.json").write_text('{"transform": {"model-initialization": 7}}')
+    with pytest.raises(MalformedClosure):
+        read_realized_seeds(scratch)  # ANY second claim for one (job, stream) — agreement included
+    (scratch / ".seeds" / "b.json").write_text('{"transform": {"model-initialization": 9}}')
+    with pytest.raises(MalformedClosure):
+        read_realized_seeds(scratch)  # …and disagreeing, likewise
+    (scratch / ".seeds" / "b.json").write_text("garbage")
+    with pytest.raises(MalformedClosure):
+        read_realized_seeds(scratch)
+
+
+def test_the_environment_manifest_records_the_executing_interpreter():
+    manifest = capture_environment()
+    assert manifest == capture_environment()  # stable within one environment
+    names = dict(manifest.artifacts)
+    assert "python" in names
+    assert "stdlib" in names        # the runtime that executes the fixtures is held content too
+    assert "dist:snakemake" in names
+    assert all("/" not in name and "\\" not in name for name, _ in manifest.artifacts)
+    # …logical names only: no absolute path, no version string, is what makes
+    # the manifest held content rather than a lockfile (§4.5)
+    require_executing_environment(manifest)   # what is recorded is what execs
+    doctored = EnvironmentManifest(artifacts=(("python", "sha256:" + "00" * 32),))
+    with pytest.raises(MalformedClosure):
+        require_executing_environment(doctored)
+
+
+def make_fixture_distribution(root: Path) -> Path:
+    # A minimal purpose-built installed distribution: one module, one
+    # dist-info with METADATA and a RECORD listing both files.
+    root.mkdir(parents=True)
+    (root / "demo_fixture.py").write_text("VALUE = 1\n")
+    info = root / "demo_fixture-1.0.dist-info"
+    info.mkdir(parents=True)
+    (info / "METADATA").write_text("Metadata-Version: 2.1\nName: demo-fixture\nVersion: 1.0\n")
+    (info / "RECORD").write_text(
+        "demo_fixture.py,,\ndemo_fixture-1.0.dist-info/METADATA,,\n")
+    return info
+
+
+def test_a_byte_mutation_in_a_held_artifact_moves_the_environment_identity(tmp_path):
+    info = make_fixture_distribution(tmp_path / "site")
+    before = distribution_digest(importlib.metadata.Distribution.at(info))
+    (tmp_path / "site" / "demo_fixture.py").write_text("VALUE = 2\n")  # one mutated byte of content
+    after = distribution_digest(importlib.metadata.Distribution.at(info))
+    assert before != after  # the digest is over the artifact BYTES, not a name==version label
+
+
+def test_relocated_identical_bytes_yield_the_same_environment_digest(tmp_path):
+    info = make_fixture_distribution(tmp_path / "site-a")
+    shutil.copytree(tmp_path / "site-a", tmp_path / "elsewhere" / "site-b")
+    relocated = tmp_path / "elsewhere" / "site-b" / "demo_fixture-1.0.dist-info"
+    assert distribution_digest(importlib.metadata.Distribution.at(info)) == \
+           distribution_digest(importlib.metadata.Distribution.at(relocated))
+    # …the same bytes reached via a different path are the same held content:
+    # RECORD-relative names carry no mount point (§4.5)
+
+
+def make_fixture_stdlib(root: Path) -> Path:
+    # A small tree standing in for a stdlib root — the real stdlib is never
+    # touched; tree_digest is the fold capture_environment applies to it.
+    (root / "lib-dynload").mkdir(parents=True)
+    (root / "random.py").write_text("def seed(n): ...\n")
+    (root / "json").mkdir()
+    (root / "json" / "__init__.py").write_text("def loads(s): ...\n")
+    (root / "lib-dynload" / "fake_ext.so").write_bytes(b"\x7fELF-fixture-extension")
+    return root
+
+
+def test_a_stdlib_byte_mutation_moves_the_environment_identity(tmp_path):
+    original = make_fixture_stdlib(tmp_path / "stdlib-a")
+    shutil.copytree(original, tmp_path / "elsewhere" / "stdlib-b")
+    relocated = tmp_path / "elsewhere" / "stdlib-b"
+    baseline = tree_digest(original, label="stdlib")
+    assert baseline == tree_digest(relocated, label="stdlib")     # relocation-invariant
+    (relocated / "random.py").write_text("def seed(n): return 0\n")  # one mutated source file
+    assert tree_digest(relocated, label="stdlib") != baseline
+    (relocated / "random.py").write_text("def seed(n): ...\n")       # restore the source…
+    (relocated / "lib-dynload" / "fake_ext.so").write_bytes(b"\x7fELF-mutated")
+    assert tree_digest(relocated, label="stdlib") != baseline        # …native extensions move it too
+    # __pycache__ is a derived cache and never enters the fold:
+    (original / "__pycache__").mkdir()
+    (original / "__pycache__" / "random.cpython-311.pyc").write_bytes(b"varying bytes")
+    assert tree_digest(original, label="stdlib") == baseline
+
+
+def test_a_missing_record_listed_artifact_refuses_capture(tmp_path):
+    info = make_fixture_distribution(tmp_path / "site")
+    (tmp_path / "site" / "demo_fixture.py").unlink()  # RECORD still lists it
+    with pytest.raises(MalformedClosure):
+        distribution_digest(importlib.metadata.Distribution.at(info))
+    bare = tmp_path / "bare" / "demo_fixture-1.0.dist-info"
+    bare.mkdir(parents=True)
+    (bare / "METADATA").write_text("Metadata-Version: 2.1\nName: demo-fixture\nVersion: 1.0\n")
+    with pytest.raises(MalformedClosure):
+        distribution_digest(importlib.metadata.Distribution.at(bare))  # no RECORD: unenumerable inventory
+
+
+def test_the_definition_identity_covers_the_snakefile_and_the_family_streams():
+    a = definition()
+    assert a.identity() != definition(snakefile=SNAKEFILE_NONDETERMINISTIC).identity()
+    assert a.identity() != definition(family_streams={"transform": ("resample-draws",)}).identity()
+
+
+def test_the_definition_keeps_strict_immutable_members():
+    streams = {"transform": ("model-initialization",)}
+    value = WorkflowDefinition(snakefile=b"rule all:\n    input: []\n", family_streams=streams)
+    streams["transform"] = ("resample-draws",)
+    assert value.family_streams == {"transform": ("model-initialization",)}
+    with pytest.raises(MalformedClosure):
+        WorkflowDefinition(snakefile="not bytes", family_streams={})  # type: ignore[arg-type]
+    with pytest.raises(MalformedClosure):
+        WorkflowDefinition(snakefile=b"", family_streams={"transform": ["mutable"]})  # type: ignore[dict-item]
