@@ -26,6 +26,7 @@ from science.spec import RealizedSeeds
 
 WORKFLOW_DEFINITION_DOMAIN = "science.workflow-definition.v1"
 _CONFIG_KEY = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+_PEP_503_RUN = re.compile(r"[-_.]+")
 
 LOG_HANDLER_SCRIPT = '''\
 import json
@@ -88,6 +89,7 @@ def create_scratch_root(base: Path) -> Path:
 
 def capture_bundle(code_roots: tuple[Path, ...], bundle_dir: Path) -> str:
     rows: list[tuple[str, str]] = []
+    names: set[str] = set()
     bundle_dir.mkdir(parents=True)
     for root in code_roots:
         for source in sorted(root.rglob("*")):
@@ -95,6 +97,9 @@ def capture_bundle(code_roots: tuple[Path, ...], bundle_dir: Path) -> str:
             if ".git" in relative.parts or not source.is_file():
                 continue
             name = (Path(root.name) / relative).as_posix()
+            if name in names:
+                raise MalformedClosure(f"code roots map more than one file to bundle path {name!r}")
+            names.add(name)
             target = bundle_dir / name
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source, target)
@@ -102,12 +107,12 @@ def capture_bundle(code_roots: tuple[Path, ...], bundle_dir: Path) -> str:
     return _fold(rows)
 
 
-def _derived_cache(parts: tuple[str, ...]) -> bool:
-    return (
-        "__pycache__" in parts
-        or "site-packages" in parts
-        or bool(parts and parts[-1].endswith(".pyc"))
-    )
+def _distribution_cache(parts: tuple[str, ...]) -> bool:
+    return "__pycache__" in parts or bool(parts and parts[-1].endswith(".pyc"))
+
+
+def _stdlib_excluded(parts: tuple[str, ...]) -> bool:
+    return "site-packages" in parts or _distribution_cache(parts)
 
 
 def tree_digest(root: Path, *, label: str) -> str:
@@ -115,7 +120,7 @@ def tree_digest(root: Path, *, label: str) -> str:
     rows = []
     for path in sorted(root.rglob("*")):
         relative = path.relative_to(root)
-        if _derived_cache(relative.parts) or not path.is_file():
+        if _stdlib_excluded(relative.parts) or not path.is_file():
             continue
         rows.append((f"{label}/{relative.as_posix()}", _file_digest(path)))
     return _fold(rows)
@@ -134,7 +139,7 @@ def distribution_digest(dist: importlib.metadata.Distribution) -> str:
         if not row or not row[0]:
             raise MalformedClosure(f"distribution {name!r} has a malformed RECORD entry")
         entry = importlib.metadata.PackagePath(row[0])
-        if _derived_cache(entry.parts):
+        if _distribution_cache(entry.parts):
             continue
         located = Path(str(dist.locate_file(entry)))
         if not located.is_file():
@@ -153,13 +158,17 @@ def _stdlib_digest() -> str:
     return _fold([(label, tree_digest(root, label=label)) for label, root in sorted(labelled)])
 
 
+def _canonical_distribution_name(name: str) -> str:
+    return _PEP_503_RUN.sub("-", name).lower()
+
+
 def capture_environment() -> EnvironmentManifest:
     rows = {
         ("python", _file_digest(Path(sys.executable).resolve())),
         ("stdlib", _stdlib_digest()),
     }
     for dist in importlib.metadata.distributions():
-        name = dist.metadata["Name"].lower().replace("_", "-")
+        name = _canonical_distribution_name(dist.metadata["Name"])
         rows.add((f"dist:{name}", distribution_digest(dist)))
     return EnvironmentManifest(artifacts=tuple(sorted(rows)))
 
@@ -240,6 +249,7 @@ def read_trace(events_file: Path) -> tuple[TraceJob, ...]:
         raise MalformedClosure("the engine trace is empty")
 
     trace = []
+    jobs_by_id: dict[str, TraceJob] = {}
     for line in lines:
         try:
             record = json.loads(line)
@@ -272,7 +282,13 @@ def read_trace(events_file: Path) -> tuple[TraceJob, ...]:
             inputs=tuple(inputs),
             outputs=tuple(outputs),
         )
-        if job not in trace:  # Snakemake 8.11.4 reports an executed run block twice.
+        previous = jobs_by_id.get(job.job_id)
+        if previous is not None and previous != job:
+            raise MalformedClosure(
+                f"engine job ID {job.job_id!r} has conflicting required trace fields"
+            )
+        if previous is None:
+            jobs_by_id[job.job_id] = job
             trace.append(job)
     return tuple(trace)
 
@@ -281,12 +297,14 @@ def read_realized_seeds(scratch: Path) -> RealizedSeeds:
     reports = scratch / ".seeds"
     if not reports.exists():
         return RealizedSeeds(seeds={})
+    if not reports.is_dir():
+        raise MalformedClosure("the seed-report path exists but is not a directory")
 
     merged: dict[str, dict[str, int]] = {}
     seen: set[tuple[str, str]] = set()
     for report in sorted(reports.glob("*.json")):
         try:
-            record = json.loads(report.read_text())
+            record = json.loads(report.read_text(), object_pairs_hook=_object_without_duplicate_keys)
         except (OSError, UnicodeError, json.JSONDecodeError) as error:
             raise MalformedClosure(f"seed report {report.name!r} is unreadable") from error
         if not isinstance(record, dict):
@@ -303,3 +321,12 @@ def read_realized_seeds(scratch: Path) -> RealizedSeeds:
                 seen.add(key)
                 merged.setdefault(job, {})[stream] = seed
     return RealizedSeeds(seeds=merged)
+
+
+def _object_without_duplicate_keys(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    value: dict[str, object] = {}
+    for key, member in pairs:
+        if key in value:
+            raise MalformedClosure(f"seed report repeats JSON object key {key!r}")
+        value[key] = member
+    return value

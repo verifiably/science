@@ -4,6 +4,7 @@ to the confinement-capable boundary policy (cut 3 §3)."""
 
 import importlib.metadata
 import inspect
+import json
 import os
 import shutil
 import subprocess
@@ -16,6 +17,7 @@ from fixtures_cut3 import SNAKEFILE_DETERMINISTIC, SNAKEFILE_NONDETERMINISTIC, d
 from science.adapter import (
     LOG_HANDLER_SCRIPT,
     WorkflowDefinition,
+    _canonical_distribution_name,
     build_argv,
     capture_bundle,
     capture_environment,
@@ -59,6 +61,17 @@ def test_r13_modifying_a_tracked_but_uncommitted_file_does_the_same(tmp_path):
     (root / "helper.py").write_text("VALUE = 2\n")  # the tree changed; no commit moved
     after = capture_bundle((root,), tmp_path / "b2")
     assert before != after
+
+
+def test_duplicate_bundle_destinations_are_refused_before_overwrite(tmp_path):
+    first = tmp_path / "first" / "code"
+    second = tmp_path / "second" / "code"
+    first.mkdir(parents=True)
+    second.mkdir(parents=True)
+    (first / "same.py").write_text("FIRST = 1\n")
+    (second / "same.py").write_text("SECOND = 2\n")
+    with pytest.raises(MalformedClosure):
+        capture_bundle((first, second), tmp_path / "bundle")
 
 
 def test_an_option_like_target_is_rejected_before_any_argv_is_built(tmp_path):
@@ -179,6 +192,61 @@ def test_a_malformed_trace_or_seed_report_refuses_capture(tmp_path):
         read_realized_seeds(scratch)
 
 
+def trace_record(jobid, *, output="outputs/result.txt"):
+    return {
+        "level": "job_info",
+        "jobid": jobid,
+        "name": "transform",
+        "input": ["inputs/data.txt"],
+        "output": [output],
+        "wildcards": {},
+    }
+
+
+def test_trace_preserves_equal_required_fields_from_different_engine_job_ids(tmp_path):
+    events = tmp_path / "events.jsonl"
+    events.write_text("\n".join(json.dumps(trace_record(jobid)) for jobid in (0, 1)))
+    assert [job.job_id for job in read_trace(events)] == ["0", "1"]
+
+
+def test_trace_folds_an_exact_duplicate_from_the_same_engine_job_id(tmp_path):
+    events = tmp_path / "events.jsonl"
+    record = json.dumps(trace_record(0))
+    events.write_text(f"{record}\n{record}\n")
+    assert [job.job_id for job in read_trace(events)] == ["0"]
+
+
+def test_trace_refuses_conflicting_required_fields_for_one_engine_job_id(tmp_path):
+    events = tmp_path / "events.jsonl"
+    events.write_text(
+        json.dumps(trace_record(0)) + "\n" + json.dumps(trace_record(0, output="outputs/other.txt"))
+    )
+    with pytest.raises(MalformedClosure):
+        read_trace(events)
+
+
+@pytest.mark.parametrize(
+    "report",
+    [
+        '{"transform": {"model-initialization": 7}, "transform": {"resample-draws": 8}}',
+        '{"transform": {"model-initialization": 7, "model-initialization": 8}}',
+    ],
+)
+def test_duplicate_keys_inside_one_seed_report_are_refused(tmp_path, report):
+    scratch = create_scratch_root(tmp_path / "scratch")
+    (scratch / ".seeds").mkdir()
+    (scratch / ".seeds" / "transform.json").write_text(report)
+    with pytest.raises(MalformedClosure):
+        read_realized_seeds(scratch)
+
+
+def test_a_seed_report_path_that_is_not_a_directory_is_refused(tmp_path):
+    scratch = create_scratch_root(tmp_path / "scratch")
+    (scratch / ".seeds").write_text("not a directory")
+    with pytest.raises(MalformedClosure):
+        read_realized_seeds(scratch)
+
+
 def test_the_environment_manifest_records_the_executing_interpreter():
     manifest = capture_environment()
     assert manifest == capture_environment()  # stable within one environment
@@ -224,6 +292,23 @@ def test_relocated_identical_bytes_yield_the_same_environment_digest(tmp_path):
            distribution_digest(importlib.metadata.Distribution.at(relocated))
     # …the same bytes reached via a different path are the same held content:
     # RECORD-relative names carry no mount point (§4.5)
+
+
+def test_a_record_listed_site_packages_byte_moves_the_distribution_digest(tmp_path):
+    info = make_fixture_distribution(tmp_path / "site")
+    nested = tmp_path / "site" / "vendor" / "site-packages"
+    nested.mkdir(parents=True)
+    artifact = nested / "runtime.py"
+    artifact.write_text("VALUE = 1\n")
+    with (info / "RECORD").open("a") as record:
+        record.write("vendor/site-packages/runtime.py,,\n")
+    before = distribution_digest(importlib.metadata.Distribution.at(info))
+    artifact.write_text("VALUE = 2\n")
+    assert distribution_digest(importlib.metadata.Distribution.at(info)) != before
+
+
+def test_distribution_names_use_pep_503_canonicalization():
+    assert _canonical_distribution_name("Demo__Fixture.Name---Extra") == "demo-fixture-name-extra"
 
 
 def make_fixture_stdlib(root: Path) -> Path:
