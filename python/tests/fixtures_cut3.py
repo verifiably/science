@@ -189,7 +189,7 @@ def interp(outcome="supported", fail=False):
     def evaluate(manifest):
         if fail:
             raise ValueError("unparseable payload")
-        return {"outcome": outcome, "estimate": "0.4"}
+        return {"outcome": outcome, "estimate": "0.4", "uncertainty": "0.1"}
 
     return {
         "impl-interp-1": RuleImplementation(

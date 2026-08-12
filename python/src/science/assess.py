@@ -56,7 +56,7 @@ def build_assessment(
     run_address = run.address()
     try:
         spec = specs[cast(str, run.recipe.spec_identity)]
-        implementation_identity = dict(spec.rule_bindings)[spec.interpretation_rule]
+        implementation_identity = dict(run.recipe.rule_bindings)[spec.interpretation_rule]
         implementation = implementations[implementation_identity]
         raw = implementation.evaluate(run.result)
         if not isinstance(raw, Mapping):

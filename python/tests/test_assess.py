@@ -100,9 +100,38 @@ def test_r22_the_facet_derives_from_the_frozen_spec_and_the_manifest(minted):
         minted.run, specs={spec.identity: spec}, implementations=interp()
     )
     assert isinstance(derived, AssessmentValue)
+    assert derived.spec == spec.identity
     assert derived.proposition == spec.target
     assert derived.estimand == spec.estimand and derived.applicability == spec.applicability
+    assert derived.interpretation_rule == spec.interpretation_rule
+    assert derived.estimate == "0.4" and derived.uncertainty == "0.1"
     assert derived.outcome == "supported" and derived.run == minted.run.address()
+
+
+def test_r22_the_evaluator_resolves_from_the_binding_frozen_in_the_recipe(minted):
+    spec = freeze(spec_draft(), held_rules=spec_rules())
+    recipe_implementation = RuleImplementation(
+        identity="impl-interp-2",
+        evaluate=lambda manifest: {"outcome": "refuted"},
+        fixtures=(),
+    )
+    bound_recipe = dataclasses.replace(
+        minted.run.recipe,
+        spec_identity=spec.identity,
+        rule_bindings=tuple(
+            (rule, "impl-interp-2" if rule == spec.interpretation_rule else identity)
+            for rule, identity in spec.rule_bindings
+        ),
+    )
+    synthetic = dataclasses.replace(minted.run, recipe=bound_recipe)
+    derived = build_assessment(
+        synthetic,
+        specs={spec.identity: spec},
+        implementations={**interp("supported"), "impl-interp-2": recipe_implementation},
+    )
+    assert isinstance(derived, AssessmentValue)
+    assert derived.outcome == "refuted"
+    assert derived.interpretation_rule == spec.interpretation_rule
 
 
 def test_r22_the_derived_outcome_moves_only_with_the_result_or_the_rule(tmp_path):
@@ -266,31 +295,48 @@ def test_r22_the_reach_arm_an_inline_exclusion_moves_the_digest_with_identical_f
         implementations=interp(),
     )
     assert a.facet_digest() == b.facet_digest()  # byte-identical derived facet values
-    # Reach ISOLATION: the derived pair also differs in spec identity, which
-    # would move the digest even if run identity stopped carrying the
-    # exclusion — so the digest claim runs over a controlled pair sharing ONE
-    # spec identity, one proposition, byte-identical facets, where only the
-    # two genuine run addresses differ. The certification's only path into
-    # the belief digest is recipe → run address → assessment identity.
-    reach_certified = AssessmentValue(
-        spec=plain_spec.identity,
-        run=certified_run.run.address(),
-        proposition=plain_spec.target,
-        outcome="supported",
-        interpretation_rule=plain_spec.interpretation_rule,
+    # Reach ISOLATION: derive a controlled pair sharing one spec identity,
+    # result and occurrence. Their recipes differ only in the reads exclusion,
+    # whose path is recipe → run address → assessment identity → belief digest.
+    isolated_plain = plain_run.run
+    isolated_certified = dataclasses.replace(
+        isolated_plain,
+        recipe=dataclasses.replace(
+            isolated_plain.recipe,
+            inputs=tuple(
+                dataclasses.replace(
+                    entry,
+                    exclusion=ExclusionCertification(
+                        rationale="plotting palette", attribution="tester"
+                    ),
+                )
+                if entry.role == "reads"
+                else entry
+                for entry in isolated_plain.recipe.inputs
+            ),
+        ),
     )
-    reach_plain = AssessmentValue(
-        spec=plain_spec.identity,
-        run=plain_run.run.address(),
-        proposition=plain_spec.target,
-        outcome="supported",
-        interpretation_rule=plain_spec.interpretation_rule,
+    assert isolated_certified.recipe.spec_identity == isolated_plain.recipe.spec_identity
+    assert isolated_certified.result == isolated_plain.result
+    assert isolated_certified.occurrence == isolated_plain.occurrence
+    reach_certified = build_assessment(
+        isolated_certified,
+        specs={plain_spec.identity: plain_spec},
+        implementations=interp(),
     )
+    reach_plain = build_assessment(
+        isolated_plain,
+        specs={plain_spec.identity: plain_spec},
+        implementations=interp(),
+    )
+    assert isinstance(reach_certified, AssessmentValue)
+    assert isinstance(reach_plain, AssessmentValue)
     assert reach_certified.facet_digest() == reach_plain.facet_digest()
+    assert reach_certified.identity() != reach_plain.identity()
     assert build_closure(
-        **closure_kwargs((reach_certified,), runs_for((certified_run.run,)))
+        **closure_kwargs((reach_certified,), runs_for((isolated_certified,)))
     ).digest() != build_closure(
-        **closure_kwargs((reach_plain,), runs_for((plain_run.run,)))
+        **closure_kwargs((reach_plain,), runs_for((isolated_plain,)))
     ).digest()
     # Editing the certification alone re-projects to exactly the other spec's
     # recipe — a different description, and no run until executed:
