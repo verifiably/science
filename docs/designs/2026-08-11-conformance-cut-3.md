@@ -4,13 +4,17 @@
 exists**, on the discipline both prior cuts held: a cut drawn after
 implementation is a list of what happened to pass. Drawn over the **151-row**
 corpus — cut 1's frozen denominator of **126** and cut 2's of **139** are
-untouched, and nothing here amends a banked row. Selects **17 rows in full
-and 17 in part**; §5 groups the 88 fully deferred rows by unblocking
-subsystem, and §6 accounts for all 151. The second reading ran before this
-freeze and §7 records its four findings — every arm a finding moved, it
-moved **out**, the direction every prior cut's errors ran; the review
-before merge is the third reading, and any arm it moves is recorded as an
-**amendment preserving the frozen original**, never an edit to it.
+untouched, and nothing here amends a banked row. Selects **15 rows in full
+and 19 in part** after the pre-merge third reading's amendment and its
+scoped re-reading (§7.1–§7.2) — the selection as first frozen read 17/17
+and is preserved verbatim at each amended site; §5 groups the 88 fully
+deferred rows by unblocking subsystem, and §6 accounts for all 151. The
+second reading ran before the freeze and §7 records its four findings;
+the third reading returned four more (§7.1), three moving arms **out** —
+the direction every prior cut's errors ran — and one correcting the
+execution boundary itself; the re-reading over that amendment returned
+four again (§7.2), catching the amendment's own mis-placement and moving
+back out the two clauses it had over-selected.
 
 ---
 
@@ -87,11 +91,21 @@ freeze with the nondeterminism contract enforced as a discriminated union,
 recipe construction with role-partitioned inputs, identity canonicalization
 consumed at run positions, and the refusal of every incomplete or
 mis-shaped closure; **the execution boundary** — begin, execute, capture:
-the operation intent opened before the act, one rendered invocation per run
-executed as a **real subprocess in a boundary-owned scratch root** over held
-fixture inputs, the code bundle and environment captured as held content,
-realized seeds recorded per stream, and the result manifest constructed by
-the boundary content-addressing every declared output on disk; **dataset
+the operation intent opened before the act; execution through the
+**minimal Snakemake adapter** — the boundary renders a single-target,
+single-rule workflow definition and executes it through the engine as a
+**real subprocess in a boundary-owned scratch root** over held fixture
+inputs, the workflow-definition snapshot captured as a **recipe** member
+and the engine-native trace as the occurrence's *(amended 2026-08-11
+twice: the frozen text read "one rendered invocation per run" with no
+engine, which substituted a Science-owned runner for the boundary
+computation §6.4 rules must wrap — the third reading, §7.1; that
+amendment's first form then mis-placed the definition snapshot as an
+occurrence member, corrected to the banked §6.2 placement by the
+re-reading, §7.2)* —
+the code bundle and environment captured as held content, realized seeds
+recorded per stream, and the result manifest constructed by the boundary
+content-addressing every declared output on disk; **dataset
 production, narrowly** — the output dataset's address as the §6.2 basis
 projection over the manifest's content identities, the `produces` edge
 emitted with the run, and prior bindings preserved; **replay and
@@ -116,8 +130,18 @@ slice restricts what an execution can observe, so **R15 defers whole and
 this slice can produce qualifies, and every scope walk stops at the
 branches genuine unconfined replays can derive.
 
-It crosses **no** persistence boundary and performs **no** IO outside its
-scratch roots and fixture inputs. Stated exclusions, each load-bearing:
+It crosses **no** persistence boundary. Its **fixtures** perform no
+network access and no IO outside the scratch roots and fixture inputs — a
+property of what this cut's suite runs, which the **boundary does not
+enforce**: an unconfined subprocess may read ambient host resources, and
+only the confinement-capable boundary policy makes the stronger claim
+checkable *(amended 2026-08-11, the third reading: this read "performs no
+IO outside its scratch roots and fixture inputs", a claim the
+unconfined-process ruling above contradicts)*. Two input-safety rules are
+the boundary's own construction, not confinement: execution is by **direct
+argv with `shell=False`**, and an entrypoint validates as
+**bundle-relative** before anything runs. Stated exclusions, each
+load-bearing:
 
 - **No store of any kind.** Runs, intents, act-reports, and verifications
   are values; corpora exist as supplied node→corpus attributions with
@@ -125,13 +149,17 @@ scratch roots and fixture inputs. Stated exclusions, each load-bearing:
   and audit arm defers — T1's negative among them, which additionally waits
   on the tamper log and a valid anchored observer set.
 - **No holdings store and no H arm** (§2 item 2).
-- **No acquisition, no network, no probe.** R10's refusal arm is selected;
-  the acquisition path that records provenance is not built, and T7 defers
+- **No acquisition and no probe.** R10's refusal arm is selected; the
+  acquisition path that records provenance is not built, and T7 defers
   whole — its publish-together claim is about store transactions this slice
   does not have.
-- **No workflow engine.** The boundary renders single invocations; every
-  trace, family, definition-equality, and target-enumeration arm defers to
-  the **Snakemake adapter** (computation §6.4's one adapter).
+- **The minimal adapter only.** The boundary wraps computation §6.4's one
+  adapter at its smallest honest surface — single-target, single-rule
+  definitions, with Snakemake pinned in the frozen environment; every
+  multi-rule, family, wildcard, definition-equality, and
+  execution-coverage arm defers to the **full workflow surface** *(amended
+  2026-08-11, the third reading: this bullet read "No workflow engine",
+  which was not a smaller execution boundary but a different one)*.
 - **No confinement.** R15 defers whole, R13's import-resolution negative
   and R21's write-outside-root clause with it, to the
   **confinement-capable boundary policy** (computation §7.3a).
@@ -161,13 +189,13 @@ selected in part because this cut adds an arm to it.
 
 | state | rows | n |
 |---|---|---|
-| **selected in full** — every previously unexercised arm | G2a, G4, M2, R1, R3, R5, R6, R7, R8, R9, R11, R14, R17, R18, T3, T6, T8 | **17** |
-| **selected in part** — the arm split stated below | G9, N2, R2, R4, R10, R12, R13, R16, R19, R20, R21, R22, R23, T1, T2, T4, T5 | **17** |
+| **selected in full** — every previously unexercised arm | G2a, G4, M2, R1, R3, R6, R7, R8, R11, R14, R17, R18, T3, T6, T8 | **15** |
+| **selected in part** — the arm split stated below | G9, N2, R2, R4, R5, R9, R10, R12, R13, R16, R19, R20, R21, R22, R23, T1, T2, T4, T5 | **19** |
 | **fully exercised by prior cuts** | M4, M7, M9, M10, M11, M13 (cut 1); G1, G2b, G6, M6, M8, P2–P9 (cut 2) | 19 |
 | **part-exercised by prior cuts, cut 3 adds nothing** | G2c, G3, G8, S5, S6, P1, D3, D6, D7, M5 | 10 |
 | **fully deferred** — no arm in any cut | §5 | 88 |
 
-### 4.1 Selected in full — 17 rows
+### 4.1 Selected in full — 15 rows *(as amended, §7.1–§7.2; the frozen table read 17, with R5 and R9 here and R2 in §4.2 — R2 was restored by §7.1 and split again by §7.2)*
 
 | row | what the slice must demonstrate |
 |---|---|
@@ -176,11 +204,9 @@ selected in part because this cut adds an arm to it.
 | **M2** | substituting any run input with a differently-addressed dataset moves the assessment identity, every input, every time; an input no declared role partition covers is refused, not ignored — the three-hop binding path (role-partitioned `inputs` → R2 → assessment identity) pinned by test |
 | **R1** | an incomplete closure is refused and no run value is minted; the curation note or source-assertion is authored as a separate explicit act before the member is supplied; no `unknown`- or `attested`-valued component is representable on a run in any position; a bare lockfile digest is refused as `environment_identity` |
 | **R3** | two executions of one recipe are two runs — equal recipe identity, distinct addresses, both referenceable; they do not collapse; identical `started_at`, `actor`, and `host_realization` still yield distinct addresses, the minted `event_token` doing the separating |
-| **R5** | bytes unreachable here while a controlled copy remains held: `belief_input_digest` unchanged, admission unchanged, replay eligibility **not available** — never `unverified`, never `failed`; destroying the last held copy of an `observes` input fails eligibility and **changes** admission; removing the corpus attribution holding the records yields **`not-available`**, never an unchanged belief |
 | **R6** | an un-replayable run creates no verification and changes no assessment state; restoring availability changes nothing until a replay actually runs |
 | **R7** | a `dataset-production` run with an `assesses` descendant is refused; an `assessment` run whose spec has no `target` is refused; zero `observes` inputs admit nothing at any quantity of `reads` |
 | **R8** | editing the equivalence rule after a failing replay mints a new spec identity; the original run's closure still names the old spec; the successor references the superseded one; the failing verification **remains active** in the slice's value state |
-| **R9** | an unreadable output, a missing output, and a reader error each yield `inconclusive`, and admission does not follow |
 | **R11** | a tolerance on a `dataset-production` replay is refused; a nondeterministic transform's replay yields all four — a different dataset entity, a `failed` verification under `dataset-content-equality/v1`, prior assessments still bound to the prior dataset, no belief moved; the dataset-production verification carries no `verifies → assessment` edge |
 | **R14** | canonicalization exercised at run and closure positions: binary floats refused everywhere, all four §4.3 collisions walked, `NaN`/`Infinity` refused in every position, kind-domain separation, and the `v2`-never-equals-`v1` negative |
 | **R17** | no path supplies `inputs`, `parameters`, or any part of the nondeterminism contract on an assessment run — including through `invocation`, which holds bindings, not values; seed shopping cannot occur at all, a changed root requiring a successor spec; the limit is pinned: a deleted or never-recorded attempt is undetectable, G4's boundary; a `dataset-production` recipe **is** authored directly, seed plan included |
@@ -193,20 +219,22 @@ selected in part because this cut adds an arm to it.
 
 | row | arms **in** cut 3 | arms **deferred**, and on what |
 |---|---|---|
-| **R2** | every §4.2 closure member mutated in turn moves the run address; the negative's in-slice half: two executions of one recipe have **equal recipe identities** despite differing realized seeds and event tokens | the negative's **trace and job-id** halves — the engine-native execution trace is an occurrence member only an engine observes, so two single-subprocess executions have no traces or job ids to differ — the **Snakemake adapter** |
 | **T5** | the type-union unspellability refusals: `byte-locator-untested` unspellable on managed-mutation, record-import, and subject-evaluation entries | the *locator entry whose request began* refusal and the *preflight refusal versus deliberate post-stop skip* distinction — began-ness is not an entry field, and both are behaviors of the **acquisition** operation this slice does not run; the *no entry outcome constructs an observation* negative — vacuous here, where no observation-minting machinery exists — with the **persistence seam** |
 | **G9** | the **replay-eligibility third** of R5's answer: making bytes unreachable here while a controlled copy remains held leaves the digest and admission halves unchanged — cut 2's arms — and now reads replay eligibility *not available*, the third the run boundary supplies | unchanged from cut 2: the *minted as a world entity* clause (**W3**'s property, the world boundary) and the **independence sabotage**, which stays with the **persistence seam** on the holdings design's own assignment (§2 item 2) |
 | **T1** | the ordinary-API and type claim: no construction path authors an act-report — direct authoring and every API taking report fields as input are absent; the constructor is reachable only from the boundary | the **import** arm — structurally-validated, unauthenticated, attributed, inert entry of another observer's report is a store operation — and the **raw-write negative**, which needs the tamper log and a valid anchored observer set |
 | **T2** | the shape refusals: a dataset-production attempt opens the **operation intent**, and the assessment-run intent is unspellable without a `spec_identity`; negative (b): a complete non-conforming execution mints a **run**, never an act-report; the pre-intent refusal: a missing-spec run request refuses **before** any intent, and a surviving boundary publishes an *unfulfilling* act-report that fulfills nothing | **one started operation, one intent, one terminal record** — qualification, the second-registration-malformed rule, and the no-act-before-intent ordering are claims about committed registrations in a root, deferred with **persistence**; the crash-leaves-no-trace clause with them, there being no durable trace here to interrogate |
 | **T4** | adding and removing reports leaves the belief digest, admission, and eligibility byte-unchanged — run against **cut 2's already-admitted value fixtures** (§3), the only admitted belief this cut can reach | the **coverage projection** clause and the *unfinished operation blocks nothing* arm — the holdings design's §5 projection, unbuilt with H — and the observation-deletion negative, whose record-layer consequences are the holdings record's |
+| **R2** | every §4.2 closure member mutated in turn moves the run address — the workflow-definition snapshot among them, as a **recipe** member; the negative over the components the minimal surface can vary: two executions of one recipe have **equal recipe identities** despite differing realized seeds, event tokens, and per-execution trace observations | the negative's **job-id** component — engine-native job ids are DAG-assigned and deterministic, so two executions of one single-rule definition carry equal job ids and no mutation produces the differing state — the **full workflow surface** *(amended 2026-08-11 twice: the frozen cut split this row because engine-free executions had no traces; §7.1 restored it to full with the minimal adapter; the §7.2 re-reading split it again on the component a single-rule DAG cannot vary)* |
+| **R5** | bytes unreachable here while a controlled copy remains held: `belief_input_digest` unchanged, admission unchanged, replay eligibility **not available** — never `unverified`, never `failed`; negative (b): removing the corpus attribution holding the records yields **`not-available`**, never an unchanged belief | negative (a) — destroying the **last held copy** is enacted only by a managed deletion recording an `absent` observation (holdings §3), and raw deletion deliberately leaves heldness unchanged until audit, so over supplied observations the destruction is a fixture edit — the **persistence seam** *(amended 2026-08-11, the third reading; the frozen cut selected the row in full)* |
+| **R9** | an unreadable output, a missing output, and a reader error each yield `inconclusive` | the *admission does not follow* conjunct — with `clean-environment` unreachable, admission never follows a verdict here, the same defect §7 item 3 removed from R16 — the **confinement-capable boundary policy** *(amended 2026-08-11, the third reading; the frozen cut selected the row in full, its cell ending "and admission does not follow")* |
 | **R4** | the derived-scope walk over the branches genuine unconfined replays can produce: `not-certified`, `same-environment`, `independent-implementation`; no authored `scope`; negatives (a)–(c): a hostname change stays `same-environment` — no receipt, so a machine name buys nothing; a comment change is `not-certified`, never `independent-implementation`; different `spec_identity` is `not-certified` | the **`clean-environment`** row of the walk and negative (d) — both need a qualifying confinement receipt, the **confinement-capable boundary policy** |
 | **R10** | a URL- or accession-valued input is refused as a run input; no fallback synthesizes a dataset entity from the URL | *"the acquisition path records dataset provenance instead"* — there is no acquisition here |
 | **R12** | the boundary refuses a run naming no frozen spec identity; the negative: freeze a spec after an out-of-band execution, attach it, and the ordering is undetectable — content addressing is not pre-registration | the **boundary-mediated strengthening** — an intent entry as a removal-detectable witness — which is conditional on the **tamper log** |
 | **R13** | modifying an untracked file inside `code_roots` changes `code_identity`; modifying a tracked-but-uncommitted file does the same — the capture is real | the negative — a local import resolving outside the bundle and held environment is refused — which is an observation about what execution can reach, the **confinement-capable boundary policy** |
-| **R16** | a complete closure whose realized seeds violate its seed plan mints a run, is **non-conforming**, and derives `not-certified`; no equivalence rule can read an occurrence — the evaluator's signature is `(result, result)` and admits no job-set argument | the *"nothing is admitted"* conjunct — failable only against a pair with **qualifying receipts**, which needs the confinement boundary, since with `clean-environment` unreachable admission never follows scope here and the conjunct passes under its own mutation — the **confinement-capable boundary policy**; every trace-membership, target-satisfaction, family, definition-equality, multi-stream, and execution-coverage arm — the **Snakemake adapter** |
+| **R16** | a complete closure whose realized seeds violate its seed plan mints a run, is **non-conforming**, and derives `not-certified`; no equivalence rule can read an occurrence — the evaluator's signature is `(result, result)` and admits no job-set argument | the *"nothing is admitted"* conjunct — failable only against a pair with **qualifying receipts**, which needs the confinement boundary, since with `clean-environment` unreachable admission never follows scope here and the conjunct passes under its own mutation — the **confinement-capable boundary policy**; the trace-membership and target-satisfaction clauses *(amended 2026-08-11 twice: §7.1 selected both on the minimal adapter's arrival; the §7.2 re-reading moved both back out — a single-rule execution **is** its derived trace by construction, and an unsatisfied single target is a missing declared output that R21's selected arm refuses upstream, so neither clause can fail here)* — and every family, definition-equality, multi-stream, and execution-coverage arm — the **full workflow surface** |
 | **R19** | the constructor's closed list: ordered run refs, an optional certification, the explicitly selected contract identity and epoch, and the optional report-position citation — nothing else, each extra argument refused; the evaluator's identity resolves from the original run's frozen spec and its implementation from the frozen `rule_bindings`; a mixed-shape pair is refused | explicit import with its refusal-before-write, both availability transitions, the audit and its contradiction finding, and negatives (c)–(e) — the **store**, the **world resolver**, and the **audit** |
-| **R20** | the union's type refusals: `deterministic` with a plan, `stochastic-unseeded` with a plan, and `seeded` without one are unspellable; a multi-root plan with no total stream mapping is refused; `stochastic-unseeded` with a rationale **is** freezable; negative (a)'s freeze-time half — unseeded beside a bitwise rule caught at freeze; negative (b) — a two-stream, two-root plan cannot record seeds keyed by job alone; negative (d)'s spellability half — the frozen spec names logical streams only, no workflow rule or process name spellable | negative (a)'s **import** half (the import boundary); negative (c) — per-family obligations are workflow claims — and negative (d)'s two-decomposition comparison, both the **Snakemake adapter** |
-| **R21** | the manifest is constructed by the boundary and there is no supplied-manifest path; a missing declared output, duplicate logical name, undeclared entry, or digest mismatch mints **no run**; intermediates are excluded and a replay with different scratch files yields an equal manifest; negative (a): a scheduling-only option leaves the recipe identity unchanged; negative (b)'s refusals: absolute and root-escaping output paths are refused; negative (c): one recipe under two differently-mounted scratch roots yields equal recipe identities, each mapping only in its receipt; negative (e): a complete closure disobeyed is a non-conforming run, an incompletable closure is a refusal | the two-target arm and negative (d) — the **Snakemake adapter**; negative (b)'s *write outside the root fails closed* and negative (c)'s `clean-environment` reachability — the **confinement-capable boundary policy** |
+| **R20** | the union's type refusals: `deterministic` with a plan, `stochastic-unseeded` with a plan, and `seeded` without one are unspellable; a multi-root plan with no total stream mapping is refused; `stochastic-unseeded` with a rationale **is** freezable; negative (a)'s freeze-time half — unseeded beside a bitwise rule caught at freeze; negative (b) — a two-stream, two-root plan cannot record seeds keyed by job alone; negative (d)'s spellability half — the frozen spec names logical streams only, no workflow rule or process name spellable | negative (a)'s **import** half (the import boundary); negative (c) — per-family obligations are workflow claims — and negative (d)'s two-decomposition comparison, both the **full workflow surface** |
+| **R21** | the manifest is constructed by the boundary and there is no supplied-manifest path; a missing declared output, duplicate logical name, undeclared entry, or digest mismatch mints **no run**; intermediates are excluded and a replay with different scratch files yields an equal manifest; negative (a): a scheduling-only option leaves the recipe identity unchanged; negative (b)'s refusals: absolute and root-escaping output paths are refused; negative (c): one recipe under two differently-mounted scratch roots yields equal recipe identities, each mapping only in its receipt; negative (e): a complete closure disobeyed is a non-conforming run, an incompletable closure is a refusal | the two-target arm and negative (d) — the **full workflow surface**; negative (b)'s *write outside the root fails closed* and negative (c)'s `clean-environment` reachability — the **confinement-capable boundary policy** |
 | **R22** | the assessment constructor takes only a run ref — every named facet parameter is absent; the derived `outcome` moves only with the result or the rule; `estimand` and `applicability` copy from the frozen spec; a failing rule evaluator produces no assessment and records a finding, never `inconclusive`; negative (a): narrowing `applicability` needs a successor spec and a new run; negative (b)'s **facet-exchange** half: exchanging the facets of two assessments moves the belief digest, composing with cut 2's keyed-facet digest; the **reach** arm: an inline exclusion certification differing between two recipes yields byte-identical facets and a differing digest, and editing the certification alone mints a recipe and moves nothing; an implementation failing its fixtures is not that rule, checked over **supplied** implementations and their fixtures | the *unresolvable interpretation rule is refused* clause — resolution against a held implementation or a registry entry is the **rules store and resolver**, excluded exactly as P1's deferred arm records, and the in-slice form ("no binding supplied → refuse") is a different, weaker claim; negative (b)'s **raw-write** half and negative (c) — corpus paths, explicit import, and the audit — the **store** |
 | **R23** | the fifth crossing, exactly: the output dataset's address is the §6.2 basis projection over the manifest's content identities; the `produces` edge is emitted with the run and no path attaches one naming an output absent from the manifest; no `produced_by` edge is reachable in either direction; negative (a): byte-identical output under two logical names yields **one** address; **replay cardinality**: one address, two `produces` edges from two runs, no existing node mutated and the prior lineage basis unchanged; the certified-exclusion mechanics: inline on the `reads` entry with rationale and attribution, adding or withdrawing it mints a different recipe and no run until executed; negative (h)'s first half: reclassifying an input's role mints a different recipe | the `derived_from` view, the independence-multiplier and omission arms, every deletion, divergence, coverage, receipt, snapshot, merge, and conflict arm, negatives (e)–(g), and the raw-written-basis audit — the **store**, the **world index**, and the **audit** |
 | **N2** | the doctrine over **cut 3's selected arms**: every arm declared as data with its row, assertion, source mutation, and exact named checks; the harness audits for `vacuous`, `stale`, `mixed`, `uncollected`, and the class-node collapse, reporting malformed contract content rather than passing it | the doctrine over the rows no cut selects, exactly as both prior cuts left it |
@@ -251,8 +279,10 @@ stated.
 
 ## 6. Accounting, freeze, and amendment discipline
 
-**17 selected in full + 17 in part + 19 fully exercised by prior cuts + 10
-part-exercised with remainders deferred + 88 fully deferred = 151.** Every
+**15 selected in full + 19 in part + 19 fully exercised by prior cuts + 10
+part-exercised with remainders deferred + 88 fully deferred = 151** *(as
+amended; the frozen accounting read 17 + 17, §7.1's read 16 + 18, and the
+§7.2 re-reading settled 15 + 19 — the total intact at every step)*. Every
 banked row is classified into exactly one state. As in both prior cuts,
 **no count of arms is offered as a denominator**: the banked rows do not
 enumerate their arms formally, and the splits in §4.2 are this document's
@@ -314,6 +344,100 @@ The reading verified the accounting before and after the moves: 151 rows,
 each in exactly one state, the full/part split shifting 19/15 → 17/17
 with the total intact.
 
+### 7.1 The third reading — the pre-merge review, and what it amended
+
+The review before merge ran against the frozen 17/17 selection and
+returned four findings. Per §6's freeze rule each is recorded as an
+**amendment**: the frozen text is preserved verbatim in an italic note at
+every amended site, and this section carries the reasons.
+
+1. **The engine-free subprocess was not the banked execution boundary.**
+   Every run occurrence carries the engine-native trace as a closure
+   member (computation §4.2), and §6.4's ruling wraps the engine rather
+   than substituting a Science-owned runner — so "no workflow engine" was
+   not a smaller execution boundary but a **different** one, and every
+   genuine execution arm would have run against machinery the banked rows
+   do not describe. Amended: §3's execution crossing wraps the **minimal
+   Snakemake adapter** — boundary-rendered single-target, single-rule
+   definitions executed through the engine, the definition snapshot and
+   trace captured as occurrence members — and the workflow deferral
+   target is renamed from "the Snakemake adapter" to the **full workflow
+   surface**, since the adapter now exists at its minimal surface and an
+   unblocking event that has occurred cannot honestly name a deferral.
+   **R2 returns to selected in full** — its traces and job ids now exist
+   to differ — and **R16's in-cell gains** the two things single-run
+   job-set conformance actually asserts, trace membership and target
+   satisfaction. This is the one finding in three readings whose
+   correction moved coverage **up**, and it moved because the boundary
+   was wrong, not because an arm was re-read: the second reading's R2
+   finding was a correct reading of a mis-drawn boundary.
+2. **R5's last-copy negative needed the managed-deletion path.**
+   "Destroy the last held copy" is enacted by a managed deletion
+   recording an `absent` observation (holdings §3); raw deletion
+   deliberately leaves heldness unchanged until audit, and over supplied
+   observations the destruction is a fixture edit. Negative (a) defers to
+   the persistence seam; **R5 moves to selected in part**.
+3. **R9's admission conjunct could not fail** — the defect §7 item 3
+   removed from R16, in a second row: with `clean-environment`
+   unreachable, admission never follows a verdict here, so *"admission
+   does not follow"* survives a verdict mutation. The three
+   `inconclusive` verdict checks stand; the admission consequence defers
+   with the confinement-capable boundary policy; **R9 moves to selected
+   in part**.
+4. **§3's IO and network claims contradicted the unconfined-process
+   ruling.** A subprocess that may read ambient host resources cannot be
+   claimed to perform no IO outside scratch roots. The claim is now that
+   the **fixtures** perform neither and the **boundary does not enforce
+   it**, and two input-safety rules are pinned as boundary construction,
+   not confinement: direct-argv execution with `shell=False`, and
+   bundle-relative entrypoint validation.
+
+The amended accounting: **16 + 18 + 19 + 10 + 88 = 151**, every row in
+exactly one state.
+
+### 7.2 The re-reading over the amendment
+
+A scoped re-reading ran over the amended cells — the restored R2, the
+widened R16, the R5 and R9 splits, and §3's amended execution crossing —
+with the same instruction and the rationale withheld. It returned four
+findings: three moved arms out, and one corrected the amendment's own
+text.
+
+1. **§7.1's amendment mis-placed the definition snapshot.** The banked
+   member table puts `workflow_definition_identity` in the **recipe** —
+   computation §6.2 rules it "declared, pre-execution — recipe member" —
+   and only the engine-native trace is the occurrence's. The amendment's
+   first form declared both as occurrence members, the inverse of the
+   mis-placement the computation design's own scar text records. Corrected
+   at §3 — a correction to the crossing declaration, not a selection move.
+2. **R16's trace-membership clause cannot fail on the minimal surface.**
+   A single-rule execution **is** its engine-derived trace by
+   construction; the only exercisable form is a hand-built occurrence
+   naming a phantom job key, a fixture no boundary emits, certifying the
+   evaluator rather than the execution property the banked clause names.
+   Moved back out to the full workflow surface, where the frozen cut had
+   it.
+3. **R16's target-satisfaction clause is pre-empted by R21's selected
+   manifest arm.** On the minimal surface an unsatisfied single target is
+   a missing declared output, and R21 rules that state mints **no run at
+   all** — so no minted run bearing the state ever reaches the
+   conformance check, and the clause passes under any mutation. The state
+   the banked clause guards needs a target distinct from the declared
+   outputs — a multi-node DAG. Moved back out with the trace clause.
+4. **R2's job-id component has no producible difference.** Engine-native
+   job ids are DAG-assigned and deterministic, so two executions of one
+   single-rule definition carry equal job ids and no mutation produces
+   the differing state. R2 moved to selected in part, its surviving
+   negative running over realized seeds, event tokens, and per-execution
+   trace observations.
+
+Explicit passes, recorded because their absence would read as unchecked:
+every other selected arm is exercisable on single-rule definitions; no
+deferred cell or §5 group names an unblocking event that has occurred;
+R5's and R9's retained arms are failable; and no selected arm assumes
+enforcement the boundary does not provide. The re-read accounting: **15 +
+19 + 19 + 10 + 88 = 151**, every row in exactly one state.
+
 ## 8. What this changes elsewhere
 
 Applied in the same change as this document. Nothing amends a banked row;
@@ -345,10 +469,11 @@ every entry is navigational.
    is an operational defect, not an epistemic one — but the suite's first
    nondeterministic failure will arrive through this cut, and triage
    discipline is part of the slice's cost.
-5. **R16's two selected arms must not be read as job-set conformance.**
-   Single-invocation seed conformance and the evaluator's signature are
-   the arms; everything the row says about traces and families waits on
-   the adapter, and a green R16 here demonstrates neither.
+5. **R16's selected arms assert seed-plan conformance and the evaluator's
+   signature and nothing more.** Trace membership, target satisfaction,
+   families, multi-stream obligations, and execution coverage all wait on
+   the full workflow surface, and a green R16 here demonstrates none of
+   them.
 6. **The second reading is one model-instructed pass, not adjudication** —
    cut 2's limitation 4, inherited unchanged.
 7. **This cut is drawn the same day two of its tables banked.** Cut 2 was
@@ -365,8 +490,8 @@ every entry is navigational.
    unbuilt** — the persistence seam is the corpus's most consequential
    unbuilt subsystem, blocking H whole, T1's negative, T2's ordering arms,
    T7, M5's remainder, and the independence sabotage (§2).
-2. **Split or carry the compound rows.** Seventeen arm-splits in this cut,
-   eleven in cut 2, five in cut 1. The F11 trade stands docketed and
+2. **Split or carry the compound rows.** Nineteen arm-splits in this cut
+   as amended, eleven in cut 2, five in cut 1. The F11 trade stands docketed and
    undecided, and recurs at every cut until someone pays one of its two
    costs.
 3. **What cut 4 is.** The persistence seam and world persistence are no
