@@ -306,3 +306,28 @@ class BasisTagMismatch(RecordError):
     has no one route to compare against — the divergence question is decided
     on the tag alone before this is ever reached, and asking it anyway of a
     `conflict` is what this refuses."""
+
+
+class MalformedSpec(RecordError):
+    """A spec facet the freeze cannot accept — an empty ``target``, a seed plan
+    whose stream-to-root mapping is not total (a derivation with no determined
+    root argument), a mapped root nobody declared (computation §3.1a)."""
+
+
+class UnfreezableSpec(RecordError):
+    """A contradiction across two frozen fields, caught at freeze time — the
+    §1.2 case: ``stochastic-unseeded`` beside a bitwise equivalence rule. A
+    check, not a type refusal, because it spans fields (computation §3.1a)."""
+
+
+class RuleUnbound(RecordError):
+    """A rule identity with no held conforming implementation. An
+    implementation that fails its fixtures is not that rule (computation
+    §3.1b). The registry/resolver form of this refusal is the rules store's
+    and is deferred (cut 3 §7 item 4)."""
+
+
+class UnreferencedSuccessor(RecordError):
+    """Reserved for the revise path's internal guard; the boundary-facing
+    verdict is the ``SuccessorRefused`` value (G4 is an outcome over value
+    state, not an exception)."""
