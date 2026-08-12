@@ -4,7 +4,10 @@ from decimal import Decimal
 from hashlib import sha256
 from typing import cast
 
+from science.assess import run_record
 from science.boundary import execute_assessment_run, execute_production_run
+from science.closure import RetractionEnumeration
+from science.lineage import LineageSnapshot
 from science.recipe import (
     BoundaryPolicy,
     BoundaryReceipt,
@@ -162,6 +165,56 @@ def closure(**overrides) -> RunClosure:
     }
     fields.update(overrides)
     return RunClosure(**fields)
+
+
+def closure_kwargs(assessments, runs):
+    return {
+        "proposition": "prop-1",
+        "assessments": assessments,
+        "runs": runs,
+        "verifications": (),
+        "snapshot": LineageSnapshot(roots=(), bases={}, producers={}),
+        "producer_snapshot_identity": "snap-1",
+        "retractions": RetractionEnumeration(found=(), coverage=("supplied",)),
+        "consulted": (("science", "base-1"),),
+        "binding": ("science.belief.v1", "impl-1"),
+    }
+
+
+def runs_for(closures):
+    return {run.address(): run_record(run) for run in closures}
+
+
+def interp(outcome="supported", fail=False):
+    def evaluate(manifest):
+        if fail:
+            raise ValueError("unparseable payload")
+        return {"outcome": outcome, "estimate": "0.4"}
+
+    return {
+        "impl-interp-1": RuleImplementation(
+            identity="impl-interp-1", evaluate=evaluate, fixtures=()
+        )
+    }
+
+
+def result_sensitive():
+    # Outcome keyed to the RESULT's bytes: the output digest's low bit
+    # decides. Deterministic, and a test can compute its expectation from the
+    # manifest it holds — which is what makes the outcome's derivation, not
+    # merely the identity, checkable (R22).
+    def evaluate(manifest):
+        parity = int(manifest.outputs[0][1].split(":", 1)[1], 16) % 2
+        return {
+            "outcome": "supported" if parity == 0 else "refuted",
+            "estimate": "0.4",
+        }
+
+    return {
+        "impl-interp-1": RuleImplementation(
+            identity="impl-interp-1", evaluate=evaluate, fixtures=()
+        )
+    }
 
 
 def report(**overrides):
