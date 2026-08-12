@@ -7,14 +7,16 @@ corpus — cut 1's frozen denominator of **126** and cut 2's of **139** are
 untouched, and nothing here amends a banked row. Selects **15 rows in full
 and 19 in part** after the pre-merge third reading's amendment and its
 scoped re-reading (§7.1–§7.2) — the selection as first frozen read 17/17
-and is preserved verbatim at each amended site; §5 groups the 88 fully
+and is preserved verbatim in **Appendix A**; §5 groups the 88 fully
 deferred rows by unblocking subsystem, and §6 accounts for all 151. The
 second reading ran before the freeze and §7 records its four findings;
 the third reading returned four more (§7.1), three moving arms **out** —
 the direction every prior cut's errors ran — and one correcting the
 execution boundary itself; the re-reading over that amendment returned
 four again (§7.2), catching the amendment's own mis-placement and moving
-back out the two clauses it had over-selected.
+back out the two clauses it had over-selected; and the review's second
+pass (§7.3) corrected two declarations and completed R2's deferral,
+moving no row.
 
 ---
 
@@ -92,17 +94,17 @@ recipe construction with role-partitioned inputs, identity canonicalization
 consumed at run positions, and the refusal of every incomplete or
 mis-shaped closure; **the execution boundary** — begin, execute, capture:
 the operation intent opened before the act; execution through the
-**minimal Snakemake adapter** — the boundary renders a single-target,
-single-rule workflow definition and executes it through the engine as a
+**minimal Snakemake adapter** — the fixtures supply a **held single-rule
+workflow definition**; the boundary captures its identity as a **recipe**
+member, renders only the engine configuration, environment, and argv
+(computation §4.2b), and invokes the definition through the adapter as a
 **real subprocess in a boundary-owned scratch root** over held fixture
-inputs, the workflow-definition snapshot captured as a **recipe** member
-and the engine-native trace as the occurrence's *(amended 2026-08-11
-twice: the frozen text read "one rendered invocation per run" with no
-engine, which substituted a Science-owned runner for the boundary
-computation §6.4 rules must wrap — the third reading, §7.1; that
-amendment's first form then mis-placed the definition snapshot as an
-occurrence member, corrected to the banked §6.2 placement by the
-re-reading, §7.2)* —
+inputs, the engine-native trace captured as the occurrence's *(amended
+2026-08-11 across three passes — §7.1 corrected the frozen "one rendered
+invocation per run, no engine" boundary, §7.2 the snapshot's member
+placement, §7.3 the rendering surface: the boundary renders
+configuration, never the definition; Appendix A preserves the frozen
+text)* —
 the code bundle and environment captured as held content, realized seeds
 recorded per stream, and the result manifest constructed by the boundary
 content-addressing every declared output on disk; **dataset
@@ -135,13 +137,15 @@ network access and no IO outside the scratch roots and fixture inputs — a
 property of what this cut's suite runs, which the **boundary does not
 enforce**: an unconfined subprocess may read ambient host resources, and
 only the confinement-capable boundary policy makes the stronger claim
-checkable *(amended 2026-08-11, the third reading: this read "performs no
-IO outside its scratch roots and fixture inputs", a claim the
-unconfined-process ruling above contradicts)*. Two input-safety rules are
-the boundary's own construction, not confinement: execution is by **direct
-argv with `shell=False`**, and an entrypoint validates as
-**bundle-relative** before anything runs. Stated exclusions, each
-load-bearing:
+checkable *(amended 2026-08-11, the third reading; Appendix A preserves
+the frozen sentence)*. Three input-safety rules are the boundary's own
+construction, not confinement: execution is by **direct argv with
+`shell=False`**; engine **targets are separated from options**, an
+option-like target rejected — `shell=False` prevents shell injection, not
+option injection; and the entrypoint must resolve to a **regular file
+inside the captured bundle** before anything runs. R17's selected
+no-second-parameter-channel arm leans on all three. Stated exclusions,
+each load-bearing:
 
 - **No store of any kind.** Runs, intents, act-reports, and verifications
   are values; corpora exist as supplied node→corpus attributions with
@@ -154,12 +158,13 @@ load-bearing:
   whole — its publish-together claim is about store transactions this slice
   does not have.
 - **The minimal adapter only.** The boundary wraps computation §6.4's one
-  adapter at its smallest honest surface — single-target, single-rule
-  definitions, with Snakemake pinned in the frozen environment; every
-  multi-rule, family, wildcard, definition-equality, and
-  execution-coverage arm defers to the **full workflow surface** *(amended
-  2026-08-11, the third reading: this bullet read "No workflow engine",
-  which was not a smaller execution boundary but a different one)*.
+  adapter at its smallest honest surface — fixture-held single-target,
+  single-rule definitions, with Snakemake pinned in the frozen
+  environment; every multi-rule, family, wildcard, definition-equality,
+  and execution-coverage arm defers to the **full workflow surface**
+  *(amended 2026-08-11, the third reading: this bullet read "No workflow
+  engine", which was not a smaller execution boundary but a different
+  one; Appendix A preserves it)*.
 - **No confinement.** R15 defers whole, R13's import-resolution negative
   and R21's write-outside-root clause with it, to the
   **confinement-capable boundary policy** (computation §7.3a).
@@ -224,9 +229,9 @@ selected in part because this cut adds an arm to it.
 | **T1** | the ordinary-API and type claim: no construction path authors an act-report — direct authoring and every API taking report fields as input are absent; the constructor is reachable only from the boundary | the **import** arm — structurally-validated, unauthenticated, attributed, inert entry of another observer's report is a store operation — and the **raw-write negative**, which needs the tamper log and a valid anchored observer set |
 | **T2** | the shape refusals: a dataset-production attempt opens the **operation intent**, and the assessment-run intent is unspellable without a `spec_identity`; negative (b): a complete non-conforming execution mints a **run**, never an act-report; the pre-intent refusal: a missing-spec run request refuses **before** any intent, and a surviving boundary publishes an *unfulfilling* act-report that fulfills nothing | **one started operation, one intent, one terminal record** — qualification, the second-registration-malformed rule, and the no-act-before-intent ordering are claims about committed registrations in a root, deferred with **persistence**; the crash-leaves-no-trace clause with them, there being no durable trace here to interrogate |
 | **T4** | adding and removing reports leaves the belief digest, admission, and eligibility byte-unchanged — run against **cut 2's already-admitted value fixtures** (§3), the only admitted belief this cut can reach | the **coverage projection** clause and the *unfinished operation blocks nothing* arm — the holdings design's §5 projection, unbuilt with H — and the observation-deletion negative, whose record-layer consequences are the holdings record's |
-| **R2** | every §4.2 closure member mutated in turn moves the run address — the workflow-definition snapshot among them, as a **recipe** member; the negative over the components the minimal surface can vary: two executions of one recipe have **equal recipe identities** despite differing realized seeds, event tokens, and per-execution trace observations | the negative's **job-id** component — engine-native job ids are DAG-assigned and deterministic, so two executions of one single-rule definition carry equal job ids and no mutation produces the differing state — the **full workflow surface** *(amended 2026-08-11 twice: the frozen cut split this row because engine-free executions had no traces; §7.1 restored it to full with the minimal adapter; the §7.2 re-reading split it again on the component a single-rule DAG cannot vary)* |
-| **R5** | bytes unreachable here while a controlled copy remains held: `belief_input_digest` unchanged, admission unchanged, replay eligibility **not available** — never `unverified`, never `failed`; negative (b): removing the corpus attribution holding the records yields **`not-available`**, never an unchanged belief | negative (a) — destroying the **last held copy** is enacted only by a managed deletion recording an `absent` observation (holdings §3), and raw deletion deliberately leaves heldness unchanged until audit, so over supplied observations the destruction is a fixture edit — the **persistence seam** *(amended 2026-08-11, the third reading; the frozen cut selected the row in full)* |
-| **R9** | an unreadable output, a missing output, and a reader error each yield `inconclusive` | the *admission does not follow* conjunct — with `clean-environment` unreachable, admission never follows a verdict here, the same defect §7 item 3 removed from R16 — the **confinement-capable boundary policy** *(amended 2026-08-11, the third reading; the frozen cut selected the row in full, its cell ending "and admission does not follow")* |
+| **R2** | every §4.2 closure member mutated in turn moves the run address — the workflow-definition snapshot among them, as a **recipe** member; the negative over the components the minimal surface can vary: two executions of one recipe have **equal recipe identities** despite differing realized seeds and event tokens | the negative's **trace and job-ID** components — the minimal one-rule fixture provides no differing-job-ID state, and equal recipes on this surface can produce equal raw traces (equal job IDs, rule names, wildcards, inputs, and outputs), so no mutation guarantees a differing per-execution trace observation — the **full workflow surface** *(amended 2026-08-11 across three passes: the frozen cut split this row, §7.1 restored it to full, §7.2 and §7.3 split it again component by component; Appendix A preserves the frozen cell)* |
+| **R5** | bytes unreachable here while a controlled copy remains held: `belief_input_digest` unchanged, admission unchanged, replay eligibility **not available** — never `unverified`, never `failed`; negative (b): removing the corpus attribution holding the records yields **`not-available`**, never an unchanged belief | negative (a) — destroying the **last held copy** is enacted only by a managed deletion recording an `absent` observation (holdings §3), and raw deletion deliberately leaves heldness unchanged until audit, so over supplied observations the destruction is a fixture edit — the **persistence seam** *(amended 2026-08-11, the third reading; the frozen cut selected the row in full — Appendix A preserves its cell)* |
+| **R9** | an unreadable output, a missing output, and a reader error each yield `inconclusive` | the *admission does not follow* conjunct — with `clean-environment` unreachable, admission never follows a verdict here, the same defect §7 item 3 removed from R16 — the **confinement-capable boundary policy** *(amended 2026-08-11, the third reading; the frozen cut selected the row in full — Appendix A preserves its cell)* |
 | **R4** | the derived-scope walk over the branches genuine unconfined replays can produce: `not-certified`, `same-environment`, `independent-implementation`; no authored `scope`; negatives (a)–(c): a hostname change stays `same-environment` — no receipt, so a machine name buys nothing; a comment change is `not-certified`, never `independent-implementation`; different `spec_identity` is `not-certified` | the **`clean-environment`** row of the walk and negative (d) — both need a qualifying confinement receipt, the **confinement-capable boundary policy** |
 | **R10** | a URL- or accession-valued input is refused as a run input; no fallback synthesizes a dataset entity from the URL | *"the acquisition path records dataset provenance instead"* — there is no acquisition here |
 | **R12** | the boundary refuses a run naming no frozen spec identity; the negative: freeze a spec after an out-of-band execution, attach it, and the ordering is undetectable — content addressing is not pre-registration | the **boundary-mediated strengthening** — an intent entry as a removal-detectable witness — which is conditional on the **tamper log** |
@@ -348,8 +353,9 @@ with the total intact.
 
 The review before merge ran against the frozen 17/17 selection and
 returned four findings. Per §6's freeze rule each is recorded as an
-**amendment**: the frozen text is preserved verbatim in an italic note at
-every amended site, and this section carries the reasons.
+**amendment**: every amended site carries a note naming its change,
+**Appendix A preserves the frozen text verbatim**, and this section
+carries the reasons.
 
 1. **The engine-free subprocess was not the banked execution boundary.**
    Every run occurrence carries the engine-native trace as a closure
@@ -438,6 +444,41 @@ R5's and R9's retained arms are failable; and no selected arm assumes
 enforcement the boundary does not provide. The re-read accounting: **15 +
 19 + 19 + 10 + 88 = 151**, every row in exactly one state.
 
+### 7.3 The review's second pass
+
+The pre-merge review read the amended document again and returned four
+findings. None moved a row; the accounting stands at 15 + 19.
+
+1. **R2's trace component followed its job-ID component out.** On the
+   one-rule surface equal recipes can produce equal raw traces — equal
+   job IDs, rule names, wildcards, inputs, and outputs — and the document
+   named no mutation guaranteeing a differing per-execution trace
+   observation. §7.2's rationale claimed broadly that "job ids are
+   DAG-assigned and deterministic"; the claim recorded now is only what
+   is established — **this minimal fixture provides no differing-job-ID
+   state**, the engine exposing job ids as internal DAG assignments, not
+   a stability contract. R2's negative retains realized seeds and event
+   tokens.
+2. **The boundary must not render the workflow definition.** The banked
+   contract makes the definition a declared input, and the boundary's
+   rendering surface is exactly engine configuration, environment, and
+   argv (computation §4.2b) — "renders a workflow definition" risked a
+   Science-owned Snakefile generator, the substitution §6.4 refuses from
+   the other side. §3 now reads: the fixtures supply a held single-rule
+   definition; the boundary captures its identity, renders
+   configuration, environment, and argv, and invokes it through the
+   adapter.
+3. **The preservation claim was made good.** The amendment notes quoted
+   fragments and summaries where §6's rule requires the frozen text
+   itself; R5's and R9's frozen cells were not preserved at all. Appendix
+   A now carries the frozen passages verbatim, and every amended site
+   points to it.
+4. **The argv rule was completed.** `shell=False` prevents shell
+   injection, not option injection: engine targets are now separated
+   from options with option-like targets rejected, and the entrypoint
+   must resolve to a regular file inside the captured bundle — all three
+   rules necessary for R17's selected no-second-parameter-channel arm.
+
 ## 8. What this changes elsewhere
 
 Applied in the same change as this document. Nothing amends a banked row;
@@ -499,3 +540,68 @@ every entry is navigational.
    the world index all wait on `atoms` A7–A8, and the first cut that
    crosses a persistence boundary will take several of §5's groups at
    once. Whether that is one cut or two is not ruled here.
+
+## Appendix A — the frozen text, preserved verbatim
+
+§6's freeze rule requires the original selection preserved verbatim
+alongside any amendment. The notes at each amended site name the change;
+this appendix is the preservation. Every passage below is byte-verbatim
+from the freeze, wrapping included.
+
+**The frozen state table's selection rows (17/17):**
+
+```
+| **selected in full** — every previously unexercised arm | G2a, G4, M2, R1, R3, R5, R6, R7, R8, R9, R11, R14, R17, R18, T3, T6, T8 | **17** |
+| **selected in part** — the arm split stated below | G9, N2, R2, R4, R10, R12, R13, R16, R19, R20, R21, R22, R23, T1, T2, T4, T5 | **17** |
+```
+
+**§3's execution crossing, as frozen** (amended by §7.1, §7.2, and §7.3;
+the final line continues into the unamended dataset-production crossing):
+
+```
+the operation intent opened before the act, one rendered invocation per run
+executed as a **real subprocess in a boundary-owned scratch root** over held
+fixture inputs, the code bundle and environment captured as held content,
+realized seeds recorded per stream, and the result manifest constructed by
+the boundary content-addressing every declared output on disk; **dataset
+```
+
+**§3's IO sentence, as frozen** (amended by §7.1 item 4):
+
+```
+It crosses **no** persistence boundary and performs **no** IO outside its
+scratch roots and fixture inputs. Stated exclusions, each load-bearing:
+```
+
+**§3's acquisition and engine bullets, as frozen** (amended by §7.1):
+
+```
+- **No acquisition, no network, no probe.** R10's refusal arm is selected;
+  the acquisition path that records provenance is not built, and T7 defers
+  whole — its publish-together claim is about store transactions this slice
+  does not have.
+- **No workflow engine.** The boundary renders single invocations; every
+  trace, family, definition-equality, and target-enumeration arm defers to
+  the **Snakemake adapter** (computation §6.4's one adapter).
+```
+
+**§4.1's R5 and R9 cells, as frozen** (moved to §4.2 by §7.1):
+
+```
+| **R5** | bytes unreachable here while a controlled copy remains held: `belief_input_digest` unchanged, admission unchanged, replay eligibility **not available** — never `unverified`, never `failed`; destroying the last held copy of an `observes` input fails eligibility and **changes** admission; removing the corpus attribution holding the records yields **`not-available`**, never an unchanged belief |
+| **R9** | an unreadable output, a missing output, and a reader error each yield `inconclusive`, and admission does not follow |
+```
+
+**§4.2's R2 cell, as frozen** (restored to full by §7.1, split again by
+§7.2 and §7.3):
+
+```
+| **R2** | every §4.2 closure member mutated in turn moves the run address; the negative's in-slice half: two executions of one recipe have **equal recipe identities** despite differing realized seeds and event tokens | the negative's **trace and job-id** halves — the engine-native execution trace is an occurrence member only an engine observes, so two single-subprocess executions have no traces or job ids to differ — the **Snakemake adapter** |
+```
+
+**§4.2's R16 cell, as frozen** (its trace and target clauses selected by
+§7.1 and moved back out by §7.2):
+
+```
+| **R16** | a complete closure whose realized seeds violate its seed plan mints a run, is **non-conforming**, and derives `not-certified`; no equivalence rule can read an occurrence — the evaluator's signature is `(result, result)` and admits no job-set argument | the *"nothing is admitted"* conjunct — failable only against a pair with **qualifying receipts**, which needs the confinement boundary, since with `clean-environment` unreachable admission never follows scope here and the conjunct passes under its own mutation — the **confinement-capable boundary policy**; every trace-membership, target-satisfaction, family, definition-equality, multi-stream, and execution-coverage arm — the **Snakemake adapter** |
+```
