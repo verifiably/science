@@ -33,14 +33,26 @@ from science.errors import (
 from science.identity import v1
 from science.recipe import (
     BoundaryPolicy,
+    BoundaryReceipt,
     EnvironmentManifest,
     Invocation,
+    Occurrence,
     RecipeInput,
     ResultManifest,
+    RunClosure,
+    TraceJob,
     project_recipe,
 )
 from science.record import AssessmentValue, SourceAssertion
-from science.spec import Deterministic, ExclusionCertification, RealizedSeeds, SpecInput, freeze
+from science.spec import (
+    Deterministic,
+    ExclusionCertification,
+    RealizedSeeds,
+    Seeded,
+    SeedPlan,
+    SpecInput,
+    freeze,
+)
 
 
 # --- R1 ----------------------------------------------------------------------
@@ -185,6 +197,13 @@ def test_r2_the_result_and_each_occurrence_member_move_the_address():
         != baseline
     )
     assert closure(occurrence=occurrence(trace=())).address() != baseline
+    assert closure(
+        occurrence=occurrence(
+            receipt=BoundaryReceipt(
+                scratch_mapping="scratch-mount-b", argv=("snakemake",), rendered_config=()
+            )
+        )
+    ).address() != baseline
 
 
 def test_r2_equal_recipes_despite_differing_seeds_and_event_tokens():
@@ -208,6 +227,112 @@ def test_recipe_keeps_nested_parameters_immutable_after_construction():
     value = recipe(parameters=parameters)
     parameters["nested"]["values"].append("after")
     assert value.parameters == {"nested": {"values": ("before",)}}
+
+
+INVALID_CLOSURE_VALUES = [
+    (
+        "recipe-input-scalar",
+        lambda: RecipeInput(role="observes", dataset="dataset:x", content=[]),
+    ),
+    (
+        "recipe-input-exclusion",
+        lambda: RecipeInput(
+            role="reads",
+            dataset="dataset:x",
+            content=D_IN,
+            exclusion=ExclusionCertification(rationale=["mutable"], attribution="tester"),
+        ),
+    ),
+    (
+        "invocation-scalar",
+        lambda: invocation(entrypoint=[]),
+    ),
+    (
+        "invocation-member",
+        lambda: invocation(bindings=([],)),
+    ),
+    (
+        "environment-pair",
+        lambda: EnvironmentManifest(artifacts=(("python", []),)),
+    ),
+    (
+        "boundary-policy-member",
+        lambda: BoundaryPolicy(
+            identity="boundary-policy/minimal-v1",
+            scope_rule="scope-derivation/v1",
+            capabilities=([],),
+        ),
+    ),
+    (
+        "recipe-composite",
+        lambda: recipe(environment=[]),
+    ),
+    (
+        "recipe-component-scalar",
+        lambda: recipe(code_identity=[]),
+    ),
+    (
+        "recipe-nondeterminism-member",
+        lambda: recipe(
+            nondeterminism=Seeded(
+                plan=SeedPlan(
+                    derivation_rule=[],
+                    streams=("model-initialization",),
+                    roots={"root-a": 11},
+                    stream_roots={"model-initialization": "root-a"},
+                )
+            )
+        ),
+    ),
+    (
+        "result-pair",
+        lambda: ResultManifest(outputs=(("outputs/result.txt", []),)),
+    ),
+    (
+        "trace-scalar",
+        lambda: TraceJob(job_id=[], rule="transform", wildcards=(), inputs=(), outputs=()),
+    ),
+    (
+        "trace-pair",
+        lambda: TraceJob(
+            job_id="0", rule="transform", wildcards=(("sample", []),), inputs=(), outputs=()
+        ),
+    ),
+    (
+        "receipt-pair",
+        lambda: BoundaryReceipt(
+            scratch_mapping="scratch", argv=("snakemake",), rendered_config=(("alpha", []),)
+        ),
+    ),
+    (
+        "occurrence-realized-seed",
+        lambda: occurrence(
+            realized_seeds=RealizedSeeds(seeds={"transform": {"model-initialization": []}})
+        ),
+    ),
+    (
+        "occurrence-composite",
+        lambda: Occurrence(
+            event_token="tok",
+            started_at="2026-08-12T00:00:00Z",
+            actor="tester",
+            host_realization="host",
+            trace=(),
+            realized_seeds=RealizedSeeds(seeds={}),
+            receipt=[],
+        ),
+    ),
+    (
+        "run-composite",
+        lambda: RunClosure(recipe=recipe(), result=closure().result, occurrence=[]),
+    ),
+]
+
+
+@pytest.mark.parametrize("name,construct", INVALID_CLOSURE_VALUES, ids=[n for n, _ in INVALID_CLOSURE_VALUES])
+def test_identity_values_refuse_wrong_scalar_pair_and_composite_types_at_construction(name, construct):
+    with pytest.raises(MalformedClosure):
+        construct()
 
 
 # --- R14 at run and closure positions ----------------------------------------
@@ -303,6 +428,20 @@ def test_r17_the_projected_recipe_carries_the_spec_whole():
         boundary_policy=POLICY,
     )
     assert reprojected.inputs[1].exclusion == certified.input_roles[1].exclusion
+
+
+def test_r17_projection_refuses_a_declared_input_that_is_not_held():
+    spec = freeze(spec_draft(), held_rules=spec_rules())
+    with pytest.raises(MalformedClosure, match="not held"):
+        project_recipe(
+            spec,
+            held={},
+            code_identity="sha256:" + "cc" * 32,
+            environment=EnvironmentManifest(artifacts=(("python", "sha256:" + "dd" * 32),)),
+            workflow_definition_identity="sha256:" + "ee" * 32,
+            invocation=invocation(),
+            boundary_policy=POLICY,
+        )
 
 
 def test_r17_invocation_holds_bindings_not_values():

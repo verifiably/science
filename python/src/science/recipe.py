@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import PurePosixPath
 from types import MappingProxyType
-from typing import final
+from typing import cast, final
 
 from science.errors import MalformedClosure, UnsafeInvocation
 from science.identity import v1
@@ -17,6 +17,7 @@ from science.spec import (
     FrozenSpec,
     RealizedSeeds,
     Seeded,
+    SeedPlan,
     StochasticUnseeded,
 )
 
@@ -50,7 +51,13 @@ ASSESSMENT_ROLES = ("observes", "reads")
 PRODUCTION_ROLES = ("transforms", "reads")
 
 
-def _require_component(value: str, where: str) -> None:
+def _require_str(value: object, where: str) -> None:
+    if type(value) is not str:
+        raise MalformedClosure(f"{where} must be a string")
+
+
+def _require_component(value: object, where: str) -> None:
+    _require_str(value, where)
     if value in ("", "unknown", "attested"):
         raise MalformedClosure(f"{where} must carry a held component identity, not {value!r}")
 
@@ -74,8 +81,44 @@ def _project_parameter_value(value: object) -> object:
 
 
 def _require_tuple(value: object, where: str) -> None:
-    if not isinstance(value, tuple):
+    if type(value) is not tuple:
         raise MalformedClosure(f"{where} must be a tuple")
+
+
+def _require_strings(value: object, where: str) -> None:
+    _require_tuple(value, where)
+    if not all(type(member) is str for member in cast(tuple[object, ...], value)):
+        raise MalformedClosure(f"{where} must contain strings only")
+
+
+def _require_pairs(value: object, where: str) -> None:
+    _require_tuple(value, where)
+    if not all(
+        type(row) is tuple and len(row) == 2 and all(type(member) is str for member in row)
+        for row in cast(tuple[object, ...], value)
+    ):
+        raise MalformedClosure(f"{where} must contain (string, string) pairs only")
+
+
+def _require_nondeterminism(value: object) -> None:
+    if type(value) is Deterministic:
+        return
+    if type(value) is StochasticUnseeded:
+        _require_str(value.rationale, "stochastic-unseeded rationale")
+        return
+    if type(value) is not Seeded or type(value.plan) is not SeedPlan:
+        raise MalformedClosure("recipe nondeterminism must be a frozen spec variant")
+    plan = value.plan
+    _require_str(plan.derivation_rule, "seed derivation rule")
+    _require_strings(plan.streams, "seed streams")
+    if not isinstance(plan.roots, Mapping) or not all(
+        type(name) is str and type(seed) is int for name, seed in plan.roots.items()
+    ):
+        raise MalformedClosure("seed roots must map strings to integers")
+    if not isinstance(plan.stream_roots, Mapping) or not all(
+        type(stream) is str and type(root) is str for stream, root in plan.stream_roots.items()
+    ):
+        raise MalformedClosure("seed stream roots must map strings to strings")
 
 
 def _pairs(rows: tuple[tuple[str, str], ...]) -> list[list[str]]:
@@ -92,7 +135,14 @@ class RecipeInput:
     exclusion: ExclusionCertification | None = None
 
     def __post_init__(self) -> None:
+        _require_str(self.role, "input role")
+        _require_str(self.dataset, "input dataset")
         _require_component(self.content, "input content")
+        if self.exclusion is not None:
+            if type(self.exclusion) is not ExclusionCertification:
+                raise MalformedClosure("input exclusion must be an ExclusionCertification")
+            _require_str(self.exclusion.rationale, "exclusion rationale")
+            _require_str(self.exclusion.attribution, "exclusion attribution")
         if self.exclusion is not None and self.role != "reads":
             raise MalformedClosure("an exclusion certification is carried by a `reads` input only")
 
@@ -107,12 +157,13 @@ class Invocation:
     declared_outputs: tuple[str, ...]
 
     def __post_init__(self) -> None:
+        _require_str(self.entrypoint, "invocation entrypoint")
         for name, values in (
             ("targets", self.targets),
             ("bindings", self.bindings),
             ("declared_outputs", self.declared_outputs),
         ):
-            _require_tuple(values, f"invocation {name}")
+            _require_strings(values, f"invocation {name}")
         if any(target.startswith("-") for target in self.targets):
             raise UnsafeInvocation("an option-like target is not a workflow target")
         for output in self.declared_outputs:
@@ -137,14 +188,7 @@ class EnvironmentManifest:
     artifacts: tuple[tuple[str, str], ...]
 
     def __post_init__(self) -> None:
-        _require_tuple(self.artifacts, "environment artifacts")
-        if not all(
-            isinstance(row, tuple)
-            and len(row) == 2
-            and all(isinstance(member, str) for member in row)
-            for row in self.artifacts
-        ):
-            raise MalformedClosure("environment artifacts are (name, content identity) pairs")
+        _require_pairs(self.artifacts, "environment artifacts")
 
     def identity(self) -> str:
         return v1.digest(ENVIRONMENT_DOMAIN, {"artifacts": _pairs(self.artifacts)})
@@ -159,7 +203,9 @@ class BoundaryPolicy:
     capabilities: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
-        _require_tuple(self.capabilities, "boundary policy capabilities")
+        _require_str(self.identity, "boundary policy identity")
+        _require_str(self.scope_rule, "boundary policy scope rule")
+        _require_strings(self.capabilities, "boundary policy capabilities")
 
 
 @sealed
@@ -179,44 +225,41 @@ class Recipe:
     rule_bindings: tuple[tuple[str, str], ...]
 
     def __post_init__(self) -> None:
+        _require_str(self.shape, "recipe shape")
         if self.shape not in SHAPES:
             raise MalformedClosure(f"recipe shape {self.shape!r} is outside {SHAPES}")
+        if self.spec_identity is not None:
+            _require_str(self.spec_identity, "spec identity")
         if self.shape == "assessment" and self.spec_identity is None:
             raise MalformedClosure("an assessment recipe carries its frozen spec identity")
         if self.shape == "dataset-production" and self.spec_identity is not None:
             raise MalformedClosure("a dataset-production recipe has no assessment spec identity")
-        if not isinstance(self.environment, EnvironmentManifest):
+        if type(self.environment) is not EnvironmentManifest:
             raise MalformedClosure("environment must be an EnvironmentManifest, not a lockfile digest")
-        if not isinstance(self.invocation, Invocation):
+        if type(self.invocation) is not Invocation:
             raise MalformedClosure("invocation must be an Invocation")
-        if not isinstance(self.boundary_policy, BoundaryPolicy):
+        if type(self.boundary_policy) is not BoundaryPolicy:
             raise MalformedClosure("boundary_policy must be a BoundaryPolicy")
         _require_tuple(self.inputs, "recipe inputs")
-        _require_tuple(self.rule_bindings, "recipe rule bindings")
-        if not all(isinstance(entry, RecipeInput) for entry in self.inputs):
+        _require_pairs(self.rule_bindings, "recipe rule bindings")
+        if not all(type(entry) is RecipeInput for entry in self.inputs):
             raise MalformedClosure("recipe inputs hold RecipeInput values only")
         roles = ASSESSMENT_ROLES if self.shape == "assessment" else PRODUCTION_ROLES
         if any(entry.role not in roles for entry in self.inputs):
             raise MalformedClosure(f"an input role is outside the {self.shape} partition {roles}")
         if not isinstance(self.parameters, Mapping):
             raise MalformedClosure("recipe parameters must be a mapping")
-        if not isinstance(self.nondeterminism, (Deterministic, Seeded, StochasticUnseeded)):
-            raise MalformedClosure("recipe nondeterminism must be a frozen spec variant")
-        if not all(
-            isinstance(row, tuple)
-            and len(row) == 2
-            and all(isinstance(member, str) for member in row)
-            for row in self.rule_bindings
-        ):
-            raise MalformedClosure("rule bindings are (rule, implementation) pairs")
+        _require_nondeterminism(self.nondeterminism)
         _require_component(self.code_identity, "code identity")
         _require_component(self.workflow_definition_identity, "workflow definition identity")
+        parameters = MappingProxyType(
+            {key: _freeze_parameter_value(value) for key, value in self.parameters.items()}
+        )
+        v1.encode(_project_parameter_value(parameters))
         object.__setattr__(
             self,
             "parameters",
-            MappingProxyType(
-                {key: _freeze_parameter_value(value) for key, value in self.parameters.items()}
-            ),
+            parameters,
         )
 
     def _projection(self) -> dict[str, object]:
@@ -283,7 +326,7 @@ def project_recipe(
     invocation: Invocation,
     boundary_policy: BoundaryPolicy,
 ) -> Recipe:
-    if not isinstance(spec, FrozenSpec):
+    if type(spec) is not FrozenSpec:
         raise MalformedClosure("project_recipe requires a FrozenSpec")
     try:
         inputs = tuple(
@@ -319,14 +362,7 @@ class ResultManifest:
     outputs: tuple[tuple[str, str], ...]
 
     def __post_init__(self) -> None:
-        _require_tuple(self.outputs, "result outputs")
-        if not all(
-            isinstance(row, tuple)
-            and len(row) == 2
-            and all(isinstance(member, str) for member in row)
-            for row in self.outputs
-        ):
-            raise MalformedClosure("result outputs are (logical name, content identity) pairs")
+        _require_pairs(self.outputs, "result outputs")
         names = [name for name, _ in self.outputs]
         if len(set(names)) != len(names):
             raise MalformedClosure("duplicate logical names in result manifest")
@@ -343,12 +379,11 @@ class TraceJob:
     outputs: tuple[str, ...]
 
     def __post_init__(self) -> None:
-        for name, values in (
-            ("wildcards", self.wildcards),
-            ("inputs", self.inputs),
-            ("outputs", self.outputs),
-        ):
-            _require_tuple(values, f"trace job {name}")
+        _require_str(self.job_id, "trace job id")
+        _require_str(self.rule, "trace rule")
+        _require_pairs(self.wildcards, "trace job wildcards")
+        _require_strings(self.inputs, "trace job inputs")
+        _require_strings(self.outputs, "trace job outputs")
 
 
 @sealed
@@ -361,12 +396,10 @@ class BoundaryReceipt:
     capabilities: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
-        for name, values in (
-            ("argv", self.argv),
-            ("rendered_config", self.rendered_config),
-            ("capabilities", self.capabilities),
-        ):
-            _require_tuple(values, f"boundary receipt {name}")
+        _require_str(self.scratch_mapping, "boundary receipt scratch mapping")
+        _require_strings(self.argv, "boundary receipt argv")
+        _require_pairs(self.rendered_config, "boundary receipt rendered config")
+        _require_strings(self.capabilities, "boundary receipt capabilities")
 
 
 @sealed
@@ -382,9 +415,24 @@ class Occurrence:
     receipt: BoundaryReceipt
 
     def __post_init__(self) -> None:
+        _require_str(self.event_token, "occurrence event token")
+        _require_str(self.started_at, "occurrence start time")
+        _require_str(self.actor, "occurrence actor")
+        _require_str(self.host_realization, "occurrence host realization")
         _require_tuple(self.trace, "occurrence trace")
-        if not all(isinstance(job, TraceJob) for job in self.trace):
+        if not all(type(job) is TraceJob for job in self.trace):
             raise MalformedClosure("occurrence trace holds TraceJob values only")
+        if type(self.realized_seeds) is not RealizedSeeds:
+            raise MalformedClosure("occurrence realized_seeds must be RealizedSeeds")
+        if not all(
+            type(job) is str
+            and isinstance(per_stream, Mapping)
+            and all(type(stream) is str and type(seed) is int for stream, seed in per_stream.items())
+            for job, per_stream in self.realized_seeds.seeds.items()
+        ):
+            raise MalformedClosure("realized seeds must map job and stream strings to integers")
+        if type(self.receipt) is not BoundaryReceipt:
+            raise MalformedClosure("occurrence receipt must be a BoundaryReceipt")
 
 
 def _trace_projection(job: TraceJob) -> dict[str, object]:
@@ -423,6 +471,12 @@ class RunClosure:
     occurrence: Occurrence
 
     def __post_init__(self) -> None:
+        if type(self.recipe) is not Recipe:
+            raise MalformedClosure("run recipe must be a Recipe")
+        if type(self.result) is not ResultManifest:
+            raise MalformedClosure("run result must be a ResultManifest")
+        if type(self.occurrence) is not Occurrence:
+            raise MalformedClosure("run occurrence must be an Occurrence")
         declared = set(self.recipe.invocation.declared_outputs)
         supplied = {name for name, _ in self.result.outputs}
         if declared - supplied:
