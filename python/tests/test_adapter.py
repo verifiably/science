@@ -247,6 +247,13 @@ def test_a_seed_report_path_that_is_not_a_directory_is_refused(tmp_path):
         read_realized_seeds(scratch)
 
 
+def test_a_dangling_seed_report_symlink_is_refused(tmp_path):
+    scratch = create_scratch_root(tmp_path / "scratch")
+    (scratch / ".seeds").symlink_to(tmp_path / "missing", target_is_directory=True)
+    with pytest.raises(MalformedClosure):
+        read_realized_seeds(scratch)
+
+
 def test_the_environment_manifest_records_the_executing_interpreter():
     manifest = capture_environment()
     assert manifest == capture_environment()  # stable within one environment

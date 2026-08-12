@@ -295,6 +295,8 @@ def read_trace(events_file: Path) -> tuple[TraceJob, ...]:
 
 def read_realized_seeds(scratch: Path) -> RealizedSeeds:
     reports = scratch / ".seeds"
+    if reports.is_symlink():
+        raise MalformedClosure("the seed-report path is a symlink, not a boundary-owned directory")
     if not reports.exists():
         return RealizedSeeds(seeds={})
     if not reports.is_dir():
