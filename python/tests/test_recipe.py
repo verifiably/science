@@ -229,6 +229,16 @@ def test_recipe_keeps_nested_parameters_immutable_after_construction():
     assert value.parameters == {"nested": {"values": ("before",)}}
 
 
+def test_recipe_refuses_duplicate_logical_rule_bindings():
+    with pytest.raises(MalformedClosure):
+        recipe(
+            rule_bindings=(
+                ("content-identity-equality/v1", "impl-eq-1"),
+                ("content-identity-equality/v1", "impl-eq-2"),
+            )
+        )
+
+
 INVALID_CLOSURE_VALUES = [
     (
         "recipe-input-scalar",

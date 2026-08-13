@@ -339,6 +339,14 @@ class RuleUnbound(RecordError):
     and is deferred (cut 3 §7 item 4)."""
 
 
+class MixedShapes(RecordError):
+    """A verification pair whose run shapes differ.
+
+    One side's equivalence rule is authored and the other's is fixed, so there
+    is no honest rule for a mixed pair (§7.3c).
+    """
+
+
 class UnreferencedSuccessor(RecordError):
     """Reserved for the revise path's internal guard; the boundary-facing
     verdict is the ``SuccessorRefused`` value (G4 is an outcome over value

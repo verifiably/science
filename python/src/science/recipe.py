@@ -242,6 +242,9 @@ class Recipe:
             raise MalformedClosure("boundary_policy must be a BoundaryPolicy")
         _require_tuple(self.inputs, "recipe inputs")
         _require_pairs(self.rule_bindings, "recipe rule bindings")
+        rules = [rule for rule, _ in self.rule_bindings]
+        if len(rules) != len(set(rules)):
+            raise MalformedClosure("recipe rule bindings must name each logical rule once")
         if not all(type(entry) is RecipeInput for entry in self.inputs):
             raise MalformedClosure("recipe inputs hold RecipeInput values only")
         roles = ASSESSMENT_ROLES if self.shape == "assessment" else PRODUCTION_ROLES

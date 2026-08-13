@@ -347,10 +347,15 @@ def run_assessment(
 ):
     code, held = stage(tmp_path, snakefile=snakefile, data=data)
     spec = spec if spec is not None else freeze(spec_draft(), held_rules=spec_rules())
-    supplied = held_inputs if held_inputs is not None else {
-        DATA_ADDRESS: held / "data.txt",
-        READS_ADDRESS: held / "palette.txt",
-    }
+    if held_inputs is not None:
+        observed = spec.input_roles[0].dataset
+        (held / "data.txt").write_bytes(held_inputs[observed].read_bytes())
+        supplied = {**held_inputs, observed: held / "data.txt"}
+    else:
+        supplied = {
+            DATA_ADDRESS: held / "data.txt",
+            READS_ADDRESS: held / "palette.txt",
+        }
     return execute_assessment_run(
         spec=spec,
         definition=definition(snakefile=snakefile),
@@ -446,16 +451,19 @@ def replay_of(
             spec_draft(nondeterminism=original.run.recipe.nondeterminism),
             held_rules=spec_rules(),
         )
+    family_streams = (
+        {"transform": original.run.recipe.nondeterminism.plan.streams}
+        if isinstance(original.run.recipe.nondeterminism, Seeded)
+        else None
+        if original.run.recipe.shape == "assessment"
+        else {}
+    )
     return replay(
         original,
         spec=spec,
         definition=definition(
             snakefile=snakefile,
-            family_streams=(
-                {"transform": original.run.recipe.nondeterminism.plan.streams}
-                if isinstance(original.run.recipe.nondeterminism, Seeded)
-                else {}
-            ),
+            family_streams=family_streams,
         ),
         code_roots=(code,),
         held_inputs=supplied,

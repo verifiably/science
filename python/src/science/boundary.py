@@ -56,6 +56,7 @@ from science.report import (
 )
 from science.sealed import sealed
 from science.spec import (
+    DATASET_EQUIVALENCE_RULE,
     SEED_DERIVATION_V1,
     FrozenSpec,
     NondeterminismContract,
@@ -292,7 +293,7 @@ def _execute_run(
                 parameters=parameters,
                 nondeterminism=nondeterminism,
                 boundary_policy=_POLICY,
-                rule_bindings=(),
+                rule_bindings=((DATASET_EQUIVALENCE_RULE, "impl-dataset-eq-1"),),
             )
 
         config = _render_config(recipe, definition)
