@@ -83,8 +83,9 @@ _M2 = [
 
 
 # --- R1 ----------------------------------------------------------------------
-# The same closure guard is declared twice because its checks live in two test
-# modules; one subprocess must never cover for the other.
+# The clause is split by execution layer: the recipe arm disables value-level
+# reconciliation; the boundary arm fabricates the missing output because
+# build_manifest would otherwise refuse before RunClosure is reached.
 
 _R1 = [
     Arm(
