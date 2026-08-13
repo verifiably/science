@@ -2,7 +2,7 @@
 title: Foundations
 status: living
 created: 2026-08-08
-updated: 2026-08-11
+updated: 2026-08-12
 sources:
   - ../designs/2026-08-02-epistemic-kernel-design.md
   - ../designs/2026-08-02-substrate-consolidation-design.md
@@ -141,10 +141,10 @@ structural or integrity finding, but it mints nothing and performs no repair.
 ## Current state
 
 The kernel, substrate, domain boundary, and formal model are designed or banked.
-The adoption ledger records one implemented vertical slice: typed claim
+The adoption ledger records three implemented slices: cut 1's typed claim
 construction, canonical projection, profile compilation, identity, decode, and
-cross-language parity. Persistence, world indexing, run capture, and belief
-computation remain beyond that slice.
+cross-language parity; cut 2's belief seam; and cut 3's run boundary.
+Persistence, world indexing, and the mutation log remain beyond them.
 
 ## Open edges
 

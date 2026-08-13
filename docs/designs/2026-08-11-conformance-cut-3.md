@@ -16,7 +16,8 @@ execution boundary itself; the re-reading over that amendment returned
 four again (§7.2), catching the amendment's own mis-placement and moving
 back out the two clauses it had over-selected; and the review's second
 pass (§7.3) corrected two declarations and completed R2's deferral,
-moving no row.
+moving no row. The slice was built on branch cut-3 2026-08-12, merge pending;
+the selection required no amendment.
 
 ---
 

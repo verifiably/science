@@ -122,7 +122,8 @@ the completion and report layer. Of the twelve rows banked after cut 2, seven
 persistence seam: the holdings design's own assignment. The selection was
 amended across three adversarial readings before merge, with the frozen text
 preserved verbatim, and a scratch root is staging by location, not
-confinement — no arm of this cut reaches `clean-environment`.
+confinement — no arm of this cut reaches `clean-environment`. Its slice landed
+2026-08-12, and the selection required no amendment.
 
 ### Measurements constrain the next slice
 
@@ -154,8 +155,9 @@ landed work. Conformance cut 2 is frozen and its slice landed 2026-08-09: the
 derived admission state, the assessment admission gate, the belief input
 closure digest, and `science.belief.v1` under an exact binding. The
 normative-contract design is banked, but a complete normative contract cut,
-instrument certification, persistence, run capture, world index, and mutation
-log remain outside both cuts. Consult the ledger for the current state rather
+instrument certification, persistence, world index, and mutation log remain
+outside all three cuts; run capture landed with cut 3's slice on 2026-08-12.
+Consult the ledger for the current state rather
 than carrying these sentences into a status report.
 
 The contributor guide has no ledger artifact of its own. That is deliberate:

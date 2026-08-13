@@ -79,7 +79,10 @@ existed, at the **run boundary**: spec freezing and closure construction, the
 execution boundary through the minimal Snakemake adapter, dataset production,
 replay and verification-as-value, and the completion and report layer —
 selecting **15 rows in full and 19 in part**, with every H arm and T7 deferred
-to the persistence seam. Its slice is not yet built.
+to the persistence seam. Its slice landed 2026-08-12: spec freezing, the execution closure, the
+minimal Snakemake adapter's boundary, dataset production, replay,
+verification-as-value, and the report layer's completion reading now run as
+real subprocess executions over held fixtures.
 
 ```
 python/     the implementation (substrate §11 puts the composition root here)
