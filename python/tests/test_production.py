@@ -44,6 +44,18 @@ def test_r23_the_produces_edge_is_emitted_with_the_run(produced):
     assert signature.parameters["existing_bases"].default is inspect.Parameter.empty
 
 
+def test_r23_no_edge_can_name_output_absent_from_the_manifest(produced):
+    minted = mint_dataset(produced.run, existing_bases={})
+    manifest_address = dataset_address(
+        DatasetDeclaration(
+            resources=tuple(
+                ResourceDeclaration(name=name, digest=digest) for name, digest in produced.run.result.outputs
+            )
+        )
+    )
+    assert minted.edge.dataset == manifest_address
+
+
 def test_r23_refuses_a_non_production_closure():
     with pytest.raises(MalformedClosure):
         mint_dataset(closure(), existing_bases={})

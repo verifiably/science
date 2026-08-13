@@ -172,12 +172,10 @@ def test_r18_two_certifications_yield_two_verification_addresses(pair):
 
 
 def test_r18_the_report_carries_the_evidence_inline_and_the_basis_names_it_once(pair):
-    certified = verification_of(
-        pair,
-        certification=CodeLineageCertification(rationale="independent rewrite", attribution="alice"),
-    )
+    certification = CodeLineageCertification(rationale="independent rewrite", attribution="alice")
+    certified = verification_of(pair, certification=certification)
     report = certified.report
-    assert report.certification is not None
+    assert report.certification == certification
     original, replayed = pair
     assert report.original_conformance == report.replay_conformance == "conforming"
     assert report.receipts == (
@@ -327,6 +325,12 @@ def test_r11_a_tolerance_on_a_dataset_production_replay_is_refused(production_pa
 
 
 def test_r11_a_nondeterministic_transform_yields_all_four(tmp_path):
+    from test_belief import scenario as belief_scenario
+
+    from science.belief import evaluate
+
+    belief_inputs = belief_scenario()
+    prior_belief = evaluate(**belief_inputs)
     first = run_production(
         tmp_path / "a",
         snakefile=SNAKEFILE_NONDETERMINISTIC,
@@ -370,6 +374,7 @@ def test_r11_a_nondeterministic_transform_yields_all_four(tmp_path):
     assert verification.rule == "dataset-content-equality/v1"
     assert prior.run == observing.run.address()
     assert observing.run.recipe.inputs[0].dataset == first_dataset.address
+    assert evaluate(**belief_inputs) == prior_belief
 
 
 def test_r11_the_dataset_production_verification_carries_no_verifies_assessment_edge(

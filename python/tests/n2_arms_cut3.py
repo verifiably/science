@@ -1289,6 +1289,16 @@ _CLAUSE_ARMS = [
         "test_verify.py::test_r11_a_nondeterministic_transform_yields_all_four",
     ),
     _clause_arm(
+        "R11",
+        "a production replay and verification move no existing belief",
+        "verify.py",
+        '    _require_str(epoch, "verification epoch")',
+        '    _require_str(epoch, "verification epoch")\n'
+        "    import science.belief as belief_module\n"
+        '    belief_module.OUTCOME_SIGNS = {"supported": -1, "refuted": 1, "inconclusive": 0}',
+        "test_verify.py::test_r11_a_nondeterministic_transform_yields_all_four",
+    ),
+    _clause_arm(
         "R12",
         "freezing a spec after an out-of-band run cannot reveal the ordering",
         "recipe.py",
@@ -1396,6 +1406,14 @@ _CLAUSE_ARMS = [
         "verify.py",
         "        original_conformance=conformance(original),",
         '        original_conformance="unreported",',
+        "test_verify.py::test_r18_the_report_carries_the_evidence_inline_and_the_basis_names_it_once",
+    ),
+    _clause_arm(
+        "R18",
+        "the comparison report carries the exact certification claim inline",
+        "verify.py",
+        "        certification=certification,",
+        "        certification=None,",
         "test_verify.py::test_r18_the_report_carries_the_evidence_inline_and_the_basis_names_it_once",
     ),
     _clause_arm(
@@ -1581,6 +1599,14 @@ _CLAUSE_ARMS = [
         "        edge=ProducesEdge(run=run_address, dataset=address),",
         '        edge=ProducesEdge(run="", dataset=address),',
         "test_production.py::test_r23_the_produces_edge_is_emitted_with_the_run",
+    ),
+    _clause_arm(
+        "R23",
+        "no produces edge can name output absent from the manifest",
+        "production.py",
+        "        edge=ProducesEdge(run=run_address, dataset=address),",
+        '        edge=ProducesEdge(run=run_address, dataset="dataset:absent"),',
+        "test_production.py::test_r23_no_edge_can_name_output_absent_from_the_manifest",
     ),
     _clause_arm(
         "R23",
