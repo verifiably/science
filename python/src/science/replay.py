@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import final
 
 from science.adapter import WorkflowDefinition
-from science.boundary import RunMinted, RunRefused, execute_assessment_run, execute_production_run
+from science.boundary import RunMinted, RunRefused, _refused, execute_assessment_run, execute_production_run
 from science.errors import MalformedClosure, MalformedRecord
 from science.recipe import ResultManifest, RunClosure
 from science.sealed import sealed
@@ -141,7 +141,7 @@ def replay(
         return outcome
     if outcome.run.recipe.identity() != recipe.identity():
         error = MalformedClosure("reconstructed recipe differs from the original recipe")
-        return RunRefused(str(error), None, outcome.intent, None)
+        return _refused(str(error), recipe.spec_identity or "absent", actor, observer, started_at, outcome.intent)
     return outcome
 
 

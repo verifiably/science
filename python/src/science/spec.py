@@ -277,7 +277,7 @@ class SpecDraft:
 
 @sealed
 @final
-@dataclass(frozen=True)
+@dataclass(frozen=True, init=False)
 class FrozenSpec:
     target: str
     estimand: str
@@ -294,6 +294,9 @@ class FrozenSpec:
     supersedes: str | None
     identity: str
 
+    def __init__(self, *args: object, **kwargs: object) -> None:
+        raise TypeError("FrozenSpec values are minted by freeze or revise")
+
     def __post_init__(self) -> None:
         if not isinstance(self.input_roles, tuple) or not all(
             isinstance(entry, SpecInput) for entry in self.input_roles
@@ -304,6 +307,14 @@ class FrozenSpec:
             "parameters",
             MappingProxyType({key: _freeze_parameter_value(value) for key, value in self.parameters.items()}),
         )
+
+
+def _mint_frozen_spec(**members: object) -> FrozenSpec:
+    spec = object.__new__(FrozenSpec)
+    for field in fields(FrozenSpec):
+        object.__setattr__(spec, field.name, members[field.name])
+    spec.__post_init__()
+    return spec
 
 
 @sealed
@@ -372,7 +383,7 @@ def freeze(
     rule_bindings = bind_rules((draft.interpretation_rule, draft.equivalence_rule), held_rules)
     identity = v1.digest(SPEC_DOMAIN, _facet_projection(draft, rule_bindings, supersedes))
     members = {f.name: getattr(draft, f.name) for f in fields(SpecDraft)}
-    return FrozenSpec(**members, rule_bindings=rule_bindings, supersedes=supersedes, identity=identity)
+    return _mint_frozen_spec(**members, rule_bindings=rule_bindings, supersedes=supersedes, identity=identity)
 
 
 def revise(

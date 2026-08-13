@@ -1092,6 +1092,650 @@ _G9 = [
 ]
 
 
+def _clause_arm(
+    row: str,
+    asserts: str,
+    module: str,
+    before: str,
+    after: str,
+    check: str,
+) -> Arm:
+    """Declare one selected assertion clause without repeating table plumbing."""
+    return Arm(row=row, asserts=asserts, sabotage=Sabotage(module, before, after), checks=(check,))
+
+
+# Clauses missed by the original seed matrix. Each entry maps one selected
+# assertion to its named test and to a sabotage of the behavior that test owns.
+_CLAUSE_ARMS = [
+    _clause_arm(
+        "G2a",
+        "FrozenSpec values are minted through freeze or revise, never the ordinary dataclass API",
+        "spec.py",
+        '        raise TypeError("FrozenSpec values are minted by freeze or revise")',
+        "        return None",
+        "test_spec.py::test_frozen_specs_are_minted_only_by_freeze_and_revise",
+    ),
+    _clause_arm(
+        "G2a",
+        "an out-of-band execution has no boundary-mediated witness after a spec is frozen",
+        "recipe.py",
+        "    receipt: BoundaryReceipt\n",
+        "    receipt: BoundaryReceipt\n    boundary_mediated: bool = True\n",
+        "test_boundary.py::test_g2a_r12_an_out_of_band_run_with_a_spec_frozen_afterwards_is_undetectable",
+    ),
+    _clause_arm(
+        "G4",
+        "a referencing successor to a recorded failed replay is admitted",
+        "spec.py",
+        "    if superseded.identity in recorded_failures and candidate.supersedes != superseded.identity:",
+        "    if candidate.supersedes == superseded.identity:",
+        "test_spec.py::test_g4_a_referencing_successor_is_admitted",
+    ),
+    _clause_arm(
+        "G4",
+        "a discarded failed attempt is undetectable from the supplied value state",
+        "spec.py",
+        "    if superseded.identity in recorded_failures and candidate.supersedes != superseded.identity:",
+        "    if candidate.supersedes != superseded.identity:",
+        "test_spec.py::test_g4_a_discarded_failed_attempt_is_undetectable",
+    ),
+    _clause_arm(
+        "R1",
+        "a source note is a separate authored act before the held member is supplied",
+        "record.py",
+        '        object.__setattr__(self, "payload", MappingProxyType(dict(self.payload)))',
+        '        object.__setattr__(self, "relation", "attested")\n'
+        '        object.__setattr__(self, "payload", MappingProxyType(dict(self.payload)))',
+        "test_recipe.py::test_r1_the_note_is_a_separate_act_and_the_member_is_then_supplied",
+    ),
+    _clause_arm(
+        "R1",
+        "a bare lockfile digest cannot stand in for an environment manifest",
+        "recipe.py",
+        "        if type(self.environment) is not EnvironmentManifest:",
+        "        if False:",
+        "test_recipe.py::test_r1_a_bare_lockfile_digest_is_refused_as_environment_identity",
+    ),
+    _clause_arm(
+        "R2",
+        "realized seeds and event tokens distinguish runs but never their recipes",
+        "recipe.py",
+        "        declared = set(self.recipe.invocation.declared_outputs)\n",
+        '        object.__setattr__(self.recipe, "parameters", MappingProxyType({**self.recipe.parameters, '
+        '"event_token": self.occurrence.event_token}))\n'
+        "        declared = set(self.recipe.invocation.declared_outputs)\n",
+        "test_recipe.py::test_r2_equal_recipes_despite_differing_seeds_and_event_tokens",
+    ),
+    _clause_arm(
+        "R3",
+        "two executions of one recipe retain equal recipe identities",
+        "boundary.py",
+        "        config = _render_config(recipe, definition)\n",
+        '        recipe = __import__("dataclasses").replace(\n'
+        '            recipe, parameters=dict(recipe.parameters) | {"event_token": intent.event_token}\n        )\n'
+        "        config = _render_config(recipe, definition)\n",
+        "test_boundary.py::test_r3_two_executions_of_one_recipe_are_two_runs",
+    ),
+    _clause_arm(
+        "R4",
+        "scope is derived and has no authored constructor parameter",
+        "replay.py",
+        "    certification: CodeLineageCertification | None,\n) -> str:",
+        "    certification: CodeLineageCertification | None,\n    scope: str | None = None,\n) -> str:",
+        "test_replay.py::test_r4_no_authored_scope_parameter_exists",
+    ),
+    _clause_arm(
+        "R4",
+        "equal recipes without a qualifying receipt derive same-environment",
+        "replay.py",
+        '        return "same-environment"',
+        '        return "not-certified"',
+        "test_replay.py::test_r4_equal_recipes_without_a_receipt_derive_same_environment",
+    ),
+    _clause_arm(
+        "R4",
+        "a hostname change alone remains same-environment",
+        "replay.py",
+        '        return "same-environment"',
+        '        return "not-certified"',
+        "test_replay.py::test_r4_negative_a_a_hostname_change_stays_same_environment",
+    ),
+    _clause_arm(
+        "R6",
+        "restored availability changes no state until a replay runs",
+        "replay.py",
+        "    return AVAILABLE if required <= resolvable_here and run.address() in attributions else NOT_AVAILABLE",
+        "    return NOT_AVAILABLE",
+        "test_replay.py::test_r6_restoring_availability_changes_nothing_until_a_replay_actually_runs",
+    ),
+    _clause_arm(
+        "R8",
+        "changing a seed root mints a successor spec",
+        "spec.py",
+        "    return freeze(draft, held_rules=held_rules, supersedes=original.identity)",
+        "    successor = freeze(draft, held_rules=held_rules, supersedes=original.identity)\n"
+        '    object.__setattr__(successor, "identity", original.identity)\n'
+        "    return successor",
+        "test_spec.py::test_r8_changing_a_root_seed_mints_a_successor_spec",
+    ),
+    _clause_arm(
+        "R8",
+        "editing the equivalence rule after a failing replay mints a new spec identity",
+        "spec.py",
+        "    return freeze(draft, held_rules=held_rules, supersedes=original.identity)",
+        "    successor = freeze(draft, held_rules=held_rules, supersedes=original.identity)\n"
+        '    object.__setattr__(successor, "identity", original.identity)\n'
+        "    return successor",
+        "test_verify.py::test_r8_the_rule_cannot_be_chosen_after_the_outputs_are_seen",
+    ),
+    _clause_arm(
+        "R8",
+        "the original run closure still names the old spec after revision",
+        "spec.py",
+        "    return freeze(draft, held_rules=held_rules, supersedes=original.identity)",
+        "    successor = freeze(draft, held_rules=held_rules, supersedes=original.identity)\n"
+        "    for value in __import__('gc').get_objects():\n"
+        "        if type(value).__name__ == 'Recipe' and getattr(value, 'spec_identity', None) == original.identity:\n"
+        "            object.__setattr__(value, 'spec_identity', successor.identity)\n"
+        "    return successor",
+        "test_verify.py::test_r8_the_rule_cannot_be_chosen_after_the_outputs_are_seen",
+    ),
+    _clause_arm(
+        "R8",
+        "the failing verification remains active after the spec revision",
+        "verify.py",
+        "    return tuple(verification for verification in verifications if verification.identity() not in superseded)",
+        "    return ()",
+        "test_verify.py::test_r8_the_rule_cannot_be_chosen_after_the_outputs_are_seen",
+    ),
+    _clause_arm(
+        "R8",
+        "the replay is failing before any post-result rule revision",
+        "replay.py",
+        '    return "passed" if original == replayed else "failed"',
+        '    return "passed"',
+        "test_verify.py::test_r8_the_rule_cannot_be_chosen_after_the_outputs_are_seen",
+    ),
+    _clause_arm(
+        "R10",
+        "an accession is refused and no fallback synthesizes a dataset",
+        "boundary.py",
+        '    return "://" in address or address.startswith("accession:")',
+        '    return "://" in address',
+        "test_boundary.py::test_r10_an_accession_is_refused_and_no_fallback_synthesizes_a_dataset",
+    ),
+    _clause_arm(
+        "R11",
+        "dataset-production verification accepts no tolerance parameter",
+        "verify.py",
+        "    citation: tuple[ActReport, int] | None = None,\n) -> RunVerification:",
+        "    citation: tuple[ActReport, int] | None = None,\n    tolerance: object = None,\n) -> RunVerification:",
+        "test_verify.py::test_r11_a_tolerance_on_a_dataset_production_replay_is_refused",
+    ),
+    _clause_arm(
+        "R11",
+        "a nondeterministic production replay yields a different dataset entity",
+        "production.py",
+        "    if address is None:",
+        '    address = "dataset:fixed"\n    if address is None:',
+        "test_verify.py::test_r11_a_nondeterministic_transform_yields_all_four",
+    ),
+    _clause_arm(
+        "R11",
+        "the prior assessment remains bound to the run observing the prior dataset",
+        "assess.py",
+        "            run=run_address,",
+        '            run="replayed-run",',
+        "test_verify.py::test_r11_a_nondeterministic_transform_yields_all_four",
+    ),
+    _clause_arm(
+        "R12",
+        "freezing a spec after an out-of-band run cannot reveal the ordering",
+        "recipe.py",
+        "    receipt: BoundaryReceipt\n",
+        "    receipt: BoundaryReceipt\n    boundary_mediated: bool = True\n",
+        "test_boundary.py::test_g2a_r12_an_out_of_band_run_with_a_spec_frozen_afterwards_is_undetectable",
+    ),
+    _clause_arm(
+        "R14",
+        "null, string-decimal, integer-decimal, normalized decimal, and normalized-key collisions stay distinct or refused",
+        "identity/v1.py",
+        '    if value is None:\n        raise NullRefused(f"at {path}: null is refused, not pruned")',
+        '    if value is None:\n        return "null"',
+        "test_recipe.py::test_r14_the_four_collisions_walked_at_the_recipe_position",
+    ),
+    _clause_arm(
+        "R14",
+        "NaN and infinities are refused at every identity position",
+        "identity/v1.py",
+        "    if not value.is_finite():",
+        "    if False:",
+        "test_recipe.py::test_r14_nan_and_infinity_are_refused_in_every_position",
+    ),
+    _clause_arm(
+        "R16",
+        "a seed-violating complete execution still mints a run",
+        "boundary.py",
+        "        realized_seeds = read_realized_seeds(scratch)\n",
+        "        realized_seeds = read_realized_seeds(scratch)\n        if realized_seeds.seeds:\n"
+        '            return _refused("seed-claim-refused", subject, actor, observer, started_at, intent)\n',
+        "test_boundary.py::test_r16_a_seed_violating_execution_still_mints_a_run",
+    ),
+    _clause_arm(
+        "R17",
+        "project_recipe offers no caller path for projected members",
+        "recipe.py",
+        "    boundary_policy: BoundaryPolicy,\n) -> Recipe:",
+        "    boundary_policy: BoundaryPolicy,\n    parameters: Mapping[str, object] | None = None,\n) -> Recipe:",
+        "test_recipe.py::test_r17_projection_offers_no_caller_path_for_the_projected_members",
+    ),
+    _clause_arm(
+        "R17",
+        "project_recipe refuses a declared input that is not held",
+        "recipe.py",
+        "                content=held[entry.dataset],",
+        '                content=held.get(entry.dataset, "sha256:" + "00" * 32),',
+        "test_recipe.py::test_r17_projection_refuses_a_declared_input_that_is_not_held",
+    ),
+    _clause_arm(
+        "R17",
+        "invocations hold bindings rather than supplied values",
+        "recipe.py",
+        "    declared_outputs: tuple[str, ...]\n\n    def __post_init__",
+        "    declared_outputs: tuple[str, ...]\n    values: tuple[str, ...] = ()\n\n    def __post_init__",
+        "test_recipe.py::test_r17_invocation_holds_bindings_not_values",
+    ),
+    _clause_arm(
+        "R17",
+        "assessment execution has no caller path for inputs, parameters, or nondeterminism",
+        "boundary.py",
+        "    spec: object,\n    definition: WorkflowDefinition,",
+        "    spec: object,\n    inputs: tuple[RecipeInput, ...] = (),\n    definition: WorkflowDefinition,",
+        "test_boundary.py::test_r17_no_path_supplies_inputs_parameters_or_contract_on_an_assessment_run",
+    ),
+    _clause_arm(
+        "R17",
+        "seed shopping requires a successor spec and leaves the recorded run on the old identity",
+        "spec.py",
+        "    return freeze(draft, held_rules=held_rules, supersedes=original.identity)",
+        "    successor = freeze(draft, held_rules=held_rules, supersedes=original.identity)\n"
+        '    object.__setattr__(successor, "identity", original.identity)\n'
+        "    return successor",
+        "test_boundary.py::test_r17_seed_shopping_cannot_occur_at_all",
+    ),
+    _clause_arm(
+        "R17",
+        "a deleted or never-recorded attempt is undetectable from the held set",
+        "boundary.py",
+        "    registration = Registration(token, report.identity()) if intent is not None else None",
+        "    report = None if intent is None else report\n"
+        "    registration = Registration(token, report.identity()) if intent is not None else None",
+        "test_boundary.py::test_r17_a_deleted_or_never_recorded_attempt_is_undetectable",
+    ),
+    _clause_arm(
+        "R17",
+        "dataset-production recipe members are authored directly at that boundary",
+        "boundary.py",
+        "def execute_production_run(\n    *,\n    inputs: tuple[RecipeInput, ...],\n"
+        "    parameters: Mapping[str, object],",
+        "def execute_production_run(\n    *,\n    _inputs: tuple[RecipeInput, ...],\n"
+        "    parameters: Mapping[str, object],",
+        "test_boundary.py::test_r17_negative_b_a_dataset_production_recipe_is_authored_directly",
+    ),
+    _clause_arm(
+        "R18",
+        "deleting an external certification leaves the embedded verification unchanged",
+        "verify.py",
+        '        ("certification", certification),',
+        '        ("certification", None),',
+        "test_verify.py::test_r18_deleting_the_external_certification_leaves_the_verification_unchanged",
+    ),
+    _clause_arm(
+        "R18",
+        "the comparison report carries both conformance results inline",
+        "verify.py",
+        "        original_conformance=conformance(original),",
+        '        original_conformance="unreported",',
+        "test_verify.py::test_r18_the_report_carries_the_evidence_inline_and_the_basis_names_it_once",
+    ),
+    _clause_arm(
+        "R18",
+        "the comparison report carries the exact resolved rule binding inline",
+        "verify.py",
+        "        rule_bindings=((rule, implementation_identity),),",
+        "        rule_bindings=(),",
+        "test_verify.py::test_r18_the_report_carries_the_evidence_inline_and_the_basis_names_it_once",
+    ),
+    _clause_arm(
+        "R19",
+        "the verification constructor has the selected closed parameter list",
+        "verify.py",
+        "    citation: tuple[ActReport, int] | None = None,\n) -> RunVerification:",
+        "    citation: tuple[ActReport, int] | None = None,\n    evaluator: object = None,\n) -> RunVerification:",
+        "test_verify.py::test_r19_the_constructor_list_is_closed",
+    ),
+    _clause_arm(
+        "R20",
+        "deterministic with a seed plan is unspellable",
+        "spec.py",
+        'class Deterministic:\n    """Carries nothing: the run claims no RNG dependence at all."""',
+        'class Deterministic:\n    """Carries nothing: the run claims no RNG dependence at all."""\n\n    plan: object = None',
+        "test_spec.py::test_r20_deterministic_with_a_plan_is_unspellable",
+    ),
+    _clause_arm(
+        "R20",
+        "stochastic-unseeded with a seed plan is unspellable",
+        "spec.py",
+        "class StochasticUnseeded:\n    rationale: str\n",
+        "class StochasticUnseeded:\n    rationale: str\n    plan: object = None\n",
+        "test_spec.py::test_r20_stochastic_unseeded_with_a_plan_is_unspellable",
+    ),
+    _clause_arm(
+        "R20",
+        "seeded without a seed plan is unspellable",
+        "spec.py",
+        "class Seeded:\n    plan: SeedPlan\n",
+        "class Seeded:\n    plan: SeedPlan | None = None\n",
+        "test_spec.py::test_r20_seeded_without_a_plan_is_unspellable",
+    ),
+    _clause_arm(
+        "R20",
+        "a stream root mapping may name declared roots only",
+        "spec.py",
+        "        if undeclared:",
+        "        if False:",
+        "test_spec.py::test_r20_a_mapped_root_must_be_declared",
+    ),
+    _clause_arm(
+        "R20",
+        "stochastic-unseeded with a nonempty rationale is freezable",
+        "spec.py",
+        "        if not self.rationale:",
+        "        if True:",
+        "test_spec.py::test_r20_stochastic_unseeded_with_a_rationale_is_freezable",
+    ),
+    _clause_arm(
+        "R20",
+        "the frozen spec names logical streams and no workflow family field",
+        "spec.py",
+        "    nondeterminism: Deterministic | Seeded | StochasticUnseeded\n\n    def __post_init__",
+        "    nondeterminism: Deterministic | Seeded | StochasticUnseeded\n    family_streams: tuple[str, ...] = ()\n\n"
+        "    def __post_init__",
+        "test_spec.py::test_r20_the_spec_names_logical_streams_only_no_family_field_exists",
+    ),
+    _clause_arm(
+        "R21",
+        "the manifest is boundary-constructed with no supplied-manifest path",
+        "boundary.py",
+        "    spec: object,\n    definition: WorkflowDefinition,",
+        "    spec: object,\n    manifest: ResultManifest | None = None,\n    definition: WorkflowDefinition,",
+        "test_boundary.py::test_r21_the_manifest_is_constructed_by_the_boundary_and_no_supplied_path_exists",
+    ),
+    _clause_arm(
+        "R21",
+        "an undeclared manifest entry mints no run",
+        "recipe.py",
+        "        if supplied - declared:",
+        "        if False:",
+        "test_recipe.py::test_r21_an_undeclared_manifest_entry_mints_no_run",
+    ),
+    _clause_arm(
+        "R21",
+        "absolute and root-escaping output declarations are refused",
+        "recipe.py",
+        "            if PurePosixPath(output).is_absolute():",
+        "            if False:",
+        "test_recipe.py::test_r21_absolute_and_root_escaping_output_declarations_are_refused",
+    ),
+    _clause_arm(
+        "R21",
+        "duplicate logical output names are refused",
+        "recipe.py",
+        "        if len(set(names)) != len(names):",
+        "        if False:",
+        "test_recipe.py::test_r21_a_duplicate_logical_name_is_refused",
+    ),
+    _clause_arm(
+        "R21",
+        "a scheduling-only cores option leaves recipe identity unchanged",
+        "boundary.py",
+        "        config = _render_config(recipe, definition)\n",
+        '        if cores != 1:\n            recipe = __import__("dataclasses").replace(\n'
+        '                recipe, parameters=dict(recipe.parameters) | {"cores": cores}\n            )\n'
+        "        config = _render_config(recipe, definition)\n",
+        "test_boundary.py::test_r21_negative_a_a_scheduling_only_option_leaves_the_recipe_identity_unchanged",
+    ),
+    _clause_arm(
+        "R21",
+        "scratch mount differences remain receipt-only and leave recipe identity unchanged",
+        "boundary.py",
+        "        config = _render_config(recipe, definition)\n",
+        '        recipe = __import__("dataclasses").replace(\n'
+        '            recipe, parameters=dict(recipe.parameters) | {"scratch": str(scratch)}\n        )\n'
+        "        config = _render_config(recipe, definition)\n",
+        "test_boundary.py::test_r21_negative_c_two_differently_mounted_scratch_roots_yield_equal_recipe_identities",
+    ),
+    _clause_arm(
+        "R21",
+        "a disobeyed complete closure is a run while an incompletable closure is a refusal",
+        "boundary.py",
+        "        realized_seeds = read_realized_seeds(scratch)\n",
+        "        realized_seeds = read_realized_seeds(scratch)\n        if realized_seeds.seeds:\n"
+        '            return _refused("seed-claim-refused", subject, actor, observer, started_at, intent)\n',
+        "test_boundary.py::test_r21_negative_e_the_two_failure_states_are_distinct",
+    ),
+    _clause_arm(
+        "R22",
+        "the assessment constructor accepts only a run and held resolution mappings",
+        "assess.py",
+        "    implementations: Mapping[str, RuleImplementation],\n) -> AssessmentValue | AssessmentFinding:",
+        "    implementations: Mapping[str, RuleImplementation],\n    outcome: object = None,\n"
+        ") -> AssessmentValue | AssessmentFinding:",
+        "test_assess.py::test_r22_the_constructor_takes_only_a_run_ref",
+    ),
+    _clause_arm(
+        "R22",
+        "the evaluator resolves from the implementation binding frozen in the recipe",
+        "assess.py",
+        "        implementation_identity = dict(run.recipe.rule_bindings)[spec.interpretation_rule]",
+        "        implementation_identity = spec.interpretation_rule",
+        "test_assess.py::test_r22_the_evaluator_resolves_from_the_binding_frozen_in_the_recipe",
+    ),
+    _clause_arm(
+        "R22",
+        "a spec mapping key cannot substitute different frozen content",
+        "assess.py",
+        "        if type(spec) is not FrozenSpec or spec.identity != spec_identity:",
+        "        if False:",
+        "test_assess.py::test_r22_a_spec_mapping_key_cannot_substitute_a_different_frozen_spec",
+    ),
+    _clause_arm(
+        "R22",
+        "an implementation mapping key cannot substitute forged, mismatched, or nonconforming content",
+        "assess.py",
+        "        if (\n            type(implementation) is not RuleImplementation",
+        "        if False and (\n            type(implementation) is not RuleImplementation",
+        "test_assess.py::test_r22_an_implementation_mapping_key_cannot_substitute_unbound_content",
+    ),
+    _clause_arm(
+        "R22",
+        "narrowing applicability requires a successor spec and a new run",
+        "spec.py",
+        "    return freeze(draft, held_rules=held_rules, supersedes=original.identity)",
+        "    return original",
+        "test_assess.py::test_r22_negative_a_narrowing_applicability_needs_a_successor_spec_and_a_new_run",
+    ),
+    _clause_arm(
+        "R22",
+        "exchanging assessment facets while preserving their bags moves the keyed belief digest",
+        "closure.py",
+        "    assessment_facets = sorted((a.identity(), a.facet_digest()) for a in ours)",
+        "    assessment_facets = list(zip(sorted(a.identity() for a in ours), "
+        "sorted(a.facet_digest() for a in ours), strict=True))",
+        "test_assess.py::test_r22_negative_b_exchanged_facets_move_the_belief_digest",
+    ),
+    _clause_arm(
+        "R23",
+        "the produces edge names the minting run and produced dataset",
+        "production.py",
+        "        edge=ProducesEdge(run=run_address, dataset=address),",
+        '        edge=ProducesEdge(run="", dataset=address),',
+        "test_production.py::test_r23_the_produces_edge_is_emitted_with_the_run",
+    ),
+    _clause_arm(
+        "R23",
+        "no produced_by edge is reachable in either direction",
+        "production.py",
+        "    stamped: bool\n\n    def __post_init__",
+        "    stamped: bool\n    produced_by: str | None = None\n\n    def __post_init__",
+        "test_production.py::test_r23_no_produced_by_edge_is_reachable_in_either_direction",
+    ),
+    _clause_arm(
+        "R23",
+        "certified exclusion is inline and changing it mints a recipe rather than a run",
+        "recipe.py",
+        "            if entry.exclusion is not None:\n"
+        '                row["exclusion"] = {\n'
+        '                    "rationale": entry.exclusion.rationale,\n'
+        '                    "attribution": entry.exclusion.attribution,\n'
+        "                }\n",
+        "",
+        "test_production.py::test_r23_the_certified_exclusion_is_inline_and_mints_a_recipe_not_a_run",
+    ),
+    _clause_arm(
+        "R23",
+        "reclassifying an input role mints a different recipe",
+        "recipe.py",
+        "            inputs.append(row)",
+        '            row.pop("role", None)\n'
+        "            inputs.append(row)\n"
+        '            inputs.sort(key=lambda value: (value["dataset"], value["content"]))',
+        "test_production.py::test_r23_negative_h_reclassifying_an_inputs_role_mints_a_different_recipe",
+    ),
+    _clause_arm(
+        "T1",
+        "the private report constructor is reachable only from boundary and report modules",
+        "assess.py",
+        "from science.recipe import RunClosure",
+        "from science.recipe import RunClosure\nfrom science.report import _mint_report",
+        "test_inertness.py::test_t1_the_constructor_is_reachable_only_from_the_boundary",
+    ),
+    _clause_arm(
+        "T2",
+        "a complete nonconforming execution mints a run rather than an act report",
+        "boundary.py",
+        "        realized_seeds = read_realized_seeds(scratch)\n",
+        "        realized_seeds = read_realized_seeds(scratch)\n        if realized_seeds.seeds:\n"
+        '            return _refused("seed-claim-refused", subject, actor, observer, started_at, intent)\n',
+        "test_boundary.py::test_t2_negative_b_a_complete_non_conforming_execution_mints_a_run_never_an_act_report",
+    ),
+    _clause_arm(
+        "T2",
+        "a reconstructed-recipe mismatch closes its intent through a report registration",
+        "replay.py",
+        '        return _refused(str(error), recipe.spec_identity or "absent", actor, observer, started_at, outcome.intent)',
+        "        return RunRefused(str(error), None, outcome.intent, None)",
+        "test_replay.py::test_a_replay_refuses_a_reconstructed_recipe_mismatch",
+    ),
+    _clause_arm(
+        "T2",
+        "an assessment-run intent requires a nonempty frozen spec identity",
+        "report.py",
+        "        if not self.spec_identity:",
+        "        if False:",
+        "test_report.py::test_t2_the_assessment_run_intent_is_unspellable_without_a_spec_identity",
+    ),
+    _clause_arm(
+        "T3",
+        "an unmatched intent reads unfinished",
+        "report.py",
+        "    return INDETERMINATE if unresolved else UNFINISHED",
+        "    return INDETERMINATE",
+        "test_report.py::test_t3_an_unmatched_intent_reads_unfinished",
+    ),
+    _clause_arm(
+        "T3",
+        "a mapping cannot fabricate a missing fulfillment pointer",
+        "report.py",
+        "        if registration.pointer not in held:",
+        "        if False:",
+        "test_report.py::test_t3_a_mapping_cannot_fabricate_a_missing_fulfillment_pointer",
+    ),
+    _clause_arm(
+        "T3",
+        "a fulfilled intent reads closed",
+        "report.py",
+        "        if type(value) is ActReport and value.event_token == intent.event_token:",
+        "        if False:",
+        "test_report.py::test_t3_a_fulfilled_intent_reads_closed",
+    ),
+    _clause_arm(
+        "T3",
+        "a nonqualifying pointer never matches an intent",
+        "report.py",
+        "        if type(value) is ActReport and value.event_token == intent.event_token:",
+        "        if type(value) is ActReport:",
+        "test_report.py::test_t3_a_non_qualifying_pointer_never_matches",
+    ),
+    _clause_arm(
+        "T3",
+        "no status field is spellable on an operation record",
+        "report.py",
+        "    entries: tuple[Entry, ...]\n\n    def __init__",
+        '    entries: tuple[Entry, ...]\n    status: str = "closed"\n\n    def __init__',
+        "test_report.py::test_t3_no_status_field_is_spellable_on_any_record",
+    ),
+    _clause_arm(
+        "T4",
+        "no belief-bearing signature names a report",
+        "closure.py",
+        "    proposition: str,\n",
+        "    proposition: str,\n    reports: tuple = (),\n",
+        "test_inertness.py::test_t4_no_belief_bearing_signature_names_a_report",
+    ),
+    _clause_arm(
+        "T5",
+        "byte-locator-untested is unspellable on record-import entries",
+        "report.py",
+        "    RecordImportEntry: (ImportedRecords,),",
+        "    RecordImportEntry: (ImportedRecords, ByteLocatorUntested),",
+        "test_report.py::test_t5_byte_locator_untested_is_unspellable_on_a_record_import_entry",
+    ),
+    _clause_arm(
+        "T5",
+        "byte-locator-untested is unspellable on subject-evaluation entries",
+        "report.py",
+        "    SubjectEvaluationEntry: (EvaluationFinding,),",
+        "    SubjectEvaluationEntry: (EvaluationFinding, ByteLocatorUntested),",
+        "test_report.py::test_t5_byte_locator_untested_is_unspellable_on_a_subject_evaluation_entry",
+    ),
+    _clause_arm(
+        "T6",
+        "a report citation resolves to exactly the indexed entry",
+        "report.py",
+        "    return report.entries[index]",
+        "    return report.entries[-1]",
+        "test_report.py::test_t6_a_citation_resolves_to_exactly_one_entry",
+    ),
+    _clause_arm(
+        "T6",
+        "an out-of-range report citation is refused at the citing site",
+        "report.py",
+        "    if type(report) is not ActReport or type(index) is not int or not 0 <= index < len(report.entries):",
+        "    if type(report) is not ActReport or type(index) is not int:",
+        "test_verify.py::test_t6_an_out_of_range_citation_is_refused_at_the_citing_site",
+    ),
+    _clause_arm(
+        "T8",
+        "no ordinary API edits, supersedes, or deletes a report",
+        "report.py",
+        '    "completion",\n]',
+        '    "completion",\n    "edit_report",\n]',
+        "test_report.py::test_t8_no_ordinary_api_edits_supersedes_or_deletes_a_report",
+    ),
+]
+
+
 CUT3_ARMS: tuple[Arm, ...] = tuple(
     _G2a
     + _G4
@@ -1126,4 +1770,5 @@ CUT3_ARMS: tuple[Arm, ...] = tuple(
     + _T6
     + _T8
     + _G9
+    + _CLAUSE_ARMS
 )

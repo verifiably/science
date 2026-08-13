@@ -48,6 +48,7 @@ from science.replay import (
     derive_scope,
     replay_eligibility,
 )
+from science.report import CLOSED, completion
 from science.spec import Deterministic, RealizedSeeds, Seeded, SeedPlan, StochasticUnseeded, derive_seed, freeze
 from science.verification import Verification, lifecycle_state
 
@@ -89,6 +90,17 @@ def test_a_replay_refuses_a_reconstructed_recipe_mismatch(tmp_path):
     attempt = replay_of(original, tmp_path / "changed", snakefile=changed)
     assert isinstance(attempt, RunRefused)
     assert "reconstructed recipe differs" in attempt.reason
+    assert attempt.report is not None and attempt.intent is not None and attempt.registration is not None
+    assert attempt.registration.intent_token == attempt.intent.event_token
+    assert attempt.registration.pointer == attempt.report.identity()
+    assert (
+        completion(
+            attempt.intent,
+            (attempt.registration,),
+            {attempt.report.identity(): attempt.report},
+        )
+        == CLOSED
+    )
 
 
 # --- R6 -----------------------------------------------------------------------

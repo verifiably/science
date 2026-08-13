@@ -162,7 +162,7 @@ def test_r10_an_accession_is_refused_and_no_fallback_synthesizes_a_dataset(tmp_p
         held_rules=spec_rules(),
     )
     outcome = run_assessment(tmp_path, spec=spec)
-    assert isinstance(outcome, RunRefused)
+    assert isinstance(outcome, RunRefused) and outcome.reason == "acquisition-not-a-run"
     assert outcome.report is not None and not hasattr(outcome, "dataset")
 
 

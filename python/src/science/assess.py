@@ -20,7 +20,7 @@ from science.errors import MalformedClosure, MalformedRecord, SignatureRefused
 from science.recipe import RunClosure
 from science.record import AssessmentValue, RunInput, RunValue
 from science.sealed import sealed
-from science.spec import FrozenSpec, RuleImplementation
+from science.spec import FrozenSpec, RuleImplementation, implementation_conforms
 
 __all__ = ["AssessmentFinding", "build_assessment", "run_record"]
 
@@ -53,9 +53,18 @@ def build_assessment(
 
     run_address = run.address()
     try:
-        spec = specs[cast(str, run.recipe.spec_identity)]
+        spec_identity = cast(str, run.recipe.spec_identity)
+        spec = specs[spec_identity]
+        if type(spec) is not FrozenSpec or spec.identity != spec_identity:
+            raise TypeError("the resolved spec does not match the run's frozen spec identity")
         implementation_identity = dict(run.recipe.rule_bindings)[spec.interpretation_rule]
         implementation = implementations[implementation_identity]
+        if (
+            type(implementation) is not RuleImplementation
+            or implementation.identity != implementation_identity
+            or not implementation_conforms(implementation)
+        ):
+            raise TypeError("the resolved interpretation implementation does not match its frozen binding")
         raw = implementation.evaluate(run.result)
         if not isinstance(raw, Mapping):
             raise TypeError("the interpretation rule returned no facet mapping")

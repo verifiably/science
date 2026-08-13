@@ -181,6 +181,25 @@ def test_a_frozen_spec_keeps_nested_parameters_immutable_after_freeze():
     assert spec.parameters == {"nested": {"values": ("before",)}}
 
 
+def test_frozen_specs_are_minted_only_by_freeze_and_revise():
+    original = freeze(draft(), held_rules=held_rules())
+    members = {field.name: getattr(original, field.name) for field in dataclasses.fields(FrozenSpec)}
+
+    with pytest.raises(TypeError, match="minted by freeze or revise"):
+        FrozenSpec(**members)
+    with pytest.raises(TypeError, match="minted by freeze or revise"):
+        dataclasses.replace(original, identity="forged-spec-id")
+
+    successor = revise(
+        original,
+        edits={"estimand": "a revised quantity"},
+        held_rules=held_rules(),
+        recorded_failures=frozenset(),
+    )
+    assert type(original) is FrozenSpec and type(successor) is FrozenSpec
+    assert successor.supersedes == original.identity
+
+
 def test_supersedes_is_in_the_hand_authored_normative_projection():
     spec = freeze(draft(), held_rules=held_rules(), supersedes="spec:prior")
     assert spec.identity == v1.digest(

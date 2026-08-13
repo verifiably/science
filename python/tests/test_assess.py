@@ -5,6 +5,7 @@ raw-write half and negative (c) (store, audit) — cut 3 §4.2.
 
 import dataclasses
 import inspect
+from types import SimpleNamespace
 
 import pytest
 from fixtures_cut3 import (
@@ -32,6 +33,7 @@ from science.recipe import RecipeInput, project_recipe
 from science.record import AssessmentValue, RunValue
 from science.spec import (
     ExclusionCertification,
+    RuleFixture,
     RuleImplementation,
     SpecInput,
     freeze,
@@ -130,6 +132,66 @@ def test_r22_the_evaluator_resolves_from_the_binding_frozen_in_the_recipe(minted
     assert isinstance(derived, AssessmentValue)
     assert derived.outcome == "refuted"
     assert derived.interpretation_rule == spec.interpretation_rule
+
+
+def test_r22_a_spec_mapping_key_cannot_substitute_a_different_frozen_spec(minted):
+    expected = freeze(spec_draft(), held_rules=spec_rules())
+    assert minted.run.recipe.spec_identity == expected.identity
+    substitutions = (
+        freeze(spec_draft(target="a substituted proposition"), held_rules=spec_rules()),
+        SimpleNamespace(
+            identity=expected.identity,
+            target="a forged proposition",
+            interpretation_rule=expected.interpretation_rule,
+            estimand=expected.estimand,
+            applicability=expected.applicability,
+        ),
+    )
+
+    for substituted in substitutions:
+        finding = build_assessment(
+            minted.run,
+            specs={expected.identity: substituted},  # type: ignore[dict-item]
+            implementations=interp(),
+        )
+
+        assert isinstance(finding, AssessmentFinding)
+        assert finding.reason.startswith("evaluation-failed:")
+
+
+@pytest.mark.parametrize(
+    "implementation",
+    [
+        SimpleNamespace(
+            identity="impl-interp-1",
+            evaluate=lambda manifest: {"outcome": "supported"},
+            fixtures=(),
+        ),
+        RuleImplementation(
+            identity="impl-substituted",
+            evaluate=lambda manifest: {"outcome": "supported"},
+            fixtures=(),
+        ),
+        RuleImplementation(
+            identity="impl-interp-1",
+            evaluate=lambda manifest: {"outcome": "refuted"},
+            fixtures=(RuleFixture(arguments=(None,), expected={"outcome": "supported"}),),
+        ),
+    ],
+    ids=("forged-type", "mismatched-identity", "nonconforming-fixtures"),
+)
+def test_r22_an_implementation_mapping_key_cannot_substitute_unbound_content(minted, implementation):
+    spec = freeze(spec_draft(), held_rules=spec_rules())
+    bound = dict(minted.run.recipe.rule_bindings)[spec.interpretation_rule]
+
+    finding = build_assessment(
+        minted.run,
+        specs={spec.identity: spec},
+        implementations={bound: implementation},  # type: ignore[dict-item]
+    )
+
+    assert isinstance(finding, AssessmentFinding)
+    assert finding.reason.startswith("evaluation-failed:")
 
 
 def test_r22_the_derived_outcome_moves_only_with_the_result_or_the_rule(tmp_path):
