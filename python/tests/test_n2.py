@@ -61,6 +61,7 @@ from n2_arms import (
     Sabotage,
 )
 from n2_arms_cut2 import CUT2_ARMS
+from n2_arms_cut3 import CUT3_ARMS
 
 PACKAGE = Path(__file__).resolve().parent.parent / "src" / "science"
 TESTS = Path(__file__).resolve().parent
@@ -227,10 +228,10 @@ def audit(arm: Arm, workspace: Path) -> Finding:
 
 @pytest.fixture(scope="session")
 def findings(tmp_path_factory) -> tuple[Finding, ...]:
-    """Every declared arm — cut 1's and cut 2's — audited once. Concurrent —
-    each arm owns its own copy."""
+    """Every declared arm across cuts 1–3, audited once. Concurrent — each
+    arm owns its own copy."""
     root = tmp_path_factory.mktemp("n2")
-    all_arms = (*ARMS, *CUT2_ARMS)
+    all_arms = (*ARMS, *CUT2_ARMS, *CUT3_ARMS)
     with ThreadPoolExecutor(max_workers=WORKERS) as pool:
         return tuple(pool.map(lambda pair: audit(pair[1], root / f"arm{pair[0]}"), enumerate(all_arms)))
 
@@ -272,7 +273,7 @@ class TestEveryArmAssertsSomething:
             row="N2",
             asserts="every declared check resolves and passes against the real package",
             sabotage=ARMS[0].sabotage,
-            checks=tuple(dict.fromkeys(check for arm in (*ARMS, *CUT2_ARMS) for check in arm.checks)),
+            checks=tuple(dict.fromkeys(check for arm in (*ARMS, *CUT2_ARMS, *CUT3_ARMS) for check in arm.checks)),
         )
         finding = baseline(every)
         assert finding.verdict == "resolved", finding.detail
@@ -487,6 +488,81 @@ class TestTheCut2ArmTableCoversTheCut:
         for arm in CUT2_ARMS:
             for check in arm.checks:
                 assert check.split("::")[-1].startswith("test_"), f"{arm.label}: {check}"
+
+
+class TestTheCut3ArmTableCoversTheCut:
+    # Cut 3 §4.1/§4.2 as amended through §7.3. N2 is the 34th selected row;
+    # its arm is the harness itself (cut 1's rule, inherited).
+    SELECTED = frozenset(
+        {
+            "G2a",
+            "G4",
+            "M2",
+            "R1",
+            "R3",
+            "R6",
+            "R7",
+            "R8",
+            "R11",
+            "R14",
+            "R17",
+            "R18",
+            "T3",
+            "T6",
+            "T8",
+            "G9",
+            "R2",
+            "R4",
+            "R5",
+            "R9",
+            "R10",
+            "R12",
+            "R13",
+            "R16",
+            "R19",
+            "R20",
+            "R21",
+            "R22",
+            "R23",
+            "T1",
+            "T2",
+            "T4",
+            "T5",
+        }
+    )
+
+    def test_every_selected_row_has_at_least_one_arm(self):
+        assert {arm.row for arm in CUT3_ARMS} == self.SELECTED
+
+    def test_no_arm_claims_a_row_the_cut_defers(self):
+        deferred = {
+            "R15",
+            "T7",
+            "H1",
+            "H2",
+            "H3",
+            "H4",
+            "G5",
+            "G7",
+            "W3",
+            "S1",
+            "L1",
+            "C1",
+            "X1",
+            "N4",
+            "P1",
+            "D3",
+            "M5",
+        }
+        assert not {arm.row for arm in CUT3_ARMS} & deferred
+
+    def test_every_arm_names_at_least_one_check(self):
+        assert all(arm.checks for arm in CUT3_ARMS)
+
+    def test_no_declared_arm_names_anything_coarser_than_a_test(self):
+        for arm in CUT3_ARMS:
+            for check in arm.checks:
+                assert check.count("::") >= 1 and not check.endswith(".py")
 
 
 class TestTheHarnessCanSeeAStaleArm:
