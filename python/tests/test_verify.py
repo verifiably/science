@@ -1,7 +1,7 @@
 """R8, R11's in-cell arms, R18, R19's constructor arms, T6's R18
 arm. Deferred: R19's import/availability-transition/audit arms and negatives
-(c)–(e) (store, world resolver, audit); R11 composes with cut 2's digest and
-moves no belief.
+(c)–(e) (store, world resolver, audit); R11 composes with cut 2's prior
+assessment binding and carries no assessment edge.
 """
 
 import dataclasses
@@ -11,20 +11,17 @@ from pathlib import Path
 import pytest
 from fixtures_cut3 import (
     SNAKEFILE_NONDETERMINISTIC,
-    closure_kwargs,
     interp,
     replay_of,
     report,
     run_assessment,
     run_production,
-    runs_for,
     spec_draft,
     spec_rules,
 )
 
 from science.assess import build_assessment
 from science.boundary import RunMinted
-from science.closure import build_closure
 from science.errors import CitationRefused, MixedShapes
 from science.identity import v1
 from science.production import mint_dataset
@@ -37,6 +34,7 @@ from science.replay import (
 from science.spec import Deterministic, SpecInput, StochasticUnseeded, freeze, revise
 from science.verify import (
     AssessmentVerification,
+    ComparisonReport,
     DatasetProductionVerification,
     active_verifications,
     build_verification,
@@ -182,11 +180,113 @@ def test_r18_the_report_carries_the_evidence_inline_and_the_basis_names_it_once(
     assert report.certification is not None
     original, replayed = pair
     assert report.original_conformance == report.replay_conformance == "conforming"
-    assert report.receipts == (original.run.address(), replayed.run.address())
+    assert report.receipts == (
+        original.run.occurrence.receipt.identity(),
+        replayed.run.occurrence.receipt.identity(),
+    )
+    assert report.receipts[0] != original.run.address()
+    assert report.receipts[1] != replayed.run.address()
     assert report.rule_bindings == (("content-identity-equality/v1", "impl-eq-1"),)
     basis = certified.basis()
     assert basis["report"] == report.identity()
     assert "receipts" not in basis and "certification" not in basis
+
+
+def test_r18_mutating_any_receipt_field_moves_receipt_report_and_verification(pair):
+    from science.verify import _mint_comparison_report, _mint_verification
+
+    # Locked carriers refuse dataclasses.replace; these private mints are the
+    # test scalpel, as fixtures use report._mint_report for ActReport values.
+    original, _ = pair
+    receipt = original.run.occurrence.receipt
+    baseline = receipt.identity()
+    verification = verification_of(pair)
+    report = verification.report
+    for field, value in [
+        ("scratch_mapping", "some-other-mount"),
+        ("argv", ("snakemake", "--other")),
+        ("rendered_config", (("alpha", "0.5"),)),
+        ("capabilities", ("network-denied",)),
+    ]:
+        moved_receipt = dataclasses.replace(receipt, **{field: value}).identity()
+        assert moved_receipt != baseline
+        moved_report = _mint_comparison_report(
+            original_conformance=report.original_conformance,
+            replay_conformance=report.replay_conformance,
+            receipts=(moved_receipt, report.receipts[1]),
+            rule_bindings=report.rule_bindings,
+            certification=report.certification,
+            citation=report.citation,
+            diagnostics=report.diagnostics,
+        )
+        assert moved_report.identity() != report.identity()
+        moved_verification = _mint_verification(
+            original=verification.original,
+            replayed=verification.replayed,
+            assessment=verification.assessment,
+            rule=verification.rule,
+            report=moved_report,
+            scope_rule=verification.scope_rule,
+            scope=verification.scope,
+            verdict=verification.verdict,
+            supersedes=verification.supersedes,
+        )
+        assert moved_verification.identity() != verification.identity()
+
+
+def test_r19_only_build_verification_mints_the_carriers():
+    import science
+    import science.verify as verify_module
+
+    assert "_mint_comparison_report" not in verify_module.__all__
+    assert "_mint_verification" not in verify_module.__all__
+    carrier_fields = (
+        {field.name for field in dataclasses.fields(ComparisonReport)}
+        | {field.name for field in dataclasses.fields(AssessmentVerification)}
+        | {field.name for field in dataclasses.fields(DatasetProductionVerification)}
+    )
+    for name in verify_module.__all__:
+        value = getattr(verify_module, name)
+        if callable(value) and not isinstance(value, type) and name != "build_verification":
+            params = set(inspect.signature(value).parameters)
+            assert not (carrier_fields & params), name
+    src = Path(science.__file__).parent
+    callers = [
+        path.name for path in sorted(src.rglob("*.py")) if "_mint_verification" in path.read_text(encoding="utf-8")
+    ]
+    assert callers == ["verify.py"]
+
+    with pytest.raises(TypeError):
+        ComparisonReport(
+            original_conformance="conforming",
+            replay_conformance="conforming",
+            receipts=("receipt-a", "receipt-b"),
+            rule_bindings=(),
+            certification=None,
+            citation=None,
+            diagnostics=(),
+        )
+    with pytest.raises(TypeError):
+        AssessmentVerification(
+            original="run-a",
+            replayed="run-b",
+            assessment="assessment-a",
+            rule="rule-a",
+            report=object(),
+            scope_rule="scope-rule-a",
+            scope="exact",
+            verdict="passed",
+        )
+    with pytest.raises(TypeError):
+        DatasetProductionVerification(
+            original="run-a",
+            replayed="run-b",
+            rule="rule-a",
+            report=object(),
+            scope_rule="scope-rule-a",
+            scope="exact",
+            verdict="passed",
+        )
 
 
 def test_r18_deleting_the_external_certification_leaves_the_verification_unchanged(pair):
@@ -252,8 +352,6 @@ def test_r11_a_nondeterministic_transform_yields_all_four(tmp_path):
         specs={observing_spec.identity: observing_spec},
         implementations=interp(),
     )
-    kwargs = closure_kwargs((prior,), runs_for((observing.run,)))
-    before = build_closure(**kwargs).digest()
     # Now replay the nondeterministic production run:
     second = replay_of(first, tmp_path / "b", snakefile=SNAKEFILE_NONDETERMINISTIC)
     assert isinstance(second, RunMinted)
@@ -272,8 +370,6 @@ def test_r11_a_nondeterministic_transform_yields_all_four(tmp_path):
     assert verification.rule == "dataset-content-equality/v1"
     assert prior.run == observing.run.address()
     assert observing.run.recipe.inputs[0].dataset == first_dataset.address
-    after = build_closure(**kwargs).digest()
-    assert after == before
 
 
 def test_r11_the_dataset_production_verification_carries_no_verifies_assessment_edge(

@@ -32,6 +32,7 @@ from science.errors import (
 )
 from science.identity import v1
 from science.recipe import (
+    BOUNDARY_RECEIPT_DOMAIN,
     BoundaryPolicy,
     BoundaryReceipt,
     EnvironmentManifest,
@@ -380,6 +381,10 @@ def test_r14_nan_and_infinity_are_refused_in_every_position():
 def test_r14_kind_domains_separate_and_v2_never_equals_v1():
     payload = {"same": "bytes"}
     assert v1.digest("science.recipe.v1", payload) != v1.digest("science.run.v1", payload)
+    assert BOUNDARY_RECEIPT_DOMAIN == "science.boundary-receipt.v1"
+    assert v1.digest(BOUNDARY_RECEIPT_DOMAIN, payload) != v1.digest(
+        "science.run.v1", payload
+    )
     assert v1.digest("science.recipe.v1", payload) != v1.digest("science.recipe.v2", payload)
 
 

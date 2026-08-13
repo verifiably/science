@@ -1,6 +1,6 @@
 """Derived run verification values with their scope evidence embedded inline.
 
-The ordinary constructor owns the comparison report, equivalence verdict,
+The ``build_verification`` constructor owns the comparison report, equivalence verdict,
 scope, and assessment edge. Explicit import and audit validation remain
 deferred with the store and world resolver (cut 3 §4.2, R19).
 """
@@ -112,26 +112,18 @@ def _citation_projection(citation: EmbeddedCitation) -> dict[str, object]:
 
 @sealed
 @final
-@dataclass(frozen=True)
+@dataclass(frozen=True, init=False)
 class ComparisonReport:
     original_conformance: str
     replay_conformance: str
-    receipts: tuple[str, ...]
+    receipts: tuple[str, str]
     rule_bindings: tuple[tuple[str, str], ...]
     certification: CodeLineageCertification | None
     citation: EmbeddedCitation | None
     diagnostics: tuple[str, ...]
 
-    def __post_init__(self) -> None:
-        _require_str(self.original_conformance, "original conformance")
-        _require_str(self.replay_conformance, "replay conformance")
-        _require_strings(self.receipts, "comparison report receipts")
-        _require_pairs(self.rule_bindings, "comparison report rule bindings")
-        _require_strings(self.diagnostics, "comparison report diagnostics")
-        if self.certification is not None and type(self.certification) is not CodeLineageCertification:
-            raise MalformedRecord("comparison report certification must be a code-lineage certification")
-        if self.citation is not None and type(self.citation) is not EmbeddedCitation:
-            raise MalformedRecord("comparison report citation must be an EmbeddedCitation")
+    def __init__(self, *args: object, **kwargs: object) -> None:
+        raise TypeError("ComparisonReport values are minted only by build_verification")
 
     def identity(self) -> str:
         projection: dict[str, object] = {
@@ -146,6 +138,41 @@ class ComparisonReport:
         if self.citation is not None:
             projection["citation"] = _citation_projection(self.citation)
         return v1.digest(COMPARISON_REPORT_DOMAIN, projection)
+
+
+def _mint_comparison_report(
+    *,
+    original_conformance: str,
+    replay_conformance: str,
+    receipts: tuple[str, str],
+    rule_bindings: tuple[tuple[str, str], ...],
+    certification: CodeLineageCertification | None,
+    citation: EmbeddedCitation | None,
+    diagnostics: tuple[str, ...],
+) -> ComparisonReport:
+    _require_str(original_conformance, "original conformance")
+    _require_str(replay_conformance, "replay conformance")
+    _require_strings(receipts, "comparison report receipts")
+    if len(receipts) != 2:
+        raise MalformedRecord("comparison report receipts must contain exactly two identities")
+    _require_pairs(rule_bindings, "comparison report rule bindings")
+    _require_strings(diagnostics, "comparison report diagnostics")
+    if certification is not None and type(certification) is not CodeLineageCertification:
+        raise MalformedRecord("comparison report certification must be a code-lineage certification")
+    if citation is not None and type(citation) is not EmbeddedCitation:
+        raise MalformedRecord("comparison report citation must be an EmbeddedCitation")
+    report = object.__new__(ComparisonReport)
+    for name, value in (
+        ("original_conformance", original_conformance),
+        ("replay_conformance", replay_conformance),
+        ("receipts", receipts),
+        ("rule_bindings", rule_bindings),
+        ("certification", certification),
+        ("citation", citation),
+        ("diagnostics", diagnostics),
+    ):
+        object.__setattr__(report, name, value)
+    return report
 
 
 def _validate_verification(members: Mapping[str, object]) -> None:
@@ -186,7 +213,7 @@ def _basis(members: dict[str, object]) -> dict[str, object]:
 
 @sealed
 @final
-@dataclass(frozen=True)
+@dataclass(frozen=True, init=False)
 class AssessmentVerification:
     original: str
     replayed: str
@@ -198,8 +225,8 @@ class AssessmentVerification:
     verdict: str
     supersedes: str | None = None
 
-    def __post_init__(self) -> None:
-        _validate_verification(vars(self))
+    def __init__(self, *args: object, **kwargs: object) -> None:
+        raise TypeError("AssessmentVerification values are minted only by build_verification")
 
     def basis(self) -> dict[str, object]:
         return _basis(vars(self))
@@ -210,7 +237,7 @@ class AssessmentVerification:
 
 @sealed
 @final
-@dataclass(frozen=True)
+@dataclass(frozen=True, init=False)
 class DatasetProductionVerification:
     original: str
     replayed: str
@@ -221,8 +248,8 @@ class DatasetProductionVerification:
     verdict: str
     supersedes: str | None = None
 
-    def __post_init__(self) -> None:
-        _validate_verification(vars(self))
+    def __init__(self, *args: object, **kwargs: object) -> None:
+        raise TypeError("DatasetProductionVerification values are minted only by build_verification")
 
     def basis(self) -> dict[str, object]:
         return _basis(vars(self))
@@ -232,6 +259,41 @@ class DatasetProductionVerification:
 
 
 RunVerification: TypeAlias = AssessmentVerification | DatasetProductionVerification
+
+
+def _mint_verification(
+    *,
+    original: str,
+    replayed: str,
+    assessment: str | None,
+    rule: str,
+    report: ComparisonReport,
+    scope_rule: str,
+    scope: str,
+    verdict: str,
+    supersedes: str | None = None,
+) -> RunVerification:
+    members: dict[str, object] = {
+        "original": original,
+        "replayed": replayed,
+        "rule": rule,
+        "report": report,
+        "scope_rule": scope_rule,
+        "scope": scope,
+        "verdict": verdict,
+        "supersedes": supersedes,
+    }
+    verification_type: type[AssessmentVerification | DatasetProductionVerification]
+    if assessment is None:
+        verification_type = DatasetProductionVerification
+    else:
+        members["assessment"] = assessment
+        verification_type = AssessmentVerification
+    _validate_verification(members)
+    verification = object.__new__(verification_type)
+    for name, value in members.items():
+        object.__setattr__(verification, name, value)
+    return verification
 
 
 def active_verifications(verifications: tuple[RunVerification, ...]) -> tuple[RunVerification, ...]:
@@ -312,10 +374,10 @@ def build_verification(
             index=index,
             content=_entry_facet(entry),
         )
-    comparison = ComparisonReport(
+    comparison = _mint_comparison_report(
         original_conformance=conformance(original),
         replay_conformance=conformance(replayed),
-        receipts=(original.address(), replayed.address()),
+        receipts=(original.occurrence.receipt.identity(), replayed.occurrence.receipt.identity()),
         rule_bindings=((rule, implementation_identity),),
         certification=certification,
         citation=embedded_citation,
@@ -331,7 +393,7 @@ def build_verification(
         "verdict": verdict,
     }
     if spec is None:
-        return DatasetProductionVerification(**common)
+        return _mint_verification(assessment=None, supersedes=None, **common)
     assessment = v1.digest(
         record.ASSESSMENT_DOMAIN,
         {
@@ -340,4 +402,4 @@ def build_verification(
             "proposition": spec.target,
         },
     )
-    return AssessmentVerification(assessment=assessment, **common)
+    return _mint_verification(assessment=assessment, supersedes=None, **common)

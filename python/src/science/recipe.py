@@ -23,6 +23,7 @@ from science.spec import (
 
 __all__ = [
     "ASSESSMENT_ROLES",
+    "BOUNDARY_RECEIPT_DOMAIN",
     "ENVIRONMENT_DOMAIN",
     "PRODUCTION_ROLES",
     "RECIPE_DOMAIN",
@@ -45,6 +46,7 @@ __all__ = [
 RECIPE_DOMAIN = "science.recipe.v1"
 RUN_DOMAIN = "science.run.v1"
 ENVIRONMENT_DOMAIN = "science.environment.v1"
+BOUNDARY_RECEIPT_DOMAIN = "science.boundary-receipt.v1"
 
 SHAPES = ("assessment", "dataset-production")
 ASSESSMENT_ROLES = ("observes", "reads")
@@ -404,6 +406,9 @@ class BoundaryReceipt:
         _require_pairs(self.rendered_config, "boundary receipt rendered config")
         _require_strings(self.capabilities, "boundary receipt capabilities")
 
+    def identity(self) -> str:
+        return v1.digest(BOUNDARY_RECEIPT_DOMAIN, _receipt_projection(self))
+
 
 @sealed
 @final
@@ -448,6 +453,15 @@ def _trace_projection(job: TraceJob) -> dict[str, object]:
     }
 
 
+def _receipt_projection(receipt: BoundaryReceipt) -> dict[str, object]:
+    return {
+        "scratch_mapping": receipt.scratch_mapping,
+        "argv": list(receipt.argv),
+        "rendered_config": _pairs(receipt.rendered_config),
+        "capabilities": sorted(receipt.capabilities),
+    }
+
+
 def _occurrence_projection(occurrence: Occurrence) -> dict[str, object]:
     return {
         "event_token": occurrence.event_token,
@@ -456,12 +470,7 @@ def _occurrence_projection(occurrence: Occurrence) -> dict[str, object]:
         "host_realization": occurrence.host_realization,
         "trace": [_trace_projection(job) for job in occurrence.trace],
         "realized_seeds": occurrence.realized_seeds.projection(),
-        "receipt": {
-            "scratch_mapping": occurrence.receipt.scratch_mapping,
-            "argv": list(occurrence.receipt.argv),
-            "rendered_config": _pairs(occurrence.receipt.rendered_config),
-            "capabilities": sorted(occurrence.receipt.capabilities),
-        },
+        "receipt": _receipt_projection(occurrence.receipt),
     }
 
 
