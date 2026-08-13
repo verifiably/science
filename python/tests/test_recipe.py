@@ -105,11 +105,7 @@ RECIPE_MUTATIONS = [
     ("code_identity", lambda: recipe(code_identity="sha256:" + "ab" * 32)),
     (
         "environment",
-        lambda: recipe(
-            environment=EnvironmentManifest(
-                artifacts=(("python", "sha256:" + "ba" * 32),)
-            )
-        ),
+        lambda: recipe(environment=EnvironmentManifest(artifacts=(("python", "sha256:" + "ba" * 32),))),
     ),
     (
         "workflow_definition_identity",
@@ -117,19 +113,11 @@ RECIPE_MUTATIONS = [
     ),
     (
         "invocation",
-        lambda: recipe(
-            invocation=invocation(targets=("outputs/other.txt",))
-        ),
+        lambda: recipe(invocation=invocation(targets=("outputs/other.txt",))),
     ),
     (
         "inputs_content",
-        lambda: recipe(
-            inputs=(
-                RecipeInput(
-                    role="observes", dataset="dataset:x", content="sha256:" + "12" * 32
-                ),
-            )
-        ),
+        lambda: recipe(inputs=(RecipeInput(role="observes", dataset="dataset:x", content="sha256:" + "12" * 32),)),
     ),
     (
         "inputs_exclusion",
@@ -140,9 +128,7 @@ RECIPE_MUTATIONS = [
                     role="reads",
                     dataset="dataset:y",
                     content="sha256:" + "34" * 32,
-                    exclusion=ExclusionCertification(
-                        rationale="reference table", attribution="tester"
-                    ),
+                    exclusion=ExclusionCertification(rationale="reference table", attribution="tester"),
                 ),
             )
         ),
@@ -152,9 +138,7 @@ RECIPE_MUTATIONS = [
     (
         "boundary_policy",
         lambda: recipe(
-            boundary_policy=BoundaryPolicy(
-                identity="boundary-policy/other-v1", scope_rule="scope-derivation/v1"
-            )
+            boundary_policy=BoundaryPolicy(identity="boundary-policy/other-v1", scope_rule="scope-derivation/v1")
         ),
     ),
     (
@@ -175,10 +159,7 @@ def test_r2_every_recipe_member_moves_the_run_address(name, mutate):
 def test_r2_the_result_and_each_occurrence_member_move_the_address():
     baseline = closure().address()
     assert (
-        closure(
-            result=ResultManifest(outputs=(("outputs/result.txt", "sha256:" + "56" * 32),))
-        ).address()
-        != baseline
+        closure(result=ResultManifest(outputs=(("outputs/result.txt", "sha256:" + "56" * 32),))).address() != baseline
     )
     for field, value in [
         ("event_token", "tok-2"),
@@ -189,22 +170,19 @@ def test_r2_the_result_and_each_occurrence_member_move_the_address():
         assert closure(occurrence=occurrence(**{field: value})).address() != baseline
     assert (
         closure(
-            occurrence=occurrence(
-                realized_seeds=RealizedSeeds(
-                    seeds={"transform": {"model-initialization": 8}}
-                )
-            )
+            occurrence=occurrence(realized_seeds=RealizedSeeds(seeds={"transform": {"model-initialization": 8}}))
         ).address()
         != baseline
     )
     assert closure(occurrence=occurrence(trace=())).address() != baseline
-    assert closure(
-        occurrence=occurrence(
-            receipt=BoundaryReceipt(
-                scratch_mapping="scratch-mount-b", argv=("snakemake",), rendered_config=()
+    assert (
+        closure(
+            occurrence=occurrence(
+                receipt=BoundaryReceipt(scratch_mapping="scratch-mount-b", argv=("snakemake",), rendered_config=())
             )
-        )
-    ).address() != baseline
+        ).address()
+        != baseline
+    )
 
 
 def test_r2_equal_recipes_despite_differing_seeds_and_event_tokens():
@@ -214,9 +192,7 @@ def test_r2_equal_recipes_despite_differing_seeds_and_event_tokens():
     b = closure(
         occurrence=occurrence(
             event_token="tok-2",
-            realized_seeds=RealizedSeeds(
-                seeds={"transform": {"model-initialization": 99}}
-            ),
+            realized_seeds=RealizedSeeds(seeds={"transform": {"model-initialization": 99}}),
         )
     )
     assert a.recipe.identity() == b.recipe.identity()
@@ -305,21 +281,15 @@ INVALID_CLOSURE_VALUES = [
     ),
     (
         "trace-pair",
-        lambda: TraceJob(
-            job_id="0", rule="transform", wildcards=(("sample", []),), inputs=(), outputs=()
-        ),
+        lambda: TraceJob(job_id="0", rule="transform", wildcards=(("sample", []),), inputs=(), outputs=()),
     ),
     (
         "receipt-pair",
-        lambda: BoundaryReceipt(
-            scratch_mapping="scratch", argv=("snakemake",), rendered_config=(("alpha", []),)
-        ),
+        lambda: BoundaryReceipt(scratch_mapping="scratch", argv=("snakemake",), rendered_config=(("alpha", []),)),
     ),
     (
         "occurrence-realized-seed",
-        lambda: occurrence(
-            realized_seeds=RealizedSeeds(seeds={"transform": {"model-initialization": []}})
-        ),
+        lambda: occurrence(realized_seeds=RealizedSeeds(seeds={"transform": {"model-initialization": []}})),
     ),
     (
         "occurrence-composite",
@@ -355,17 +325,11 @@ def test_r14_binary_floats_are_refused_at_every_run_position():
 
 
 def test_r14_the_four_collisions_walked_at_the_recipe_position():
-    assert recipe(parameters={"x": Decimal("0.5")}).identity() != recipe(
-        parameters={"x": "0.5"}
-    ).identity()
+    assert recipe(parameters={"x": Decimal("0.5")}).identity() != recipe(parameters={"x": "0.5"}).identity()
     with pytest.raises(NullRefused):
         recipe(parameters={"x": None}).identity()
-    assert recipe(parameters={"x": 1}).identity() != recipe(
-        parameters={"x": Decimal("1.0")}
-    ).identity()
-    assert recipe(parameters={"x": Decimal("1.00")}).identity() == recipe(
-        parameters={"x": Decimal("1.0")}
-    ).identity()
+    assert recipe(parameters={"x": 1}).identity() != recipe(parameters={"x": Decimal("1.0")}).identity()
+    assert recipe(parameters={"x": Decimal("1.00")}).identity() == recipe(parameters={"x": Decimal("1.0")}).identity()
     with pytest.raises(KeyCollision):
         recipe(parameters={"é": 1, "é": 2}).identity()
 
@@ -382,9 +346,7 @@ def test_r14_kind_domains_separate_and_v2_never_equals_v1():
     payload = {"same": "bytes"}
     assert v1.digest("science.recipe.v1", payload) != v1.digest("science.run.v1", payload)
     assert BOUNDARY_RECEIPT_DOMAIN == "science.boundary-receipt.v1"
-    assert v1.digest(BOUNDARY_RECEIPT_DOMAIN, payload) != v1.digest(
-        "science.run.v1", payload
-    )
+    assert v1.digest(BOUNDARY_RECEIPT_DOMAIN, payload) != v1.digest("science.run.v1", payload)
     assert v1.digest("science.recipe.v1", payload) != v1.digest("science.recipe.v2", payload)
 
 
@@ -425,9 +387,7 @@ def test_r17_the_projected_recipe_carries_the_spec_whole():
                 SpecInput(
                     role="reads",
                     dataset=READS_ADDRESS,
-                    exclusion=ExclusionCertification(
-                        rationale="palette", attribution="tester"
-                    ),
+                    exclusion=ExclusionCertification(rationale="palette", attribution="tester"),
                 ),
             )
         ),
@@ -516,11 +476,7 @@ def test_m2_an_input_no_declared_role_partition_covers_is_refused_not_ignored():
 # --- R21's value-level manifest refusals (the boundary arms are Task 6's) -----
 def test_r21_an_undeclared_manifest_entry_mints_no_run():
     with pytest.raises(MalformedClosure):
-        closure(
-            result=ResultManifest(
-                outputs=(("outputs/result.txt", D_OUT), ("outputs/extra.txt", D_IN))
-            )
-        )
+        closure(result=ResultManifest(outputs=(("outputs/result.txt", D_OUT), ("outputs/extra.txt", D_IN))))
 
 
 def test_r21_absolute_and_root_escaping_output_declarations_are_refused():

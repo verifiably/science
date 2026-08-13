@@ -76,13 +76,15 @@ def mint_dataset(run: RunClosure, *, existing_bases: Mapping[str, StampedBasis])
     if run.recipe.shape != "dataset-production":
         raise MalformedClosure("mint_dataset requires a dataset-production run")
     if not isinstance(existing_bases, Mapping) or not all(
-        type(address) is str and type(basis) is StampedBasis
-        for address, basis in existing_bases.items()
+        type(address) is str and type(basis) is StampedBasis for address, basis in existing_bases.items()
     ):
         raise MalformedClosure("existing bases must map strings to StampedBasis values")
 
-    address = dataset_address(DatasetDeclaration(resources=tuple(
-        ResourceDeclaration(name=name, digest=digest) for name, digest in run.result.outputs)))
+    address = dataset_address(
+        DatasetDeclaration(
+            resources=tuple(ResourceDeclaration(name=name, digest=digest) for name, digest in run.result.outputs)
+        )
+    )
     if address is None:
         raise MalformedClosure("a production manifest must have a dataset content identity")
     run_address = run.address()

@@ -96,9 +96,7 @@ def test_r22_the_constructor_takes_only_a_run_ref(minted):
 
 def test_r22_the_facet_derives_from_the_frozen_spec_and_the_manifest(minted):
     spec = freeze(spec_draft(), held_rules=spec_rules())
-    derived = build_assessment(
-        minted.run, specs={spec.identity: spec}, implementations=interp()
-    )
+    derived = build_assessment(minted.run, specs={spec.identity: spec}, implementations=interp())
     assert isinstance(derived, AssessmentValue)
     assert derived.spec == spec.identity
     assert derived.proposition == spec.target
@@ -137,12 +135,8 @@ def test_r22_the_evaluator_resolves_from_the_binding_frozen_in_the_recipe(minted
 def test_r22_the_derived_outcome_moves_only_with_the_result_or_the_rule(tmp_path):
     spec = freeze(spec_draft(), held_rules=spec_rules())
     first = run_assessment(tmp_path / "a", data="hello")
-    baseline = build_assessment(
-        first.run, specs={spec.identity: spec}, implementations=result_sensitive()
-    )
-    again = build_assessment(
-        first.run, specs={spec.identity: spec}, implementations=result_sensitive()
-    )
+    baseline = build_assessment(first.run, specs={spec.identity: spec}, implementations=result_sensitive())
+    again = build_assessment(first.run, specs={spec.identity: spec}, implementations=result_sensitive())
     assert baseline == again  # same run, same rule: byte-identical facet
     # Same rule, changed RESULT: pick fixture bytes whose output-digest parity
     # differs from the first run's, so the derived outcome provably flips.
@@ -153,20 +147,14 @@ def test_r22_the_derived_outcome_moves_only_with_the_result_or_the_rule(tmp_path
             break
     else:
         pytest.fail("no candidate flipped the output-digest parity — widen the list")
-    flipped = build_assessment(
-        other.run, specs={spec.identity: spec}, implementations=result_sensitive()
-    )
+    flipped = build_assessment(other.run, specs={spec.identity: spec}, implementations=result_sensitive())
     assert {baseline.outcome, flipped.outcome} == {"supported", "refuted"}
     # Same RESULT, changed rule: a successor spec freezing the inverted rule
     # derives the other outcome over byte-identical result bytes.
     inverted = RuleImplementation(
         identity="impl-interp-2",
         evaluate=lambda manifest: {
-            "outcome": (
-                "refuted"
-                if int(manifest.outputs[0][1].split(":", 1)[1], 16) % 2 == 0
-                else "supported"
-            ),
+            "outcome": ("refuted" if int(manifest.outputs[0][1].split(":", 1)[1], 16) % 2 == 0 else "supported"),
             "estimate": "0.4",
         },
         fixtures=(),
@@ -191,9 +179,7 @@ def test_r22_the_derived_outcome_moves_only_with_the_result_or_the_rule(tmp_path
 
 def test_r22_a_failing_evaluator_produces_a_finding_never_inconclusive(minted):
     spec = freeze(spec_draft(), held_rules=spec_rules())
-    finding = build_assessment(
-        minted.run, specs={spec.identity: spec}, implementations=interp(fail=True)
-    )
+    finding = build_assessment(minted.run, specs={spec.identity: spec}, implementations=interp(fail=True))
     assert isinstance(finding, AssessmentFinding)
     assert "inconclusive" not in finding.reason  # machinery failure is not a scientific outcome
 
@@ -216,9 +202,7 @@ def test_r22_negative_a_narrowing_applicability_needs_a_successor_spec_and_a_new
     )
     assert narrowed.identity != spec.identity
     assert minted.run.recipe.spec_identity == spec.identity  # the recorded run stays attached
-    derived = build_assessment(
-        minted.run, specs={spec.identity: spec}, implementations=interp()
-    )
+    derived = build_assessment(minted.run, specs={spec.identity: spec}, implementations=interp())
     assert derived.applicability == spec.applicability  # never the successor's
 
 
@@ -230,19 +214,11 @@ def test_r22_negative_b_exchanged_facets_move_the_belief_digest(minted, tmp_path
         specs={spec.identity: spec},
         implementations=interp("supported"),
     )
-    b = build_assessment(
-        other.run, specs={spec.identity: spec}, implementations=interp("refuted")
-    )
+    b = build_assessment(other.run, specs={spec.identity: spec}, implementations=interp("refuted"))
     exchanged_a = dataclasses.replace(a, outcome=b.outcome)
     exchanged_b = dataclasses.replace(b, outcome=a.outcome)
-    straight = build_closure(
-        **closure_kwargs((a, b), runs_for((minted.run, other.run)))
-    ).digest()
-    crossed = build_closure(
-        **closure_kwargs(
-            (exchanged_a, exchanged_b), runs_for((minted.run, other.run))
-        )
-    ).digest()
+    straight = build_closure(**closure_kwargs((a, b), runs_for((minted.run, other.run)))).digest()
+    crossed = build_closure(**closure_kwargs((exchanged_a, exchanged_b), runs_for((minted.run, other.run)))).digest()
     bags = (
         sorted(value.facet_digest() for value in (a, b)),
         sorted(value.facet_digest() for value in (exchanged_a, exchanged_b)),
@@ -266,18 +242,14 @@ def test_r22_the_reach_arm_an_inline_exclusion_moves_the_digest_with_identical_f
                 SpecInput(
                     role="reads",
                     dataset=READS_ADDRESS,
-                    exclusion=ExclusionCertification(
-                        rationale="plotting palette", attribution="tester"
-                    ),
+                    exclusion=ExclusionCertification(rationale="plotting palette", attribution="tester"),
                 ),
             )
         ),
         held_rules=spec_rules(),
     )
     plain_spec = freeze(
-        spec_draft(
-            input_roles=(observes, SpecInput(role="reads", dataset=READS_ADDRESS))
-        ),
+        spec_draft(input_roles=(observes, SpecInput(role="reads", dataset=READS_ADDRESS))),
         held_rules=spec_rules(),
     )
     certified_run = run_assessment(tmp_path / "certified", spec=certified_spec)
@@ -306,9 +278,7 @@ def test_r22_the_reach_arm_an_inline_exclusion_moves_the_digest_with_identical_f
             inputs=tuple(
                 dataclasses.replace(
                     entry,
-                    exclusion=ExclusionCertification(
-                        rationale="plotting palette", attribution="tester"
-                    ),
+                    exclusion=ExclusionCertification(rationale="plotting palette", attribution="tester"),
                 )
                 if entry.role == "reads"
                 else entry
@@ -333,11 +303,10 @@ def test_r22_the_reach_arm_an_inline_exclusion_moves_the_digest_with_identical_f
     assert isinstance(reach_plain, AssessmentValue)
     assert reach_certified.facet_digest() == reach_plain.facet_digest()
     assert reach_certified.identity() != reach_plain.identity()
-    assert build_closure(
-        **closure_kwargs((reach_certified,), runs_for((isolated_certified,)))
-    ).digest() != build_closure(
-        **closure_kwargs((reach_plain,), runs_for((isolated_plain,)))
-    ).digest()
+    assert (
+        build_closure(**closure_kwargs((reach_certified,), runs_for((isolated_certified,)))).digest()
+        != build_closure(**closure_kwargs((reach_plain,), runs_for((isolated_plain,)))).digest()
+    )
     # Editing the certification alone re-projects to exactly the other spec's
     # recipe — a different description, and no run until executed:
     reprojected = project_recipe(

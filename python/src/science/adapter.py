@@ -28,7 +28,7 @@ WORKFLOW_DEFINITION_DOMAIN = "science.workflow-definition.v1"
 _CONFIG_KEY = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _PEP_503_RUN = re.compile(r"[-_.]+")
 
-LOG_HANDLER_SCRIPT = '''\
+LOG_HANDLER_SCRIPT = """\
 import json
 import os
 
@@ -39,7 +39,7 @@ def log_handler(msg):
     if msg.get("level") == "job_info":
         with open(_EVENTS, "a", encoding="utf-8") as events:
             events.write(json.dumps(msg, default=str) + "\\n")
-'''
+"""
 
 
 @sealed
@@ -53,9 +53,7 @@ class WorkflowDefinition:
         if type(self.snakefile) is not bytes:
             raise MalformedClosure("workflow definition snakefile must be bytes")
         if not isinstance(self.family_streams, Mapping) or not all(
-            type(family) is str
-            and type(streams) is tuple
-            and all(type(stream) is str for stream in streams)
+            type(family) is str and type(streams) is tuple and all(type(stream) is str for stream in streams)
             for family, streams in self.family_streams.items()
         ):
             raise MalformedClosure("workflow family streams must map strings to tuples of strings")
@@ -66,9 +64,7 @@ class WorkflowDefinition:
             WORKFLOW_DEFINITION_DOMAIN,
             {
                 "snakefile": "sha256:" + sha256(self.snakefile).hexdigest(),
-                "family_streams": {
-                    family: sorted(streams) for family, streams in self.family_streams.items()
-                },
+                "family_streams": {family: sorted(streams) for family, streams in self.family_streams.items()},
             },
         )
 
@@ -131,9 +127,7 @@ def distribution_digest(dist: importlib.metadata.Distribution) -> str:
     name = dist.metadata["Name"]
     record = dist.read_text("RECORD")
     if not record:
-        raise MalformedClosure(
-            f"distribution {name!r} has no readable RECORD — its inventory cannot be enumerated"
-        )
+        raise MalformedClosure(f"distribution {name!r} has no readable RECORD — its inventory cannot be enumerated")
     rows = []
     for row in csv.reader(record.splitlines()):
         if not row or not row[0]:
@@ -143,9 +137,7 @@ def distribution_digest(dist: importlib.metadata.Distribution) -> str:
             continue
         located = Path(str(dist.locate_file(entry)))
         if not located.is_file():
-            raise MalformedClosure(
-                f"distribution {name!r}: RECORD lists {entry} and no such file exists"
-            )
+            raise MalformedClosure(f"distribution {name!r}: RECORD lists {entry} and no such file exists")
         rows.append((entry.as_posix(), _file_digest(located)))
     return _fold(rows)
 
@@ -185,9 +177,7 @@ def validate_entrypoint(bundle_dir: Path, entrypoint: str) -> Path:
     bundle = bundle_dir.resolve()
     candidate = (bundle / entrypoint).resolve()
     if not candidate.is_relative_to(bundle) or not candidate.is_file():
-        raise UnsafeInvocation(
-            f"entrypoint {entrypoint!r} must resolve to a regular file inside the captured bundle"
-        )
+        raise UnsafeInvocation(f"entrypoint {entrypoint!r} must resolve to a regular file inside the captured bundle")
     return candidate
 
 
@@ -208,9 +198,7 @@ def build_argv(
             )
     for key in config:
         if not _CONFIG_KEY.fullmatch(key):
-            raise UnsafeInvocation(
-                f"config key {key!r} is not an identifier and could parse as an option"
-            )
+            raise UnsafeInvocation(f"config key {key!r} is not an identifier and could parse as an option")
     argv = [
         sys.executable,
         "-m",
@@ -284,9 +272,7 @@ def read_trace(events_file: Path) -> tuple[TraceJob, ...]:
         )
         previous = jobs_by_id.get(job.job_id)
         if previous is not None and previous != job:
-            raise MalformedClosure(
-                f"engine job ID {job.job_id!r} has conflicting required trace fields"
-            )
+            raise MalformedClosure(f"engine job ID {job.job_id!r} has conflicting required trace fields")
         if previous is None:
             jobs_by_id[job.job_id] = job
             trace.append(job)

@@ -76,17 +76,35 @@ def test_duplicate_bundle_destinations_are_refused_before_overwrite(tmp_path):
 
 def test_an_option_like_target_is_rejected_before_any_argv_is_built(tmp_path):
     with pytest.raises(UnsafeInvocation):
-        build_argv(snakefile=tmp_path / "Snakefile", scratch=tmp_path,
-                   targets=("--unlock",), config={}, log_handler=tmp_path / "h.py", cores=1)
+        build_argv(
+            snakefile=tmp_path / "Snakefile",
+            scratch=tmp_path,
+            targets=("--unlock",),
+            config={},
+            log_handler=tmp_path / "h.py",
+            cores=1,
+        )
 
 
 def test_a_config_key_cannot_become_an_option_shaped_argument(tmp_path):
     with pytest.raises(UnsafeInvocation):
-        build_argv(snakefile=tmp_path / "Snakefile", scratch=tmp_path, targets=(),
-                   config={"--config-injection": "1"}, log_handler=tmp_path / "h.py", cores=1)
+        build_argv(
+            snakefile=tmp_path / "Snakefile",
+            scratch=tmp_path,
+            targets=(),
+            config={"--config-injection": "1"},
+            log_handler=tmp_path / "h.py",
+            cores=1,
+        )
     with pytest.raises(UnsafeInvocation):
-        build_argv(snakefile=tmp_path / "Snakefile", scratch=tmp_path, targets=(),
-                   config={"seed=extra": "1"}, log_handler=tmp_path / "h.py", cores=1)
+        build_argv(
+            snakefile=tmp_path / "Snakefile",
+            scratch=tmp_path,
+            targets=(),
+            config={"seed=extra": "1"},
+            log_handler=tmp_path / "h.py",
+            cores=1,
+        )
 
 
 def test_the_entrypoint_must_be_a_regular_file_inside_the_bundle(tmp_path):
@@ -101,13 +119,17 @@ def test_the_entrypoint_must_be_a_regular_file_inside_the_bundle(tmp_path):
 
 
 def test_execution_is_direct_argv_with_shell_false(tmp_path):
-    argv = build_argv(snakefile=tmp_path / "Snakefile", scratch=tmp_path,
-                      targets=("outputs/result.txt",),
-                      config={"seed_model_initialization": "7"},
-                      log_handler=tmp_path / "handler.py", cores=1)
+    argv = build_argv(
+        snakefile=tmp_path / "Snakefile",
+        scratch=tmp_path,
+        targets=("outputs/result.txt",),
+        config={"seed_model_initialization": "7"},
+        log_handler=tmp_path / "handler.py",
+        cores=1,
+    )
     assert argv[0] == sys.executable and argv[1:3] == ("-m", "snakemake")
     assert "--log-handler-script" in argv
-    assert argv[argv.index("--") + 1:] == ("outputs/result.txt",)  # targets after the delimiter, always
+    assert argv[argv.index("--") + 1 :] == ("outputs/result.txt",)  # targets after the delimiter, always
     source = inspect.getsource(run_engine)  # the N2 sabotage target
     assert "shell=False" in source and "shell=True" not in source
 
@@ -121,10 +143,10 @@ def engine_run(scratch, entry, trace_dir, *, config):
     handler = trace_dir / "handler.py"
     handler.write_text(LOG_HANDLER_SCRIPT)
     events = trace_dir / "events.jsonl"
-    argv = build_argv(snakefile=entry, scratch=scratch, targets=("outputs/result.txt",),
-                      config=config, log_handler=handler, cores=1)
-    code, log = run_engine(argv, cwd=scratch,
-                           env={**os.environ, "SCIENCE_TRACE_FILE": str(events)})
+    argv = build_argv(
+        snakefile=entry, scratch=scratch, targets=("outputs/result.txt",), config=config, log_handler=handler, cores=1
+    )
+    code, log = run_engine(argv, cwd=scratch, env={**os.environ, "SCIENCE_TRACE_FILE": str(events)})
     return code, log, events
 
 
@@ -136,8 +158,7 @@ def test_the_adapter_executes_the_held_definition_and_observes_the_trace(tmp_pat
     (scratch / "inputs").mkdir()
     (scratch / "inputs" / "data.txt").write_text("hello")
     entry = validate_entrypoint(bundle, "code/workflow/Snakefile")
-    code, log, events = engine_run(scratch, entry, tmp_path / "trace",
-                                   config={"seed_model_initialization": "7"})
+    code, log, events = engine_run(scratch, entry, tmp_path / "trace", config={"seed_model_initialization": "7"})
     assert code == 0, log
     assert (scratch / "outputs" / "result.txt").read_text().startswith("HELLO:")
     trace = read_trace(events)
@@ -160,8 +181,9 @@ def test_the_computation_derives_from_the_seed_it_reports(tmp_path):
         (scratch / "inputs").mkdir()
         (scratch / "inputs" / "data.txt").write_text("hello")
         entry = validate_entrypoint(bundle, "code/workflow/Snakefile")
-        code, log, _ = engine_run(scratch, entry, tmp_path / f"trace-{seed}",
-                                  config={"seed_model_initialization": seed})
+        code, log, _ = engine_run(
+            scratch, entry, tmp_path / f"trace-{seed}", config={"seed_model_initialization": seed}
+        )
         assert code == 0, log
         outputs[seed] = (scratch / "outputs" / "result.txt").read_text()
     assert outputs["7"] != outputs["8"]
@@ -218,9 +240,7 @@ def test_trace_folds_an_exact_duplicate_from_the_same_engine_job_id(tmp_path):
 
 def test_trace_refuses_conflicting_required_fields_for_one_engine_job_id(tmp_path):
     events = tmp_path / "events.jsonl"
-    events.write_text(
-        json.dumps(trace_record(0)) + "\n" + json.dumps(trace_record(0, output="outputs/other.txt"))
-    )
+    events.write_text(json.dumps(trace_record(0)) + "\n" + json.dumps(trace_record(0, output="outputs/other.txt")))
     with pytest.raises(MalformedClosure):
         read_trace(events)
 
@@ -259,12 +279,12 @@ def test_the_environment_manifest_records_the_executing_interpreter():
     assert manifest == capture_environment()  # stable within one environment
     names = dict(manifest.artifacts)
     assert "python" in names
-    assert "stdlib" in names        # the runtime that executes the fixtures is held content too
+    assert "stdlib" in names  # the runtime that executes the fixtures is held content too
     assert "dist:snakemake" in names
     assert all("/" not in name and "\\" not in name for name, _ in manifest.artifacts)
     # …logical names only: no absolute path, no version string, is what makes
     # the manifest held content rather than a lockfile (§4.5)
-    require_executing_environment(manifest)   # what is recorded is what execs
+    require_executing_environment(manifest)  # what is recorded is what execs
     doctored = EnvironmentManifest(artifacts=(("python", "sha256:" + "00" * 32),))
     with pytest.raises(MalformedClosure):
         require_executing_environment(doctored)
@@ -278,8 +298,7 @@ def make_fixture_distribution(root: Path) -> Path:
     info = root / "demo_fixture-1.0.dist-info"
     info.mkdir(parents=True)
     (info / "METADATA").write_text("Metadata-Version: 2.1\nName: demo-fixture\nVersion: 1.0\n")
-    (info / "RECORD").write_text(
-        "demo_fixture.py,,\ndemo_fixture-1.0.dist-info/METADATA,,\n")
+    (info / "RECORD").write_text("demo_fixture.py,,\ndemo_fixture-1.0.dist-info/METADATA,,\n")
     return info
 
 
@@ -295,8 +314,9 @@ def test_relocated_identical_bytes_yield_the_same_environment_digest(tmp_path):
     info = make_fixture_distribution(tmp_path / "site-a")
     shutil.copytree(tmp_path / "site-a", tmp_path / "elsewhere" / "site-b")
     relocated = tmp_path / "elsewhere" / "site-b" / "demo_fixture-1.0.dist-info"
-    assert distribution_digest(importlib.metadata.Distribution.at(info)) == \
-           distribution_digest(importlib.metadata.Distribution.at(relocated))
+    assert distribution_digest(importlib.metadata.Distribution.at(info)) == distribution_digest(
+        importlib.metadata.Distribution.at(relocated)
+    )
     # …the same bytes reached via a different path are the same held content:
     # RECORD-relative names carry no mount point (§4.5)
 
@@ -334,12 +354,12 @@ def test_a_stdlib_byte_mutation_moves_the_environment_identity(tmp_path):
     shutil.copytree(original, tmp_path / "elsewhere" / "stdlib-b")
     relocated = tmp_path / "elsewhere" / "stdlib-b"
     baseline = tree_digest(original, label="stdlib")
-    assert baseline == tree_digest(relocated, label="stdlib")     # relocation-invariant
+    assert baseline == tree_digest(relocated, label="stdlib")  # relocation-invariant
     (relocated / "random.py").write_text("def seed(n): return 0\n")  # one mutated source file
     assert tree_digest(relocated, label="stdlib") != baseline
-    (relocated / "random.py").write_text("def seed(n): ...\n")       # restore the source…
+    (relocated / "random.py").write_text("def seed(n): ...\n")  # restore the source…
     (relocated / "lib-dynload" / "fake_ext.so").write_bytes(b"\x7fELF-mutated")
-    assert tree_digest(relocated, label="stdlib") != baseline        # …native extensions move it too
+    assert tree_digest(relocated, label="stdlib") != baseline  # …native extensions move it too
     # __pycache__ is a derived cache and never enters the fold:
     (original / "__pycache__").mkdir()
     (original / "__pycache__" / "random.cpython-311.pyc").write_bytes(b"varying bytes")

@@ -66,9 +66,7 @@ def _require_component(value: object, where: str) -> None:
 
 def _freeze_parameter_value(value: object) -> object:
     if isinstance(value, Mapping):
-        return MappingProxyType(
-            {key: _freeze_parameter_value(member) for key, member in value.items()}
-        )
+        return MappingProxyType({key: _freeze_parameter_value(member) for key, member in value.items()})
     if isinstance(value, (list, tuple)):
         return tuple(_freeze_parameter_value(member) for member in value)
     return value
@@ -257,9 +255,7 @@ class Recipe:
         _require_nondeterminism(self.nondeterminism)
         _require_component(self.code_identity, "code identity")
         _require_component(self.workflow_definition_identity, "workflow definition identity")
-        parameters = MappingProxyType(
-            {key: _freeze_parameter_value(value) for key, value in self.parameters.items()}
-        )
+        parameters = MappingProxyType({key: _freeze_parameter_value(value) for key, value in self.parameters.items()})
         v1.encode(_project_parameter_value(parameters))
         object.__setattr__(
             self,

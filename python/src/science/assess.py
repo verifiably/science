@@ -49,9 +49,7 @@ def build_assessment(
     if type(run) is not RunClosure:
         raise MalformedClosure("build_assessment requires a RunClosure")
     if run.recipe.shape == "dataset-production":
-        raise SignatureRefused(
-            "a dataset-production run has no `assesses` descendant (R7)"
-        )
+        raise SignatureRefused("a dataset-production run has no `assesses` descendant (R7)")
 
     run_address = run.address()
     try:
@@ -96,11 +94,7 @@ def run_record(run: RunClosure) -> RunValue:
         inputs=tuple(
             RunInput(
                 role=entry.role,
-                dataset=DatasetDeclaration(
-                    resources=(
-                        ResourceDeclaration(name=entry.dataset, digest=entry.content),
-                    )
-                ),
+                dataset=DatasetDeclaration(resources=(ResourceDeclaration(name=entry.dataset, digest=entry.content),)),
             )
             for entry in run.recipe.inputs
         ),

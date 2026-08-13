@@ -43,14 +43,10 @@ READS_ADDRESS = "dataset:sha256:" + "ee" * 32
 POLICY = BoundaryPolicy(identity="boundary-policy/minimal-v1", scope_rule="scope-derivation/v1")
 
 
-def seed_plan(
-    streams=("model-initialization",), roots=None, stream_roots=None
-) -> SeedPlan:
+def seed_plan(streams=("model-initialization",), roots=None, stream_roots=None) -> SeedPlan:
     roots = roots if roots is not None else {"root-a": 11}
     stream_roots = stream_roots if stream_roots is not None else {s: "root-a" for s in streams}
-    return SeedPlan(
-        derivation_rule="seed-derivation/v1", streams=streams, roots=roots, stream_roots=stream_roots
-    )
+    return SeedPlan(derivation_rule="seed-derivation/v1", streams=streams, roots=roots, stream_roots=stream_roots)
 
 
 def spec_rules() -> dict[str, RuleImplementation]:
@@ -116,11 +112,7 @@ def recipe(**overrides) -> Recipe:
         "environment": EnvironmentManifest(artifacts=(("python", "sha256:" + "dd" * 32),)),
         "workflow_definition_identity": "sha256:" + "ee" * 32,
         "invocation": invocation(),
-        "inputs": (
-            RecipeInput(
-                role="observes", dataset="dataset:sha256:" + "ff" * 32, content=D_IN
-            ),
-        ),
+        "inputs": (RecipeInput(role="observes", dataset="dataset:sha256:" + "ff" * 32, content=D_IN),),
         "parameters": {"alpha": Decimal("0.05")},
         "nondeterminism": seeded(),
         "boundary_policy": POLICY,
@@ -149,9 +141,7 @@ def occurrence(**overrides) -> Occurrence:
             ),
         ),
         "realized_seeds": RealizedSeeds(seeds={"transform": {"model-initialization": 7}}),
-        "receipt": BoundaryReceipt(
-            scratch_mapping="scratch-mount-a", argv=("snakemake",), rendered_config=()
-        ),
+        "receipt": BoundaryReceipt(scratch_mapping="scratch-mount-a", argv=("snakemake",), rendered_config=()),
     }
     fields.update(overrides)
     return Occurrence(**fields)
@@ -191,11 +181,7 @@ def interp(outcome="supported", fail=False):
             raise ValueError("unparseable payload")
         return {"outcome": outcome, "estimate": "0.4", "uncertainty": "0.1"}
 
-    return {
-        "impl-interp-1": RuleImplementation(
-            identity="impl-interp-1", evaluate=evaluate, fixtures=()
-        )
-    }
+    return {"impl-interp-1": RuleImplementation(identity="impl-interp-1", evaluate=evaluate, fixtures=())}
 
 
 def result_sensitive():
@@ -210,11 +196,7 @@ def result_sensitive():
             "estimate": "0.4",
         }
 
-    return {
-        "impl-interp-1": RuleImplementation(
-            identity="impl-interp-1", evaluate=evaluate, fixtures=()
-        )
-    }
+    return {"impl-interp-1": RuleImplementation(identity="impl-interp-1", evaluate=evaluate, fixtures=())}
 
 
 def report(**overrides):
@@ -265,8 +247,8 @@ rule transform:
 # record of a genuinely violating execution, not a doctored sidecar. A
 # complete closure the execution violated — R16's mint arm, R21 negative (e).
 SNAKEFILE_SEED_VIOLATING = SNAKEFILE_DETERMINISTIC.replace(
-    'seed = int(config["seed_model_initialization"])',
-    'seed = int(config["seed_model_initialization"]) + 1')
+    'seed = int(config["seed_model_initialization"])', 'seed = int(config["seed_model_initialization"]) + 1'
+)
 
 # Byte-nondeterministic output, urandom staying inside the scratch root. Used
 # with a stochastic-unseeded production recipe (R11) and, declared
@@ -312,11 +294,13 @@ rule transform:
 SNAKEFILE_SCRATCHY = SNAKEFILE_DETERMINISTIC.replace(
     'pathlib.Path(output[0]).write_text(text.upper() + ":" + salt)',
     'pathlib.Path("scratch.tmp").write_text(__import__("os").urandom(8).hex())\n'
-    '        pathlib.Path(output[0]).write_text(text.upper() + ":" + salt)')
+    '        pathlib.Path(output[0]).write_text(text.upper() + ":" + salt)',
+)
 
 
 def definition(snakefile: str = SNAKEFILE_DETERMINISTIC, family_streams=None):
     from science.adapter import WorkflowDefinition
+
     streams = family_streams if family_streams is not None else {"transform": ("model-initialization",)}
     return WorkflowDefinition(snakefile=snakefile.encode("utf-8"), family_streams=streams)
 
@@ -389,21 +373,27 @@ def run_production(
     data="hello",
 ):
     code, held = stage(tmp_path, snakefile=snakefile, data=data)
-    supplied = held_inputs if held_inputs is not None else {
-        DATA_ADDRESS: held / "data.txt",
-        READS_ADDRESS: held / "palette.txt",
-    }
-    authored = inputs if inputs is not None else (
-        RecipeInput(
-            role="transforms",
-            dataset=DATA_ADDRESS,
-            content="sha256:" + sha256(supplied[DATA_ADDRESS].read_bytes()).hexdigest(),
-        ),
+    supplied = (
+        held_inputs
+        if held_inputs is not None
+        else {
+            DATA_ADDRESS: held / "data.txt",
+            READS_ADDRESS: held / "palette.txt",
+        }
+    )
+    authored = (
+        inputs
+        if inputs is not None
+        else (
+            RecipeInput(
+                role="transforms",
+                dataset=DATA_ADDRESS,
+                content="sha256:" + sha256(supplied[DATA_ADDRESS].read_bytes()).hexdigest(),
+            ),
+        )
     )
     contract = nondeterminism if nondeterminism is not None else Deterministic()
-    family_streams = (
-        {"transform": contract.plan.streams} if isinstance(contract, Seeded) else {}
-    )
+    family_streams = {"transform": contract.plan.streams} if isinstance(contract, Seeded) else {}
     return execute_production_run(
         inputs=authored,
         parameters=parameters if parameters is not None else {},
@@ -413,9 +403,7 @@ def run_production(
         held_inputs=supplied,
         entrypoint="code/workflow/Snakefile",
         targets=targets if targets is not None else ("outputs/result.txt",),
-        declared_outputs=(
-            declared_outputs if declared_outputs is not None else ("outputs/result.txt",)
-        ),
+        declared_outputs=(declared_outputs if declared_outputs is not None else ("outputs/result.txt",)),
         actor="tester",
         observer="observer-1",
         started_at=started_at,

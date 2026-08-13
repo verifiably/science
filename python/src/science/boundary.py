@@ -113,13 +113,9 @@ def _output_path(scratch: Path, logical_name: str) -> Path:
 
 def build_manifest(declared_outputs: tuple[str, ...], scratch: Path) -> ResultManifest:
     """Digest exactly the declared output files, never scratch intermediates."""
-    if type(declared_outputs) is not tuple or not all(
-        type(name) is str for name in declared_outputs
-    ):
+    if type(declared_outputs) is not tuple or not all(type(name) is str for name in declared_outputs):
         raise MalformedClosure("manifest declarations must be a tuple of strings")
-    return ResultManifest(
-        outputs=tuple((name, _digest(_output_path(scratch, name))) for name in declared_outputs)
-    )
+    return ResultManifest(outputs=tuple((name, _digest(_output_path(scratch, name))) for name in declared_outputs))
 
 
 def mint_run(
@@ -172,9 +168,7 @@ def _preflight(addresses: tuple[str, ...], held_inputs: Mapping[str, Path]) -> s
     return None
 
 
-def _stage_inputs(
-    addresses: tuple[str, ...], held_inputs: Mapping[str, Path], scratch: Path
-) -> Mapping[str, str]:
+def _stage_inputs(addresses: tuple[str, ...], held_inputs: Mapping[str, Path], scratch: Path) -> Mapping[str, str]:
     inputs_dir = scratch / "inputs"
     inputs_dir.mkdir()
     identities: dict[str, str] = {}
@@ -194,17 +188,13 @@ def _stage_inputs(
     return identities
 
 
-def _render_config(
-    recipe: Recipe, definition: WorkflowDefinition
-) -> dict[str, str]:
+def _render_config(recipe: Recipe, definition: WorkflowDefinition) -> dict[str, str]:
     config = {key: str(value) for key, value in recipe.parameters.items()}
     if type(recipe.nondeterminism) is not Seeded:
         return config
 
     plan = recipe.nondeterminism.plan
-    declared_streams = {
-        stream for streams in definition.family_streams.values() for stream in streams
-    }
+    declared_streams = {stream for streams in definition.family_streams.values() for stream in streams}
     if declared_streams != set(plan.streams):
         raise MalformedClosure("workflow family streams do not match the seed plan")
     if plan.derivation_rule != SEED_DERIVATION_V1:

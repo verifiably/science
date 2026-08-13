@@ -149,9 +149,7 @@ def test_g2a_r12_an_out_of_band_run_with_a_spec_frozen_afterwards_is_undetectabl
 # --- R10 ----------------------------------------------------------------------
 def test_r10_a_url_valued_input_is_refused_as_a_run_input(tmp_path):
     spec = freeze(
-        spec_draft(
-            input_roles=(SpecInput(role="observes", dataset="https://example.org/series"),)
-        ),
+        spec_draft(input_roles=(SpecInput(role="observes", dataset="https://example.org/series"),)),
         held_rules=spec_rules(),
     )
     outcome = run_assessment(tmp_path, spec=spec)
@@ -160,9 +158,7 @@ def test_r10_a_url_valued_input_is_refused_as_a_run_input(tmp_path):
 
 def test_r10_an_accession_is_refused_and_no_fallback_synthesizes_a_dataset(tmp_path):
     spec = freeze(
-        spec_draft(
-            input_roles=(SpecInput(role="observes", dataset="accession:GSE00001"),)
-        ),
+        spec_draft(input_roles=(SpecInput(role="observes", dataset="accession:GSE00001"),)),
         held_rules=spec_rules(),
     )
     outcome = run_assessment(tmp_path, spec=spec)
@@ -322,36 +318,35 @@ def test_r21_negative_e_the_two_failure_states_are_distinct(tmp_path):
 def test_r16_a_seed_violating_execution_still_mints_a_run(tmp_path):
     outcome = run_assessment(tmp_path, snakefile=SNAKEFILE_SEED_VIOLATING)
     assert isinstance(outcome, RunMinted)
-    realized = outcome.run.occurrence.realized_seeds.seeds["transform"][
-        "model-initialization"
-    ]
+    realized = outcome.run.occurrence.realized_seeds.seeds["transform"]["model-initialization"]
     assert realized != derive_seed(11, "transform", "model-initialization")
 
 
 # --- R17's execution halves ----------------------------------------------------
 def test_r17_no_path_supplies_inputs_parameters_or_contract_on_an_assessment_run():
     params = set(inspect.signature(execute_assessment_run).parameters)
-    assert not {
-        "inputs",
-        "parameters",
-        "nondeterminism",
-        "seed",
-        "seeds",
-        "root_seed",
-        "config",
-        "options",
-        "environment",
-        "env_root",
-        "manifest",
-    } & params
+    assert (
+        not {
+            "inputs",
+            "parameters",
+            "nondeterminism",
+            "seed",
+            "seeds",
+            "root_seed",
+            "config",
+            "options",
+            "environment",
+            "env_root",
+            "manifest",
+        }
+        & params
+    )
 
 
 def test_r17_the_boundary_renders_the_configuration_from_the_projected_members(minted):
     rendered = dict(minted.run.occurrence.receipt.rendered_config)
     assert rendered["alpha"] == "0.05"
-    assert rendered["seed_model_initialization"] == str(
-        derive_seed(11, "transform", "model-initialization")
-    )
+    assert rendered["seed_model_initialization"] == str(derive_seed(11, "transform", "model-initialization"))
 
 
 def test_r17_seed_shopping_cannot_occur_at_all(minted):
@@ -371,9 +366,7 @@ def test_r17_seed_shopping_cannot_occur_at_all(minted):
         recorded_failures=frozenset(),
     )
     assert successor.identity != minted.run.recipe.spec_identity
-    assert minted.run.recipe.spec_identity == freeze(
-        spec_draft(), held_rules=spec_rules()
-    ).identity
+    assert minted.run.recipe.spec_identity == freeze(spec_draft(), held_rules=spec_rules()).identity
 
 
 def test_r17_a_deleted_or_never_recorded_attempt_is_undetectable(tmp_path):

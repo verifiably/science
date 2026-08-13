@@ -26,8 +26,9 @@ def produced(tmp_path_factory):
 
 
 def test_r23_the_address_is_the_basis_projection_over_the_manifest(produced):
-    declaration = DatasetDeclaration(resources=tuple(
-        ResourceDeclaration(name=name, digest=digest) for name, digest in produced.run.result.outputs))
+    declaration = DatasetDeclaration(
+        resources=tuple(ResourceDeclaration(name=name, digest=digest) for name, digest in produced.run.result.outputs)
+    )
     expected = dataset_address(declaration)
     minted = mint_dataset(produced.run, existing_bases={})
     assert minted.address == expected  # §6.2: dedupe, sort, fold — reused from cut 2, not rebuilt
@@ -58,6 +59,7 @@ def test_r23_production_values_are_strict_and_immutable(produced):
 
 def test_r23_no_produced_by_edge_is_reachable_in_either_direction(produced):
     import science.production as production_module
+
     assert not any("produced_by" in name for name in production_module.__all__)
     minted = mint_dataset(produced.run, existing_bases={})
     for value in (minted, minted.edge, minted.basis):
@@ -65,15 +67,19 @@ def test_r23_no_produced_by_edge_is_reachable_in_either_direction(produced):
 
 
 def test_r23_negative_a_byte_identical_output_under_two_logical_names_yields_one_address(tmp_path):
-    outcome = run_production(tmp_path, snakefile=SNAKEFILE_TWO_NAMES,
-                             targets=("outputs/a.txt", "outputs/b.txt"),
-                             declared_outputs=("outputs/a.txt", "outputs/b.txt"))
+    outcome = run_production(
+        tmp_path,
+        snakefile=SNAKEFILE_TWO_NAMES,
+        targets=("outputs/a.txt", "outputs/b.txt"),
+        declared_outputs=("outputs/a.txt", "outputs/b.txt"),
+    )
     assert isinstance(outcome, RunMinted)
     minted = mint_dataset(outcome.run, existing_bases={})
     digests = {digest for _, digest in outcome.run.result.outputs}
     assert len(outcome.run.result.outputs) == 2 and len(digests) == 1
-    single = dataset_address(DatasetDeclaration(resources=(
-        ResourceDeclaration(name="only", digest=next(iter(digests))),)))
+    single = dataset_address(
+        DatasetDeclaration(resources=(ResourceDeclaration(name="only", digest=next(iter(digests))),))
+    )
     assert minted.address == single  # the name never entered; the projection deduplicated
 
 
@@ -85,36 +91,63 @@ def test_r23_replay_cardinality_one_address_two_edges_nothing_mutated(tmp_path):
     first_minted = mint_dataset(first.run, existing_bases={})
     bases = {first_minted.address: first_minted.basis}
     second_minted = mint_dataset(second.run, existing_bases=bases)
-    assert second_minted.address == first_minted.address       # one address
-    assert second_minted.edge != first_minted.edge             # two produces edges from two runs
-    assert second_minted.basis == first_minted.basis           # the prior lineage basis unchanged
+    assert second_minted.address == first_minted.address  # one address
+    assert second_minted.edge != first_minted.edge  # two produces edges from two runs
+    assert second_minted.basis == first_minted.basis  # the prior lineage basis unchanged
     assert second_minted.stamped is False
     assert bases == {first_minted.address: first_minted.basis}  # no existing node mutated
 
 
 def test_r23_the_certified_exclusion_is_inline_and_mints_a_recipe_not_a_run():
-    certified = recipe(shape="dataset-production", spec_identity=None, inputs=(
-        RecipeInput(role="transforms", dataset="dataset:x", content=D_IN),
-        RecipeInput(role="reads", dataset="dataset:y", content="sha256:" + "34" * 32,
-                    exclusion=ExclusionCertification(rationale="gene-name lookup", attribution="tester")),))
-    uncertified = recipe(shape="dataset-production", spec_identity=None, inputs=(
-        RecipeInput(role="transforms", dataset="dataset:x", content=D_IN),
-        RecipeInput(role="reads", dataset="dataset:y", content="sha256:" + "34" * 32),))
+    certified = recipe(
+        shape="dataset-production",
+        spec_identity=None,
+        inputs=(
+            RecipeInput(role="transforms", dataset="dataset:x", content=D_IN),
+            RecipeInput(
+                role="reads",
+                dataset="dataset:y",
+                content="sha256:" + "34" * 32,
+                exclusion=ExclusionCertification(rationale="gene-name lookup", attribution="tester"),
+            ),
+        ),
+    )
+    uncertified = recipe(
+        shape="dataset-production",
+        spec_identity=None,
+        inputs=(
+            RecipeInput(role="transforms", dataset="dataset:x", content=D_IN),
+            RecipeInput(role="reads", dataset="dataset:y", content="sha256:" + "34" * 32),
+        ),
+    )
     assert certified.identity() != uncertified.identity()  # adding it mints a different recipe
     withdrawn = uncertified
-    assert withdrawn.identity() != certified.identity()    # withdrawing it likewise
+    assert withdrawn.identity() != certified.identity()  # withdrawing it likewise
     # …and no run until executed: a Recipe is a description, not a run —
     # nothing here has an address() until a RunClosure exists.
     assert not hasattr(certified, "address")
 
 
 def test_r23_negative_h_reclassifying_an_inputs_role_mints_a_different_recipe():
-    as_transforms = recipe(shape="dataset-production", spec_identity=None, inputs=(
-        RecipeInput(role="transforms", dataset="dataset:x", content=D_IN),))
-    as_reads = recipe(shape="dataset-production", spec_identity=None, inputs=(
-        RecipeInput(role="transforms", dataset="dataset:x", content=D_IN),
-        RecipeInput(role="reads", dataset="dataset:y", content="sha256:" + "34" * 32),))
-    reclassified = recipe(shape="dataset-production", spec_identity=None, inputs=(
-        RecipeInput(role="reads", dataset="dataset:x", content=D_IN),
-        RecipeInput(role="transforms", dataset="dataset:y", content="sha256:" + "34" * 32),))
+    as_transforms = recipe(
+        shape="dataset-production",
+        spec_identity=None,
+        inputs=(RecipeInput(role="transforms", dataset="dataset:x", content=D_IN),),
+    )
+    as_reads = recipe(
+        shape="dataset-production",
+        spec_identity=None,
+        inputs=(
+            RecipeInput(role="transforms", dataset="dataset:x", content=D_IN),
+            RecipeInput(role="reads", dataset="dataset:y", content="sha256:" + "34" * 32),
+        ),
+    )
+    reclassified = recipe(
+        shape="dataset-production",
+        spec_identity=None,
+        inputs=(
+            RecipeInput(role="reads", dataset="dataset:x", content=D_IN),
+            RecipeInput(role="transforms", dataset="dataset:y", content="sha256:" + "34" * 32),
+        ),
+    )
     assert len({as_transforms.identity(), as_reads.identity(), reclassified.identity()}) == 3

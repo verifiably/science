@@ -34,21 +34,24 @@ from science.report import (
 def test_t5_byte_locator_untested_is_unspellable_on_a_managed_mutation_entry():
     with pytest.raises(OutcomeRefused):
         ManagedMutationEntry(
-            subject="store://data/x", outcome=ByteLocatorUntested(reason="preflight refusal")  # type: ignore[arg-type]
+            subject="store://data/x",
+            outcome=ByteLocatorUntested(reason="preflight refusal"),  # type: ignore[arg-type]
         )
 
 
 def test_t5_byte_locator_untested_is_unspellable_on_a_record_import_entry():
     with pytest.raises(OutcomeRefused):
         RecordImportEntry(
-            subject="record:abc", outcome=ByteLocatorUntested(reason="preflight refusal")  # type: ignore[arg-type]
+            subject="record:abc",
+            outcome=ByteLocatorUntested(reason="preflight refusal"),  # type: ignore[arg-type]
         )
 
 
 def test_t5_byte_locator_untested_is_unspellable_on_a_subject_evaluation_entry():
     with pytest.raises(OutcomeRefused):
         SubjectEvaluationEntry(
-            subject="record:abc", outcome=ByteLocatorUntested(reason="preflight refusal")  # type: ignore[arg-type]
+            subject="record:abc",
+            outcome=ByteLocatorUntested(reason="preflight refusal"),  # type: ignore[arg-type]
         )
 
 

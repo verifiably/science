@@ -68,8 +68,10 @@ def test_r20_a_mapped_root_must_be_declared():
 
 def test_r20_stochastic_unseeded_with_a_rationale_is_freezable():
     spec = freeze(
-        draft(nondeterminism=StochasticUnseeded(rationale="MCMC without a fixed seed"),
-              equivalence_rule="tolerance-1e-6/v1"),
+        draft(
+            nondeterminism=StochasticUnseeded(rationale="MCMC without a fixed seed"),
+            equivalence_rule="tolerance-1e-6/v1",
+        ),
         held_rules={**held_rules(), "tolerance-1e-6/v1": held_rules()["content-identity-equality/v1"]},
     )
     assert isinstance(spec, FrozenSpec)
@@ -216,13 +218,17 @@ def test_the_exclusion_certification_is_spellable_only_on_a_reads_declaration():
     # R22's reach arm starts here: the certification's authoring home is the
     # frozen spec's reads declaration, frozen into identity with everything else.
     with pytest.raises(MalformedSpec):
-        SpecInput(role="observes", dataset="dataset:x",
-                  exclusion=ExclusionCertification(rationale="r", attribution="a"))
-    reads = SpecInput(role="reads", dataset="dataset:y",
-                      exclusion=ExclusionCertification(rationale="palette", attribution="tester"))
+        SpecInput(
+            role="observes", dataset="dataset:x", exclusion=ExclusionCertification(rationale="r", attribution="a")
+        )
+    reads = SpecInput(
+        role="reads", dataset="dataset:y", exclusion=ExclusionCertification(rationale="palette", attribution="tester")
+    )
     certified = freeze(draft(input_roles=draft().input_roles + (reads,)), held_rules=held_rules())
-    plain = freeze(draft(input_roles=draft().input_roles + (SpecInput(role="reads", dataset="dataset:y"),)),
-                   held_rules=held_rules())
+    plain = freeze(
+        draft(input_roles=draft().input_roles + (SpecInput(role="reads", dataset="dataset:y"),)),
+        held_rules=held_rules(),
+    )
     assert certified.identity != plain.identity
 
 
@@ -261,8 +267,12 @@ def test_g4_an_unreferenced_successor_to_a_recorded_failed_replay_is_refused():
 
 def test_g4_a_referencing_successor_is_admitted():
     original = freeze(draft(), held_rules=held_rules())
-    successor = revise(original, edits={"estimand": "revised"}, held_rules=held_rules(),
-                       recorded_failures=frozenset({original.identity}))
+    successor = revise(
+        original,
+        edits={"estimand": "revised"},
+        held_rules=held_rules(),
+        recorded_failures=frozenset({original.identity}),
+    )
     assert isinstance(admit_successor(successor, original, frozenset({original.identity})), SuccessorAdmitted)
 
 

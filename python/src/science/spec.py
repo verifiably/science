@@ -264,7 +264,9 @@ class SpecDraft:
     nondeterminism: Deterministic | Seeded | StochasticUnseeded
 
     def __post_init__(self) -> None:
-        if not isinstance(self.input_roles, tuple) or not all(isinstance(entry, SpecInput) for entry in self.input_roles):
+        if not isinstance(self.input_roles, tuple) or not all(
+            isinstance(entry, SpecInput) for entry in self.input_roles
+        ):
             raise MalformedSpec("input_roles holds SpecInput values only")
         object.__setattr__(
             self,
@@ -293,7 +295,9 @@ class FrozenSpec:
     identity: str
 
     def __post_init__(self) -> None:
-        if not isinstance(self.input_roles, tuple) or not all(isinstance(entry, SpecInput) for entry in self.input_roles):
+        if not isinstance(self.input_roles, tuple) or not all(
+            isinstance(entry, SpecInput) for entry in self.input_roles
+        ):
             raise MalformedSpec("input_roles holds SpecInput values only")
         object.__setattr__(
             self,
@@ -317,8 +321,9 @@ class SuccessorRefused:
     reason: str
 
 
-def admit_successor(candidate: FrozenSpec, superseded: FrozenSpec,
-                    recorded_failures: frozenset[str]) -> SuccessorAdmitted | SuccessorRefused:
+def admit_successor(
+    candidate: FrozenSpec, superseded: FrozenSpec, recorded_failures: frozenset[str]
+) -> SuccessorAdmitted | SuccessorRefused:
     """G4 over the slice's value state — the recorded-failure set the boundary
     holds. A failure absent from the set never happened: undetectable."""
     if superseded.identity in recorded_failures and candidate.supersedes != superseded.identity:
@@ -335,9 +340,11 @@ def _facet_projection(draft: SpecDraft, rule_bindings, supersedes) -> dict[str, 
         "falsification": draft.falsification,
         "input_roles": [
             {"role": entry.role, "dataset": entry.dataset}
-            | ({"exclusion": {"rationale": entry.exclusion.rationale,
-                              "attribution": entry.exclusion.attribution}}
-               if entry.exclusion is not None else {})
+            | (
+                {"exclusion": {"rationale": entry.exclusion.rationale, "attribution": entry.exclusion.attribution}}
+                if entry.exclusion is not None
+                else {}
+            )
             for entry in draft.input_roles
         ],
         "applicability": draft.applicability,
@@ -352,8 +359,9 @@ def _facet_projection(draft: SpecDraft, rule_bindings, supersedes) -> dict[str, 
     return facet
 
 
-def freeze(draft: SpecDraft, *, held_rules: Mapping[str, RuleImplementation],
-           supersedes: str | None = None) -> FrozenSpec:
+def freeze(
+    draft: SpecDraft, *, held_rules: Mapping[str, RuleImplementation], supersedes: str | None = None
+) -> FrozenSpec:
     if not draft.target:
         raise MalformedSpec("an assessment spec targets a proposition; an empty target is not a spec (R7)")
     if isinstance(draft.nondeterminism, StochasticUnseeded) and draft.equivalence_rule in BITWISE_EQUIVALENCE_RULES:
@@ -367,9 +375,13 @@ def freeze(draft: SpecDraft, *, held_rules: Mapping[str, RuleImplementation],
     return FrozenSpec(**members, rule_bindings=rule_bindings, supersedes=supersedes, identity=identity)
 
 
-def revise(original: FrozenSpec, *, edits: Mapping[str, object],
-           held_rules: Mapping[str, RuleImplementation],
-           recorded_failures: frozenset[str]) -> FrozenSpec:
+def revise(
+    original: FrozenSpec,
+    *,
+    edits: Mapping[str, object],
+    held_rules: Mapping[str, RuleImplementation],
+    recorded_failures: frozenset[str],
+) -> FrozenSpec:
     """The only edit path. Always mints with `supersedes=original.identity`,
     so the successor to a recorded failed replay carries its reference by
     construction; `admit_successor` is the value-state check the boundary

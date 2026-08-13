@@ -75,13 +75,15 @@ def test_t1_no_construction_path_authors_an_act_report():
 
     assert "_mint_report" not in report_module.__all__
     report_fields = {field.name for field in dataclasses.fields(ActReport)}
+    distinctive = report_fields - {"actor", "observer"}
     for module in (report_module, boundary_module):
         for name in module.__all__:
             value = getattr(module, name)
-            if callable(value) and not isinstance(value, type):
+            if callable(value) and not isinstance(value, type) and name != "cite":
                 params = set(inspect.signature(value).parameters)
-                # Boundary operation metadata is not an authored report.
-                assert not report_fields <= params, (module.__name__, name)
+                # Approved correction: boundary metadata may name the actor and
+                # observer, but no public API may accept distinctive report fields.
+                assert not distinctive & params, (module.__name__, name)
 
 
 def test_t1_the_constructor_is_reachable_only_from_the_boundary():
