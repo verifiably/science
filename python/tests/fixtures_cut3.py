@@ -343,6 +343,7 @@ def run_assessment(
     cores=1,
     data="hello",
     held_inputs=None,
+    scratch_base=None,
 ):
     code, held = stage(tmp_path, snakefile=snakefile, data=data)
     spec = spec if spec is not None else freeze(spec_draft(), held_rules=spec_rules())
@@ -362,7 +363,7 @@ def run_assessment(
         observer="observer-1",
         started_at=started_at,
         host_realization=host_realization,
-        scratch_base=tmp_path / "scratch",
+        scratch_base=scratch_base if scratch_base is not None else tmp_path / "scratch",
         cores=cores,
     )
 
@@ -426,6 +427,7 @@ def replay_of(
     snakefile=SNAKEFILE_DETERMINISTIC,
     host_realization="host-a",
     held_inputs=None,
+    scratch_base=None,
 ):
     from science.replay import replay
 
@@ -464,5 +466,5 @@ def replay_of(
         observer="observer-1",
         started_at="2026-08-12T00:00:00Z",
         host_realization=host_realization,
-        scratch_base=tmp_path / "scratch",
+        scratch_base=scratch_base if scratch_base is not None else tmp_path / "scratch",
     )

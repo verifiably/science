@@ -1,4 +1,10 @@
-"""Replay eligibility, execution, conformance, equivalence, and scope."""
+"""Replay eligibility, execution, conformance, equivalence, and scope.
+
+Seed conformance validates recorded claims against the global SeedPlan. Family
+coverage is deferred: RunClosure retains the workflow-definition identity, not
+its family-to-stream mapping, so missing family/job/stream claims cannot be
+derived from this value alone.
+"""
 
 from __future__ import annotations
 
@@ -38,6 +44,10 @@ class EquivalenceImplementation:
     fixtures: tuple[RuleFixture, ...]
 
     def __post_init__(self) -> None:
+        if type(self.identity) is not str or not self.identity:
+            raise MalformedRecord("an equivalence implementation carries a nonempty string identity")
+        if type(self.fixtures) is not tuple or any(type(fixture) is not RuleFixture for fixture in self.fixtures):
+            raise MalformedRecord("equivalence fixtures must be a tuple of RuleFixture values")
         try:
             parameters = tuple(inspect.signature(self.evaluate).parameters.values())
         except (TypeError, ValueError) as error:
@@ -163,6 +173,7 @@ def byte_tolerance_rule(store: Mapping[str, bytes]) -> EquivalenceImplementation
 
 
 def conformance(run: RunClosure) -> str:
+    """Validate every recorded seed claim; do not infer unrecorded family coverage."""
     contract = run.recipe.nondeterminism
     realized = run.occurrence.realized_seeds.seeds
     if type(contract) is StochasticUnseeded:
@@ -178,27 +189,14 @@ def conformance(run: RunClosure) -> str:
     if plan.derivation_rule != SEED_DERIVATION_V1:
         return f"non-conforming: unsupported seed derivation rule {plan.derivation_rule!r}"
 
-    expected = {
-        job.rule: {
-            stream: derive_seed(plan.roots[plan.stream_roots[stream]], job.rule, stream) for stream in plan.streams
-        }
-        for job in run.occurrence.trace
-    }
-    for job in sorted(set(expected) | set(realized)):
-        if job not in expected:
-            return f"non-conforming: realized seeds name unexecuted job {job!r}"
-        if job not in realized:
-            return f"non-conforming: missing realized seeds for job {job!r}"
-        for stream in sorted(set(expected[job]) | set(realized[job])):
-            if stream not in expected[job]:
+    streams = set(plan.streams)
+    for job, claims in sorted(realized.items()):
+        for stream, actual in sorted(claims.items()):
+            if stream not in streams:
                 return f"non-conforming: job {job!r} names undeclared stream {stream!r}"
-            if stream not in realized[job]:
-                return f"non-conforming: job {job!r} is missing stream {stream!r}"
-            if realized[job][stream] != expected[job][stream]:
-                return (
-                    f"non-conforming: job {job!r} stream {stream!r} realized "
-                    f"{realized[job][stream]}, expected {expected[job][stream]}"
-                )
+            expected = derive_seed(plan.roots[plan.stream_roots[stream]], job, stream)
+            if actual != expected:
+                return f"non-conforming: job {job!r} stream {stream!r} realized {actual}, expected {expected}"
     return CONFORMING
 
 

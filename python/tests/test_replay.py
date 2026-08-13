@@ -3,10 +3,13 @@ checks, R16's evaluator and scope arms, G9's replay-eligibility third.
 Deferred: R4's clean-environment row and negative (d), R9's admission
 conjunct, R16's nothing-is-admitted conjunct (confinement-capable boundary
 policy); R5 negative (a) (persistence seam) — cut 3 §4.2/§7.1.
+R16's missing family/job/stream completeness remains deferred with the full
+workflow surface because RunClosure retains only the definition identity.
 """
 
 import dataclasses
 import inspect
+from pathlib import Path
 
 import pytest
 from fixtures_cut3 import (
@@ -14,10 +17,12 @@ from fixtures_cut3 import (
     DATA_ADDRESS,
     READS_ADDRESS,
     SNAKEFILE_DETERMINISTIC,
+    SNAKEFILE_PRODUCTION,
     SNAKEFILE_SEED_VIOLATING,
     closure_kwargs,
     replay_of,
     run_assessment,
+    run_production,
     spec_draft,
     spec_rules,
 )
@@ -28,7 +33,7 @@ from science.boundary import RunMinted, RunRefused, execute_assessment_run
 from science.closure import build_closure
 from science.dataset import ByteObservation, DatasetDeclaration, ResourceDeclaration, dataset_address
 from science.errors import MalformedRecord
-from science.recipe import ResultManifest
+from science.recipe import ResultManifest, TraceJob
 from science.record import AssessmentValue, RunInput, RunValue
 from science.replay import (
     AVAILABLE,
@@ -43,21 +48,34 @@ from science.replay import (
     derive_scope,
     replay_eligibility,
 )
-from science.spec import Deterministic, RealizedSeeds, StochasticUnseeded, freeze
+from science.spec import Deterministic, RealizedSeeds, Seeded, SeedPlan, StochasticUnseeded, derive_seed, freeze
 from science.verification import Verification, lifecycle_state
 
 
 @pytest.fixture(scope="module")
 def pair(tmp_path_factory):
     base = tmp_path_factory.mktemp("replay")
-    original = run_assessment(base / "original")
-    replayed = replay_of(original, base / "replayed")
+    scratch_base = base / "scratch"
+    original = run_assessment(base / "original", scratch_base=scratch_base)
+    replayed = replay_of(original, base / "replayed", scratch_base=scratch_base)
     assert isinstance(original, RunMinted) and isinstance(replayed, RunMinted)
     return original, replayed
 
 
 def test_a_replay_runs_in_a_fresh_scratch_root_with_an_equal_recipe(pair):
     original, replayed = pair
+    assert original.run.recipe.identity() == replayed.run.recipe.identity()
+    assert original.run.occurrence.receipt.scratch_mapping != replayed.run.occurrence.receipt.scratch_mapping
+    assert (
+        Path(original.run.occurrence.receipt.scratch_mapping).parent
+        == Path(replayed.run.occurrence.receipt.scratch_mapping).parent
+    )
+
+
+def test_a_production_replay_runs_through_the_boundary_with_an_equal_recipe(tmp_path):
+    original = run_production(tmp_path / "original")
+    replayed = replay_of(original, tmp_path / "replayed", snakefile=SNAKEFILE_PRODUCTION)
+    assert isinstance(original, RunMinted) and isinstance(replayed, RunMinted)
     assert original.run.recipe.identity() == replayed.run.recipe.identity()
     assert original.run.occurrence.receipt.scratch_mapping != replayed.run.occurrence.receipt.scratch_mapping
 
@@ -96,6 +114,7 @@ def existing_assessment_state(original):
 def test_r6_an_unreplayable_run_creates_no_verification_and_changes_no_state(pair, tmp_path):
     original, _ = pair
     admitting, before = existing_assessment_state(original)
+    before_records = admitting
     assert replay_eligibility(original.run, resolvable_here=frozenset(), attributions={}) == NOT_AVAILABLE
     attempt = replay_of(
         original,
@@ -106,8 +125,7 @@ def test_r6_an_unreplayable_run_creates_no_verification_and_changes_no_state(pai
         },
     )
     assert isinstance(attempt, RunRefused)
-    verifications: tuple = ()
-    assert verifications == ()
+    assert admitting == before_records
     assert lifecycle_state(admitting) == before
 
 
@@ -180,6 +198,23 @@ def test_r16_no_equivalence_rule_can_read_an_occurrence():
         assert len(inspect.signature(held.evaluate).parameters) == 2
 
 
+@pytest.mark.parametrize(
+    "identity, fixtures",
+    [
+        ("", ()),
+        (1, ()),
+        ("impl", []),
+        ("impl", (object(),)),
+    ],
+)
+def test_equivalence_implementations_are_strict_immutable_values(identity, fixtures):
+    with pytest.raises(MalformedRecord):
+        EquivalenceImplementation(identity=identity, evaluate=lambda a, b: "passed", fixtures=fixtures)
+
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        CONTENT_EQUALITY.identity = "changed"
+
+
 def test_r16_a_seed_violating_run_is_non_conforming_and_derives_not_certified(tmp_path):
     violating = run_assessment(tmp_path / "v", snakefile=SNAKEFILE_SEED_VIOLATING)
     clean = replay_of(violating, tmp_path / "r", snakefile=SNAKEFILE_SEED_VIOLATING)
@@ -213,13 +248,60 @@ def test_conformance_enforces_each_nondeterminism_contract(pair):
     assert conformance(unconstrained) == CONFORMING
 
 
-def test_seeded_conformance_requires_exact_stream_coverage(pair):
+def split_family_run(run):
+    plan = SeedPlan(
+        derivation_rule="seed-derivation/v1",
+        streams=("initialization", "draws"),
+        roots={"fit-root": 11, "resample-root": 22},
+        stream_roots={"initialization": "fit-root", "draws": "resample-root"},
+    )
+    trace = (
+        TraceJob("0", "fit", (), ("inputs/data.txt",), ("outputs/fit.txt",)),
+        TraceJob("1", "resample", (), ("outputs/fit.txt",), ("outputs/result.txt",)),
+    )
+    realized = RealizedSeeds(
+        seeds={
+            "fit": {"initialization": derive_seed(11, "fit", "initialization")},
+            "resample": {"draws": derive_seed(22, "resample", "draws")},
+        }
+    )
+    return dataclasses.replace(
+        run,
+        recipe=dataclasses.replace(run.recipe, nondeterminism=Seeded(plan)),
+        occurrence=dataclasses.replace(run.occurrence, trace=trace, realized_seeds=realized),
+    )
+
+
+def test_seeded_conformance_checks_reported_split_family_claims_without_a_global_cross_product(pair):
     original, _ = pair
-    realized = original.run.occurrence.realized_seeds
-    extra = RealizedSeeds(seeds={job: {**streams, "undeclared": 1} for job, streams in realized.seeds.items()})
+    assert conformance(split_family_run(original.run)) == CONFORMING
+
+
+def test_seeded_conformance_refuses_an_undeclared_reported_stream(pair):
+    original, _ = pair
+    split = split_family_run(original.run)
+    realized = split.occurrence.realized_seeds
+    extra = RealizedSeeds(seeds={**realized.seeds, "fit": {**realized.seeds["fit"], "undeclared": 1}})
     changed = dataclasses.replace(
-        original.run,
-        occurrence=dataclasses.replace(original.run.occurrence, realized_seeds=extra),
+        split,
+        occurrence=dataclasses.replace(split.occurrence, realized_seeds=extra),
+    )
+    assert conformance(changed).startswith("non-conforming")
+
+
+def test_seeded_conformance_refuses_a_wrong_reported_seed(pair):
+    original, _ = pair
+    split = split_family_run(original.run)
+    realized = split.occurrence.realized_seeds
+    wrong = RealizedSeeds(
+        seeds={
+            **realized.seeds,
+            "resample": {"draws": realized.seeds["resample"]["draws"] + 1},
+        }
+    )
+    changed = dataclasses.replace(
+        split,
+        occurrence=dataclasses.replace(split.occurrence, realized_seeds=wrong),
     )
     assert conformance(changed).startswith("non-conforming")
 
