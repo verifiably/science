@@ -55,7 +55,7 @@ survives contact with §4.2."*
 
 **Not ruled here.** Docket §4.2 (tamper log versus git) and §4.3 (normative
 contract strata) are untouched. §4.2 is explicitly free to defer — every L row is
-gated on `atoms` A7–A8 regardless. §4.3's substance is already settled by its own
+gated on `atoms` A8 and composition-root adoption regardless. §4.3's substance is already settled by its own
 table; what remains there is execution.
 
 ---

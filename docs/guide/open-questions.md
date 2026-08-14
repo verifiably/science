@@ -2,7 +2,7 @@
 title: Open questions
 status: living
 created: 2026-08-08
-updated: 2026-08-12
+updated: 2026-08-14
 sources:
   - ../designs/2026-08-02-epistemic-kernel-design.md
   - ../designs/2026-08-02-substrate-consolidation-design.md
@@ -47,14 +47,10 @@ implementation**: a guarantee row awaiting code is work, not a question.
 - **Kernel-adjacent structures.** Are inquiries, patch definitions, structural
   chains, and coverage searches new kinds or derived views over existing kinds?
   ([kernel question](../designs/2026-08-02-epistemic-kernel-design.md#11-open-questions))
-- **Package and durability seam.** Where is the Science profile distributed,
-  and how should Python-only `atoms` capabilities compose with portable
-  Python/TypeScript `nodes` without breaking the layering? ([substrate question](../designs/2026-08-02-substrate-consolidation-design.md#12-open-questions))
-- **Which layer adopts `atoms` first.** Science waiting for `atoms` A7–A8 is one
-  route; `nodes` adopting `atoms` is the other, and it buys durability without
-  Science depending on `atoms` directly. But `atoms` is Python-only and
-  platform-specific while `nodes` holds normative Python/TypeScript parity, so
-  that route either breaks parity or forces a second `atoms`.
+- **Science profile distribution.** Does the downstream profile live inside
+  the `science` distribution or in its own package? The durability composition
+  route is closed: Science's Python composition root combines portable `nodes`
+  with `atoms`; `nodes` does not adopt the Python-only engine.
   ([substrate question](../designs/2026-08-02-substrate-consolidation-design.md#12-open-questions))
 - **Pre-run fixation is not pre-registration.** Science can guarantee that a
   spec was frozen before its run. Calling that *pre-registered* additionally
@@ -180,7 +176,7 @@ implementation**: a guarantee row awaiting code is work, not a question.
   verified-holdings record (2026-08-10) and the act-report design (2026-08-11)
   finished designing. What remains open is what its §5 defers: the persistence
   seam (the holdings store, H1–H4, T7, the tamper log), world persistence on
-  `atoms` A7–A8 and the `nodes` contract deltas, and the subsystems behind
+  `atoms` A8, composition-root adoption, and the `nodes` contract deltas, and the subsystems behind
   them. The persistence candidates are no longer independent — the first cut
   that crosses a persistence boundary will take several of those groups at
   once, and whether that is one cut or two is deliberately not ruled.
@@ -197,6 +193,7 @@ implementation**: a guarantee row awaiting code is work, not a question.
   resolvability and fulfillment evidence (the rule today is retain); new
   operation kinds (the enum is closed at five); the agentic surface —
   audit scheduling and liveness, kernel sub-problem 6; and the engine,
-  with everything durable still waiting on `atoms` A7–A8.
+  with everything durable still waiting on `atoms` A8 and composition-root
+  adoption.
   ([act-report design](../designs/2026-08-11-act-report-design.md),
   [what stays open](../designs/2026-08-11-act-report-design.md#6-what-this-unblocks-and-what-stays-open))

@@ -174,14 +174,14 @@ the discarded attempt never existed durably.
 Strengthening it to the full claim requires every attempt to be registered
 durably *before* execution, in an append-only sequence the author cannot rewrite.
 `atoms` — a write-ahead journaling engine — is the natural home for such a
-registry, but its effect-execution stages (A7–A8) remain unbuilt (*updated
-2026-08-08*: A6, coherent capture, has since landed, and it writes only
-engine-owned paths — the engine prepares durable transaction records and
-observes the surface they will act on, and still mutates no project path), so
-this is an upgrade path and not a present capability. `atoms`' authority design §15 now records the obligation —
-including that its recovery journal alone is not the registry, since rolled-back
-records are durable but their removal is not yet detectable. Recorded here so
-that a later document does not quietly assume the stronger guarantee.
+registry. A7's chain and effect/recovery executor landed 2026-08-14, including
+the engine half of pre-mutation registration. Production volume binding still
+refuses every volume until A8's durability certification, and Science still
+owes composition-root adoption, anchor carriage, and verification, so this is
+not yet a present Science capability. `atoms`' authority design §15 recorded the
+obligation — including that its recovery journal alone is not the registry —
+and the A7 implementation discharges the engine half. Recorded here so that a
+later document does not quietly assume the stronger end-to-end guarantee.
 
 This is the §2.1 discipline applied to my own rule: the strong version is not on
 the guaranteeable list, so it is not claimed.

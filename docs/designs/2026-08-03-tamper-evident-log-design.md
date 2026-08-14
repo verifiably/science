@@ -3,9 +3,10 @@
 **Status:** Banked 2026-08-03, after eleven review rounds; the banking commit
 applies the amendment set below across kernel, comp, repro, packaging, the
 `atoms` design (its repo), and the ledger. Closes ledger artifact 5 at the design
-level; the capability itself lands with `atoms` A7–A8 and the composition-root
-adoption, and until then every existing honest limitation (kernel §8.7,
-packaging limitations 1–2, the G4/G8/G2a/R12/R19 negatives) stands unchanged.
+level. `atoms` A7 landed the engine half on 2026-08-14; the end-to-end capability
+still waits on A8 durability certification and composition-root adoption. Until
+then every existing honest limitation (kernel §8.7, packaging limitations 1–2,
+the G4/G8/G2a/R12/R19 negatives) stands unchanged.
 **Inherits:** kernel §8.7 (the contract — pre-mutation durable registration
 **and** detectable removal, stricter than crash recovery — and its five
 consequences); repro §9 and its 2026-08-03 amendment (the shared facility, one
@@ -529,7 +530,7 @@ unknowable without a holder protocol (§12).
 ## 9. The `atoms` seam — obligations by repo
 
 **`atoms`** (its deferred-obligation ledger, amended at banking; all inside
-A7–A8's executor path):
+A7's executor path, implemented 2026-08-14):
 
 1. `registered` entry written and durable **before** apply, inside the
    transaction path, in the pinned order: durable `PREPARED` → durable
@@ -584,8 +585,9 @@ the verified-holdings record design §8)*.
 ## 10. Guarantees
 
 New table, prefix **L**, certified by mutation per the estimator doctrine.
-**Every row is [A7–A8]-gated**: the tests run against the `atoms`-backed
-executor and the adopted composition root; until then kernel §8.7 stands
+**Every row is [A8]-gated**: the tests run against the `atoms`-backed
+executor after durability certification and composition-root adoption; until
+then kernel §8.7 stands
 unchanged as the honest limitation. The positive arms of rows exercising
 replay (L2, L5, L6, L13) presume an observer set carrying at least one valid
 anchor — §6's step 2 passes; anchor-free and malformed classification belong
@@ -634,7 +636,8 @@ to L9 and step 1.
    never when an unwitnessed execution occurred. Raw attachment is caught as
    an unlogged surface mutation (§6); cooperative import of the out-of-band
    past is the residue.
-6. **Everything is gated on `atoms` A7–A8 and composition-root adoption.**
+6. **The end-to-end capability is gated on `atoms` A8 and composition-root adoption.**
+   A7's engine half is implemented; the production and Science halves are not.
    Until then, kernel §8.7 and packaging limitations 1–2 stand exactly as
    written.
 7. **Pending on a copied root may never resolve.** Settlement evidence lives

@@ -348,9 +348,10 @@ Fairness constraints on the comparison:
   entries, and no carrier for the registry log-head the packaging design
   reserved. Those are the properties the comparison has to defeat, not the hash
   chain itself.
-- Every L row is already gated on unbuilt `atoms` A7–A8 — one stage wider when
-  this was written, since A6 landed 2026-08-08 — so nothing is unblocked by
-  deciding this sooner, and nothing is lost by deciding it later.
+- Every L row remains gated on unbuilt `atoms` A8 and composition-root
+  adoption. A7's engine half landed 2026-08-14, but no Science L row moves, so
+  nothing is unblocked by deciding this sooner and nothing is lost by deciding
+  it later.
 
 ### 4.3 Normative contract — parity machinery versus what survives one implementation
 
@@ -571,7 +572,7 @@ split, because its rows do **not** share a trigger.
 
 | group | rows | n | unblocked by |
 |---|---|---|---|
-| tamper log | L1–L13 | 13 | `atoms` A7–A8 (and §4.2) |
+| tamper log | L1–L13 | 13 | `atoms` A8, composition-root adoption (and §4.2) |
 | computation & runs | R1–R23 | 23 | the run boundary |
 | world addressing | W1–W13, W5a, W8a–b | 16 | the world index (and §4.1) |
 | packaging | X1–X12 | 12 | world export |

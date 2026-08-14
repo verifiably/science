@@ -32,13 +32,10 @@ architecture docs. Measured state:
 - `science` imports neither.
 - **`nodes` does not reference `atoms` either** — its dependencies are `pydantic`
   and `pyyaml`.
-- **`atoms` cannot yet execute effects.** A1–A6 are implemented — the
-  SQLite-WAL metadata store (A5a) and the recovery-resolve lease (A5b) landed
-  2026-08-02, so the engine prepares durable transaction records, and coherent
-  capture (A6) landed 2026-08-08, so it also observes the surface a transaction
-  will act on — but the effect-execution stages **A7–A8 are not**, so no project
-  path is mutated yet. Everything `atoms` writes today is under its own
-  `metadata_root`.
+- **`atoms` can execute effects.** A7 landed 2026-08-14 with the chain and
+  effect/recovery executor, which mutates approved project paths under its test
+  allowlist. Production volume binding still refuses every volume until A8's
+  persistence-cut exerciser and durability certification land.
 
 So adopting `nodes` buys **no durability today**, and `nodes` §7 leaves the hole
 explicitly: *"Single-writer assumption. Nothing coordinates concurrent mutation of
@@ -489,10 +486,10 @@ could not run" — a report that looks like sixteen problems and conceals that m
 validation was disabled. A normative severity/code/ordering contract with a
 non-normative message is what makes that distinction expressible.
 
-## 7. Durability — deferred, with nothing built in the meantime
+## 7. Durability — deferred to A8 and adoption
 
-`atoms` owns durability and concurrency. Until its effect-execution stages
-(A7–A8) exist:
+`atoms` owns durability and concurrency. Until A8 certifies a production
+configuration and Science adopts the composition root:
 
 - the profile claims **single-writer operation** and **no crash-safe multi-file
   durability**, matching `nodes` §7 and §13 exactly;
@@ -563,8 +560,8 @@ be read as the strong claim.
 
 ## 11. Limitations
 
-1. **No durability until `atoms` A7–A8.** Single-writer, no crash-safe multi-file
-   commit. Stated, not mitigated.
+1. **No Science durability until `atoms` A8 and composition-root adoption.**
+   Single-writer, no crash-safe multi-file commit. Stated, not mitigated.
 2. **Recorded-history completeness** (kernel §8.7) — a coordinated
    fields-plus-hash edit is undetectable.
 3. **Scale is unbenchmarked.** The range is stated by `nodes` and the corpora are
@@ -589,19 +586,8 @@ be read as the strong claim.
   compatibility layer appears. Note the pricing consequence: because
   contributions merge *upstream* of `Registry.register()`, `nodes` gains
   nothing — a zero runtime and contract delta, with one added parity fixture.
-- **`atoms` consumption order.** Whether Science waits for `atoms` A7–A8 or
-  `nodes` adopts `atoms` first. The second route is appealing — durability
-  without Science depending on `atoms` directly, matching the stated layering —
-  but it carries an unstated conflict: **`atoms` is Python-only and
-  filesystem/platform-specific, while `nodes` holds normative Python/TypeScript
-  parity.** Making portable `nodes` depend on a Python-only engine either breaks
-  parity or forces a second `atoms` implementation, and §2 already prices
-  TypeScript parity as the reason `nodes` gains only two operations here.
-
-  Current recommendation: Science's Python composition root eventually combines
-  `nodes` and `atoms`, and portable `nodes` does not depend on `atoms` until a
-  language-neutral execution seam exists. Left open rather than ruled, because it
-  turns on `atoms`' A7–A8 interface, which is not yet built (the A5 store and
-  lease interfaces landed 2026-08-02 and coherent capture landed 2026-08-08;
-  `atoms`' authority design §12.2 now records the composition-root route as the
-  likely first adoption).
+- ~~**`atoms` consumption order.**~~ **CLOSED 2026-08-14.** Science's Python
+  composition root combines `nodes` and `atoms`; portable `nodes` does not
+  depend on the Python-only, filesystem-specific engine. `atoms` authority
+  §12.2 and the adoption ledger artifact 4 own that route. A7 supplies the
+  transaction interface; A8 certification remains the production gate.

@@ -2,7 +2,7 @@
 title: Foundations
 status: living
 created: 2026-08-08
-updated: 2026-08-12
+updated: 2026-08-14
 sources:
   - ../designs/2026-08-02-epistemic-kernel-design.md
   - ../designs/2026-08-02-substrate-consolidation-design.md
@@ -102,7 +102,7 @@ function of named records and configuration.
 | `science` | Kernel kinds, closed relation signatures, identity rules, eligibility, belief policy, and cross-node scientific invariants. |
 | `domains` | Namespaced sorts, operators, dimensions, facets, and vocabulary bindings. A domain may extend interpretation, not redefine kernel relations. |
 | `practices` | Procedures and workflows that use the model without owning scientific vocabulary. |
-| `atoms` | Durable atomic filesystem effects, including the future pre-mutation registration boundary. |
+| `atoms` | Durable atomic filesystem effects, including the pre-mutation registration boundary. |
 
 Composition happens at Science's boundary. There is no compatibility layer with
 the predecessor: legacy material is reproduced through the ordinary typed
@@ -150,9 +150,8 @@ Persistence, world indexing, and the mutation log remain beyond them.
 
 See [Foundations](open-questions.md#foundations) in the consolidated question
 list for the unresolved non-empirical route, the empirical-observation facet
-contract, the kernel-adjacent structures, the package and durability seam,
-which layer adopts `atoms` first, and why pre-run fixation is not
-pre-registration.
+contract, the kernel-adjacent structures, Science profile distribution, and why
+pre-run fixation is not pre-registration.
 
 ## References
 

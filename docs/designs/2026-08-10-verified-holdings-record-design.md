@@ -22,7 +22,8 @@ ramp's §4 retrieval boundary (preflight refusals, retrieval bounds, and the
 `byte-locator-untested` / `retrieval-failed` vocabulary, reused as the acts'
 dereference contract, §3); the tamper-evident log design (its own table `L`;
 its `intent`/`fulfills` discipline, reused by managed mutations, §3;
-guarantees stated at the strength they have until `atoms` A7–A8 land);
+guarantees stated at the strength they have until `atoms` A8 and the
+composition root land);
 conformance cut 2
 (`2026-08-09-conformance-cut-2.md`) §2.1 item 1 — the slice consumes byte
 observations as supplied arguments and settles nothing about their store, "an
@@ -468,11 +469,11 @@ observation — a record written to look like an act's output — stands until a
 audit reaches its location, exactly as a hand-forged verification stands until
 audited. This is the act-bound ruling's own bound ("tamper detection at import
 and under audit, and nothing in between") and it is inherited here, not
-improved. What improves it is what improves it there: the tamper-evident log's
-pre-mutation registration and detectable removal, landing with `atoms` A7–A8,
-under which a record with no registered provenance is itself detectable. Until
-then, saying otherwise would be claiming a guarantee the substrate does not
-carry.
+improved. `atoms` A7 landed the engine half of pre-mutation registration on
+2026-08-14. Detectable removal for Science still requires A8 durability
+certification, composition-root adoption, and a surviving anchor; only then is a
+record with no registered provenance itself detectable. Until then, saying
+otherwise would be claiming an end-to-end guarantee the system does not carry.
 
 ## 4. Supersession and staleness
 
@@ -1005,7 +1006,7 @@ that builds the persistence seam; none is claimed exercised by this document.
    — or, operator-crashed, as the durable unmatched intent.*
 7. **The engine.** Persistence, the tamper-evident log's strengthening, and
    every operational duty (who runs audits, on what cadence) wait on `atoms`
-   A7–A8 and the composition root, as everything durable does. §3's
+   A8 and the composition root; A7's engine half landed 2026-08-14. §3's
    consistent-read boundary adds one **named item** to that bill, under
    authority §12.2's Plan B: the consumer-facing coordinator read command
    (dereference-and-hash under the private lease); post-state capture on

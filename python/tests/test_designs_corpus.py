@@ -37,9 +37,10 @@ _ALGORITHM_QUALIFIED = re.compile(r"\A[a-z0-9][a-z0-9_-]*:[0-9a-f]+\Z")
 ATOMS_STAGES = ("A1", "A2", "A3", "A4a", "A4b", "A5a", "A5b", "A6", "A7", "A8")
 
 #: The one fact this file exists to hold. `atoms` landing a sub-plan moves it.
-#: A6 — coherent capture — landed 2026-08-08; A7 (effect execution) and A8
-#: (the crash exerciser) are what every durability claim here is still gated on.
-ATOMS_FIRST_UNIMPLEMENTED = "A7"
+#: A7 — effect and recovery execution — landed 2026-08-14; A8 (the crash
+#: exerciser and durability certification) is what every durability claim here
+#: is still gated on.
+ATOMS_FIRST_UNIMPLEMENTED = "A8"
 
 _ATOMS_IMPLEMENTED = ATOMS_STAGES[: ATOMS_STAGES.index(ATOMS_FIRST_UNIMPLEMENTED)]
 _ATOMS_LAST_IMPLEMENTED = _ATOMS_IMPLEMENTED[-1]
@@ -163,9 +164,10 @@ def test_the_ledger_records_the_atoms_boundary_this_file_holds() -> None:
     assert atoms_rows, "the ledger no longer carries an `atoms` artifact row"
     row = "\n".join(atoms_rows)
     assert _ATOMS_LAST_IMPLEMENTED in row, f"the ledger's `atoms` row does not name {_ATOMS_LAST_IMPLEMENTED} as landed"
-    assert f"{ATOMS_FIRST_UNIMPLEMENTED}–A8" in row, (
-        f"the ledger's `atoms` row does not name {ATOMS_FIRST_UNIMPLEMENTED}–A8 as the remainder"
-    )
+    remainder = "–".join((ATOMS_FIRST_UNIMPLEMENTED, ATOMS_STAGES[-1]))
+    if ATOMS_FIRST_UNIMPLEMENTED == ATOMS_STAGES[-1]:
+        remainder = ATOMS_FIRST_UNIMPLEMENTED
+    assert f"**`atoms` {remainder}**" in row, f"the ledger's `atoms` row does not name {remainder} as the remainder"
 
 
 def test_every_design_declares_a_status() -> None:
