@@ -176,7 +176,7 @@ implementation**: a guarantee row awaiting code is work, not a question.
   verified-holdings record (2026-08-10) and the act-report design (2026-08-11)
   finished designing. What remains open is what its §5 defers: the persistence
   seam (the holdings store, H1–H4, T7, the tamper log), world persistence on
-  `atoms` A8, composition-root adoption, and the `nodes` contract deltas, and the subsystems behind
+  composition-root adoption, the `nodes` contract deltas, and the subsystems behind
   them. The persistence candidates are no longer independent — the first cut
   that crosses a persistence boundary will take several of those groups at
   once, and whether that is one cut or two is deliberately not ruled.
@@ -193,7 +193,6 @@ implementation**: a guarantee row awaiting code is work, not a question.
   resolvability and fulfillment evidence (the rule today is retain); new
   operation kinds (the enum is closed at five); the agentic surface —
   audit scheduling and liveness, kernel sub-problem 6; and the engine,
-  with everything durable still waiting on `atoms` A8 and composition-root
-  adoption.
+  with everything durable still waiting on composition-root adoption.
   ([act-report design](../designs/2026-08-11-act-report-design.md),
   [what stays open](../designs/2026-08-11-act-report-design.md#6-what-this-unblocks-and-what-stays-open))

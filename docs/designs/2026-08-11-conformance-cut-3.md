@@ -21,6 +21,25 @@ the selection required no amendment.
 
 ---
 
+> **Status amendment 2026-08-17.** `atoms` A8 landed; the live prerequisite
+> descriptions below now name composition-root adoption alone. This changes no
+> frozen selection. Original prerequisite text, preserved verbatim:
+>
+> **World persistence still fails it.** `atoms` A7 landed 2026-08-14, but A8 and
+> composition-root adoption have not; the `nodes` contract deltas are not on
+> `nodes` main, and the world layer's availability outcomes presuppose the index
+> that carries them. The stop-rule outcome is unchanged from cut 2; the `atoms`
+> boundary has narrowed.
+>
+> | packaging | X1–X12 | 12 | world export; X2 additionally gated on `atoms` A8 and composition-root adoption |
+> | tamper log | L1–L13 | 13 | `atoms` A8 and composition-root adoption; the intent/reduction **semantics** are built here as functions over values (§3), and every L row's check sits at the durable chain |
+>
+> 3. **What cut 4 is.** The persistence seam and world persistence are no
+>    longer independent candidates: the holdings store, the tamper log, and
+>    the world index all wait on `atoms` A8 and composition-root adoption, and the first cut that
+>    crosses a persistence boundary will take several of §5's groups at
+>    once. Whether that is one cut or two is not ruled here.
+
 ## 1. What this cut is drawn against
 
 Cut 2 (`2026-08-09-conformance-cut-2.md`) froze over 139 rows at the belief
@@ -62,8 +81,8 @@ that failure have since closed — the holdings record on 2026-08-10, and its
 own named residue, the run boundary's completion and report seam, on
 2026-08-11. **Run capture now passes the stop rule.**
 
-**World persistence still fails it.** `atoms` A7 landed 2026-08-14, but A8 and
-composition-root adoption have not; the `nodes` contract deltas are not on
+**World persistence still fails it.** `atoms` A7 landed 2026-08-14 and A8 landed
+2026-08-17, but composition-root adoption has not; the `nodes` contract deltas are not on
 `nodes` main, and the world layer's availability outcomes presuppose the index
 that carries them. The stop-rule outcome is unchanged from cut 2; the `atoms`
 boundary has narrowed.
@@ -274,8 +293,8 @@ stated.
 | world addressing | W1–W16, W5a, W8a, W8b | 19 | the write boundary and the index, unchanged from cut 2 |
 | substrate write & traversal | S1, S1a, S2, S3, S4, S7, S8 | 7 | the write API and the stored-corpus traversal, unchanged |
 | kernel, at other boundaries | G5, G7 | 2 | the authoring surface and kind registry; the mint path — unchanged |
-| packaging | X1–X12 | 12 | world export; X2 additionally gated on `atoms` A8 and composition-root adoption |
-| tamper log | L1–L13 | 13 | `atoms` A8 and composition-root adoption; the intent/reduction **semantics** are built here as functions over values (§3), and every L row's check sits at the durable chain |
+| packaging | X1–X12 | 12 | world export; X2 additionally gated on composition-root adoption |
+| tamper log | L1–L13 | 13 | composition-root adoption; the intent/reduction **semantics** are built here as functions over values (§3), and every L row's check sits at the durable chain |
 | correction lifecycle | C1–C10 | 10 | retraction records, unchanged |
 | normative contract — contract cut | N1, N3 | 2 | the first contract cut |
 | normative contract — certification | N4–N9 | 6 | instrument certification and parity machinery |
@@ -539,7 +558,7 @@ every entry is navigational.
    costs.
 3. **What cut 4 is.** The persistence seam and world persistence are no
    longer independent candidates: the holdings store, the tamper log, and
-   the world index all wait on `atoms` A8 and composition-root adoption, and the first cut that
+   the world index all wait on composition-root adoption, and the first cut that
    crosses a persistence boundary will take several of §5's groups at
    once. Whether that is one cut or two is not ruled here.
 

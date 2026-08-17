@@ -417,16 +417,16 @@ transaction, one root, holds — corpus writes and world-root writes are separat
 sequences composed by the consumer, never one transaction.
 
 **The interim writer is best-effort, and says so.** `atoms` A7 landed
-2026-08-14, but A8's persistence-cut certification and the Science composition
-root do not exist. The substrate design's ruling therefore stands: no Science
-claim of crash-safe multi-file durability before both land. Until then the
+2026-08-14 and A8's persistence-cut certification landed 2026-08-17, but the
+Science composition root does not exist. The substrate design's ruling therefore
+stands: no Science claim of crash-safe multi-file durability before adoption. Until then the
 writer is plain create-then-pointer-replace —
 same layout, same seam, honestly weaker, and the weakness is not confined to
 partial epochs: after a durability failure (a persistence cut, not only a
 process kill), `current` may still name the old epoch, may be **missing**, or
 may name **incomplete content**. "Durable pointer" is itself a gated claim.
-Every durability and crash-atomicity claim in §10 is **gated on A8 and
-composition-root adoption** and stated as such; the layout is constrained now
+Every durability and crash-atomicity claim in §10 is **gated on composition-root
+adoption** and stated as such; the layout is constrained now
 so that swapping the executor
 changes no consumer-visible contract (X-gating, §10; limitation 2).
 
@@ -448,14 +448,14 @@ operation. The policy itself can wait. Two rules are fixed now:
 ## 10. Guarantees
 
 New table, prefix **X**. Each row is certified by mutation, per the estimator
-doctrine. Rows marked **[A8]** are gated: their mutation tests run against the
-certified `atoms`-backed writer after composition-root adoption, and the interim
+doctrine. Rows marked **[Plan B]** are gated: their mutation tests run against
+the certified `atoms`-backed writer after composition-root adoption, and the interim
 writer carries limitation 2 instead of the claim.
 
 | # | guarantee | mutation test |
 |---|---|---|
 | X1 | A published epoch is immutable, and members are never deleted individually | no API edits or deletes an **individual** epoch member — whole-epoch GC (§9, X11) is the sole deletion operation; raw-edit a member → the epoch's packaging identity no longer matches at audit, reported |
-| X2 | **[A8]** Publication is crash-atomic and `current` is durable: it never selects a partial epoch and survives a persistence cut | kill the writer at every stage of publication **and** cut persistence (power-fail simulation) at every stage; assert `current` resolves the **prior epoch when the cut precedes the commit decision's durability, and the new, complete epoch after it** — `atoms` recovery rolls a committed transaction forward, never back — and is never missing and never names incomplete content; pre-commit residue is detected and reported. **Interim negative:** the best-effort writer can leave a partial epoch, a missing `current`, or a `current` naming incomplete content after a persistence cut — asserted and reported, per limitation 2 |
+| X2 | **[Plan B]** Publication is crash-atomic and `current` is durable: it never selects a partial epoch and survives a persistence cut | kill the writer at every stage of publication **and** cut persistence (power-fail simulation) at every stage; assert `current` resolves the **prior epoch when the cut precedes the commit decision's durability, and the new, complete epoch after it** — `atoms` recovery rolls a committed transaction forward, never back — and is never missing and never names incomplete content; pre-commit residue is detected and reported. **Interim negative:** the best-effort writer can leave a partial epoch, a missing `current`, or a `current` naming incomplete content after a persistence cut — asserted and reported, per limitation 2 |
 | X3 | Belief never reads `current` | attempt a belief computation selecting "current" rather than an explicit snapshot identity → refused; assert every epoch remains readable by packaging identity while it exists |
 | X4 | The registry is append-only through every API | assert no API mutates or deletes a registry record; attempt a purge → unspellable. **Negative (limitation 1):** raw deletion of an admission record is undetected until §9 lands |
 | X5 | Duplicate `corpus_id` is refused at admission and detected at build | admit a known id → refused (replica declaration excepted, minting no admission); raw-place two corpora with one id, build → refused, reported |
@@ -479,7 +479,7 @@ writer carries limitation 2 instead of the claim.
    world chain from outside, and the closure lands at implementation with its
    L1–L13 — until then this limitation stands.
 2. **Interim publication is neither crash-atomic nor durably pointed.** Until
-   `atoms` A8 and composition-root adoption, the writer is best-effort
+   composition-root adoption, the writer is best-effort
    create-then-pointer-replace; after a
    durability failure `current` may still name the old epoch, may be missing, or
    may name incomplete content — not merely sit intact beside a partial epoch.

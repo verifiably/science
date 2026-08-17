@@ -32,10 +32,10 @@ architecture docs. Measured state:
 - `science` imports neither.
 - **`nodes` does not reference `atoms` either** — its dependencies are `pydantic`
   and `pyyaml`.
-- **`atoms` can execute effects.** A7 landed 2026-08-14 with the chain and
-  effect/recovery executor, which mutates approved project paths under its test
-  allowlist. Production volume binding still refuses every volume until A8's
-  persistence-cut exerciser and durability certification land.
+- **`atoms` can execute certified effects.** A7 landed 2026-08-14 with the chain
+  and effect/recovery executor; A8 landed 2026-08-17 with physical certification
+  and an exact production allowlist. Science has not adopted it at the composition
+  root.
 
 So adopting `nodes` buys **no durability today**, and `nodes` §7 leaves the hole
 explicitly: *"Single-writer assumption. Nothing coordinates concurrent mutation of
@@ -486,10 +486,10 @@ could not run" — a report that looks like sixteen problems and conceals that m
 validation was disabled. A normative severity/code/ordering contract with a
 non-normative message is what makes that distinction expressible.
 
-## 7. Durability — deferred to A8 and adoption
+## 7. Durability — deferred to composition-root adoption
 
-`atoms` owns durability and concurrency. Until A8 certifies a production
-configuration and Science adopts the composition root:
+`atoms` owns durability and concurrency. A8 certified a production configuration
+on 2026-08-17. Until Science adopts the composition root:
 
 - the profile claims **single-writer operation** and **no crash-safe multi-file
   durability**, matching `nodes` §7 and §13 exactly;
@@ -560,7 +560,7 @@ be read as the strong claim.
 
 ## 11. Limitations
 
-1. **No Science durability until `atoms` A8 and composition-root adoption.**
+1. **No Science durability until composition-root adoption.**
    Single-writer, no crash-safe multi-file commit. Stated, not mitigated.
 2. **Recorded-history completeness** (kernel §8.7) — a coordinated
    fields-plus-hash edit is undetectable.
@@ -590,4 +590,5 @@ be read as the strong claim.
   composition root combines `nodes` and `atoms`; portable `nodes` does not
   depend on the Python-only, filesystem-specific engine. `atoms` authority
   §12.2 and the adoption ledger artifact 4 own that route. A7 supplies the
-  transaction interface; A8 certification remains the production gate.
+  transaction interface and A8 supplies the certified production tuple;
+  composition-root adoption remains the production gate.

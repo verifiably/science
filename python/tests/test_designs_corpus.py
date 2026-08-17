@@ -3,11 +3,9 @@
 Three drift classes were found by hand on 2026-08-08, and each one is a fact that
 lives in many documents while being owned by none of them:
 
-* **`atoms` roadmap state.** Twenty sites across nine designs wrote the durability
-  gate as the range `A6–A8`. `atoms` implemented A6 on 2026-08-08 and every one of
-  those sentences became false at once. The stage boundary is now a single constant
-  here; landing a stage means moving it, and this file then names every document
-  that still disagrees.
+* **`atoms` adoption state.** Plan A through A8 is implemented. The remaining
+  durability gate is Science's composition-root adoption; this file names every
+  live document that still gates on a completed Plan A stage.
 * **The guarantee-row inventory.** Thirteen frozen tables carry the acceptance
   criteria. Their counts are quoted in the README and in the review-disposition
   record, and nothing recomputed them when the belief policy added a table.
@@ -32,18 +30,6 @@ README = ROOT / "README.md"
 
 #: A digest as §6.2's projection folds it: the algorithm, then lowercase hex.
 _ALGORITHM_QUALIFIED = re.compile(r"\A[a-z0-9][a-z0-9_-]*:[0-9a-f]+\Z")
-
-#: `atoms`' Plan A sub-plans, in delivery order (its authority design §14).
-ATOMS_STAGES = ("A1", "A2", "A3", "A4a", "A4b", "A5a", "A5b", "A6", "A7", "A8")
-
-#: The one fact this file exists to hold. `atoms` landing a sub-plan moves it.
-#: A7 — effect and recovery execution — landed 2026-08-14; A8 (the crash
-#: exerciser and durability certification) is what every durability claim here
-#: is still gated on.
-ATOMS_FIRST_UNIMPLEMENTED = "A8"
-
-_ATOMS_IMPLEMENTED = ATOMS_STAGES[: ATOMS_STAGES.index(ATOMS_FIRST_UNIMPLEMENTED)]
-_ATOMS_LAST_IMPLEMENTED = _ATOMS_IMPLEMENTED[-1]
 
 #: The thirteen frozen guarantee tables and the rows each holds. Extending a table
 #: means adding its id here; the corpus's own rule is that ids are never renumbered.
@@ -81,13 +67,18 @@ TABLE_OWNERS = {
     "T": "2026-08-11-act-report-design.md",
 }
 
+#: Science's Linux adoption vocabulary ends at A8. A9 is `atoms`' macOS arm and
+#: deliberately stays outside this guard because it is not a Science durability gate.
 #: `A6` is also the formal model's refinement-row prefix (`ρA6`), so a bare stage
 #: token must not be preceded by `ρ`. `A5b` and `A4a` carry a letter suffix.
 _STAGE = r"A[1-8][ab]?"
-#: A range of stages. The corpus spells ranges with an en-dash; an ASCII hyphen
-#: between two stage labels is caught separately rather than silently parsed.
-_RANGE = re.compile(rf"(?<![ρ\w])({_STAGE})–({_STAGE})")
 _ASCII_RANGE = re.compile(rf"(?<![ρ\w])({_STAGE})-({_STAGE})(?![\w])")
+_PENDING = r"(?:await(?:s|ing)?|block(?:ed|s|ing)?|gat(?:e|ed|es|ing)|remain(?:s|ing)?|still|until|wait(?:s|ing)?)"
+_PENDING_ATOMS_STAGE = re.compile(
+    rf"(?:{_PENDING})[^.\n]{{0,160}}(?<![ρ\w]){_STAGE}(?![\w])"
+    rf"|(?<![ρ\w]){_STAGE}(?![\w])[^.\n]{{0,160}}(?:{_PENDING})",
+    re.IGNORECASE,
+)
 
 #: Row ids run to `G2c` and `W8b`, so the suffix is a letter and not just `a`/`b`.
 _ROW = re.compile(r"^\|\s*\*{0,2}([GSWRCXNLDMPHT][0-9]+[a-z]?)\*{0,2}\s*\|", re.MULTILINE)
@@ -123,23 +114,18 @@ def _text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def test_no_design_gates_on_an_implemented_atoms_stage() -> None:
-    """A durability gate is written as a stage range ending at A8.
-
-    Every such range names what is *not yet built*, so it must begin at the first
-    unimplemented stage. This is the check that fires the day `atoms` lands one.
-    """
+def test_no_live_document_gates_on_an_atoms_plan_a_stage() -> None:
+    """Plan A is complete; live durability gates name composition-root adoption."""
     stale: list[str] = []
-    for path in design_documents():
+    paths = [README, *design_documents(), *sorted(GUIDE.glob("*.md"))]
+    for path in paths:
         for line_no, line in enumerate(_text(path).splitlines(), start=1):
-            for start, end in _RANGE.findall(line):
-                if end != "A8":
-                    continue
-                if start != ATOMS_FIRST_UNIMPLEMENTED:
-                    stale.append(f"{path.name}:{line_no}: {start}–{end}")
+            clauses = re.split(r"[.;|]", line)
+            if not line.lstrip().startswith(">") and any(_PENDING_ATOMS_STAGE.search(clause) for clause in clauses):
+                stale.append(f"{path.relative_to(ROOT)}:{line_no}: {line.strip()}")
     assert not stale, (
-        f"`atoms` {'/'.join(_ATOMS_IMPLEMENTED)} are implemented, so a gate ending at A8 "
-        f"begins at {ATOMS_FIRST_UNIMPLEMENTED}. These ranges disagree:\n  " + "\n  ".join(stale)
+        "`atoms` Plan A through A8 is implemented; Science's remaining durability gate "
+        "is composition-root adoption. These live claims still gate on a Plan A stage:\n  " + "\n  ".join(stale)
     )
 
 
@@ -153,21 +139,14 @@ def test_no_design_spells_a_stage_range_with_an_ascii_hyphen() -> None:
     assert not found, "stage ranges use an en-dash:\n  " + "\n  ".join(found)
 
 
-def test_the_ledger_records_the_atoms_boundary_this_file_holds() -> None:
-    """The ledger is the corpus's authority for implementation state.
-
-    It must name the last implemented stage and the first unimplemented one, so a
-    reader who never opens this file still reads the same boundary.
-    """
+def test_the_ledger_records_the_atoms_adoption_gate_this_file_holds() -> None:
+    """The ledger records completed Plan A and the remaining adoption gate."""
     ledger = _text(DESIGNS / "2026-08-03-redesign-adoption-ledger.md")
     atoms_rows = [line for line in ledger.splitlines() if "**`atoms` " in line and "—" in line]
     assert atoms_rows, "the ledger no longer carries an `atoms` artifact row"
-    row = "\n".join(atoms_rows)
-    assert _ATOMS_LAST_IMPLEMENTED in row, f"the ledger's `atoms` row does not name {_ATOMS_LAST_IMPLEMENTED} as landed"
-    remainder = "–".join((ATOMS_FIRST_UNIMPLEMENTED, ATOMS_STAGES[-1]))
-    if ATOMS_FIRST_UNIMPLEMENTED == ATOMS_STAGES[-1]:
-        remainder = ATOMS_FIRST_UNIMPLEMENTED
-    assert f"**`atoms` {remainder}**" in row, f"the ledger's `atoms` row does not name {remainder} as the remainder"
+    state = atoms_rows[0].split("|")[-2]
+    assert "A8 landed 2026-08-17" in state
+    assert "Plan B adoption at Science's composition root is the remaining gate" in state
 
 
 def test_every_design_declares_a_status() -> None:
