@@ -30,7 +30,6 @@ testpaths = ["tests"]
 line-length = 120
 
 [tool.pyright]
-include = ["src"]
 pythonVersion = "3.11"
 typeCheckingMode = "basic"
 
