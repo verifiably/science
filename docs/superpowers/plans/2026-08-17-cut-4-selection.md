@@ -191,8 +191,11 @@ partial selection, and unchanged standing are all legal outcomes.
   none does — that Task 6's accounting counts wherever it lands.
 
 - [ ] **Step 1: Adjudicate each deferred cell.** T1: the import arm is
-  the worked example in Task 2 Step 2 — use it verbatim; the raw-write
-  negative stays deferred. R19: of "explicit import with its
+  a candidate — adjudicate whether "inert entry of another observer's
+  report" is reachable as a pure add through the composition root, or
+  needs import machinery this slice does not build; Task 2 Step 2's
+  worked example shows the cell *format* for the selecting outcome, not
+  the conclusion. The raw-write negative stays deferred either way. R19: of "explicit import with its
   refusal-before-write, both availability transitions, the audit and its
   contradiction finding, and negatives (c)–(e)", select only what an
   add-only durable store reaches — the refusal-before-write is a
@@ -202,10 +205,11 @@ partial selection, and unchanged standing are all legal outcomes.
   raw-write half of negative (b) and negative (c)'s corpus paths are
   candidates; anything needing explicit import machinery beyond the add
   path, the audit, or the rules store defers with that name.
-- [ ] **Step 2: Write the three §4.2 rows** in the Task 2 Step 2 format,
-  and add one §3 paragraph stating what the run/report boundary gains
-  from a durable store (records cut 3 could only hold as values now
-  land and reload).
+- [ ] **Step 2: Write each row where Step 1 placed it** — a §4.2 cell
+  in the Task 2 Step 2 format where arms select, an unchanged-standing
+  line in §4.3 where none does. Add one §3 paragraph stating what the
+  run/report boundary gains from a durable store (records cut 3 could
+  only hold as values now land and reload).
 - [ ] **Step 3: Run the guards.** Expected: 12 passed.
 - [ ] **Step 4: Commit.**
   `git commit -am "docs(cut4): split the store-gated T and R arms"`
@@ -243,7 +247,8 @@ partial selection, and unchanged standing are all legal outcomes.
 
 **Files:**
 - Modify: `docs/designs/2026-08-17-conformance-cut-4.md` (§4.3, §5)
-- Read first: cut 3 §4.3 (`:268-281`) and §5 (`:283-304`)
+- Read first: cut 3 §4.1 (`:224-242`, its 15 selected-in-full rows),
+  §4.3 (`:268-281`), and §5 (`:283-304`)
 
 **Interfaces:**
 - Consumes: Tasks 2–4's selections (they determine which rows leave
@@ -268,8 +273,11 @@ partial selection, and unchanged standing are all legal outcomes.
   No group row is reproduced in §5 until each of its members has its
   line here. A placement carried without its cell read is the defect
   this step exists to prevent.
-- [ ] **Step 2: Write §4.3.** Carry cut 3's fully-exercised list (34
-  rows) forward verbatim. List every part-exercised row whose remainder
+- [ ] **Step 2: Write §4.3.** Assemble the 34-row fully-exercised list
+  — no single list exists to copy: combine cut 3 §4.3's nineteen
+  exercised before cut 3 (M4, M7, M9–M11, M13 from cut 1; G1, G2b, G6,
+  M6, M8, P2–P9 from cut 2) with cut 3's own fifteen selected-in-full
+  rows from its §4.1, whose implementation landed 2026-08-13. List every part-exercised row whose remainder
   this cut does not touch, each with its waiting place per Step 1's
   sweep, then add this cut's outright exclusions with their
   citations: G3 (the corpus-move negative — world persistence, kernel
@@ -282,9 +290,12 @@ partial selection, and unchanged standing are all legal outcomes.
 - [ ] **Step 3: Write §5.** Open with one sentence stating the sweep:
   every remaining row was re-read against this slice's boundary (Step
   1), none carried unread. Reproduce cut 3's group table (`:292-304`)
-  with every move stated inline: rows selected by Tasks 2–4 leave their
-  groups (substrate becomes S2, S4 with unblocker "the supersede
-  family's adapter"); the tamper-log group's unblocker becomes "anchor
+  with every move stated inline: each row Tasks 2–4 actually selected
+  leaves its group, and each group row lists exactly the members
+  remaining after those adjudications — the substrate group keeps
+  whichever of its seven rows gained no arm, with unblocker "the
+  supersede family's adapter" for the edit-bound rows; the tamper-log
+  group's unblocker becomes "anchor
   carriage and Science-side verification — the next persistence cut;
   the chain itself is engine-supplied at every commit"; the persistence
   seam (H1–H4, T7), correction lifecycle, normative-contract,
