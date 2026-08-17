@@ -2,7 +2,7 @@
 title: Open questions
 status: living
 created: 2026-08-08
-updated: 2026-08-14
+updated: 2026-08-17
 sources:
   - ../designs/2026-08-02-epistemic-kernel-design.md
   - ../designs/2026-08-02-substrate-consolidation-design.md
@@ -21,6 +21,7 @@ sources:
   - ../designs/2026-08-10-verified-holdings-record-design.md
   - ../designs/2026-08-11-act-report-design.md
   - ../designs/2026-08-11-conformance-cut-3.md
+  - ../designs/2026-08-17-conformance-cut-4.md
 ---
 
 # Open questions
@@ -171,17 +172,20 @@ implementation**: a guarantee row awaiting code is work, not a question.
   certification is unspellable and existing instruments certify only through a
   successor spec. Open is the cadence: sweep, mint on next authored use, or
   never. ([normative-contract questions](../designs/2026-08-03-normative-contract-design.md#11-open-questions))
-- **The third conformance cut is drawn; what cut 4 is remains open.** Cut 3
-  was frozen 2026-08-11 at the run boundary, taking run capture — the seam the
+- **What cut 4 is has been drawn; its selection is pending.** Cut 3 was
+  frozen 2026-08-11 at the run boundary, taking run capture — the seam the
   verified-holdings record (2026-08-10) and the act-report design (2026-08-11)
-  finished designing. What remains open is what its §5 defers: the persistence
-  seam (the holdings store, H1–H4, T7, the tamper log), world persistence on
-  composition-root adoption, the `nodes` contract deltas, and the subsystems behind
-  them. The persistence candidates are no longer independent — the first cut
-  that crosses a persistence boundary will take several of those groups at
-  once, and whether that is one cut or two is deliberately not ruled.
+  finished designing. What its §5 deferred — the persistence seam (the
+  holdings store, H1–H4, T7, the tamper log), world persistence, the `nodes`
+  contract deltas, and the subsystems behind them — is no longer an open
+  boundary question: the cut-4 draft is drawn against the certified `atoms`
+  engine adopted at Science's composition root, add-only, corpus-write
+  minting alone, with no L row selected because registration is
+  engine-supplied. What remains open is the per-row selection itself and the
+  freeze, which the composition-root adapter design's banking settles.
   ([conformance cut 3](../designs/2026-08-11-conformance-cut-3.md),
-  [its deferrals](../designs/2026-08-11-conformance-cut-3.md#5-step-3--fully-deferred-rows-grouped-by-unblocking-subsystem))
+  [its deferrals](../designs/2026-08-11-conformance-cut-3.md#5-step-3--fully-deferred-rows-grouped-by-unblocking-subsystem),
+  [conformance cut 4 draft](../designs/2026-08-17-conformance-cut-4.md))
 - **The act-report's residue.** The act-report design (2026-08-11) closed
   the run boundary's report seam: the boundary-minted terminal record of
   an opened operation — or the pre-intent refusal record of a rejected
