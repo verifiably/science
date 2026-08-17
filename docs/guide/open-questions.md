@@ -172,17 +172,21 @@ implementation**: a guarantee row awaiting code is work, not a question.
   certification is unspellable and existing instruments certify only through a
   successor spec. Open is the cadence: sweep, mint on next authored use, or
   never. ([normative-contract questions](../designs/2026-08-03-normative-contract-design.md#11-open-questions))
-- **What cut 4 is has been drawn; its selection is pending.** Cut 3 was
-  frozen 2026-08-11 at the run boundary, taking run capture — the seam the
-  verified-holdings record (2026-08-10) and the act-report design (2026-08-11)
-  finished designing. What its §5 deferred — the persistence seam (the
-  holdings store, H1–H4, T7, the tamper log), world persistence, the `nodes`
-  contract deltas, and the subsystems behind them — is no longer an open
-  boundary question: the cut-4 draft is drawn against the certified `atoms`
-  engine adopted at Science's composition root, add-only, corpus-write
-  minting alone, with no L row selected because registration is
-  engine-supplied. What remains open is the per-row selection itself and the
-  freeze, which the composition-root adapter design's banking settles.
+- **What cut 4 is drawn against is settled; most of cut 3's deferred
+  boundary stays open.** Cut 3 was frozen 2026-08-11 at the run boundary,
+  taking run capture — the seam the verified-holdings record (2026-08-10)
+  and the act-report design (2026-08-11) finished designing. Its §5
+  deferred the persistence seam (the holdings store, H1–H4, T7, the tamper
+  log), world persistence, and the `nodes` contract deltas, noting that the
+  first cut to cross a persistence boundary would take several of those
+  groups at once — whether as one cut or two, not ruled there. The cut-4
+  draft narrows this only for itself: it is drawn against the certified
+  `atoms` engine adopted at Science's composition root, add-only,
+  corpus-write minting alone, with no L row selected because registration
+  is engine-supplied. World persistence and anchor carriage remain outside
+  it — the draft names the *next* persistence cut as their owner, so cut
+  3's one-cut-or-two question is still not ruled. What remains open is the
+  per-row selection itself, the freeze, and that next-cut question.
   ([conformance cut 3](../designs/2026-08-11-conformance-cut-3.md),
   [its deferrals](../designs/2026-08-11-conformance-cut-3.md#5-step-3--fully-deferred-rows-grouped-by-unblocking-subsystem),
   [conformance cut 4 draft](../designs/2026-08-17-conformance-cut-4.md))
