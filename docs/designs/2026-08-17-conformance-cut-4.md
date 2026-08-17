@@ -125,6 +125,18 @@ transactions being chained but unanchored, no valid anchored observer set.
 Where a T or R arm's subject is one of those, durability moves it no closer,
 and the row defers by name below.
 
+**The world layer.** Of the nineteen W rows, only **W3** runs without it. The
+world-addressing design states its refusal — creating a `source` or
+`dataset` without its basis — as the write boundary's own rule
+(`2026-08-02-world-addressing-design.md:364`): a check over one record's own
+fields, needing no resolution and no corpus beyond the one being written to.
+Every other row's substantive claim is a world-scope one — collision,
+coreference, and handle resolution across a world holding more than one
+corpus, §1.1's own fixture being cross-project — or names an operation this
+slice does not build: a move, a redirect, `consolidate`, a rename, or the
+index and its derived maps. The eighteen remaining rows defer on the write
+boundary and the index, unchanged from cut 3.
+
 ## 4. Step 2 — the selection, arm by arm
 
 ### 4.1 Selected in full
@@ -134,6 +146,7 @@ and the row defers by name below.
 | **S3** | a stale semantic hash refused on import, where *import* is the substrate consolidation design §4.2.1 sense — an untrusted write — and not the import/cohort **plan family** this cut excludes: a record whose stored hash disagrees with its fields is raw-written into the durable store and the read refuses it. The refusal half needs no edit at all — a refusable record is *constructed* stale rather than edited stale — so the row's own word "hand-edit" names a construction, not a dependency on the excluded edit surface. **Negative**, pinning §4.3's bound: raw-write a record whose fields and stored hash agree with each other and with nothing that preceded them, and assert it passes undetected. The negative is neither strengthened nor weakened by durability here — the chain records committed transactions, and a raw write is not one — so what it pins is exactly §4.3's recorded-history limitation, the G4/G8 pattern the substrate table's own footnote names below it |
 | **S7** | eligibility enforced at **both** boundaries, both of which this slice builds. The write boundary (substrate consolidation design §6.2 item 1): the add path refuses to mint an inadmissible `assesses` edge. The profile-level corpus check (item 2): a file raw-written into the durable store carrying an `assesses` edge whose run has no `observes` input is reported `eligibility-unmet` by the check reading that store, under the Science-owned code namespace §6.2 fixes. The cross-node predicate spans assessment → run → `observes` → dataset → facet — kernel kinds and the `science` base profile's own `empirical-observation` facet, corrected there by the domain-extension boundary — so no clause of it reaches the excluded **registry compile**. The row's stated bound, that a raw write producing a *valid* node is intentionally unreported, is pinned by S8's negative construction — a raw write with the static check asserted silent — while the corpus check's own silence on a *valid* node remains §4.2.1's stated bound rather than an arm of either row |
 | **S8** | the static claim over the code this cut wires: no module outside the write API constructs or receives a mutable `Corpus`, checked by AST — the capability boundary §4.2.1 chose precisely so that a new writer cannot escape by being undiscovered. The claim gains its first durable subject here, the composition root where the corpus-write adapter is the handle's one holder. **Negative:** write a corpus file with a raw filesystem call and assert S8 does **not** fire — the limit pinned, then validated by §4.3's stale-hash check and §6.2's corpus check, which are S3 and S7 and are selected in this same cut, subject to the recorded-history limitation the row carries |
+| **W3** | a `source` created with **no accepted external identifier** (no DOI, PMID, ISBN or accession) and a `dataset` created with **no content identity** — the §1.1 DepMap case, a programme named with no release pinned — both **refused**, not silently coerced to a curation `note`: the world-addressing design's own rule (`2026-08-02-world-addressing-design.md:364`) puts the refusal **at the write boundary**, over the record being minted and nothing else. A curation note is authored instead as its own explicit add; supplying the basis afterward mints the world entity as a second, separate add — two mints, never an edit, so §3's add-only reading reaches both. **Negative:** no title-and-year fallback exists to be reached — the refusal has no derived-identity escape. **Negative — identity is not holding, the admission-ramp narrowing** (`2026-08-09-admission-ramp-design.md` §6.4): a `dataset` whose content identity is recorded and whose bytes are **not held anywhere** is **minted**, not refused — `declared`, addressable and referenceable; the add path performs no holding check, since `declared`/`held` is a state derived on read (by `G2b`, fully exercised) and never gated at write. No clause of the row reaches the index, a move, `consolidate`, or a redirect: the check is entirely over one mint attempt's own fields |
 
 ### 4.2 Selected in part
 
