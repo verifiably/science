@@ -108,8 +108,8 @@ minted lived in a fixture's value set, and every claim it could make about
 one was a claim about what the API constructs and what a digest over those
 values reads. A durable store changes two things for those rows, and no
 more. Records now **land** — a minted record occupies an address on disk, so
-a corpus path exists to write beside through the fixture act item 2 above
-defines, and a forged file can be placed at the address a genuine record
+a corpus path exists to write beside through the fixture act that item 2
+above defines, and a forged file can be placed at the address a genuine record
 would occupy; that is the construction cut 3's raw-write clauses named and
 could not build. And records now **reload** — what the add path committed is
 read back by the stored-corpus traversal, so an assertion that a read *does
@@ -117,11 +117,13 @@ not* check something is at last an assertion about a read this cut runs.
 What the boundary does not gain is every operation that is not the add path.
 There is no explicit import here, so no write-time recomputation and no
 refusal before writing; no audit, so no contradiction finding and no
-superseding mint; no managed holdings root, so nothing is unreachable here
-while held elsewhere and nothing is mounted; and, this cut's transactions
-being chained but unanchored, no valid anchored observer set. Where a T or R
-arm's subject is one of those, durability moves it no closer, and the row
-defers by name below.
+superseding mint; no managed holdings root, so nothing is **mounted** and no
+managed deletion runs — heldness itself stays exactly what cut 3 made it, a
+value a fixture supplies, which is how cut 3's own selected R5 and G9 arms
+made bytes unreachable here while a copy remained held; and, this cut's
+transactions being chained but unanchored, no valid anchored observer set.
+Where a T or R arm's subject is one of those, durability moves it no closer,
+and the row defers by name below.
 
 ## 4. Step 2 — the selection, arm by arm
 
@@ -140,7 +142,8 @@ defers by name below.
 | **S1** | the relation fixture minted through the add path into one durable corpus root and walked back out of it: chain, diamond, cycle, unrelated predicate, deprecated ref, dangling target, and the **undirected relation** reached from its stored source but not its stored target — the whole of it corpus-local traversal over `nodes`' one-hop operations, which is the traversal this cut's boundary names; membership-traversal agreement and the non-reinterpretation of `directed` are asserted over that store. **Negative:** `nodes` exposes **no** transitive operation — a static reading of that package's surface, depending on nothing this cut builds | the **chain crossing corpora**, with its assertion of the full closure rather than truncation at the corpus edge. Reaching a target the holding corpus does not carry requires resolving an address to the corpus holding it, and that is the **world index**; run corpus-locally the fixture cannot be built at all, and a truncation indistinguishable from the dangling-target case already selected would assert nothing |
 | **S1a** | the lineage fixture over the same durable root, walked as a **facet** rather than as relations: chain, diamond, cycle, a `single` basis, a `conflict` basis yielding **every** route and certifying nothing, and the unresolvable **ancestor** told apart from the unresolvable **producing run** — the distinction the relation adapter cannot express. Both unresolvable cases are constructed by *minting* a basis entry naming an address no record carries, never by deleting one, so §3's add-only reading reaches them; the `conflict` tag is likewise written into the store rather than produced, the boundary minting only `single`. **Negatives:** the lineage adapter accepts **no** predicate and **no** direction argument; and one algorithm serves both adapters, so cycle-safety and start-exclusion are certified once — assertable because S1's adapter arms are selected in this same cut | the **cross-corpus chain**, deferred with S1's and for the same reason — a basis whose ancestor lives in another corpus is resolvable only through the **world index** |
 | **S5** | the walk that *produces* the lineage snapshot from a store, in its corpus-local form: the basis walked transitively out of a durable corpus root under the substrate consolidation design §5's procedure — the inspected set is `{observed root} ∪ closure`, the root included because the traversal is start-excluding (step 1); a `conflict` tag short-circuits to `lineage-divergent` on the tag alone, before resolution or comparison (step 2); a basis entry that does not resolve — absent ancestor or absent producing run alike — yields `lineage-incomplete` and no certificate (step 2b); and deleting the observed root's immediate parent is reached in its minted form, a root carrying an unresolvable entry with an empty closure, still `lineage-incomplete`. Cut 2 deferred exactly this piece on "**S1a's and the write API's** territory"; this cut supplies both — the add path mints the basis durably, and S1a's walk runs over the store — so what cut 2 could not run is what this cut adds | the walk's **cross-corpus** reach, with S1's and S1a's, on the **world index**; the banked construction — *delete* an ancestor named by a basis and assert the `belief_input_digest` **changed** and belief did not rise — which is a transition across the **deletion surface** Plan B item 2 assigns to the family adapters, leaving both halves where cut 2 left them, over supplied snapshots; and the negative's *"indistinguishable from one where that run never existed"* clause, which needs the same **deletion surface** and is in any case a claim about what a store retains after a removal, not about the walk this cut adds |
-| **R22** | negative (b)'s **raw-write** half, which cut 3 deferred on the store and the store now supplies: mint an assessment through the add path into a durable corpus root and take the belief digest over the reloaded store; then raw-write a second file at the **correct** address carrying `supported` where the derivation from the same run yields `refuted`, self-consistent in its own stored hash so §4.3's stale-hash check has nothing to say about it, and assert the belief digest **differs** from the correct state's — the half a digest keyed on assessment identities alone would have missed, and the first cut in which the forged state can be built at all, an address on disk being what "at the correct address" needs. The rule binding stays **supplied** by fixture, exactly as cut 3's selected arms had it, so no clause of this reaches the excluded **rules store**; the closure is corpus-local, the producer snapshot an argument to the digest rather than a stored selection. **Negative (c)'s corpus-path clause**, its companion and its point: the same hand-written file with its fabricated facet is **not refused** and **not reported** on read — not by the stale-hash check and not by the corpus check, which are S3 and S7 and are selected in this same cut, so those two are exactly the checks the clause bounds. Read with the raw-write half it is R22's own punchline made durable: the digest moved and the reader said nothing, which is change detection and not truth detection | the *unresolvable interpretation rule is refused* clause, unchanged from cut 3 — resolution against a held implementation or a registry entry is the **rules store and resolver**, still excluded exactly as P1's deferred arm records, and the in-slice form (*"no binding supplied → refuse"*) is still the different, weaker claim cut 3 named; negative (c)'s **explicit-import** clause — that import recomputes the facet from the run and refuses a mismatch — which is the import **family dialect**'s operation, Plan B item 2's surface and not the add path this slice builds, so the recomputation has nowhere to happen and no refusal to produce; and negative (c)'s *caught only under audit* clause — the **audit** — which stays where cut 3 left it and is what keeps the two selected halves a statement of the §7.3c limitation rather than a closing of it |
+| **R19** | **availability transition (a)**, the genuine one — record a `passed` verification under a declared **tolerance** through the constructor cut 3 selected, mint it durably into a corpus root, then make its artifacts unreachable here while they remain **held elsewhere**, and assert it is **not refused**, that admission is **unchanged**, and that no `inconclusive` is recorded; with it, the *reading the record validates nothing* sentence in its (a) half. Heldness is no stronger here than in cut 3 — it stays a value a fixture supplies, exactly as cut 3's selected R5 and G9 arms had it, so no clause reaches the **managed holdings root**, which owns the mount and the managed deletion and neither of which (a) performs. What the store adds is the whole of what cut 3 was missing: the verification is a record that *lands* and is *reloaded*, so "not refused" and "validates nothing" are assertions about a read this cut runs rather than about a value set, and admission is recomputed over the reloaded store. The bound is built and the arm is failable on it: this cut's traversal already reports an unresolvable reference as `lineage-incomplete` (S5), so a build that let unavailability reach admission — the `inconclusive` R5 forbids, or a refusal on reload — fails this arm, which is precisely R19's *"neither mounting nor a raw write is an epistemic event"* in the direction that needs no mount | the **refusal before writing**, which is the explicit import's result and not the add path's: the import operation is the import **family dialect**, Plan B item 2's surface, and the recomputation it refuses on traverses verification → runs → spec and results, all world-identified, which the computation design's own world-addressing consumer table assigns to the composed resolver — the **world index**, out of scope, and §3's corpus-local reading with it. **Transition (b)** is not (a)'s mirror and does not follow it in: it imports a forged verification, then **mounts** the artifacts, then wants an **audit** to emit the contradiction finding and a separate constructor act to mint the superseding verification — the **family dialects**, the **managed holdings root** for the mount, and the **audit** for everything the transition is *for*, since the admission change it asserts happens because of the audit's superseding node. Negative (c) asks whether inputs resolve *anywhere in the world* — the **world index**. Negatives (d) and (e) bound detection and the detector each bounds is the **audit**, (e) naming §9's log by hand as well; their *not refused, not validated on read* clause does not select on R22's pattern below, because the thing they bound — derivation validation — is built at explicit import and under audit and nowhere else, so unlike (a), whose bound this cut's admission and traversal supply, they would bound nothing this slice builds |
+| **R22** | negative (b)'s **raw-write** half, which cut 3 deferred on the store and the store now supplies: mint an assessment through the add path into a durable corpus root and take the belief digest over the reloaded store; then raw-write a second file **placed at the address a genuine record would occupy** — the basis is `(spec, run, proposition)`, so the forgery sits exactly where the derived assessment sits — carrying `supported` where the derivation from the same run yields `refuted`, self-consistent in its own stored hash so §4.3's stale-hash check has nothing to say about it, and assert the belief digest **differs** from the correct state's — the half a digest keyed on assessment identities alone would have missed, and the first cut in which the forged state can be built at all, an address on disk being what "at the correct address" needs. The rule binding stays **supplied** by fixture, exactly as cut 3's selected arms had it, so no clause of this reaches the excluded **rules store**; the closure is corpus-local, the producer snapshot an argument to the digest rather than a stored selection. **Negative (c)'s corpus-path clause**, its companion and its point: the same hand-written file with its fabricated facet is **not refused** and **not reported** on read — not by the stale-hash check and not by the corpus check, which are S3 and S7 and are selected in this same cut, so those two are exactly the checks the clause bounds. Read with the raw-write half it is R22's own punchline made durable: the digest moved and the reader said nothing, which is change detection and not truth detection | the *unresolvable interpretation rule is refused* clause, unchanged from cut 3 — resolution against a held implementation or a registry entry is the **rules store and resolver**, still excluded exactly as P1's deferred arm records, and the in-slice form (*"no binding supplied → refuse"*) is still the different, weaker claim cut 3 named; negative (c)'s **explicit-import** clause — that import recomputes the facet from the run and refuses a mismatch — which is the import **family dialect**'s operation, Plan B item 2's surface and not the add path this slice builds, so the recomputation has nowhere to happen and no refusal to produce; and negative (c)'s *caught only under audit* clause — the **audit** — which stays where cut 3 left it and is what keeps the two selected halves a statement of the §7.3c limitation rather than a closing of it |
 
 ### 4.3 Standing from prior cuts
 
@@ -157,7 +160,7 @@ builds no such branch; asserting unreachability from a branch that does not
 exist is not a weaker form of the row but a vacuous one, which N2's
 sabotage doctrine refuses. It defers whole with S2, to the same cut.
 
-Two boundary rows the store was read against and did not move. **T1** —
+One boundary row the store was read against and did not move. **T1** —
 *only the boundary mints an act-report* — has two arms outstanding and the
 durable store reaches neither. The **import** arm asserts what another
 observer's report becomes when it *enters*: structurally validated, not
@@ -167,41 +170,18 @@ import's doing, and the act-report design §3.1 makes an explicit import a
 boundary **operation** — a frozen observer-corpus root, one operation intent
 appended before any act, products publishing per act, and an act-report
 closing it — which is the import **family dialect**'s surface, Plan B item
-2's work and not this slice's. The add path cannot stand in for it: T1's own
-arm selected in cut 3 says no API takes report fields as input, so a foreign
-report has no add-path entry at all, and an arm asserting how the add path
-treats a record it will not accept asserts nothing. The **raw-write
-negative** names its own blockers in its own text — a self-consistent report
+2's work and not this slice's. The add path cannot stand in for it, and the
+clause that forecloses it is the one cut 3 selected: *the constructor is
+reachable only from the boundary*. There is no path by which a fixture
+constructs another observer's report to hand the add path in the first
+place, so the arm has no add-path form at all — not a weaker one. The
+**raw-write negative** names its own blockers in its own text — a
+self-consistent report
 undetected on read, detected by an audit *only* with the tamper log
 implemented and a valid anchored observer set — which are the **audit** and
 the **L rows and anchor carriage**, both excluded here, every transaction
 this cut commits being chained but unanchored. T1 stays selected in part,
 exactly where cut 3 left it.
-
-**R19** — *verification derivation is validated at explicit import and under
-audit, and neither mounting nor a raw write is an epistemic event* — is the
-same story with more arms, and the store discharges none of them. The
-**refusal before writing** is the explicit import's result and not the add
-path's: the import operation is the **family dialect** again, and the
-recomputation it refuses on traverses verification → runs → spec and
-results, all world-identified, which the computation design's own
-world-addressing consumer table assigns to the composed resolver — the
-**world index**, out of scope, and §3's corpus-local reading with it. Both
-**availability transitions** turn on artifacts unreachable here *while they
-remain held elsewhere* and on **mounting** them again; heldness is the
-verified-holdings record's property and the mount is its root's, so both
-defer with the **managed holdings root**, and transition (b) additionally
-with the **audit**, whose contradiction finding and superseding mint are the
-whole of its second half. Negative (c) asks whether inputs resolve *anywhere
-in the world* — the **world index**. Negatives (d) and (e) bound detection,
-and the detector each bounds is the **audit**, (e) naming §9's log by hand
-as well. Their shared *not refused, not validated on read* clause is not
-selectable here on R22's pattern above: R22's raw-write half has a check
-present in this cut whose bound it pins — the belief digest, which moves
-when the forged file lands — whereas everything R19's negatives bound,
-validation at import, contradiction at audit, and admission across the two
-transitions, defers with the arms above it, and a negative pins a bound only
-where the bounded thing is built. R19 stays selected in part, unchanged.
 
 ## 5. Step 3 — fully deferred rows, grouped by unblocking subsystem
 
