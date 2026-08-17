@@ -23,8 +23,8 @@ cut selects is bounded by the corpus-write adapter alone, Plan B item 1.
 
 The draft freezes when the composition-root adapter design banks, and that
 design itself waits on the `nodes` write-plan/executor seam freeze. Until it
-banks, this document's status header reads draft, and its freeze block, once
-written, is present but not in force.
+banks, this document's status header reads draft, and its freeze block (§6)
+is present but not in force.
 
 ## 2. The boundary
 
@@ -328,4 +328,122 @@ name a deferral, which is cut 3's own rule from its third reading.
 
 ## 6. Accounting, freeze, and amendment discipline
 
+**4 selected in full + 8 in part + 34 fully exercised by prior cuts + 23
+part-exercised with untouched remainders + 82 fully deferred = 151.** Every
+banked row is classified into exactly one state. As in all three prior cuts,
+**no count of arms is offered as a denominator**: the banked rows do not
+enumerate their arms formally, and the splits in §4.2 are this document's
+reading of each row's test cell.
+
+The identity is checked by hand, and there is no other way to check it. A
+selection cell legitimately names other rows in bold — S8's negative cites
+S3 and S7, G9's clause cites W3 and `G2b`, R22's companion negative cites S3
+and S7 again — so any pattern that read bold row ids out of §4 would score a
+citation as a placement. §5's group rows carry ranges rather than members, so
+`X1–X12` and `W4–W16` must be expanded before there is anything to count. The
+check was therefore made by writing out all 151 ids on paper: the four of
+§4.1 (**S3**, **S7**, **S8**, **W3**); the eight of §4.2 (**S1**, **S1a**,
+**S5**, **R19**, **R22**, **G9**, **R23**, **N2**); the 34 and the 23 that
+§4.3 enumerates by name; and each of §5's thirteen groups expanded to its
+members, 5 + 18 + 2 + 2 + 12 + 13 + 10 + 2 + 6 + 1 + 7 + 3 + 1 = 82. Every
+one of the corpus's 151 rows appears once and once only.
+
+Four sets of placements are the ones a re-reading should attack first,
+because each is *read* in one section and *counted* in another, which is
+exactly the shape a double count takes. **S2** and **S4** are read in §4.3 and counted in §5's
+substrate write & traversal group, never among the 23. **G5** and **G7** are
+named in §4.3's exclusion paragraph and counted in §5's kernel group.
+**G3**, **M5** and **D7** are named in that same paragraph and counted among
+the 23, their remainders being prior-cut standing rather than fresh whole
+deferrals. And **S5** is counted in §4.2, having never been a member of §5's
+substrate group — §5's own row says so, because cut 2's phrasing invites the
+opposite reading.
+
+> **Freeze — written, and not in force.** This block takes force when the
+> composition-root adapter design banks, and the status header carries that
+> date when it does. Before then this document is a draft: its selection is
+> provisional, any cell may be edited, and such an edit is an ordinary
+> revision needing no amendment and leaving no preserved text. From the
+> freeze onward the discipline is cut 3's, unchanged. **Results are recorded
+> separately**, never by editing the selection. If the cut must change, the
+> original selection is **preserved verbatim** alongside the amendment, with
+> the reason stated.
+
+The slice's acceptance criteria are the selected arms as frozen. This cut
+adds no guarantee table of its own, and the acceptance suite that discharges
+the selected arms belongs to the composition-root adapter design, not to this
+document.
+
 ## 7. The second reader — reserved
+
+A second reader is required before this cut freezes, and this section is
+reserved for what they return. Cut 1's limitation 8 set the precedent — a cut
+drawn by its author against rows that author also reads is not
+self-checking — and every classification error found in cuts 1, 2 and 3 ran
+the same way, toward overstating coverage; cut 3 accordingly ran its reading
+before its freeze, and all four findings it returned moved arms **out**. The
+reader here is given the banked row texts and §2's boundary declaration, not
+this document's rationale, and is instructed to attack the draft in that known
+direction. Three things are theirs to check. **The arm splits of §4.1 and
+§4.2, against the Selection rule**: an arm is selectable only where its check
+runs entirely inside §2's in-scope list, so a clause reaching an edit, a move,
+a deletion, the world index, the registry compile, the managed holdings root,
+retraction records, the rules store, or anchor carriage moves its row out of
+full into part, or out of part into whole deferral. **The accounting of §6**,
+re-derived independently by the hand method described there rather than read
+off its sum — the check that cannot be mechanized is the one most likely to
+have been fudged, and the arithmetic being right proves only that the
+placements agree with each other. **The group moves of §5**: each *Leaves:*
+and each *Restated:* claim, since a restatement naming as missing a subsystem
+this cut in fact builds is the same overstatement wearing a deferral's
+clothes, and an unblocking event that has occurred cannot honestly name a
+deferral.
+
+## Limitations
+
+1. **The unbounded unanchored tail.** Every transaction this cut commits is
+   **chained but unanchored**. The `atoms` executor appends a registration
+   entry inside each one, so chain entries exist from the first commit and
+   there is no window without them; what does not exist is an anchor act
+   publishing a head against which truncation or chain removal could be
+   refuted. The tail therefore grows without bound for as long as this slice
+   is the whole persistence surface, and its extent is not a reported
+   quantity here either — the row that would report it is an L row, and no L
+   row is selected. Anchor carriage and Science-side verification are the
+   next persistence cut's work; the tail is the price of drawing this cut
+   first.
+2. **Add-only: no edit, move, or deletion obligation is exercised.** The
+   corpus-write adapter mints, and nothing in this slice supersedes,
+   renames, moves an entity between corpora, retracts standing, or removes a
+   record. Where an add-only construction reaches the *state* a deletion
+   would produce — S1a's basis entry naming an address no record carries,
+   S5's observed root with an empty closure — the arm is selected and the
+   construction is named; every arm asserting the *transition* stays
+   deferred, by §3's third consequence. A reader tallying rows exercised
+   should read that as the whole edit-shaped half of the corpus's
+   obligations having no first arm yet, in this cut or any prior one.
+3. **The draft is prospective.** This document selects against a
+   composition-root adapter design that has not banked. That design may draw
+   its root differently — a narrower add path, a different traversal seam,
+   a volume binding admitted on other terms — and arms placed in §4 would
+   move with it, in either direction. Before the freeze block takes force,
+   moving one is an ordinary edit rather than an amendment, so no cell here
+   is yet a banked commitment; §7's reading is what converts the draft into
+   one, and nothing in this document should be cited as though it already
+   had.
+4. **Durability claims rest on the certified tuple's binding, not on
+   re-running the physical exerciser.** `atoms`' certification of the Linux
+   volume tuple is relied on by construction: this cut asserts compilation
+   correctness at the Science boundary and that every other tuple fails
+   closed, and it asserts nothing whatever about crash atomicity, fsync
+   ordering, or rename semantics beneath that boundary — §4.3 defers T2's
+   crash clause on exactly this ground. If the certified binding is wrong,
+   or a deployment runs a tuple the binding does not cover, no arm selected
+   here fails; the whole of that risk is carried by the certification and
+   its adoption-ledger row, not by this cut's suite.
+5. **The arm splits are a reading, not a property of the rows** — all three
+   prior cuts' limitation, inherited whole. The banked cells are prose, and
+   a different reader could draw a boundary one clause earlier and change
+   which half of S5, R19 or R23 is selectable. That is why §6 offers no arm
+   count as a denominator, and why §7's reading is a precondition of the
+   freeze rather than a courtesy after it.

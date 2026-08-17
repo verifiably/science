@@ -81,7 +81,7 @@ partial selection, and unchanged standing are all legal outcomes.
 - Produces: the document skeleton with section headings §1–§7 that Tasks
   2–6 fill; Task 6 renumbers nothing.
 
-- [ ] **Step 1: Write the skeleton.** Title `# Conformance cut 4 — the
+- [x] **Step 1: Write the skeleton.** Title `# Conformance cut 4 — the
   first persistence slice`; the exact status header from Global
   Constraints; a `**Sources:**` line naming the spec path, cut 3, the
   adoption ledger, and (by description) the `atoms` authority design §14
@@ -92,7 +92,7 @@ partial selection, and unchanged standing are all legal outcomes.
   prior cuts`), `## 5. Step 3 — fully deferred rows, grouped by
   unblocking subsystem`, `## 6. Accounting, freeze, and amendment
   discipline`, `## 7. The second reader — reserved`.
-- [ ] **Step 2: Write §1.** Three paragraphs from the spec: (a) the cut
+- [x] **Step 2: Write §1.** Three paragraphs from the spec: (a) the cut
   is drawn against the certified engine adopted at Science's composition
   root, compiling generic corpus writes into `TransactionSpec` against
   the certified Linux tuple, every other tuple failing closed; (b) the
@@ -100,13 +100,13 @@ partial selection, and unchanged standing are all legal outcomes.
   adapters' surface (Plan B item 2); (c) the draft freezes when the
   composition-root adapter design banks, which itself waits on the
   `nodes` write-plan/executor seam.
-- [ ] **Step 3: Write §2.** The in/out lists from Global Constraints,
+- [x] **Step 3: Write §2.** The in/out lists from Global Constraints,
   each exclusion in one sentence naming where it waits. Close with the
   chained-but-unanchored paragraph: the engine appends registration
   entries inside every transaction; anchor carriage and Science-side
   verification are the next persistence cut; the unbounded unanchored
   tail is this cut's stated limitation.
-- [ ] **Step 4: Propagate the new design through the guards.** A
+- [x] **Step 4: Propagate the new design through the guards.** A
   twenty-third design trips three guards unless these land in the same
   commit: (a) README — add the cut-4 row to the design table, change
   the count sentence to `Twenty-three documents` and its date range to
@@ -119,12 +119,12 @@ partial selection, and unchanged standing are all legal outcomes.
   after the `22` entry. This is the plan's only test edit, and it is a
   data-table extension the guard itself demands
   (`extend _COUNT_WORDS: ...`), not production code.
-- [ ] **Step 5: Run the guards.**
+- [x] **Step 5: Run the guards.**
   Run: `cd python && uv run pytest tests/test_designs_corpus.py -q`
   Expected: 12 passed — the README listing, count-word, date-range, and
   guide-citation guards all see the new document; the status header,
   gate-pairing, and filename-citation guards accept it.
-- [ ] **Step 6: Commit.**
+- [x] **Step 6: Commit.**
   `git add docs/designs/2026-08-17-conformance-cut-4.md README.md docs/guide python/tests/test_designs_corpus.py && git commit -m "docs(cut4): scaffold the first persistence slice"`
 
 ### Task 2: The substrate reading — candidates S1, S1a, S3, S5, S7, S8
@@ -141,7 +141,7 @@ partial selection, and unchanged standing are all legal outcomes.
 - Produces: §3's substrate paragraph; S-row cells in §4.1/§4.2 that Task
   5's group table and Task 6's accounting count.
 
-- [ ] **Step 1: Read each candidate cell and adjudicate arm by arm.**
+- [x] **Step 1: Read each candidate cell and adjudicate arm by arm.**
   For S1, S1a, S3, S5's remainder, S7, S8, split the banked test cell
   under the Selection rule. Full selection, partial selection, and
   unchanged standing are all legal outcomes — the cell text records
@@ -157,7 +157,7 @@ partial selection, and unchanged standing are all legal outcomes.
   add-only surface defers regardless. S7's raw eligibility-violation
   write and S8's static no-mutable-handle claim are candidates for
   full selection — say so or say why not.
-- [ ] **Step 2: Write the cells.** Fully selected rows go in §4.1 as one
+- [x] **Step 2: Write the cells.** Fully selected rows go in §4.1 as one
   row each with the complete banked test restated; split rows go in §4.2
   in cut 3's two-column format — selected arms in column 2, deferred
   arms in column 3 with the excluding subsystem bolded. Format, worked
@@ -168,13 +168,13 @@ partial selection, and unchanged standing are all legal outcomes.
   |---|---|---|
   | **T1** | the **import** arm — structurally-validated, unauthenticated, attributed, inert entry of another observer's report, now a **durable store operation** through the composition root | the **raw-write negative**, unchanged from cut 3 — it needs the tamper log's verification act and a valid **anchored observer set**, deferred with anchor carriage |
   ```
-- [ ] **Step 3: Record the exclusions.** In §4.3, one line each for S2
+- [x] **Step 3: Record the exclusions.** In §4.3, one line each for S2
   and S4: S2's cell is pure edit (`:550`), S4 observes the
   semantic-change branch (`:552`); each defers whole to the supersede
   family's cut. S5's placement follows Step 1's adjudication, never
   this step.
-- [ ] **Step 4: Run the guards.** Same command; expected 12 passed.
-- [ ] **Step 5: Commit.**
+- [x] **Step 4: Run the guards.** Same command; expected 12 passed.
+- [x] **Step 5: Commit.**
   `git commit -am "docs(cut4): adjudicate the substrate group"`
 
 ### Task 3: The store-gated arm splits — T1, R19, R22
@@ -190,7 +190,7 @@ partial selection, and unchanged standing are all legal outcomes.
   cell where arms select, or an unchanged-standing line in §4.3 where
   none does — that Task 6's accounting counts wherever it lands.
 
-- [ ] **Step 1: Adjudicate each deferred cell.** T1: the import arm is
+- [x] **Step 1: Adjudicate each deferred cell.** T1: the import arm is
   a candidate — adjudicate whether "inert entry of another observer's
   report" is reachable as a pure add through the composition root, or
   needs import machinery this slice does not build; Task 2 Step 2's
@@ -205,13 +205,13 @@ partial selection, and unchanged standing are all legal outcomes.
   raw-write half of negative (b) and negative (c)'s corpus paths are
   candidates; anything needing explicit import machinery beyond the add
   path, the audit, or the rules store defers with that name.
-- [ ] **Step 2: Write each row where Step 1 placed it** — a §4.2 cell
+- [x] **Step 2: Write each row where Step 1 placed it** — a §4.2 cell
   in the Task 2 Step 2 format where arms select, an unchanged-standing
   line in §4.3 where none does. Add one §3 paragraph stating what the
   run/report boundary gains from a durable store (records cut 3 could
   only hold as values now land and reload).
-- [ ] **Step 3: Run the guards.** Expected: 12 passed.
-- [ ] **Step 4: Commit.**
+- [x] **Step 3: Run the guards.** Expected: 12 passed.
+- [x] **Step 4: Commit.**
   `git commit -am "docs(cut4): split the store-gated T and R arms"`
 
 ### Task 4: The W sweep
@@ -227,20 +227,20 @@ partial selection, and unchanged standing are all legal outcomes.
 - Produces: either W cells for §4 or a justified unchanged group row
   that Task 5 places in §5.
 
-- [ ] **Step 1: Read all 19 W rows against one question:** does any
+- [x] **Step 1: Read all 19 W rows against one question:** does any
   row's check fail at the write boundary alone — no index, no move, no
   consolidate, no redirect, add-only? Expected outcome per the spec: few
   or none; W rows about collision, consolidation, redirects, and uid
   survival all involve the index or a move. Do not force a selection.
-- [ ] **Step 2: Write the conclusion.** If no row selects: one §3
+- [x] **Step 2: Write the conclusion.** If no row selects: one §3
   sentence — "no W row's check fails at the write boundary alone; the
   group defers unchanged" — and the group row stays in §5 with
   unblocker "the write boundary and the index, unchanged from cut 3".
   If a row selects: a §4 cell in the standard format naming exactly
   which arm runs add-only.
-- [ ] **Step 3: Run the guards.** Expected: 12 passed. (The row-range
+- [x] **Step 3: Run the guards.** Expected: 12 passed. (The row-range
   guard checks `W1–W16` endpoints exist; keep the en-dash.)
-- [ ] **Step 4: Commit.**
+- [x] **Step 4: Commit.**
   `git commit -am "docs(cut4): sweep the world-addressing rows"`
 
 ### Task 5: Standing, exclusions, and the deferred-group re-read
@@ -255,7 +255,7 @@ partial selection, and unchanged standing are all legal outcomes.
   which group).
 - Produces: the complete §4.3 and §5 that Task 6's accounting sums.
 
-- [ ] **Step 1: The full-coverage sweep.** The spec promises every row
+- [x] **Step 1: The full-coverage sweep.** The spec promises every row
   not fully exercised is read, not carried. Work through this exact
   inventory, and for each row open its owning table's cell (the
   `TABLE_OWNERS` map in `python/tests/test_designs_corpus.py:68` names
@@ -273,7 +273,7 @@ partial selection, and unchanged standing are all legal outcomes.
   No group row is reproduced in §5 until each of its members has its
   line here. A placement carried without its cell read is the defect
   this step exists to prevent.
-- [ ] **Step 2: Write §4.3.** Assemble the 34-row fully-exercised list
+- [x] **Step 2: Write §4.3.** Assemble the 34-row fully-exercised list
   — no single list exists to copy: combine cut 3 §4.3's nineteen
   exercised before cut 3 (M4, M7, M9–M11, M13 from cut 1; G1, G2b, G6,
   M6, M8, P2–P9 from cut 2) with cut 3's own fifteen selected-in-full
@@ -287,7 +287,7 @@ partial selection, and unchanged standing are all legal outcomes.
   is a semantic edit, kernel `:964`), M5 (the mint-and-edit walk is one
   scenario, carried whole, cut 3 `:280`), D7 (both remaining arms are
   moves needing the write boundary *and* the index, cut 2 `:253`).
-- [ ] **Step 3: Write §5.** Open with one sentence stating the sweep:
+- [x] **Step 3: Write §5.** Open with one sentence stating the sweep:
   every remaining row was re-read against this slice's boundary (Step
   1), none carried unread. Reproduce cut 3's group table (`:292-304`)
   with every move stated inline: each row Tasks 2–4 actually selected
@@ -302,8 +302,8 @@ partial selection, and unchanged standing are all legal outcomes.
   domain-boundary, formal-model, confinement, packaging, and kernel
   groups carry forward with any wording the new boundary forces, each
   change named and each member covered by a Step 1 line.
-- [ ] **Step 4: Run the guards.** Expected: 12 passed.
-- [ ] **Step 5: Commit.**
+- [x] **Step 4: Run the guards.** Expected: 12 passed.
+- [x] **Step 5: Commit.**
   `git commit -am "docs(cut4): standing and the deferred-group re-read"`
 
 ### Task 6: Accounting, freeze block, second reader, limitations
@@ -316,7 +316,7 @@ partial selection, and unchanged standing are all legal outcomes.
 - Consumes: every prior task's row placements.
 - Produces: the finished draft.
 
-- [ ] **Step 1: Compute the accounting, by hand.** Count the document's
+- [x] **Step 1: Compute the accounting, by hand.** Count the document's
   own placements: N_full (§4.1) + N_part (§4.2) + 34 (prior full) +
   N_standing (§4.3 untouched remainders) + N_deferred (§5) and state
   the sum is 151 *in the text*, showing the addition as cut 3 §6 does.
@@ -326,25 +326,25 @@ partial selection, and unchanged standing are all legal outcomes.
   on paper, expand each §5 range, and verify each of the 151 appears in
   exactly one state. The second reader re-runs this check at freeze
   (§7); the plan claims no mechanical cross-check exists.
-- [ ] **Step 2: Write the freeze block** in cut 3's form, prefixed:
+- [x] **Step 2: Write the freeze block** in cut 3's form, prefixed:
   this block takes force when the composition-root adapter design
   banks; until then the selection is a draft and edits need no
   amendment. After freeze: results recorded separately, original
   selection preserved verbatim beside any amendment.
-- [ ] **Step 3: Write §7 (reserved)** — one paragraph: a second reader
+- [x] **Step 3: Write §7 (reserved)** — one paragraph: a second reader
   is required at freeze, per cut 1 limitation 8's precedent; name what
   they check (arm splits against the Selection rule, the accounting,
   the group moves).
-- [ ] **Step 4: Write Limitations.** At minimum: (1) the unbounded
+- [x] **Step 4: Write Limitations.** At minimum: (1) the unbounded
   unanchored tail (chained but unanchored, anchor carriage deferred);
   (2) add-only — no edit, move, or deletion obligation is exercised;
   (3) the draft is prospective: the adapter design may move arms, and
   pre-freeze edits are ordinary; (4) durability claims rely on the
   certified tuple's binding, not on re-running the physical exerciser.
-- [ ] **Step 5: Full verification.**
+- [x] **Step 5: Full verification.**
   Run: `cd python && uv run pytest -q` (whole suite) and
   `uv run ruff check .` — Expected: all pass; the branch's changes are
   the new design, the README/guide propagation, the `_COUNT_WORDS`
   entry (all Task 1), and this plan's checkboxes — no production code.
-- [ ] **Step 6: Commit.**
+- [x] **Step 6: Commit.**
   `git commit -am "docs(cut4): accounting, freeze discipline, and limitations"`
