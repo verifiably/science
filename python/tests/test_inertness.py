@@ -25,22 +25,26 @@ def admitted_scenario():
         outcome="supported",
         interpretation_rule="rule-1",
     )
-    observations = {dataset_address(d): (ByteObservation(digest=D_IN, location="repo://data"),)}
+    address = dataset_address(d)
+    assert address is not None
+    observations = {address: (ByteObservation(digest=D_IN, location="repo://data"),)}
     admitting = (Verification(ref="v1", assessment=assessment.identity(), scope="clean-environment", verdict="passed"),)
     return d, run, assessment, observations, admitting
 
 
 def test_t4_adding_and_removing_reports_leaves_belief_admission_and_eligibility_byte_unchanged():
     d, run, assessment, observations, admitting = admitted_scenario()
+    address = dataset_address(d)
+    assert address is not None
     kwargs = closure_kwargs((assessment,), {"run-1": run})
     before_digest = build_closure(**kwargs).digest()
     before_admission = admit(assessment, run, observations, admitting)
-    before_state = admission_state(d, observations[dataset_address(d)])
+    before_state = admission_state(d, observations[address])
     reports = {r.identity(): r for r in (report(), report(event_token="tok-2"))}
     assert reports  # The reports exist and reference nothing that protects them.
     after_digest = build_closure(**kwargs).digest()
     after_admission = admit(assessment, run, observations, admitting)
-    after_state = admission_state(d, observations[dataset_address(d)])
+    after_state = admission_state(d, observations[address])
     assert after_digest == before_digest  # Byte-unchanged, not merely equal-valued.
     assert after_admission == before_admission
     assert type(after_state) is type(before_state)

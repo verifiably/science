@@ -219,7 +219,7 @@ def test_recipe_refuses_duplicate_logical_rule_bindings():
 INVALID_CLOSURE_VALUES = [
     (
         "recipe-input-scalar",
-        lambda: RecipeInput(role="observes", dataset="dataset:x", content=[]),
+        lambda: RecipeInput(role="observes", dataset="dataset:x", content=[]),  # type: ignore[arg-type]
     ),
     (
         "recipe-input-exclusion",
@@ -227,7 +227,7 @@ INVALID_CLOSURE_VALUES = [
             role="reads",
             dataset="dataset:x",
             content=D_IN,
-            exclusion=ExclusionCertification(rationale=["mutable"], attribution="tester"),
+            exclusion=ExclusionCertification(rationale=["mutable"], attribution="tester"),  # type: ignore[arg-type]
         ),
     ),
     (
@@ -240,14 +240,14 @@ INVALID_CLOSURE_VALUES = [
     ),
     (
         "environment-pair",
-        lambda: EnvironmentManifest(artifacts=(("python", []),)),
+        lambda: EnvironmentManifest(artifacts=(("python", []),)),  # type: ignore[arg-type]
     ),
     (
         "boundary-policy-member",
         lambda: BoundaryPolicy(
             identity="boundary-policy/minimal-v1",
             scope_rule="scope-derivation/v1",
-            capabilities=([],),
+            capabilities=([],),  # type: ignore[arg-type]
         ),
     ),
     (
@@ -263,7 +263,7 @@ INVALID_CLOSURE_VALUES = [
         lambda: recipe(
             nondeterminism=Seeded(
                 plan=SeedPlan(
-                    derivation_rule=[],
+                    derivation_rule=[],  # type: ignore[arg-type]
                     streams=("model-initialization",),
                     roots={"root-a": 11},
                     stream_roots={"model-initialization": "root-a"},
@@ -273,23 +273,35 @@ INVALID_CLOSURE_VALUES = [
     ),
     (
         "result-pair",
-        lambda: ResultManifest(outputs=(("outputs/result.txt", []),)),
+        lambda: ResultManifest(outputs=(("outputs/result.txt", []),)),  # type: ignore[arg-type]
     ),
     (
         "trace-scalar",
-        lambda: TraceJob(job_id=[], rule="transform", wildcards=(), inputs=(), outputs=()),
+        lambda: TraceJob(job_id=[], rule="transform", wildcards=(), inputs=(), outputs=()),  # type: ignore[arg-type]
     ),
     (
         "trace-pair",
-        lambda: TraceJob(job_id="0", rule="transform", wildcards=(("sample", []),), inputs=(), outputs=()),
+        lambda: TraceJob(
+            job_id="0",
+            rule="transform",
+            wildcards=(("sample", []),),  # type: ignore[arg-type]
+            inputs=(),
+            outputs=(),
+        ),
     ),
     (
         "receipt-pair",
-        lambda: BoundaryReceipt(scratch_mapping="scratch", argv=("snakemake",), rendered_config=(("alpha", []),)),
+        lambda: BoundaryReceipt(
+            scratch_mapping="scratch",
+            argv=("snakemake",),
+            rendered_config=(("alpha", []),),  # type: ignore[arg-type]
+        ),
     ),
     (
         "occurrence-realized-seed",
-        lambda: occurrence(realized_seeds=RealizedSeeds(seeds={"transform": {"model-initialization": []}})),
+        lambda: occurrence(
+            realized_seeds=RealizedSeeds(seeds={"transform": {"model-initialization": []}})  # type: ignore[arg-type]
+        ),
     ),
     (
         "occurrence-composite",
@@ -300,12 +312,12 @@ INVALID_CLOSURE_VALUES = [
             host_realization="host",
             trace=(),
             realized_seeds=RealizedSeeds(seeds={}),
-            receipt=[],
+            receipt=[],  # type: ignore[arg-type]
         ),
     ),
     (
         "run-composite",
-        lambda: RunClosure(recipe=recipe(), result=closure().result, occurrence=[]),
+        lambda: RunClosure(recipe=recipe(), result=closure().result, occurrence=[]),  # type: ignore[arg-type]
     ),
 ]
 

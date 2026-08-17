@@ -101,6 +101,7 @@ class TestPresenceDoesNotPromote:
 
     def test_the_mismatch_is_reported_as_a_mismatch(self):
         state = admission_state(declaration(D1), observed(D2))
+        assert isinstance(state, Declared)
         outcomes = {f.declared: f for f in state.findings}
         assert outcomes[D1].outcome == "no-matching-observation-in-coverage"
         assert any(f.outcome == "mismatch" and D2 in f.observed for f in state.findings)
@@ -109,6 +110,7 @@ class TestPresenceDoesNotPromote:
         # fb-2026-07-27-010 reached from the holding side: a failure to look is
         # not a finding of absence, so no finding may spell "unheld".
         state = admission_state(declaration(D1), ())
+        assert isinstance(state, Declared)
         assert all("unheld" not in f.outcome for f in state.findings)
 
 

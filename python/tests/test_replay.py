@@ -203,7 +203,7 @@ def test_r16_no_equivalence_rule_can_read_an_occurrence():
     with pytest.raises(MalformedRecord):
         EquivalenceImplementation(
             identity="impl-bad",
-            evaluate=lambda a, b, occurrence: "passed",
+            evaluate=lambda a, b, occurrence: "passed",  # type: ignore[arg-type]
             fixtures=(),
         )
     for held in (CONTENT_EQUALITY, DATASET_CONTENT_EQUALITY):
@@ -224,12 +224,13 @@ def test_equivalence_implementations_are_strict_immutable_values(identity, fixtu
         EquivalenceImplementation(identity=identity, evaluate=lambda a, b: "passed", fixtures=fixtures)
 
     with pytest.raises(dataclasses.FrozenInstanceError):
-        CONTENT_EQUALITY.identity = "changed"
+        CONTENT_EQUALITY.identity = "changed"  # type: ignore[misc]
 
 
 def test_r16_a_seed_violating_run_is_non_conforming_and_derives_not_certified(tmp_path):
     violating = run_assessment(tmp_path / "v", snakefile=SNAKEFILE_SEED_VIOLATING)
     clean = replay_of(violating, tmp_path / "r", snakefile=SNAKEFILE_SEED_VIOLATING)
+    assert isinstance(violating, RunMinted) and isinstance(clean, RunMinted)
     assert conformance(violating.run).startswith("non-conforming")
     assert derive_scope(violating.run, clean.run, certification=None) == "not-certified"
 
@@ -332,6 +333,7 @@ def test_r4_equal_recipes_without_a_receipt_derive_same_environment(pair):
 def test_r4_negative_a_a_hostname_change_stays_same_environment(tmp_path):
     a = run_assessment(tmp_path / "a", host_realization="host-x")
     b = replay_of(a, tmp_path / "b", host_realization="host-y")
+    assert isinstance(a, RunMinted) and isinstance(b, RunMinted)
     assert derive_scope(a.run, b.run, certification=None) == "same-environment"
     assert a.run.occurrence.receipt.capabilities == ()
 
@@ -343,6 +345,7 @@ def test_r4_negative_b_a_comment_change_is_not_certified_never_independent(tmp_p
         "import json, pathlib, random  # a comment",
     )
     b = run_assessment(tmp_path / "b", snakefile=commented)
+    assert isinstance(a, RunMinted) and isinstance(b, RunMinted)
     assert a.run.recipe.code_identity != b.run.recipe.code_identity
     assert derive_scope(a.run, b.run, certification=None) == "not-certified"
 
@@ -351,6 +354,7 @@ def test_r4_independent_implementation_needs_all_four_conditions(tmp_path):
     a = run_assessment(tmp_path / "a")
     reimplemented = SNAKEFILE_DETERMINISTIC.replace("text.upper()", "text.upper() + ''")
     b = run_assessment(tmp_path / "b", snakefile=reimplemented)
+    assert isinstance(a, RunMinted) and isinstance(b, RunMinted)
     certified = CodeLineageCertification(rationale="independent rewrite", attribution="tester")
     assert derive_scope(a.run, b.run, certification=certified) == "independent-implementation"
     assert derive_scope(a.run, b.run, certification=None) == "not-certified"
@@ -360,6 +364,7 @@ def test_r4_negative_c_a_different_spec_identity_is_not_certified(tmp_path):
     a = run_assessment(tmp_path / "a")
     other_spec = freeze(spec_draft(estimand="a different question"), held_rules=spec_rules())
     b = run_assessment(tmp_path / "b", spec=other_spec)
+    assert isinstance(a, RunMinted) and isinstance(b, RunMinted)
     certified = CodeLineageCertification(rationale="claim", attribution="tester")
     assert derive_scope(a.run, b.run, certification=certified) == "not-certified"
 
@@ -367,7 +372,7 @@ def test_r4_negative_c_a_different_spec_identity_is_not_certified(tmp_path):
 def test_code_lineage_certification_is_strict_and_immutable():
     certification = CodeLineageCertification(rationale="independent rewrite", attribution="tester")
     with pytest.raises(dataclasses.FrozenInstanceError):
-        certification.rationale = "changed"
+        certification.rationale = "changed"  # type: ignore[misc]
     with pytest.raises(MalformedRecord):
         CodeLineageCertification(rationale="", attribution="tester")
 
@@ -397,8 +402,10 @@ def test_r5_g9_unreachable_bytes_with_a_held_copy_move_none_of_the_three(pair):
             verdict="passed",
         ),
     )
-    local = {dataset_address(d): (ByteObservation(digest=D_IN, location="repo://data"),)}
-    far = {dataset_address(d): (ByteObservation(digest=D_IN, location="https://mirror.example/data"),)}
+    address = dataset_address(d)
+    assert address is not None
+    local = {address: (ByteObservation(digest=D_IN, location="repo://data"),)}
+    far = {address: (ByteObservation(digest=D_IN, location="https://mirror.example/data"),)}
     kwargs = closure_kwargs((assessment,), {"run-1": run})
     before_digest = build_closure(**kwargs).digest()
     before_admission = admit(assessment, run, local, admitting)

@@ -197,19 +197,23 @@ def test_r22_an_implementation_mapping_key_cannot_substitute_unbound_content(min
 def test_r22_the_derived_outcome_moves_only_with_the_result_or_the_rule(tmp_path):
     spec = freeze(spec_draft(), held_rules=spec_rules())
     first = run_assessment(tmp_path / "a", data="hello")
+    assert isinstance(first, RunMinted)
     baseline = build_assessment(first.run, specs={spec.identity: spec}, implementations=result_sensitive())
     again = build_assessment(first.run, specs={spec.identity: spec}, implementations=result_sensitive())
+    assert isinstance(baseline, AssessmentValue) and isinstance(again, AssessmentValue)
     assert baseline == again  # same run, same rule: byte-identical facet
     # Same rule, changed RESULT: pick fixture bytes whose output-digest parity
     # differs from the first run's, so the derived outcome provably flips.
     first_parity = int(first.run.result.outputs[0][1].split(":", 1)[1], 16) % 2
     for candidate in ("hello-1", "hello-2", "hello-3", "hello-4", "hello-5"):
         other = run_assessment(tmp_path / candidate, data=candidate)
+        assert isinstance(other, RunMinted)
         if int(other.run.result.outputs[0][1].split(":", 1)[1], 16) % 2 != first_parity:
             break
     else:
         pytest.fail("no candidate flipped the output-digest parity — widen the list")
     flipped = build_assessment(other.run, specs={spec.identity: spec}, implementations=result_sensitive())
+    assert isinstance(flipped, AssessmentValue)
     assert {baseline.outcome, flipped.outcome} == {"supported", "refuted"}
     # Same RESULT, changed rule: a successor spec freezing the inverted rule
     # derives the other outcome over byte-identical result bytes.
@@ -228,12 +232,14 @@ def test_r22_the_derived_outcome_moves_only_with_the_result_or_the_rule(tmp_path
         recorded_failures=frozenset(),
     )
     rerun = run_assessment(tmp_path / "rerun", spec=successor, data="hello")
+    assert isinstance(rerun, RunMinted)
     assert rerun.run.result == first.run.result  # the same result bytes…
     rederived = build_assessment(
         rerun.run,
         specs={successor.identity: successor},
         implementations={"impl-interp-2": inverted},
     )
+    assert isinstance(rederived, AssessmentValue)
     assert rederived.outcome != baseline.outcome  # …and the rule alone moved the outcome
     # No API path produces an assessment carrying the un-derived outcome:
     assert "outcome" not in inspect.signature(build_assessment).parameters
@@ -265,18 +271,21 @@ def test_r22_negative_a_narrowing_applicability_needs_a_successor_spec_and_a_new
     assert narrowed.identity != spec.identity
     assert minted.run.recipe.spec_identity == spec.identity  # the recorded run stays attached
     derived = build_assessment(minted.run, specs={spec.identity: spec}, implementations=interp())
+    assert isinstance(derived, AssessmentValue)
     assert derived.applicability == spec.applicability  # never the successor's
 
 
 def test_r22_negative_b_exchanged_facets_move_the_belief_digest(minted, tmp_path):
     spec = freeze(spec_draft(), held_rules=spec_rules())
     other = run_assessment(tmp_path, data="different bytes")
+    assert isinstance(other, RunMinted)
     a = build_assessment(
         minted.run,
         specs={spec.identity: spec},
         implementations=interp("supported"),
     )
     b = build_assessment(other.run, specs={spec.identity: spec}, implementations=interp("refuted"))
+    assert isinstance(a, AssessmentValue) and isinstance(b, AssessmentValue)
     exchanged_a = dataclasses.replace(a, outcome=b.outcome)
     exchanged_b = dataclasses.replace(b, outcome=a.outcome)
     straight = build_closure(**closure_kwargs((a, b), runs_for((minted.run, other.run)))).digest()
@@ -328,6 +337,7 @@ def test_r22_the_reach_arm_an_inline_exclusion_moves_the_digest_with_identical_f
         specs={plain_spec.identity: plain_spec},
         implementations=interp(),
     )
+    assert isinstance(a, AssessmentValue) and isinstance(b, AssessmentValue)
     assert a.facet_digest() == b.facet_digest()  # byte-identical derived facet values
     # Reach ISOLATION: derive a controlled pair sharing one spec identity,
     # result and occurrence. Their recipes differ only in the reads exclusion,
@@ -387,6 +397,7 @@ def test_r22_the_reach_arm_an_inline_exclusion_moves_the_digest_with_identical_f
 
 def test_r7_a_dataset_production_run_with_an_assesses_descendant_is_refused(tmp_path):
     outcome = run_production(tmp_path)
+    assert isinstance(outcome, RunMinted)
     with pytest.raises(SignatureRefused):
         build_assessment(outcome.run, specs={}, implementations={})
 

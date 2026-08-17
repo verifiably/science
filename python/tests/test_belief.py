@@ -12,6 +12,7 @@ from __future__ import annotations
 import inspect
 from dataclasses import replace
 from pathlib import Path
+from typing import TypedDict, cast
 
 import pytest
 import yaml
@@ -34,7 +35,7 @@ from science.dataset import ByteObservation, DatasetDeclaration, ResourceDeclara
 from science.errors import MalformedRecord
 from science.lineage import LineageSnapshot
 from science.policy import BELIEF_V1, BELIEF_V1_FIXTURES, BELIEF_V1_RULE, PolicyBinding, PolicyImplementation
-from science.profile import compile_profile
+from science.profile import ProfileSpec, compile_profile
 from science.projection import claim_identity
 from science.record import AssessmentValue, RunInput, RunValue, SourceAssertion
 from science.verification import Verification
@@ -75,8 +76,15 @@ def _dataset(letter: str) -> DatasetDeclaration:
 
 
 DATASET_A, DATASET_B, DATASET_C = _dataset("a"), _dataset("b"), _dataset("c")
-ADDRESS_A, ADDRESS_B = dataset_address(DATASET_A), dataset_address(DATASET_B)
-assert ADDRESS_A is not None and ADDRESS_B is not None
+
+
+def _address(dataset: DatasetDeclaration) -> str:
+    address = dataset_address(dataset)
+    assert address is not None
+    return address
+
+
+ADDRESS_A, ADDRESS_B = _address(DATASET_A), _address(DATASET_B)
 
 
 def _held(*datasets: DatasetDeclaration) -> dict[str, tuple[ByteObservation, ...]]:
@@ -84,7 +92,11 @@ def _held(*datasets: DatasetDeclaration) -> dict[str, tuple[ByteObservation, ...
     for d in datasets:
         address = dataset_address(d)
         assert address is not None
-        table[address] = tuple(ByteObservation(digest=r.digest, location="repo://data") for r in d.resources)
+        observations = []
+        for resource in d.resources:
+            assert resource.digest is not None
+            observations.append(ByteObservation(digest=resource.digest, location="repo://data"))
+        table[address] = tuple(observations)
     return table
 
 
@@ -114,7 +126,16 @@ def _fifty_inconclusive_records() -> Records:
     )
 
 
-def scenario(**overrides: object) -> dict[str, object]:
+class _Scenario(TypedDict):
+    proposition: str
+    records: Records
+    availability: Availability
+    context: SuppliedContext
+    binding: PolicyBinding
+    profile: ProfileSpec
+
+
+def scenario(**overrides: object) -> _Scenario:
     a1, a2 = _assessment("spec-a", "run-a"), _assessment("spec-b", "run-b")
     runs = {"run-a": _run("run-a", "spec-a", DATASET_A), "run-b": _run("run-b", "spec-b", DATASET_B)}
     verifications = (
@@ -149,7 +170,7 @@ def scenario(**overrides: object) -> dict[str, object]:
         "profile": PROFILE,
     }
     kwargs.update(overrides)
-    return kwargs
+    return cast(_Scenario, kwargs)
 
 
 class TestP1TheBindingIsExact:
@@ -163,6 +184,7 @@ class TestP1TheBindingIsExact:
 
     def test_the_exact_binding_computes(self):
         result = evaluate(**scenario())
+        assert isinstance(result, Belief)
         assert result == Belief(2, result.belief_input_digest, scenario()["binding"])
 
 
@@ -237,6 +259,7 @@ class TestP4TheAbsencesAreDistinguishable:
         fifty = evaluate(**scenario(records=_fifty_inconclusive_records()))
         assert isinstance(balanced, Belief)
         for result in (no_eligible, fifty):
+            assert isinstance(result, NoBelief)
             assert not result.reason.startswith("unavailable-")
 
     def test_corpus_absent_is_defined_and_unreached(self):
@@ -392,6 +415,7 @@ class TestG8AFailingVerificationForcesADifferentAnswer:
 
     def test_deleting_the_failure_returns_the_assessment(self):
         original = evaluate(**scenario())
+        assert isinstance(original, Belief)
         kwargs = scenario()
         _a1, a2 = kwargs["records"].assessments
         failing = Verification(ref="v-fail", assessment=a2.identity(), scope="clean-environment", verdict="failed")

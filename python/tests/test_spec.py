@@ -38,17 +38,17 @@ from science.spec import (
 
 def test_r20_deterministic_with_a_plan_is_unspellable():
     with pytest.raises(TypeError):
-        Deterministic(plan=plan())  # the variant carries nothing — refused by the type
+        Deterministic(plan=plan())  # type: ignore[call-arg]  # the variant carries nothing — refused by the type
 
 
 def test_r20_stochastic_unseeded_with_a_plan_is_unspellable():
     with pytest.raises(TypeError):
-        StochasticUnseeded(rationale="honest", plan=plan())
+        StochasticUnseeded(rationale="honest", plan=plan())  # type: ignore[call-arg]
 
 
 def test_r20_seeded_without_a_plan_is_unspellable():
     with pytest.raises(TypeError):
-        Seeded()
+        Seeded()  # type: ignore[call-arg]
 
 
 def test_r20_multi_root_plan_without_a_total_mapping_is_refused():

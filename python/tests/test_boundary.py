@@ -371,6 +371,7 @@ def test_r17_seed_shopping_cannot_occur_at_all(minted):
 
 def test_r17_a_deleted_or_never_recorded_attempt_is_undetectable(tmp_path):
     refused = run_assessment(tmp_path, spec=spec_draft())
+    assert isinstance(refused, RunRefused)
     assert refused.report is not None
     held_records = {refused.report.identity(): refused.report}
     held_records.clear()

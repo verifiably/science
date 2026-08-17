@@ -199,6 +199,7 @@ def test_r18_mutating_any_receipt_field_moves_receipt_report_and_verification(pa
     receipt = original.run.occurrence.receipt
     baseline = receipt.identity()
     verification = verification_of(pair)
+    assert isinstance(verification, AssessmentVerification)
     report = verification.report
     for field, value in [
         ("scratch_mapping", "some-other-mount"),
@@ -401,6 +402,7 @@ def test_r8_the_rule_cannot_be_chosen_after_the_outputs_are_seen(tmp_path):
     spec = freeze(spec_draft(nondeterminism=Deterministic()), held_rules=spec_rules())
     original = run_assessment(tmp_path / "a", snakefile=SNAKEFILE_NONDETERMINISTIC, spec=spec)
     replayed = replay_of(original, tmp_path / "b", snakefile=SNAKEFILE_NONDETERMINISTIC)
+    assert isinstance(original, RunMinted) and isinstance(replayed, RunMinted)
     failing = build_verification(
         original.run,
         replayed.run,

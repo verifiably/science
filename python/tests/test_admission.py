@@ -93,6 +93,7 @@ class TestG6:
         # Regardless of verification state: the gate refuses before reading it.
         corpus = dataset()
         result = admit(assessment(), run(RunInput(role="reads", dataset=corpus)), held(corpus), ADMITTING)
+        assert isinstance(result, AdmissionRefused)
         assert result.reason.startswith("no-observes-input")
 
 

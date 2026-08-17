@@ -395,5 +395,5 @@ def test_closure_is_sealed_against_subclassing():
 
     with pytest.raises(SubclassRefused):
 
-        class Subclass(Closure):
+        class Subclass(Closure):  # type: ignore[misc]
             pass
