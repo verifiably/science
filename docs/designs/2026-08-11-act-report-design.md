@@ -371,9 +371,9 @@ fail.
 4. **The agentic surface** (kernel sub-problem 6): audit scheduling,
    liveness, the divergence table — untouched.
 5. **The engine.** The operation intent reuses the log's existing
-   intent/reduction machinery; A7's engine half landed 2026-08-14, while
-   everything durable in Science still waits on `atoms` A8 and composition-root
-   adoption. Operational duties stay tabled with the engine bill.
+   intent/reduction machinery; A7's engine half landed 2026-08-14 and A8's
+   certification landed 2026-08-17, while everything durable in Science still
+   waits on composition-root adoption. Operational duties stay tabled with the engine bill.
 
 ## 7. What this changes elsewhere
 

@@ -2370,17 +2370,16 @@ and wrong.
 ## 9. The `atoms` boundary
 
 `atoms` completed A7 on 2026-08-14: durable transaction records, coherent
-capture, and effect/recovery execution now exist, and the executor mutates
-approved project paths under its test allowlist. Production volume binding still
-refuses every volume until A8's persistence-cut exerciser and durability
-certification land. This design is written so that **nothing in it waits on
-A8**, and so that what changes at adoption is stated rather than assumed.
+capture, and effect/recovery execution now exist. A8's persistence-cut exerciser
+and durability certification landed 2026-08-17, admitting one exact production
+tuple. This design is written so that **nothing in it waits on composition-root
+adoption**, and so that what changes there is stated rather than assumed.
 
 **Content addressing is not durability.** A hash-named artifact in an ordinary
 directory is content addressing, available today, and it is what specs, datasets,
 runs and outputs need. `atoms` is required for atomic multi-file commit and for
 tamper evidence — different capabilities, and keeping them apart is what stops
-this design stalling on A8 or composition-root adoption.
+this design stalling on composition-root adoption.
 
 **What this design builds:** content identity for specs, datasets, runs and outputs
 (`science.identity.v1`, §4.3); the execution boundary and its receipts; the code

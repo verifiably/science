@@ -175,9 +175,9 @@ Strengthening it to the full claim requires every attempt to be registered
 durably *before* execution, in an append-only sequence the author cannot rewrite.
 `atoms` — a write-ahead journaling engine — is the natural home for such a
 registry. A7's chain and effect/recovery executor landed 2026-08-14, including
-the engine half of pre-mutation registration. Production volume binding still
-refuses every volume until A8's durability certification, and Science still
-owes composition-root adoption, anchor carriage, and verification, so this is
+the engine half of pre-mutation registration; A8's durability certification
+landed 2026-08-17. Science still owes composition-root adoption, anchor carriage,
+and verification, so this is
 not yet a present Science capability. `atoms`' authority design §15 recorded the
 obligation — including that its recovery journal alone is not the registry —
 and the A7 implementation discharges the engine half. Recorded here so that a

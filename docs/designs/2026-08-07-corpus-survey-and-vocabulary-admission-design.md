@@ -523,7 +523,7 @@ context in which a plausible-sounding relation gets invented for a single record
 
 **Stop rule, inherited unchanged from the disposition record's §5.5.** No belief
 computed, no persistence boundary crossed. A typing that would require either is
-recorded as *blocked on A8 and composition-root adoption*, not worked around.
+recorded as *blocked on composition-root adoption*, not worked around.
 
 ### 6.1 What the run measured
 

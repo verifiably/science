@@ -22,8 +22,8 @@ ramp's §4 retrieval boundary (preflight refusals, retrieval bounds, and the
 `byte-locator-untested` / `retrieval-failed` vocabulary, reused as the acts'
 dereference contract, §3); the tamper-evident log design (its own table `L`;
 its `intent`/`fulfills` discipline, reused by managed mutations, §3;
-guarantees stated at the strength they have until `atoms` A8 and the
-composition root land);
+guarantees stated at the strength they have until the composition root lands;
+`atoms` A8 landed 2026-08-17);
 conformance cut 2
 (`2026-08-09-conformance-cut-2.md`) §2.1 item 1 — the slice consumes byte
 observations as supplied arguments and settles nothing about their store, "an
@@ -470,8 +470,8 @@ audit reaches its location, exactly as a hand-forged verification stands until
 audited. This is the act-bound ruling's own bound ("tamper detection at import
 and under audit, and nothing in between") and it is inherited here, not
 improved. `atoms` A7 landed the engine half of pre-mutation registration on
-2026-08-14. Detectable removal for Science still requires A8 durability
-certification, composition-root adoption, and a surviving anchor; only then is a
+2026-08-14, and A8 landed durability certification on 2026-08-17. Detectable
+removal for Science still requires composition-root adoption and a surviving anchor; only then is a
 record with no registered provenance itself detectable. Until then, saying
 otherwise would be claiming an end-to-end guarantee the system does not carry.
 
@@ -1005,8 +1005,9 @@ that builds the persistence seam; none is claimed exercised by this document.
    (§3 there), and the look's non-report lands in the closing report's entries
    — or, operator-crashed, as the durable unmatched intent.*
 7. **The engine.** Persistence, the tamper-evident log's strengthening, and
-   every operational duty (who runs audits, on what cadence) wait on `atoms`
-   A8 and the composition root; A7's engine half landed 2026-08-14. §3's
+   every operational duty (who runs audits, on what cadence) wait on the
+   composition root; A7's engine half landed 2026-08-14 and A8's certification
+   landed 2026-08-17. §3's
    consistent-read boundary adds one **named item** to that bill, under
    authority §12.2's Plan B: the consumer-facing coordinator read command
    (dereference-and-hash under the private lease); post-state capture on

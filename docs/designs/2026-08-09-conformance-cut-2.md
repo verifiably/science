@@ -20,6 +20,28 @@ the design §10 item 1 named as the most consequential open question landed —
 
 ---
 
+> **Status amendment 2026-08-17.** `atoms` A8 landed; the live prerequisite
+> descriptions below now name composition-root adoption alone. This changes no
+> frozen selection. Original prerequisite text, preserved verbatim:
+>
+> **World persistence's prerequisites are not discharged.** The world-index build
+> is X1–X12 with **X2 gated on `atoms` A8 and composition-root adoption**. A7's
+> engine half landed 2026-08-14, but neither remaining prerequisite has; the `nodes`
+> contract deltas (ledger artifact 3) block profile implementation and are not on
+> `nodes` main; and the world layer's availability outcomes presuppose the index
+> that carries them. A cut there today would be partial selections arranged
+> around an absent substrate.
+>
+> | packaging | X1–X12 | 12 | world export; X2 additionally gated on `atoms` A8 and composition-root adoption |
+> | tamper log | L1–L13 | 13 | `atoms` A8 and composition-root adoption |
+>
+> 3. **What cut 3 is.** §2 argues run capture and world persistence each fail a
+>    prerequisite today; it does not rank them. The first is unblocked by
+>    designing the holdings record; the second by `atoms` A8,
+>    composition-root adoption, and the `nodes` deltas. A7's engine half landed
+>    2026-08-14 without changing that stop-rule outcome. Whichever prerequisite
+>    set lands first likely names the cut.
+
 ## 1. What this cut is drawn against
 
 Cut 1 (`2026-08-05-review-disposition-and-conformance-cut-1.md` §5) froze over
@@ -70,8 +92,9 @@ build a run boundary that cannot admit anything, which exercises no R row's
 positive arm.
 
 **World persistence's prerequisites are not discharged.** The world-index build
-is X1–X12 with **X2 gated on `atoms` A8 and composition-root adoption**. A7's
-engine half landed 2026-08-14, but neither remaining prerequisite has; the `nodes`
+is X1–X12 with **X2 gated on composition-root adoption**. A7's engine half
+landed 2026-08-14 and A8 landed 2026-08-17. Composition-root adoption remains;
+the `nodes`
 contract deltas (ledger artifact 3) block profile implementation and are not on
 `nodes` main; and the world layer's availability outcomes presuppose the index
 that carries them. A cut there today would be partial selections arranged
@@ -258,8 +281,8 @@ appear in §4 and not here.
 | world addressing | W1–W16, W5a, W8a, W8b | 19 | the world index. The §6.2 projection **function** is built and exercised through G9's arms, but every W row's check sits at the write boundary or the index, so none is selected — the same line cut 1 drew between M8's clause and D4's rows |
 | substrate write & traversal | S1, S1a, S2, S3, S4, S7, S8 | 7 | the write API and the world layer's stored-corpus traversal — where S5's deferred walk half also waits |
 | kernel, at other boundaries | **G5**, **G7** | 2 | G5 — the authoring surface and kind registry, where *"no such kind exists"* is a checkable claim; G7 — the mint path. Both sat in cut 1's kernel-and-belief group; neither unblocks on the evaluator |
-| packaging | X1–X12 | 12 | world export; X2 additionally gated on `atoms` A8 and composition-root adoption |
-| tamper log | L1–L13 | 13 | `atoms` A8 and composition-root adoption |
+| packaging | X1–X12 | 12 | world export; X2 additionally gated on composition-root adoption |
+| tamper log | L1–L13 | 13 | composition-root adoption |
 | correction lifecycle | C1–C10 | 10 | retraction records — where G8's deferred arm and G2c's retraction-clause of "active" also wait |
 | normative contract — contract cut | N1, N3 | 2 | the first contract cut |
 | normative contract — certification | N4–N9 | 6 | instrument certification and parity machinery |
@@ -397,7 +420,7 @@ every entry is navigational.
    differently. One of the two costs is paid once and the other on every cut.
 3. **What cut 3 is.** §2 argues run capture and world persistence each fail a
    prerequisite today; it does not rank them. The first is unblocked by
-   designing the holdings record; the second by `atoms` A8,
-   composition-root adoption, and the `nodes` deltas. A7's engine half landed
-   2026-08-14 without changing that stop-rule outcome. Whichever prerequisite
+   designing the holdings record; the second by composition-root adoption and
+   the `nodes` deltas. A7's engine half landed 2026-08-14 and A8 landed
+   2026-08-17; the stop-rule outcome remains unchanged. Whichever prerequisite
    set lands first likely names the cut.

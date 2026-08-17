@@ -1146,7 +1146,7 @@ them, and the gap is exactly as wide as that omission predicts.
 | **CA†** construction authority | each value has a **closed set of permitted constructors** — authored, derived, compiled, or boundary-minted — and no other path constructs it | 9 |
 | **PC†** path coherence | two sanctioned paths from equivalent inputs must agree; the square commutes | 4 |
 | **EO†** effect ordering | one effect durably precedes another within a single act | 3 |
-| **DU†** durable atomicity | crash-atomic and survives a persistence cut (gated on `atoms` A8 and composition-root adoption) | 2 |
+| **DU†** durable atomicity | crash-atomic and survives a persistence cut (gated on composition-root adoption) | 2 |
 | **OF†** oracle falsifiability | every oracle row must be capable of failing; one that passes under sabotage is defective | 1 |
 
 **RF and US must stay distinct.** Refusal is a runtime answer — the act was
