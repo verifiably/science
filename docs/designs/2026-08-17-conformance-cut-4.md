@@ -40,11 +40,18 @@ Out of scope, each named with where it waits:
 
 - **the family dialects** (supersede, archive, import/cohort) — wait for
   their own adapters, Plan B item 2;
+- **the deletion surface** — removing a record is one of the edit-shaped
+  writes §1 assigns to those same adapters, Plan B item 2's later cuts;
 - **the managed holdings root** — the verified-holdings store's own
   management surface is not the corpus-write adapter's target, and waits on
   an adapter this slice does not build;
-- **the world index** — waits on composition-root adoption together with the
-  `nodes` contract deltas, as cut 3 restated;
+- **the world index** — waits on the `nodes` contract deltas, which are not
+  on `nodes` main, and on the index those deltas carry being built, as cut 3
+  stated it; its other condition there, composition-root adoption, is what
+  this cut is drawn against (§5);
+- **the audit** — no audit operation runs here, so every *caught only under
+  audit* clause the cells below name waits on the reproducibility audit's
+  own future slice;
 - **retraction records** — subtracting standing without deleting a record is
   an edit-shaped write, outside this slice's add-only surface;
 - **the rules store and resolver** — remain unbuilt, exactly as cut 2's P1
@@ -146,7 +153,7 @@ boundary and the index, unchanged from cut 3.
 | **S3** | a stale semantic hash refused on import, where *import* is the substrate consolidation design §4.2.1 sense — an untrusted write — and not the import/cohort **plan family** this cut excludes: a record whose stored hash disagrees with its fields is raw-written into the durable store and the read refuses it. The refusal half needs no edit at all — a refusable record is *constructed* stale rather than edited stale — so the row's own word "hand-edit" names a construction, not a dependency on the excluded edit surface. **Negative**, pinning §4.3's bound: raw-write a record whose fields and stored hash agree with each other and with nothing that preceded them, and assert it passes undetected. The negative is neither strengthened nor weakened by durability here — the chain records committed transactions, and a raw write is not one — so what it pins is exactly §4.3's recorded-history limitation, the G4/G8 pattern the substrate table's own footnote names below it |
 | **S7** | eligibility enforced at **both** boundaries, both of which this slice builds. The write boundary (substrate consolidation design §6.2 item 1): the add path refuses to mint an inadmissible `assesses` edge. The profile-level corpus check (item 2): a file raw-written into the durable store carrying an `assesses` edge whose run has no `observes` input is reported `eligibility-unmet` by the check reading that store, under the Science-owned code namespace §6.2 fixes. The cross-node predicate spans assessment → run → `observes` → dataset → facet — kernel kinds and the `science` base profile's own `empirical-observation` facet, corrected there by the domain-extension boundary — so no clause of it reaches the excluded **registry compile**. The row's stated bound, that a raw write producing a *valid* node is intentionally unreported, is pinned by S8's negative construction — a raw write with the static check asserted silent — while the corpus check's own silence on a *valid* node remains §4.2.1's stated bound rather than an arm of either row |
 | **S8** | the static claim over the code this cut wires: no module outside the write API constructs or receives a mutable `Corpus`, checked by AST — the capability boundary §4.2.1 chose precisely so that a new writer cannot escape by being undiscovered. The claim gains its first durable subject here, the composition root where the corpus-write adapter is the handle's one holder. **Negative:** write a corpus file with a raw filesystem call and assert S8 does **not** fire — the limit pinned, then validated by §4.3's stale-hash check and §6.2's corpus check, which are S3 and S7 and are selected in this same cut, subject to the recorded-history limitation the row carries |
-| **W3** | a `source` created with **no accepted external identifier** (no DOI, PMID, ISBN or accession) and a `dataset` created with **no content identity** — the §1.1 DepMap case, a programme named with no release pinned — both **refused**, not silently coerced to a curation `note`: the world-addressing design's own rule (`2026-08-02-world-addressing-design.md:364`) puts the refusal **at the write boundary**, over the record being minted and nothing else. A curation note is authored instead as its own explicit add; supplying the basis afterward mints the world entity as a second, separate add — two mints, never an edit, so §3's add-only reading reaches both. **Negative:** no title-and-year fallback exists to be reached — the refusal has no derived-identity escape. **Negative — identity is not holding, the admission-ramp narrowing** (`2026-08-09-admission-ramp-design.md` §6.4): a `dataset` whose content identity is recorded and whose bytes are **not held anywhere** is **minted**, not refused — `declared`, addressable and referenceable; the add path performs no holding check, since `declared`/`held` is a state derived on read (by `G2b`, fully exercised) and never gated at write. No clause of the row reaches the index, a move, `consolidate`, or a redirect: the check is entirely over one mint attempt's own fields |
+| **W3** | a `source` created with **no accepted external identifier** (no DOI, PMID, ISBN or accession) and a `dataset` created with **no content identity** — the §1.1 DepMap case, a programme named with no release pinned — both **refused**, not silently coerced to a curation `note`: the world-addressing design's own rule (`2026-08-02-world-addressing-design.md:364`) puts the refusal **at the write boundary**, over the record being minted and nothing else. A curation note is authored instead as its own explicit add; supplying the basis afterward mints the world entity as a second, separate add — two mints, never an edit, so §3's add-only reading reaches both. **Negative:** no title-and-year fallback exists to be reached — the refusal has no derived-identity escape. **Negative — identity is not holding, the admission-ramp narrowing** (`2026-08-09-admission-ramp-design.md` §6.4): a `dataset` whose content identity is recorded and whose bytes are **not held anywhere** is **minted**, not refused — `declared`, addressable and referenceable; the add path performs no holding check, since `declared`/`held` is derived on read and never stored — cut 2's own arms over the same record, `G9`'s *derived, never stored* clause and `G2b`'s refusal of a `declared` input — so what this negative narrows is a write-time non-check. No clause of the row reaches the index, a move, `consolidate`, or a redirect: the check is entirely over one mint attempt's own fields |
 
 ### 4.2 Selected in part
 
@@ -336,14 +343,19 @@ enumerate their arms formally, and the splits in §4.2 are this document's
 reading of each row's test cell.
 
 The identity is checked by hand, and there is no other way to check it. A
-selection cell legitimately names other rows in bold — S8's negative cites
-S3 and S7, G9's clause cites W3 and `G2b`, R22's companion negative cites S3
-and S7 again — so any pattern that read bold row ids out of §4 would score a
-citation as a placement. §5's group rows carry ranges rather than members, so
-`X1–X12` and `W4–W16` must be expanded before there is anything to count. The
-check was therefore made by writing out all 151 ids on paper: the four of
-§4.1 (**S3**, **S7**, **S8**, **W3**); the eight of §4.2 (**S1**, **S1a**,
-**S5**, **R19**, **R22**, **G9**, **R23**, **N2**); the 34 and the 23 that
+cell legitimately names other rows in bold — **N2**'s cell bolds **S4** and
+**G5**, neither of which it selects, the doctrine being what refuses the one
+and excludes the other — so any pattern that read bold row ids out of §4
+would score a citation as a placement. §5's *Leaves:* clauses are the
+stronger case: they bold the ids of rows that left a group, **W3** in world
+addressing and **S3**, **S7**, **S8**, **S1**, **S1a** in substrate write &
+traversal, and every one of those is counted in §4 — so the same pattern run
+over §5 would count each of them a second time. §5's group rows carry
+ranges rather than members besides, so `X1–X12` and `W4–W16` must be
+expanded before there is anything to count. The check was therefore made by
+writing out all 151 ids on paper: the four of §4.1 (**S3**, **S7**, **S8**,
+**W3**); the eight of §4.2 (**S1**, **S1a**, **S5**, **R19**, **R22**,
+**G9**, **R23**, **N2**); the 34 and the 23 that
 §4.3 enumerates by name; and each of §5's thirteen groups expanded to its
 members, 5 + 18 + 2 + 2 + 12 + 13 + 10 + 2 + 6 + 1 + 7 + 3 + 1 = 82. Every
 one of the corpus's 151 rows appears once and once only.
@@ -379,9 +391,13 @@ document.
 A second reader is required before this cut freezes, and this section is
 reserved for what they return. Cut 1's limitation 8 set the precedent — a cut
 drawn by its author against rows that author also reads is not
-self-checking — and every classification error found in cuts 1, 2 and 3 ran
-the same way, toward overstating coverage; cut 3 accordingly ran its reading
-before its freeze, and all four findings it returned moved arms **out**. The
+self-checking — and every arm-level classification error found in cuts 1, 2
+and 3 ran the same way, toward overstating coverage. The one recorded
+exception is not an arm error: cut 3's §7.1 finding 1 calls itself *"the one
+finding in three readings whose correction moved coverage **up**"*, and it
+moved because the execution boundary had been mis-drawn, not because an arm
+was re-read. Cut 3 accordingly ran its reading before its freeze, and of the
+four findings it returned, every arm a finding moved, it moved **out**. The
 reader here is given the banked row texts and §2's boundary declaration, not
 this document's rationale, and is instructed to attack the draft in that known
 direction. Three things are theirs to check. **The arm splits of §4.1 and

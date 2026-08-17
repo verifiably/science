@@ -184,7 +184,9 @@ implementation**: a guarantee row awaiting code is work, not a question.
   `atoms` engine adopted at Science's composition root, add-only,
   corpus-write minting alone, with no L row selected because registration
   is engine-supplied. World persistence and anchor carriage remain outside
-  it — the draft names the *next* persistence cut as their owner, so cut
+  it, each on its own condition — the draft names the *next* persistence
+  cut as anchor carriage's owner, and routes the world index through the
+  `nodes` contract deltas and the index they carry being built — so cut
   3's one-cut-or-two question is still not ruled. What remains open is the
   per-row selection itself, the freeze, and that next-cut question.
   ([conformance cut 3](../designs/2026-08-11-conformance-cut-3.md),
