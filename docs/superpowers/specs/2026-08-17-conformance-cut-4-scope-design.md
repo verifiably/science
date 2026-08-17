@@ -18,16 +18,22 @@ Three scope decisions are settled:
 
 1. **Operation surface: the corpus-write adapter only** (Plan B item 1).
    The family dialects — supersede, archive, import/cohort — are Plan B
-   item 2 and wait for their own adapters in later cuts. Arms that require
-   an edit (S2's mint-and-supersede, S5's snapshot walk, M5's edit half)
-   stay partial, recorded under the rule that any unrun arm leaves a row
-   partial.
-2. **Tamper log: out, with the anchor seat reserved.** No L row is
-   selected; the log ships in the next persistence cut. The adapter's
-   `TransactionSpec` compilation names the position where the log append
-   will join the same atomic commit, so the log later extends the spec
-   rather than reworking the adapter. Records written before the log cut
-   are pre-chain; the cut states this as a limitation.
+   item 2 and wait for their own adapters in later cuts. The slice is
+   add-only: edits, moves, and deletions are outside its surface, so a row
+   whose remaining arms need one — S2, S4, S5, G3, G7, M5, and D7 among
+   them — gains no arm and defers whole, under the rule that any unrun
+   arm leaves a row partial.
+2. **Tamper log: no L row selected; the chain is engine-supplied from the
+   first commit.** Registration is an engine facility (tamper-log design
+   §2.1): the `atoms` executor appends the registration entry inside every
+   transaction, and `TransactionSpec` already carries `consumer_tag`,
+   `intent_digest`, and `fulfills` — the adapter reserves nothing and adds
+   no effect. What the next persistence cut adds is anchor carriage and
+   Science-side verification — cut 3's intent/reduction semantics meeting
+   the durable chain — and it selects the L rows then. Until anchor acts
+   exist, every committed transaction is **chained but unanchored**; the
+   cut states the unbounded unanchored tail as a limitation. There are no
+   pre-chain records.
 3. **Freeze timing: draft now, freeze when the composition-root adapter
    design banks.** The adapter design waits on the `nodes`
    write-plan/executor seam freeze. Until it banks, the cut's status header
@@ -45,24 +51,30 @@ In scope:
 
 Out of scope, each named in the cut's boundary section: the family
 dialects; the managed holdings root; the world index; retraction records;
-the rules store; the registry compile; the tamper log (reserved seat and
-pre-chain limitation per §1 item 2).
+the rules store; the registry compile; the L rows and anchor carriage
+(the engine-supplied chain and the unanchored-tail limitation per §1
+item 2).
 
 ## 3. Candidate groups for the selection reading
 
 The reading sweeps every row not fully exercised (117), row by row. Arms
 are expected mainly in:
 
-- **substrate write & traversal** — S1, S1a, S3, S4, S7, S8; S2 and S5
-  contribute only their non-edit halves;
-- **M5** — the founding mint walk's store half, not the edit;
-- **G3** — the corpus-move negative;
-- **G7** (the mint path) and possibly **G5** (the authoring surface);
-- **D7** — the write-boundary half, the index half still deferred;
+- **substrate write & traversal** — S1, S1a, S3, S7, S8. S2 and S5 defer
+  whole (their remaining arms are an edit and a deletion), as does S4
+  (it observes the semantic-change branch, which this slice does not
+  build);
+- possibly **G5** — the authoring surface's no-such-kind refusal;
 - **T1** — the import arm, as a store operation;
 - **R19, R22** — their store-gated arms;
 - any **W** row whose check fails at the write boundary alone, without the
   index.
+
+Rows the boundary excludes outright, against cut 3's own placements:
+**M5** (the founding mint-and-edit walk is one scenario, carried whole),
+**G3** (the remaining negative moves an entity between corpora — world
+persistence), **G7** (its walk is a semantic edit), and **D7** (both
+remaining arms are moves needing the write boundary *and* the index).
 
 No group pre-commits a selection; the draft's per-row cells make each
 call.
