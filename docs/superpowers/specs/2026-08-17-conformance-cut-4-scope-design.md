@@ -64,7 +64,6 @@ are expected mainly in:
   whole (their remaining arms are an edit and a deletion), as does S4
   (it observes the semantic-change branch, which this slice does not
   build);
-- possibly **G5** — the authoring surface's no-such-kind refusal;
 - **T1** — the import arm, as a store operation;
 - **R19, R22** — their store-gated arms;
 - any **W** row whose check fails at the write boundary alone, without the
@@ -73,8 +72,11 @@ are expected mainly in:
 Rows the boundary excludes outright, against cut 3's own placements:
 **M5** (the founding mint-and-edit walk is one scenario, carried whole),
 **G3** (the remaining negative moves an entity between corpora — world
-persistence), **G7** (its walk is a semantic edit), and **D7** (both
-remaining arms are moves needing the write boundary *and* the index).
+persistence), **G5** (the kind registry is where *"no such kind exists"*
+becomes checkable — cut 2 §5 — and the registry compile is out of scope,
+so the refusal would be vacuous and fail N2's sabotage doctrine), **G7**
+(its walk is a semantic edit), and **D7** (both remaining arms are moves
+needing the write boundary *and* the index).
 
 No group pre-commits a selection; the draft's per-row cells make each
 call.
