@@ -20,9 +20,13 @@ Three scope decisions are settled:
    The family dialects — supersede, archive, import/cohort — are Plan B
    item 2 and wait for their own adapters in later cuts. The slice is
    add-only: edits, moves, and deletions are outside its surface, so a row
-   whose remaining arms need one — S2, S4, S5, G3, G7, M5, and D7 among
+   whose remaining arms need one — S2, S4, G3, G7, M5, and D7 among
    them — gains no arm and defers whole, under the rule that any unrun
-   arm leaves a row partial.
+   arm leaves a row partial. S5 is a candidate, not a whole deferral:
+   its cut-2 remainder holds both the read-only walk that produces the
+   snapshot from a store and the deletion negative, and the walk must be
+   adjudicated against the boundary (does it need only stored-corpus
+   traversal, or the world resolver?) while the deletion clause defers.
 2. **Tamper log: no L row selected; the chain is engine-supplied from the
    first commit.** Registration is an engine facility (tamper-log design
    §2.1): the `atoms` executor appends the registration entry inside every
@@ -60,10 +64,12 @@ item 2).
 The reading sweeps every row not fully exercised (117), row by row. Arms
 are expected mainly in:
 
-- **substrate write & traversal** — S1, S1a, S3, S7, S8. S2 and S5 defer
-  whole (their remaining arms are an edit and a deletion), as does S4
-  (it observes the semantic-change branch, which this slice does not
-  build);
+- **substrate write & traversal** — S1, S1a, S3, S7, S8, and S5's
+  snapshot-walk remainder (cut 2 §4.2: the walk that produces the
+  snapshot from a store, adjudicated against the world-resolver
+  question; its deletion negative defers). S2 defers whole (its cell is
+  pure edit), as does S4 (it observes the semantic-change branch, which
+  this slice does not build);
 - **T1** — the import arm, as a store operation;
 - **R19, R22** — their store-gated arms;
 - any **W** row whose check fails at the write boundary alone, without the
@@ -107,8 +113,11 @@ suite must discharge.
 - The accounting identity (selected in full + in part + fully exercised
   prior + part-exercised prior + fully deferred = 151) is checked by hand
   in the draft, as in prior cuts.
-- Work happens on `docs/cut-4-selection`; the draft lands as a docs-only
-  commit.
+- Work happens on `docs/cut-4-selection`. A twenty-third design forces
+  guard propagation in the same commit: the README count/table/date, a
+  guide citation, and a `23: "Twenty-three"` entry in the guard's
+  `_COUNT_WORDS` table — the one test edit, demanded by the guard
+  itself. No production code changes.
 
 ## 6. Dependencies and non-goals
 
