@@ -121,9 +121,17 @@ the previous occurrence's post-state). So the build:
    `expected_digest` is cross-checked against the state that op will actually
    see — the disk read for a first occurrence, the derived state after — with
    the `sha256:` prefix added when building `FileState`s and stripped when
-   comparing. A mismatch or absence refuses before any effect
-   (`ExecutionError`, that op's index, `applied=0`). Creates read nothing;
-   `CreateFileNoClobber` enforces absence engine-side.
+   comparing. Alongside the digest, **every operation's implicit existence
+   precondition is checked against the state it will actually see**: a later
+   create on a path whose derived state is present, or a later replace or
+   delete on a path whose derived state is `ABSENT`, is unsatisfiable by
+   construction. Any mismatch, absence, or unsatisfiable precondition refuses
+   before any effect (`ExecutionError`, that op's index, `applied=0`) — a
+   create's pre-state is always `ABSENT` and cannot be derived, so without
+   this check a create-after-present plan would fall through to the engine's
+   timeline validation and surface mislabeled as an adapter bug.
+   First-occurrence creates read nothing; `CreateFileNoClobber` enforces
+   absence engine-side.
 3. **Effects** — the seam §6 mapping verbatim: `CreateOp → CreateFileNoClobber`,
    `ReplaceOp → ReplaceFile`, `DeleteOp → DeletePath`, with deterministic
    position-derived effect ids (`op-<index>`). Created and replacement
@@ -140,8 +148,12 @@ the previous occurrence's post-state). So the build:
    `{"op": "delete", "path": …, "expected_digest": …}`. Then
    `intent_digest = "sha256:" + digest("science.corpus-write-intent.v1", projection)`
    — the prefix is mandatory for the spec's format check.
-6. **Constants** — `consumer_tag = "science.corpus-write.v1"`,
-   `dependencies=()`, `fulfills=None`, `registered_paths=()`: the adapter
+6. **Assembly** — the adapter calls the engine's `build_spec` and never
+   constructs a `TransactionSpec` directly: `build_spec` supplies
+   `schema_version` from the engine's `SCHEMA_VERSION` constant and imposes
+   canonical ordering, so the adapter cannot ship a stale version literal.
+   Its constants: `consumer_tag = "science.corpus-write.v1"`,
+   `dependencies=()`, `fulfills=None`, `registered_paths=()` — the adapter
    reserves nothing and adds no effect of its own. The engine's automatic
    registration-chain append happens inside every transaction regardless;
    per cut 4, every transaction this slice commits is **chained but
@@ -192,11 +204,22 @@ The complete mapping:
 | failure | raised | fields |
 |---|---|---|
 | lexical/reserved/op-kind malformedness | `PlanRefusedError` | before any read |
-| pre-state mismatch or absence at build | `ExecutionError` | that op's `index`, `applied=0` |
-| `ProjectApprovalRefused` (rooted proof) | `ExecutionError` | `index=None`, `applied=0` |
-| `SpecValidationError` (adapter-built spec fails compile — an adapter bug) | `ExecutionError` | `index=None`, `applied=0` |
-| `PreconditionRefused`, `CapabilityUnavailable`, `MetadataStoreInvalid`, other clean refusals | `ExecutionError` | `index=None`, `applied=0` |
-| `TransactionHalted`, or any failure where restoration is unproved | `ExecutionError` | `index=None`, `applied=None` |
+| pre-state mismatch, absence, or unsatisfiable precondition at build | `ExecutionError` | that op's `index`, `applied=0` |
+| `ProjectApprovalRefused` (rooted proof; before any mutation) | `ExecutionError` | `index=None`, `applied=0` |
+| `SpecValidationError` (adapter-built spec fails compile, before project context — an adapter bug) | `ExecutionError` | `index=None`, `applied=0` |
+| `PreconditionRefused` (clean refusal — restoration proven by the engine's own contract), `CapabilityUnavailable` (at preparation, before mutation) | `ExecutionError` | `index=None`, `applied=0` |
+| `MetadataStoreInvalid`, `ChainStateInvalid` — stop-and-preserve, bypassing rollback | `ExecutionError` | `index=None`, `applied=None` |
+| `TransactionHalted`, `ProtocolError`, any unrecognized engine failure — restoration unproved | `ExecutionError` | `index=None`, `applied=None` |
+
+`applied=0` is licensed only where the engine's own contract proves
+pre-mutation state: `ProjectApprovalRefused` and `CapabilityUnavailable` are
+raised before any project mutation, `SpecValidationError` before any project
+context, and `PreconditionRefused` refuses cleanly — once mutation may have
+begun it returns only after proven restoration, unprovable restoration
+becoming a halt. Everything else is `applied=None` unless the adapter
+independently knows the failure preceded mutation (a store error raised
+before `run_transaction` was entered). The default for the unrecognized is
+conservative, never optimistic.
 
 The engine exception is always chained as `__cause__`. Cause inspection is
 diagnostic, never a public discrimination API: callers branch on the seam's
@@ -221,8 +244,14 @@ The input is a constructed `nodes` document (Science's record constructors
 from cuts 1–3 produce its content); payloads are serialized document bytes
 from the kernel's serializer — the executor stays pure file mechanics.
 
-**Every refusal this package raises is a `ScienceError`.** The add path's
-refusal types, in refusal order, all subclasses of a new
+**Every corpus-domain refusal this package raises is a `ScienceError`;
+execution-layer failures cross the boundary as the seam's two names.** The
+split is deliberate: what the write API decides (basis, eligibility,
+collisions, the add-only guard) refuses in Science's vocabulary, and what the
+executor layer decides (plan validity, engine refusal, halt) surfaces as
+`PlanRefusedError`/`ExecutionError` per §4 — a third vocabulary wrapping the
+seam's two names would add a layer with no added discrimination. The add
+path's refusal types, in refusal order, all subclasses of a new
 `WriteRefused(ScienceError)`:
 
 1. `RecordAlreadyMinted` — the add-only guard: an existing `(uid, id)` pair
@@ -253,15 +282,25 @@ A write against an unregistered root surfaces as §4's
 `ExecutionError(index=None, applied=0)` with the engine's registration
 refusal as cause — init is an explicit act, not a fallback the add performs.
 
-**Why pre-plan reads are safe in this slice, recorded.** The refusals above
-read corpus state before the engine lease exists. That is sound only because
-the slice is add-only and its predicates are monotone under addition: another
-admitted add cannot invalidate an already-satisfied eligibility predicate
-(nothing removes the `observes` edge), and the racy half of the pair-absence
-read is backstopped by `CreateFileNoClobber`'s engine-side precondition — a
-lost race refuses at the engine, it does not double-mint. Deletion-capable
-family adapters **must re-own this concurrency question**; the argument does
-not transfer.
+**Why pre-plan reads are safe in this slice, recorded — two arguments, not
+one.** The refusals above read corpus state before the engine lease exists.
+The **monotone** predicates are safe under concurrent adds: another admitted
+add cannot invalidate an already-satisfied W3 or S7 predicate (nothing
+removes a basis or an `observes` edge). The **collision** predicates are
+not: two planners can each pass `assert_addable` for the same uid under
+different ids, plan creates at two different paths, and both no-clobber
+effects succeed — a duplicate uid on disk that no engine precondition can
+express, and identity-claim collisions race identically. `CreateFileNoClobber`
+backstops only the same-path (same-id) race. The ruling is therefore a
+**single-planner restriction**: the write API serializes each add end-to-end
+— read, refuse, plan, execute — under a per-corpus-root operation lock, which
+the composition root enforces in-process by construction (one mutable
+`Corpus`, one holder). Cross-process, single-planner-per-root is a **stated
+deployment obligation**, and its violation is detected loudly rather than
+prevented: strict construction refuses the duplicate uid with
+`CollisionError` — the same loud-refusal posture the seam chose for rename's
+duplicate-uid window. Deletion-capable family adapters **must re-own this
+concurrency question**; neither argument transfers.
 
 ## 6. The read side and S8's capability boundary
 
@@ -377,9 +416,13 @@ no world index, no interim transaction layer, no runtime executor choice.
    arriving without its sibling cold-bootstraps; one arriving with a foreign
    sibling is a restored-backup classification case. A synced metadata copy is
    untrusted, not impossible.
-4. **The pre-plan read argument is scoped to add-only.** §5's monotonicity
-   rationale does not transfer to deletion-capable adapters; Plan B item 2
-   re-owns it.
+4. **The pre-plan read argument is scoped to add-only under a single
+   planner.** §5's monotonicity rationale covers W3 and S7 alone; the
+   collision predicates rest on the single-planner restriction, whose
+   cross-process half is a deployment obligation with loud detection
+   (`CollisionError` at strict construction), not prevention. Neither
+   argument transfers to deletion-capable adapters; Plan B item 2 re-owns
+   the question.
 5. **The seam amendment is a prerequisite, not an assumption.** If `nodes`
    review rejects or reshapes §4's amendment, this design does not bank as
    written; the affected sections return to review rather than being worked
