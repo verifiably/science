@@ -7,4 +7,5 @@ dist/
 build/
 *.egg-info/
 
+.cut4-acceptance/
 node_modules/

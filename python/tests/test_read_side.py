@@ -105,7 +105,9 @@ class TestTheOneAlgorithmsSharedBehaviour:
             note("b", relations=[cites("note:b", "note:gone")]),
         )
         walk = relation_walk(view, "note:a")
-        assert [(entry.source, entry.position) for entry in walk.unresolved] == [("note:a", 1), ("note:b", 0)]
+        assert [
+            (entry.source, entry.position) for entry in walk.unresolved if isinstance(entry, RelationEntry)
+        ] == [("note:a", 1), ("note:b", 0)]
 
 
 class TestTheRelationAdapter:

@@ -32,7 +32,10 @@ build-backend = "hatchling.build"
 packages = ["src/science"]
 
 [tool.pytest.ini_options]
-addopts = "-q"
+# The acceptance arms are excluded from the ordinary run rather than skipped
+# inside it: they require the certified tuple and error without it, and an
+# ordinary unit-test run must stay portable (adapter design §7).
+addopts = "-q --ignore=tests/acceptance"
 testpaths = ["tests"]
 
 [tool.ruff]
