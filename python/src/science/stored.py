@@ -32,11 +32,15 @@ alone; the coverage is `COVERED_FACETS`, and the projection records which
 covered facets are **present**, so adding a governed facet to a stored node
 without restamping is a disagreement rather than a silent extension.
 
-**A node with no stamp is not a disagreement.** Nothing recomputes to a value it
-can be compared against, and refusing every unstamped document would refuse
-every hand-authored prose node in the corpus. A raw writer omitting the stamp is
-the recorded-history bound (substrate §4.2.1), stated there and inherited here,
-not a hole this module could close by being stricter.
+**A governed kind must carry a stamp; a prose kind never has to** *(post-freeze
+strengthening, adapter design review 2026-08-18)*. `SEMANTIC_DOMAINS` already
+partitions the corpus: a kind with a semantic domain is minted stamped by the
+boundary without exception, so an unstamped stored record of such a kind is a
+raw write that skipped even self-stamping — statically detectable, and refused
+(`semantic-hash-missing`) rather than admitted as the cheapest forgery. Kinds
+with no semantic domain — every hand-authored prose node — carry no stamp
+obligation. The recorded-history bound (substrate §4.2.1) is unchanged and
+covers exactly what it says: fields and stamp moved *together* are undetectable.
 """
 
 from __future__ import annotations
@@ -74,6 +78,7 @@ __all__ = [
     "recompute_semantic_hash",
     "run_spec",
     "semantic_hash_disagrees",
+    "semantic_hash_missing",
     "semantic_projection",
     "stamp_semantic_identity",
     "stored_semantic_hash",
@@ -175,9 +180,16 @@ def stored_semantic_hash(node: Node) -> str | None:
 
 def semantic_hash_disagrees(node: Node) -> bool:
     """`True` when the stamp and the stored fields disagree. An unstamped node
-    is not a disagreement — see the module docstring's stated bound."""
+    is not a disagreement — `semantic_hash_missing` is the separate question of
+    whether it was allowed to be unstamped."""
     stored = stored_semantic_hash(node)
     return stored is not None and stored != recompute_semantic_hash(node)
+
+
+def semantic_hash_missing(node: Node) -> bool:
+    """`True` when a governed kind carries no stamp at all. Prose kinds have no
+    semantic domain and are never reported — see the module docstring."""
+    return node.kind in SEMANTIC_DOMAINS and stored_semantic_hash(node) is None
 
 
 def stamp_semantic_identity(node: Node) -> Node:

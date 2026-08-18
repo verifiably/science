@@ -63,7 +63,9 @@ unresolvable cases were minted, never produced by deleting anything; R22's
 forgery and R23's basis/composition disagreement were constructed with the
 raw-write fixture act.
 
-**N2** audits cut 4's own arms as data — 32 arms, each with its row, its
+**N2** audits cut 4's own arms as data — 32 arms as frozen, plus the one
+labeled post-freeze strengthening the 2026-08-18 review added (§3's closure
+note), each with its row, its
 assertion, its source mutation and its exact named checks — for `vacuous`,
 `stale`, `mixed` and `uncollected`, refusing a check coarser than one test
 function, and with the unsabotaged baseline verdict (`resolved`) taken over
@@ -82,6 +84,21 @@ compared as a set where the walk promises an order.
 Both are engine constraints the design does not survive contact with, and
 neither is worked around adapter-side: they are recorded here and marked in
 place in the code, and they belong in design review.
+
+> **Review closed 2026-08-18.** Both deviations were verified against the
+> engine sources and accepted as dated amendments to the design's §3 (steps 3
+> and 6). Cut 4's frozen §2 sentence — *"reserves nothing and adds no effect
+> of its own"* — was ruled **not violated**: it sits in the registration
+> paragraph and claims no registration machinery and no reserved paths, both
+> still true; the cut document stays untouched. The review also recorded the
+> stored-document mapping as normative surface (design §5a) and added one
+> strengthening it found: an unstamped record of a **governed** kind is
+> refused on the facade's read path and reported `semantic-hash-missing` by
+> the corpus check — statically detectable, since the boundary mints every
+> governed record stamped, and breaking no frozen negative, since S3's
+> negative and R22(c) both construct *stamped* self-consistent forgeries. The
+> strengthening is declared as a labeled post-freeze arm in the N2 table,
+> outside the frozen selection and counted in no cut's accounting.
 
 1. **`consumer_tag`.** §3 step 6 names `science.corpus-write.v1`. `compile_spec`
    runs `require_valid_identifier` over the tag — the grammar is

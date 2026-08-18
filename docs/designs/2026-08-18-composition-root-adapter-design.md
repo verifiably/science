@@ -7,13 +7,14 @@ conformance cut 4 in the same change. **Implemented 2026-08-18** (`science`,
 branch `feat/composition-root-adapter`): `science.root`, `science.corpus`,
 `science.traversal` and `science.stored`, with cut 4's frozen selection
 discharged against the certified engine on a certified volume — results in
-`docs/plans/2026-08-18-conformance-cut-4-results.md`. **Two constants deviate
-and are pending review**, both engine constraints rather than choices: the
-engine's identifier grammar refuses §3 step 6's dotted `consumer_tag`, and a
-create below a missing directory refuses unless the same transaction creates
-the parent, which §3 step 3's verbatim mapping and step 6's *adds no effect of
-its own* together forbid. The affected sections return to review; nothing is
-worked around adapter-side.
+`docs/plans/2026-08-18-conformance-cut-4-results.md`. **Review of 2026-08-18
+closed both implementation deviations as amendments** — the `consumer_tag`
+grammar (§3 step 6) and the derived parent-directory effects (§3 step 3), each
+an engine constraint the original text did not survive; recorded the
+stored-document mapping as normative surface (§5a); and added one
+strengthening the review found (§5a: an unstamped governed kind is refused,
+`semantic-hash-missing`), outside cut 4's frozen selection and counted in no
+cut's accounting.
 **Sources:** the `nodes` write-plan/executor seam design
 (`~/d/nodes/docs/designs/2026-08-17-nodes-write-plan-executor-seam-design.md`,
 frozen 2026-08-17, pre-normative); the `atoms` authority design §11–§12.2/§14
@@ -142,12 +143,28 @@ the previous occurrence's post-state). So the build:
    timeline validation and surface mislabeled as an adapter bug.
    First-occurrence creates read nothing; `CreateFileNoClobber` enforces
    absence engine-side.
-3. **Effects** — the seam §6 mapping verbatim: `CreateOp → CreateFileNoClobber`,
+3. **Effects** — the seam §6 mapping: `CreateOp → CreateFileNoClobber`,
    `ReplaceOp → ReplaceFile`, `DeleteOp → DeletePath`, with deterministic
    position-derived effect ids (`op-<index>`). Created and replacement
-   **post**-states carry the adapter's one constant, mode `0o644`; every
+   **post**-states carry the adapter's constant file mode `0o644`; every
    **pre**-state carries its observed mode and byte length. `MoveNoClobber`
    stays deliberately unused — rename is never a pure move.
+   *(Amended 2026-08-18, implementation review.)* The engine refuses a create
+   whose parent directory neither exists nor is created by the same
+   transaction, so the adapter additionally **derives `CreateDirectory`
+   effects** for each missing parent a created file needs, ordered before the
+   file and carrying the second adapter constant, directory mode `0o755`
+   (`dir-<index>-<depth>` effect ids); the surfaces gain the corresponding
+   directory states. The alternative — an out-of-transaction `mkdir` — would
+   put a corpus mutation outside both all-or-nothing and the chain's
+   transaction record, and pre-creating kind directories at init fails
+   because the kind set is open. The intent digest is unaffected: it is
+   taken over the op list, not the effects, and stays derivable from the
+   plan alone. Cut 4 §2's frozen *"reserves nothing and adds no effect of
+   its own"* is **not** contradicted: that sentence sits in the registration
+   paragraph and claims the adapter adds no registration machinery and
+   reserves no paths, both still true — the wrong text was this step's
+   verbatim three-effect mapping, which is what this amendment corrects.
 4. **Surfaces** — `initial_surface` from each touched path's first pre-state,
    `final_surface` from its last post-state (`ABSENT` ↔ `FileState`).
 5. **Intent** — derivable from the plan alone. The projection is the ordered
@@ -162,9 +179,15 @@ the previous occurrence's post-state). So the build:
    constructs a `TransactionSpec` directly: `build_spec` supplies
    `schema_version` from the engine's `SCHEMA_VERSION` constant and imposes
    canonical ordering, so the adapter cannot ship a stale version literal.
-   Its constants: `consumer_tag = "science.corpus-write.v1"`,
-   `dependencies=()`, `fulfills=None`, `registered_paths=()` — the adapter
-   reserves nothing and adds no effect of its own. The engine's automatic
+   Its constants: `consumer_tag = "science-corpus-write-v1"` *(amended
+   2026-08-18, implementation review: the engine's identifier grammar is
+   `[A-Za-z0-9_-]{1,64}` because the tag becomes a scratch-leaf path
+   component, so the originally specified dotted `science.corpus-write.v1`
+   was never submittable; the intent **domain** in step 5 stays dotted —
+   Science identity domains and engine identifiers are different namespaces
+   with different grammars)*, `dependencies=()`, `fulfills=None`,
+   `registered_paths=()` — the adapter reserves nothing and adds no
+   registration effect. The engine's automatic
    registration-chain append happens inside every transaction regardless;
    per cut 4, every transaction this slice commits is **chained but
    unanchored**.
@@ -312,6 +335,42 @@ prevented: strict construction refuses the duplicate uid with
 duplicate-uid window. Deletion-capable family adapters **must re-own this
 concurrency question**; neither argument transfers.
 
+## 5a. The stored-document mapping *(added 2026-08-18, implementation review)*
+
+The design as banked said the record constructors from cuts 1–3 produce a
+document's content and left unstated how a Science value sits in a `nodes`
+document. That gap is normative surface — two readers disagreeing about which
+facet carries a run's spec is a corpus with two meanings — and `science.stored`
+is its one home. The review records its contract here:
+
+- **Facet keys are unnamespaced**: they belong to the `science` base profile,
+  not a domain contract (domain-extension boundary §3.4), with
+  `empirical-observation` the facet the eligibility predicate turns on.
+- **Relation predicates are kernel §4.1's closed signatures**, and role-typed
+  inputs are stored as relations, not facet payload. Where a ref is
+  deliberately carried twice — an assessment's edges beside its facet's
+  digest fields — the builders write both from one argument, so nothing the
+  boundary mints can disagree with itself; a raw write that makes them
+  disagree is an untrusted import under the stated bound.
+- **Semantic-hash coverage is code, not stored data** (`COVERED_FACETS`,
+  per-kind): a stored coverage list is data an untrusted writer could
+  shorten, which is a hash certifying whatever it was pointed at. The
+  projection records which covered facets are present, so adding a governed
+  facet without restamping is a disagreement, not a silent extension. Prose
+  (`title`, body, `display_statement`) is outside every entry, hand-editable
+  by rule.
+- **A governed kind must carry a stamp; a prose kind never has to** — the
+  review's one strengthening. `SEMANTIC_DOMAINS` partitions the corpus; the
+  boundary mints every governed record stamped, so an unstamped stored
+  record of a governed kind is statically detectable and is refused on the
+  facade's read path (`SemanticHashMissing`) and reported by the corpus
+  check (`semantic-hash-missing`). This narrows nothing in the
+  recorded-history bound — fields and stamp moved together stay undetectable
+  — and breaks no frozen negative: S3's negative and R22(c) both construct
+  *stamped* self-consistent forgeries. It is outside cut 4's frozen
+  selection, declared as a labeled post-freeze arm in the N2 table and
+  counted in no cut's accounting.
+
 ## 6. The read side and S8's capability boundary
 
 **A concrete facade, not a protocol.** `Corpus` structurally satisfies any
@@ -328,7 +387,8 @@ arm — S8's row is about the mutable corpus handle.
 **Stale-hash validation lives on the facade's node-read path.** Every fetch —
 `get` and every node a traversal resolves — recomputes the semantic hash from
 the stored fields and refuses a disagreement (`semantic-hash-stale`), which is
-S3's read-side check. This design supplies the behavior, but cut 4 does not
+S3's read-side check, and refuses an unstamped governed kind
+(`semantic-hash-missing`, §5a's strengthening). This design supplies the behavior, but cut 4 does not
 select S3: its exact banked mutation is an edit followed by explicit import,
 and that family surface remains deferred. The §6.2 profile-level corpus check
 (`eligibility-unmet`, over the store) reads through the same facade's

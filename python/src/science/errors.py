@@ -385,6 +385,20 @@ class SemanticHashStale(ScienceError):
     """
 
 
+class SemanticHashMissing(ScienceError):
+    """A stored node of a governed kind carrying no semantic-identity stamp at
+    all (`semantic-hash-missing`; post-freeze strengthening, adapter design
+    review 2026-08-18).
+
+    The recorded-history bound covers fields and stamp moved *together*; a
+    forger who simply omits the stamp is statically detectable, and admitting
+    the omission would make the cheapest forgery the one the reader waves
+    through. Prose kinds carry no semantic domain and no stamp obligation —
+    the boundary mints every governed record stamped, so nothing the write
+    API produces can raise this.
+    """
+
+
 class WriteRefused(ScienceError):
     """The add path's own refusals — what the write API decides, in Science's
     vocabulary. Execution-layer failures are not these: plan validity, engine

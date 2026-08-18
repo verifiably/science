@@ -21,7 +21,7 @@ from nodes.core.relations import Relation
 
 from science import stored
 from science.corpus import LineageAdjacency, RelationAdjacency, corpus_check, derived_from, lineage_snapshot
-from science.errors import SemanticHashStale
+from science.errors import SemanticHashMissing, SemanticHashStale
 from science.lineage import certify
 from science.traversal import LineageEntry, RelationEntry, closure
 
@@ -288,6 +288,22 @@ class TestTheFacadesNodeReadPath:
         view = seed(tmp_path, forged)
         assert view.get(forged.id).facets[stored.DATASET_FACET]["resources"][0]["name"] == "other"
 
+    def test_an_unstamped_governed_record_is_refused_on_get(self, tmp_path):
+        # Post-freeze strengthening (2026-08-18 review): a forger who omits the
+        # stamp on a governed kind is statically detectable, and the
+        # recorded-history bound covers only fields and stamp moved *together*.
+        node = observed_dataset()
+        del node.facets[stored.SEMANTIC_IDENTITY_FACET]
+        view = seed(tmp_path, node)
+        with pytest.raises(SemanticHashMissing):
+            view.get(node.id)
+
+    def test_an_unstamped_prose_node_is_not_refused(self, tmp_path):
+        # Prose kinds carry no semantic domain; requiring a stamp there would
+        # refuse every hand-authored note in the corpus.
+        view = seed(tmp_path, note("a"))
+        assert view.get("note:a").kind == "note"
+
     def test_iteration_does_not_refuse_so_the_check_can_report(self, tmp_path):
         node = observed_dataset()
         node.facets[stored.DATASET_FACET]["resources"] = []
@@ -328,6 +344,17 @@ class TestTheCorpusCheck:
             stored.proposition_node("p1", title="p1", claim={"operator": "affects"}),
         )
         assert [f.code for f in corpus_check(view)] == ["eligibility-unmet"]
+
+    def test_an_unstamped_governed_record_is_reported_semantic_hash_missing(self, tmp_path):
+        node = observed_dataset()
+        del node.facets[stored.SEMANTIC_IDENTITY_FACET]
+        view = seed(tmp_path, node)
+        assert [(f.severity, f.code, f.ref, f.detail) for f in corpus_check(view)] == [
+            ("error", "semantic-hash-missing", node.id, "unstamped")
+        ]
+
+    def test_an_unstamped_prose_node_is_reported_by_nothing(self, tmp_path):
+        assert corpus_check(seed(tmp_path, note("a"))) == ()
 
     def test_a_stale_node_is_reported_rather_than_raised(self, tmp_path):
         node = observed_dataset()

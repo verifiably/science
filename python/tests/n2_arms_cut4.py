@@ -1,4 +1,6 @@
-"""Cut 4's selected arms, paired with the sabotage each must not survive.
+"""Cut 4's selected arms, paired with the sabotage each must not survive —
+plus one clearly-labeled post-freeze strengthening at the end, which belongs
+to no cut's accounting.
 
 Same doctrine as `n2_arms.py` (N2: every oracle row can fail), extended over
 cut 4's frozen selection. The deferred rows' doctrine stays exactly as the prior
@@ -27,7 +29,7 @@ __all__ = ["CUT4_ARMS"]
 
 _OVER_EAGER_CHECK = Sabotage(
     module="corpus.py",
-    before="    for node in view.iter_stored():\n        try:",
+    before="    for node in view.iter_stored():\n        if stored.semantic_hash_missing(node):",
     after=(
         "    for node in view.iter_stored():\n"
         "        findings.append(\n"
@@ -39,7 +41,7 @@ _OVER_EAGER_CHECK = Sabotage(
         '                message="over-eager",\n'
         "            )\n"
         "        )\n"
-        "        try:"
+        "        if stored.semantic_hash_missing(node):"
     ),
 )
 """A corpus check that reports every node.
@@ -520,7 +522,7 @@ _R19 = [
         asserts="a minted verification reloads without refusal, and reading the record validates nothing",
         sabotage=Sabotage(
             module="corpus.py",
-            before="    @staticmethod\n    def _validated(node: Node) -> Node:\n        if stored.semantic_hash_disagrees(node):",
+            before="    @staticmethod\n    def _validated(node: Node) -> Node:\n        if stored.semantic_hash_missing(node):",
             after="    @staticmethod\n    def _validated(node: Node) -> Node:\n        if True:",
         ),
         checks=(
@@ -580,4 +582,33 @@ _R22 = [
 ]
 
 
-CUT4_ARMS = (*_S7, *_S8, *_W3, *_G9, *_ADD_ONLY, *_S1, *_WALK, *_S1a, *_S5, *_R23, *_R19, *_R22)
+# --- post-freeze strengthening — outside the frozen selection -----------------
+
+_POST_FREEZE = [
+    Arm(
+        row="S3 (post-freeze strengthening)",
+        asserts=(
+            "an unstamped record of a governed kind is refused on get and reported "
+            "`semantic-hash-missing` by the corpus check; declared here so the check is "
+            "sabotage-audited, and counted in no cut's accounting — the 2026-08-18 "
+            "adapter-design review added it after cut 4 froze, and the frozen selection "
+            "is untouched"
+        ),
+        sabotage=Sabotage(
+            module="stored.py",
+            before="    return node.kind in SEMANTIC_DOMAINS and stored_semantic_hash(node) is None",
+            after="    return False",
+        ),
+        checks=(
+            "test_read_side.py::TestTheFacadesNodeReadPath" +
+            "::test_an_unstamped_governed_record_is_refused_on_get",
+            "test_read_side.py::TestTheCorpusCheck" +
+            "::test_an_unstamped_governed_record_is_reported_semantic_hash_missing",
+        ),
+    ),
+]
+
+
+CUT4_ARMS = (
+    *_S7, *_S8, *_W3, *_G9, *_ADD_ONLY, *_S1, *_WALK, *_S1a, *_S5, *_R23, *_R19, *_R22, *_POST_FREEZE
+)

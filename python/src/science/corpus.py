@@ -51,6 +51,7 @@ from science.errors import (
     EligibilityUnmet,
     IdentityError,
     RecordAlreadyMinted,
+    SemanticHashMissing,
     SemanticHashStale,
     ValidationRefused,
 )
@@ -126,12 +127,16 @@ class ReadView:
     # --- fetching -----------------------------------------------------------
 
     def get(self, ref: str) -> Node:
-        """Fetch one node, refusing a stale semantic hash (`semantic-hash-stale`).
+        """Fetch one node, refusing a stale semantic hash (`semantic-hash-stale`)
+        and an unstamped governed kind (`semantic-hash-missing`).
 
-        The refusal is S3's read-side check. What it cannot see is an edit that
-        moved the fields **and** the stamp together: the store compares a state
-        against itself and has no record of what preceded it — substrate §4.3's
-        bound, inherited here rather than papered over.
+        The stale refusal is S3's read-side check; the missing refusal is the
+        2026-08-18 review's strengthening — a governed kind is minted stamped
+        without exception, so omission is statically detectable. What neither
+        can see is an edit that moved the fields **and** the stamp together:
+        the store compares a state against itself and has no record of what
+        preceded it — substrate §4.3's bound, inherited here rather than
+        papered over.
         """
         return self._validated(self._corpus.get(ref))
 
@@ -152,6 +157,12 @@ class ReadView:
 
     @staticmethod
     def _validated(node: Node) -> Node:
+        if stored.semantic_hash_missing(node):
+            raise SemanticHashMissing(
+                f"{node.id}: a {node.kind!r} carries no semantic-identity stamp "
+                "(semantic-hash-missing); the boundary mints every governed record stamped, "
+                "so an unstamped one is a raw write that skipped even self-stamping"
+            )
         if stored.semantic_hash_disagrees(node):
             raise SemanticHashStale(
                 f"{node.id}: the stored semantic hash disagrees with the fields it covers "
@@ -411,13 +422,24 @@ def corpus_check(view: ReadView) -> tuple[Finding, ...]:
 
     Files are canonical and hand-editable, so a node can reach the store without
     passing the write boundary. What this reports is what such a node can be
-    caught by: a stale stamp, and an `assesses` edge whose run does not support
-    it. What it is silent on is a raw write that is **self-consistent** — the
-    hash agrees because the writer computed it, and nothing structural is wrong
-    because nothing is. That silence is §4.2.1's stated bound, not a gap here.
+    caught by: a stale stamp, a governed kind with no stamp at all, and an
+    `assesses` edge whose run does not support it. What it is silent on is a
+    raw write that is **self-consistent** — the hash agrees because the writer
+    computed it, and nothing structural is wrong because nothing is. That
+    silence is §4.2.1's stated bound, not a gap here.
     """
     findings: list[Finding] = []
     for node in view.iter_stored():
+        if stored.semantic_hash_missing(node):
+            findings.append(
+                Finding(
+                    severity="error",
+                    code="semantic-hash-missing",
+                    ref=node.id,
+                    detail="unstamped",
+                    message=f"{node.id}: a {node.kind!r} carries no semantic-identity stamp",
+                )
+            )
         try:
             if stored.semantic_hash_disagrees(node):
                 findings.append(
