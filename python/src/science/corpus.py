@@ -29,23 +29,39 @@ this slice does not build.
 
 from __future__ import annotations
 
-from collections.abc import Iterator, Sequence
+import threading
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import final
 
 from nodes.core.corpus import Corpus
+from nodes.core.errors import CollisionError
+from nodes.core.errors import ValidationError as NodesValidationError
 from nodes.core.node import Node
 from nodes.core.structural_index import ResolvedEdge
+from nodes.core.write_plan import WritePlanExecutor
+from pydantic import ValidationError as PydanticValidationError
 
 from science import stored
-from science.errors import IdentityError, SemanticHashStale
+from science.dataset import dataset_address
+from science.errors import (
+    BasisMissing,
+    CollisionRefused,
+    EligibilityUnmet,
+    IdentityError,
+    RecordAlreadyMinted,
+    SemanticHashStale,
+    ValidationRefused,
+)
 from science.lineage import Basis, LineageSnapshot, Producer, Route
+from science.record import RunInput, RunValue
 from science.sealed import sealed
 from science.traversal import LineageEntry, Reach, RelationEntry, Step, closure
 
 __all__ = [
     "DIRECTIONS",
+    "CorpusWriter",
     "Finding",
     "LineageAdjacency",
     "ReadView",
@@ -53,6 +69,7 @@ __all__ = [
     "corpus_check",
     "derived_from",
     "lineage_snapshot",
+    "run_value",
 ]
 
 DIRECTIONS = ("inbound", "outbound")
@@ -284,6 +301,25 @@ class _DerivedFromAdjacency:
         return tuple(steps)
 
 
+def run_value(view: ReadView, ref: str) -> RunValue:
+    """A stored run as cut 2's value: its spec, and its role-partitioned inputs
+    with each input dataset's declaration read from the dataset itself.
+
+    **Corpus-local**: an input naming a dataset this corpus does not hold is not
+    in the value, because its declaration lives wherever that dataset does and
+    resolving an address to the corpus holding it is the world index's job. A
+    walk truncating at the corpus edge is this layer's documented property.
+    """
+    node = view.get(ref)
+    inputs = tuple(
+        RunInput(role=role, dataset=stored.dataset_declaration(view.get(target)))
+        for role in stored.INPUT_ROLES
+        for target in stored.inputs_of(node, role)
+        if view.holds(target)
+    )
+    return RunValue(ref=ref, spec=stored.run_spec(node) or "", inputs=inputs)
+
+
 def lineage_snapshot(view: ReadView, roots: Sequence[str]) -> LineageSnapshot:
     """Produce substrate §5's snapshot from a store, corpus-locally.
 
@@ -417,3 +453,111 @@ def corpus_check(view: ReadView) -> tuple[Finding, ...]:
                         )
                     )
     return tuple(sorted(findings, key=lambda finding: finding.sort_key))
+
+
+class CorpusWriter:
+    """The write API — the sole constructor and holder of a mutable `Corpus`.
+
+    Its public surface in this slice is **add alone**. What this package decides
+    — basis, eligibility, collisions, the add-only guard — refuses in Science's
+    vocabulary as a `WriteRefused`; what the executor layer decides — plan
+    validity, engine refusal, halt — crosses the boundary as the seam's
+    `PlanRefusedError` and `ExecutionError`. A third vocabulary wrapping those
+    two would add a layer with no added discrimination.
+
+    **Every add is serialized end to end under a per-root operation lock** —
+    read, refuse, plan, execute. The refusals read corpus state before the
+    engine lease exists, and only some of those reads are safe under concurrency:
+    the **monotone** predicates (W3, S7) cannot be invalidated by another
+    admitted add, because nothing removes a basis or an `observes` edge, but the
+    **collision** predicates can — two planners can each pass `assert_addable`
+    for one uid under different ids, plan creates at two different paths, and
+    both no-clobber effects succeed. `CreateFileNoClobber` backstops only the
+    same-path race. So the ruling is a single-planner restriction: in-process it
+    is this lock, and cross-process it is a **stated deployment obligation**
+    whose violation is detected loudly rather than prevented — strict
+    construction refuses the duplicate uid with `CollisionError`.
+
+    Deletion-capable family adapters must re-own this question; neither argument
+    transfers to them.
+    """
+
+    def __init__(self, root: Path, executor_factory: Callable[[Path], WritePlanExecutor]) -> None:
+        self._corpus = Corpus(Path(root), executor_factory=executor_factory)
+        self._view = ReadView(self._corpus)
+        self._operation = threading.Lock()
+
+    @property
+    def read_view(self) -> ReadView:
+        """The facade every other module receives. The mutable handle stays
+        here."""
+        return self._view
+
+    def add(self, node: Node) -> Node:
+        """Mint one record, returning it as `nodes` mints it.
+
+        A write against an unregistered root surfaces as the executor's
+        `ExecutionError(index=None, applied=0)` with the engine's registration
+        refusal as cause — init is an explicit act, not a fallback this
+        performs.
+        """
+        with self._operation:
+            self._refuse(node)
+            return self._corpus.add(node)
+
+    # --- the refusals, in order ---------------------------------------------
+
+    def _refuse(self, node: Node) -> None:
+        self._refuse_already_minted(node)
+        self._refuse_missing_basis(node)
+        self._refuse_ineligible(node)
+        self._refuse_invalid(node)
+        self._refuse_collision(node)
+
+    def _refuse_already_minted(self, node: Node) -> None:
+        """The add-only guard, **before plan construction**: an existing
+        `(uid, id)` pair is the pair `nodes`' own `add` would answer with a
+        `ReplaceOp`, so refusing here is what keeps every plan this surface
+        emits a create. The edit surface is the family adapters'."""
+        existing = self._corpus.index.by_uid.get(node.uid)
+        if existing is not None and existing.id == node.id:
+            raise RecordAlreadyMinted(
+                f"{node.id} is already minted under uid {node.uid}; an edit is a new mint, never a rewrite"
+            )
+
+    def _refuse_missing_basis(self, node: Node) -> None:
+        """W3 as narrowed, over the record being minted and nothing else."""
+        if node.kind == "source" and not stored.external_identifiers(node):
+            raise BasisMissing(
+                f"{node.id}: a source carries an accepted external identifier "
+                f"({', '.join(stored.ACCEPTED_EXTERNAL_IDENTIFIERS)}); a curation note is its own explicit add, "
+                "and no title-and-year fallback exists"
+            )
+        if node.kind == "dataset" and dataset_address(stored.dataset_declaration(node)) is None:
+            raise BasisMissing(
+                f"{node.id}: a dataset carries a content identity — every declared resource pinned by an "
+                "accepted digest. Supplying it later is a second, separate mint"
+            )
+
+    def _refuse_ineligible(self, node: Node) -> None:
+        """S7's write boundary, reading the cross-node predicate through this
+        corpus's own read view."""
+        reason = eligibility_refusal(self._view, node)
+        if reason is not None:
+            raise EligibilityUnmet(f"{node.id}: the assesses edge is inadmissible because {reason}")
+
+    @staticmethod
+    def _refuse_invalid(node: Node) -> None:
+        """`nodes`' document validation, wrapped so no `nodes` exception escapes
+        raw. The registry half is unexercised here: no kind registry is compiled
+        in this slice, and G5's kind-existence check waits with it."""
+        try:
+            Node.model_validate(node.model_dump())
+        except (NodesValidationError, PydanticValidationError) as caught:
+            raise ValidationRefused(f"{node.id}: refused by document validation: {caught}") from caught
+
+    def _refuse_collision(self, node: Node) -> None:
+        try:
+            self._corpus.index.assert_addable(node)
+        except CollisionError as caught:
+            raise CollisionRefused(str(caught)) from caught

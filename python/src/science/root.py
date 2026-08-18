@@ -20,24 +20,52 @@ pre-bound executor would let the corpus write through a root it never verified.
 
 from __future__ import annotations
 
+import io
+import stat as stat_module
+from collections.abc import Callable, Mapping
 from hashlib import sha256
 from pathlib import Path
+from typing import IO
 
-from atoms.coordinator.commands import register_root
+from atoms.chain.errors import ChainStateInvalid
+from atoms.coordinator.commands import register_root, run_transaction
+from atoms.core.effects import CreateDirectory, CreateFileNoClobber, DeletePath, Effect, ReplaceFile
+from atoms.core.errors import (
+    AtomsError,
+    CapabilityUnavailable,
+    PreconditionRefused,
+    ProjectApprovalRefused,
+    ProtocolError,
+    SpecValidationError,
+    TransactionHalted,
+)
+from atoms.core.fingerprint import ABSENT, AbsentState, DirectoryState, FileState, PathState
+from atoms.core.scratch import SCRATCH_SIGIL
+from atoms.core.spec import build_spec
+from atoms.fs.backend import Backend
 from atoms.fs.platform import select_backend
 from atoms.fs.volume import StorageProfile
-from nodes.core.write_plan import CreateOp, DeleteOp, ReplaceOp, WritePlan
+from atoms.store.errors import MetadataStoreInvalid
+from nodes.core.errors import ExecutionError, PlanRefusedError
+from nodes.core.write_plan import CreateOp, DeleteOp, ReplaceOp, WritePlan, validate_plan
 
+from science.corpus import CorpusWriter
 from science.errors import CorpusRootRefused
 from science.identity import v1
 
 __all__ = [
+    "CONSUMER_TAG",
+    "CREATED_DIRECTORY_MODE",
+    "CREATED_FILE_MODE",
     "GENESIS_DOMAIN",
     "GENESIS_PAYLOAD",
     "INTENT_DOMAIN",
     "PRODUCTION_STORAGE",
+    "DurableExecutor",
+    "durable_executor_factory",
     "init_corpus_root",
     "metadata_root_for",
+    "open_corpus",
     "write_intent_digest",
     "write_intent_projection",
 ]
@@ -156,3 +184,288 @@ def write_intent_digest(plan: WritePlan) -> str:
     """`sha256:`-prefixed digest of the intent projection. The prefix is
     mandatory: the engine's spec compilation checks the format."""
     return "sha256:" + v1.digest(INTENT_DOMAIN, write_intent_projection(plan))
+
+
+CONSUMER_TAG = "science-corpus-write-v1"
+"""The engine's consumer tag for every transaction this adapter commits.
+
+**Design deviation, pending review.** The design names
+`science.corpus-write.v1`, which the engine refuses: `compile_spec` runs
+`require_valid_identifier` over `consumer_tag`, whose grammar is
+`[A-Za-z0-9_-]{1,64}` — a tag is woven into a scratch-leaf path component, so
+the dot-versioned spelling cannot be shipped. The same name in the admitted
+grammar is used until the design says otherwise. Science's own identity
+domains are unaffected: `INTENT_DOMAIN` above is a `science.identity.v1`
+domain and answers to that grammar, not to the engine's.
+"""
+
+CREATED_FILE_MODE = 0o644
+"""The adapter's one constant, carried by every created and replacement
+**post**-state. Pre-states carry their observed mode, never this."""
+
+CREATED_DIRECTORY_MODE = 0o755
+
+
+class DurableExecutor:
+    """The seam's `WritePlanExecutor`, compiling one `WritePlan` into one
+    `TransactionSpec` and submitting it through the engine.
+
+    All-or-nothing is the engine's property, relied on and never
+    re-implemented. The complete `TransactionOutcome` is **discarded**: nothing
+    in this slice consumes it, and anchor carriage reads registration digests
+    from the chain itself rather than from executor state.
+
+    **The build follows path timelines, not independent operations.** A path may
+    occur more than once in one plan and the engine validates a continuous
+    timeline per path, so each occurrence's pre-state is the previous
+    occurrence's post-state, and only a **first** occurrence reads disk.
+    """
+
+    def __init__(self, root: Path, *, backend: Backend, storage: StorageProfile, metadata_root: Path) -> None:
+        self.root = Path(root)
+        self._backend = backend
+        self._storage = storage
+        self._metadata_root = Path(metadata_root)
+
+    # --- the seam's one method ----------------------------------------------
+
+    def execute(self, plan: WritePlan) -> None:
+        if not plan:
+            # Vacuous: no transaction, no chain entry — what `DefaultExecutor`
+            # does with nothing to apply.
+            return
+        _refuse_malformed(plan)
+        effects, initial_surface, final_surface, payloads = self._compile(plan)
+        spec = build_spec(
+            consumer_tag=CONSUMER_TAG,
+            intent_digest=write_intent_digest(plan),
+            initial_surface=initial_surface,
+            final_surface=final_surface,
+            effects=effects,
+            # The adapter reserves nothing, declares no ordering of its own, and
+            # fulfils no prior intent. `build_spec` supplies `schema_version`
+            # from the engine's own constant, so no stale literal can ship here.
+            dependencies=(),
+            fulfills=None,
+            registered_paths=(),
+        )
+        self._submit(spec, _PlanPayloads(payloads))
+
+    # --- the build ----------------------------------------------------------
+
+    def _compile(
+        self, plan: WritePlan
+    ) -> tuple[tuple[Effect, ...], dict[str, PathState], dict[str, PathState], dict[str, bytes]]:
+        initial: dict[str, PathState] = {}
+        current: dict[str, PathState] = {}
+        effects: list[Effect] = []
+        payloads: dict[str, bytes] = {}
+
+        for index, op in enumerate(plan):
+            if op.path in current:
+                pre = current[op.path]
+            else:
+                # A first-occurrence create reads nothing: its pre-state is
+                # `ABSENT` by construction and `CreateFileNoClobber` enforces
+                # absence engine-side.
+                pre = ABSENT if isinstance(op, CreateOp) else self._observe(op.path, index)
+                initial[op.path] = pre
+
+            if isinstance(op, CreateOp):
+                if not isinstance(pre, AbsentState):
+                    raise ExecutionError(
+                        f"create at {op.path!r} is unsatisfiable: the state it would see is present",
+                        index=index,
+                        applied=0,
+                    )
+                post = _file_state(op.content)
+                effects.extend(self._missing_ancestors(op.path, index, initial, current))
+                effects.append(CreateFileNoClobber(effect_id=f"op-{index}", path=op.path, post=post))
+                payloads[post.content_hash] = op.content
+                current[op.path] = post
+            elif isinstance(op, ReplaceOp):
+                observed = _require_file(pre, op, index)
+                post = _file_state(op.content)
+                effects.append(ReplaceFile(effect_id=f"op-{index}", path=op.path, pre=observed, post=post))
+                payloads[post.content_hash] = op.content
+                current[op.path] = post
+            else:
+                observed = _require_file(pre, op, index)
+                effects.append(DeletePath(effect_id=f"op-{index}", path=op.path, pre=observed))
+                current[op.path] = ABSENT
+
+        return tuple(effects), initial, current, payloads
+
+    def _observe(self, path: str, index: int) -> FileState:
+        """One read per path, at its first occurrence: bytes hashed, mode and
+        byte length from `stat`."""
+        target = self.root / path
+        try:
+            observed = target.stat()
+            content = target.read_bytes()
+        except OSError as caught:
+            raise ExecutionError(
+                f"{path!r} could not be read for its pre-state: {caught}", index=index, applied=0
+            ) from caught
+        if not stat_module.S_ISREG(observed.st_mode):
+            raise ExecutionError(f"{path!r} is not a regular file", index=index, applied=0)
+        return FileState(
+            content_hash="sha256:" + sha256(content).hexdigest(),
+            mode=stat_module.S_IMODE(observed.st_mode),
+            byte_len=observed.st_size,
+        )
+
+    def _missing_ancestors(
+        self,
+        path: str,
+        index: int,
+        initial: dict[str, PathState],
+        current: dict[str, PathState],
+    ) -> list[Effect]:
+        """`CreateDirectory` effects for the parents a created file needs.
+
+        **Design deviation, pending review.** §3 step 3's mapping is three
+        operations to three effects and step 6 says the adapter adds no effect
+        of its own, but `nodes` keeps a node at `<kind>/<slug>.md` and the
+        engine refuses a create whose parent *"neither exists nor is created by
+        this transaction"*. The alternative — an `mkdir` outside the
+        transaction — would put a corpus mutation outside the engine, which is
+        the worse of the two, so the directory is created **inside** the same
+        transaction and all-or-nothing still holds.
+        """
+        effects: list[Effect] = []
+        components = path.split("/")[:-1]
+        for depth in range(len(components)):
+            prefix = "/".join(components[: depth + 1])
+            if prefix in current:
+                continue
+            if (self.root / prefix).exists():
+                continue
+            post = DirectoryState(mode=CREATED_DIRECTORY_MODE)
+            initial[prefix] = ABSENT
+            current[prefix] = post
+            effects.append(CreateDirectory(effect_id=f"dir-{index}-{depth}", path=prefix, post=post))
+        return effects
+
+    # --- submission and §4's mapping ----------------------------------------
+
+    def _submit(self, spec: object, payloads: _PlanPayloads) -> None:
+        """Run the transaction, mapping every engine failure onto the seam's two
+        names. `applied=0` is licensed only where the engine's own contract
+        proves pre-mutation state; everything else is `applied=None`, which says
+        restoration is **unproved**. The default for the unrecognized is
+        conservative, never optimistic, and the engine exception is always
+        chained as `__cause__` — diagnostic, never a discrimination API.
+        """
+        try:
+            run_transaction(
+                self._backend,
+                str(self.root),
+                str(self._metadata_root),
+                self._storage,
+                spec,  # type: ignore[arg-type]
+                payloads,
+            )
+        except (ProjectApprovalRefused, SpecValidationError, PreconditionRefused, CapabilityUnavailable) as caught:
+            # Rooted proof, adapter-built spec, clean refusal, missing
+            # capability: each is raised before any project mutation, or refuses
+            # cleanly with restoration proven by the engine's own contract.
+            raise ExecutionError(str(caught), index=None, applied=0) from caught
+        except (MetadataStoreInvalid, ChainStateInvalid) as caught:
+            # Stop-and-preserve, bypassing rollback.
+            raise ExecutionError(str(caught), index=None, applied=None) from caught
+        except (TransactionHalted, ProtocolError) as caught:
+            raise ExecutionError(str(caught), index=None, applied=None) from caught
+        except AtomsError as caught:
+            raise ExecutionError(str(caught), index=None, applied=None) from caught
+        except Exception as caught:
+            raise ExecutionError(str(caught), index=None, applied=None) from caught
+
+
+class _PlanPayloads:
+    """The planned-postimage bytes, content-addressed.
+
+    Two effects writing identical content are supplied once, and the consumer
+    never learns a staging path. `KeyError` — and only `KeyError` — is the
+    signal for a digest this source has no binding for.
+    """
+
+    def __init__(self, blobs: Mapping[str, bytes]) -> None:
+        self._blobs = dict(blobs)
+
+    def open(self, digest: str) -> IO[bytes]:
+        return io.BytesIO(self._blobs[digest])
+
+
+def _file_state(content: bytes) -> FileState:
+    return FileState(
+        content_hash="sha256:" + sha256(content).hexdigest(),
+        mode=CREATED_FILE_MODE,
+        byte_len=len(content),
+    )
+
+
+def _require_file(pre: PathState, op: ReplaceOp | DeleteOp, index: int) -> FileState:
+    """The digest **and** the existence precondition, both against the state the
+    operation will actually see.
+
+    Without the existence half, an operation unsatisfiable by construction would
+    fall through to the engine's timeline validation and surface mislabelled as
+    an adapter bug.
+    """
+    if not isinstance(pre, FileState):
+        raise ExecutionError(
+            f"{op.op} at {op.path!r} is unsatisfiable: the state it would see is absent",
+            index=index,
+            applied=0,
+        )
+    if pre.content_hash != "sha256:" + op.expected_digest:
+        raise ExecutionError(
+            f"{op.path!r} does not hold the expected content: {pre.content_hash} != sha256:{op.expected_digest}",
+            index=index,
+            applied=0,
+        )
+    return pre
+
+
+def _refuse_malformed(plan: WritePlan) -> None:
+    """The lexically decidable checks, before any read.
+
+    `nodes` owns the predicate for its own namespace and for lexical escape —
+    `validate_plan` is exported precisely so a durable executor keeps one
+    authority for it. What it cannot know about is the **engine's** own leaves,
+    so that residue is checked here, and `atoms` refuses such a path at compile
+    time besides.
+    """
+    validate_plan(plan)
+    for op in plan:
+        for component in op.path.split("/"):
+            if component.startswith(SCRATCH_SIGIL):
+                raise PlanRefusedError(f"path names an engine-reserved leaf: {op.path!r}")
+
+
+def durable_executor_factory() -> Callable[[Path], DurableExecutor]:
+    """The root-taking factory the write API is built with.
+
+    Closes over the backend and the storage profile; the corpus supplies its own
+    root, and the metadata root follows from it by §2's rule. A pre-bound
+    executor would let a corpus write through a root it never verified.
+    """
+    backend = select_backend()
+    storage = PRODUCTION_STORAGE
+
+    def factory(root: Path) -> DurableExecutor:
+        return DurableExecutor(root, backend=backend, storage=storage, metadata_root=metadata_root_for(root))
+
+    return factory
+
+
+def open_corpus(corpus_root: Path) -> CorpusWriter:
+    """The composition root's product: a write API bound to one corpus root,
+    writing through the certified engine.
+
+    The root is registered by `init_corpus_root`, never by this call. A corpus
+    opened against an unregistered root constructs and reads; its first write
+    refuses with the engine's registration refusal as cause.
+    """
+    return CorpusWriter(Path(corpus_root), durable_executor_factory())

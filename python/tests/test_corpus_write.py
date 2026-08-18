@@ -1,0 +1,310 @@
+"""The add path's refusals, the plans it emits, and the operation lock.
+
+Portable: the write API takes its executor factory as an argument, so these run
+against `DefaultExecutor` behind a recorder. What they cannot claim is cut-4
+discharge — a record minted through `DefaultExecutor` is minted through the
+substrate's best-effort path, not through the certified engine.
+"""
+
+from __future__ import annotations
+
+import threading
+import time
+from typing import ClassVar
+
+import pytest
+from nodes.core.errors import CollisionError, ExecutionError
+from nodes.core.node import Node
+from nodes.core.write_plan import CreateOp, DefaultExecutor, DeleteOp, ReplaceOp
+
+from science import stored
+from science.corpus import CorpusWriter
+from science.errors import (
+    BasisMissing,
+    CollisionRefused,
+    EligibilityUnmet,
+    RecordAlreadyMinted,
+    ScienceError,
+    ValidationRefused,
+    WriteRefused,
+)
+
+PINNED = [{"name": "matrix", "digest": "sha256:" + "ab" * 32}]
+
+
+class Recorder:
+    """Every plan that reaches an executor, applied through the substrate's own
+    best-effort executor so later reads see the result."""
+
+    plans: ClassVar[list[list]] = []
+
+    def __init__(self, root):
+        self._inner = DefaultExecutor(root)
+
+    def execute(self, plan) -> None:
+        Recorder.plans.append(list(plan))
+        self._inner.execute(plan)
+
+
+@pytest.fixture()
+def writer(tmp_path) -> CorpusWriter:
+    Recorder.plans = []
+    return CorpusWriter(tmp_path, Recorder)
+
+
+def observed_dataset(slug="raw"):
+    return stored.dataset_node(
+        slug, title=slug, resources=PINNED, empirical_observation={"boundary": "instrument"}
+    )
+
+
+def admissible(writer: CorpusWriter, *, observes=True):
+    dataset = observed_dataset()
+    writer.add(dataset)
+    run = stored.run_node(
+        "r1", title="r1", spec="analysis-spec:s1", observes=[dataset.id] if observes else []
+    )
+    writer.add(run)
+    writer.add(stored.proposition_node("p1", title="p1", claim={"operator": "affects"}))
+    return stored.assessment_node(
+        "a1",
+        title="a1",
+        spec="analysis-spec:s1",
+        run=run.id,
+        proposition="proposition:p1",
+        outcome="supported",
+        interpretation_rule="rule:threshold",
+    )
+
+
+class TestTheAddPathIsAddOnly:
+    def test_a_mint_emits_exactly_one_create(self, writer):
+        writer.add(observed_dataset())
+        (plan,) = Recorder.plans
+        assert [type(op) for op in plan] == [CreateOp]
+
+    def test_no_plan_this_surface_emits_carries_a_replace_or_a_delete(self, writer):
+        writer.add(observed_dataset())
+        with pytest.raises(RecordAlreadyMinted):
+            writer.add(writer.read_view.get("dataset:raw"))
+        assert not any(isinstance(op, (ReplaceOp, DeleteOp)) for plan in Recorder.plans for op in plan)
+
+    def test_an_existing_uid_and_id_pair_refuses_before_plan_construction(self, writer):
+        minted = observed_dataset()
+        writer.add(minted)
+        with pytest.raises(RecordAlreadyMinted):
+            writer.add(minted)
+        assert len(Recorder.plans) == 1
+
+    def test_the_minted_node_is_returned_as_nodes_mints_it(self, writer):
+        minted = observed_dataset()
+        assert writer.add(minted).uid == minted.uid
+
+
+class TestW3TheBasisRefusal:
+    def test_a_source_with_no_accepted_external_identifier_refuses(self, writer):
+        with pytest.raises(BasisMissing):
+            writer.add(stored.source_node("s1", title="A paper", identifiers={}))
+
+    def test_a_source_with_a_doi_is_minted(self, writer):
+        assert writer.add(stored.source_node("s1", title="A paper", identifiers={"doi": "10.1/abc"})).id
+
+    def test_an_unaccepted_identifier_is_not_a_basis(self, writer):
+        # The set is closed: a url or a title-and-year is not an external
+        # identifier, and there is no derived-identity escape to reach.
+        with pytest.raises(BasisMissing):
+            writer.add(stored.source_node("s1", title="A paper", identifiers={"url": "https://example.org"}))
+
+    def test_a_dataset_with_no_content_identity_refuses(self, writer):
+        with pytest.raises(BasisMissing):
+            writer.add(stored.dataset_node("d1", title="DepMap", resources=[]))
+
+    def test_a_dataset_with_one_unpinned_resource_refuses(self, writer):
+        with pytest.raises(BasisMissing):
+            writer.add(
+                stored.dataset_node("d1", title="DepMap", resources=[*PINNED, {"name": "unpinned"}])
+            )
+
+    def test_a_dataset_whose_bytes_are_held_nowhere_is_minted(self, writer):
+        # G9, and the admission ramp's narrowing: identity is not holding. The
+        # add path performs no holding check — `declared` / `held` is derived on
+        # read and never stored.
+        minted = writer.add(stored.dataset_node("d1", title="DepMap 24Q2", resources=PINNED))
+        assert writer.read_view.holds(minted.id)
+
+    def test_a_note_is_not_what_a_missing_basis_coerces_to(self, writer):
+        with pytest.raises(BasisMissing):
+            writer.add(stored.source_node("s1", title="A paper", identifiers={}))
+        assert not writer.read_view.holds("source:s1")
+
+
+class TestS7TheWriteBoundary:
+    def test_an_assesses_edge_whose_run_has_no_observes_input_refuses(self, writer):
+        with pytest.raises(EligibilityUnmet):
+            writer.add(admissible(writer, observes=False))
+
+    def test_an_admissible_assesses_edge_is_minted(self, writer):
+        assert writer.add(admissible(writer)).id == "assessment:a1"
+
+    def test_an_assessment_naming_a_run_this_corpus_does_not_hold_refuses(self, writer):
+        with pytest.raises(EligibilityUnmet):
+            writer.add(
+                stored.assessment_node(
+                    "a1",
+                    title="a1",
+                    spec="analysis-spec:s1",
+                    run="run:elsewhere",
+                    proposition="proposition:p1",
+                    outcome="supported",
+                    interpretation_rule="rule:threshold",
+                )
+            )
+
+
+class TestTheRefusalsWrapAndOrder:
+    def test_a_document_validation_failure_is_wrapped(self, writer):
+        malformed = Node.model_construct(
+            id="dataset:d1", uid="a" * 32, kind="run", title="wrong kind", facets={}, relations=[]
+        )
+        with pytest.raises(ValidationRefused) as refused:
+            writer.add(malformed)
+        assert refused.value.__cause__ is not None
+
+    def test_a_collision_is_wrapped_and_no_nodes_error_escapes_raw(self, writer):
+        first = observed_dataset()
+        writer.add(first)
+        second = observed_dataset("other")
+        second.uid = first.uid
+        with pytest.raises(CollisionRefused) as refused:
+            writer.add(second)
+        assert isinstance(refused.value.__cause__, CollisionError)
+
+    def test_an_identity_claim_held_by_another_uid_is_a_collision(self, writer):
+        writer.add(observed_dataset())
+        twin = observed_dataset()  # same id, fresh uid
+        with pytest.raises(CollisionRefused):
+            writer.add(twin)
+
+    def test_every_refusal_is_a_science_error(self, writer):
+        assert issubclass(WriteRefused, ScienceError)
+        for refusal in (RecordAlreadyMinted, BasisMissing, EligibilityUnmet, ValidationRefused, CollisionRefused):
+            assert issubclass(refusal, WriteRefused)
+
+    def test_the_add_only_guard_refuses_before_the_basis_check(self, writer):
+        minted = writer.add(observed_dataset())
+        minted.facets[stored.DATASET_FACET]["resources"] = []  # no content identity any more
+        with pytest.raises(RecordAlreadyMinted):
+            writer.add(minted)
+
+    def test_the_basis_check_refuses_before_eligibility(self, writer):
+        # A dataset with no content identity and an assesses edge it could not
+        # support either: the earlier refusal is the one raised.
+        node = stored.dataset_node("d1", title="d1", resources=[])
+        node.relations.append(
+            stored.Relation(source=node.id, predicate=stored.ASSESSES, target="proposition:p1")
+        )
+        with pytest.raises(BasisMissing):
+            writer.add(node)
+
+    def test_eligibility_refuses_before_document_validation(self, writer):
+        malformed = stored.assessment_node(
+            "a1",
+            title="a1",
+            spec="analysis-spec:s1",
+            run="run:elsewhere",
+            proposition="proposition:p1",
+            outcome="supported",
+            interpretation_rule="rule:threshold",
+        )
+        malformed.kind = "run"  # a document-validation failure, behind an eligibility one
+        with pytest.raises(EligibilityUnmet):
+            writer.add(malformed)
+
+    def test_document_validation_refuses_before_the_collision_check(self, writer):
+        writer.add(observed_dataset())
+        malformed = Node.model_construct(
+            id="dataset:raw", uid="b" * 32, kind="run", title="colliding and malformed", facets={}, relations=[]
+        )
+        with pytest.raises(ValidationRefused):
+            writer.add(malformed)
+
+
+class TestTheExecutionLayerCrossesUnwrapped:
+    def test_an_executor_failure_is_not_translated_into_a_write_refusal(self, tmp_path):
+        class Failing:
+            def __init__(self, root):
+                self.root = root
+
+            def execute(self, plan):
+                raise ExecutionError("engine said no", index=None, applied=None)
+
+        writer = CorpusWriter(tmp_path, Failing)
+        with pytest.raises(ExecutionError) as raised:
+            writer.add(observed_dataset())
+        assert not isinstance(raised.value, ScienceError)
+
+
+class TestTheOperationLock:
+    """§7's deterministic barrier check, and the sabotage it exists to catch: a
+    lock covering only `execute` lets the second add complete its reads and its
+    planning while the first is still inside the engine, and two plans reach the
+    executor with no collision refused anywhere."""
+
+    def test_two_same_uid_adds_are_serialized_end_to_end(self, tmp_path):
+        entered = threading.Event()
+        release = threading.Event()
+        plans: list[list] = []
+        lock = threading.Lock()
+
+        class Barrier:
+            def __init__(self, root):
+                self._inner = DefaultExecutor(root)
+
+            def execute(self, plan):
+                with lock:
+                    plans.append(list(plan))
+                entered.set()
+                assert release.wait(timeout=10)
+                self._inner.execute(plan)
+
+        writer = CorpusWriter(tmp_path, Barrier)
+        first = observed_dataset("first")
+        second = observed_dataset("second")
+        second.uid = first.uid  # same uid, different id
+
+        outcome: list[BaseException | None] = [None]
+
+        def add_first():
+            writer.add(first)
+
+        def add_second():
+            try:
+                writer.add(second)
+                outcome[0] = None
+            except BaseException as caught:  # noqa: BLE001 - the outcome is the assertion
+                outcome[0] = caught
+
+        one = threading.Thread(target=add_first)
+        one.start()
+        assert entered.wait(timeout=10)  # the first add is inside the executor
+
+        two = threading.Thread(target=add_second)
+        two.start()
+        # Long enough for the second add to reach whatever it blocks on: under
+        # the operation lock that is the lock itself, and under an execute-only
+        # lock it is the barrier, with its plan already built.
+        time.sleep(0.25)
+        try:
+            with lock:
+                planned = len(plans)
+        finally:
+            # Released whatever the count turned out to be: a failing assertion
+            # must not leave two threads parked on a barrier.
+            release.set()
+            one.join(timeout=10)
+            two.join(timeout=10)
+
+        assert planned == 1  # exactly one plan reached the executor
+        assert isinstance(outcome[0], CollisionRefused)
+        assert len(plans) == 1
+        assert not one.is_alive() and not two.is_alive()
