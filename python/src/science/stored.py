@@ -1,0 +1,420 @@
+"""The stored shape of a Science record — facet keys, relation predicates, and
+the semantic hash over them.
+
+Cuts 1–3 built the **values**: assessments, runs, datasets, verifications,
+declarations. This module is the one place that says how such a value sits in a
+`nodes` document, and how it is read back out of one. Two readers of the same
+store disagreeing about which facet carries a run's spec is a corpus with two
+meanings, so the mapping is code in one module rather than convention repeated
+at each call site.
+
+**Facet keys are unnamespaced.** They belong to the `science` base profile, not
+to a domain contract (domain-extension boundary §3.4), and `empirical-observation`
+is the one the eligibility predicate turns on.
+
+**Relation predicates are kernel §4.1's closed signatures**, and the role-typed
+inputs are stored as relations rather than as facet payload: they are edges the
+substrate already resolves, and duplicating them inside a facet would create a
+second answer to *what did this run observe*.
+
+Two positions genuinely carry the same ref twice, and it is worth saying why
+rather than tidying it away. An assessment's `assesses` and `produced_by` edges
+are what the substrate resolves and what kernel §4.1 makes the guarantee out of;
+its facet's `proposition` and `run` fields are what `(spec, run, proposition)`
+digests. The builders below write both from one argument, so nothing this slice
+mints can disagree with itself; a raw write that makes them disagree is an
+untrusted import, subject to the same stated bound as every other one.
+
+**The semantic hash covers a fixed set of facets per kind, named in code.** A
+stored `covers` list would be data an untrusted writer could shorten, which is a
+hash that certifies whatever it was pointed at. What is stored is the digest
+alone; the coverage is `COVERED_FACETS`, and the projection records which
+covered facets are **present**, so adding a governed facet to a stored node
+without restamping is a disagreement rather than a silent extension.
+
+**A node with no stamp is not a disagreement.** Nothing recomputes to a value it
+can be compared against, and refusing every unstamped document would refuse
+every hand-authored prose node in the corpus. A raw writer omitting the stamp is
+the recorded-history bound (substrate §4.2.1), stated there and inherited here,
+not a hole this module could close by being stricter.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Mapping, Sequence
+from typing import Any
+
+from nodes.core.node import Node
+from nodes.core.relations import Relation
+
+from science.dataset import DatasetDeclaration, ResourceDeclaration
+from science.errors import MalformedRecord
+from science.identity import v1
+from science.record import AssessmentValue
+from science.verification import Verification
+
+__all__ = [
+    "ACCEPTED_EXTERNAL_IDENTIFIERS",
+    "ASSESSMENT_FACET",
+    "COVERED_FACETS",
+    "DATASET_FACET",
+    "EMPIRICAL_OBSERVATION_FACET",
+    "LINEAGE_BASIS_FACET",
+    "PROPOSITION_FACET",
+    "RUN_FACET",
+    "SEMANTIC_DOMAINS",
+    "SEMANTIC_IDENTITY_FACET",
+    "SOURCE_FACET",
+    "VERIFICATION_FACET",
+    "assessment_value",
+    "dataset_declaration",
+    "external_identifiers",
+    "is_empirical_observation",
+    "lineage_basis",
+    "recompute_semantic_hash",
+    "run_spec",
+    "semantic_hash_disagrees",
+    "semantic_projection",
+    "stamp_semantic_identity",
+    "stored_semantic_hash",
+    "verification_value",
+]
+
+# --- the facet vocabulary ----------------------------------------------------
+
+SEMANTIC_IDENTITY_FACET = "semantic-identity"
+EMPIRICAL_OBSERVATION_FACET = "empirical-observation"
+PROPOSITION_FACET = "proposition"
+ASSESSMENT_FACET = "assessment"
+RUN_FACET = "run"
+DATASET_FACET = "dataset"
+LINEAGE_BASIS_FACET = "lineage-basis"
+SOURCE_FACET = "source"
+VERIFICATION_FACET = "verification"
+
+# --- kernel §4.1's closed relation signatures --------------------------------
+
+ASSESSES = "assesses"
+PRODUCED_BY = "produced_by"
+EXECUTES = "executes"
+OBSERVES = "observes"
+READS = "reads"
+TRANSFORMS = "transforms"
+PRODUCES = "produces"
+TARGETS = "targets"
+VERIFIES = "verifies"
+ANCHORED_IN = "anchored_in"
+MEMBER_OF = "member_of"
+
+INPUT_ROLES = (OBSERVES, READS, TRANSFORMS)
+"""The role partition. `observes` confers eligibility; `reads` never does, in
+any quantity; `transforms` is dataset-production lineage input."""
+
+ACCEPTED_EXTERNAL_IDENTIFIERS = ("accession", "doi", "isbn", "pmid")
+"""W3's accepted external identifiers for a `source`. A closed set: a fallback
+derived from title and year is exactly the coercion the row refuses."""
+
+SEMANTIC_DOMAINS: Mapping[str, str] = {
+    "analysis-spec": "science.analysis-spec.v1",
+    "assessment": "science.assessment.v1",
+    "dataset": "science.dataset.v1",
+    "proposition": "science.proposition.v1",
+    "run": "science.run.v1",
+    "source": "science.source.v1",
+    "source-assertion": "science.source-assertion.v1",
+    "verification": "science.verification.v1",
+}
+
+COVERED_FACETS: Mapping[str, tuple[str, ...]] = {
+    "analysis-spec": ("analysis-spec",),
+    "assessment": (ASSESSMENT_FACET,),
+    "dataset": (DATASET_FACET, EMPIRICAL_OBSERVATION_FACET, LINEAGE_BASIS_FACET),
+    "proposition": (PROPOSITION_FACET,),
+    "run": (RUN_FACET,),
+    "source": (SOURCE_FACET,),
+    "source-assertion": ("source-assertion",),
+    "verification": (VERIFICATION_FACET,),
+}
+"""Which facets the semantic hash governs, per kind. Prose — `title`, `body`,
+an authored `display_statement` — is deliberately outside every entry: it is
+hand-editable by rule, and a hash covering it would refuse an editorial fix."""
+
+
+# --- the semantic hash -------------------------------------------------------
+
+
+def semantic_projection(node: Node) -> dict[str, Any]:
+    """What the semantic hash is taken over: the kind, which covered facets are
+    present, and their payloads. Never the id or the uid — a rename preserves
+    semantics by rule, and a hash that moved under one would refuse it."""
+    covered = COVERED_FACETS.get(node.kind, ())
+    present = [name for name in covered if name in node.facets]
+    return {
+        "kind": node.kind,
+        "present": present,
+        "facets": {name: node.facets[name] for name in present},
+    }
+
+
+def recompute_semantic_hash(node: Node) -> str:
+    """The hash the node's stored fields say it should carry."""
+    domain = SEMANTIC_DOMAINS.get(node.kind)
+    if domain is None:
+        raise MalformedRecord(f"kind {node.kind!r} has no semantic-identity domain")
+    return v1.digest(domain, semantic_projection(node))
+
+
+def stored_semantic_hash(node: Node) -> str | None:
+    """The stamp as stored, or `None` when the node carries none."""
+    facet = node.facets.get(SEMANTIC_IDENTITY_FACET)
+    if not isinstance(facet, dict):
+        return None
+    digest = facet.get("digest")
+    return digest if isinstance(digest, str) else None
+
+
+def semantic_hash_disagrees(node: Node) -> bool:
+    """`True` when the stamp and the stored fields disagree. An unstamped node
+    is not a disagreement — see the module docstring's stated bound."""
+    stored = stored_semantic_hash(node)
+    return stored is not None and stored != recompute_semantic_hash(node)
+
+
+def stamp_semantic_identity(node: Node) -> Node:
+    """Stamp `node` in place with the hash its fields recompute to, and return
+    it. The one construction authority for the stamp: a caller computing it
+    itself is a second implementation of the predicate the read path checks."""
+    node.facets[SEMANTIC_IDENTITY_FACET] = {"digest": recompute_semantic_hash(node)}
+    return node
+
+
+# --- reading values back out of stored documents -----------------------------
+
+
+def _facet(node: Node, key: str) -> Mapping[str, Any] | None:
+    payload = node.facets.get(key)
+    return payload if isinstance(payload, dict) else None
+
+
+def is_empirical_observation(node: Node) -> bool:
+    """Whether a dataset carries the facet an `observes` input demands. The
+    facet's own payload contract is open (kernel §11); its **presence** is what
+    the eligibility predicate reads, and that is all this asks."""
+    return _facet(node, EMPIRICAL_OBSERVATION_FACET) is not None
+
+
+def external_identifiers(node: Node) -> tuple[str, ...]:
+    """The accepted external identifiers a `source` carries, sorted. Empty is
+    W3's refusal case at the write boundary."""
+    facet = _facet(node, SOURCE_FACET) or {}
+    identifiers = facet.get("identifiers")
+    if not isinstance(identifiers, dict):
+        return ()
+    return tuple(
+        sorted(
+            name
+            for name in ACCEPTED_EXTERNAL_IDENTIFIERS
+            if isinstance(identifiers.get(name), str) and identifiers[name]
+        )
+    )
+
+
+def dataset_declaration(node: Node) -> DatasetDeclaration:
+    """The stored declaration as cut 2's value. A resource with no digest stays
+    unpinned rather than being dropped: `dataset_address` is all-or-nothing, and
+    silently discarding the unpinned resource would manufacture an address the
+    record does not have."""
+    facet = _facet(node, DATASET_FACET) or {}
+    resources = facet.get("resources")
+    if not isinstance(resources, list):
+        return DatasetDeclaration(resources=())
+    declared: list[ResourceDeclaration] = []
+    for entry in resources:
+        if not isinstance(entry, dict):
+            raise MalformedRecord(f"{node.id}: a declared resource is not an object")
+        digest = entry.get("digest")
+        declared.append(
+            ResourceDeclaration(
+                name=str(entry.get("name", "")),
+                digest=digest if isinstance(digest, str) else None,
+            )
+        )
+    return DatasetDeclaration(resources=tuple(declared))
+
+
+def run_spec(node: Node) -> str | None:
+    facet = _facet(node, RUN_FACET) or {}
+    spec = facet.get("spec")
+    return spec if isinstance(spec, str) else None
+
+
+def inputs_of(node: Node, role: str) -> tuple[str, ...]:
+    """The dataset refs a run names under one input role, in stored order."""
+    return tuple(relation.target for relation in node.relations if relation.predicate == role)
+
+
+def assessment_value(node: Node) -> AssessmentValue:
+    """The stored assessment as cut 2's value — `(spec, run, proposition)` and
+    the facet kernel §4.2.1 tables. Absent optionals stay absent."""
+    facet = _facet(node, ASSESSMENT_FACET)
+    if facet is None:
+        raise MalformedRecord(f"{node.id}: an assessment carries an {ASSESSMENT_FACET!r} facet")
+    optional = {
+        name: facet[name]
+        for name in ("estimate", "uncertainty", "estimand", "applicability")
+        if isinstance(facet.get(name), str)
+    }
+    return AssessmentValue(
+        spec=str(facet.get("spec", "")),
+        run=str(facet.get("run", "")),
+        proposition=str(facet.get("proposition", "")),
+        outcome=str(facet.get("outcome", "")),
+        interpretation_rule=str(facet.get("interpretation_rule", "")),
+        **optional,
+    )
+
+
+def verification_value(node: Node) -> Verification:
+    facet = _facet(node, VERIFICATION_FACET)
+    if facet is None:
+        raise MalformedRecord(f"{node.id}: a verification carries a {VERIFICATION_FACET!r} facet")
+    supersedes = facet.get("supersedes")
+    return Verification(
+        ref=node.id,
+        assessment=str(facet.get("assessment", "")),
+        scope=str(facet.get("scope", "")),
+        verdict=str(facet.get("verdict", "")),
+        supersedes=supersedes if isinstance(supersedes, str) else None,
+    )
+
+
+def lineage_basis(node: Node) -> Mapping[str, Any] | None:
+    """The stamped descendant-side basis, as stored. `None` when the dataset
+    carries none — an authored dataset with no producing run."""
+    return _facet(node, LINEAGE_BASIS_FACET)
+
+
+def basis_routes(node: Node) -> tuple[Mapping[str, Any], ...]:
+    """The basis's routes in stored order, so a route's **position** is stable
+    for the traversal's unresolved entries."""
+    facet = lineage_basis(node)
+    if facet is None:
+        return ()
+    routes = facet.get("routes")
+    if not isinstance(routes, list):
+        return ()
+    return tuple(route for route in routes if isinstance(route, dict))
+
+
+# --- constructing stored documents -------------------------------------------
+
+
+def _node(kind: str, slug: str, title: str, facets: Mapping[str, Any], relations: Sequence[Relation]) -> Node:
+    node = Node(id=f"{kind}:{slug}", kind=kind, title=title, facets=dict(facets), relations=list(relations))
+    return stamp_semantic_identity(node)
+
+
+def proposition_node(slug: str, *, title: str, claim: Mapping[str, Any]) -> Node:
+    """A proposition carrying the typed claim projection. Prose is not identity
+    and is not stored as one: `title` is display only."""
+    return _node("proposition", slug, title, {PROPOSITION_FACET: dict(claim)}, ())
+
+
+def source_node(slug: str, *, title: str, identifiers: Mapping[str, str]) -> Node:
+    return _node("source", slug, title, {SOURCE_FACET: {"identifiers": dict(identifiers)}}, ())
+
+
+def dataset_node(
+    slug: str,
+    *,
+    title: str,
+    resources: Sequence[Mapping[str, Any]] = (),
+    empirical_observation: Mapping[str, Any] | None = None,
+    basis: Mapping[str, Any] | None = None,
+) -> Node:
+    facets: dict[str, Any] = {DATASET_FACET: {"resources": [dict(resource) for resource in resources]}}
+    if empirical_observation is not None:
+        facets[EMPIRICAL_OBSERVATION_FACET] = dict(empirical_observation)
+    if basis is not None:
+        facets[LINEAGE_BASIS_FACET] = dict(basis)
+    return _node("dataset", slug, title, facets, ())
+
+
+def run_node(
+    slug: str,
+    *,
+    title: str,
+    spec: str,
+    observes: Sequence[str] = (),
+    reads: Sequence[str] = (),
+    transforms: Sequence[str] = (),
+    produces: Sequence[str] = (),
+) -> Node:
+    node_id = f"run:{slug}"
+    relations = [
+        Relation(source=node_id, predicate=predicate, target=target)
+        for predicate, targets in (
+            (OBSERVES, observes),
+            (READS, reads),
+            (TRANSFORMS, transforms),
+            (PRODUCES, produces),
+        )
+        for target in targets
+    ]
+    return _node("run", slug, title, {RUN_FACET: {"spec": spec}}, relations)
+
+
+def assessment_node(
+    slug: str,
+    *,
+    title: str,
+    spec: str,
+    run: str,
+    proposition: str,
+    # `proposition` and `run` are corpus refs: the address of the record, which
+    # is what a corpus-local reader can resolve. The claim identity itself lives
+    # on the proposition node, in its own facet.
+    outcome: str,
+    interpretation_rule: str,
+    **optional: str,
+) -> Node:
+    node_id = f"assessment:{slug}"
+    facet: dict[str, Any] = {
+        "spec": spec,
+        "run": run,
+        "proposition": proposition,
+        "outcome": outcome,
+        "interpretation_rule": interpretation_rule,
+        **optional,
+    }
+    relations = [
+        Relation(source=node_id, predicate=ASSESSES, target=proposition),
+        Relation(source=node_id, predicate=PRODUCED_BY, target=run),
+    ]
+    return _node("assessment", slug, title, {ASSESSMENT_FACET: facet}, relations)
+
+
+def verification_node(
+    slug: str,
+    *,
+    title: str,
+    assessment: str,
+    assessment_ref: str,
+    scope: str,
+    verdict: str,
+    supersedes: str | None = None,
+) -> Node:
+    """`assessment` is the assessment **identity** the verification is about —
+    what cut 2's lifecycle table matches on — and `assessment_ref` is the corpus
+    address the `verifies` edge binds. The two are different facts: an identity
+    survives a corpus that never held the record, and an address does not."""
+    facet: dict[str, Any] = {"assessment": assessment, "scope": scope, "verdict": verdict}
+    if supersedes is not None:
+        facet["supersedes"] = supersedes
+    return _node(
+        "verification",
+        slug,
+        title,
+        {VERIFICATION_FACET: facet},
+        [Relation(source=f"verification:{slug}", predicate=VERIFIES, target=assessment_ref)],
+    )
