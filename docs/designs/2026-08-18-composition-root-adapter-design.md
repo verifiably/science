@@ -362,6 +362,15 @@ exercised cannot report green. Ordinary unit tests (plan building, refusal
 ordering, intent encoding, facade behavior against `DefaultExecutor` or a
 fake executor) remain runnable anywhere and **cannot claim cut-4 discharge**.
 
+**The single-planner lock has its own runnable check**, portable, since §5
+makes it load-bearing: a deterministic concurrent-add test drives two adds of
+the same uid under different ids from two threads against a fake executor
+whose `execute` blocks on a barrier, and asserts the operation lock
+serializes them end-to-end — the second add observes the first's mint and
+raises `CollisionRefused`, and exactly one plan reaches the executor. A lock
+covering only `execute` (not the reads and planning before it) fails this
+test, which is the sabotage that makes it an arm rather than a smoke test.
+
 ## 8. Dependencies, gates, and banking choreography
 
 **Dependencies.** The distributions are already named: `science` gains
@@ -427,7 +436,10 @@ no world index, no interim transaction layer, no runtime executor choice.
    review rejects or reshapes §4's amendment, this design does not bank as
    written; the affected sections return to review rather than being worked
    around adapter-side.
-6. **Single writer per corpus root is engine-serialized; nothing here adds
-   cross-root coordination.** Multi-corpus operations remain consumer-composed
-   sequences of per-root transactions, per the engine's one-transaction,
-   one-root rule.
+6. **Transaction execution is engine-serialized; planning is not.** The
+   engine's project lock serializes execution per root under the lease, but
+   the safety of pre-plan reads depends on §5's single-planner restriction —
+   in-process by the operation lock, cross-process as a deployment
+   obligation. Nothing here adds cross-root coordination: multi-corpus
+   operations remain consumer-composed sequences of per-root transactions,
+   per the engine's one-transaction, one-root rule.
