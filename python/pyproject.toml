@@ -11,9 +11,18 @@ authors = [{ name = "Keith Hughitt", email = "keith.hughitt@gmail.com" }]
 requires-python = ">=3.11"
 classifiers = ["Typing :: Typed"]
 dependencies = [
+  "atoms-core",
+  "nodes-core",
   "pyyaml>=6.0.3",
   "snakemake==8.11.4",
 ]
+
+# The engine and the substrate are unpublished, so their source is overridden with
+# the sibling checkouts. Publication removes these entries and adds released-version
+# bounds above; nothing else about the dependency changes (adapter design §8).
+[tool.uv.sources]
+atoms-core = { path = "../../atoms/python", editable = true }
+nodes-core = { path = "../../nodes/python", editable = true }
 
 [build-system]
 requires = ["hatchling>=1.30"]
