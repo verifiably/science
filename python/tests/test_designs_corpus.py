@@ -4,7 +4,7 @@ Three drift classes were found by hand on 2026-08-08, and each one is a fact tha
 lives in many documents while being owned by none of them:
 
 * **`atoms` adoption state.** Plan A through A8 is implemented. The remaining
-  durability gate is Science's composition-root adoption; this file names every
+  durability gate is Science's composition-root implementation; this file names every
   live document that still gates on a completed Plan A stage.
 * **The guarantee-row inventory.** Thirteen frozen tables carry the acceptance
   criteria. Their counts are quoted in the README and in the review-disposition
@@ -116,7 +116,7 @@ def _text(path: Path) -> str:
 
 
 def test_no_live_document_gates_on_an_atoms_plan_a_stage() -> None:
-    """Plan A is complete; live durability gates name composition-root adoption."""
+    """Plan A is complete; live durability gates name composition-root implementation."""
     stale: list[str] = []
     paths = [README, *design_documents(), *sorted(GUIDE.glob("*.md"))]
     for path in paths:
@@ -126,7 +126,8 @@ def test_no_live_document_gates_on_an_atoms_plan_a_stage() -> None:
                 stale.append(f"{path.relative_to(ROOT)}:{line_no}: {line.strip()}")
     assert not stale, (
         "`atoms` Plan A through A8 is implemented; Science's remaining durability gate "
-        "is composition-root adoption. These live claims still gate on a Plan A stage:\n  " + "\n  ".join(stale)
+        "is composition-root implementation. These live claims still gate on a Plan A stage:\n  "
+        + "\n  ".join(stale)
     )
 
 
@@ -141,13 +142,13 @@ def test_no_design_spells_a_stage_range_with_an_ascii_hyphen() -> None:
 
 
 def test_the_ledger_records_the_atoms_adoption_gate_this_file_holds() -> None:
-    """The ledger records completed Plan A and the remaining adoption gate."""
+    """The ledger records completed Plan A and the remaining implementation gate."""
     ledger = _text(DESIGNS / "2026-08-03-redesign-adoption-ledger.md")
     atoms_rows = [line for line in ledger.splitlines() if "**`atoms` " in line and "—" in line]
     assert atoms_rows, "the ledger no longer carries an `atoms` artifact row"
     state = atoms_rows[0].split("|")[-2]
     assert "A8 landed 2026-08-17" in state
-    assert "Plan B adoption at Science's composition root is the remaining gate" in state
+    assert "Plan B adoption is now implementation" in state
 
 
 def test_every_design_declares_a_status() -> None:
@@ -208,6 +209,7 @@ _COUNT_WORDS = {
     21: "Twenty-one",
     22: "Twenty-two",
     23: "Twenty-three",
+    24: "Twenty-four",
 }
 
 

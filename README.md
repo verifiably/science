@@ -17,9 +17,9 @@ below for rationale and frozen guarantees.
 
 ## The designs
 
-Twenty-three documents in `docs/designs/`: the banked redesigns, review disposition,
+Twenty-four documents in `docs/designs/`: the banked redesigns, review disposition,
 adoption ledger, measurements, rulings, and contributor-guide design written
-2026-08-02 through 2026-08-17. Read them in this order:
+2026-08-02 through 2026-08-18. Read them in this order:
 
 | document | what it rules |
 |---|---|
@@ -45,7 +45,8 @@ adoption ledger, measurements, rulings, and contributor-guide design written
 | `2026-08-10-verified-holdings-record-design.md` | where verified holdings are recorded: a per-location world record in the observer's corpus, act-minted, superseded never expired, projected under a declared coverage — H1–H4 |
 | `2026-08-11-act-report-design.md` | the run boundary's report seam: the act-report, boundary-minted terminal record of an opened operation or pre-intent refusal record of a rejected run request; the operation intent's derived three-valued completion reading; the durable home of a look's non-report — T1–T8 |
 | `2026-08-11-conformance-cut-3.md` | the third frozen conformance cut, drawn at the run boundary over the 151-row corpus: 15 rows selected in full and 19 in part, amended across three readings with the frozen text preserved verbatim, and the persistence seam's H1–H4 and T7 deferred on the holdings design's own assignment |
-| `2026-08-17-conformance-cut-4.md` | the fourth conformance cut, drafted 2026-08-17 against the certified `atoms` engine adopted at Science's composition root: the first persistence slice, add-only, corpus-write minting alone, freezing when the composition-root adapter design banks |
+| `2026-08-17-conformance-cut-4.md` | the fourth conformance cut, frozen 2026-08-18 against the certified `atoms` engine adopted at Science's composition root: the first persistence slice, add-only, corpus-write minting alone, selecting 3 rows in full and 8 in part |
+| `2026-08-18-composition-root-adapter-design.md` | Science's composition root, durable executor adapter, add-only write boundary, read capability boundary, and cut-4 acceptance suite |
 
 The ledger is the entry point for "what is built, what is not, and what waits on
 what." Every guarantee table is frozen under its identifiers: designs extend and
@@ -84,6 +85,10 @@ to the persistence seam. Its slice landed 2026-08-12: spec freezing, the executi
 minimal Snakemake adapter's boundary, dataset production, replay,
 verification-as-value, and the report layer's completion reading now run as
 real subprocess executions over held fixtures.
+
+**Conformance cut 4** froze 2026-08-18 when the composition-root adapter
+design banked, selecting **3 rows in full and 8 in part**. Its acceptance slice
+is designed, not implemented; no Science production-durability claim has moved.
 
 ```
 python/     the implementation (substrate §11 puts the composition root here)
