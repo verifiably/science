@@ -3,7 +3,17 @@
 **Date:** 2026-08-18
 **Status:** Banked 2026-08-18 — the `nodes` seam amendment landed as
 `abbf52b`, cut 4's §7 second reader discharged, and the banking commit froze
-conformance cut 4 in the same change.
+conformance cut 4 in the same change. **Implemented 2026-08-18** (`science`,
+branch `feat/composition-root-adapter`): `science.root`, `science.corpus`,
+`science.traversal` and `science.stored`, with cut 4's frozen selection
+discharged against the certified engine on a certified volume — results in
+`docs/plans/2026-08-18-conformance-cut-4-results.md`. **Two constants deviate
+and are pending review**, both engine constraints rather than choices: the
+engine's identifier grammar refuses §3 step 6's dotted `consumer_tag`, and a
+create below a missing directory refuses unless the same transaction creates
+the parent, which §3 step 3's verbatim mapping and step 6's *adds no effect of
+its own* together forbid. The affected sections return to review; nothing is
+worked around adapter-side.
 **Sources:** the `nodes` write-plan/executor seam design
 (`~/d/nodes/docs/designs/2026-08-17-nodes-write-plan-executor-seam-design.md`,
 frozen 2026-08-17, pre-normative); the `atoms` authority design §11–§12.2/§14
