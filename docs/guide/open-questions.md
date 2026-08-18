@@ -180,6 +180,9 @@ implementation**: a guarantee row awaiting code is work, not a question.
   log), world persistence, and the `nodes` contract deltas, noting that the
   first cut to cross a persistence boundary would take several of those
   groups at once — whether as one cut or two, not ruled there. The cut-4
+  `nodes` write-plan/executor seam dependency was frozen and satisfied
+  2026-08-17; the Science composition-root adapter design remains open. The
+  cut-4
   draft narrows this only for itself: it is drawn against the certified
   `atoms` engine adopted at Science's composition root, add-only,
   corpus-write minting alone, with no L row selected because registration

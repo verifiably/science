@@ -95,6 +95,7 @@ EXTERNAL_DOCUMENTS = {
     # `nodes`, branch `system-redesign` — cited by ledger artifact 3 and packaging
     # §6 for the reserved-path contract. Not on `nodes` main as of 2026-08-08.
     "2026-08-03-nodes-under-the-system-redesign-design.md",
+    "2026-08-17-nodes-write-plan-executor-seam-design.md",
 }
 
 
