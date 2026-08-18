@@ -365,3 +365,62 @@ class UnsafeInvocation(RecordError):
     §3): an option-like engine target, an entrypoint that does not resolve to
     a regular file inside the captured bundle, an absolute or root-escaping
     declared output."""
+
+
+class CorpusRootRefused(ScienceError):
+    """A path that cannot be a corpus root — an existing non-directory. The
+    composition root creates the directory when it is absent and refuses
+    anything else rather than registering a root beside it."""
+
+
+class SemanticHashStale(ScienceError):
+    """A stored node whose recorded semantic hash disagrees with the one its
+    stored fields recompute to (`semantic-hash-stale`, substrate §4.3).
+
+    Refused on the read path, never repaired: a disagreement says the fields
+    and the hash were not written together, and which of the two is the record
+    is exactly what a store with no recorded history cannot say. An edit that
+    moves the fields *and* the hash together is undetectable here — the
+    recorded-history bound, stated rather than patched.
+    """
+
+
+class WriteRefused(ScienceError):
+    """The add path's own refusals — what the write API decides, in Science's
+    vocabulary. Execution-layer failures are not these: plan validity, engine
+    refusal and halt cross the boundary as the seam's `PlanRefusedError` and
+    `ExecutionError`, and a third vocabulary wrapping those two would add a
+    layer with no added discrimination (adapter design §5)."""
+
+
+class RecordAlreadyMinted(WriteRefused):
+    """The add-only guard: the corpus already holds this `(uid, id)` pair.
+
+    Refused **before plan construction**, so no plan this slice's public
+    surface emits can carry a `ReplaceOp` or a `DeleteOp` — the seam's
+    replace-selecting `add` stays unexercised rather than accidentally
+    exposed. The edit surface is the family adapters'."""
+
+
+class BasisMissing(WriteRefused):
+    """W3 as narrowed: a `source` with no accepted external identifier, or a
+    `dataset` with no content identity. Refused, never coerced to a curation
+    `note` — a note is its own explicit add, and supplying the basis later is
+    a second, separate mint. No title-and-year fallback exists to reach."""
+
+
+class EligibilityUnmet(WriteRefused):
+    """S7's write boundary: an inadmissible `assesses` edge — one whose run
+    has no `observes` input carrying the `empirical-observation` facet. The
+    cross-node predicate reads through the same corpus's read view."""
+
+
+class ValidationRefused(WriteRefused):
+    """A `nodes` document (or registry) validation failure, wrapped with the
+    `nodes` exception as `__cause__` so no `nodes` error escapes raw."""
+
+
+class CollisionRefused(WriteRefused):
+    """`assert_addable`'s corpus-side refusals — a uid held by another id, or
+    an identity claim held by another uid — wrapped for the same reason.
+    These never reach an executor."""
