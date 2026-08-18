@@ -938,6 +938,7 @@ source = { editable = "." }
 dependencies = [
     { name = "atoms-core" },
     { name = "nodes-core" },
+    { name = "pydantic" },
     { name = "pyyaml" },
     { name = "snakemake" },
 ]
@@ -953,6 +954,7 @@ dev = [
 requires-dist = [
     { name = "atoms-core", editable = "../../atoms/python" },
     { name = "nodes-core", editable = "../../nodes/python" },
+    { name = "pydantic", specifier = ">=2.0" },
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "snakemake", specifier = "==8.11.4" },
 ]

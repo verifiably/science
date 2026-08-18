@@ -13,6 +13,10 @@ classifiers = ["Typing :: Typed"]
 dependencies = [
   "atoms-core",
   "nodes-core",
+  # Declared because `science.corpus` names `pydantic.ValidationError` when it
+  # wraps a document-validation refusal. It arrives with `nodes-core` either
+  # way; an undeclared import is a dependency nobody can see going stale.
+  "pydantic>=2.0",
   "pyyaml>=6.0.3",
   "snakemake==8.11.4",
 ]

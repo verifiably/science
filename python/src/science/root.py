@@ -41,7 +41,7 @@ from atoms.core.errors import (
 )
 from atoms.core.fingerprint import ABSENT, AbsentState, DirectoryState, FileState, PathState
 from atoms.core.scratch import SCRATCH_SIGIL
-from atoms.core.spec import build_spec
+from atoms.core.spec import TransactionSpec, build_spec
 from atoms.fs.backend import Backend
 from atoms.fs.platform import select_backend
 from atoms.fs.volume import StorageProfile
@@ -349,7 +349,7 @@ class DurableExecutor:
 
     # --- submission and §4's mapping ----------------------------------------
 
-    def _submit(self, spec: object, payloads: _PlanPayloads) -> None:
+    def _submit(self, spec: TransactionSpec, payloads: _PlanPayloads) -> None:
         """Run the transaction, mapping every engine failure onto the seam's two
         names. `applied=0` is licensed only where the engine's own contract
         proves pre-mutation state; everything else is `applied=None`, which says
@@ -363,7 +363,7 @@ class DurableExecutor:
                 str(self.root),
                 str(self._metadata_root),
                 self._storage,
-                spec,  # type: ignore[arg-type]
+                spec,
                 payloads,
             )
         except (ProjectApprovalRefused, SpecValidationError, PreconditionRefused, CapabilityUnavailable) as caught:
