@@ -45,7 +45,18 @@ def work_directory() -> Path:
     return work
 
 
-def probe(work: Path) -> str | None:
+def run_directory(work: Path) -> Path:
+    """This run's own directory under the work directory.
+
+    One run never removes another's roots. The command cleans up after itself,
+    and two invocations at once — or one beside an editor running the suite —
+    would otherwise delete each other's corpora mid-transaction, which reads as
+    an engine failure and is not one.
+    """
+    return Path(tempfile.mkdtemp(prefix="run-", dir=work))
+
+
+def probe(run: Path) -> str | None:
     """Register and drop one throwaway root. Returns the engine's refusal, or
     `None` when the tuple is certified.
 
@@ -55,21 +66,23 @@ def probe(work: Path) -> str | None:
     """
     from science.root import init_corpus_root, metadata_root_for
 
-    root = Path(tempfile.mkdtemp(dir=work)) / "probe"
+    root = run / "probe"
     try:
         init_corpus_root(root)
         return None
     except Exception as refused:  # noqa: BLE001 - reported, whatever the engine raised
         return f"{type(refused).__name__}: {refused}"
     finally:
-        shutil.rmtree(root.parent, ignore_errors=True)
+        shutil.rmtree(root, ignore_errors=True)
         shutil.rmtree(metadata_root_for(root), ignore_errors=True)
 
 
 def main(argv: list[str]) -> int:
     work = work_directory()
-    refusal = probe(work)
+    run = run_directory(work)
+    refusal = probe(run)
     if refusal is not None:
+        shutil.rmtree(run, ignore_errors=True)
         print(
             "cut-4 acceptance cannot run here: the volume beneath "
             f"{work} is not on the engine's certified allowlist.\n"
@@ -85,9 +98,9 @@ def main(argv: list[str]) -> int:
         [sys.executable, "-m", "pytest", str(ACCEPTANCE), *argv],
         cwd=PYTHON_ROOT,
         check=False,
+        env={**os.environ, "SCIENCE_CUT4_ROOT": str(run)},
     )
-    if not os.environ.get("SCIENCE_CUT4_ROOT"):
-        shutil.rmtree(work, ignore_errors=True)
+    shutil.rmtree(run, ignore_errors=True)
     return completed.returncode
 
 
