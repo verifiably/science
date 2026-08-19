@@ -53,7 +53,11 @@ from science.errors import (
     EligibilityUnmet,
     FamilyKindUnsupported,
     IdentityError,
+    MalformedRecord,
     RecordAlreadyMinted,
+    RetractionGroundsMissing,
+    RetractionTargetIneligible,
+    RetractionTargetUnresolvable,
     ReviseKindImmutable,
     ReviseOutsideAllowlist,
     RevisionTargetMissing,
@@ -63,6 +67,7 @@ from science.errors import (
     SupersedeIdentityUnchanged,
     SupersedeTargetMissing,
     ValidationRefused,
+    WriteRefused,
 )
 from science.lineage import Basis, LineageSnapshot, Producer, Route
 from science.record import RunInput, RunValue
@@ -71,6 +76,7 @@ from science.traversal import LineageEntry, Reach, RelationEntry, Step, closure
 
 __all__ = [
     "DIRECTIONS",
+    "ELIGIBLE_RETRACTION_TARGET_KINDS",
     "CorpusWriter",
     "Finding",
     "LineageAdjacency",
@@ -83,6 +89,7 @@ __all__ = [
 ]
 
 DIRECTIONS = ("inbound", "outbound")
+ELIGIBLE_RETRACTION_TARGET_KINDS = ("assessment", "retraction", "verification")
 
 
 @sealed
@@ -566,8 +573,54 @@ class CorpusWriter:
         performs.
         """
         with self._operation:
+            self._refuse_family_kinds(node)
             self._refuse(node)
             return self._corpus.add(node)
+
+    def retract(self, record: Node) -> Node:
+        """Mint one locally resolvable retraction without touching its target."""
+        with self._operation:
+            facet = self._validated_retraction(record)
+            target = facet["target"]
+            if target["arm"] == "node":
+                if target["resolved"].partition(":")[0] not in ELIGIBLE_RETRACTION_TARGET_KINDS:
+                    raise RetractionTargetIneligible(
+                        f"{record.id}: node target kind is outside {ELIGIBLE_RETRACTION_TARGET_KINDS}"
+                    )
+                resolved = self._view.resolve(target["ref"])
+                if resolved is None or resolved != target["resolved"]:
+                    raise RetractionTargetUnresolvable(f"{record.id}: node target does not resolve exactly")
+                if self._view.get(resolved).kind not in ELIGIBLE_RETRACTION_TARGET_KINDS:
+                    raise RetractionTargetIneligible(
+                        f"{record.id}: resolved node target kind is outside {ELIGIBLE_RETRACTION_TARGET_KINDS}"
+                    )
+            else:
+                if target["resolved"].partition(":")[0] != "dataset":
+                    raise RetractionTargetIneligible(f"{record.id}: a route target must name a dataset")
+                resolved = self._view.resolve(target["dataset"])
+                if resolved is None or resolved != target["resolved"]:
+                    raise RetractionTargetUnresolvable(f"{record.id}: route dataset does not resolve exactly")
+                dataset = self._view.get(resolved)
+                if dataset.kind != "dataset":
+                    raise RetractionTargetIneligible(f"{record.id}: a route target must resolve to a dataset")
+                if not any(
+                    route.get("identity") == target["route_identity"] for route in stored.basis_routes(dataset)
+                ):
+                    raise RetractionTargetUnresolvable(
+                        f"{record.id}: route identity {target['route_identity']!r} is absent from the stamped basis"
+                    )
+
+            grounds = facet["grounds"]
+            if not grounds or not all(ground for ground in grounds):
+                raise RetractionGroundsMissing(f"{record.id}: a retraction names at least one grounds reference")
+
+            self._refuse_already_minted(record)
+            self._refuse_missing_basis(record)
+            self._refuse_ineligible(record)
+            if stored.display_facet_malformed(record):
+                raise ValidationRefused(f"{record.id}: refused by document validation: malformed display facet")
+            self._refuse_collision(record)
+            return self._corpus.add(record)
 
     def supersede(self, successor: Node, *, of: str) -> Node:
         """Mint a proposition successor without touching its predecessor."""
@@ -633,6 +686,79 @@ class CorpusWriter:
             return self._corpus.add(node)
 
     # --- the refusals, in order ---------------------------------------------
+
+    @staticmethod
+    def _validated_retraction(record: Node) -> dict:
+        CorpusWriter._refuse_invalid(record)
+        if record.kind != "retraction":
+            raise ValidationRefused(f"{record.id}: retract accepts a stored retraction only")
+        facet = record.facets.get(stored.RETRACTION_FACET)
+        required = {"target", "reason", "rationale", "grounds", "actor", "event_token"}
+        if not isinstance(facet, dict) or set(facet) not in (required, required | {"successor"}):
+            raise MalformedRecord(f"{record.id}: malformed retraction facet")
+        target = facet["target"]
+        if not isinstance(target, dict) or target.get("arm") not in ("node", "route"):
+            raise MalformedRecord(f"{record.id}: malformed retraction target arm")
+        target_fields = (
+            {"arm", "ref", "resolved", "content_identity"}
+            if target["arm"] == "node"
+            else {"arm", "dataset", "resolved", "content_identity", "route_identity"}
+        )
+        if set(target) != target_fields or not all(type(target[field]) is str and target[field] for field in target):
+            raise MalformedRecord(f"{record.id}: malformed retraction target")
+        if type(facet["reason"]) is not str or facet["reason"] not in stored.RETRACTION_REASONS:
+            raise MalformedRecord(f"{record.id}: malformed retraction reason")
+        if type(facet["rationale"]) is not str or not facet["rationale"]:
+            raise MalformedRecord(f"{record.id}: malformed retraction rationale")
+        if type(facet["actor"]) is not str or not facet["actor"]:
+            raise MalformedRecord(f"{record.id}: malformed retraction actor")
+        if type(facet["event_token"]) is not str or not facet["event_token"]:
+            raise MalformedRecord(f"{record.id}: malformed retraction event token")
+        grounds = facet["grounds"]
+        if not isinstance(grounds, list) or not all(type(ground) is str for ground in grounds):
+            raise MalformedRecord(f"{record.id}: malformed retraction grounds")
+        successor = facet.get("successor")
+        if successor is not None and (type(successor) is not str or not successor):
+            raise MalformedRecord(f"{record.id}: malformed retraction successor")
+        stamp = record.facets.get(stored.SEMANTIC_IDENTITY_FACET)
+        if not isinstance(stamp, dict) or set(stamp) != {"digest"} or type(stamp["digest"]) is not str:
+            raise ValidationRefused(f"{record.id}: refused by retraction stamp validation")
+        try:
+            if stored.semantic_hash_missing(record) or stored.semantic_hash_disagrees(record):
+                raise ValidationRefused(f"{record.id}: refused by retraction stamp validation")
+        except IdentityError as caught:
+            raise ValidationRefused(f"{record.id}: refused by retraction stamp validation: {caught}") from caught
+        if grounds and all(grounds):
+            target_value: stored.NodeTarget | stored.RouteTarget
+            if target["arm"] == "node":
+                target_value = stored.NodeTarget(target["ref"], target["resolved"], target["content_identity"])
+            else:
+                target_value = stored.RouteTarget(
+                    target["dataset"],
+                    target["resolved"],
+                    target["content_identity"],
+                    target["route_identity"],
+                )
+            expected = stored.retraction_node(
+                title=record.title,
+                target=target_value,
+                reason=facet["reason"],
+                rationale=facet["rationale"],
+                grounds=grounds,
+                actor=facet["actor"],
+                event_token=facet["event_token"],
+                successor=successor,
+            )
+            if record.id != expected.id or record.facets != expected.facets or record.relations != expected.relations:
+                raise MalformedRecord(f"{record.id}: retraction does not match the controlled stored shape")
+        return facet
+
+    @staticmethod
+    def _refuse_family_kinds(node: Node) -> None:
+        if node.kind == "retraction":
+            raise WriteRefused("a retraction enters through retract")
+        if node.kind == "act-report":
+            raise WriteRefused("an act-report is minted by the boundary and stored by import")
 
     def _refuse_malformed_supersede_successor(self, successor: Node) -> None:
         if not all(isinstance(relation, Relation) for relation in successor.relations):

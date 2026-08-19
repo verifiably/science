@@ -1,0 +1,227 @@
+"""The controlled, additive retraction write path."""
+
+from __future__ import annotations
+
+from typing import ClassVar
+
+import pytest
+from nodes.core.node import Node
+from nodes.core.write_plan import CreateOp, DefaultExecutor
+
+from science import errors, stored
+from science.corpus import CorpusWriter
+
+PINNED = [{"name": "matrix", "digest": "sha256:" + "ab" * 32}]
+
+
+class Recorder:
+    plans: ClassVar[list[list]] = []
+
+    def __init__(self, root):
+        self._inner = DefaultExecutor(root)
+
+    def execute(self, plan) -> None:
+        Recorder.plans.append(list(plan))
+        self._inner.execute(plan)
+
+
+@pytest.fixture()
+def writer(tmp_path) -> CorpusWriter:
+    Recorder.plans = []
+    return CorpusWriter(tmp_path, Recorder)
+
+
+def content_identity(node: Node) -> str:
+    digest = stored.stored_semantic_hash(node)
+    assert digest is not None
+    return digest
+
+
+def mint_eligible_assessment(writer: CorpusWriter) -> Node:
+    dataset = writer.add(
+        stored.dataset_node(
+            "raw", title="raw", resources=PINNED, empirical_observation={"boundary": "instrument"}
+        )
+    )
+    run = writer.add(stored.run_node("r1", title="r1", spec="analysis-spec:s1", observes=[dataset.id]))
+    proposition = writer.add(stored.proposition_node("p1", title="p1", claim={"operator": "affects"}))
+    return writer.add(
+        stored.assessment_node(
+            "a1",
+            title="a1",
+            spec="analysis-spec:s1",
+            run=run.id,
+            proposition=proposition.id,
+            outcome="supported",
+            interpretation_rule="rule:threshold",
+        )
+    )
+
+
+def retraction_for(target: Node, *, reason: str = "defective-code") -> Node:
+    return stored.retraction_node(
+        title="retraction",
+        target=stored.NodeTarget(target.id, target.id, content_identity(target)),
+        reason=reason,
+        rationale="the recorded result is invalid",
+        grounds=("verification:v1",),
+        actor="tester",
+        event_token="event-1",
+    )
+
+
+def without_grounds(record: Node) -> Node:
+    facet = dict(record.facets[stored.RETRACTION_FACET])
+    facet["grounds"] = []
+    record.facets[stored.RETRACTION_FACET] = facet
+    record.relations = [relation for relation in record.relations if relation.predicate != stored.GROUNDED_IN]
+    return stored.stamp_semantic_identity(record)
+
+
+def test_retract_is_create_only_and_target_untouched(writer):
+    target = mint_eligible_assessment(writer)
+    before = writer.read_view.get(target.id).model_dump(mode="json")
+
+    admitted = writer.retract(retraction_for(target))
+
+    assert all(isinstance(op, CreateOp) for op in Recorder.plans[-1])
+    assert writer.read_view.get(admitted.id) == admitted
+    assert writer.read_view.get(target.id).model_dump(mode="json") == before
+
+
+def test_counter_retraction_targets_a_retraction_as_a_new_chain_link(writer):
+    target = mint_eligible_assessment(writer)
+    first = writer.retract(retraction_for(target))
+
+    counter = writer.retract(retraction_for(first, reason="upstream-retraction"))
+
+    assert counter.relations[0].target == first.id
+    assert writer.read_view.holds(target.id)
+    assert writer.read_view.holds(first.id)
+
+
+def test_retract_refuses_an_unresolvable_node_target(writer):
+    absent = stored.retraction_node(
+        title="absent",
+        target=stored.NodeTarget("assessment:absent", "assessment:absent", "sha256:" + "cd" * 32),
+        reason="defective-code",
+        rationale="missing",
+        grounds=("verification:v1",),
+        actor="tester",
+        event_token="event-1",
+    )
+
+    with pytest.raises(errors.RetractionTargetUnresolvable):
+        writer.retract(absent)
+
+
+def test_retract_refuses_an_ineligible_kind_before_resolution(writer):
+    proposition = stored.proposition_node("absent", title="absent", claim={"operator": "affects"})
+
+    with pytest.raises(errors.RetractionTargetIneligible):
+        writer.retract(retraction_for(proposition))
+
+
+def test_retract_accepts_an_exact_route_identity(writer):
+    dataset = writer.add(
+        stored.dataset_node(
+            "derived",
+            title="derived",
+            resources=PINNED,
+            basis={
+                "tag": "single",
+                "routes": [
+                    {
+                        "identity": "route:one",
+                        "run": "run:r1",
+                        "ancestor": "dataset:raw",
+                        "transforms": ["dataset:raw"],
+                    }
+                ],
+            },
+        )
+    )
+    record = stored.retraction_node(
+        title="route retraction",
+        target=stored.RouteTarget(dataset.id, dataset.id, content_identity(dataset), "route:one"),
+        reason="wrong-route",
+        rationale="the selected route was wrong",
+        grounds=("verification:v1",),
+        actor="tester",
+        event_token="event-1",
+    )
+
+    assert writer.retract(record).id == record.id
+
+
+def test_retract_refuses_a_route_absent_from_the_stamped_basis(writer):
+    dataset = writer.add(
+        stored.dataset_node(
+            "derived",
+            title="derived",
+            resources=PINNED,
+            basis={"tag": "single", "routes": [{"identity": "route:one"}]},
+        )
+    )
+    record = stored.retraction_node(
+        title="route retraction",
+        target=stored.RouteTarget(dataset.id, dataset.id, content_identity(dataset), "route:other"),
+        reason="wrong-route",
+        rationale="the selected route was wrong",
+        grounds=("verification:v1",),
+        actor="tester",
+        event_token="event-1",
+    )
+
+    with pytest.raises(errors.RetractionTargetUnresolvable):
+        writer.retract(record)
+
+
+def test_resolution_refuses_before_missing_grounds(writer):
+    absent = stored.retraction_node(
+        title="absent",
+        target=stored.NodeTarget("assessment:absent", "assessment:absent", "sha256:" + "cd" * 32),
+        reason="defective-code",
+        rationale="missing",
+        grounds=("verification:v1",),
+        actor="tester",
+        event_token="event-1",
+    )
+
+    with pytest.raises(errors.RetractionTargetUnresolvable):
+        writer.retract(without_grounds(absent))
+
+
+def test_retract_refuses_missing_grounds(writer):
+    target = mint_eligible_assessment(writer)
+
+    with pytest.raises(errors.RetractionGroundsMissing):
+        writer.retract(without_grounds(retraction_for(target)))
+
+
+def test_retract_refuses_a_stale_stamp_at_the_boundary(writer):
+    target = mint_eligible_assessment(writer)
+    record = retraction_for(target)
+    record.facets[stored.RETRACTION_FACET]["rationale"] = "changed without restamping"
+
+    with pytest.raises(errors.ValidationRefused):
+        writer.retract(record)
+
+
+def test_retract_keeps_malformed_raw_shapes_in_the_record_error_surface(writer):
+    target = mint_eligible_assessment(writer)
+    record = retraction_for(target)
+    record.facets[stored.RETRACTION_FACET]["target"] = {"arm": "node"}
+    stored.stamp_semantic_identity(record)
+
+    with pytest.raises(errors.MalformedRecord):
+        writer.retract(record)
+
+
+def test_retract_errors_are_write_refusals():
+    for refusal in (
+        errors.RetractionTargetIneligible,
+        errors.RetractionTargetUnresolvable,
+        errors.RetractionGroundsMissing,
+    ):
+        assert issubclass(refusal, errors.WriteRefused)

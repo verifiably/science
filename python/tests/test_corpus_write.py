@@ -163,6 +163,27 @@ class TestS7TheWriteBoundary:
 
 
 class TestTheRefusalsWrapAndOrder:
+    def test_add_reserves_family_owned_kinds_before_document_validation(self, writer):
+        retraction = stored.retraction_node(
+            title="r",
+            target=stored.NodeTarget("assessment:a1", "assessment:a1", "sha256:" + "cd" * 32),
+            reason="defective-code",
+            rationale="invalid",
+            grounds=("verification:v1",),
+            actor="tester",
+            event_token="event-1",
+        )
+        retraction.metadata = NodeMetadata.model_construct(version="bad")
+        with pytest.raises(WriteRefused, match="a retraction enters through retract"):
+            writer.add(retraction)
+
+        report = Node.model_construct(id="act-report:r1", kind="act-report")
+        with pytest.raises(
+            WriteRefused,
+            match="an act-report is minted by the boundary and stored by import",
+        ):
+            writer.add(report)
+
     def test_a_document_validation_failure_is_wrapped(self, writer):
         malformed = Node.model_construct(
             id="dataset:d1", uid="a" * 32, kind="run", title="wrong kind", facets={}, relations=[]

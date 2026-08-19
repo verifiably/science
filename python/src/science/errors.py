@@ -428,6 +428,18 @@ class FamilyKindUnsupported(WriteRefused):
     """A mutation family does not operate on the supplied node kind."""
 
 
+class RetractionTargetIneligible(WriteRefused):
+    """A retraction target arm or node kind is not eligible."""
+
+
+class RetractionTargetUnresolvable(WriteRefused):
+    """A retraction's local node, dataset, or exact route does not resolve."""
+
+
+class RetractionGroundsMissing(WriteRefused):
+    """A retraction carries no present string grounds reference."""
+
+
 class RevisionTargetMissing(WriteRefused):
     """The supplied `(uid, id)` pair does not identify a local node."""
 
