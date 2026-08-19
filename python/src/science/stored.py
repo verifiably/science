@@ -52,6 +52,7 @@ from typing import Any
 from nodes.core.node import Node
 from nodes.core.relations import Relation
 
+from science import report as report_values
 from science.dataset import DatasetDeclaration, ResourceDeclaration
 from science.errors import LoneSurrogate, MalformedRecord
 from science.identity import v1
@@ -80,6 +81,7 @@ __all__ = [
     "VERIFICATION_FACET",
     "NodeTarget",
     "RouteTarget",
+    "act_report_node",
     "assessment_value",
     "dataset_declaration",
     "display_facet_malformed",
@@ -149,6 +151,7 @@ ACCEPTED_EXTERNAL_IDENTIFIERS = ("accession", "doi", "isbn", "pmid")
 derived from title and year is exactly the coercion the row refuses."""
 
 SEMANTIC_DOMAINS: Mapping[str, str] = {
+    "act-report": report_values.ACT_REPORT_DOMAIN,
     "analysis-spec": "science.analysis-spec.v1",
     "assessment": "science.assessment.v1",
     "dataset": "science.dataset.v1",
@@ -161,6 +164,7 @@ SEMANTIC_DOMAINS: Mapping[str, str] = {
 }
 
 COVERED_FACETS: Mapping[str, tuple[str, ...]] = {
+    "act-report": ("act-report",),
     "analysis-spec": ("analysis-spec",),
     "assessment": (ASSESSMENT_FACET,),
     "dataset": (DATASET_FACET, EMPIRICAL_OBSERVATION_FACET, LINEAGE_BASIS_FACET),
@@ -390,6 +394,18 @@ class RouteTarget:
 def _node(kind: str, slug: str, title: str, facets: Mapping[str, Any], relations: Sequence[Relation]) -> Node:
     node = Node(id=f"{kind}:{slug}", kind=kind, title=title, facets=dict(facets), relations=list(relations))
     return stamp_semantic_identity(node)
+
+
+def act_report_node(report: report_values.ActReport) -> Node:
+    if type(report) is not report_values.ActReport:
+        raise MalformedRecord("act_report_node requires an ActReport")
+    facet = dict(vars(report))
+    facet["entries"] = [report_values._entry_facet(entry) for entry in report.entries]
+    try:
+        slug = report.identity()
+    except LoneSurrogate as exc:
+        raise MalformedRecord("an act report identity field is not canonically encodable") from exc
+    return _node("act-report", slug, f"{report.operation} report", {"act-report": facet}, ())
 
 
 def proposition_node(
