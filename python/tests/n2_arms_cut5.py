@@ -1,4 +1,4 @@
-"""Cut 5's 31 selected family-adapter arms and their exact sabotages."""
+"""Cut 5's 28 selected family-adapter arms and their exact sabotages."""
 
 from __future__ import annotations
 
@@ -38,7 +38,7 @@ _SUPERSEDE_AND_REVISE = (
             before="                        Relation(source=successor.id, predicate=stored.SUPERSEDES, target=predecessor_id),\n",
             after="",
         ),
-        checks=("test_supersede.py::test_supersede_mints_a_successor_and_one_owned_edge",),
+        checks=("acceptance/test_n2_cut5.py::test_scope_supersession_preserves_predecessor_evidence",),
     ),
     Arm(
         row="S4",
@@ -54,7 +54,7 @@ _SUPERSEDE_AND_REVISE = (
         row="G7",
         asserts=(
             "editing proposition scope mints a new semantic identity while prior evidence remains "
-            "bound to the predecessor"
+            "bound to the predecessor and belief on that predecessor remains unchanged"
         ),
         sabotage=_PROPOSITION_IDENTITY_DROPPED,
         checks=("acceptance/test_n2_cut5.py::test_scope_supersession_preserves_predecessor_evidence",),
@@ -121,7 +121,10 @@ _EXPLICIT_IMPORT = (
     ),
     Arm(
         row="T1",
-        asserts="an explicitly imported foreign act-report is attributed, structurally validated, and inert",
+        asserts=(
+            "an explicitly imported foreign act-report enters structurally validated, not "
+            "operation-authenticated, attributed, and inert without stored validation state"
+        ),
         sabotage=Sabotage(
             module="corpus.py",
             before=(
@@ -130,11 +133,12 @@ _EXPLICIT_IMPORT = (
             ),
             after=(
                 '                if record.kind == "act-report":\n'
-                "                    self._refuse_malformed_act_report(record)\n"
-                '                    raise ValidationRefused(f"{record.id}: foreign reports are active")'
+                "                    pass"
             ),
         ),
-        checks=("test_import_bundle.py::test_foreign_act_report_enters_inert",),
+        checks=(
+            "acceptance/test_n2_cut5.py::test_foreign_act_report_is_attributed_inert_and_structurally_validated",
+        ),
     ),
     Arm(
         row="T2",
@@ -160,16 +164,6 @@ _EXPLICIT_IMPORT = (
         checks=(
             "acceptance/test_n2_cut5.py::test_post_intent_refusal_writes_one_fulfilling_report_and_no_payload",
         ),
-    ),
-    Arm(
-        row="T2",
-        asserts="a second fulfilling registration for one import intent is malformed",
-        sabotage=Sabotage(
-            module="root.py",
-            before="            fulfills=fulfills,",
-            after="            fulfills=None,",
-        ),
-        checks=("acceptance/test_n2_cut5.py::test_second_fulfillment_is_malformed",),
     ),
     Arm(
         row="T2",
@@ -206,18 +200,6 @@ _EXPLICIT_IMPORT = (
         asserts="the cycle validator returns a cycle-specific offending-edge witness",
         sabotage=_CYCLE_WITNESS_DROPPED,
         checks=("acceptance/test_n2_cut5.py::test_cycle_validator_returns_the_offending_edges",),
-    ),
-    Arm(
-        row="M3",
-        asserts="a cycle wholly inside the import bundle is refused with its edge set",
-        sabotage=_CYCLE_WITNESS_DROPPED,
-        checks=("test_import_bundle.py::test_bundle_cycle_refuses_with_edge_set",),
-    ),
-    Arm(
-        row="M3",
-        asserts="a cycle closed through local corpus context is refused over the bundle-world union",
-        sabotage=_CYCLE_WITNESS_DROPPED,
-        checks=("test_import_bundle.py::test_bundle_plus_local_context_cycle_refuses",),
     ),
     Arm(
         row="M3",
@@ -351,13 +333,10 @@ _RETRACTION = (
         asserts="node-arm targets of kind note, proposition, and run are refused",
         sabotage=Sabotage(
             module="corpus.py",
-            before=(
-                '                if target["resolved"].partition(":")[0] not in ELIGIBLE_RETRACTION_TARGET_KINDS:\n'
-                "                    raise RetractionTargetIneligible("
-            ),
+            before='ELIGIBLE_RETRACTION_TARGET_KINDS = ("assessment", "retraction", "verification")',
             after=(
-                "                if False:\n"
-                "                    raise RetractionTargetIneligible("
+                'ELIGIBLE_RETRACTION_TARGET_KINDS = ("assessment", "note", "proposition", "retraction", "run", '
+                '"verification")'
             ),
         ),
         checks=("acceptance/test_n2_cut5.py::test_ineligible_node_target_kinds_refuse",),

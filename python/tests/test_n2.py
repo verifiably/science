@@ -41,6 +41,7 @@ same way vacuity is, so each is reported the same way.
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 import sys
@@ -136,6 +137,9 @@ def _run_check(check: str, package: Path | None) -> CheckRun:
             f"{check!r} does not name one test function outside {HARNESS}; a check must name the one test it means"
         )
     env = {"PATH": "/usr/bin:/bin", "HOME": str(Path.home())}
+    for name in ("SCIENCE_CUT4_ROOT", "SCIENCE_CUT5_ROOT"):
+        if name in os.environ:
+            env[name] = os.environ[name]
     if package is not None:
         env["PYTHONPATH"] = str(package.parent)
     # Node ids are declared relative to `tests/` and resolved to absolute paths
@@ -277,6 +281,23 @@ class TestEveryArmAssertsSomething:
         )
         finding = baseline(every)
         assert finding.verdict == "resolved", finding.detail
+
+
+def test_an_explicit_uncertified_acceptance_root_is_not_silently_replaced(monkeypatch):
+    shm = Path("/dev/shm")
+    if not shm.is_dir():
+        raise AssertionError("/dev/shm is required for the N2 child-environment regression")
+    root = shm / f"science-n2-env-{os.getpid()}"
+    monkeypatch.setenv("SCIENCE_CUT4_ROOT", str(root))
+    monkeypatch.setenv("SCIENCE_CUT5_ROOT", str(root))
+    try:
+        run = _run_check(
+            "acceptance/test_durable_families.py::test_supersede_survives_facade_reload",
+            None,
+        )
+        assert run.returncode == FAILED
+    finally:
+        shutil.rmtree(root, ignore_errors=True)
 
 
 class TestTheHarnessCanSeeAVacuousArm:

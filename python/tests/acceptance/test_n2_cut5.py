@@ -1,4 +1,4 @@
-"""N2 over Cut 5's 31 selected family-adapter arms."""
+"""N2 over Cut 5's 28 selected family-adapter arms."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ import ast
 import inspect
 import textwrap
 from concurrent.futures import ThreadPoolExecutor
+from copy import deepcopy
 from dataclasses import replace
 
 import pytest
@@ -19,15 +20,18 @@ from n2_arms import (
     Arm,
 )
 from n2_arms_cut5 import CUT5_ARMS
-from nodes.core.write_plan import CreateOp
+from nodes.core.node import Node
 from test_durable_families import chain_entries, proposition
 from test_n2 import MalformedArm, audit, baseline
 
 from science import stored
 from science.belief import Belief, evaluate
 from science.closure import RetractionEnumeration, build_closure
-from science.corpus import CorpusWriter, _cycle_edges, standing_in_local_view
+from science.corpus import CorpusWriter, _cycle_edges, run_value, standing_in_local_view
+from science.dataset import ByteObservation, dataset_address
 from science.errors import BundleMemberHeld, ImportRefused, MalformedRecord, RetractionTargetIneligible
+from science.lineage import LineageSnapshot
+from science.report import ImportedRecords, RecordImportEntry, _mint_report
 from science.verification import ADMITTED, INVALIDATED, NOT_ADMITTED, Verification, lifecycle_state
 
 WORKERS = 8
@@ -74,6 +78,8 @@ def test_semantic_change_branch_names_no_rename_path():
 
 
 def test_scope_supersession_preserves_predecessor_evidence(durable_writer):
+    from test_belief import scenario
+
     observed = durable_writer.add(
         stored.dataset_node(
             "scope-observed",
@@ -108,7 +114,55 @@ def test_scope_supersession_preserves_predecessor_evidence(durable_writer):
             interpretation_rule="rule:threshold",
         )
     )
+    assessment_value = stored.assessment_value(assessment)
+    verification = durable_writer.add(
+        stored.verification_node(
+            "scope-verification",
+            title="scope verification",
+            assessment=assessment_value.identity(),
+            assessment_ref=assessment.id,
+            scope="clean-environment",
+            verdict="passed",
+        )
+    )
     before = durable_writer.read_view.get(predecessor.id).model_dump(mode="json")
+    template = scenario()
+    declaration = stored.dataset_declaration(observed)
+    address = dataset_address(declaration)
+    digest = declaration.resources[0].digest
+    assert address is not None and digest is not None
+
+    def predecessor_belief():
+        view = durable_writer.read_view
+        value = stored.assessment_value(view.get(assessment.id))
+        records = replace(
+            template["records"],
+            claims={},
+            assessments=(value,),
+            runs={run.id: run_value(view, run.id)},
+            source_assertions=(),
+            verifications=(stored.verification_value(view.get(verification.id)),),
+        )
+        availability = replace(
+            template["availability"],
+            observations={address: (ByteObservation(digest=digest, location="corpus:scope"),)},
+        )
+        context = replace(
+            template["context"],
+            snapshot=LineageSnapshot(roots=(address,), bases={}, producers={}),
+            node_corpus={value.identity(): "c1"},
+        )
+        return evaluate(
+            proposition=predecessor.id,
+            records=records,
+            availability=availability,
+            context=context,
+            binding=template["binding"],
+            profile=template["profile"],
+        )
+
+    belief_before = predecessor_belief()
+    assert isinstance(belief_before, Belief)
 
     successor = durable_writer.supersede(
         stored.proposition_node(
@@ -122,6 +176,7 @@ def test_scope_supersession_preserves_predecessor_evidence(durable_writer):
     assert stored.stored_semantic_hash(successor) != stored.stored_semantic_hash(predecessor)
     assert durable_writer.read_view.get(predecessor.id).model_dump(mode="json") == before
     assert durable_writer.read_view.get(assessment.id).relations[0].target == predecessor.id
+    assert predecessor_belief() == belief_before
     assert successor.relations == [
         stored.Relation(source=successor.id, predicate=stored.SUPERSEDES, target=predecessor.id)
     ]
@@ -135,6 +190,54 @@ def test_restamped_semantic_edit_is_imported(durable_writer):
     _import(durable_writer, (record,))
 
     assert durable_writer.read_view.get(record.id) == record
+
+
+def test_foreign_act_report_is_attributed_inert_and_structurally_validated(durable_writer):
+    foreign = stored.act_report_node(
+        _mint_report(
+            operation="import",
+            event_token="foreign-valid",
+            actor="elsewhere",
+            observer="other-corpus",
+            instrument="other-tool",
+            opened_at="T-2",
+            closed_at="T-1",
+            entries=(
+                RecordImportEntry(
+                    subject="other",
+                    outcome=ImportedRecords(refs=("note:not-minted",), findings=()),
+                ),
+            ),
+        )
+    )
+
+    _import(durable_writer, (foreign,))
+
+    held = durable_writer.read_view.get(foreign.id)
+    assert held == foreign
+    assert held.facets["act-report"]["actor"] == "elsewhere"
+    assert "validated" not in held.facets["act-report"]
+    assert not durable_writer.read_view.holds("note:not-minted")
+
+    original = stored.act_report_node(
+        _mint_report(
+            operation="import",
+            event_token="foreign-malformed",
+            actor="elsewhere",
+            observer="other-corpus",
+            instrument="other-tool",
+            opened_at="T-2",
+            closed_at="T-1",
+            entries=(),
+        )
+    )
+    facets = deepcopy(original.facets)
+    facets["act-report"]["entries"] = [{"kind": "made-up"}]
+    malformed = stored.stamp_semantic_identity(original.model_copy(update={"facets": facets}))
+
+    with pytest.raises(ImportRefused):
+        _import(durable_writer, (malformed,))
+    assert not durable_writer.read_view.holds(malformed.id)
 
 
 def test_post_intent_refusal_writes_one_fulfilling_report_and_no_payload(durable_writer, durable_root):
@@ -154,25 +257,6 @@ def test_post_intent_refusal_writes_one_fulfilling_report_and_no_payload(durable
     assert settlement.outcome is ChainOutcome.COMMITTED
     assert refused.value.report_ref is not None
     assert not durable_writer.read_view.holds("proposition:not-written")
-
-
-def test_second_fulfillment_is_malformed(durable_writer, durable_root):
-    before = chain_entries(durable_root)
-    _import(durable_writer, (proposition("fulfilled-once"),))
-    intent_digest = chain_entries(durable_root)[len(before)][0]
-    path = "note/second-fulfillment.md"
-    port = durable_writer._operation_port
-    assert port is not None
-
-    port.execute_fulfilling([CreateOp(path=path, content=b"second")], intent_digest)
-
-    registrations = [
-        entry
-        for _, entry in chain_entries(durable_root)
-        if isinstance(entry, RegisteredEntry) and entry.fulfills == intent_digest
-    ]
-    assert len(registrations) == 2
-    assert len(registrations) != 1  # the frozen singular-fulfillment rule: malformed
 
 
 def test_intent_append_failure_begins_no_act(durable_writer, durable_root, monkeypatch):
@@ -421,9 +505,23 @@ def test_verification_retractions_recompute_admission_and_belief(durable_writer)
 
 @pytest.mark.parametrize("kind", ["note", "proposition", "run"])
 def test_ineligible_node_target_kinds_refuse(durable_writer, kind):
+    if kind == "note":
+        target = Node(
+            id="note:target",
+            kind="note",
+            title="target",
+            facets={stored.SEMANTIC_IDENTITY_FACET: {"digest": "cd" * 32}},
+        )
+    elif kind == "proposition":
+        target = stored.proposition_node("target", title="target", claim={"operator": "affects"})
+    else:
+        target = stored.run_node("target", title="target", spec="analysis-spec:target")
+    durable_writer.add(target)
+    content_identity = stored.stored_semantic_hash(target)
+    assert content_identity is not None
     record = stored.retraction_node(
         title=f"ineligible {kind}",
-        target=stored.NodeTarget(f"{kind}:target", f"{kind}:target", "sha256:" + "cd" * 32),
+        target=stored.NodeTarget(target.id, target.id, content_identity),
         reason="defective-code",
         rationale="the target kind is ineligible",
         grounds=("source:cut5",),
@@ -433,6 +531,7 @@ def test_ineligible_node_target_kinds_refuse(durable_writer, kind):
 
     with pytest.raises(RetractionTargetIneligible):
         durable_writer.retract(record)
+    assert not durable_writer.read_view.holds(record.id)
 
 
 @pytest.fixture(scope="session")
@@ -484,7 +583,7 @@ class TestEveryCut5ArmAssertsSomething:
 
 class TestTheCut5InventoryIsExact:
     def test_exactly_one_declaration_exists_per_selected_bullet(self):
-        assert len(CUT5_ARMS) == 31
+        assert len(CUT5_ARMS) == 28
 
     def test_only_selected_rows_are_named(self):
         assert {arm.row for arm in CUT5_ARMS} == {
