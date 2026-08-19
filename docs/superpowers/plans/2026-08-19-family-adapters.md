@@ -8,7 +8,7 @@
 
 **Tech Stack:** Python 3.12, `nodes-core` (WritePlan seam), `atoms-core` (certified engine, `append_intent`, `build_spec`), pytest, the repo's N2 arm harness.
 
-**Spec:** `docs/superpowers/specs/2026-08-19-family-adapters-design.md` (read it in full before any task; every task below argues from it).
+**Spec:** `docs/superpowers/specs/2026-08-19-family-adapters-design.md` — Task 3 moves it to `docs/designs/2026-08-19-family-adapters-design.md`; from Task 5 on, read it there. Read it in full before any task; every task below argues from it.
 
 ## Global Constraints
 
@@ -22,6 +22,8 @@
 - **Portable tests run anywhere; durable arms run only under the cut-5 acceptance runner, which errors off the certified tuple and never skips. `python/tools/cut4_acceptance.py` is never edited** (spec §9).
 - **Timestamps are caller-supplied strings; event tokens are `secrets.token_hex(16)`** (boundary.py precedent).
 - Run tests from `python/`: `uv run pytest tests/<file> -q` (or plain `pytest` if the venv is active).
+- **Commits stage explicitly.** Every commit step means `git add <each created or modified path>` then `git commit -m "..."` — never `-a`/`-A`, which misses untracked files and over-stages sibling work.
+- **Family-owned kinds are reserved from `add`**: `CorpusWriter.add` refuses `retraction` (enters only through `retract`) and `act-report` (minted only by the boundary; stored only by import) — spec T1's no-construction-path claim, enforced at the one public mint.
 
 ---
 
@@ -52,23 +54,23 @@
 
 - [ ] **Step 1: Dispatch a fresh reviewing agent** with ONLY: the banked row texts it names, the spec, and cut 5's §2 boundary declaration. Instruct it to attack **toward overstated coverage**: every selected clause must be checkable entirely inside §2's in-scope list; flag any clause that quietly reaches the world index, audit, holdings, anchor carriage, or a deferred family; flag any C-row arm whose text requires world standing rather than `standing_in_local_view`; check the R19/R20/R22/R23 splits against spec §8's narrowing rule (the validation promise narrows, the selection never expands).
 - [ ] **Step 2: Close every finding in the document** — move overstated clauses to part/deferral, record the reader's run and dispositions in §6.
-- [ ] **Step 3: Commit** — `git commit -am "docs(cut5): close the second reader's findings"`.
+- [ ] **Step 3: Commit** — `git add docs/designs/2026-08-19-conformance-cut-5.md && git commit -m "docs(cut5): close the second reader's findings"`.
 
 ---
 
 ### Task 3: Bank the design and freeze cut 5
 
 **Files:**
-- Create: `docs/designs/2026-08-19-family-adapters-design.md` (promoted copy)
-- Modify: `docs/superpowers/specs/2026-08-19-family-adapters-design.md` (status → promoted, pointing at the banked copy), `docs/designs/2026-08-19-conformance-cut-5.md` (status → frozen, dated), `docs/designs/2026-08-03-redesign-adoption-ledger.md` (row 4's Plan B note; order-of-work item 5; affected "waits on" cells), `README.md` (design count/table/date), `python/tools/check_guide.py` (`_COUNT_WORDS` gains `25: "Twenty-five"` if absent), `docs/guide/open-questions.md` (if it names item 2 as open)
+- Create: `docs/designs/2026-08-19-family-adapters-design.md` (via `git mv` — see Step 1)
+- Modify: `docs/designs/2026-08-19-conformance-cut-5.md` (status → frozen, dated), `docs/designs/2026-08-03-redesign-adoption-ledger.md` (row 4's Plan B note; order-of-work item 5; affected "waits on" cells), `README.md` (design count/table/date), `python/tests/test_designs_corpus.py` (`_COUNT_WORDS` — that is where the guard lives, **not** `check_guide.py`), `docs/guide/open-questions.md` (if it names item 2 as open)
 
 **Steps:**
 
-- [ ] **Step 1: Promote the spec** into `docs/designs/` with status "Banked 2026-08-19; implementation in progress on `design/family-adapters`". One banked authority: the `docs/superpowers/specs/` copy's status header now says it is the review draft superseded by the banked copy.
+- [ ] **Step 1: Promote the spec by `git mv`** — `git mv docs/superpowers/specs/2026-08-19-family-adapters-design.md docs/designs/2026-08-19-family-adapters-design.md` — never by copy: the spec prohibits a permanent duplicate, and a moved file leaves no second authority behind. Update the moved file's status to "Banked 2026-08-19; implementation in progress on `design/family-adapters`".
 - [ ] **Step 2: Freeze cut 5** in the same change: status → "Frozen 2026-08-19, second reader discharged".
 - [ ] **Step 3: Ledger updates**: §1 row 4 note (item 2 design banked; recast recorded), §3 item 5 (remaining Plan B surface = implementation of item 2, then the deferred consolidate/move/deletion cut), any "waits on" cells naming the family surface.
-- [ ] **Step 4: Guard propagation**: run `uv run python tools/check_guide.py` from `python/`; fix every count/table/date it reports until clean.
-- [ ] **Step 5: Commit** — `git commit -am "docs: bank the family-adapters design and freeze conformance cut 5"`.
+- [ ] **Step 4: Guard propagation**: the tree holds 24 design documents before this task; Task 1 added cut 5 and Step 1 adds the family design, so the count the guards must carry is **26** — verify against what `python/tests/test_designs_corpus.py` actually counts (its rule, not this plan's arithmetic, is the authority), extend `_COUNT_WORDS` with the entries the new count needs (`25: "Twenty-five"`, `26: "Twenty-six"` as applicable), update the README count/table/date, then run `uv run pytest tests/test_designs_corpus.py -q` and `uv run python tools/check_guide.py` from `python/` until both are clean.
+- [ ] **Step 5: Commit** — `git add -u docs README.md python/tests/test_designs_corpus.py && git commit -m "docs: bank the family-adapters design and freeze conformance cut 5"`.
 
 ---
 
@@ -80,7 +82,7 @@
 **Steps:**
 
 - [ ] **Step 1: Add a dated amendment note** (do not rewrite the original sentences; append `*(amended 2026-08-19 …)*` markers in both sections): science's Plan B item 2 recast under the clean start per `science`'s `2026-08-19-family-adapters-design.md` — the family list is supersede, retraction, and explicit import; planner/Gate-B lapse with the save/apply boundary that no longer exists; dialect deletion discharged by the clean start; archive/cohort require their own designs; the hard cut's surviving claim is "every Science corpus mutation flows through the certified engine".
-- [ ] **Step 2: Commit in ~/d/atoms** — `git -C ~/d/atoms add -A && git -C ~/d/atoms commit -m "docs: record science's Plan B item 2 recast (2026-08-19)"`.
+- [ ] **Step 2: Commit in ~/d/atoms** — `git -C ~/d/atoms add docs/plans/2026-07-23-recoverable-fs-effect-engine-design.md && git -C ~/d/atoms commit -m "docs: record science's Plan B item 2 recast (2026-08-19)"`.
 
 ---
 
@@ -114,9 +116,9 @@ def test_display_facet_shape_is_validated():
 ```
 
 - [ ] **Step 2: Run to verify failure** — `uv run pytest tests -k display -q` → FAIL (no `display_statement` parameter).
-- [ ] **Step 3: Implement**: `DISPLAY_FACET = "display"`; the facet is `{"display_statement": <str>}` exactly, absent when unauthored; `display_facet_malformed` is True when the facet exists and is not exactly that one-string-field shape. Never touch `COVERED_FACETS`.
+- [ ] **Step 3: Implement**: `DISPLAY_FACET = "display"`; the facet is `{"display_statement": <str>}` exactly, absent when unauthored; `display_facet_malformed` is True when the facet exists and is not exactly that one-string-field shape. Never touch `COVERED_FACETS`. Wire it into the write boundary in the same task: `CorpusWriter._refuse` gains a check raising `ValidationRefused` on a malformed display facet, so ordinary `add` (and later `revise`) cannot admit one — a validator no write path consults is not a boundary. Test: `writer.add(<node with malformed display facet>)` raises `ValidationRefused`.
 - [ ] **Step 4: Run to verify pass**, then run the full portable suite: `uv run pytest tests -q`.
-- [ ] **Step 5: Commit** — `git commit -am "feat(stored): give display_statement its uncovered facet home"`.
+- [ ] **Step 5: Commit** — `git add python/src/science/stored.py python/src/science/corpus.py python/tests/test_stored_display.py && git commit -m "feat(stored): give display_statement its uncovered facet home"`.
 
 ---
 
@@ -127,28 +129,35 @@ def test_display_facet_shape_is_validated():
 - Test: `python/tests/test_corpus_write.py`
 
 **Interfaces:**
-- Produces: module-level `_operation_lock_for(root: Path) -> threading.Lock` (private); `CorpusWriter` keeps `self._operation` but assigns it from the registry; every later family entry point uses `with self._operation:` unchanged.
+- Produces: a private module-level registry `_root_state_for(root: Path, executor_factory) -> _RootState`, where `_RootState` holds `lock: threading.Lock`, `corpus: Corpus`, `view: ReadView`, and the `executor_factory` it was built with; `CorpusWriter` keeps `self._operation` (the shared lock) and reads `self._corpus`/`self._view` **through the shared state**, so two writers on one root share the lock *and* the live index — a lock over independently cached `Corpus` instances would serialize stale reads and still admit duplicate uids at different paths.
 
 **Steps:**
 
-- [ ] **Step 1: Write the failing test** (beside the existing lock test in `test_corpus_write.py`, reusing its `Recorder`/barrier pattern):
+- [ ] **Step 1: Write the failing tests** (beside the existing lock test in `test_corpus_write.py`, reusing its `Recorder`/barrier pattern):
 
 ```python
-def test_two_writers_one_root_share_one_lock(tmp_path):
+def test_two_writers_one_root_share_lock_and_state(tmp_path):
     Recorder.plans = []
     a = CorpusWriter(tmp_path, Recorder)
     b = CorpusWriter(tmp_path, Recorder)
     assert a._operation is b._operation
+    minted = a.add(prop("p"))
+    assert b.read_view.holds(minted.id)          # b sees a's mint without reconstruction
     other = CorpusWriter(tmp_path / "other", Recorder)
     assert other._operation is not a._operation
+
+def test_second_writer_with_different_factory_refuses(tmp_path):
+    CorpusWriter(tmp_path, Recorder)
+    with pytest.raises(ScienceError):
+        CorpusWriter(tmp_path, DefaultExecutor)
 ```
 
-Also extend the existing deterministic concurrent-add test to drive its two adds through **two different writer instances** on the same root and assert the same serialization outcome (second add sees the first's mint, `CollisionRefused`, exactly one plan reaches the executor).
+Also extend the existing deterministic concurrent-add test to drive its two adds through **two different writer instances** on the same root and assert the same serialization outcome (the second add observes the first's mint through the shared index and raises `RecordAlreadyMinted`/`CollisionRefused`; exactly one plan reaches the executor).
 
-- [ ] **Step 2: Run to verify failure** — the two writers currently hold distinct `threading.Lock()`s.
-- [ ] **Step 3: Implement**: a module-level `dict[str, threading.Lock]` guarded by one `threading.Lock`, keyed on `str(Path(root).resolve())`; `CorpusWriter.__init__` takes its lock from the registry. Also stash `self._root = Path(root)` and `self._executor_factory = executor_factory` (Task 13 reconstructs the corpus after an import payload).
+- [ ] **Step 2: Run to verify failure** — the two writers currently hold distinct locks and distinct `Corpus` instances.
+- [ ] **Step 3: Implement**: a module-level `dict[str, _RootState]` guarded by one `threading.Lock`, keyed on `str(Path(root).resolve())`. First construction for a root builds the `Corpus` and stores the factory; a later construction with a **different** factory object refuses loudly (a `ScienceError` — two executors for one root is a wiring bug, not a fallback case). Import's post-payload reconstruction (Task 15) replaces `corpus`/`view` **inside the shared state**, under the lock, so every writer sees the reconstruction.
 - [ ] **Step 4: Run the full portable suite.**
-- [ ] **Step 5: Commit** — `git commit -am "feat(corpus): share one operation lock per resolved corpus root"`.
+- [ ] **Step 5: Commit** — `git add python/src/science/corpus.py python/tests/test_corpus_write.py && git commit -m "feat(corpus): one shared lock and one live index per corpus root"`.
 
 ---
 
@@ -206,7 +215,7 @@ def test_supersede_refuses_non_proposition(writer):
 
   **Spec gap, close it here:** the banked design's §6 table has no name for supersede's kind refusal. Add one row — `FamilyKindUnsupported` | the family does not operate on this kind — to `docs/designs/2026-08-19-family-adapters-design.md` §6 in this task's commit, noted as a gap closure dated 2026-08-19, not a behavior change.
 - [ ] **Step 4: Run to verify pass; run the full portable suite.**
-- [ ] **Step 5: Commit** — `git commit -am "feat(corpus): supersede mints a successor and never touches the predecessor"`.
+- [ ] **Step 5: Commit** — `git add python/src/science/{corpus,stored,errors}.py docs/designs/2026-08-19-family-adapters-design.md python/tests/test_supersede.py && git commit -m "feat(corpus): supersede mints a successor and never touches the predecessor"`.
 
 ---
 
@@ -256,7 +265,7 @@ def test_revise_refuses_non_proposition(writer):                  # ReviseKindIm
 - [ ] **Step 2: Run to verify failure.**
 - [ ] **Step 3: Implement** per spec §4.2: under the lock — the exact `(uid, id)` pair must exist (`RevisionTargetMissing`); kind must be `proposition` (`ReviseKindImmutable`); diff the candidate against the **stored** node: every field outside {`title`, `body`, the `display` facet} must be equal (`uid`, `id`, `kind`, metadata, relations, deprecated ids, every other facet including the covered one and the stamp) else `ReviseOutsideAllowlist`; validate the display facet shape if present (`ValidationRefused` on malformed); recompute the semantic digest and require it unchanged; then `return self._corpus.add(candidate)` — `nodes`' `add` selects `ReplaceOp` with `expected_digest` from its manifest for a matching live pair, which is the pre-plan-read digest spec §5.2 names. Do **not** route through `_refuse_already_minted`.
 - [ ] **Step 4: Run to verify pass; full portable suite.**
-- [ ] **Step 5: Commit** — `git commit -am "feat(corpus): revise replaces prose in place and mints nothing"`.
+- [ ] **Step 5: Commit** — `git add python/src/science/{corpus,errors}.py python/tests/test_revise.py && git commit -m "feat(corpus): revise replaces prose in place and mints nothing"`.
 
 ---
 
@@ -267,7 +276,7 @@ def test_revise_refuses_non_proposition(writer):                  # ReviseKindIm
 - Test: `python/tests/test_stored_retraction.py` (new)
 
 **Interfaces:**
-- Produces: `stored.RETRACTS = "retracts"`, `stored.GROUNDED_IN = "grounded_in"`, `stored.SUCCEEDED_BY = "succeeded_by"`, `stored.RETRACTION_FACET = "retraction"`, `stored.RETRACTION_REASONS = ("authored-error", "corrupt-input", "defective-code", "environment-miscapture", "false-certification", "upstream-retraction", "wrong-route")`; frozen dataclasses `stored.NodeTarget(ref: str, resolved: str, content_identity: str)` and `stored.RouteTarget(dataset: str, resolved: str, content_identity: str, route_identity: str)`; constructor `stored.retraction_node(slug, *, title, target: NodeTarget | RouteTarget, reason: str, rationale: str, grounds: Sequence[str], actor: str, event_token: str, successor: str | None = None) -> Node`; `SEMANTIC_DOMAINS` and `COVERED_FACETS` gain `"retraction"` (`"science.retraction.v1"`, facet-covered).
+- Produces: `stored.RETRACTS = "retracts"`, `stored.GROUNDED_IN = "grounded-in"`, `stored.SUCCEEDED_BY = "succeeded-by"` — **hyphens, exactly**: the formal model's frozen vocabulary warns that an underscore spelling mints an unrelated predicate; `stored.RETRACTION_FACET = "retraction"`, `stored.RETRACTION_REASONS = ("authored-error", "corrupt-input", "defective-code", "environment-miscapture", "false-certification", "upstream-retraction", "wrong-route")`; frozen dataclasses `stored.NodeTarget(ref: str, resolved: str, content_identity: str)` and `stored.RouteTarget(dataset: str, resolved: str, content_identity: str, route_identity: str)`; constructor `stored.retraction_node(*, title, target: NodeTarget | RouteTarget, reason: str, rationale: str, grounds: Sequence[str], actor: str, event_token: str, successor: str | None = None) -> Node` — **no caller-selected slug**: the id is content-derived, `retraction:<first 16 hex of v1.digest("science.retraction.v1", <the facet's identity mapping>)>`, so two retractions of one target by one actor for two reasons are two records and repetition never collides an address; `SEMANTIC_DOMAINS` and `COVERED_FACETS` gain `"retraction"` (`"science.retraction.v1"`, facet-covered).
 
 **Steps:**
 
@@ -275,29 +284,35 @@ def test_revise_refuses_non_proposition(writer):                  # ReviseKindIm
 
 ```python
 def test_retraction_node_derives_relations_from_one_argument():
-    node = stored.retraction_node("r1", title="r",
+    node = stored.retraction_node(title="r",
         target=stored.NodeTarget("assessment:a1", "assessment:a1", "sha256:" + "ab"*32),
         reason="defective-code", rationale="why", grounds=("verification:v1",),
         actor="keith", event_token="tok")
     predicates = {(r.predicate, r.target) for r in node.relations}
     assert ("retracts", "assessment:a1") in predicates
-    assert ("grounded_in", "verification:v1") in predicates
+    assert ("grounded-in", "verification:v1") in predicates
     assert not stored.semantic_hash_missing(node)      # governed and stamped
     facet = node.facets[stored.RETRACTION_FACET]
     assert facet["reason"] == "defective-code" and facet["event_token"] == "tok"
+
+def test_retraction_id_is_content_derived():
+    a = retraction(..., event_token="tok-1"); b = retraction(..., event_token="tok-1")
+    assert a.id == b.id                                # same basis → same address
+    c = retraction(..., event_token="tok-2")
+    assert c.id != a.id                                # the token is in the basis
 
 def test_retraction_reason_outside_closed_vocabulary_refuses():
     with pytest.raises(MalformedRecord): stored.retraction_node(..., reason="vibes", ...)
 
 def test_retraction_empty_grounds_refuses():                       # MalformedRecord
 def test_route_target_carries_route_identity():                     # facet round-trips it
-def test_successor_derives_succeeded_by_relation():                 # optional arm
+def test_successor_derives_succeeded_by_relation():                 # optional arm, "succeeded-by"
 ```
 
 - [ ] **Step 2: Run to verify failure.**
-- [ ] **Step 3: Implement**: the facet carries the discriminated target (a `"target"` mapping with an `"arm"` key of `"node"` or `"route"` plus that arm's fields), `reason`, `rationale`, `grounds` (non-empty list), `actor`, `event_token`, optional `successor`. The constructor writes facet and relations from the same arguments (spec §3.3: they cannot diverge); the whole retraction facet is covered — add `"retraction": (RETRACTION_FACET,)` to `COVERED_FACETS` and the domain to `SEMANTIC_DOMAINS`; stamp via `stamp_semantic_identity`. Malformed inputs (unknown arm, unknown reason, missing attribution, no grounds, non-string rationale) raise `MalformedRecord` — the existing record vocabulary, per spec §6.
+- [ ] **Step 3: Implement**: the facet carries the discriminated target (a `"target"` mapping with an `"arm"` key of `"node"` or `"route"` plus that arm's fields), `reason`, `rationale`, `grounds` (non-empty list), `actor`, `event_token`, optional `successor`. The constructor writes facet and relations from the same arguments (spec §3.3: they cannot diverge), **derives the slug from the facet's identity** (`v1.digest("science.retraction.v1", facet_mapping)[:16]`) so the address is content-derived, and stamps via `stamp_semantic_identity`; the whole retraction facet is covered — add `"retraction": (RETRACTION_FACET,)` to `COVERED_FACETS` and the domain to `SEMANTIC_DOMAINS`. Malformed inputs (unknown arm, unknown reason, missing attribution, no grounds, non-string rationale) raise `MalformedRecord` — the existing record vocabulary, per spec §6.
 - [ ] **Step 4: Run to verify pass; full portable suite.**
-- [ ] **Step 5: Commit** — `git commit -am "feat(stored): the retraction kind, facet-covered, relations derived from one argument"`.
+- [ ] **Step 5: Commit** — `git add python/src/science/{stored,errors}.py python/tests/test_stored_retraction.py && git commit -m "feat(stored): the retraction kind, facet-covered, relations derived from one argument"`.
 
 ---
 
@@ -328,12 +343,18 @@ def test_retract_refuses_unresolvable_target(writer):                   # Retrac
 def test_retract_refuses_ineligible_kind(writer):                       # a proposition target refuses
 def test_retract_refuses_route_absent_from_stamped_basis(writer):       # RetractionTargetUnresolvable
 def test_retract_refuses_missing_grounds(writer):                       # RetractionGroundsMissing
+
+def test_add_reserves_family_owned_kinds(writer):
+    # the bypass closure: a retraction handed to plain add refuses — retract is the one
+    # entry that enforces C10/C2 — and an act-report kind refuses at add always
+    with pytest.raises(WriteRefused): writer.add(valid_retraction)
+    with pytest.raises(WriteRefused): writer.add(raw_act_report_shaped_node)
 ```
 
 - [ ] **Step 2: Run to verify failure.**
-- [ ] **Step 3: Implement** per spec §4.3's refusal order: under the lock — the record must be a well-formed stored retraction (kind, facet, stamp — `ValidationRefused`/`MalformedRecord` per existing vocabulary); target-arm and kind eligibility (`RetractionTargetIneligible`); node-arm target resolves in this corpus, route-arm dataset resolves and the named `route_identity` exists among `stored.basis_routes(dataset)`'s identities (`RetractionTargetUnresolvable`); grounds non-empty and each ground ref present as a string (`RetractionGroundsMissing` when empty); then the ordinary `self._refuse(record)` and `self._corpus.add(record)`. Resolution is the DAG-preservation rule; there is **no** graph scan here (spec §6 item 3).
+- [ ] **Step 3: Implement** per spec §4.3's refusal order: under the lock — the record must be a well-formed stored retraction (kind, facet, stamp — `ValidationRefused`/`MalformedRecord` per existing vocabulary); target-arm and kind eligibility (`RetractionTargetIneligible`); node-arm target resolves in this corpus, route-arm dataset resolves and the named `route_identity` exists among `stored.basis_routes(dataset)`'s identities (`RetractionTargetUnresolvable`); grounds non-empty and each ground ref present as a string (`RetractionGroundsMissing` when empty); then the ordinary refusal set and the corpus add — `retract` calls the shared internals directly rather than the public `add`, because this task also adds the **family-kind reservation** to `add` itself: `_refuse_family_kinds` raises `WriteRefused` for kind `"retraction"` ("a retraction enters through retract") and `"act-report"` ("an act-report is minted by the boundary and stored by import") before every other add refusal, closing the bypass in which a caller-built retraction skips C10/C2 by using `add`. Resolution is the DAG-preservation rule; there is **no** graph scan here (spec §6 item 3).
 - [ ] **Step 4: Run to verify pass; full portable suite.**
-- [ ] **Step 5: Commit** — `git commit -am "feat(corpus): retract admits chained, additive retraction records"`.
+- [ ] **Step 5: Commit** — `git add python/src/science/{corpus,errors}.py python/tests/test_retract.py python/tests/test_corpus_write.py && git commit -m "feat(corpus): retract admits chained, additive retraction records"`.
 
 ---
 
@@ -364,9 +385,9 @@ def test_raw_written_cycle_is_malformed_not_evaluated(tmp_path):
 ```
 
 - [ ] **Step 2: Run to verify failure.**
-- [ ] **Step 3: Implement**: collect the corpus's retraction nodes once per call (`iter_stored`, kind == "retraction", skipping unstamped/stale ones as the corpus check would report them); build `target-ref → [retraction ids]` from node-arm facet targets resolved through the view; detect a cycle in the `target → retraction` orientation (iterative DFS) and raise `RetractionCycleMalformed` before any evaluation; otherwise evaluate the recursion (a retraction is standing unless a standing retraction targets it; the queried ref's standing is subtracted iff ≥1 standing retraction targets it). Route-arm targets do not subtract a node's standing (they name a route, not a record) — state that in the docstring, it is the cut's corpus-local narrowing.
+- [ ] **Step 3: Implement**: enumerate retraction ids via `iter_stored` (kind == "retraction") but **fetch each through `view.get`**, so an unstamped or stale retraction raises the facade's own `SemanticHashMissing`/`SemanticHashStale` — a malformed retraction must refuse the whole evaluation, never be skipped: silently ignoring one would let a corrupted stamp restore its target's apparent standing. A structurally malformed retraction facet likewise refuses (`MalformedRecord`). Only `corpus_check` (Task 12) converts these refusals into reported findings. Then build `target-ref → [retraction ids]` from node-arm facet targets resolved through the view; detect a cycle in the `target → retraction` orientation (iterative DFS) and raise `RetractionCycleMalformed` before any evaluation; otherwise evaluate the recursion (a retraction is standing unless a standing retraction targets it; the queried ref's standing is subtracted iff ≥1 standing retraction targets it). Route-arm targets do not subtract a node's standing (they name a route, not a record) — state that in the docstring, it is the cut's corpus-local narrowing. Update the cyclic raw-write test accordingly: its two raw-written retractions must be **self-consistently stamped** so the cycle — not a stale stamp — is what the evaluator refuses on.
 - [ ] **Step 4: Run to verify pass; full portable suite.**
-- [ ] **Step 5: Commit** — `git commit -am "feat(corpus): derived supersession chase and bounded local standing"`.
+- [ ] **Step 5: Commit** — `git add python/src/science/{corpus,errors}.py python/tests/test_local_standing.py && git commit -m "feat(corpus): derived supersession chase and bounded local standing"`.
 
 ---
 
@@ -385,7 +406,7 @@ def test_raw_written_cycle_is_malformed_not_evaluated(tmp_path):
 - [ ] **Step 2: Run to verify failure.**
 - [ ] **Step 3: Implement** inside `corpus_check`'s single iteration pass, reusing Task 11's collection helpers; the cycle check runs once over the collected graph, reported (never raised) here.
 - [ ] **Step 4: Run to verify pass; full portable suite.**
-- [ ] **Step 5: Commit** — `git commit -am "feat(corpus): report the family-era raw-write shapes"`.
+- [ ] **Step 5: Commit** — `git add python/src/science/corpus.py python/tests/ && git commit -m "feat(corpus): report the family-era raw-write shapes"`.
 
 ---
 
@@ -405,7 +426,7 @@ class OperationPort(Protocol):
 ```
 
   and `CorpusWriter.__init__(self, root, executor_factory, operation_port: OperationPort | None = None)`.
-- Produces, in `science.root`: `OPERATION_INTENT_DOMAIN = "science.operation-intent.v1"`; `class DurableOperationPort` — `append_intent` wraps `atoms.coordinator.commands.append_intent(backend, str(root), str(metadata_root), storage, payload)`; `execute_fulfilling` constructs a `DurableExecutor(root, ..., fulfills=fulfills)` and calls `execute(plan)`; `DurableExecutor.__init__` gains keyword `fulfills: str | None = None`, passed into `build_spec(fulfills=self._fulfills, ...)` — everything else in the compile is unchanged; `open_corpus` passes a `DurableOperationPort` for the root.
+- Produces, in `science.root`: `class DurableOperationPort` — `append_intent` wraps `atoms.coordinator.commands.append_intent(backend, str(root), str(metadata_root), storage, payload)`; `execute_fulfilling` constructs a `DurableExecutor(root, ..., fulfills=fulfills)` and calls `execute(plan)`; `DurableExecutor.__init__` gains keyword `fulfills: str | None = None`, passed into `build_spec(fulfills=self._fulfills, ...)` — everything else in the compile is unchanged; `open_corpus` passes a `DurableOperationPort` for the root.
 
 **Steps:**
 
@@ -413,7 +434,7 @@ class OperationPort(Protocol):
 - [ ] **Step 2: Run to verify failure.**
 - [ ] **Step 3: Implement.** `science.corpus` must not import `atoms` (the protocol is structural); the engine failure mapping in `execute_fulfilling` is `DurableExecutor._submit`'s, inherited for free. `append_intent` failures map like §4's table: wrap engine exceptions as `ExecutionError(index=None, applied=0)` when raised before any mutation (`ProjectApprovalRefused`, `CapabilityUnavailable`), `applied=None` otherwise — implement this inside `DurableOperationPort.append_intent` with the same `except` ladder as `_submit`.
 - [ ] **Step 4: Run to verify pass; full portable suite.**
-- [ ] **Step 5: Commit** — `git commit -am "feat(root): the operation port — durable intents and fulfilling transactions"`.
+- [ ] **Step 5: Commit** — `git add python/src/science/{corpus,root}.py python/tests/test_operation_port.py && git commit -m "feat(root): the operation port — durable intents and fulfilling transactions"`.
 
 ---
 
@@ -425,7 +446,7 @@ class OperationPort(Protocol):
 
 **Interfaces:**
 - Consumes: `science.report.ActReport` (frozen boundary-minted value) and `report.ACT_REPORT_DOMAIN`.
-- Produces: `stored.act_report_node(report: ActReport) -> Node` — kind `"act-report"`, slug from the report's `event_token`, title `f"{report.operation} report"`, one covered facet `"act-report"` carrying exactly the identity fields (`operation`, `event_token`, `actor`, `observer`, `instrument`, `opened_at`, `closed_at`, `entries` as `_entry_facet` rows); `SEMANTIC_DOMAINS["act-report"] = report.ACT_REPORT_DOMAIN`; `COVERED_FACETS["act-report"] = ("act-report",)`.
+- Produces: `stored.act_report_node(report: ActReport) -> Node` — kind `"act-report"`, **slug derived from `report.identity()`** (first 16 hex — the report's complete facet is its identity basis, so the address is content-derived; the event token alone is not the identity), title `f"{report.operation} report"`, one covered facet `"act-report"` carrying exactly the identity fields (`operation`, `event_token`, `actor`, `observer`, `instrument`, `opened_at`, `closed_at`, `entries` as `_entry_facet` rows); `SEMANTIC_DOMAINS["act-report"] = report.ACT_REPORT_DOMAIN`; `COVERED_FACETS["act-report"] = ("act-report",)`. Test the invariant: two mints of the same report value share an id; changing any identity field changes it.
 
 **Steps:**
 
@@ -433,7 +454,7 @@ class OperationPort(Protocol):
 - [ ] **Step 2: Run to verify failure.**
 - [ ] **Step 3: Implement.**
 - [ ] **Step 4: Run to verify pass; full portable suite.**
-- [ ] **Step 5: Commit** — `git commit -am "feat(stored): act-report as a governed stored kind"`.
+- [ ] **Step 5: Commit** — `git add python/src/science/stored.py python/tests/test_stored_act_report.py && git commit -m "feat(stored): act-report as a governed stored kind"`.
 
 ---
 
@@ -501,6 +522,26 @@ def test_unresolved_foreign_input_admits_with_finding(writer_with_port):
     # report entries carry ImportedRecords(refs=..., findings=("unresolved: ...",))
 def test_stale_stamp_member_refuses(writer_with_port):                # S3's banked mutation
 def test_foreign_act_report_enters_inert(writer_with_port):           # T1's import arm
+
+# The four promised R-row validators, each a runnable check with a concrete forgery —
+# these are the arms cut 5 selects; "recomputable derivation identities" is not a test:
+def test_forged_verification_refused_at_import(writer_with_port):
+    # R19's local clause: a bundle verification whose inputs all resolve (bundle ∪ local)
+    # but whose recomputed report/verdict identity disagrees with its embedded authored
+    # certification — recompute via the cut-3 validators (science.verify) and refuse
+    # the whole bundle before any payload write.
+def test_contradictory_nondeterminism_contract_refused(writer_with_port):
+    # R20's import half: a bundle run whose recorded nondeterminism contract contradicts
+    # its spec's (spec says deterministic, run records tolerance) — refused, no write.
+def test_fabricated_assessment_derivation_refused(writer_with_port):
+    # R22's local clause: an at-the-address assessment whose (spec, run, proposition)
+    # facet fields disagree with its own carried edges — the §5a doubly-carried rule
+    # recomputed at import; refused, no write.
+def test_basis_composition_disagreement_on_import(writer_with_port):
+    # R23's local clause: a bundle dataset whose stamped lineage basis disagrees with
+    # the producer composition the bundle ∪ local corpus derives (derived_from view);
+    # per the frozen R23 arm split in cut 5 §3, this is admitted-with-finding or refused
+    # exactly as that split says — the test asserts whichever the frozen text rules.
 def test_refusal_before_intent_when_request_malformed(writer_with_port):
     # empty bundle: refuses before any intent is appended
     with pytest.raises(ImportRefused): writer_with_port.import_bundle([], ...)
@@ -510,13 +551,13 @@ def test_refusal_before_intent_when_request_malformed(writer_with_port):
 - [ ] **Step 2: Run to verify failure.**
 - [ ] **Step 3: Implement** per spec §4.4/§6 order: under the lock —
   1. request validation (non-empty bundle, attribution strings) — refuses **before** the intent;
-  2. mint `event_token = secrets.token_hex(16)`; define `OPERATION_INTENT_DOMAIN = "science.operation-intent.v1"` in `corpus.py` (which cannot import `science.root`; `root.py` re-exports it); intent payload = `v1.encode({"domain": OPERATION_INTENT_DOMAIN, "operation": "import", "event_token": event_token, "actor": actor, "observer": observer, "instrument": instrument})`; `intent_digest = port.append_intent(payload)`; no port configured → `ImportRefused` before any act ("this corpus has no operation port; import is a boundary operation");
-  3. whole-bundle validation over `records` + the local `ReadView` (spec §4.4's list): stored shape/stamp per member (stale → refuse), duplicate ids/uids/paths within the bundle, member held or colliding (`BundleMemberHeld`), the ordinary add refusals per member (basis, eligibility — evaluated over the union view so intra-bundle references resolve), retraction-graph acyclicity over bundle ∪ local (refusing with the offending edge set), locally recomputable derivation identities, unresolvable foreign inputs collected as findings (not refusals);
+  2. mint `intent = OperationIntent("import", secrets.token_hex(16), actor)` and serialize **exactly its projection** — the banked act-report design fixes the operation-intent payload to operation kind, event token, and actor, nothing more (`observer`/`instrument` are act-report fields, not intent fields): `payload = v1.encode({"kind": intent.kind, "event_token": intent.event_token, "actor": intent.actor})`; `intent_digest = port.append_intent(payload)`; no port configured → `ImportRefused` before any act ("this corpus has no operation port; import is a boundary operation");
+  3. whole-bundle validation over `records` + the local `ReadView` (spec §4.4's list): stored shape/stamp per member (stale → refuse), duplicate ids/uids/paths within the bundle, member held or colliding (`BundleMemberHeld`), the ordinary add refusals per member (basis, eligibility — evaluated over the union view so intra-bundle references resolve), retraction-graph acyclicity over bundle ∪ local (refusing with the offending edge set), the four R-row validators from Step 1 (verification recomputation via `science.verify`; run-vs-spec nondeterminism-contract agreement; the assessment facet-vs-edges §5a recomputation; the lineage-basis-vs-derived-producers comparison via `derived_from`, disposed per cut 5 §3's frozen R23 split), and unresolvable foreign inputs collected as findings (not refusals);
   4. on refusal after the intent: build the refusal report (`RecordImportEntry(subject=<corpus root name>, outcome=ImportedRecords(refs=(), findings=(reason, ...)))`), publish it via `port.execute_fulfilling([CreateOp(...report node...)], intent_digest)`, reconstruct the corpus, set `report_ref` on the exception, raise;
-  5. on pass: build the payload plan — one `CreateOp` per member, path from the store's own rule `self._corpus.store.path_for(node.id).relative_to(self._corpus.store.root).as_posix()`, content `node_to_markdown(node).encode("utf-8")` (import `node_to_markdown` from the same `nodes` module `nodes/core/corpus.py` imports it from) — execute through `self._corpus.executor.execute(plan)`, then **reconstruct** `self._corpus = Corpus(self._root, executor_factory=self._executor_factory)` and re-wrap `self._view` (reconstruction from disk is the stated recovery posture);
+  5. on pass: build the payload plan — one `CreateOp` per member, path from the store's own rule `self._corpus.store.path_for(node.id).relative_to(self._corpus.store.root).as_posix()`, content `node_to_markdown(node).encode("utf-8")` (import `node_to_markdown` from the same `nodes` module `nodes/core/corpus.py` imports it from) — execute through the shared state's `corpus.executor.execute(plan)`, then **reconstruct inside the shared root state** (Task 6): build a fresh `Corpus(self._root, executor_factory=<the state's stored factory>)`, replace the state's `corpus` and `view` under the held lock so every writer on this root sees the reconstruction (reconstruction from disk is the stated recovery posture);
   6. mint the closing report (entries: one `RecordImportEntry` with the admitted refs in canonical payload order and the findings), store it via `port.execute_fulfilling([CreateOp(<act_report_node bytes>)], intent_digest)`, reconstruct again, return the `ActReport`.
 - [ ] **Step 4: Run to verify pass; full portable suite.**
-- [ ] **Step 5: Commit** — `git commit -am "feat(corpus): import_bundle — intent, one payload transaction, closing report"`.
+- [ ] **Step 5: Commit** — `git add python/src/science/{corpus,errors}.py python/tests/test_import_bundle.py && git commit -m "feat(corpus): import_bundle — intent, one payload transaction, closing report"`.
 
 ---
 
@@ -530,7 +571,7 @@ def test_refusal_before_intent_when_request_malformed(writer_with_port):
 
 - [ ] **Step 1: Declare every cut-5 selected arm as data** — row, assertion, source mutation (a `Sabotage` against the real module text), and the exact tests that must fail. Durable arms name `acceptance/…` node ids exactly as `n2_arms_cut4.py` does. Every declaration must match a clause the frozen cut selects — no extra arms, no missing arms.
 - [ ] **Step 2: Run the audit** — `uv run pytest tests/test_n2_cut5.py -q` — and fix every `vacuous`/`stale`/`mixed`/`uncollected` verdict. The unsabotaged baseline must pass against the real package.
-- [ ] **Step 3: Commit** — `git commit -am "test(n2): declare cut 5's arms with their sabotages"`.
+- [ ] **Step 3: Commit** — `git add python/tests/n2_arms_cut5.py python/tests/test_n2_cut5.py && git commit -m "test(n2): declare cut 5's arms with their sabotages"`.
 
 ---
 
@@ -543,10 +584,10 @@ def test_refusal_before_intent_when_request_malformed(writer_with_port):
 
 **Steps:**
 
-- [ ] **Step 1: Write the durable arms** against the certified tuple via the existing acceptance fixture: a durable supersede walked back out after facade reload; a durable revise whose replacement survives reload with unchanged stamp; a durable retract; one full `import_bundle` through `open_corpus` (real intent in the chain, payload transaction, report transaction with `fulfills` — assert the report node reloads and the engine chain grew by three entries); the uncertified-tuple refusal for one family write (`/dev/shm`, errors if unavailable, per cut 4's pattern).
+- [ ] **Step 1: Write the durable arms** against the certified tuple via the existing acceptance fixture: a durable supersede walked back out after facade reload; a durable revise whose replacement survives reload with unchanged stamp; a durable retract; one full `import_bundle` through `open_corpus` — real intent in the chain, payload transaction, report transaction with `fulfills` — asserting the report node reloads and the chain grew by **five** entries in the exact typed sequence: the intent entry, then the payload transaction's registration and settlement, then the report transaction's registration and settlement, with the report registration carrying `fulfills` equal to the intent entry's digest; the uncertified-tuple refusal for one family write (`/dev/shm`, errors if unavailable, per cut 4's pattern).
 - [ ] **Step 2: Write `tools/cut5_acceptance.py`** by cut 4's shape (probe first, `PROBE_REFUSED = 2`, work dir `<repo>/.cut5-acceptance` / `SCIENCE_CUT5_ROOT`, per-run directories); it runs the cut-5 durable arms and may invoke cut 4's runner as a prefix without altering it.
 - [ ] **Step 3: Run it on this host** — `uv run python -m tools.cut5_acceptance` — all durable arms green on the certified tuple. Record the full output.
-- [ ] **Step 4: Commit** — `git commit -am "test(cut5): durable family arms and the acceptance runner"`.
+- [ ] **Step 4: Commit** — `git add python/tests/acceptance/test_durable_families.py python/tools/cut5_acceptance.py && git commit -m "test(cut5): durable family arms and the acceptance runner"`.
 
 ---
 
@@ -561,4 +602,4 @@ def test_refusal_before_intent_when_request_malformed(writer_with_port):
 - [ ] **Step 1: Write the results doc** per `2026-08-18-conformance-cut-4-results.md`'s form: what ran, where, counts, the acceptance output, any deviations (each closed as a dated design amendment or reverted — never silently).
 - [ ] **Step 2: Status flips** in the same change; grep `docs/` for "add-only", "no edit surface", "Plan B item 2" claims that this landing makes stale and correct them (drift propagates outward).
 - [ ] **Step 3: Run everything**: `uv run pytest tests -q` (portable), `uv run pytest tests/test_n2_cut5.py -q`, `uv run python -m tools.cut5_acceptance`, `uv run python tools/check_guide.py`. All green before the final commit.
-- [ ] **Step 4: Commit** — `git commit -am "feat(corpus): land the family adapters; discharge conformance cut 5"`.
+- [ ] **Step 4: Commit** — `git add -u docs && git add docs/plans/2026-08-19-conformance-cut-5-results.md && git commit -m "feat(corpus): land the family adapters; discharge conformance cut 5"`.
