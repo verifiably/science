@@ -179,7 +179,7 @@ def test_malformed_retraction_facet_refuses_the_whole_evaluation(tmp_path):
         corpus.standing_in_local_view(view, "assessment:unrelated")
 
 
-def test_raw_written_cycle_is_malformed_before_evaluation(tmp_path):
+def test_unrelated_query_refuses_a_raw_written_cycle_before_evaluation(tmp_path):
     first = raw_retraction("retraction:r1", "retraction:r2")
     second = raw_retraction("retraction:r2", "retraction:r1")
     assert not stored.semantic_hash_disagrees(first)
@@ -187,4 +187,4 @@ def test_raw_written_cycle_is_malformed_before_evaluation(tmp_path):
     view = seed(tmp_path, first, second)
 
     with pytest.raises(errors.RetractionCycleMalformed):
-        corpus.standing_in_local_view(view, first.id)
+        corpus.standing_in_local_view(view, "assessment:unrelated")
