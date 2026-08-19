@@ -154,9 +154,8 @@ def test_second_writer_with_different_factory_refuses(tmp_path):
 def test_open_corpus_twice_shares_state(tmp_path):
     # durable-factory identity is stable: repeated open_corpus on one root must
     # share state, never refuse (root.durable_executor_factory returns one
-    # module-level callable, not a fresh closure per call)
-    init_corpus_root(tmp_path)  # requires the certified tuple? No: construction
-    # alone touches no engine; skip init and assert construction-level sharing:
+    # module-level callable, not a fresh closure per call). Construction alone
+    # touches no engine, so this runs portably with no init_corpus_root.
     a = open_corpus(tmp_path)
     b = open_corpus(tmp_path)
     assert a._operation is b._operation
