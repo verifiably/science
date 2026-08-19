@@ -38,6 +38,10 @@
 
 **Steps:**
 
+**Historical drafting instruction:** The steps below preserve the prospective
+selection before either post-freeze feasibility correction. Current execution
+uses the corrected inventory stated after Task 2 and in Tasks 17 then 16.
+
 - [ ] **Step 1: Write the cut document** following cut 4's structure: §1 what this cut is, §2 the in-scope boundary declaration (the three families, the lock registry, the display facet, the stored retraction/act-report kinds, the read-side evaluators, the acceptance runner — and the explicit out-list: world index, audit, holdings root, anchor acts, consolidate/move/deletion, rules store, registry compile), §3 the selection with **exact arm splits against each frozen row's full text**, §4 accounting, §5 N2 obligations, §6 the second-reader protocol, §7 limitations.
 - [ ] **Step 2: The selection must contain exactly** (spec §8): S2, S4, G7, M5 for supersede/revise; S3 whole, T1's import arm, T2's persistence-deferred import arms, the six locally runnable M3 arms (termination over an admissible local state; cycle witness; bundle-only cycle; bundle-plus-local-context cycle; refusal with no payload write; ordinary-write target resolution in C10's termination role), and the corpus-local explicit-import clauses of R19, R20, R22, R23 for import; the corpus-local arms of C1–C10 plus the positive retraction arms of G2c and G8 for retraction. Quote each row's frozen text and mark every clause **selected / part / deferred** with the deferral's unblocker named. Per the standing classification rule: any unrun arm makes the row **part**, and there is no "full" on an argument for why an arm shouldn't count — the error always runs toward overstating coverage.
 - [ ] **Step 3: Status header** says "Drafted 2026-08-19, awaiting second reader; NOT frozen." Nothing downstream may treat it as frozen yet.
@@ -56,11 +60,20 @@
 - [ ] **Step 2: Close every finding in the document** — move overstated clauses to part/deferral, record the reader's run and dispositions in §6.
 - [ ] **Step 3: Commit** — `git add docs/designs/2026-08-19-conformance-cut-5.md && git commit -m "docs(cut5): close the second reader's findings"`.
 
-**Post-freeze correction:** The original reader correctly demoted R23 but
+**First post-freeze correction (historical):** The original reader correctly demoted R23 but
 missed that R19 and R22 require semantic evidence absent from the persisted
 projections and `import_bundle(Sequence[Node])`. Task 15's later feasibility
 audit narrowed both rows to deferred. The corrected inventory is **8 full + 10
 part + 6 deferred = 24**, with **31** Selected declaration units.
+
+**Second post-freeze correction:** Task 16's feasibility review deferred T2's
+second-fulfillment classification because no durable-log consumer/classifier
+exists, and deferred M3's bundle-only and bundle-plus-local concrete cycle arms
+because controlled content-derived identities make those cycles unspellable.
+T2 retains success, refusal, and intent-failure; M3 retains the direct abstract
+witness, forced-verdict consumption, local-DAG termination, and ordinary
+unresolved-target arms. Row accounting remains **8 full + 10 part + 6 deferred
+= 24**; the current inventory is exactly **28** Selected declaration units.
 
 ---
 
@@ -429,7 +442,7 @@ def test_raw_written_cycle_is_malformed_not_evaluated(tmp_path):
 
 **Files:**
 - Modify: `python/src/science/corpus.py` (protocol), `python/src/science/root.py` (implementation + wiring)
-- Test: `python/tests/test_operation_port.py` (new, portable — fake port), plus one arm in the durable suite later (Task 16)
+- Test: `python/tests/test_operation_port.py` (new, portable — fake port), plus one arm in the durable suite later (Task 17)
 
 **Interfaces:**
 - Produces, in `science.corpus`:
@@ -536,8 +549,6 @@ def test_member_held_refuses_whole_bundle_no_payload_write(writer_with_port):
     assert not writer_with_port.read_view.holds("proposition:b")     # nothing admitted
     assert caught.value.report_ref is not None                        # refusal report published
 
-def test_bundle_cycle_refuses_with_edge_set(writer_with_port):        # M3: bundle-only cycle
-def test_bundle_plus_local_context_cycle_refuses(writer_with_port):   # M3: union, never bundle alone
 def test_unresolved_foreign_input_admits_with_finding(writer_with_port):
     # report entries carry ImportedRecords(refs=..., findings=("unresolved: ...",))
 def test_stale_stamp_member_refuses(writer_with_port):                # S3's banked mutation
@@ -567,20 +578,6 @@ def test_refusal_before_intent_when_request_malformed(writer_with_port):
 
 ---
 
-### Task 16: N2 arms for cut 5
-
-**Files:**
-- Create: `python/tests/n2_arms_cut5.py`, `python/tests/test_n2_cut5.py`
-- Read first: `python/tests/n2_arms.py` (the `Arm`/`Sabotage` types), `n2_arms_cut4.py`, `tests/test_n2_cut4.py`, and frozen cut 5 §5.
-
-**Steps:**
-
-- [ ] **Step 1: Declare all 31 cut-5 selected arms as data** — row, assertion, source mutation (a `Sabotage` against the real module text), and the exact tests that must fail. Durable arms name `acceptance/…` node ids exactly as `n2_arms_cut4.py` does. Every declaration must match a clause the corrected frozen cut selects — no extra arms, no missing arms. R20 remains selected; R19, R22, and R23 have no cut-5 declaration.
-- [ ] **Step 2: Run the audit** — `uv run pytest tests/test_n2_cut5.py -q` — and fix every `vacuous`/`stale`/`mixed`/`uncollected` verdict. The unsabotaged baseline must pass against the real package.
-- [ ] **Step 3: Commit** — `git add python/tests/n2_arms_cut5.py python/tests/test_n2_cut5.py && git commit -m "test(n2): declare cut 5's arms with their sabotages"`.
-
----
-
 ### Task 17: The cut-5 acceptance suite and runner
 
 **Files:**
@@ -597,6 +594,23 @@ def test_refusal_before_intent_when_request_malformed(writer_with_port):
 
 ---
 
+### Task 16: N2 arms for cut 5
+
+**Ordering:** Task 17 creates the durable acceptance nodes first. Task 16 then
+declares and audits their N2 arms through the certified cut-5 runner.
+
+**Files:**
+- Create: `python/tests/n2_arms_cut5.py`, `python/tests/acceptance/test_n2_cut5.py`
+- Read first: `python/tests/n2_arms.py` (the `Arm`/`Sabotage` types), `n2_arms_cut4.py`, `tests/test_n2_cut4.py`, and frozen cut 5 §5.
+
+**Steps:**
+
+- [ ] **Step 1: Declare all 28 cut-5 selected arms as data** — row, assertion, source mutation (a `Sabotage` against the real module text), and the exact tests that must fail. Durable arms name `acceptance/…` node ids exactly as `n2_arms_cut4.py` does. Every declaration must match a clause the twice-corrected frozen cut selects — no extra arms, no missing arms. R20 remains selected; R19, R22, and R23 have no cut-5 declaration. T2 has three declarations and M3 has four.
+- [ ] **Step 2: Run `python/tests/acceptance/test_n2_cut5.py` through the certified runner** — `uv run python -m tools.cut5_acceptance -q` — and fix every `vacuous`/`stale`/`mixed`/`uncollected` verdict. The runner includes that acceptance module; the unsabotaged baseline must pass against the real package and certified tuple.
+- [ ] **Step 3: Commit** — `git add python/tests/n2_arms_cut5.py python/tests/acceptance/test_n2_cut5.py && git commit -m "test(n2): declare cut 5's arms with their sabotages"`.
+
+---
+
 ### Task 18: Results, ledger, and close-out
 
 **Files:**
@@ -607,5 +621,5 @@ def test_refusal_before_intent_when_request_malformed(writer_with_port):
 
 - [ ] **Step 1: Write the results doc** per `2026-08-18-conformance-cut-4-results.md`'s form: what ran, where, counts, the acceptance output, any deviations (each closed as a dated design amendment or reverted — never silently).
 - [ ] **Step 2: Status flips** in the same change; grep `docs/` for "add-only", "no edit surface", "Plan B item 2" claims that this landing makes stale and correct them (drift propagates outward).
-- [ ] **Step 3: Run everything**: `uv run pytest tests -q` (portable), `uv run pytest tests/test_n2_cut5.py -q`, `uv run python -m tools.cut5_acceptance`, `uv run python tools/check_guide.py`. All green before the final commit.
+- [ ] **Step 3: Run everything**: `uv run pytest tests -q` (portable), `uv run python -m tools.cut5_acceptance` (durable arms and `tests/acceptance/test_n2_cut5.py`), `uv run python tools/check_guide.py`. All green before the final commit.
 - [ ] **Step 4: Commit** — `git add docs/plans/2026-08-19-conformance-cut-5-results.md docs/designs/2026-08-19-conformance-cut-5.md docs/designs/2026-08-19-family-adapters-design.md docs/designs/2026-08-03-redesign-adoption-ledger.md docs/guide && git commit -m "feat(corpus): land the family adapters; discharge conformance cut 5"`.

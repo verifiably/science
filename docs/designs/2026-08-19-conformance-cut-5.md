@@ -1,7 +1,7 @@
 # Conformance cut 5 — the family adapters
 
 **Status:** Frozen 2026-08-19; second reader discharged; post-freeze feasibility
-correction recorded 2026-08-19.
+corrections recorded 2026-08-19.
 
 **Sources:** `2026-08-17-conformance-cut-4.md`; the family-adapter design
 `2026-08-19-family-adapters-design.md` §8; and the
@@ -164,8 +164,6 @@ not selected again; every **deferred** bullet names its unblocker.
   payload act before the intent.
 - **Selected:** for a post-intent import refusal that mints no run, assert exactly
   one qualifying refusal report closes the intent and no payload is written.
-- **Selected:** attempt a second fulfilling registration for the import intent
-  and assert the durable log classifies it malformed.
 - **Selected:** make intent append fail; assert no payload or report act began
   and no record was minted.
 - **Deferred:** root-selection failure belongs to the **boundary that selects a
@@ -176,6 +174,10 @@ not selected again; every **deferred** bullet names its unblocker.
   cuts**. Pre-intent request validation is an implementation promise, not a
   substitute frozen arm. Dataset-production's typed intent shape is prior cut-3
   standing, not selected again.
+- **Deferred:** second-fulfillment classification waits on a durable-log
+  consumer/classifier. The current port and engine treat `fulfills` as opaque
+  and append both registrations; counting them in a test does not classify the
+  history.
 
 #### M3 — part
 
@@ -183,31 +185,28 @@ not selected again; every **deferred** bullet names its unblocker.
 | **M3** | **`standing` terminates, because the retraction graph is a DAG** | **Termination itself, on valid states:** evaluate `standing` over retraction chains of increasing depth, including counter-retractions and several standing retractions of one target, and assert termination and a stable value. Without this arm a looping implementation passes while its validator is perfectly correct. **The validator, exercised directly** — the only arm that can certify the check exists: hand it an abstract two-cycle and assert a **cycle-specific** result carrying a **witness** (the offending edge set), not a generic failure. Case-split the cycle across the boundary that matters — both records in the **bundle**, and one record in the bundle closing a cycle through the **resolved world context** — and assert import invokes the validator on the **union**, never on the bundle alone. **That import consumes the result:** force a cycle verdict for an otherwise entirely valid bundle and assert the import **refuses with no write**; an importer that calls the validator and ignores its witness must fail this arm. **Ordinary writes:** attempt a retraction whose target does not already resolve and assert refusal (C10), which is what makes a write incapable of closing a cycle. **Merge's two arms, restated onto its successors 2026-08-08 (`2026-08-08-world-address-ruling.md` §5; ρA10):** the distinct-basis arm becomes **unspellable rather than refused** — assert **no operation exists** that merges two distinct-basis retractions, which is stronger than the refusal this arm banked, and assert instead that a `coreference-attestation` over them leaves both retraction records **byte-unchanged** and closes **no cycle** (**W15**). The equal-basis arm keeps its shape under its new name: `consolidate` two **equal-basis** replicas of one retraction held in two corpora **while a counter-retraction `R` already targets it**, and assert it **succeeds**, that the retraction's content identity is **unchanged**, and that `R` is **not rewritten and not re-minted** — now true by construction, since `consolidate` requires one canonical address and performs no inbound rewrite (**W16**). World §4.3's `duplicate location` state has no other resolution. **Raw writes:** a cyclic configuration is classified **malformed by audit before any standing or belief evaluation** — assert no reading is invoked on it (§3.3, `Ω_valid`). **Explicitly not the test:** refusing a hand-written cyclic *pair* certifies nothing. Each retraction's content-derived address already includes its target identity, so such a pair fails **identity recomputation** on its own, and a generic "import refused" passes whether or not any acyclicity validation exists. That fixture is circular evidence, and an earlier draft of this row used it. **Negative:** no topological rank is stored anywhere; re-evaluate the same state after admitting records in a different order and assert every identity and `belief_input_digest` is unchanged |
 ```
 
-Exactly six arms are selected:
+Exactly four arms are selected:
 
 - **Selected:** evaluate `standing_in_local_view` over an admissible local DAG
   with increasing-depth chains, counter-retractions, and sibling retractions;
   assert termination and a stable value.
 - **Selected:** invoke the validator directly on an abstract cycle and require a
   cycle-specific result carrying the offending edge set as witness.
-- **Selected:** reject a cycle whose records are both in the import bundle.
-- **Selected:** reject a cycle closed by one bundle record through the resolved
-  local corpus context, proving validation runs on the union rather than the
-  bundle alone.
 - **Selected:** force the cycle verdict for an otherwise valid bundle and assert
   import consumes it, refuses, and performs no payload write.
 - **Selected:** attempt an ordinary retraction write whose target does not
   already resolve and assert C10 refusal; this is C10's termination role.
-
-The frozen warning that a self-addressed hand-written cyclic pair may fail
-identity recomputation constrains the two selected cycle fixtures: neither may
-use that circular non-test as evidence of acyclicity validation.
 
 - **Deferred:** the distinct-basis coreference-attestation arm waits on the
   **world index/coreference surface**; the equal-basis replica arm waits on
   **consolidate and the world index**; raw-written-cycle classification waits on
   the global **audit**; and the admission-order/no-stored-rank negative waits on
   a later **M3 completion cut**. Those unrun clauses keep M3 part.
+- **Deferred:** the bundle-only and bundle-plus-local concrete cycle arms wait
+  on a spellable controlled identity construction. A controlled retraction's
+  content identity hashes its target identity, so a cyclic pair requires a
+  circular fixed point. Raw forged pairs instead fail controlled-shape
+  validation and are the frozen row's explicitly forbidden non-test.
 
 #### R19 — deferred
 
@@ -437,7 +436,7 @@ these 24 is selected by cut 5, and no prior-cut arm is counted as new selection.
 ## 5. N2 and acceptance obligations
 
 Task 16 owns cut 5's N2 declarations. It must declare every §3 **Selected**
-bullet, and only those 31 bullets, as data with:
+bullet, and only those 28 bullets, as data with:
 
 - its frozen row id and assertion;
 - the exact source mutation, against real module text;
@@ -509,6 +508,27 @@ deferred = 24**, with **31** §3 Selected declaration units for Task 16.
 The reading completed before banking froze the cut. At banking, implementation
 was prospective: no implementation task could cite the cut as a discharge
 authority until its selected obligations were implemented and verified.
+
+A second implementation-feasibility review on 2026-08-19 found two more
+unexecutable declarations without changing either affected row's `part`
+classification:
+
+1. **T2 second fulfillment:** the operation port and engine treat `fulfills`
+   as opaque and append both registrations. No durable-log consumer or
+   classifier exists, and a test-local count is not classification.
+   **Disposition:** defer this arm until that consumer exists; retain T2's
+   success, refusal, and intent-append-failure arms.
+2. **M3 concrete import cycles:** controlled retraction identities hash their
+   targets, so a cyclic pair cannot be constructed without circular fixed-point
+   identities. Raw forged pairs fail controlled-shape validation and are the
+   row's explicitly forbidden non-test. **Disposition:** defer the bundle-only
+   and bundle-plus-local arms until a controlled cycle is spellable; retain the
+   direct abstract witness, forced-verdict consumption, local-DAG termination,
+   and ordinary unresolved-target arms.
+
+The current inventory is therefore **28** §3 Selected declaration units. Row
+accounting remains **8 full + 10 part + 6 deferred = 24** because T2 and M3
+retain selected arms and remain part.
 
 ## 7. Limitations
 

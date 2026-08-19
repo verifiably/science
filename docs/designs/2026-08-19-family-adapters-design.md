@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-19
 
-**Status:** Banked 2026-08-19; post-freeze feasibility correction recorded
+**Status:** Banked 2026-08-19; post-freeze feasibility corrections recorded
 2026-08-19; implementation in progress on `design/family-adapters`.
 
 **Scope:** Plan B item 2 in
@@ -296,6 +296,16 @@ neither the persisted run/verification/assessment projections nor
 deferred, as R23 already was. Exact link, identity, and stamp checks remain
 import-integrity checks, but are not substitutes for those semantic rules.
 
+A second post-freeze feasibility review narrowed the conformance selection,
+not this import boundary. T2's second-fulfillment classification is deferred
+until a durable-log consumer exists: the port and engine treat `fulfills` as
+opaque and append both registrations, and a test-local count is not a
+classifier. M3's bundle-only and bundle-plus-local concrete cycle arms are also
+deferred: controlled retraction identities hash their targets, making cyclic
+pairs unspellable without circular fixed-point identities, while raw forged
+pairs fail controlled-shape validation and are the frozen row's forbidden
+non-test.
+
 ## 5. Serialization and races
 
 ### 5.1 One in-process writer per resolved root
@@ -436,8 +446,10 @@ for overstated coverage.
 The prospective selection is:
 
 - **supersede/revise:** S2, S4, G7, and M5;
-- **import:** S3 whole; T1's import arm; T2's persistence-deferred import arms;
-  the locally runnable M3 arms; and R20's corpus-local explicit-import clause;
+- **import:** S3 whole; T1's import arm; T2's success, refusal, and
+  intent-append-failure arms; M3's local-DAG termination, direct abstract
+  witness, forced-verdict consumption, and ordinary unresolved-target arms;
+  and R20's corpus-local explicit-import clause;
 - **retraction:** the corpus-local arms of C1–C10, plus the positive retraction
   arms of G2c and G8.
 
@@ -446,9 +458,10 @@ clause reaching the world index, global retraction audit, corpus identity map,
 or verified holdings remains deferred by name.
 
 For M3, the locally runnable selection includes termination over an admissible
-local state, a cycle witness, a bundle-only cycle, a bundle-plus-local-context
-cycle, refusal with no payload write, and ordinary-write target resolution in
-C10's termination role. Cross-corpus and audit arms remain deferred.
+local state, a direct abstract cycle witness, forced-verdict refusal with no
+payload write, and ordinary-write target resolution in C10's termination role.
+The two concrete import-cycle arms, cross-corpus arms, and audit arms remain
+deferred.
 
 R20 selects only the contradiction check the local importer can execute. The
 original second reader correctly deferred R23 but missed that R19 and R22 also
@@ -456,6 +469,11 @@ need semantic evidence absent from the stored projections and import API. A
 later implementation-feasibility audit therefore deferred R19 and R22 as a
 post-freeze correction. Stale-stamp and exact-link checks remain required
 import-integrity behavior; they do not discharge R19 or R22.
+
+The second post-freeze feasibility review deferred one T2 declaration and two
+M3 declarations for the reasons above. T2 and M3 remain part rows, so row-state
+accounting stays **8 full + 10 part + 6 deferred = 24**; the current N2
+inventory is exactly **28** Selected declaration units.
 
 N2 extends over every newly selected arm. On the certified tuple, a selected
 arm must run durably; errors on that tuple must never become skips. Portable
