@@ -62,6 +62,7 @@ __all__ = [
     "ASSESSMENT_FACET",
     "COVERED_FACETS",
     "DATASET_FACET",
+    "DISPLAY_FACET",
     "EMPIRICAL_OBSERVATION_FACET",
     "LINEAGE_BASIS_FACET",
     "PROPOSITION_FACET",
@@ -72,6 +73,8 @@ __all__ = [
     "VERIFICATION_FACET",
     "assessment_value",
     "dataset_declaration",
+    "display_facet_malformed",
+    "display_statement",
     "external_identifiers",
     "is_empirical_observation",
     "lineage_basis",
@@ -93,6 +96,7 @@ PROPOSITION_FACET = "proposition"
 ASSESSMENT_FACET = "assessment"
 RUN_FACET = "run"
 DATASET_FACET = "dataset"
+DISPLAY_FACET = "display"
 LINEAGE_BASIS_FACET = "lineage-basis"
 SOURCE_FACET = "source"
 VERIFICATION_FACET = "verification"
@@ -260,6 +264,26 @@ def run_spec(node: Node) -> str | None:
     return spec if isinstance(spec, str) else None
 
 
+def display_facet_malformed(node: Node) -> bool:
+    """Whether an authored display facet is not its exact one-field shape."""
+    if DISPLAY_FACET not in node.facets:
+        return False
+    facet = node.facets[DISPLAY_FACET]
+    return not (
+        isinstance(facet, dict)
+        and set(facet) == {"display_statement"}
+        and isinstance(facet["display_statement"], str)
+    )
+
+
+def display_statement(node: Node) -> str | None:
+    """The authored display prose, or `None` when it is absent or malformed."""
+    if display_facet_malformed(node):
+        return None
+    facet = node.facets.get(DISPLAY_FACET)
+    return None if facet is None else facet["display_statement"]
+
+
 def inputs_of(node: Node, role: str) -> tuple[str, ...]:
     """The dataset refs a run names under one input role, in stored order."""
     return tuple(relation.target for relation in node.relations if relation.predicate == role)
@@ -326,10 +350,15 @@ def _node(kind: str, slug: str, title: str, facets: Mapping[str, Any], relations
     return stamp_semantic_identity(node)
 
 
-def proposition_node(slug: str, *, title: str, claim: Mapping[str, Any]) -> Node:
-    """A proposition carrying the typed claim projection. Prose is not identity
-    and is not stored as one: `title` is display only."""
-    return _node("proposition", slug, title, {PROPOSITION_FACET: dict(claim)}, ())
+def proposition_node(
+    slug: str, *, title: str, claim: Mapping[str, Any], display_statement: str | None = None
+) -> Node:
+    """A proposition carrying the typed claim projection. Prose is not an
+    identity input: `title` and an authored display statement are display only."""
+    facets: dict[str, Any] = {PROPOSITION_FACET: dict(claim)}
+    if display_statement is not None:
+        facets[DISPLAY_FACET] = {"display_statement": display_statement}
+    return _node("proposition", slug, title, facets, ())
 
 
 def source_node(slug: str, *, title: str, identifiers: Mapping[str, str]) -> Node:

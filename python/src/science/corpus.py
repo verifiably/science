@@ -533,6 +533,8 @@ class CorpusWriter:
         self._refuse_already_minted(node)
         self._refuse_missing_basis(node)
         self._refuse_ineligible(node)
+        if stored.display_facet_malformed(node):
+            raise ValidationRefused(f"{node.id}: refused by document validation: malformed display facet")
         self._refuse_invalid(node)
         self._refuse_collision(node)
 
