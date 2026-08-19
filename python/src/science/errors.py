@@ -478,3 +478,24 @@ class CollisionRefused(WriteRefused):
     """`assert_addable`'s corpus-side refusals — a uid held by another id, or
     an identity claim held by another uid — wrapped for the same reason.
     These never reach an executor."""
+
+
+class ImportRefused(WriteRefused):
+    """A whole import bundle refused before its payload transaction."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        member: str | None = None,
+        cycle_edges: tuple[tuple[str, str], ...] = (),
+        report_ref: str | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.member = member
+        self.cycle_edges = cycle_edges
+        self.report_ref = report_ref
+
+
+class BundleMemberHeld(ImportRefused):
+    """A bundle member is already held or collides with local state."""

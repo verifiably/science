@@ -33,7 +33,7 @@ from science.adapter import (
     run_engine,
     validate_entrypoint,
 )
-from science.errors import MalformedClosure, ScienceError
+from science.errors import MalformedClosure, MalformedRecord, ScienceError
 from science.recipe import (
     BoundaryPolicy,
     BoundaryReceipt,
@@ -48,7 +48,9 @@ from science.recipe import (
 from science.report import (
     ActReport,
     AssessmentRunIntent,
+    ImportedRecords,
     OperationIntent,
+    RecordImportEntry,
     Registration,
     RunAttemptEntry,
     RunRefusal,
@@ -154,6 +156,31 @@ def _refused(
     )
     registration = Registration(token, report.identity()) if intent is not None else None
     return RunRefused(reason, report, intent, registration)
+
+
+def _mint_import_report(
+    intent: OperationIntent,
+    *,
+    subject: str,
+    observer: str,
+    instrument: str,
+    opened_at: str,
+    closed_at: str,
+    refs: tuple[str, ...],
+    findings: tuple[str, ...],
+) -> ActReport:
+    if type(intent) is not OperationIntent or intent.kind != "import":
+        raise MalformedRecord("an import report requires an import operation intent")
+    return _mint_report(
+        operation="import",
+        event_token=intent.event_token,
+        actor=intent.actor,
+        observer=observer,
+        instrument=instrument,
+        opened_at=opened_at,
+        closed_at=closed_at,
+        entries=(RecordImportEntry(subject, ImportedRecords(refs, findings)),),
+    )
 
 
 def _is_acquisition(address: str) -> bool:

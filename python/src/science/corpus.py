@@ -29,30 +29,37 @@ this slice does not build.
 
 from __future__ import annotations
 
+import secrets
 import threading
 from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass
+from itertools import pairwise
 from pathlib import Path
 from typing import Protocol, final
 
 from nodes.core.corpus import Corpus
 from nodes.core.errors import CollisionError
 from nodes.core.errors import ValidationError as NodesValidationError
+from nodes.core.frontmatter import node_to_markdown
 from nodes.core.node import Node
 from nodes.core.relations import Relation
 from nodes.core.structural_index import ResolvedEdge
-from nodes.core.write_plan import WritePlan, WritePlanExecutor
+from nodes.core.write_plan import CreateOp, WritePlan, WritePlanExecutor
 from pydantic import ValidationError as PydanticValidationError
 from pydantic_core import PydanticSerializationError
 
+from science import boundary as boundary_values
+from science import report as report_values
 from science import stored
 from science.dataset import dataset_address
 from science.errors import (
     BasisMissing,
+    BundleMemberHeld,
     CollisionRefused,
     EligibilityUnmet,
     FamilyKindUnsupported,
     IdentityError,
+    ImportRefused,
     MalformedRecord,
     RecordAlreadyMinted,
     RetractionCycleMalformed,
@@ -70,9 +77,12 @@ from science.errors import (
     ValidationRefused,
     WriteRefused,
 )
+from science.identity import v1
 from science.lineage import Basis, LineageSnapshot, Producer, Route
 from science.record import RunInput, RunValue
+from science.report import OperationIntent
 from science.sealed import sealed
+from science.spec import BITWISE_EQUIVALENCE_RULES
 from science.traversal import LineageEntry, Reach, RelationEntry, Step, closure
 
 __all__ = [
@@ -203,6 +213,30 @@ class _RootState:
     corpus: Corpus
     view: ReadView
     executor_factory: Callable[[Path], WritePlanExecutor]
+
+
+class _ImportView:
+    """The arriving bundle overlaid on the current local read view."""
+
+    def __init__(self, local: ReadView, records: Sequence[Node]) -> None:
+        self._local = local
+        self._records = {record.id: record for record in records}
+
+    def resolve(self, ref: str) -> str | None:
+        return ref if ref in self._records else self._local.resolve(ref)
+
+    def holds(self, ref: str) -> bool:
+        return self.resolve(ref) is not None
+
+    def get(self, ref: str) -> Node:
+        resolved = self.resolve(ref)
+        if resolved in self._records:
+            return self._records[resolved]
+        return self._local.get(ref)
+
+    def iter_stored(self) -> Iterator[Node]:
+        yield from self._local.iter_stored()
+        yield from self._records.values()
 
 
 _ROOT_STATES: dict[str, _RootState] = {}
@@ -410,6 +444,87 @@ def _acyclic_postorder(graph: dict[str, tuple[str, ...]]) -> tuple[str, ...]:
     return tuple(ordered)
 
 
+def _cycle_edges(graph: dict[str, tuple[str, ...]]) -> tuple[tuple[str, str], ...]:
+    """Return one deterministic directed cycle, or the empty tuple."""
+    state: dict[str, int] = {}
+    parent: dict[str, str] = {}
+    vertices = sorted(set(graph).union(child for children in graph.values() for child in children))
+    for start in vertices:
+        if start in state:
+            continue
+        state[start] = 1
+        stack = [(start, iter(graph.get(start, ())))]
+        while stack:
+            node, children = stack[-1]
+            try:
+                child = next(children)
+            except StopIteration:
+                state[node] = 2
+                stack.pop()
+                continue
+            if state.get(child) == 1:
+                path = [node]
+                while path[-1] != child:
+                    path.append(parent[path[-1]])
+                path.reverse()
+                return tuple(sorted((*pairwise(path), (node, child))))
+            if child not in state:
+                parent[child] = node
+                state[child] = 1
+                stack.append((child, iter(graph.get(child, ()))))
+    return ()
+
+
+_REPORT_ENTRY_OUTCOMES: dict[str, dict[str, tuple[str, ...]]] = {
+    "pure-look": {
+        "published-observation": ("ref",),
+        "byte-locator-untested": ("reason",),
+        "retrieval-failed": ("reason",),
+    },
+    "managed-mutation": {"published-observation": ("ref",)},
+    "declaration-pin": {"pinned-declaration": ("ref",)},
+    "subject-evaluation": {"evaluation-finding": ("payload",)},
+    "record-import": {"imported-records": ("refs", "findings")},
+    "run-attempt": {"run-refusal": ("missing_member",)},
+}
+
+
+def _valid_report_entry(entry: object) -> bool:
+    if not isinstance(entry, dict):
+        return False
+    kind = entry.get("kind")
+    if type(kind) is not str:
+        return False
+    expected_entry_fields = {"kind", "subject", "outcome", *(("instrument_inputs",) if kind == "pure-look" else ())}
+    if set(entry) != expected_entry_fields or type(entry.get("subject")) is not str:
+        return False
+    if kind == "pure-look":
+        inputs = entry["instrument_inputs"]
+        if not isinstance(inputs, list) or any(
+            not isinstance(pair, list) or len(pair) != 2 or any(type(member) is not str for member in pair)
+            for pair in inputs
+        ):
+            return False
+    outcomes = _REPORT_ENTRY_OUTCOMES.get(kind)
+    outcome = entry.get("outcome")
+    if outcomes is None or not isinstance(outcome, dict):
+        return False
+    outcome_type = outcome.get("type")
+    if type(outcome_type) is not str:
+        return False
+    fields = outcomes.get(outcome_type)
+    if fields is None or set(outcome) != {"type", *fields}:
+        return False
+    for field in fields:
+        value = outcome[field]
+        if outcome_type == "imported-records":
+            if not isinstance(value, list) or any(type(member) is not str for member in value):
+                return False
+        elif type(value) is not str:
+            return False
+    return True
+
+
 def _validated_retraction_facet(record: Node) -> dict:
     facet = record.facets.get(stored.RETRACTION_FACET)
     required = {"target", "reason", "rationale", "grounds", "actor", "event_token"}
@@ -540,7 +655,7 @@ def _producers_of(view: ReadView, dataset: str) -> list[Producer]:
 # --- the §6.2 corpus check ---------------------------------------------------
 
 
-def eligibility_refusal(view: ReadView, node: Node) -> str | None:
+def eligibility_refusal(view: ReadView | _ImportView, node: Node) -> str | None:
     """S7's cross-node predicate, in one implementation for both boundaries.
 
     assessment → run → `observes` → dataset → facet. `reads` inputs never
@@ -777,6 +892,74 @@ class CorpusWriter:
             self._refuse(node)
             return self._corpus.add(node)
 
+    def import_bundle(
+        self,
+        records: Sequence[Node],
+        *,
+        actor: str,
+        observer: str,
+        instrument: str,
+        opened_at: str,
+        closed_at: str,
+    ) -> report_values.ActReport:
+        """Admit one validated bundle in one payload transaction."""
+        with self._operation:
+            try:
+                bundle = tuple(records)
+            except TypeError as caught:
+                raise ImportRefused("an import bundle must be a sequence of records") from caught
+            if not bundle:
+                raise ImportRefused("an import bundle must not be empty")
+            for name, value in (
+                ("actor", actor),
+                ("observer", observer),
+                ("instrument", instrument),
+                ("opened_at", opened_at),
+                ("closed_at", closed_at),
+            ):
+                if type(value) is not str or not value:
+                    raise ImportRefused(f"import {name} must be a non-empty string")
+            if self._operation_port is None:
+                raise ImportRefused("this corpus has no operation port; import is a boundary operation")
+
+            intent = OperationIntent("import", secrets.token_hex(16), actor)
+            intent_digest = self._operation_port.append_intent(
+                v1.encode({"kind": intent.kind, "event_token": intent.event_token, "actor": intent.actor})
+            )
+            try:
+                findings = self._validate_import_bundle(bundle)
+            except ImportRefused as refused:
+                report = self._import_report(
+                    intent,
+                    observer=observer,
+                    instrument=instrument,
+                    opened_at=opened_at,
+                    closed_at=closed_at,
+                    refs=(),
+                    findings=(str(refused),),
+                )
+                report_node = stored.act_report_node(report)
+                self._operation_port.execute_fulfilling([self._create_op(report_node)], intent_digest)
+                self._reconstruct()
+                refused.report_ref = report_node.id
+                raise
+
+            payload = [self._create_op(record) for record in bundle]
+            self._corpus.executor.execute(payload)
+            self._reconstruct()
+            report = self._import_report(
+                intent,
+                observer=observer,
+                instrument=instrument,
+                opened_at=opened_at,
+                closed_at=closed_at,
+                refs=tuple(record.id for record in bundle),
+                findings=findings,
+            )
+            self._operation_port.execute_fulfilling([self._create_op(stored.act_report_node(report))], intent_digest)
+            self._reconstruct()
+            return report
+
     def retract(self, record: Node) -> Node:
         """Mint one locally resolvable retraction without touching its target."""
         with self._operation:
@@ -885,6 +1068,189 @@ class CorpusWriter:
                 raise ReviseOutsideAllowlist(f"{node.id}: revision changes a field outside display prose")
             return self._corpus.add(node)
 
+    def _validate_import_bundle(self, records: tuple[Node, ...]) -> tuple[str, ...]:
+        seen_ids: set[str] = set()
+        seen_uids: set[str] = set()
+        seen_paths: set[str] = set()
+        for record in records:
+            if type(record) is not Node:
+                raise ImportRefused("an import member must be a Node")
+            try:
+                self._refuse_invalid(record)
+                path = self._relative_path(record)
+                if stored.semantic_hash_missing(record) or stored.semantic_hash_disagrees(record):
+                    raise ValidationRefused(f"{record.id}: semantic-identity stamp is missing or stale")
+                covered = stored.COVERED_FACETS.get(record.kind)
+                if covered and covered[0] not in record.facets:
+                    raise ValidationRefused(f"{record.id}: required {covered[0]!r} facet is missing")
+            except (IdentityError, WriteRefused) as caught:
+                raise ImportRefused(str(caught), member=record.id) from caught
+            if record.id in seen_ids:
+                raise ImportRefused(f"{record.id}: duplicate id in import bundle", member=record.id)
+            if record.uid in seen_uids:
+                raise ImportRefused(f"{record.id}: duplicate uid in import bundle", member=record.id)
+            if path in seen_paths:
+                raise ImportRefused(f"{record.id}: duplicate destination path in import bundle", member=record.id)
+            if path in self._corpus.manifest:
+                raise BundleMemberHeld(f"{record.id}: destination path is already held", member=record.id)
+            seen_ids.add(record.id)
+            seen_uids.add(record.uid)
+            seen_paths.add(path)
+
+        union = _ImportView(self._view, records)
+        for record in records:
+            try:
+                self._refuse(record, view=union)
+                if record.kind == "act-report":
+                    self._refuse_malformed_act_report(record)
+                self._refuse_r20_contradiction(record)
+            except (RecordAlreadyMinted, CollisionRefused) as caught:
+                raise BundleMemberHeld(str(caught), member=record.id) from caught
+            except ScienceError as caught:
+                raise ImportRefused(str(caught), member=record.id) from caught
+
+        cycle_edges = self._import_cycle_edges(records)
+        if cycle_edges:
+            raise ImportRefused(
+                f"retraction graph contains a cycle through {cycle_edges!r}",
+                cycle_edges=cycle_edges,
+            )
+        for record in records:
+            if record.kind == "retraction":
+                try:
+                    self._validated_retraction(record)
+                    self._refuse_import_retraction_target(record, union)
+                except ScienceError as caught:
+                    raise ImportRefused(str(caught), member=record.id) from caught
+
+        findings = {
+            f"unresolved: {record.id} -> {relation.target}"
+            for record in records
+            for relation in record.relations
+            if not union.holds(relation.target)
+        }
+        return tuple(sorted(findings))
+
+    def _import_cycle_edges(self, records: tuple[Node, ...]) -> tuple[tuple[str, str], ...]:
+        targets: dict[str, list[str]] = {}
+        for record in (*tuple(self._view.iter_stored()), *records):
+            if record.kind != "retraction":
+                continue
+            try:
+                target = _validated_retraction_target(record)
+            except MalformedRecord as caught:
+                raise ImportRefused(str(caught), member=record.id) from caught
+            if target["arm"] == "node":
+                targets.setdefault(target["resolved"], []).append(record.id)
+        graph = {target: tuple(sorted(children)) for target, children in targets.items()}
+        return _cycle_edges(graph)
+
+    @staticmethod
+    def _refuse_import_retraction_target(record: Node, view: _ImportView) -> None:
+        target = _validated_retraction_target(record)
+        if target["arm"] == "node":
+            resolved = view.resolve(target["ref"])
+            if resolved is None or resolved != target["resolved"]:
+                raise RetractionTargetUnresolvable(f"{record.id}: node target does not resolve exactly")
+            resolved_target = view.get(resolved)
+            if resolved_target.kind not in ELIGIBLE_RETRACTION_TARGET_KINDS:
+                raise RetractionTargetIneligible(
+                    f"{record.id}: resolved node target kind is outside {ELIGIBLE_RETRACTION_TARGET_KINDS}"
+                )
+            if stored.stored_semantic_hash(resolved_target) != target["content_identity"]:
+                raise RetractionTargetUnresolvable(f"{record.id}: node target content identity does not resolve")
+            return
+        resolved = view.resolve(target["dataset"])
+        if resolved is None or resolved != target["resolved"]:
+            raise RetractionTargetUnresolvable(f"{record.id}: route dataset does not resolve exactly")
+        dataset = view.get(resolved)
+        if dataset.kind != "dataset":
+            raise RetractionTargetIneligible(f"{record.id}: a route target must resolve to a dataset")
+        if stored.stored_semantic_hash(dataset) != target["content_identity"]:
+            raise RetractionTargetUnresolvable(f"{record.id}: route dataset content identity does not resolve")
+        if not any(route.get("identity") == target["route_identity"] for route in stored.basis_routes(dataset)):
+            raise RetractionTargetUnresolvable(
+                f"{record.id}: route identity {target['route_identity']!r} is absent from the stamped basis"
+            )
+
+    @staticmethod
+    def _refuse_r20_contradiction(record: Node) -> None:
+        if record.kind != "analysis-spec":
+            return
+        facet = record.facets.get("analysis-spec")
+        nondeterminism = facet.get("nondeterminism") if isinstance(facet, dict) else None
+        equivalence_rule = facet.get("equivalence_rule") if isinstance(facet, dict) else None
+        variant = nondeterminism.get("variant") if isinstance(nondeterminism, dict) else None
+        if type(equivalence_rule) is not str or type(variant) is not str:
+            raise ValidationRefused(f"{record.id}: malformed analysis-spec contract fields")
+        if (
+            variant == "stochastic-unseeded"
+            and equivalence_rule in BITWISE_EQUIVALENCE_RULES
+        ):
+            raise ValidationRefused(f"{record.id}: stochastic-unseeded cannot support a bitwise equivalence rule")
+
+    @staticmethod
+    def _refuse_malformed_act_report(record: Node) -> None:
+        facet = record.facets.get("act-report")
+        required = {
+            "operation",
+            "event_token",
+            "actor",
+            "observer",
+            "instrument",
+            "opened_at",
+            "closed_at",
+            "entries",
+        }
+        if (
+            not isinstance(facet, dict)
+            or set(record.facets) != {"act-report", stored.SEMANTIC_IDENTITY_FACET}
+            or set(facet) != required
+            or facet.get("operation") not in report_values.OPERATION_KINDS
+            or any(type(facet.get(name)) is not str for name in required - {"entries"})
+            or not isinstance(facet.get("entries"), list)
+            or record.relations
+        ):
+            raise ValidationRefused(f"{record.id}: malformed act-report facet")
+        if any(not _valid_report_entry(entry) for entry in facet["entries"]):
+            raise ValidationRefused(f"{record.id}: malformed act-report entry")
+        expected = v1.digest(report_values.ACT_REPORT_DOMAIN, facet)
+        if record.id != f"act-report:{expected}":
+            raise ValidationRefused(f"{record.id}: act-report address disagrees with its identity")
+
+    def _import_report(
+        self,
+        intent: OperationIntent,
+        *,
+        observer: str,
+        instrument: str,
+        opened_at: str,
+        closed_at: str,
+        refs: tuple[str, ...],
+        findings: tuple[str, ...],
+    ) -> report_values.ActReport:
+        return boundary_values._mint_import_report(  # pyright: ignore[reportPrivateUsage]
+            intent,
+            subject=self._corpus.store.root.name,
+            observer=observer,
+            instrument=instrument,
+            opened_at=opened_at,
+            closed_at=closed_at,
+            refs=refs,
+            findings=findings,
+        )
+
+    def _relative_path(self, record: Node) -> str:
+        return self._corpus.store.path_for(record.id).relative_to(self._corpus.store.root).as_posix()
+
+    def _create_op(self, record: Node) -> CreateOp:
+        return CreateOp(path=self._relative_path(record), content=node_to_markdown(record).encode("utf-8"))
+
+    def _reconstruct(self) -> None:
+        corpus = Corpus(self._corpus.store.root, executor_factory=self._state.executor_factory)
+        self._state.corpus = corpus
+        self._state.view = ReadView(corpus)
+
     # --- the refusals, in order ---------------------------------------------
 
     @staticmethod
@@ -941,10 +1307,16 @@ class CorpusWriter:
             raise ValidationRefused(f"{successor.id}: refused by document validation: malformed relation")
         self._refuse_invalid(successor)
 
-    def _refuse(self, node: Node, *, document_validated: bool = False) -> None:
+    def _refuse(
+        self,
+        node: Node,
+        *,
+        document_validated: bool = False,
+        view: ReadView | _ImportView | None = None,
+    ) -> None:
         self._refuse_already_minted(node)
         self._refuse_missing_basis(node)
-        self._refuse_ineligible(node)
+        self._refuse_ineligible(node, view=view)
         if stored.display_facet_malformed(node):
             raise ValidationRefused(f"{node.id}: refused by document validation: malformed display facet")
         if not document_validated:
@@ -976,10 +1348,10 @@ class CorpusWriter:
                 "accepted digest. Supplying it later is a second, separate mint"
             )
 
-    def _refuse_ineligible(self, node: Node) -> None:
+    def _refuse_ineligible(self, node: Node, *, view: ReadView | _ImportView | None = None) -> None:
         """S7's write boundary, reading the cross-node predicate through this
         corpus's own read view."""
-        reason = eligibility_refusal(self._view, node)
+        reason = eligibility_refusal(self._view if view is None else view, node)
         if reason is not None:
             raise EligibilityUnmet(f"{node.id}: the assesses edge is inadmissible because {reason}")
 
