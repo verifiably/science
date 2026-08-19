@@ -13,7 +13,7 @@ corpus handle* and is checked over `science.corpus`. Two boundaries, two checks,
 neither standing in for the other.
 
 **The corpus supplies its own root.** The factory this module hands the write
-API is `(root: Path) -> DurableExecutor`, closing over the backend and the
+API is `(root: Path) -> DurableExecutor`, using the module-bound backend and
 storage profile and deriving the metadata root by §2's sibling rule. A
 pre-bound executor would let the corpus write through a root it never verified.
 """
@@ -99,6 +99,8 @@ cut 4's *every other tuple fails closed* obligation is exercised as the
 engine's own refusal — relied on, never re-implemented.
 """
 
+_PRODUCTION_BACKEND: Backend = select_backend()
+
 METADATA_SUFFIX = ".metadata"
 
 
@@ -134,7 +136,7 @@ def init_corpus_root(corpus_root: Path) -> None:
         raise CorpusRootRefused(f"{str(root)!r} exists and is not a directory, so it cannot be a corpus root")
     root.mkdir(parents=True, exist_ok=True)
     register_root(
-        select_backend(),
+        _PRODUCTION_BACKEND,
         str(root),
         str(metadata_root_for(root)),
         PRODUCTION_STORAGE,
@@ -444,20 +446,18 @@ def _refuse_malformed(plan: WritePlan) -> None:
                 raise PlanRefusedError(f"path names an engine-reserved leaf: {op.path!r}")
 
 
+def _durable_executor(root: Path) -> DurableExecutor:
+    return DurableExecutor(
+        root,
+        backend=_PRODUCTION_BACKEND,
+        storage=PRODUCTION_STORAGE,
+        metadata_root=metadata_root_for(root),
+    )
+
+
 def durable_executor_factory() -> Callable[[Path], DurableExecutor]:
-    """The root-taking factory the write API is built with.
-
-    Closes over the backend and the storage profile; the corpus supplies its own
-    root, and the metadata root follows from it by §2's rule. A pre-bound
-    executor would let a corpus write through a root it never verified.
-    """
-    backend = select_backend()
-    storage = PRODUCTION_STORAGE
-
-    def factory(root: Path) -> DurableExecutor:
-        return DurableExecutor(root, backend=backend, storage=storage, metadata_root=metadata_root_for(root))
-
-    return factory
+    """The stable root-taking factory the write API is built with."""
+    return _durable_executor
 
 
 def open_corpus(corpus_root: Path) -> CorpusWriter:

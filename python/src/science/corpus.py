@@ -51,6 +51,7 @@ from science.errors import (
     EligibilityUnmet,
     IdentityError,
     RecordAlreadyMinted,
+    ScienceError,
     SemanticHashMissing,
     SemanticHashStale,
     ValidationRefused,
@@ -169,6 +170,32 @@ class ReadView:
                 "(semantic-hash-stale); the node is an untrusted import, not a guaranteed mutation"
             )
         return node
+
+
+@dataclass
+class _RootState:
+    lock: threading.Lock
+    corpus: Corpus
+    view: ReadView
+    executor_factory: Callable[[Path], WritePlanExecutor]
+
+
+_ROOT_STATES: dict[str, _RootState] = {}
+_ROOT_STATES_LOCK = threading.Lock()
+
+
+def _root_state_for(root: Path, executor_factory: Callable[[Path], WritePlanExecutor]) -> _RootState:
+    resolved = Path(root).resolve()
+    key = str(resolved)
+    with _ROOT_STATES_LOCK:
+        state = _ROOT_STATES.get(key)
+        if state is None:
+            corpus = Corpus(resolved, executor_factory=executor_factory)
+            state = _RootState(threading.Lock(), corpus, ReadView(corpus), executor_factory)
+            _ROOT_STATES[key] = state
+        elif state.executor_factory is not executor_factory:
+            raise ScienceError(f"corpus root {key!r} is already open with a different executor factory")
+        return state
 
 
 # --- the two adjacency adapters ---------------------------------------------
@@ -505,9 +532,16 @@ class CorpusWriter:
     """
 
     def __init__(self, root: Path, executor_factory: Callable[[Path], WritePlanExecutor]) -> None:
-        self._corpus = Corpus(Path(root), executor_factory=executor_factory)
-        self._view = ReadView(self._corpus)
-        self._operation = threading.Lock()
+        self._state = _root_state_for(root, executor_factory)
+        self._operation = self._state.lock
+
+    @property
+    def _corpus(self) -> Corpus:
+        return self._state.corpus
+
+    @property
+    def _view(self) -> ReadView:
+        return self._state.view
 
     @property
     def read_view(self) -> ReadView:

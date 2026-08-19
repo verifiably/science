@@ -28,6 +28,7 @@ from science.errors import (
     ValidationRefused,
     WriteRefused,
 )
+from science.root import open_corpus
 
 PINNED = [{"name": "matrix", "digest": "sha256:" + "ab" * 32}]
 
@@ -250,6 +251,28 @@ class TestTheOperationLock:
     planning while the first is still inside the engine, and two plans reach the
     executor with no collision refused anywhere."""
 
+    def test_two_writers_one_root_share_lock_and_state(self, tmp_path):
+        Recorder.plans = []
+        a = CorpusWriter(tmp_path, Recorder)
+        b = CorpusWriter(tmp_path, Recorder)
+
+        assert a._operation is b._operation
+        minted = a.add(stored.proposition_node("p", title="p", claim={"operator": "affects"}))
+        assert b.read_view.holds(minted.id)
+
+        other = CorpusWriter(tmp_path / "other", Recorder)
+        assert other._operation is not a._operation
+
+    def test_second_writer_with_different_factory_refuses(self, tmp_path):
+        CorpusWriter(tmp_path, Recorder)
+        with pytest.raises(ScienceError):
+            CorpusWriter(tmp_path, DefaultExecutor)
+
+    def test_open_corpus_twice_shares_state(self, tmp_path):
+        a = open_corpus(tmp_path)
+        b = open_corpus(tmp_path)
+        assert a._operation is b._operation
+
     def test_two_same_uid_adds_are_serialized_end_to_end(self, tmp_path):
         entered = threading.Event()
         release = threading.Event()
@@ -267,7 +290,8 @@ class TestTheOperationLock:
                 assert release.wait(timeout=10)
                 self._inner.execute(plan)
 
-        writer = CorpusWriter(tmp_path, Barrier)
+        first_writer = CorpusWriter(tmp_path, Barrier)
+        second_writer = CorpusWriter(tmp_path, Barrier)
         first = observed_dataset("first")
         second = observed_dataset("second")
         second.uid = first.uid  # same uid, different id
@@ -275,11 +299,11 @@ class TestTheOperationLock:
         outcome: list[BaseException | None] = [None]
 
         def add_first():
-            writer.add(first)
+            first_writer.add(first)
 
         def add_second():
             try:
-                writer.add(second)
+                second_writer.add(second)
                 outcome[0] = None
             except BaseException as caught:  # noqa: BLE001 - the outcome is the assertion
                 outcome[0] = caught
