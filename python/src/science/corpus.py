@@ -989,7 +989,10 @@ class CorpusWriter:
                     grounds = facet.get("grounds")
                     if "grounds" not in facet or (
                         isinstance(grounds, list)
-                        and (not grounds or any(type(ground) is not str or not ground for ground in grounds))
+                        and (
+                            not grounds
+                            or all(type(ground) is str and not ground for ground in grounds)
+                        )
                     ):
                         raise RetractionGroundsMissing(
                             f"{record.id}: a retraction names at least one grounds reference"

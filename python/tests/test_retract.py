@@ -250,8 +250,16 @@ def test_malformed_grounds_refuse_before_target_resolution(writer):
 def test_retract_refuses_missing_grounds_with_the_public_subtype(writer):
     target = mint_eligible_assessment(writer)
 
-    for grounds in (None, [], [""]):
+    for grounds in (None, [], [""], ["", ""]):
         with pytest.raises(errors.RetractionGroundsMissing):
+            writer.retract(malformed_grounds(retraction_for(target), grounds))
+
+
+def test_retract_keeps_malformed_ground_lists_in_validation_refused(writer):
+    target = mint_eligible_assessment(writer)
+
+    for grounds in ([1], ["verification:v1", 1], ["", "verification:v1"]):
+        with pytest.raises(errors.ValidationRefused):
             writer.retract(malformed_grounds(retraction_for(target), grounds))
 
 
