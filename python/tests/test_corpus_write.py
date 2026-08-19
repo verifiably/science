@@ -14,7 +14,7 @@ from typing import ClassVar
 
 import pytest
 from nodes.core.errors import CollisionError, ExecutionError
-from nodes.core.node import Node
+from nodes.core.node import Node, NodeMetadata
 from nodes.core.write_plan import CreateOp, DefaultExecutor, DeleteOp, ReplaceOp
 
 from science import stored
@@ -170,6 +170,16 @@ class TestTheRefusalsWrapAndOrder:
         with pytest.raises(ValidationRefused) as refused:
             writer.add(malformed)
         assert refused.value.__cause__ is not None
+
+    def test_a_forged_nested_model_is_revalidated_before_add(self, writer):
+        malformed = observed_dataset()
+        malformed.metadata = NodeMetadata.model_construct(version="bad")
+
+        with pytest.raises(ValidationRefused):
+            writer.add(malformed)
+
+        assert not writer.read_view.holds(malformed.id)
+        assert Recorder.plans == []
 
     def test_a_collision_is_wrapped_and_no_nodes_error_escapes_raw(self, writer):
         first = observed_dataset()

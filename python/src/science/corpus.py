@@ -43,6 +43,7 @@ from nodes.core.relations import Relation
 from nodes.core.structural_index import ResolvedEdge
 from nodes.core.write_plan import WritePlanExecutor
 from pydantic import ValidationError as PydanticValidationError
+from pydantic_core import PydanticSerializationError
 
 from science import stored
 from science.dataset import dataset_address
@@ -685,8 +686,8 @@ class CorpusWriter:
         raw. The registry half is unexercised here: no kind registry is compiled
         in this slice, and G5's kind-existence check waits with it."""
         try:
-            Node.model_validate(dict(node))
-        except (NodesValidationError, PydanticValidationError) as caught:
+            Node.model_validate(node.model_dump(warnings="error"))
+        except (NodesValidationError, PydanticValidationError, PydanticSerializationError) as caught:
             raise ValidationRefused(f"{node.id}: refused by document validation: {caught}") from caught
 
     def _refuse_collision(self, node: Node) -> None:

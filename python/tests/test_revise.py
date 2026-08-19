@@ -150,6 +150,17 @@ def test_revise_wraps_non_iterable_relations_as_validation_refused(writer):
         writer.revise(old.model_copy(update={"relations": None}))
 
 
+def test_revise_revalidates_a_forged_nested_model(writer):
+    old = writer.add(prop())
+    malformed = old.model_copy(update={"metadata": NodeMetadata.model_construct(version="bad")})
+
+    with pytest.raises(ValidationRefused):
+        writer.revise(malformed)
+
+    assert writer.read_view.get(old.id).metadata == old.metadata
+    assert len(Recorder.plans) == 1
+
+
 def test_revise_refuses_malformed_public_shapes(writer):
     old = writer.add(prop())
     malformed_display = old.model_copy(
