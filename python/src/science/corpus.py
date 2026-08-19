@@ -33,7 +33,7 @@ import threading
 from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import final
+from typing import Protocol, final
 
 from nodes.core.corpus import Corpus
 from nodes.core.errors import CollisionError
@@ -41,7 +41,7 @@ from nodes.core.errors import ValidationError as NodesValidationError
 from nodes.core.node import Node
 from nodes.core.relations import Relation
 from nodes.core.structural_index import ResolvedEdge
-from nodes.core.write_plan import WritePlanExecutor
+from nodes.core.write_plan import WritePlan, WritePlanExecutor
 from pydantic import ValidationError as PydanticValidationError
 from pydantic_core import PydanticSerializationError
 
@@ -81,6 +81,7 @@ __all__ = [
     "CorpusWriter",
     "Finding",
     "LineageAdjacency",
+    "OperationPort",
     "ReadView",
     "RelationAdjacency",
     "corpus_check",
@@ -93,6 +94,12 @@ __all__ = [
 
 DIRECTIONS = ("inbound", "outbound")
 ELIGIBLE_RETRACTION_TARGET_KINDS = ("assessment", "retraction", "verification")
+
+
+class OperationPort(Protocol):
+    def append_intent(self, payload: bytes) -> str: ...
+
+    def execute_fulfilling(self, plan: WritePlan, fulfills: str) -> None: ...
 
 
 @sealed
@@ -733,9 +740,15 @@ class CorpusWriter:
     transfers to them.
     """
 
-    def __init__(self, root: Path, executor_factory: Callable[[Path], WritePlanExecutor]) -> None:
+    def __init__(
+        self,
+        root: Path,
+        executor_factory: Callable[[Path], WritePlanExecutor],
+        operation_port: OperationPort | None = None,
+    ) -> None:
         self._state = _root_state_for(root, executor_factory)
         self._operation = self._state.lock
+        self._operation_port = operation_port
 
     @property
     def _corpus(self) -> Corpus:

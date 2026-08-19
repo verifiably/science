@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import IO
 
 from atoms.chain.errors import ChainStateInvalid
-from atoms.coordinator.commands import register_root, run_transaction
+from atoms.coordinator.commands import append_intent, register_root, run_transaction
 from atoms.core.effects import CreateDirectory, CreateFileNoClobber, DeletePath, Effect, ReplaceFile
 from atoms.core.errors import (
     AtomsError,
@@ -62,6 +62,7 @@ __all__ = [
     "INTENT_DOMAIN",
     "PRODUCTION_STORAGE",
     "DurableExecutor",
+    "DurableOperationPort",
     "durable_executor_factory",
     "init_corpus_root",
     "metadata_root_for",
@@ -223,11 +224,20 @@ class DurableExecutor:
     occurrence's post-state, and only a **first** occurrence reads disk.
     """
 
-    def __init__(self, root: Path, *, backend: Backend, storage: StorageProfile, metadata_root: Path) -> None:
+    def __init__(
+        self,
+        root: Path,
+        *,
+        backend: Backend,
+        storage: StorageProfile,
+        metadata_root: Path,
+        fulfills: str | None = None,
+    ) -> None:
         self.root = Path(root)
         self._backend = backend
         self._storage = storage
         self._metadata_root = Path(metadata_root)
+        self._fulfills = fulfills
 
     # --- the seam's one method ----------------------------------------------
 
@@ -244,11 +254,11 @@ class DurableExecutor:
             initial_surface=initial_surface,
             final_surface=final_surface,
             effects=effects,
-            # The adapter reserves nothing, declares no ordering of its own, and
-            # fulfils no prior intent. `build_spec` supplies `schema_version`
-            # from the engine's own constant, so no stale literal can ship here.
+            # The adapter reserves nothing and declares no ordering of its own.
+            # `build_spec` supplies `schema_version` from the engine's own
+            # constant, so no stale literal can ship here.
             dependencies=(),
-            fulfills=None,
+            fulfills=self._fulfills,
             registered_paths=(),
         )
         self._submit(spec, _PlanPayloads(payloads))
@@ -384,6 +394,43 @@ class DurableExecutor:
             raise ExecutionError(str(caught), index=None, applied=None) from caught
 
 
+class DurableOperationPort:
+    def __init__(self, root: Path, *, backend: Backend, storage: StorageProfile, metadata_root: Path) -> None:
+        self.root = Path(root)
+        self._backend = backend
+        self._storage = storage
+        self._metadata_root = Path(metadata_root)
+
+    def append_intent(self, payload: bytes) -> str:
+        try:
+            return append_intent(
+                self._backend,
+                str(self.root),
+                str(self._metadata_root),
+                self._storage,
+                payload,
+            )
+        except (ProjectApprovalRefused, PreconditionRefused, CapabilityUnavailable) as caught:
+            raise ExecutionError(str(caught), index=None, applied=0) from caught
+        except (MetadataStoreInvalid, ChainStateInvalid) as caught:
+            raise ExecutionError(str(caught), index=None, applied=None) from caught
+        except (TransactionHalted, ProtocolError) as caught:
+            raise ExecutionError(str(caught), index=None, applied=None) from caught
+        except AtomsError as caught:
+            raise ExecutionError(str(caught), index=None, applied=None) from caught
+        except Exception as caught:
+            raise ExecutionError(str(caught), index=None, applied=None) from caught
+
+    def execute_fulfilling(self, plan: WritePlan, fulfills: str) -> None:
+        DurableExecutor(
+            self.root,
+            backend=self._backend,
+            storage=self._storage,
+            metadata_root=self._metadata_root,
+            fulfills=fulfills,
+        ).execute(plan)
+
+
 class _PlanPayloads:
     """The planned-postimage bytes, content-addressed.
 
@@ -468,4 +515,14 @@ def open_corpus(corpus_root: Path) -> CorpusWriter:
     opened against an unregistered root constructs and reads; its first write
     refuses with the engine's registration refusal as cause.
     """
-    return CorpusWriter(Path(corpus_root), durable_executor_factory())
+    root = Path(corpus_root)
+    return CorpusWriter(
+        root,
+        durable_executor_factory(),
+        operation_port=DurableOperationPort(
+            root,
+            backend=_PRODUCTION_BACKEND,
+            storage=PRODUCTION_STORAGE,
+            metadata_root=metadata_root_for(root),
+        ),
+    )
