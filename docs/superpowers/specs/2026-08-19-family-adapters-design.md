@@ -240,7 +240,10 @@ def import_bundle(
 
 The returned report records the canonical payload order and every import
 finding. The input already carries the admitted records, so no second result or
-workflow type is introduced.
+workflow type is introduced. `actor`, `observer`, and `instrument` are the
+act-report's required attribution triple (act-report design §2.2, the
+holdings-observation vocabulary): all three are required, and `instrument`
+names the tool performing the import.
 
 One call imports one non-empty bundle into one corpus. The boundary freezes the
 observer-corpus root, mints operation metadata, and performs three durable
@@ -328,8 +331,13 @@ The intent/report pair records rather than conceals partial operation history:
 | Durable point reached | Observable state |
 |---|---|
 | intent only | unfinished operation, no payload |
+| intent and refusal report | finished operation, refused, no payload |
 | intent and payload | unfinished operation, imported records present |
 | intent, payload, report | finished operation |
+
+The refusal report **fulfills** the intent — a refused import is a finished
+operation that admitted nothing, which is a different state from T2's
+unfulfilling report that fulfills nothing.
 
 There is no compensation transaction. There is also no recovery resumption in
 this slice. Retrying creates a new operation with a new intent and cannot close
