@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from decimal import Decimal
 from typing import ClassVar
 
 import pytest
@@ -137,6 +138,45 @@ def test_local_destination_path_collision_is_a_held_member(writer_with_port):
     assert not writer_with_port.read_view.holds("proposition:a__b")
 
 
+def test_bundle_members_cannot_share_a_deprecated_identity_claim(writer_with_port):
+    first = prop("first").model_copy(update={"deprecated_ids": ["proposition:shared"]})
+    second = prop("second").model_copy(update={"deprecated_ids": ["proposition:shared"]})
+
+    with pytest.raises(BundleMemberHeld) as caught:
+        import_records(writer_with_port, [first, second])
+
+    assert caught.value.report_ref is not None
+    assert Recorder.plans == []
+    assert not writer_with_port.read_view.holds(first.id)
+    assert not writer_with_port.read_view.holds(second.id)
+
+
+def test_bundle_deprecated_claim_cannot_collide_with_an_arriving_live_id(writer_with_port):
+    live = prop("claimed")
+    alias = prop("alias").model_copy(update={"deprecated_ids": [live.id]})
+
+    with pytest.raises(BundleMemberHeld):
+        import_records(writer_with_port, [alias, live])
+
+    assert Recorder.plans == []
+    assert not writer_with_port.read_view.holds(live.id)
+
+
+def test_bundle_relation_resolves_through_an_arriving_deprecated_id(writer_with_port):
+    dataset = stored.dataset_node(
+        "current",
+        title="current",
+        resources=[{"name": "data", "digest": "sha256:" + "ab" * 32}],
+    ).model_copy(update={"deprecated_ids": ["dataset:previous"]})
+    run = stored.run_node("run", title="run", spec="analysis-spec:s", observes=["dataset:previous"])
+
+    report = import_records(writer_with_port, [run, dataset])
+
+    outcome = report.entries[0].outcome
+    assert isinstance(outcome, ImportedRecords) and outcome.findings == ()
+    assert writer_with_port.read_view.resolve("dataset:previous") == dataset.id
+
+
 def test_bundle_cycle_refuses_with_edge_set(writer_with_port):
     first = retraction("a", "retraction:b")
     second = retraction("b", "retraction:a")
@@ -254,6 +294,23 @@ def test_stale_stamp_member_refuses(writer_with_port):
     assert Recorder.plans == []
 
 
+def test_unrenderable_member_closes_the_intent_without_a_payload(writer_with_port):
+    unrenderable = stored.proposition_node(
+        "decimal",
+        title="decimal",
+        claim={"estimate": Decimal("1.25")},
+    )
+
+    with pytest.raises(ImportRefused) as caught:
+        import_records(writer_with_port, [unrenderable])
+
+    assert caught.value.report_ref is not None
+    assert len(FakePort.intents) == 1
+    assert len(FakePort.fulfilling) == 1
+    assert Recorder.plans == []
+    assert not writer_with_port.read_view.holds(unrenderable.id)
+
+
 def test_foreign_act_report_enters_inert(writer_with_port):
     foreign_report = _mint_report(
         operation="import",
@@ -363,6 +420,38 @@ def test_attribution_and_times_refuse_before_intent(writer_with_port, field):
     assert FakePort.intents == []
 
 
+@pytest.mark.parametrize("field", ["actor", "observer", "instrument", "opened_at", "closed_at"])
+def test_uncanonically_encodable_report_fields_refuse_before_intent(writer_with_port, field):
+    values = {
+        "actor": "k",
+        "observer": "corpus",
+        "instrument": "test",
+        "opened_at": "T0",
+        "closed_at": "T1",
+    }
+    values[field] = "\ud800"
+
+    with pytest.raises(ImportRefused):
+        writer_with_port.import_bundle([prop("a")], **values)
+
+    assert FakePort.intents == []
+    assert FakePort.fulfilling == []
+    assert Recorder.plans == []
+
+
+def test_uncanonically_encodable_report_subject_refuses_before_intent(tmp_path):
+    Recorder.plans, FakePort.intents, FakePort.fulfilling = [], [], []
+    root = tmp_path / "\udcff"
+    writer = CorpusWriter(root, Recorder, operation_port=FakePort(root))
+
+    with pytest.raises(ImportRefused):
+        import_records(writer, [prop("a")])
+
+    assert FakePort.intents == []
+    assert FakePort.fulfilling == []
+    assert Recorder.plans == []
+
+
 def test_no_operation_port_refuses_before_any_act(tmp_path):
     Recorder.plans = []
     writer = CorpusWriter(tmp_path, Recorder)
@@ -390,3 +479,23 @@ def test_refusal_report_failure_leaves_intent_open_and_engine_error_unchanged(tm
     assert len(FakePort.intents) == 1
     assert Recorder.plans == []
     assert not writer.read_view.holds("proposition:not-written")
+
+
+def test_success_report_failure_leaves_payload_visible_and_intent_open(tmp_path):
+    class ReportFailure(RuntimeError):
+        pass
+
+    class FailingPort(FakePort):
+        def execute_fulfilling(self, plan, fulfills: str) -> None:
+            raise ReportFailure
+
+    Recorder.plans, FakePort.intents, FakePort.fulfilling = [], [], []
+    writer = CorpusWriter(tmp_path, Recorder, operation_port=FailingPort(tmp_path))
+
+    with pytest.raises(ReportFailure) as caught:
+        import_records(writer, [prop("admitted")])
+
+    assert type(caught.value) is ReportFailure
+    assert len(FakePort.intents) == 1
+    assert FakePort.fulfilling == []
+    assert writer.read_view.holds("proposition:admitted")

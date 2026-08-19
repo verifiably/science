@@ -43,10 +43,11 @@ from nodes.core.errors import ValidationError as NodesValidationError
 from nodes.core.frontmatter import node_to_markdown
 from nodes.core.node import Node
 from nodes.core.relations import Relation
-from nodes.core.structural_index import ResolvedEdge
+from nodes.core.structural_index import Index, ResolvedEdge
 from nodes.core.write_plan import CreateOp, WritePlan, WritePlanExecutor
 from pydantic import ValidationError as PydanticValidationError
 from pydantic_core import PydanticSerializationError
+from yaml import YAMLError
 
 from science import boundary as boundary_values
 from science import report as report_values
@@ -60,6 +61,7 @@ from science.errors import (
     FamilyKindUnsupported,
     IdentityError,
     ImportRefused,
+    LoneSurrogate,
     MalformedRecord,
     RecordAlreadyMinted,
     RetractionCycleMalformed,
@@ -218,20 +220,22 @@ class _RootState:
 class _ImportView:
     """The arriving bundle overlaid on the current local read view."""
 
-    def __init__(self, local: ReadView, records: Sequence[Node]) -> None:
+    def __init__(self, local: ReadView, records: Sequence[Node], index: Index) -> None:
         self._local = local
-        self._records = {record.id: record for record in records}
+        self._records = {record.uid: record for record in records}
+        self._index = index
 
     def resolve(self, ref: str) -> str | None:
-        return ref if ref in self._records else self._local.resolve(ref)
+        uid = self._index.resolve_uid(ref)
+        return None if uid is None else self._index.by_uid[uid].id
 
     def holds(self, ref: str) -> bool:
         return self.resolve(ref) is not None
 
     def get(self, ref: str) -> Node:
-        resolved = self.resolve(ref)
-        if resolved in self._records:
-            return self._records[resolved]
+        uid = self._index.resolve_uid(ref)
+        if uid in self._records:
+            return self._records[uid]
         return self._local.get(ref)
 
     def iter_stored(self) -> Iterator[Node]:
@@ -919,6 +923,19 @@ class CorpusWriter:
             ):
                 if type(value) is not str or not value:
                     raise ImportRefused(f"import {name} must be a non-empty string")
+            try:
+                v1.encode(
+                    {
+                        "actor": actor,
+                        "observer": observer,
+                        "instrument": instrument,
+                        "opened_at": opened_at,
+                        "closed_at": closed_at,
+                        "subject": self._corpus.store.root.name,
+                    }
+                )
+            except LoneSurrogate as caught:
+                raise ImportRefused(f"import report fields are not canonically encodable: {caught}") from caught
             if self._operation_port is None:
                 raise ImportRefused("this corpus has no operation port; import is a boundary operation")
 
@@ -927,7 +944,7 @@ class CorpusWriter:
                 v1.encode({"kind": intent.kind, "event_token": intent.event_token, "actor": intent.actor})
             )
             try:
-                findings = self._validate_import_bundle(bundle)
+                findings, payload = self._validate_import_bundle(bundle)
             except ImportRefused as refused:
                 report = self._import_report(
                     intent,
@@ -944,7 +961,6 @@ class CorpusWriter:
                 refused.report_ref = report_node.id
                 raise
 
-            payload = [self._create_op(record) for record in bundle]
             self._corpus.executor.execute(payload)
             self._reconstruct()
             report = self._import_report(
@@ -1068,7 +1084,7 @@ class CorpusWriter:
                 raise ReviseOutsideAllowlist(f"{node.id}: revision changes a field outside display prose")
             return self._corpus.add(node)
 
-    def _validate_import_bundle(self, records: tuple[Node, ...]) -> tuple[str, ...]:
+    def _validate_import_bundle(self, records: tuple[Node, ...]) -> tuple[tuple[str, ...], list[CreateOp]]:
         seen_ids: set[str] = set()
         seen_uids: set[str] = set()
         seen_paths: set[str] = set()
@@ -1097,7 +1113,14 @@ class CorpusWriter:
             seen_uids.add(record.uid)
             seen_paths.add(path)
 
-        union = _ImportView(self._view, records)
+        union_index = Index.build(self._view.iter_stored())
+        for record in records:
+            try:
+                union_index.assert_addable(record)
+            except CollisionError as caught:
+                raise BundleMemberHeld(str(caught), member=record.id) from caught
+            union_index.upsert(record)
+        union = _ImportView(self._view, records, union_index)
         for record in records:
             try:
                 self._refuse(record, view=union)
@@ -1129,7 +1152,13 @@ class CorpusWriter:
             for relation in record.relations
             if not union.holds(relation.target)
         }
-        return tuple(sorted(findings))
+        payload: list[CreateOp] = []
+        for record in records:
+            try:
+                payload.append(self._create_op(record))
+            except (YAMLError, UnicodeError) as caught:
+                raise ImportRefused(f"{record.id}: import member cannot be rendered: {caught}", member=record.id) from caught
+        return tuple(sorted(findings)), payload
 
     def _import_cycle_edges(self, records: tuple[Node, ...]) -> tuple[tuple[str, str], ...]:
         targets: dict[str, list[str]] = {}
