@@ -8,12 +8,10 @@ frozen S, G, M, T, R, and C rows quoted below.
 
 ## 1. What this cut is
 
-Cut 5 is the prospective acceptance boundary for the supersede/revise,
-retraction, and explicit-import families at Science's certified composition
-root. It selects obligations before their implementation. Nothing in this
-draft claims that an adapter or test already exists, and nothing downstream may
-treat the selection as frozen until §6's independent reading has run and the
-banking change updates this status.
+Cut 5 is the frozen acceptance boundary for the supersede/revise, retraction,
+and explicit-import families at Science's certified composition root. It
+selected obligations before their implementation. No adapter or test is yet
+claimed to exist; banking froze the selection after §6's independent reading.
 
 The selection rule is cut 4's rule, made deliberately conservative: a clause is
 selected only when its source mutation and every named check run entirely
@@ -460,10 +458,10 @@ no declaration, sabotage, or test exists yet.
 
 ## 6. The second reader
 
-This draft is intentionally not frozen. A fresh reader receives only the
-frozen rows quoted in §3, the family-adapter specification, and §2's boundary;
-they are not asked to preserve this draft's rationale. Their review attacks in
-the historically common direction, toward overstated coverage.
+The independent reader received only the frozen rows quoted in §3, the
+family-adapter specification, and §2's boundary; they were not asked to
+preserve the draft's rationale. Their review attacked in the historically
+common direction, toward overstated coverage.
 
 The reader must:
 
@@ -503,9 +501,9 @@ rules store, registry compile, a world-changing family, or authoritative world
 standing. The R19, R20, and R22 selections are exact local explicit-import
 clauses from their frozen rows; R23 has no such locally grounded import arm.
 
-The reading is complete, but the cut remains unfrozen until the banking change.
-There is no freeze block, and no implementation task may cite this draft as
-acceptance authority before banking.
+The reading completed before banking froze the cut. Implementation remains
+prospective: no implementation task may cite the cut as a discharge authority
+until its selected obligations are implemented and verified.
 
 ## 7. Limitations
 
