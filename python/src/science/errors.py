@@ -416,6 +416,18 @@ class RecordAlreadyMinted(WriteRefused):
     exposed. The edit surface is the family adapters'."""
 
 
+class SupersedeTargetMissing(WriteRefused):
+    """The named predecessor does not resolve in this corpus."""
+
+
+class SupersedeIdentityUnchanged(WriteRefused):
+    """A successor has the predecessor's proposition semantic identity."""
+
+
+class FamilyKindUnsupported(WriteRefused):
+    """A mutation family does not operate on the supplied node kind."""
+
+
 class BasisMissing(WriteRefused):
     """W3 as narrowed: a `source` with no accepted external identifier, or a
     `dataset` with no content identity. Refused, never coerced to a curation

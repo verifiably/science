@@ -352,6 +352,7 @@ the two public names and mappings from the composition-root adapter.
 |---|---|
 | `SupersedeTargetMissing` | predecessor does not resolve locally |
 | `SupersedeIdentityUnchanged` | successor has the predecessor's semantic identity |
+| `FamilyKindUnsupported` | the family does not operate on this kind *(gap closure 2026-08-19)* |
 | `RevisionTargetMissing` | `(uid, id)` does not identify an existing local proposition |
 | `ReviseKindImmutable` | this kind has no revision path |
 | `ReviseOutsideAllowlist` | at least one changed field is not revision-permitted |

@@ -70,6 +70,7 @@ __all__ = [
     "SEMANTIC_DOMAINS",
     "SEMANTIC_IDENTITY_FACET",
     "SOURCE_FACET",
+    "SUPERSEDES",
     "VERIFICATION_FACET",
     "assessment_value",
     "dataset_declaration",
@@ -114,6 +115,7 @@ TARGETS = "targets"
 VERIFIES = "verifies"
 ANCHORED_IN = "anchored_in"
 MEMBER_OF = "member_of"
+SUPERSEDES = "supersedes"
 
 INPUT_ROLES = (OBSERVES, READS, TRANSFORMS)
 """The role partition. `observes` confers eligibility; `reads` never does, in

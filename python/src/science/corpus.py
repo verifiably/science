@@ -39,6 +39,7 @@ from nodes.core.corpus import Corpus
 from nodes.core.errors import CollisionError
 from nodes.core.errors import ValidationError as NodesValidationError
 from nodes.core.node import Node
+from nodes.core.relations import Relation
 from nodes.core.structural_index import ResolvedEdge
 from nodes.core.write_plan import WritePlanExecutor
 from pydantic import ValidationError as PydanticValidationError
@@ -49,11 +50,14 @@ from science.errors import (
     BasisMissing,
     CollisionRefused,
     EligibilityUnmet,
+    FamilyKindUnsupported,
     IdentityError,
     RecordAlreadyMinted,
     ScienceError,
     SemanticHashMissing,
     SemanticHashStale,
+    SupersedeIdentityUnchanged,
+    SupersedeTargetMissing,
     ValidationRefused,
 )
 from science.lineage import Basis, LineageSnapshot, Producer, Route
@@ -560,6 +564,33 @@ class CorpusWriter:
         with self._operation:
             self._refuse(node)
             return self._corpus.add(node)
+
+    def supersede(self, successor: Node, *, of: str) -> Node:
+        """Mint a proposition successor without touching its predecessor."""
+        with self._operation:
+            predecessor_id = self._view.resolve(of)
+            if predecessor_id is None:
+                raise SupersedeTargetMissing(f"{of!r}: predecessor does not resolve locally")
+            predecessor = self._view.get(predecessor_id)
+            if predecessor.kind != "proposition" or successor.kind != "proposition":
+                raise FamilyKindUnsupported("supersede operates on propositions only")
+            self._refuse_already_minted(successor)
+            if any(relation.predicate == stored.SUPERSEDES for relation in successor.relations):
+                raise ValidationRefused(f"{successor.id}: supersedes relations are authored by the adapter")
+            if stored.recompute_semantic_hash(successor) == stored.recompute_semantic_hash(predecessor):
+                raise SupersedeIdentityUnchanged(
+                    f"{successor.id}: successor semantic identity is unchanged; use revise instead"
+                )
+            candidate = successor.model_copy(
+                update={
+                    "relations": [
+                        *successor.relations,
+                        Relation(source=successor.id, predicate=stored.SUPERSEDES, target=predecessor_id),
+                    ]
+                }
+            )
+            self._refuse(candidate)
+            return self._corpus.add(candidate)
 
     # --- the refusals, in order ---------------------------------------------
 
