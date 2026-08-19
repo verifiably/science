@@ -55,6 +55,7 @@ from science.errors import (
     IdentityError,
     MalformedRecord,
     RecordAlreadyMinted,
+    RetractionCycleMalformed,
     RetractionGroundsMissing,
     RetractionTargetIneligible,
     RetractionTargetUnresolvable,
@@ -86,6 +87,8 @@ __all__ = [
     "derived_from",
     "lineage_snapshot",
     "run_value",
+    "standing_in_local_view",
+    "superseded_by",
 ]
 
 DIRECTIONS = ("inbound", "outbound")
@@ -339,6 +342,97 @@ def derived_from(view: ReadView, dataset: str) -> Reach:
     disagreement R23's fixture constructs.
     """
     return closure(dataset, _DerivedFromAdjacency(view))
+
+
+def superseded_by(view: ReadView, ref: str) -> tuple[str, ...]:
+    """The sorted, transitive successors derived from inbound `supersedes` edges."""
+    return closure(ref, RelationAdjacency(view, stored.SUPERSEDES, "inbound")).reached
+
+
+def standing_in_local_view(view: ReadView, ref: str) -> bool:
+    """Whether `ref` has no standing node-arm retraction in this corpus.
+
+    This is deliberately non-authoritative and corpus-local. Route-arm targets
+    name an embedded route, not a record, so they never subtract node standing.
+    """
+    targets: dict[str, list[str]] = {}
+    for stored_node in view.iter_stored():
+        if stored_node.kind != "retraction":
+            continue
+        retraction = view.get(stored_node.id)
+        target = _validated_retraction_facet(retraction)["target"]
+        if target["arm"] != "node":
+            continue
+        resolved = view.resolve(target["ref"])
+        if resolved is not None:
+            targets.setdefault(resolved, []).append(retraction.id)
+
+    graph = {target: tuple(sorted(retractions)) for target, retractions in targets.items()}
+    standing: dict[str, bool] = {}
+    for target in _acyclic_postorder(graph):
+        standing[target] = not any(standing[retraction] for retraction in graph.get(target, ()))
+    return standing.get(view.resolve(ref) or ref, True)
+
+
+def _acyclic_postorder(graph: dict[str, tuple[str, ...]]) -> tuple[str, ...]:
+    """Return child-first order, refusing cycles with iterative DFS."""
+    state: dict[str, int] = {}
+    ordered: list[str] = []
+    vertices = sorted(set(graph).union(retraction for retractions in graph.values() for retraction in retractions))
+    for start in vertices:
+        if state.get(start) is not None:
+            continue
+        state[start] = 1
+        stack = [(start, iter(graph.get(start, ())))]
+        while stack:
+            target, successors = stack[-1]
+            try:
+                successor = next(successors)
+            except StopIteration:
+                state[target] = 2
+                ordered.append(target)
+                stack.pop()
+                continue
+            if state.get(successor) == 1:
+                raise RetractionCycleMalformed(
+                    f"retraction graph contains a cycle through {target!r} -> {successor!r}"
+                )
+            if state.get(successor) is None:
+                state[successor] = 1
+                stack.append((successor, iter(graph.get(successor, ()))))
+    return tuple(ordered)
+
+
+def _validated_retraction_facet(record: Node) -> dict:
+    facet = record.facets.get(stored.RETRACTION_FACET)
+    required = {"target", "reason", "rationale", "grounds", "actor", "event_token"}
+    if not isinstance(facet, dict) or set(facet) not in (required, required | {"successor"}):
+        raise MalformedRecord(f"{record.id}: malformed retraction facet")
+    target = facet["target"]
+    if not isinstance(target, dict) or target.get("arm") not in ("node", "route"):
+        raise MalformedRecord(f"{record.id}: malformed retraction target arm")
+    target_fields = (
+        {"arm", "ref", "resolved", "content_identity"}
+        if target["arm"] == "node"
+        else {"arm", "dataset", "resolved", "content_identity", "route_identity"}
+    )
+    if set(target) != target_fields or not all(type(target[field]) is str and target[field] for field in target):
+        raise MalformedRecord(f"{record.id}: malformed retraction target")
+    if type(facet["reason"]) is not str or facet["reason"] not in stored.RETRACTION_REASONS:
+        raise MalformedRecord(f"{record.id}: malformed retraction reason")
+    if type(facet["rationale"]) is not str or not facet["rationale"]:
+        raise MalformedRecord(f"{record.id}: malformed retraction rationale")
+    if type(facet["actor"]) is not str or not facet["actor"]:
+        raise MalformedRecord(f"{record.id}: malformed retraction actor")
+    if type(facet["event_token"]) is not str or not facet["event_token"]:
+        raise MalformedRecord(f"{record.id}: malformed retraction event token")
+    grounds = facet["grounds"]
+    if not isinstance(grounds, list) or not all(type(ground) is str for ground in grounds):
+        raise MalformedRecord(f"{record.id}: malformed retraction grounds")
+    successor = facet.get("successor")
+    if successor is not None and (type(successor) is not str or not successor):
+        raise MalformedRecord(f"{record.id}: malformed retraction successor")
+    return facet
 
 
 class _DerivedFromAdjacency:
@@ -692,34 +786,10 @@ class CorpusWriter:
         CorpusWriter._refuse_invalid(record)
         if record.kind != "retraction":
             raise ValidationRefused(f"{record.id}: retract accepts a stored retraction only")
-        facet = record.facets.get(stored.RETRACTION_FACET)
-        required = {"target", "reason", "rationale", "grounds", "actor", "event_token"}
-        if not isinstance(facet, dict) or set(facet) not in (required, required | {"successor"}):
-            raise MalformedRecord(f"{record.id}: malformed retraction facet")
+        facet = _validated_retraction_facet(record)
         target = facet["target"]
-        if not isinstance(target, dict) or target.get("arm") not in ("node", "route"):
-            raise MalformedRecord(f"{record.id}: malformed retraction target arm")
-        target_fields = (
-            {"arm", "ref", "resolved", "content_identity"}
-            if target["arm"] == "node"
-            else {"arm", "dataset", "resolved", "content_identity", "route_identity"}
-        )
-        if set(target) != target_fields or not all(type(target[field]) is str and target[field] for field in target):
-            raise MalformedRecord(f"{record.id}: malformed retraction target")
-        if type(facet["reason"]) is not str or facet["reason"] not in stored.RETRACTION_REASONS:
-            raise MalformedRecord(f"{record.id}: malformed retraction reason")
-        if type(facet["rationale"]) is not str or not facet["rationale"]:
-            raise MalformedRecord(f"{record.id}: malformed retraction rationale")
-        if type(facet["actor"]) is not str or not facet["actor"]:
-            raise MalformedRecord(f"{record.id}: malformed retraction actor")
-        if type(facet["event_token"]) is not str or not facet["event_token"]:
-            raise MalformedRecord(f"{record.id}: malformed retraction event token")
         grounds = facet["grounds"]
-        if not isinstance(grounds, list) or not all(type(ground) is str for ground in grounds):
-            raise MalformedRecord(f"{record.id}: malformed retraction grounds")
         successor = facet.get("successor")
-        if successor is not None and (type(successor) is not str or not successor):
-            raise MalformedRecord(f"{record.id}: malformed retraction successor")
         stamp = record.facets.get(stored.SEMANTIC_IDENTITY_FACET)
         if not isinstance(stamp, dict) or set(stamp) != {"digest"} or type(stamp["digest"]) is not str:
             raise ValidationRefused(f"{record.id}: refused by retraction stamp validation")

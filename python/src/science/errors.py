@@ -399,6 +399,10 @@ class SemanticHashMissing(ScienceError):
     """
 
 
+class RetractionCycleMalformed(ScienceError):
+    """A corpus-local retraction graph contains a cycle, so standing is undefined."""
+
+
 class WriteRefused(ScienceError):
     """The add path's own refusals — what the write API decides, in Science's
     vocabulary. Execution-layer failures are not these: plan validity, engine
