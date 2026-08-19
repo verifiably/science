@@ -428,6 +428,18 @@ class FamilyKindUnsupported(WriteRefused):
     """A mutation family does not operate on the supplied node kind."""
 
 
+class RevisionTargetMissing(WriteRefused):
+    """The supplied `(uid, id)` pair does not identify a local node."""
+
+
+class ReviseKindImmutable(WriteRefused):
+    """The supplied node kind has no in-place revision path."""
+
+
+class ReviseOutsideAllowlist(WriteRefused):
+    """A revision changes something other than proposition display prose."""
+
+
 class BasisMissing(WriteRefused):
     """W3 as narrowed: a `source` with no accepted external identifier, or a
     `dataset` with no content identity. Refused, never coerced to a curation

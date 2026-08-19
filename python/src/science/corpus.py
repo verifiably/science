@@ -53,6 +53,9 @@ from science.errors import (
     FamilyKindUnsupported,
     IdentityError,
     RecordAlreadyMinted,
+    ReviseKindImmutable,
+    ReviseOutsideAllowlist,
+    RevisionTargetMissing,
     ScienceError,
     SemanticHashMissing,
     SemanticHashStale,
@@ -596,6 +599,37 @@ class CorpusWriter:
             )
             self._refuse(candidate)
             return self._corpus.add(candidate)
+
+    def revise(self, node: Node) -> Node:
+        """Replace a proposition after changing display prose alone."""
+        with self._operation:
+            existing = self._corpus.index.by_uid.get(node.uid)
+            if existing is None or existing.id != node.id:
+                raise RevisionTargetMissing(f"{node.id}: exact uid and id do not identify a local node")
+            current = self._view.get(node.id)
+            if current.kind != "proposition" or node.kind != "proposition":
+                raise ReviseKindImmutable("revise operates on propositions only")
+            if not all(isinstance(relation, Relation) for relation in node.relations):
+                raise ValidationRefused(f"{node.id}: refused by document validation: malformed relation")
+            self._refuse_invalid(node)
+            if stored.display_facet_malformed(node):
+                raise ValidationRefused(f"{node.id}: refused by document validation: malformed display facet")
+            try:
+                candidate_digest = stored.recompute_semantic_hash(node)
+            except IdentityError as caught:
+                raise ValidationRefused(f"{node.id}: refused by document validation: {caught}") from caught
+            if candidate_digest != stored.recompute_semantic_hash(current):
+                raise ReviseOutsideAllowlist(f"{node.id}: semantic fields require supersede")
+
+            candidate_fields = node.model_dump()
+            current_fields = current.model_dump()
+            for fields in (candidate_fields, current_fields):
+                fields.pop("title")
+                fields.pop("body")
+                fields["facets"].pop(stored.DISPLAY_FACET, None)
+            if candidate_fields != current_fields:
+                raise ReviseOutsideAllowlist(f"{node.id}: revision changes a field outside display prose")
+            return self._corpus.add(node)
 
     # --- the refusals, in order ---------------------------------------------
 
