@@ -2,16 +2,15 @@
 
 **Date:** 2026-08-19
 
-**Status:** Draft for user review. This document is not yet banked, conformance
-cut 5 is not yet frozen, and no implementation plan is authorized.
+**Status:** Banked 2026-08-19; implementation in progress on `design/family-adapters`.
 
 **Scope:** Plan B item 2 in
-[`2026-08-03-redesign-adoption-ledger.md`](../../designs/2026-08-03-redesign-adoption-ledger.md):
+[`2026-08-03-redesign-adoption-ledger.md`](2026-08-03-redesign-adoption-ledger.md):
 the supersede, retraction, and explicit-import families at Science's certified
 composition root.
 
 **Prerequisite:** The composition-root adapter in
-[`2026-08-18-composition-root-adapter-design.md`](../../designs/2026-08-18-composition-root-adapter-design.md).
+[`2026-08-18-composition-root-adapter-design.md`](2026-08-18-composition-root-adapter-design.md).
 
 ## 1. Decision
 
@@ -466,7 +465,7 @@ also updates:
 
 - the adoption ledger's Plan B row 4 note, order-of-work item 5, and every
   affected `waits on` cell;
-- the design-corpus guard for a twenty-fifth design, including the README
+- the design-corpus guard for a twenty-sixth design, including the README
   count/table/date and `_COUNT_WORDS`;
 - the dated `atoms` §12.2/§14 amendment that cites this design as the recast
   authority.

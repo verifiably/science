@@ -210,6 +210,8 @@ _COUNT_WORDS = {
     22: "Twenty-two",
     23: "Twenty-three",
     24: "Twenty-four",
+    25: "Twenty-five",
+    26: "Twenty-six",
 }
 
 

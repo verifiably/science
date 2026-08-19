@@ -2,7 +2,7 @@
 title: Open questions
 status: living
 created: 2026-08-08
-updated: 2026-08-18
+updated: 2026-08-19
 sources:
   - ../designs/2026-08-02-epistemic-kernel-design.md
   - ../designs/2026-08-02-substrate-consolidation-design.md
@@ -23,6 +23,8 @@ sources:
   - ../designs/2026-08-11-conformance-cut-3.md
   - ../designs/2026-08-17-conformance-cut-4.md
   - ../designs/2026-08-18-composition-root-adapter-design.md
+  - ../designs/2026-08-19-family-adapters-design.md
+  - ../designs/2026-08-19-conformance-cut-5.md
 ---
 
 # Open questions

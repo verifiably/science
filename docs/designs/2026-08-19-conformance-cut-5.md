@@ -1,9 +1,9 @@
 # Conformance cut 5 — the family adapters
 
-**Status:** Drafted and independently read 2026-08-19; NOT frozen.
+**Status:** Frozen 2026-08-19, second reader discharged.
 
-**Sources:** `2026-08-17-conformance-cut-4.md`; the prospective cut in
-`docs/superpowers/specs/2026-08-19-family-adapters-design.md` §8; and the
+**Sources:** `2026-08-17-conformance-cut-4.md`; the family-adapter design
+`2026-08-19-family-adapters-design.md` §8; and the
 frozen S, G, M, T, R, and C rows quoted below.
 
 ## 1. What this cut is
