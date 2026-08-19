@@ -162,6 +162,30 @@ def test_bundle_deprecated_claim_cannot_collide_with_an_arriving_live_id(writer_
     assert not writer_with_port.read_view.holds(live.id)
 
 
+def test_bundle_member_live_id_cannot_also_be_deprecated(writer_with_port):
+    malformed = prop("self-alias").model_copy(update={"deprecated_ids": ["proposition:self-alias"]})
+
+    with pytest.raises(ImportRefused) as caught:
+        import_records(writer_with_port, [malformed])
+
+    assert caught.value.report_ref is not None
+    assert Recorder.plans == []
+    assert not writer_with_port.read_view.holds(malformed.id)
+
+
+def test_bundle_member_cannot_repeat_a_deprecated_id(writer_with_port):
+    malformed = prop("duplicate-alias").model_copy(
+        update={"deprecated_ids": ["proposition:old", "proposition:old"]}
+    )
+
+    with pytest.raises(ImportRefused) as caught:
+        import_records(writer_with_port, [malformed])
+
+    assert caught.value.report_ref is not None
+    assert Recorder.plans == []
+    assert not writer_with_port.read_view.holds(malformed.id)
+
+
 def test_bundle_relation_resolves_through_an_arriving_deprecated_id(writer_with_port):
     dataset = stored.dataset_node(
         "current",
@@ -225,6 +249,31 @@ def test_unresolved_foreign_input_admits_with_finding(writer_with_port):
     assert outcome.findings == (f"unresolved: {foreign.id} -> assessment:elsewhere",)
     assert writer_with_port.read_view.holds(foreign.id)
     assert "validated" not in writer_with_port.read_view.get(foreign.id).facets[stored.VERIFICATION_FACET]
+
+
+def test_uncanonically_encodable_success_finding_refuses_before_payload(writer_with_port):
+    record = Node(
+        id="note:surrogate-finding",
+        kind="note",
+        title="surrogate finding",
+        relations=[
+            Relation(
+                source="note:surrogate-finding",
+                predicate="refers-to",
+                target="\ud800",
+            )
+        ],
+    )
+
+    with pytest.raises(ImportRefused) as caught:
+        import_records(writer_with_port, [record])
+
+    assert caught.value.report_ref is not None
+    assert "\ud800" not in str(caught.value)
+    assert len(FakePort.intents) == 1
+    assert len(FakePort.fulfilling) == 1
+    assert Recorder.plans == []
+    assert not writer_with_port.read_view.holds(record.id)
 
 
 def test_ordinary_eligibility_is_evaluated_over_bundle_union(writer_with_port):
@@ -309,6 +358,24 @@ def test_unrenderable_member_closes_the_intent_without_a_payload(writer_with_por
     assert len(FakePort.fulfilling) == 1
     assert Recorder.plans == []
     assert not writer_with_port.read_view.holds(unrenderable.id)
+
+
+def test_member_that_cannot_round_trip_refuses_before_payload(writer_with_port):
+    lossy = Node(
+        id="note:roundtrip",
+        kind="note",
+        title="roundtrip",
+        facets={"custom": {("a", "b"): "value"}},
+    )
+
+    with pytest.raises(ImportRefused) as caught:
+        import_records(writer_with_port, [lossy])
+
+    assert caught.value.report_ref is not None
+    assert len(FakePort.intents) == 1
+    assert len(FakePort.fulfilling) == 1
+    assert Recorder.plans == []
+    assert not writer_with_port.read_view.holds(lossy.id)
 
 
 def test_foreign_act_report_enters_inert(writer_with_port):

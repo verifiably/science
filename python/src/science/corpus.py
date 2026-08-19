@@ -40,7 +40,7 @@ from typing import Protocol, final
 from nodes.core.corpus import Corpus
 from nodes.core.errors import CollisionError
 from nodes.core.errors import ValidationError as NodesValidationError
-from nodes.core.frontmatter import node_to_markdown
+from nodes.core.frontmatter import node_from_markdown, node_to_markdown
 from nodes.core.node import Node
 from nodes.core.relations import Relation
 from nodes.core.structural_index import Index, ResolvedEdge
@@ -945,6 +945,19 @@ class CorpusWriter:
             )
             try:
                 findings, payload = self._validate_import_bundle(bundle)
+                report = self._import_report(
+                    intent,
+                    observer=observer,
+                    instrument=instrument,
+                    opened_at=opened_at,
+                    closed_at=closed_at,
+                    refs=tuple(record.id for record in bundle),
+                    findings=findings,
+                )
+                try:
+                    report_op = self._validated_import_op(stored.act_report_node(report))
+                except MalformedRecord as caught:
+                    raise ImportRefused("import success report is not canonically storable") from caught
             except ImportRefused as refused:
                 report = self._import_report(
                     intent,
@@ -963,16 +976,7 @@ class CorpusWriter:
 
             self._corpus.executor.execute(payload)
             self._reconstruct()
-            report = self._import_report(
-                intent,
-                observer=observer,
-                instrument=instrument,
-                opened_at=opened_at,
-                closed_at=closed_at,
-                refs=tuple(record.id for record in bundle),
-                findings=findings,
-            )
-            self._operation_port.execute_fulfilling([self._create_op(stored.act_report_node(report))], intent_digest)
+            self._operation_port.execute_fulfilling([report_op], intent_digest)
             self._reconstruct()
             return report
 
@@ -1101,6 +1105,19 @@ class CorpusWriter:
                     raise ValidationRefused(f"{record.id}: required {covered[0]!r} facet is missing")
             except (IdentityError, WriteRefused) as caught:
                 raise ImportRefused(str(caught), member=record.id) from caught
+            seen_deprecated_ids: set[str] = set()
+            for deprecated_id in record.deprecated_ids:
+                if deprecated_id == record.id:
+                    raise ImportRefused(
+                        f"{record.id}: identity claim {deprecated_id!r} is both live and deprecated in one member",
+                        member=record.id,
+                    )
+                if deprecated_id in seen_deprecated_ids:
+                    raise ImportRefused(
+                        f"{record.id}: duplicate deprecated identity claim {deprecated_id!r} in one member",
+                        member=record.id,
+                    )
+                seen_deprecated_ids.add(deprecated_id)
             if record.id in seen_ids:
                 raise ImportRefused(f"{record.id}: duplicate id in import bundle", member=record.id)
             if record.uid in seen_uids:
@@ -1152,12 +1169,7 @@ class CorpusWriter:
             for relation in record.relations
             if not union.holds(relation.target)
         }
-        payload: list[CreateOp] = []
-        for record in records:
-            try:
-                payload.append(self._create_op(record))
-            except (YAMLError, UnicodeError) as caught:
-                raise ImportRefused(f"{record.id}: import member cannot be rendered: {caught}", member=record.id) from caught
+        payload = [self._validated_import_op(record) for record in records]
         return tuple(sorted(findings)), payload
 
     def _import_cycle_edges(self, records: tuple[Node, ...]) -> tuple[tuple[str, str], ...]:
@@ -1274,6 +1286,25 @@ class CorpusWriter:
 
     def _create_op(self, record: Node) -> CreateOp:
         return CreateOp(path=self._relative_path(record), content=node_to_markdown(record).encode("utf-8"))
+
+    def _validated_import_op(self, record: Node) -> CreateOp:
+        try:
+            op = self._create_op(record)
+            reparsed = node_from_markdown(op.content.decode("utf-8"))
+        except (
+            NodesValidationError,
+            PydanticValidationError,
+            PydanticSerializationError,
+            YAMLError,
+            UnicodeError,
+        ) as caught:
+            raise ImportRefused(
+                f"{record.id}: import record is not losslessly renderable",
+                member=record.id,
+            ) from caught
+        if reparsed != record:
+            raise ImportRefused(f"{record.id}: import record rendering is lossy", member=record.id)
+        return op
 
     def _reconstruct(self) -> None:
         corpus = Corpus(self._corpus.store.root, executor_factory=self._state.executor_factory)
