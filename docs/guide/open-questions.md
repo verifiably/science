@@ -175,7 +175,7 @@ implementation**: a guarantee row awaiting code is work, not a question.
   certification is unspellable and existing instruments certify only through a
   successor spec. Open is the cadence: sweep, mint on next authored use, or
   never. ([normative-contract questions](../designs/2026-08-03-normative-contract-design.md#11-open-questions))
-- **Cut 4 is frozen; most of cut 3's deferred boundary stays open.** Cut 3
+- **Cut 5 is discharged; most of cut 3's deferred boundary stays open.** Cut 3
   was frozen 2026-08-11 at the run boundary,
   taking run capture — the seam the verified-holdings record (2026-08-10)
   and the act-report design (2026-08-11) finished designing. Its §5
@@ -193,13 +193,17 @@ implementation**: a guarantee row awaiting code is work, not a question.
   it, each on its own condition — the cut names the *next* persistence
   cut as anchor carriage's owner, and routes the world index through the
   `nodes` contract deltas and the index they carry being built — so cut
-  3's one-cut-or-two question is still not ruled. The per-row selection and
-  freeze are closed; composition-root adoption remains implementation, and
-  the next-cut question remains open.
+  3's one-cut-or-two question is still not ruled. Cut 4's add-only slice and
+  cut 5's supersede, revise, retraction, and explicit-import families are
+  implemented and discharged. The separately deferred
+  consolidate/move/deletion cut still waits on the world index; anchor carriage
+  remains outside both landed cuts.
   ([conformance cut 3](../designs/2026-08-11-conformance-cut-3.md),
   [its deferrals](../designs/2026-08-11-conformance-cut-3.md#5-step-3--fully-deferred-rows-grouped-by-unblocking-subsystem),
   [conformance cut 4](../designs/2026-08-17-conformance-cut-4.md),
-  [composition-root adapter design](../designs/2026-08-18-composition-root-adapter-design.md))
+  [composition-root adapter design](../designs/2026-08-18-composition-root-adapter-design.md),
+  [conformance cut 5](../designs/2026-08-19-conformance-cut-5.md),
+  [cut 5 results](../plans/2026-08-19-conformance-cut-5-results.md))
 - **The act-report's residue.** The act-report design (2026-08-11) closed
   the run boundary's report seam: the boundary-minted terminal record of
   an opened operation — or the pre-intent refusal record of a rejected
@@ -210,7 +214,8 @@ implementation**: a guarantee row awaiting code is work, not a question.
   today); a compaction protocol that must preserve intent-qualification
   resolvability and fulfillment evidence (the rule today is retain); new
   operation kinds (the enum is closed at five); the agentic surface —
-  audit scheduling and liveness, kernel sub-problem 6; and the engine,
-  with durable behavior still waiting on composition-root implementation.
+  audit scheduling and liveness, kernel sub-problem 6; and Science-side anchor
+  carriage and a durable-log consumer, which remain unimplemented after
+  composition-root adoption.
   ([act-report design](../designs/2026-08-11-act-report-design.md),
   [what stays open](../designs/2026-08-11-act-report-design.md#6-what-this-unblocks-and-what-stays-open))

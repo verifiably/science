@@ -1318,6 +1318,10 @@ one survivor certifies over that route and zero is `not-certified`. Nothing in
 **this** design retires a route, which is what the paragraph is really about, and
 C1–C10 await implementation.)*
 
+*(Amended 2026-08-19, `2026-08-19-conformance-cut-5.md`: cut 5 landed its
+selected C1–C6 and C10 arms. The unselected clauses and C7–C9 remain deferred
+to their named world-index, audit, and registry-compile dependencies.)*
+
 **Why the conflict is kept rather than the consolidation refused**, which would be simpler and
 was the obvious alternative: refusing leaves two records at one world address, which is
 world §5's **duplicate-location** state — reported, refused at the write boundary, and

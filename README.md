@@ -89,8 +89,13 @@ verification-as-value, and the report layer's completion reading now run as
 real subprocess executions over held fixtures.
 
 **Conformance cut 4** froze 2026-08-18 when the composition-root adapter
-design banked, selecting **3 rows in full and 8 in part**. Its acceptance slice
-is designed, not implemented; no Science production-durability claim has moved.
+design banked, selecting **3 rows in full and 8 in part**. Its implementation
+landed and the cut was discharged on the certified volume that day.
+
+**Conformance cut 5** froze and was discharged 2026-08-19. The family adapters
+now implement supersede, revise, retraction, and explicit import through the
+certified composition root, with **28 selected declarations** across **8 rows
+in full and 10 in part**; 6 rows remain fully deferred.
 
 ```
 python/     the implementation (substrate §11 puts the composition root here)

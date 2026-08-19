@@ -2,8 +2,8 @@
 
 **Date:** 2026-08-19
 
-**Status:** Banked 2026-08-19; post-freeze feasibility corrections recorded
-2026-08-19; implementation in progress on `design/family-adapters`.
+**Status:** Implemented 2026-08-19; post-freeze feasibility corrections recorded
+2026-08-19; conformance cut 5 discharged.
 
 **Scope:** Plan B item 2 in
 [`2026-08-03-redesign-adoption-ledger.md`](2026-08-03-redesign-adoption-ledger.md):

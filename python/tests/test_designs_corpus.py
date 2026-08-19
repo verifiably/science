@@ -141,14 +141,15 @@ def test_no_design_spells_a_stage_range_with_an_ascii_hyphen() -> None:
     assert not found, "stage ranges use an en-dash:\n  " + "\n  ".join(found)
 
 
-def test_the_ledger_records_the_atoms_adoption_gate_this_file_holds() -> None:
-    """The ledger records completed Plan A and the remaining implementation gate."""
+def test_the_ledger_records_the_completed_atoms_adoption_gate() -> None:
+    """The ledger records completed Plan A and Plan B adoption."""
     ledger = _text(DESIGNS / "2026-08-03-redesign-adoption-ledger.md")
     atoms_rows = [line for line in ledger.splitlines() if "**`atoms` " in line and "—" in line]
     assert atoms_rows, "the ledger no longer carries an `atoms` artifact row"
     state = atoms_rows[0].split("|")[-2]
     assert "A8 landed 2026-08-17" in state
-    assert "Plan B adoption is now implementation" in state
+    assert "Plan B item 2 landed 2026-08-19" in state
+    assert "composition-root-adoption half is complete" in state
 
 
 def test_every_design_declares_a_status() -> None:

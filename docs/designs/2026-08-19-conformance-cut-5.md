@@ -1,7 +1,8 @@
 # Conformance cut 5 — the family adapters
 
-**Status:** Frozen 2026-08-19; second reader discharged; post-freeze feasibility
-corrections recorded 2026-08-19.
+**Status:** Discharged 2026-08-19; frozen 2026-08-19; second reader discharged;
+post-freeze feasibility corrections recorded 2026-08-19. Results:
+`../plans/2026-08-19-conformance-cut-5-results.md`.
 
 **Sources:** `2026-08-17-conformance-cut-4.md`; the family-adapter design
 `2026-08-19-family-adapters-design.md` §8; and the
@@ -543,8 +544,8 @@ retain selected arms and remain part.
    payload. Retrying opens a new operation; it does not adopt the old intent.
 4. **No world-changing family.** Consolidate, move/rename, and deletion remain
    deferred and must reopen target-resolution and locking assumptions.
-5. **Prospective, not discharged.** The cells state what implementation and N2
-   must demonstrate. They do not say the current tree does it.
+5. **Discharge is bounded.** The 28 selected declaration units are discharged;
+   deferred clauses and prior-cut evidence are not relabelled as cut-5 results.
 6. **Arm boundaries remain a reading.** The frozen cells are prose. That is why
    the independent reading is a precondition of freeze and why any uncertainty
    is classified toward part or deferral.
