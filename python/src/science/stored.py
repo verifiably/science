@@ -46,6 +46,7 @@ covers exactly what it says: fields and stamp moved *together* are undetectable.
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from typing import Any
 
 from nodes.core.node import Node
@@ -64,14 +65,21 @@ __all__ = [
     "DATASET_FACET",
     "DISPLAY_FACET",
     "EMPIRICAL_OBSERVATION_FACET",
+    "GROUNDED_IN",
     "LINEAGE_BASIS_FACET",
     "PROPOSITION_FACET",
+    "RETRACTION_FACET",
+    "RETRACTION_REASONS",
+    "RETRACTS",
     "RUN_FACET",
     "SEMANTIC_DOMAINS",
     "SEMANTIC_IDENTITY_FACET",
     "SOURCE_FACET",
+    "SUCCEEDED_BY",
     "SUPERSEDES",
     "VERIFICATION_FACET",
+    "NodeTarget",
+    "RouteTarget",
     "assessment_value",
     "dataset_declaration",
     "display_facet_malformed",
@@ -80,6 +88,7 @@ __all__ = [
     "is_empirical_observation",
     "lineage_basis",
     "recompute_semantic_hash",
+    "retraction_node",
     "run_spec",
     "semantic_hash_disagrees",
     "semantic_hash_missing",
@@ -101,6 +110,7 @@ DISPLAY_FACET = "display"
 LINEAGE_BASIS_FACET = "lineage-basis"
 SOURCE_FACET = "source"
 VERIFICATION_FACET = "verification"
+RETRACTION_FACET = "retraction"
 
 # --- kernel §4.1's closed relation signatures --------------------------------
 
@@ -116,6 +126,19 @@ VERIFIES = "verifies"
 ANCHORED_IN = "anchored_in"
 MEMBER_OF = "member_of"
 SUPERSEDES = "supersedes"
+RETRACTS = "retracts"
+GROUNDED_IN = "grounded-in"
+SUCCEEDED_BY = "succeeded-by"
+
+RETRACTION_REASONS = (
+    "authored-error",
+    "corrupt-input",
+    "defective-code",
+    "environment-miscapture",
+    "false-certification",
+    "upstream-retraction",
+    "wrong-route",
+)
 
 INPUT_ROLES = (OBSERVES, READS, TRANSFORMS)
 """The role partition. `observes` confers eligibility; `reads` never does, in
@@ -130,6 +153,7 @@ SEMANTIC_DOMAINS: Mapping[str, str] = {
     "assessment": "science.assessment.v1",
     "dataset": "science.dataset.v1",
     "proposition": "science.proposition.v1",
+    "retraction": "science.retraction.v1",
     "run": "science.run.v1",
     "source": "science.source.v1",
     "source-assertion": "science.source-assertion.v1",
@@ -141,6 +165,7 @@ COVERED_FACETS: Mapping[str, tuple[str, ...]] = {
     "assessment": (ASSESSMENT_FACET,),
     "dataset": (DATASET_FACET, EMPIRICAL_OBSERVATION_FACET, LINEAGE_BASIS_FACET),
     "proposition": (PROPOSITION_FACET,),
+    "retraction": (RETRACTION_FACET,),
     "run": (RUN_FACET,),
     "source": (SOURCE_FACET,),
     "source-assertion": ("source-assertion",),
@@ -347,6 +372,21 @@ def basis_routes(node: Node) -> tuple[Mapping[str, Any], ...]:
 # --- constructing stored documents -------------------------------------------
 
 
+@dataclass(frozen=True)
+class NodeTarget:
+    ref: str
+    resolved: str
+    content_identity: str
+
+
+@dataclass(frozen=True)
+class RouteTarget:
+    dataset: str
+    resolved: str
+    content_identity: str
+    route_identity: str
+
+
 def _node(kind: str, slug: str, title: str, facets: Mapping[str, Any], relations: Sequence[Relation]) -> Node:
     node = Node(id=f"{kind}:{slug}", kind=kind, title=title, facets=dict(facets), relations=list(relations))
     return stamp_semantic_identity(node)
@@ -461,3 +501,68 @@ def verification_node(
         {VERIFICATION_FACET: facet},
         [Relation(source=f"verification:{slug}", predicate=VERIFIES, target=assessment_ref)],
     )
+
+
+def retraction_node(
+    *,
+    title: str,
+    target: NodeTarget | RouteTarget,
+    reason: str,
+    rationale: str,
+    grounds: Sequence[str],
+    actor: str,
+    event_token: str,
+    successor: str | None = None,
+) -> Node:
+    if isinstance(target, NodeTarget):
+        target_mapping = {
+            "arm": "node",
+            "ref": target.ref,
+            "resolved": target.resolved,
+            "content_identity": target.content_identity,
+        }
+        target_ref = target.ref
+    elif isinstance(target, RouteTarget):
+        target_mapping = {
+            "arm": "route",
+            "dataset": target.dataset,
+            "resolved": target.resolved,
+            "content_identity": target.content_identity,
+            "route_identity": target.route_identity,
+        }
+        target_ref = target.dataset
+    else:
+        raise MalformedRecord("a retraction target arm is NodeTarget or RouteTarget")
+    if not all(isinstance(value, str) and value for value in target_mapping.values()):
+        raise MalformedRecord("a retraction target carries non-empty string fields")
+    if reason not in RETRACTION_REASONS:
+        raise MalformedRecord(f"retraction reason {reason!r} is outside the closed set {RETRACTION_REASONS}")
+    if not isinstance(rationale, str):
+        raise MalformedRecord("a retraction rationale is a string")
+    if isinstance(grounds, (str, bytes)) or not isinstance(grounds, Sequence):
+        raise MalformedRecord("a retraction's grounds are a sequence of references")
+    grounds_list = list(grounds)
+    if not grounds_list or not all(isinstance(ground, str) and ground for ground in grounds_list):
+        raise MalformedRecord("a retraction names at least one string ground reference")
+    if not isinstance(actor, str) or not actor or not isinstance(event_token, str) or not event_token:
+        raise MalformedRecord("a retraction carries actor and event attribution")
+    if successor is not None and (not isinstance(successor, str) or not successor):
+        raise MalformedRecord("a retraction successor is a string reference when present")
+
+    facet: dict[str, Any] = {
+        "target": target_mapping,
+        "reason": reason,
+        "rationale": rationale,
+        "grounds": grounds_list,
+        "actor": actor,
+        "event_token": event_token,
+    }
+    if successor is not None:
+        facet["successor"] = successor
+    slug = v1.digest("science.retraction.v1", facet)
+    node_id = f"retraction:{slug}"
+    relations = [Relation(source=node_id, predicate=RETRACTS, target=target_ref)]
+    relations.extend(Relation(source=node_id, predicate=GROUNDED_IN, target=ground) for ground in grounds_list)
+    if successor is not None:
+        relations.append(Relation(source=node_id, predicate=SUCCEEDED_BY, target=successor))
+    return _node("retraction", slug, title, {RETRACTION_FACET: facet}, relations)
