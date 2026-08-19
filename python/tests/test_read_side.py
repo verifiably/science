@@ -364,6 +364,30 @@ class TestTheCorpusCheck:
             ("semantic-hash-stale", node.id, "mismatch")
         ]
 
+    def test_a_raw_written_malformed_display_facet_is_reported(self, tmp_path):
+        node = stored.proposition_node("p1", title="p1", claim={"operator": "affects"})
+        node.facets[stored.DISPLAY_FACET] = {"display_statement": "shown", "extra": "not allowed"}
+        raw_write(tmp_path, node)
+
+        findings = corpus_check(reopen(tmp_path))
+
+        assert [(finding.severity, finding.code) for finding in findings] == [
+            ("error", "display-malformed")
+        ]
+
+    def test_a_raw_written_supersession_to_a_missing_target_is_reported(self, tmp_path):
+        node = stored.proposition_node("new", title="new", claim={"operator": "affects"})
+        node.relations.append(
+            Relation(source=node.id, predicate=stored.SUPERSEDES, target="proposition:missing")
+        )
+        raw_write(tmp_path, node)
+
+        findings = corpus_check(reopen(tmp_path))
+
+        assert [(finding.severity, finding.code) for finding in findings] == [
+            ("error", "supersession-target-missing")
+        ]
+
     def test_findings_are_ordered_by_ref_then_code_then_detail(self, tmp_path):
         stale = observed_dataset()
         stale.facets[stored.DATASET_FACET]["resources"] = []

@@ -408,16 +408,7 @@ def _validated_retraction_facet(record: Node) -> dict:
     required = {"target", "reason", "rationale", "grounds", "actor", "event_token"}
     if not isinstance(facet, dict) or set(facet) not in (required, required | {"successor"}):
         raise MalformedRecord(f"{record.id}: malformed retraction facet")
-    target = facet["target"]
-    if not isinstance(target, dict) or target.get("arm") not in ("node", "route"):
-        raise MalformedRecord(f"{record.id}: malformed retraction target arm")
-    target_fields = (
-        {"arm", "ref", "resolved", "content_identity"}
-        if target["arm"] == "node"
-        else {"arm", "dataset", "resolved", "content_identity", "route_identity"}
-    )
-    if set(target) != target_fields or not all(type(target[field]) is str and target[field] for field in target):
-        raise MalformedRecord(f"{record.id}: malformed retraction target")
+    _validated_retraction_target(record)
     if type(facet["reason"]) is not str or facet["reason"] not in stored.RETRACTION_REASONS:
         raise MalformedRecord(f"{record.id}: malformed retraction reason")
     if type(facet["rationale"]) is not str or not facet["rationale"]:
@@ -433,6 +424,23 @@ def _validated_retraction_facet(record: Node) -> dict:
     if successor is not None and (type(successor) is not str or not successor):
         raise MalformedRecord(f"{record.id}: malformed retraction successor")
     return facet
+
+
+def _validated_retraction_target(record: Node) -> dict:
+    facet = record.facets.get(stored.RETRACTION_FACET)
+    if not isinstance(facet, dict):
+        raise MalformedRecord(f"{record.id}: malformed retraction facet")
+    target = facet.get("target")
+    if not isinstance(target, dict) or target.get("arm") not in ("node", "route"):
+        raise MalformedRecord(f"{record.id}: malformed retraction target arm")
+    target_fields = (
+        {"arm", "ref", "resolved", "content_identity"}
+        if target["arm"] == "node"
+        else {"arm", "dataset", "resolved", "content_identity", "route_identity"}
+    )
+    if set(target) != target_fields or not all(type(target[field]) is str and target[field] for field in target):
+        raise MalformedRecord(f"{record.id}: malformed retraction target")
+    return target
 
 
 class _DerivedFromAdjacency:
@@ -558,15 +566,18 @@ def corpus_check(view: ReadView) -> tuple[Finding, ...]:
 
     Files are canonical and hand-editable, so a node can reach the store without
     passing the write boundary. What this reports is what such a node can be
-    caught by: a stale stamp, a governed kind with no stamp at all, and an
-    `assesses` edge whose run does not support it. What it is silent on is a
-    raw write that is **self-consistent** — the hash agrees because the writer
-    computed it, and nothing structural is wrong because nothing is. That
-    silence is §4.2.1's stated bound, not a gap here.
+    caught by: stamp faults, unsupported `assesses` edges, and the corpus-local
+    family faults this module can resolve. What it is silent on is a raw write
+    that is **self-consistent** — the hash agrees because the writer computed
+    it, and nothing structural is wrong because nothing is. That silence is
+    §4.2.1's stated bound, not a gap here.
     """
     findings: list[Finding] = []
+    retraction_targets: dict[str, list[str]] = {}
     for node in view.iter_stored():
+        base_valid = True
         if stored.semantic_hash_missing(node):
+            base_valid = False
             findings.append(
                 Finding(
                     severity="error",
@@ -578,6 +589,7 @@ def corpus_check(view: ReadView) -> tuple[Finding, ...]:
             )
         try:
             if stored.semantic_hash_disagrees(node):
+                base_valid = False
                 findings.append(
                     Finding(
                         severity="error",
@@ -588,6 +600,7 @@ def corpus_check(view: ReadView) -> tuple[Finding, ...]:
                     )
                 )
         except IdentityError as refused:
+            base_valid = False
             findings.append(
                 Finding(
                     severity="error",
@@ -597,7 +610,74 @@ def corpus_check(view: ReadView) -> tuple[Finding, ...]:
                     message=f"{node.id}: the covered fields do not encode, so no hash can be recomputed: {refused}",
                 )
             )
-        reason = eligibility_refusal(view, node)
+        if not base_valid:
+            continue
+        if stored.display_facet_malformed(node):
+            findings.append(
+                Finding(
+                    severity="error",
+                    code="display-malformed",
+                    ref=node.id,
+                    detail="display",
+                    message=f"{node.id}: the display facet is not its exact one-field shape",
+                )
+            )
+        for relation in node.relations:
+            if relation.predicate == stored.SUPERSEDES and not view.holds(relation.target):
+                findings.append(
+                    Finding(
+                        severity="error",
+                        code="supersession-target-missing",
+                        ref=node.id,
+                        detail=relation.target,
+                        message=f"{node.id}: supersedes target {relation.target!r} does not resolve locally",
+                    )
+                )
+        if node.kind == "retraction":
+            try:
+                target = _validated_retraction_target(node)
+            except MalformedRecord as refused:
+                findings.append(
+                    Finding(
+                        severity="error",
+                        code="retraction-target-invalid",
+                        ref=node.id,
+                        detail="target",
+                        message=str(refused),
+                    )
+                )
+            else:
+                target_ref = target["ref"] if target["arm"] == "node" else target["dataset"]
+                resolved = view.resolve(target_ref)
+                target_invalid = resolved is None or resolved != target["resolved"]
+                if not target_invalid and target["arm"] == "route":
+                    assert resolved is not None
+                    try:
+                        dataset = view.get(resolved)
+                    except (IdentityError, SemanticHashMissing, SemanticHashStale):
+                        dataset = None
+                    if dataset is not None:
+                        target_invalid = dataset.kind != "dataset" or not any(
+                            route.get("identity") == target["route_identity"]
+                            for route in stored.basis_routes(dataset)
+                        )
+                if target_invalid:
+                    findings.append(
+                        Finding(
+                            severity="error",
+                            code="retraction-target-invalid",
+                            ref=node.id,
+                            detail=target_ref,
+                            message=f"{node.id}: retraction target {target_ref!r} does not resolve locally",
+                        )
+                    )
+                elif target["arm"] == "node":
+                    assert resolved is not None
+                    retraction_targets.setdefault(resolved, []).append(node.id)
+        try:
+            reason = eligibility_refusal(view, node)
+        except (IdentityError, SemanticHashMissing, SemanticHashStale):
+            reason = None
         if reason is not None:
             for relation in node.relations:
                 if relation.predicate == stored.ASSESSES:
@@ -610,6 +690,19 @@ def corpus_check(view: ReadView) -> tuple[Finding, ...]:
                             message=f"{node.id}: assesses {relation.target!r} but {reason}",
                         )
                     )
+    graph = {target: tuple(sorted(retractions)) for target, retractions in retraction_targets.items()}
+    try:
+        _acyclic_postorder(graph)
+    except RetractionCycleMalformed as refused:
+        findings.append(
+            Finding(
+                severity="error",
+                code="retraction-cycle",
+                ref="corpus",
+                detail=str(refused),
+                message=str(refused),
+            )
+        )
     return tuple(sorted(findings, key=lambda finding: finding.sort_key))
 
 

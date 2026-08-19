@@ -188,3 +188,27 @@ def test_unrelated_query_refuses_a_raw_written_cycle_before_evaluation(tmp_path)
 
     with pytest.raises(errors.RetractionCycleMalformed):
         corpus.standing_in_local_view(view, "assessment:unrelated")
+
+
+def test_corpus_check_reports_a_raw_retraction_with_a_missing_local_target(tmp_path):
+    retraction = raw_retraction("retraction:r1", "assessment:missing")
+    raw_write(tmp_path, retraction)
+
+    findings = corpus.corpus_check(reopen(tmp_path))
+
+    assert [(finding.severity, finding.code) for finding in findings] == [
+        ("error", "retraction-target-invalid")
+    ]
+
+
+def test_corpus_check_reports_a_raw_retraction_cycle_without_raising(tmp_path):
+    first = raw_retraction("retraction:r1", "retraction:r2")
+    second = raw_retraction("retraction:r2", "retraction:r1")
+    raw_write(tmp_path, first)
+    raw_write(tmp_path, second)
+
+    findings = corpus.corpus_check(reopen(tmp_path))
+
+    assert [(finding.severity, finding.code) for finding in findings] == [
+        ("error", "retraction-cycle")
+    ]
