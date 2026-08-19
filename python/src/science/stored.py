@@ -53,7 +53,7 @@ from nodes.core.node import Node
 from nodes.core.relations import Relation
 
 from science.dataset import DatasetDeclaration, ResourceDeclaration
-from science.errors import MalformedRecord
+from science.errors import LoneSurrogate, MalformedRecord
 from science.identity import v1
 from science.record import AssessmentValue
 from science.verification import Verification
@@ -533,20 +533,22 @@ def retraction_node(
         target_ref = target.dataset
     else:
         raise MalformedRecord("a retraction target arm is NodeTarget or RouteTarget")
-    if not all(isinstance(value, str) and value for value in target_mapping.values()):
+    if not all(type(value) is str and value for value in target_mapping.values()):
         raise MalformedRecord("a retraction target carries non-empty string fields")
+    if type(reason) is not str:
+        raise MalformedRecord("a retraction reason is a string")
     if reason not in RETRACTION_REASONS:
         raise MalformedRecord(f"retraction reason {reason!r} is outside the closed set {RETRACTION_REASONS}")
-    if not isinstance(rationale, str):
-        raise MalformedRecord("a retraction rationale is a string")
+    if type(rationale) is not str or not rationale:
+        raise MalformedRecord("a retraction rationale is a non-empty string")
     if isinstance(grounds, (str, bytes)) or not isinstance(grounds, Sequence):
         raise MalformedRecord("a retraction's grounds are a sequence of references")
     grounds_list = list(grounds)
-    if not grounds_list or not all(isinstance(ground, str) and ground for ground in grounds_list):
+    if not grounds_list or not all(type(ground) is str and ground for ground in grounds_list):
         raise MalformedRecord("a retraction names at least one string ground reference")
-    if not isinstance(actor, str) or not actor or not isinstance(event_token, str) or not event_token:
+    if type(actor) is not str or not actor or type(event_token) is not str or not event_token:
         raise MalformedRecord("a retraction carries actor and event attribution")
-    if successor is not None and (not isinstance(successor, str) or not successor):
+    if successor is not None and (type(successor) is not str or not successor):
         raise MalformedRecord("a retraction successor is a string reference when present")
 
     facet: dict[str, Any] = {
@@ -559,7 +561,10 @@ def retraction_node(
     }
     if successor is not None:
         facet["successor"] = successor
-    slug = v1.digest("science.retraction.v1", facet)
+    try:
+        slug = v1.digest("science.retraction.v1", facet)
+    except LoneSurrogate as exc:
+        raise MalformedRecord("a retraction identity field is not canonically encodable") from exc
     node_id = f"retraction:{slug}"
     relations = [Relation(source=node_id, predicate=RETRACTS, target=target_ref)]
     relations.extend(Relation(source=node_id, predicate=GROUNDED_IN, target=ground) for ground in grounds_list)
