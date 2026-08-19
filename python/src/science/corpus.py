@@ -590,10 +590,13 @@ class CorpusWriter:
                 resolved = self._view.resolve(target["ref"])
                 if resolved is None or resolved != target["resolved"]:
                     raise RetractionTargetUnresolvable(f"{record.id}: node target does not resolve exactly")
-                if self._view.get(resolved).kind not in ELIGIBLE_RETRACTION_TARGET_KINDS:
+                resolved_target = self._view.get(resolved)
+                if resolved_target.kind not in ELIGIBLE_RETRACTION_TARGET_KINDS:
                     raise RetractionTargetIneligible(
                         f"{record.id}: resolved node target kind is outside {ELIGIBLE_RETRACTION_TARGET_KINDS}"
                     )
+                if stored.stored_semantic_hash(resolved_target) != target["content_identity"]:
+                    raise RetractionTargetUnresolvable(f"{record.id}: node target content identity does not resolve")
             else:
                 if target["resolved"].partition(":")[0] != "dataset":
                     raise RetractionTargetIneligible(f"{record.id}: a route target must name a dataset")
@@ -603,6 +606,8 @@ class CorpusWriter:
                 dataset = self._view.get(resolved)
                 if dataset.kind != "dataset":
                     raise RetractionTargetIneligible(f"{record.id}: a route target must resolve to a dataset")
+                if stored.stored_semantic_hash(dataset) != target["content_identity"]:
+                    raise RetractionTargetUnresolvable(f"{record.id}: route dataset content identity does not resolve")
                 if not any(
                     route.get("identity") == target["route_identity"] for route in stored.basis_routes(dataset)
                 ):
@@ -614,12 +619,7 @@ class CorpusWriter:
             if not grounds or not all(ground for ground in grounds):
                 raise RetractionGroundsMissing(f"{record.id}: a retraction names at least one grounds reference")
 
-            self._refuse_already_minted(record)
-            self._refuse_missing_basis(record)
-            self._refuse_ineligible(record)
-            if stored.display_facet_malformed(record):
-                raise ValidationRefused(f"{record.id}: refused by document validation: malformed display facet")
-            self._refuse_collision(record)
+            self._refuse(record, document_validated=True)
             return self._corpus.add(record)
 
     def supersede(self, successor: Node, *, of: str) -> Node:
@@ -765,13 +765,14 @@ class CorpusWriter:
             raise ValidationRefused(f"{successor.id}: refused by document validation: malformed relation")
         self._refuse_invalid(successor)
 
-    def _refuse(self, node: Node) -> None:
+    def _refuse(self, node: Node, *, document_validated: bool = False) -> None:
         self._refuse_already_minted(node)
         self._refuse_missing_basis(node)
         self._refuse_ineligible(node)
         if stored.display_facet_malformed(node):
             raise ValidationRefused(f"{node.id}: refused by document validation: malformed display facet")
-        self._refuse_invalid(node)
+        if not document_validated:
+            self._refuse_invalid(node)
         self._refuse_collision(node)
 
     def _refuse_already_minted(self, node: Node) -> None:

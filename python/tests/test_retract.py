@@ -9,7 +9,7 @@ from nodes.core.node import Node
 from nodes.core.write_plan import CreateOp, DefaultExecutor
 
 from science import errors, stored
-from science.corpus import CorpusWriter
+from science.corpus import ELIGIBLE_RETRACTION_TARGET_KINDS, CorpusWriter
 
 PINNED = [{"name": "matrix", "digest": "sha256:" + "ab" * 32}]
 
@@ -84,6 +84,7 @@ def test_retract_is_create_only_and_target_untouched(writer):
 
     admitted = writer.retract(retraction_for(target))
 
+    assert len(Recorder.plans[-1]) == 1
     assert all(isinstance(op, CreateOp) for op in Recorder.plans[-1])
     assert writer.read_view.get(admitted.id) == admitted
     assert writer.read_view.get(target.id).model_dump(mode="json") == before
@@ -113,6 +114,24 @@ def test_retract_refuses_an_unresolvable_node_target(writer):
 
     with pytest.raises(errors.RetractionTargetUnresolvable):
         writer.retract(absent)
+
+
+def test_retract_refuses_a_node_target_with_the_wrong_content_identity(writer):
+    target = mint_eligible_assessment(writer)
+    record = stored.retraction_node(
+        title="wrong identity",
+        target=stored.NodeTarget(target.id, target.id, "sha256:" + "ff" * 32),
+        reason="defective-code",
+        rationale="wrong tuple",
+        grounds=("verification:v1",),
+        actor="tester",
+        event_token="event-1",
+    )
+
+    with pytest.raises(errors.RetractionTargetUnresolvable):
+        writer.retract(record)
+
+    assert not writer.read_view.holds(record.id)
 
 
 def test_retract_refuses_an_ineligible_kind_before_resolution(writer):
@@ -177,6 +196,31 @@ def test_retract_refuses_a_route_absent_from_the_stamped_basis(writer):
         writer.retract(record)
 
 
+def test_retract_refuses_a_route_dataset_with_the_wrong_content_identity(writer):
+    dataset = writer.add(
+        stored.dataset_node(
+            "derived",
+            title="derived",
+            resources=PINNED,
+            basis={"tag": "single", "routes": [{"identity": "route:one"}]},
+        )
+    )
+    record = stored.retraction_node(
+        title="route retraction",
+        target=stored.RouteTarget(dataset.id, dataset.id, "sha256:" + "ff" * 32, "route:one"),
+        reason="wrong-route",
+        rationale="the dataset identity is wrong",
+        grounds=("verification:v1",),
+        actor="tester",
+        event_token="event-1",
+    )
+
+    with pytest.raises(errors.RetractionTargetUnresolvable):
+        writer.retract(record)
+
+    assert not writer.read_view.holds(record.id)
+
+
 def test_resolution_refuses_before_missing_grounds(writer):
     absent = stored.retraction_node(
         title="absent",
@@ -225,3 +269,22 @@ def test_retract_errors_are_write_refusals():
         errors.RetractionGroundsMissing,
     ):
         assert issubclass(refusal, errors.WriteRefused)
+
+
+def test_retraction_target_kind_tuple_is_exact():
+    assert ELIGIBLE_RETRACTION_TARGET_KINDS == ("assessment", "retraction", "verification")
+
+
+def test_retract_accepts_a_verification_target(writer):
+    verification = writer.add(
+        stored.verification_node(
+            "v1",
+            title="v1",
+            assessment="assessment-identity",
+            assessment_ref="assessment:a1",
+            scope="clean-environment",
+            verdict="passed",
+        )
+    )
+
+    assert writer.retract(retraction_for(verification)).relations[0].target == verification.id
