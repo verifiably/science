@@ -42,6 +42,11 @@ def probe(run: Path) -> str | None:
 
 
 def main(argv: list[str]) -> int:
+    n2 = ACCEPTANCE / "test_n2_cut5.py"
+    if not n2.is_file():
+        print(f"cut-5 required acceptance module is missing: {n2}", file=sys.stderr)
+        return 1
+
     work = work_directory()
     run = Path(tempfile.mkdtemp(prefix="run-", dir=work))
     try:
@@ -58,10 +63,7 @@ def main(argv: list[str]) -> int:
             )
             return PROBE_REFUSED
 
-        modules = [ACCEPTANCE / "test_durable_families.py"]
-        n2 = ACCEPTANCE / "test_n2_cut5.py"
-        if n2.exists():
-            modules.append(n2)
+        modules = [ACCEPTANCE / "test_durable_families.py", n2]
         completed = subprocess.run(
             [sys.executable, "-m", "pytest", *(str(module) for module in modules), *argv],
             cwd=PYTHON_ROOT,

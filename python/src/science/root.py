@@ -132,7 +132,7 @@ def init_corpus_root(corpus_root: Path) -> None:
     Re-runnable: `register_root` returns the existing genesis digest when the
     payload and surface match, and refuses when they do not.
     """
-    root = Path(corpus_root)
+    root = Path(corpus_root).resolve()
     if root.exists() and not root.is_dir():
         raise CorpusRootRefused(f"{str(root)!r} exists and is not a directory, so it cannot be a corpus root")
     root.mkdir(parents=True, exist_ok=True)
@@ -515,7 +515,7 @@ def open_corpus(corpus_root: Path) -> CorpusWriter:
     opened against an unregistered root constructs and reads; its first write
     refuses with the engine's registration refusal as cause.
     """
-    root = Path(corpus_root)
+    root = Path(corpus_root).resolve()
     return CorpusWriter(
         root,
         durable_executor_factory(),

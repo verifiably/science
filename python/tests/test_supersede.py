@@ -61,6 +61,17 @@ def test_supersede_refuses_a_missing_predecessor_first(writer):
         writer.supersede(prop("s"), of="proposition:absent")
 
 
+def test_supersede_refuses_a_stale_successor_stamp_before_execution(writer):
+    old = writer.add(prop("old"))
+    successor = prop("new", claim_op="causes")
+    successor.facets[stored.PROPOSITION_FACET]["op"] = "prevents"
+
+    with pytest.raises(ValidationRefused, match="semantic-identity stamp"):
+        writer.supersede(successor, of=old.id)
+
+    assert len(Recorder.plans) == 1
+
+
 def test_supersede_refuses_an_unsupported_predecessor_kind(writer):
     source = writer.add(stored.source_node("s", title="s", identifiers={"doi": "10.1/x"}))
 

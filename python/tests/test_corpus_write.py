@@ -101,6 +101,32 @@ class TestTheAddPathIsAddOnly:
         minted = observed_dataset()
         assert writer.add(minted).uid == minted.uid
 
+    def test_a_stale_governed_stamp_refuses_before_execution(self, writer):
+        stale = observed_dataset()
+        stale.facets[stored.DATASET_FACET]["resources"][0]["digest"] = "sha256:" + "cd" * 32
+
+        with pytest.raises(ValidationRefused, match="semantic-identity stamp"):
+            writer.add(stale)
+
+        assert Recorder.plans == []
+
+    def test_a_missing_governed_stamp_refuses_before_execution(self, writer):
+        unstamped = observed_dataset()
+        del unstamped.facets[stored.SEMANTIC_IDENTITY_FACET]
+
+        with pytest.raises(ValidationRefused, match="semantic-identity stamp"):
+            writer.add(unstamped)
+
+        assert Recorder.plans == []
+
+    def test_an_unrenderable_node_refuses_before_execution(self, writer):
+        node = Node(id="note:surrogate", kind="note", title="surrogate", body="\ud800")
+
+        with pytest.raises(ValidationRefused, match="losslessly renderable"):
+            writer.add(node)
+
+        assert Recorder.plans == []
+
 
 class TestW3TheBasisRefusal:
     def test_a_source_with_no_accepted_external_identifier_refuses(self, writer):

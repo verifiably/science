@@ -221,7 +221,7 @@ def test_retract_refuses_a_route_dataset_with_the_wrong_content_identity(writer)
     assert not writer.read_view.holds(record.id)
 
 
-def test_resolution_refuses_before_missing_grounds(writer):
+def test_malformed_grounds_refuse_before_target_resolution(writer):
     absent = stored.retraction_node(
         title="absent",
         target=stored.NodeTarget("assessment:absent", "assessment:absent", "sha256:" + "cd" * 32),
@@ -232,14 +232,14 @@ def test_resolution_refuses_before_missing_grounds(writer):
         event_token="event-1",
     )
 
-    with pytest.raises(errors.RetractionTargetUnresolvable):
+    with pytest.raises(errors.ValidationRefused):
         writer.retract(without_grounds(absent))
 
 
 def test_retract_refuses_missing_grounds(writer):
     target = mint_eligible_assessment(writer)
 
-    with pytest.raises(errors.RetractionGroundsMissing):
+    with pytest.raises(errors.ValidationRefused):
         writer.retract(without_grounds(retraction_for(target)))
 
 
@@ -252,13 +252,13 @@ def test_retract_refuses_a_stale_stamp_at_the_boundary(writer):
         writer.retract(record)
 
 
-def test_retract_keeps_malformed_raw_shapes_in_the_record_error_surface(writer):
+def test_retract_translates_malformed_raw_shapes_to_validation_refused(writer):
     target = mint_eligible_assessment(writer)
     record = retraction_for(target)
     record.facets[stored.RETRACTION_FACET]["target"] = {"arm": "node"}
     stored.stamp_semantic_identity(record)
 
-    with pytest.raises(errors.MalformedRecord):
+    with pytest.raises(errors.ValidationRefused):
         writer.retract(record)
 
 

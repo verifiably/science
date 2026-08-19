@@ -3,9 +3,9 @@
 Three drift classes were found by hand on 2026-08-08, and each one is a fact that
 lives in many documents while being owned by none of them:
 
-* **`atoms` adoption state.** Plan A through A8 is implemented. The remaining
-  durability gate is Science's composition-root implementation; this file names every
-  live document that still gates on a completed Plan A stage.
+* **`atoms` adoption state.** Plan A through A8 and Plan B items 1–2 are
+  implemented; this file names every live document that still gates on a
+  completed Plan A stage.
 * **The guarantee-row inventory.** Thirteen frozen tables carry the acceptance
   criteria. Their counts are quoted in the README and in the review-disposition
   record, and nothing recomputed them when the belief policy added a table.
@@ -116,7 +116,7 @@ def _text(path: Path) -> str:
 
 
 def test_no_live_document_gates_on_an_atoms_plan_a_stage() -> None:
-    """Plan A is complete; live durability gates name composition-root implementation."""
+    """Plan A is complete; live claims do not gate on a completed Plan A stage."""
     stale: list[str] = []
     paths = [README, *design_documents(), *sorted(GUIDE.glob("*.md"))]
     for path in paths:
@@ -125,8 +125,7 @@ def test_no_live_document_gates_on_an_atoms_plan_a_stage() -> None:
             if not line.lstrip().startswith(">") and any(_PENDING_ATOMS_STAGE.search(clause) for clause in clauses):
                 stale.append(f"{path.relative_to(ROOT)}:{line_no}: {line.strip()}")
     assert not stale, (
-        "`atoms` Plan A through A8 is implemented; Science's remaining durability gate "
-        "is composition-root implementation. These live claims still gate on a Plan A stage:\n  "
+        "`atoms` Plan A through A8 is implemented. These live claims still gate on a Plan A stage:\n  "
         + "\n  ".join(stale)
     )
 

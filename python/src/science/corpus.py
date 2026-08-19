@@ -38,7 +38,7 @@ from pathlib import Path
 from typing import Protocol, final
 
 from nodes.core.corpus import Corpus
-from nodes.core.errors import CollisionError
+from nodes.core.errors import CollisionError, ExecutionError
 from nodes.core.errors import ValidationError as NodesValidationError
 from nodes.core.frontmatter import node_from_markdown, node_to_markdown
 from nodes.core.node import Node
@@ -65,7 +65,6 @@ from science.errors import (
     MalformedRecord,
     RecordAlreadyMinted,
     RetractionCycleMalformed,
-    RetractionGroundsMissing,
     RetractionTargetIneligible,
     RetractionTargetUnresolvable,
     ReviseKindImmutable,
@@ -405,7 +404,8 @@ def standing_in_local_view(view: ReadView, ref: str) -> bool:
         if stored_node.kind != "retraction":
             continue
         retraction = view.get(stored_node.id)
-        target = _validated_retraction_facet(retraction)["target"]
+        target = CorpusWriter._validated_retraction(retraction)["target"]
+        CorpusWriter._resolve_retraction_target(retraction, view)
         if target["arm"] != "node":
             continue
         resolved = view.resolve(target["ref"])
@@ -544,7 +544,11 @@ def _validated_retraction_facet(record: Node) -> dict:
     if type(facet["event_token"]) is not str or not facet["event_token"]:
         raise MalformedRecord(f"{record.id}: malformed retraction event token")
     grounds = facet["grounds"]
-    if not isinstance(grounds, list) or not all(type(ground) is str for ground in grounds):
+    if (
+        not isinstance(grounds, list)
+        or not grounds
+        or not all(type(ground) is str and ground for ground in grounds)
+    ):
         raise MalformedRecord(f"{record.id}: malformed retraction grounds")
     successor = facet.get("successor")
     if successor is not None and (type(successor) is not str or not successor):
@@ -761,8 +765,9 @@ def corpus_check(view: ReadView) -> tuple[Finding, ...]:
                 )
         if node.kind == "retraction":
             try:
-                target = _validated_retraction_target(node)
-            except MalformedRecord as refused:
+                target = CorpusWriter._validated_retraction(node)["target"]
+                CorpusWriter._resolve_retraction_target(node, view)
+            except ScienceError as refused:
                 findings.append(
                     Finding(
                         severity="error",
@@ -773,31 +778,8 @@ def corpus_check(view: ReadView) -> tuple[Finding, ...]:
                     )
                 )
             else:
-                target_ref = target["ref"] if target["arm"] == "node" else target["dataset"]
-                resolved = view.resolve(target_ref)
-                target_invalid = resolved is None or resolved != target["resolved"]
-                if not target_invalid and target["arm"] == "route":
-                    assert resolved is not None
-                    try:
-                        dataset = view.get(resolved)
-                    except (IdentityError, SemanticHashMissing, SemanticHashStale):
-                        dataset = None
-                    if dataset is not None:
-                        target_invalid = dataset.kind != "dataset" or not any(
-                            route.get("identity") == target["route_identity"]
-                            for route in stored.basis_routes(dataset)
-                        )
-                if target_invalid:
-                    findings.append(
-                        Finding(
-                            severity="error",
-                            code="retraction-target-invalid",
-                            ref=node.id,
-                            detail=target_ref,
-                            message=f"{node.id}: retraction target {target_ref!r} does not resolve locally",
-                        )
-                    )
-                elif target["arm"] == "node":
+                if target["arm"] == "node":
+                    resolved = view.resolve(target["ref"])
                     assert resolved is not None
                     retraction_targets.setdefault(resolved, []).append(node.id)
         try:
@@ -835,18 +817,19 @@ def corpus_check(view: ReadView) -> tuple[Finding, ...]:
 class CorpusWriter:
     """The write API — the sole constructor and holder of a mutable `Corpus`.
 
-    Its public surface in this slice is **add alone**. What this package decides
-    — basis, eligibility, collisions, the add-only guard — refuses in Science's
+    Its public surface is `add` plus the explicit supersede, revise, retract,
+    and import families. What this package decides — basis, eligibility,
+    collisions, stored shape, and family invariants — refuses in Science's
     vocabulary as a `WriteRefused`; what the executor layer decides — plan
     validity, engine refusal, halt — crosses the boundary as the seam's
     `PlanRefusedError` and `ExecutionError`. A third vocabulary wrapping those
     two would add a layer with no added discrimination.
 
-    **Every add is serialized end to end under a per-root operation lock** —
+    **Every mutation is serialized end to end under a per-root operation lock** —
     read, refuse, plan, execute. The refusals read corpus state before the
     engine lease exists, and only some of those reads are safe under concurrency:
     the **monotone** predicates (W3, S7) cannot be invalidated by another
-    admitted add, because nothing removes a basis or an `observes` edge, but the
+    admitted mutation, because nothing removes a basis or an `observes` edge, but the
     **collision** predicates can — two planners can each pass `assert_addable`
     for one uid under different ids, plan creates at two different paths, and
     both no-clobber effects succeed. `CreateFileNoClobber` backstops only the
@@ -855,8 +838,8 @@ class CorpusWriter:
     whose violation is detected loudly rather than prevented — strict
     construction refuses the duplicate uid with `CollisionError`.
 
-    Deletion-capable family adapters must re-own this question; neither argument
-    transfers to them.
+    A future deletion-capable family must re-own this question; neither argument
+    transfers to it.
     """
 
     def __init__(
@@ -943,6 +926,16 @@ class CorpusWriter:
             intent_digest = self._operation_port.append_intent(
                 v1.encode({"kind": intent.kind, "event_token": intent.event_token, "actor": intent.actor})
             )
+            if (
+                type(intent_digest) is not str
+                or len(intent_digest) != 64
+                or any(character not in "0123456789abcdef" for character in intent_digest)
+            ):
+                raise ExecutionError(
+                    "operation port returned a malformed intent digest; expected 64 lowercase hexadecimal characters",
+                    index=None,
+                    applied=0,
+                )
             try:
                 findings, payload = self._validate_import_bundle(bundle)
                 report = self._import_report(
@@ -958,7 +951,8 @@ class CorpusWriter:
                     report_op = self._validated_import_op(stored.act_report_node(report))
                 except MalformedRecord as caught:
                     raise ImportRefused("import success report is not canonically storable") from caught
-            except ImportRefused as refused:
+            except ScienceError as caught:
+                refused = caught if isinstance(caught, ImportRefused) else ImportRefused(str(caught))
                 report = self._import_report(
                     intent,
                     observer=observer,
@@ -972,7 +966,9 @@ class CorpusWriter:
                 self._operation_port.execute_fulfilling([self._create_op(report_node)], intent_digest)
                 self._reconstruct()
                 refused.report_ref = report_node.id
-                raise
+                if refused is caught:
+                    raise
+                raise refused from caught
 
             self._corpus.executor.execute(payload)
             self._reconstruct()
@@ -983,44 +979,11 @@ class CorpusWriter:
     def retract(self, record: Node) -> Node:
         """Mint one locally resolvable retraction without touching its target."""
         with self._operation:
-            facet = self._validated_retraction(record)
-            target = facet["target"]
-            if target["arm"] == "node":
-                if target["resolved"].partition(":")[0] not in ELIGIBLE_RETRACTION_TARGET_KINDS:
-                    raise RetractionTargetIneligible(
-                        f"{record.id}: node target kind is outside {ELIGIBLE_RETRACTION_TARGET_KINDS}"
-                    )
-                resolved = self._view.resolve(target["ref"])
-                if resolved is None or resolved != target["resolved"]:
-                    raise RetractionTargetUnresolvable(f"{record.id}: node target does not resolve exactly")
-                resolved_target = self._view.get(resolved)
-                if resolved_target.kind not in ELIGIBLE_RETRACTION_TARGET_KINDS:
-                    raise RetractionTargetIneligible(
-                        f"{record.id}: resolved node target kind is outside {ELIGIBLE_RETRACTION_TARGET_KINDS}"
-                    )
-                if stored.stored_semantic_hash(resolved_target) != target["content_identity"]:
-                    raise RetractionTargetUnresolvable(f"{record.id}: node target content identity does not resolve")
-            else:
-                if target["resolved"].partition(":")[0] != "dataset":
-                    raise RetractionTargetIneligible(f"{record.id}: a route target must name a dataset")
-                resolved = self._view.resolve(target["dataset"])
-                if resolved is None or resolved != target["resolved"]:
-                    raise RetractionTargetUnresolvable(f"{record.id}: route dataset does not resolve exactly")
-                dataset = self._view.get(resolved)
-                if dataset.kind != "dataset":
-                    raise RetractionTargetIneligible(f"{record.id}: a route target must resolve to a dataset")
-                if stored.stored_semantic_hash(dataset) != target["content_identity"]:
-                    raise RetractionTargetUnresolvable(f"{record.id}: route dataset content identity does not resolve")
-                if not any(
-                    route.get("identity") == target["route_identity"] for route in stored.basis_routes(dataset)
-                ):
-                    raise RetractionTargetUnresolvable(
-                        f"{record.id}: route identity {target['route_identity']!r} is absent from the stamped basis"
-                    )
-
-            grounds = facet["grounds"]
-            if not grounds or not all(ground for ground in grounds):
-                raise RetractionGroundsMissing(f"{record.id}: a retraction names at least one grounds reference")
+            try:
+                self._validated_retraction(record)
+            except MalformedRecord as caught:
+                raise ValidationRefused(f"{record.id}: refused by retraction shape validation: {caught}") from caught
+            self._resolve_retraction_target(record, self._view)
 
             self._refuse(record, document_validated=True)
             return self._corpus.add(record)
@@ -1086,6 +1049,7 @@ class CorpusWriter:
                 fields["facets"].pop(stored.DISPLAY_FACET, None)
             if candidate_fields != current_fields:
                 raise ReviseOutsideAllowlist(f"{node.id}: revision changes a field outside display prose")
+            self._refuse_rendering(node)
             return self._corpus.add(node)
 
     def _validate_import_bundle(self, records: tuple[Node, ...]) -> tuple[tuple[str, ...], list[CreateOp]]:
@@ -1098,12 +1062,11 @@ class CorpusWriter:
             try:
                 self._refuse_invalid(record)
                 path = self._relative_path(record)
-                if stored.semantic_hash_missing(record) or stored.semantic_hash_disagrees(record):
-                    raise ValidationRefused(f"{record.id}: semantic-identity stamp is missing or stale")
+                self._refuse_governed_stamp(record)
                 covered = stored.COVERED_FACETS.get(record.kind)
                 if covered and covered[0] not in record.facets:
                     raise ValidationRefused(f"{record.id}: required {covered[0]!r} facet is missing")
-            except (IdentityError, WriteRefused) as caught:
+            except ScienceError as caught:
                 raise ImportRefused(str(caught), member=record.id) from caught
             seen_deprecated_ids: set[str] = set()
             for deprecated_id in record.deprecated_ids:
@@ -1149,19 +1112,20 @@ class CorpusWriter:
             except ScienceError as caught:
                 raise ImportRefused(str(caught), member=record.id) from caught
 
+        for record in records:
+            if record.kind == "retraction":
+                try:
+                    self._validated_retraction(record)
+                    self._resolve_retraction_target(record, union)
+                except ScienceError as caught:
+                    raise ImportRefused(str(caught), member=record.id) from caught
+
         cycle_edges = self._import_cycle_edges(records)
         if cycle_edges:
             raise ImportRefused(
                 f"retraction graph contains a cycle through {cycle_edges!r}",
                 cycle_edges=cycle_edges,
             )
-        for record in records:
-            if record.kind == "retraction":
-                try:
-                    self._validated_retraction(record)
-                    self._refuse_import_retraction_target(record, union)
-                except ScienceError as caught:
-                    raise ImportRefused(str(caught), member=record.id) from caught
 
         findings = {
             f"unresolved: {record.id} -> {relation.target}"
@@ -1178,8 +1142,8 @@ class CorpusWriter:
             if record.kind != "retraction":
                 continue
             try:
-                target = _validated_retraction_target(record)
-            except MalformedRecord as caught:
+                target = self._validated_retraction(record)["target"]
+            except ScienceError as caught:
                 raise ImportRefused(str(caught), member=record.id) from caught
             if target["arm"] == "node":
                 targets.setdefault(target["resolved"], []).append(record.id)
@@ -1187,9 +1151,13 @@ class CorpusWriter:
         return _cycle_edges(graph)
 
     @staticmethod
-    def _refuse_import_retraction_target(record: Node, view: _ImportView) -> None:
+    def _resolve_retraction_target(record: Node, view: ReadView | _ImportView) -> None:
         target = _validated_retraction_target(record)
         if target["arm"] == "node":
+            if target["resolved"].partition(":")[0] not in ELIGIBLE_RETRACTION_TARGET_KINDS:
+                raise RetractionTargetIneligible(
+                    f"{record.id}: node target kind is outside {ELIGIBLE_RETRACTION_TARGET_KINDS}"
+                )
             resolved = view.resolve(target["ref"])
             if resolved is None or resolved != target["resolved"]:
                 raise RetractionTargetUnresolvable(f"{record.id}: node target does not resolve exactly")
@@ -1202,6 +1170,8 @@ class CorpusWriter:
                 raise RetractionTargetUnresolvable(f"{record.id}: node target content identity does not resolve")
             return
         resolved = view.resolve(target["dataset"])
+        if target["resolved"].partition(":")[0] != "dataset":
+            raise RetractionTargetIneligible(f"{record.id}: a route target must name a dataset")
         if resolved is None or resolved != target["resolved"]:
             raise RetractionTargetUnresolvable(f"{record.id}: route dataset does not resolve exactly")
         dataset = view.get(resolved)
@@ -1289,22 +1259,10 @@ class CorpusWriter:
 
     def _validated_import_op(self, record: Node) -> CreateOp:
         try:
-            op = self._create_op(record)
-            reparsed = node_from_markdown(op.content.decode("utf-8"))
-        except (
-            NodesValidationError,
-            PydanticValidationError,
-            PydanticSerializationError,
-            YAMLError,
-            UnicodeError,
-        ) as caught:
-            raise ImportRefused(
-                f"{record.id}: import record is not losslessly renderable",
-                member=record.id,
-            ) from caught
-        if reparsed != record:
-            raise ImportRefused(f"{record.id}: import record rendering is lossy", member=record.id)
-        return op
+            content = self._refuse_rendering(record)
+        except ValidationRefused as caught:
+            raise ImportRefused(str(caught), member=record.id) from caught
+        return CreateOp(path=self._relative_path(record), content=content)
 
     def _reconstruct(self) -> None:
         corpus = Corpus(self._corpus.store.root, executor_factory=self._state.executor_factory)
@@ -1320,7 +1278,6 @@ class CorpusWriter:
             raise ValidationRefused(f"{record.id}: retract accepts a stored retraction only")
         facet = _validated_retraction_facet(record)
         target = facet["target"]
-        grounds = facet["grounds"]
         successor = facet.get("successor")
         stamp = record.facets.get(stored.SEMANTIC_IDENTITY_FACET)
         if not isinstance(stamp, dict) or set(stamp) != {"digest"} or type(stamp["digest"]) is not str:
@@ -1330,29 +1287,28 @@ class CorpusWriter:
                 raise ValidationRefused(f"{record.id}: refused by retraction stamp validation")
         except IdentityError as caught:
             raise ValidationRefused(f"{record.id}: refused by retraction stamp validation: {caught}") from caught
-        if grounds and all(grounds):
-            target_value: stored.NodeTarget | stored.RouteTarget
-            if target["arm"] == "node":
-                target_value = stored.NodeTarget(target["ref"], target["resolved"], target["content_identity"])
-            else:
-                target_value = stored.RouteTarget(
-                    target["dataset"],
-                    target["resolved"],
-                    target["content_identity"],
-                    target["route_identity"],
-                )
-            expected = stored.retraction_node(
-                title=record.title,
-                target=target_value,
-                reason=facet["reason"],
-                rationale=facet["rationale"],
-                grounds=grounds,
-                actor=facet["actor"],
-                event_token=facet["event_token"],
-                successor=successor,
+        target_value: stored.NodeTarget | stored.RouteTarget
+        if target["arm"] == "node":
+            target_value = stored.NodeTarget(target["ref"], target["resolved"], target["content_identity"])
+        else:
+            target_value = stored.RouteTarget(
+                target["dataset"],
+                target["resolved"],
+                target["content_identity"],
+                target["route_identity"],
             )
-            if record.id != expected.id or record.facets != expected.facets or record.relations != expected.relations:
-                raise MalformedRecord(f"{record.id}: retraction does not match the controlled stored shape")
+        expected = stored.retraction_node(
+            title=record.title,
+            target=target_value,
+            reason=facet["reason"],
+            rationale=facet["rationale"],
+            grounds=facet["grounds"],
+            actor=facet["actor"],
+            event_token=facet["event_token"],
+            successor=successor,
+        )
+        if record.id != expected.id or record.facets != expected.facets or record.relations != expected.relations:
+            raise MalformedRecord(f"{record.id}: retraction does not match the controlled stored shape")
         return facet
 
     @staticmethod
@@ -1381,17 +1337,48 @@ class CorpusWriter:
             raise ValidationRefused(f"{node.id}: refused by document validation: malformed display facet")
         if not document_validated:
             self._refuse_invalid(node)
+        self._refuse_governed_stamp(node)
+        self._refuse_rendering(node)
         self._refuse_collision(node)
 
+    @staticmethod
+    def _refuse_governed_stamp(node: Node) -> None:
+        if node.kind not in stored.SEMANTIC_DOMAINS:
+            if stored.SEMANTIC_IDENTITY_FACET in node.facets:
+                raise ValidationRefused(f"{node.id}: kind {node.kind!r} has no semantic-identity domain")
+            return
+        try:
+            if stored.semantic_hash_missing(node) or stored.semantic_hash_disagrees(node):
+                raise ValidationRefused(f"{node.id}: semantic-identity stamp is missing or stale")
+        except IdentityError as caught:
+            raise ValidationRefused(f"{node.id}: semantic-identity stamp cannot be recomputed: {caught}") from caught
+
+    @staticmethod
+    def _refuse_rendering(node: Node) -> bytes:
+        try:
+            content = node_to_markdown(node).encode("utf-8")
+            reparsed = node_from_markdown(content.decode("utf-8"))
+        except (
+            NodesValidationError,
+            PydanticValidationError,
+            PydanticSerializationError,
+            YAMLError,
+            UnicodeError,
+        ) as caught:
+            raise ValidationRefused(f"{node.id}: record is not losslessly renderable") from caught
+        if reparsed != node:
+            raise ValidationRefused(f"{node.id}: record rendering is lossy")
+        return content
+
     def _refuse_already_minted(self, node: Node) -> None:
-        """The add-only guard, **before plan construction**: an existing
+        """The create-path guard, **before plan construction**: an existing
         `(uid, id)` pair is the pair `nodes`' own `add` would answer with a
-        `ReplaceOp`, so refusing here is what keeps every plan this surface
-        emits a create. The edit surface is the family adapters'."""
+        `ReplaceOp`, so ordinary add and create-shaped family members cannot
+        silently replace it. Display-only replacement enters through `revise`."""
         existing = self._corpus.index.by_uid.get(node.uid)
         if existing is not None and existing.id == node.id:
             raise RecordAlreadyMinted(
-                f"{node.id} is already minted under uid {node.uid}; an edit is a new mint, never a rewrite"
+                f"{node.id} is already minted under uid {node.uid}; use revise for a display-only replacement"
             )
 
     def _refuse_missing_basis(self, node: Node) -> None:

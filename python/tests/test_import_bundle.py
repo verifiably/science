@@ -5,6 +5,7 @@ from decimal import Decimal
 from typing import ClassVar
 
 import pytest
+from nodes.core.errors import ExecutionError
 from nodes.core.node import Node
 from nodes.core.relations import Relation
 from nodes.core.write_plan import CreateOp, DefaultExecutor
@@ -201,23 +202,19 @@ def test_bundle_relation_resolves_through_an_arriving_deprecated_id(writer_with_
     assert writer_with_port.read_view.resolve("dataset:previous") == dataset.id
 
 
-def test_bundle_cycle_refuses_with_edge_set(writer_with_port):
+def test_raw_bundle_cycle_shapes_refuse_before_cycle_classification(writer_with_port):
     first = retraction("a", "retraction:b")
     second = retraction("b", "retraction:a")
 
     with pytest.raises(ImportRefused) as caught:
         import_records(writer_with_port, [first, second])
 
-    assert caught.value.cycle_edges == (
-        ("retraction:a", "retraction:b"),
-        ("retraction:b", "retraction:a"),
-    )
+    assert caught.value.member == "retraction:a"
+    assert caught.value.cycle_edges == ()
     assert Recorder.plans == []
 
 
-def test_bundle_plus_local_context_cycle_refuses(writer_with_port):
-    # The frozen M3 fixture forces the graph verdict with a raw local record:
-    # content-addressed retractions cannot construct a cryptographic fixed-point cycle.
+def test_raw_local_cycle_shape_refuses_before_cycle_classification(writer_with_port):
     DefaultExecutor(writer_with_port._corpus.store.root).execute(
         [writer_with_port._create_op(retraction("a", "retraction:b"))]
     )
@@ -227,7 +224,8 @@ def test_bundle_plus_local_context_cycle_refuses(writer_with_port):
     with pytest.raises(ImportRefused) as caught:
         import_records(writer_with_port, [retraction("b", "retraction:a")])
 
-    assert caught.value.cycle_edges
+    assert caught.value.member == "retraction:b"
+    assert caught.value.cycle_edges == ()
     assert Recorder.plans == []
 
 
@@ -341,6 +339,76 @@ def test_stale_stamp_member_refuses(writer_with_port):
 
     assert caught.value.member == stale.id
     assert Recorder.plans == []
+
+
+@pytest.mark.parametrize("grounds", [[], [""]])
+def test_malformed_retraction_grounds_close_intent_without_payload(writer_with_port, grounds):
+    target = stored.verification_node(
+        "grounds-target",
+        title="grounds target",
+        assessment="assessment-identity",
+        assessment_ref="assessment:elsewhere",
+        scope="clean-environment",
+        verdict="passed",
+    )
+    content_identity = stored.stored_semantic_hash(target)
+    assert content_identity is not None
+    valid = stored.retraction_node(
+        title="withdraw target",
+        target=stored.NodeTarget(target.id, target.id, content_identity),
+        reason="authored-error",
+        rationale="invalid grounds fixture",
+        grounds=("source:ground",),
+        actor="k",
+        event_token="invalid-grounds",
+    )
+    facet = deepcopy(valid.facets)
+    facet[stored.RETRACTION_FACET]["grounds"] = grounds
+    malformed = stored.stamp_semantic_identity(
+        valid.model_copy(update={"facets": facet, "relations": valid.relations[:1]})
+    )
+
+    with pytest.raises(ImportRefused) as caught:
+        import_records(writer_with_port, [target, malformed])
+
+    assert caught.value.report_ref is not None
+    assert len(FakePort.intents) == 1
+    assert len(FakePort.fulfilling) == 1
+    assert Recorder.plans == []
+    assert not writer_with_port.read_view.holds(target.id)
+
+
+def test_post_intent_domain_validation_failure_closes_with_import_refused(writer_with_port):
+    malformed = Node(
+        id="note:semantic-domain",
+        kind="note",
+        title="semantic domain",
+        facets={stored.SEMANTIC_IDENTITY_FACET: {"digest": "x"}},
+    )
+
+    with pytest.raises(ImportRefused) as caught:
+        import_records(writer_with_port, [malformed])
+
+    assert caught.value.report_ref is not None
+    assert len(FakePort.intents) == 1
+    assert len(FakePort.fulfilling) == 1
+    assert Recorder.plans == []
+
+
+def test_malformed_intent_digest_refuses_before_payload_or_report(tmp_path):
+    class MalformedDigestPort(FakePort):
+        intent_digest = "bad"
+
+    Recorder.plans, FakePort.intents, FakePort.fulfilling = [], [], []
+    writer = CorpusWriter(tmp_path, Recorder, operation_port=MalformedDigestPort(tmp_path))
+
+    with pytest.raises(ExecutionError, match="intent digest"):
+        import_records(writer, [prop("not-written")])
+
+    assert len(FakePort.intents) == 1
+    assert FakePort.fulfilling == []
+    assert Recorder.plans == []
+    assert not writer.read_view.holds("proposition:not-written")
 
 
 def test_unrenderable_member_closes_the_intent_without_a_payload(writer_with_port):

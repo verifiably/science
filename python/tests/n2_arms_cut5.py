@@ -98,10 +98,10 @@ _EXPLICIT_IMPORT = (
         sabotage=Sabotage(
             module="corpus.py",
             before=(
-                "                path = self._relative_path(record)\n"
-                "                if stored.semantic_hash_missing(record) or stored.semantic_hash_disagrees(record):"
+                "            if stored.semantic_hash_missing(node) or stored.semantic_hash_disagrees(node):\n"
+                '                raise ValidationRefused(f"{node.id}: semantic-identity stamp is missing or stale")'
             ),
-            after="                path = self._relative_path(record)\n                if False:",
+            after="            if False:\n                pass",
         ),
         checks=("test_import_bundle.py::test_stale_stamp_member_refuses",),
     ),
@@ -217,14 +217,14 @@ _EXPLICIT_IMPORT = (
         sabotage=Sabotage(
             module="corpus.py",
             before=(
-                '                resolved = self._view.resolve(target["ref"])\n'
-                '                if resolved is None or resolved != target["resolved"]:\n'
-                '                    raise RetractionTargetUnresolvable(f"{record.id}: node target does not resolve exactly")'
+                '            resolved = view.resolve(target["ref"])\n'
+                '            if resolved is None or resolved != target["resolved"]:\n'
+                '                raise RetractionTargetUnresolvable(f"{record.id}: node target does not resolve exactly")'
             ),
             after=(
-                '                resolved = self._view.resolve(target["ref"])\n'
-                "                if False:\n"
-                '                    raise RetractionTargetUnresolvable(f"{record.id}: node target does not resolve exactly")'
+                '            resolved = view.resolve(target["ref"])\n'
+                "            if False:\n"
+                '                raise RetractionTargetUnresolvable(f"{record.id}: node target does not resolve exactly")'
             ),
         ),
         checks=("test_retract.py::test_retract_refuses_an_unresolvable_node_target",),
@@ -347,14 +347,12 @@ _RETRACTION = (
         sabotage=Sabotage(
             module="corpus.py",
             before=(
-                "                if not any(\n"
-                '                    route.get("identity") == target["route_identity"] for route in stored.basis_routes(dataset)\n'
-                "                ):\n"
-                "                    raise RetractionTargetUnresolvable("
+                "        if not any(route.get(\"identity\") == target[\"route_identity\"] for route in stored.basis_routes(dataset)):\n"
+                "            raise RetractionTargetUnresolvable("
             ),
             after=(
-                "                if False:\n"
-                "                    raise RetractionTargetUnresolvable("
+                "        if False:\n"
+                "            raise RetractionTargetUnresolvable("
             ),
         ),
         checks=("test_retract.py::test_retract_refuses_a_route_absent_from_the_stamped_basis",),

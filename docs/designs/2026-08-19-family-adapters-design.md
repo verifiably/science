@@ -235,6 +235,8 @@ def import_bundle(
     actor: str,
     observer: str,
     instrument: str,
+    opened_at: str,
+    closed_at: str,
 ) -> ActReport: ...
 ```
 
@@ -243,7 +245,9 @@ finding. The input already carries the admitted records, so no second result or
 workflow type is introduced. `actor`, `observer`, and `instrument` are the
 act-report's required attribution triple (act-report design §2.2, the
 holdings-observation vocabulary): all three are required, and `instrument`
-names the tool performing the import.
+names the tool performing the import. `opened_at` and `closed_at` are the
+required operation timestamps. All five metadata fields are explicit,
+non-empty strings; the adapter supplies no clock fallback.
 
 One call imports one non-empty bundle into one corpus. The boundary freezes the
 observer-corpus root, mints operation metadata, and performs three durable

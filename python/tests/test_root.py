@@ -49,6 +49,40 @@ class TestTheInitActRefusesANonDirectory:
         with pytest.raises(CorpusRootRefused):
             root.init_corpus_root(occupied)
 
+    def test_a_symlink_root_is_registered_under_its_resolved_path(self, tmp_path, monkeypatch):
+        real = tmp_path / "real"
+        real.mkdir()
+        link = tmp_path / "link"
+        link.symlink_to(real, target_is_directory=True)
+        calls = []
+        monkeypatch.setattr(root, "register_root", lambda *args: calls.append(args))
+
+        root.init_corpus_root(link)
+
+        _, project_root, metadata_root, *_ = calls[0]
+        assert project_root == str(real.resolve())
+        assert metadata_root == str(real.resolve()) + ".metadata"
+
+
+class TestTheCompositionRoot:
+    def test_a_symlink_root_binds_every_writer_component_to_the_resolved_path(self, tmp_path):
+        real = tmp_path / "real"
+        real.mkdir()
+        link = tmp_path / "link"
+        link.symlink_to(real, target_is_directory=True)
+
+        writer = root.open_corpus(link)
+        executor = writer._corpus.executor
+        port = writer._operation_port
+        assert isinstance(executor, root.DurableExecutor)
+        assert isinstance(port, root.DurableOperationPort)
+
+        assert writer._corpus.store.root == real.resolve()
+        assert executor.root == real.resolve()
+        assert executor._metadata_root == real.resolve().with_name("real.metadata")
+        assert port.root == real.resolve()
+        assert port._metadata_root == real.resolve().with_name("real.metadata")
+
 
 class TestTheWriteIntentEncoding:
     def test_each_operation_kind_projects_its_own_discriminated_shape(self):

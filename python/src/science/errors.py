@@ -412,12 +412,11 @@ class WriteRefused(ScienceError):
 
 
 class RecordAlreadyMinted(WriteRefused):
-    """The add-only guard: the corpus already holds this `(uid, id)` pair.
+    """The create-path guard: the corpus already holds this `(uid, id)` pair.
 
-    Refused **before plan construction**, so no plan this slice's public
-    surface emits can carry a `ReplaceOp` or a `DeleteOp` — the seam's
-    replace-selecting `add` stays unexercised rather than accidentally
-    exposed. The edit surface is the family adapters'."""
+    Refused **before plan construction**, so ordinary add and create-shaped
+    family members cannot accidentally select `ReplaceOp`. Display-only
+    replacement is explicit through `revise`; no public family deletes."""
 
 
 class SupersedeTargetMissing(WriteRefused):

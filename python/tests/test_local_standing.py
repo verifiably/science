@@ -179,14 +179,14 @@ def test_malformed_retraction_facet_refuses_the_whole_evaluation(tmp_path):
         corpus.standing_in_local_view(view, "assessment:unrelated")
 
 
-def test_unrelated_query_refuses_a_raw_written_cycle_before_evaluation(tmp_path):
+def test_raw_written_cycle_shape_is_malformed_before_evaluation(tmp_path):
     first = raw_retraction("retraction:r1", "retraction:r2")
     second = raw_retraction("retraction:r2", "retraction:r1")
     assert not stored.semantic_hash_disagrees(first)
     assert not stored.semantic_hash_disagrees(second)
     view = seed(tmp_path, first, second)
 
-    with pytest.raises(errors.RetractionCycleMalformed):
+    with pytest.raises(errors.MalformedRecord):
         corpus.standing_in_local_view(view, "assessment:unrelated")
 
 
@@ -201,7 +201,26 @@ def test_corpus_check_reports_a_raw_retraction_with_a_missing_local_target(tmp_p
     ]
 
 
-def test_corpus_check_reports_a_raw_retraction_cycle_without_raising(tmp_path):
+def test_wrong_retraction_target_content_identity_is_invalid_and_not_applied(tmp_path):
+    target = assessment()
+    retraction = stored.retraction_node(
+        title="wrong content identity",
+        target=stored.NodeTarget(target.id, target.id, "sha256:" + "ab" * 32),
+        reason="defective-code",
+        rationale="wrong target identity",
+        grounds=("verification:v1",),
+        actor="tester",
+        event_token="wrong-content",
+    )
+    view = seed(tmp_path, target, retraction)
+
+    with pytest.raises(errors.RetractionTargetUnresolvable):
+        corpus.standing_in_local_view(view, target.id)
+
+    assert "retraction-target-invalid" in {finding.code for finding in corpus.corpus_check(view)}
+
+
+def test_corpus_check_rejects_raw_cycle_shapes_before_cycle_classification(tmp_path):
     first = raw_retraction("retraction:r1", "retraction:r2")
     second = raw_retraction("retraction:r2", "retraction:r1")
     raw_write(tmp_path, first)
@@ -210,5 +229,6 @@ def test_corpus_check_reports_a_raw_retraction_cycle_without_raising(tmp_path):
     findings = corpus.corpus_check(reopen(tmp_path))
 
     assert [(finding.severity, finding.code) for finding in findings] == [
-        ("error", "retraction-cycle")
+        ("error", "retraction-target-invalid"),
+        ("error", "retraction-target-invalid"),
     ]

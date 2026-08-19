@@ -5,6 +5,7 @@ from __future__ import annotations
 import ast
 import inspect
 import textwrap
+from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from dataclasses import replace
@@ -510,15 +511,13 @@ def test_ineligible_node_target_kinds_refuse(durable_writer, kind):
             id="note:target",
             kind="note",
             title="target",
-            facets={stored.SEMANTIC_IDENTITY_FACET: {"digest": "cd" * 32}},
         )
     elif kind == "proposition":
         target = stored.proposition_node("target", title="target", claim={"operator": "affects"})
     else:
         target = stored.run_node("target", title="target", spec="analysis-spec:target")
     durable_writer.add(target)
-    content_identity = stored.stored_semantic_hash(target)
-    assert content_identity is not None
+    content_identity = stored.stored_semantic_hash(target) or "sha256:" + "cd" * 32
     record = stored.retraction_node(
         title=f"ineligible {kind}",
         target=stored.NodeTarget(target.id, target.id, content_identity),
@@ -585,26 +584,26 @@ class TestTheCut5InventoryIsExact:
     def test_exactly_one_declaration_exists_per_selected_bullet(self):
         assert len(CUT5_ARMS) == 28
 
-    def test_only_selected_rows_are_named(self):
-        assert {arm.row for arm in CUT5_ARMS} == {
-            "S2",
-            "S4",
-            "G7",
-            "M5",
-            "S3",
-            "T1",
-            "T2",
-            "M3",
-            "R20",
-            "C1",
-            "C2",
-            "C3",
-            "C4",
-            "C5",
-            "C6",
-            "C10",
-            "G2c",
-            "G8",
+    def test_declarations_match_the_selected_row_histogram(self):
+        assert Counter(arm.row for arm in CUT5_ARMS) == {
+            "S2": 1,
+            "S4": 1,
+            "G7": 3,
+            "M5": 1,
+            "S3": 2,
+            "T1": 1,
+            "T2": 3,
+            "M3": 4,
+            "R20": 1,
+            "C1": 1,
+            "C2": 1,
+            "C3": 1,
+            "C4": 1,
+            "C5": 2,
+            "C6": 1,
+            "C10": 2,
+            "G2c": 1,
+            "G8": 1,
         }
 
     def test_deferred_semantic_import_rows_are_absent(self):

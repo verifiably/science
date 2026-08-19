@@ -60,6 +60,15 @@ def test_revise_prose_in_place_no_mint(writer):
     assert stored.stored_semantic_hash(got) == old_digest
 
 
+def test_revise_unrenderable_prose_refuses_before_execution(writer):
+    old = writer.add(prop())
+
+    with pytest.raises(ValidationRefused, match="losslessly renderable"):
+        writer.revise(old.model_copy(update={"body": "\ud800"}))
+
+    assert len(Recorder.plans) == 1
+
+
 def test_revise_display_statement_add_change_remove(writer):
     current = writer.add(prop())
     digest = stored.stored_semantic_hash(current)
