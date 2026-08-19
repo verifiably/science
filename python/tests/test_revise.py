@@ -136,6 +136,20 @@ def test_revise_refuses_non_proposition(writer):
         writer.revise(source.model_copy(update={"title": "x"}))
 
 
+def test_revise_wraps_an_unhashable_uid_as_validation_refused(writer):
+    old = writer.add(prop())
+
+    with pytest.raises(ValidationRefused):
+        writer.revise(old.model_copy(update={"uid": []}))
+
+
+def test_revise_wraps_non_iterable_relations_as_validation_refused(writer):
+    old = writer.add(prop())
+
+    with pytest.raises(ValidationRefused):
+        writer.revise(old.model_copy(update={"relations": None}))
+
+
 def test_revise_refuses_malformed_public_shapes(writer):
     old = writer.add(prop())
     malformed_display = old.model_copy(

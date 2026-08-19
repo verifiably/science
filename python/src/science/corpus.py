@@ -603,15 +603,15 @@ class CorpusWriter:
     def revise(self, node: Node) -> Node:
         """Replace a proposition after changing display prose alone."""
         with self._operation:
+            self._refuse_invalid(node)
+            if not all(isinstance(relation, Relation) for relation in node.relations):
+                raise ValidationRefused(f"{node.id}: refused by document validation: malformed relation")
             existing = self._corpus.index.by_uid.get(node.uid)
             if existing is None or existing.id != node.id:
                 raise RevisionTargetMissing(f"{node.id}: exact uid and id do not identify a local node")
             current = self._view.get(node.id)
             if current.kind != "proposition" or node.kind != "proposition":
                 raise ReviseKindImmutable("revise operates on propositions only")
-            if not all(isinstance(relation, Relation) for relation in node.relations):
-                raise ValidationRefused(f"{node.id}: refused by document validation: malformed relation")
-            self._refuse_invalid(node)
             if stored.display_facet_malformed(node):
                 raise ValidationRefused(f"{node.id}: refused by document validation: malformed display facet")
             try:
@@ -685,7 +685,7 @@ class CorpusWriter:
         raw. The registry half is unexercised here: no kind registry is compiled
         in this slice, and G5's kind-existence check waits with it."""
         try:
-            Node.model_validate(node.model_dump())
+            Node.model_validate(dict(node))
         except (NodesValidationError, PydanticValidationError) as caught:
             raise ValidationRefused(f"{node.id}: refused by document validation: {caught}") from caught
 
