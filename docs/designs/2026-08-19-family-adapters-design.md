@@ -2,7 +2,8 @@
 
 **Date:** 2026-08-19
 
-**Status:** Banked 2026-08-19; implementation in progress on `design/family-adapters`.
+**Status:** Banked 2026-08-19; post-freeze feasibility correction recorded
+2026-08-19; implementation in progress on `design/family-adapters`.
 
 **Scope:** Plan B item 2 in
 [`2026-08-03-redesign-adoption-ledger.md`](2026-08-03-redesign-adoption-ledger.md):
@@ -267,7 +268,7 @@ before any payload write. It checks:
   the local corpus;
 - every locally recomputable derivation identity;
 - semantic stamps, including stale-stamp refusal;
-- the locally decidable R19, R20, R22, and R23 import clauses;
+- the locally decidable R20 import clause;
 - the retraction graph formed by the bundle union the local context, including
   a topological order and a cycle witness when none exists;
 - structural validity of imported act-reports.
@@ -286,6 +287,14 @@ describes.
 
 The adapter builds one payload plan directly. It does not call `add` once per
 member, because that would destroy bundle atomicity.
+
+A post-freeze feasibility audit narrowed the earlier validation promise. R19
+and R22 semantic recomputation require complete run closures, results,
+comparison evidence, frozen specifications, and callable rule implementations;
+neither the persisted run/verification/assessment projections nor
+`import_bundle(Sequence[Node])` carries those inputs. They are therefore
+deferred, as R23 already was. Exact link, identity, and stamp checks remain
+import-integrity checks, but are not substitutes for those semantic rules.
 
 ## 5. Serialization and races
 
@@ -428,8 +437,7 @@ The prospective selection is:
 
 - **supersede/revise:** S2, S4, G7, and M5;
 - **import:** S3 whole; T1's import arm; T2's persistence-deferred import arms;
-  the locally runnable M3 arms; and the corpus-local explicit-import clauses of
-  R19, R20, R22, and R23;
+  the locally runnable M3 arms; and R20's corpus-local explicit-import clause;
 - **retraction:** the corpus-local arms of C1–C10, plus the positive retraction
   arms of G2c and G8.
 
@@ -442,12 +450,12 @@ local state, a cycle witness, a bundle-only cycle, a bundle-plus-local-context
 cycle, refusal with no payload write, and ordinary-write target resolution in
 C10's termination role. Cross-corpus and audit arms remain deferred.
 
-For R19, R20, R22, and R23, selection is limited to what the promised local
-validators actually exercise: derivation recomputation, stale-stamp refusal,
-the applicable at-the-address forgery nondetection arm, and
-basis/composition-disagreement handling. If a promised validator cannot ground
-a proposed arm against the frozen row text, the validation promise narrows;
-the selection never expands to preserve a sentence in this document.
+R20 selects only the contradiction check the local importer can execute. The
+original second reader correctly deferred R23 but missed that R19 and R22 also
+need semantic evidence absent from the stored projections and import API. A
+later implementation-feasibility audit therefore deferred R19 and R22 as a
+post-freeze correction. Stale-stamp and exact-link checks remain required
+import-integrity behavior; they do not discharge R19 or R22.
 
 N2 extends over every newly selected arm. On the certified tuple, a selected
 arm must run durably; errors on that tuple must never become skips. Portable

@@ -56,6 +56,12 @@
 - [ ] **Step 2: Close every finding in the document** — move overstated clauses to part/deferral, record the reader's run and dispositions in §6.
 - [ ] **Step 3: Commit** — `git add docs/designs/2026-08-19-conformance-cut-5.md && git commit -m "docs(cut5): close the second reader's findings"`.
 
+**Post-freeze correction:** The original reader correctly demoted R23 but
+missed that R19 and R22 require semantic evidence absent from the persisted
+projections and `import_bundle(Sequence[Node])`. Task 15's later feasibility
+audit narrowed both rows to deferred. The corrected inventory is **8 full + 10
+part + 6 deferred = 24**, with **31** Selected declaration units.
+
 ---
 
 ### Task 3: Bank the design and freeze cut 5
@@ -477,6 +483,11 @@ class OperationPort(Protocol):
 - Consumes: Task 13's port, Task 14's stored act-report, Task 9's retraction kind (bundle cycle checks), `science.report`'s `OperationIntent`, `RecordImportEntry`, `ImportedRecords`, `Registration`.
 - Produces: errors `ImportRefused(WriteRefused)` (fields: `member: str | None`, `cycle_edges: tuple[tuple[str, str], ...]`, `report_ref: str | None`), `BundleMemberHeld(ImportRefused)`; `CorpusWriter.import_bundle(self, records: Sequence[Node], *, actor: str, observer: str, instrument: str, opened_at: str, closed_at: str) -> ActReport`.
 
+**Post-freeze correction:** Implement only R20's grounded semantic import
+check. R19 and R22 require run/result/comparison/rule evidence this API and the
+stored projections do not carry; R23 remains deferred. Exact link and stamp
+hygiene remains required import integrity, but does not proxy those rows.
+
 **Steps:**
 
 - [ ] **Step 1: Write the failing tests.** The fixture:
@@ -532,27 +543,11 @@ def test_unresolved_foreign_input_admits_with_finding(writer_with_port):
 def test_stale_stamp_member_refuses(writer_with_port):                # S3's banked mutation
 def test_foreign_act_report_enters_inert(writer_with_port):           # T1's import arm
 
-# The four promised R-row validators, each a runnable check with a concrete forgery —
-# these are the arms cut 5 selects; "recomputable derivation identities" is not a test:
-def test_forged_verification_refused_at_import(writer_with_port):
-    # R19's local clause: a bundle verification whose inputs all resolve (bundle ∪ local)
-    # but whose recomputed report/verdict identity disagrees with its embedded authored
-    # certification — recompute via the cut-3 validators (science.verify) and refuse
-    # the whole bundle before any payload write.
+# The one selected R-row validator is a runnable check with a concrete forgery:
 def test_contradictory_nondeterminism_contract_refused(writer_with_port):
     # R20's import half, per the frozen row: a bundle analysis-spec that combines the
     # stochastic-unseeded nondeterminism class with a bitwise equivalence rule — the
     # contradiction is internal to the spec record — refused, no write.
-def test_fabricated_assessment_derivation_refused(writer_with_port):
-    # R22's local clause, per the frozen row: recompute the assessment OUTCOME from the
-    # resolved run and the interpretation rule (the cut-3 assess machinery) and refuse a
-    # bundle assessment whose recorded outcome the recomputation contradicts — comparing
-    # the doubly-carried facet refs against edges is §5a hygiene, not this arm.
-def test_basis_composition_disagreement_on_import(writer_with_port):
-    # R23's local clause: a bundle dataset whose stamped lineage basis disagrees with
-    # the producer composition the bundle ∪ local corpus derives (derived_from view);
-    # per the frozen R23 arm split in cut 5 §3, this is admitted-with-finding or refused
-    # exactly as that split says — the test asserts whichever the frozen text rules.
 def test_refusal_before_intent_when_request_malformed(writer_with_port):
     # empty bundle: refuses before any intent is appended
     with pytest.raises(ImportRefused): writer_with_port.import_bundle([], ...)
@@ -563,7 +558,7 @@ def test_refusal_before_intent_when_request_malformed(writer_with_port):
 - [ ] **Step 3: Implement** per spec §4.4/§6 order: under the lock —
   1. request validation (non-empty bundle, attribution strings) — refuses **before** the intent;
   2. mint `intent = OperationIntent("import", secrets.token_hex(16), actor)` and serialize **exactly its projection** — the banked act-report design fixes the operation-intent payload to operation kind, event token, and actor, nothing more (`observer`/`instrument` are act-report fields, not intent fields): `payload = v1.encode({"kind": intent.kind, "event_token": intent.event_token, "actor": intent.actor})`; `intent_digest = port.append_intent(payload)`; no port configured → `ImportRefused` before any act ("this corpus has no operation port; import is a boundary operation");
-  3. whole-bundle validation over `records` + the local `ReadView` (spec §4.4's list): stored shape/stamp per member (stale → refuse), duplicate ids/uids/paths within the bundle, member held or colliding (`BundleMemberHeld`), the ordinary add refusals per member (basis, eligibility — evaluated over the union view so intra-bundle references resolve), retraction-graph acyclicity over bundle ∪ local (refusing with the offending edge set), the four R-row validators from Step 1 (verification recomputation via `science.verify`; the analysis-spec's internal nondeterminism-class/equivalence-rule consistency; assessment-outcome recomputation from run plus interpretation rule via the cut-3 assess machinery; the lineage-basis-vs-derived-producers comparison via `derived_from`, disposed per cut 5 §3's frozen R23 split), and unresolvable foreign inputs collected as findings (not refusals);
+  3. whole-bundle validation over `records` + the local `ReadView` (spec §4.4's list): stored shape/stamp per member (stale → refuse), duplicate ids/uids/paths within the bundle, member held or colliding (`BundleMemberHeld`), the ordinary add refusals per member (basis, eligibility — evaluated over the union view so intra-bundle references resolve), retraction-graph acyclicity over bundle ∪ local (refusing with the offending edge set), R20's analysis-spec nondeterminism-class/equivalence-rule consistency check, and unresolvable foreign inputs collected as findings (not refusals);
   4. on refusal after the intent: build the refusal report (`RecordImportEntry(subject=<corpus root name>, outcome=ImportedRecords(refs=(), findings=(reason, ...)))`), publish it via `port.execute_fulfilling([CreateOp(...report node...)], intent_digest)`, reconstruct the corpus, set `report_ref` on the exception, raise;
   5. on pass: build the payload plan — one `CreateOp` per member, path from the store's own rule `self._corpus.store.path_for(node.id).relative_to(self._corpus.store.root).as_posix()`, content `node_to_markdown(node).encode("utf-8")` (import `node_to_markdown` from the same `nodes` module `nodes/core/corpus.py` imports it from) — execute through the shared state's `corpus.executor.execute(plan)`, then **reconstruct inside the shared root state** (Task 6): build a fresh `Corpus(self._root, executor_factory=<the state's stored factory>)`, replace the state's `corpus` and `view` under the held lock so every writer on this root sees the reconstruction (reconstruction from disk is the stated recovery posture);
   6. mint the closing report (entries: one `RecordImportEntry` with the admitted refs in canonical payload order and the findings), store it via `port.execute_fulfilling([CreateOp(<act_report_node bytes>)], intent_digest)`, reconstruct again, return the `ActReport`.
@@ -580,7 +575,7 @@ def test_refusal_before_intent_when_request_malformed(writer_with_port):
 
 **Steps:**
 
-- [ ] **Step 1: Declare every cut-5 selected arm as data** — row, assertion, source mutation (a `Sabotage` against the real module text), and the exact tests that must fail. Durable arms name `acceptance/…` node ids exactly as `n2_arms_cut4.py` does. Every declaration must match a clause the frozen cut selects — no extra arms, no missing arms.
+- [ ] **Step 1: Declare all 31 cut-5 selected arms as data** — row, assertion, source mutation (a `Sabotage` against the real module text), and the exact tests that must fail. Durable arms name `acceptance/…` node ids exactly as `n2_arms_cut4.py` does. Every declaration must match a clause the corrected frozen cut selects — no extra arms, no missing arms. R20 remains selected; R19, R22, and R23 have no cut-5 declaration.
 - [ ] **Step 2: Run the audit** — `uv run pytest tests/test_n2_cut5.py -q` — and fix every `vacuous`/`stale`/`mixed`/`uncollected` verdict. The unsabotaged baseline must pass against the real package.
 - [ ] **Step 3: Commit** — `git add python/tests/n2_arms_cut5.py python/tests/test_n2_cut5.py && git commit -m "test(n2): declare cut 5's arms with their sabotages"`.
 

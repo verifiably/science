@@ -1,6 +1,7 @@
 # Conformance cut 5 — the family adapters
 
-**Status:** Frozen 2026-08-19, second reader discharged.
+**Status:** Frozen 2026-08-19; second reader discharged; post-freeze feasibility
+correction recorded 2026-08-19.
 
 **Sources:** `2026-08-17-conformance-cut-4.md`; the family-adapter design
 `2026-08-19-family-adapters-design.md` §8; and the
@@ -10,8 +11,9 @@ frozen S, G, M, T, R, and C rows quoted below.
 
 Cut 5 is the frozen acceptance boundary for the supersede/revise, retraction,
 and explicit-import families at Science's certified composition root. It
-selected obligations before their implementation. No adapter or test is yet
-claimed to exist; banking froze the selection after §6's independent reading.
+selected obligations before their implementation. At freeze, no adapter or test
+was claimed to exist; banking froze the selection after §6's independent
+reading.
 
 The selection rule is cut 4's rule, made deliberately conservative: a clause is
 selected only when its source mutation and every named check run entirely
@@ -207,26 +209,23 @@ use that circular non-test as evidence of acyclicity validation.
   the global **audit**; and the admission-order/no-stored-rank negative waits on
   a later **M3 completion cut**. Those unrun clauses keep M3 part.
 
-#### R19 — part
+#### R19 — deferred
 
 ```markdown
 | **R19** | Verification derivation is validated at explicit import and under audit, and neither mounting nor a raw write is an epistemic event (§7.3c) | Assert the constructor's arguments are **ordered run refs, an optional certification, and the explicitly selected contract identity and epoch (5b §7.6), and nothing else**: attempt to pass a comparison report, a conformance result, a boundary receipt, an **equivalence-rule evaluator**, or an **implementation selection** and assert no such parameter exists. Assert the evaluator's **identity** is resolved from the **original run's frozen spec** and its **implementation** from the run's frozen `rule_bindings` (5b §6), and that a **mixed-shape** pair is refused. **Explicit import, inputs resolvable:** hand a `verification` with a fabricated report, a chosen `scope` and `verdict`, and an address computed to agree with them to the **import operation** — the untrusted-import case substrate §4.2 says passes stale-hash and corpus checks — and assert the import is **refused before any write**, and that no file exists afterwards. Assert an import whose inputs do **not** resolve **proceeds** and emits an **import finding**, and that **no validation state is written onto the verification** in either case — the record is immutable and gains no `validated` field. Assert the recomputation resolves **across corpora** through the world resolver, and that a verification whose runs live in a different corpus is **not** refused for that reason alone. Do the same for an `analysis-spec` whose `stochastic-unseeded` contract accompanies a bitwise `equivalence_rule`. **Both transitions, which is the point of this row:** **(a) genuine, available → unavailable** — record a `passed` verification under a declared **tolerance**, make its artifacts unreachable here while they remain **held elsewhere**, and assert it is **not refused**, admission is **unchanged**, and no `inconclusive` is recorded; **(b) forged, unavailable → available** — import a self-consistent forged verification whose artifacts do **not** resolve (so it enters unvalidated and admits), then **mount them**, and assert admission is **still unchanged** until an **audit** runs, that the audit emits the contradiction finding and **mints nothing** (amended 2026-08-03, 5b §7.6), that a separate explicit constructor act naming its own cut and epoch mints the **superseding verification** carrying the correct derivation, and that admission changes **because of that node**, never as a side effect of the mount or of the audit alone. Assert reading the record at any point in either transition validates nothing. **Negative (c) — availability is not an epistemic result:** assert an unvalidated verification is neither certified sound nor treated as non-admitting; where its inputs cannot be resolved anywhere in the world, assert belief is **not computable**, never a silently unchanged or lowered value. **Negative (d) — the import boundary is an operation, not a directory:** write the same forged verification straight into a corpus path with a raw filesystem call, bypassing the import operation entirely; assert it is **not** refused, that **reloading the corpus does not validate it** at any point, and that it is caught **only** when an audit runs — pinning that "validate on import" is a claim about Science's operations and never about files appearing on disk. **Negative (e):** assert a raw-written *run* whose internal hashes agree is **still** not detected, and that an unaudited self-consistent verification is **not** distinguishable from a genuine one — both are substrate §4.3's limitation and need §9's log; this test must not be read as closing either *(Amended 2026-08-11, the act-report design §4: the constructor's closed list gains one member — the optional report-position citation. Every other extra argument is still refused, deleting the cited report invalidates nothing, and the audit arm is unchanged: the evaluator mints nothing, its finding recorded as an entry in the boundary wrapper's inert act-report.)* |
 ```
 
-- **Selected:** explicitly import a self-consistent forged verification whose
-  inputs all resolve in the bundle union the local corpus; recompute its
-  derivation, refuse the mismatch before any payload write, and assert no member
-  file exists afterward.
-- **Selected:** where the frozen import rule permits unresolved foreign inputs,
-  admit with an import finding and write no validation state; the resolvable
-  refusal path likewise writes no validation state on the immutable record.
 - **Prior, not selected again:** the constructor/evaluator-shape clauses and cut
   4's local durable-read availability and raw-write clauses.
-- **Deferred:** cross-corpus recomputation and the different-corpus negative wait
-  on the **world index**; availability transitions and world-wide computability
-  wait on the **world index and holdings root**; contradiction discovery and the
-  superseding constructor act wait on the **audit**; log-backed raw-write
-  detection waits on **anchor acts**.
+- **Deferred:** explicit-import derivation validation requires the original and
+  replayed `RunClosure` values, their results, comparison evidence, frozen
+  specifications, and callable equivalence-rule implementations. Persisted
+  runs and verifications and `import_bundle(Sequence[Node])` carry none of that
+  complete evidence. Cross-corpus recomputation and the different-corpus
+  negative also wait on the **world index**; availability transitions and
+  world-wide computability wait on the **world index and holdings root**;
+  contradiction discovery and the superseding constructor act wait on the
+  **audit**; log-backed raw-write detection waits on **anchor acts**.
 
 #### R20 — part
 
@@ -242,22 +241,21 @@ use that circular non-test as evidence of acyclicity validation.
 - **Deferred:** per-family workflow obligations and the two-decomposition
   comparison wait on the **full workflow surface**.
 
-#### R22 — part
+#### R22 — deferred
 
 ```markdown
 | **R22** | The assessment facet is derived from the run through the ordinary API (§3.1b, §5.1, kernel §4.2.1) | Assert the assessment constructor takes **only a run ref** — attempt to pass `outcome`, `estimate`, `uncertainty`, `estimand`, `applicability` or `interpretation_rule` and assert **no such parameter exists**. Run an analysis whose result the frozen `interpretation_rule` maps to **`refuted`**, and assert no API path produces an assessment carrying `supported`; assert the derived `outcome` changes only when the **result** or the **rule** changes. Assert `estimand` and `applicability` are **copied by the constructor** from the frozen spec, and that `proposition` comes from the spec's `target`. **Evaluator failure (§3.1b):** make the rule's evaluator fail — unreadable output, unparseable payload, missing rule implementation — and assert **no assessment is produced** and a finding is recorded; assert `inconclusive` is **not** produced, since it is a scientific outcome and machinery failure is not one. **Negative (a):** assert narrowing `applicability` after seeing the result requires a **successor spec and a new run**. **Negative (b) — no revisions, but the values are still hashed:** assert there is **no edit** that changes a facet and leaves the same assessment, and that the world basis `(spec, run, proposition)` is the constructor's own argument set. Then assert **G3 digests keyed facets** — sorted `(assessment identity, facet digest)` pairs — with **both** halves tested, since two consecutive revisions each dropped one: raw-write an assessment at the correct address carrying `supported` where the derivation yields `refuted` and assert the **belief digest differs** from the correct state's (which hashing identities alone would have missed); then **exchange the facets of two assessments** on one proposition, over different runs and different lineages, and assert the belief digest **differs** (which hashing a bag of facet digests alone would have missed, the multiset being unchanged). Assert the second state can aggregate to a different belief, so the digest is not merely being pedantic. Assert this is **change detection, not truth detection**. **Reach:** execute one recipe, then execute a second differing **only** by an inline exclusion certification (§5.2), so the two assessments carry **byte-identical facet values**; assert the belief digest differs. Assert that editing the certification alone changes **no** belief digest, because it mints a recipe and no run. **Rule binding (§3.1b):** assert a spec naming an `interpretation_rule` that resolves to neither a held implementation nor a registry entry with fixtures is **refused**, and that an implementation failing its fixtures **is not that rule**. **Negative (c) — the API is not the world:** hand-write an assessment file with a fabricated facet straight into a corpus path; assert it is **not** refused and **not** detected on read, that **explicit import** recomputes the facet from the run and **refuses** a mismatch, and that a raw-written one is caught **only under audit** — the §7.3c limitation, unchanged, and read-time validation would violate R5 |
 ```
 
-- **Selected:** negative (c)'s explicit-import clause, narrowed to local
-  resolvability: recompute the assessment outcome from its resolved run and
-  supplied interpretation-rule implementation, and refuse a fabricated facet
-  mismatch before any payload write.
 - **Prior, not selected again:** the constructor, derivation, supplied-rule,
   keyed-facet, at-the-address raw-write, and read-side nondetection clauses
   selected by cuts 3 and 4.
-- **Deferred:** resolving an interpretation rule not supplied with the fixture
-  waits on the **rules store and resolver**; catching a raw-written assessment
-  waits on the global **audit**.
+- **Deferred:** explicit-import outcome recomputation requires a complete
+  `RunClosure` result, its frozen specification, and a callable interpretation
+  implementation. Persisted runs and assessments and
+  `import_bundle(Sequence[Node])` omit those inputs. Resolving an interpretation
+  rule waits on the **rules store and resolver**; catching a raw-written
+  assessment waits on the global **audit**.
 
 #### R23 — deferred
 
@@ -423,13 +421,13 @@ use that circular non-test as evidence of acyclicity validation.
 
 ## 4. Accounting
 
-Cut 5 reads 24 frozen rows: **8 full + 12 part + 4 deferred = 24**.
+Cut 5 reads 24 frozen rows: **8 full + 10 part + 6 deferred = 24**.
 
 | state | rows | n |
 |---|---|---:|
 | full | S2, S3, S4, G7, C1, C2, C4, C5 | 8 |
-| part | M5, T1, T2, M3, R19, R20, R22, C3, C6, C10, G2c, G8 | 12 |
-| deferred | R23, C7, C8, C9 | 4 |
+| part | M5, T1, T2, M3, R20, C3, C6, C10, G2c, G8 | 10 |
+| deferred | R19, R22, R23, C7, C8, C9 | 6 |
 
 This is row accounting, not a denominator of prose arms. Each **Selected**
 bullet in §3 is one declaration unit for N2; a declaration may name a
@@ -439,7 +437,7 @@ these 24 is selected by cut 5, and no prior-cut arm is counted as new selection.
 ## 5. N2 and acceptance obligations
 
 Task 16 owns cut 5's N2 declarations. It must declare every §3 **Selected**
-bullet, and only those bullets, as data with:
+bullet, and only those 31 bullets, as data with:
 
 - its frozen row id and assertion;
 - the exact source mutation, against real module text;
@@ -453,8 +451,8 @@ never skips. Portable arms remain in the portable suite. The cut-5 runner may
 invoke cut 4 as a prefix, but neither `python/tools/cut4_acceptance.py` nor cut
 4's meaning is edited.
 
-N2 is prospective here: this draft fixes the declaration inventory but claims
-no declaration, sabotage, or test exists yet.
+N2 was prospective when this cut froze: the cut fixed the declaration inventory
+but claimed no declaration, sabotage, or test existed yet.
 
 ## 6. The second reader
 
@@ -494,16 +492,23 @@ closed three overstatements:
    M3, while C10 says its termination role is not a new arm. **Disposition:**
    keep the one M3 declaration and remove the duplicate C10 declaration unit.
 
-The reader rederived all 24 row states as **8 full + 12 part + 4 deferred** and
-counted **34** §3 Selected declaration units for Task 16. No selected clause
-requires the world index, global audit, managed holdings root, anchor acts,
-rules store, registry compile, a world-changing family, or authoritative world
-standing. The R19, R20, and R22 selections are exact local explicit-import
-clauses from their frozen rows; R23 has no such locally grounded import arm.
+The reader originally rederived all 24 row states as **8 full + 12 part + 4
+deferred** and counted **34** §3 Selected declaration units for Task 16. That
+was the bank-time result: the reader correctly demoted R23 but missed that R19
+and R22 cannot run from the frozen import boundary.
 
-The reading completed before banking froze the cut. Implementation remains
-prospective: no implementation task may cite the cut as a discharge authority
-until its selected obligations are implemented and verified.
+A later implementation-feasibility audit found that the persisted
+run/verification/assessment projections and `import_bundle(Sequence[Node])`
+omit the complete `RunClosure`, result, comparison, frozen-specification, and
+callable rule-implementation evidence needed for R19 and R22 semantic
+recomputation. Exact link and stamp hygiene cannot substitute for those checks.
+The post-freeze correction therefore defers R19 and R22, leaves R20 selected
+and R23 deferred, and rederives the inventory as **8 full + 10 part + 6
+deferred = 24**, with **31** §3 Selected declaration units for Task 16.
+
+The reading completed before banking froze the cut. At banking, implementation
+was prospective: no implementation task could cite the cut as a discharge
+authority until its selected obligations were implemented and verified.
 
 ## 7. Limitations
 
