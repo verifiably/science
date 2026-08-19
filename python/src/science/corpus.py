@@ -575,9 +575,14 @@ class CorpusWriter:
             if predecessor.kind != "proposition" or successor.kind != "proposition":
                 raise FamilyKindUnsupported("supersede operates on propositions only")
             self._refuse_already_minted(successor)
+            self._refuse_malformed_supersede_successor(successor)
             if any(relation.predicate == stored.SUPERSEDES for relation in successor.relations):
                 raise ValidationRefused(f"{successor.id}: supersedes relations are authored by the adapter")
-            if stored.recompute_semantic_hash(successor) == stored.recompute_semantic_hash(predecessor):
+            try:
+                successor_identity = stored.recompute_semantic_hash(successor)
+            except IdentityError as caught:
+                raise ValidationRefused(f"{successor.id}: refused by document validation: {caught}") from caught
+            if successor_identity == stored.recompute_semantic_hash(predecessor):
                 raise SupersedeIdentityUnchanged(
                     f"{successor.id}: successor semantic identity is unchanged; use revise instead"
                 )
@@ -593,6 +598,11 @@ class CorpusWriter:
             return self._corpus.add(candidate)
 
     # --- the refusals, in order ---------------------------------------------
+
+    def _refuse_malformed_supersede_successor(self, successor: Node) -> None:
+        if not all(isinstance(relation, Relation) for relation in successor.relations):
+            raise ValidationRefused(f"{successor.id}: refused by document validation: malformed relation")
+        self._refuse_invalid(successor)
 
     def _refuse(self, node: Node) -> None:
         self._refuse_already_minted(node)

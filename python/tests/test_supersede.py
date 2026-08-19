@@ -105,6 +105,26 @@ def test_supersede_refuses_a_caller_authored_edge_before_equal_identity(writer):
         writer.supersede(candidate, of=old.id)
 
 
+def test_supersede_refuses_an_unvalidated_relation_shape(writer):
+    old = writer.add(prop("old"))
+    candidate = prop("new", claim_op="causes").model_copy(
+        update={"relations": [{"source": "proposition:new", "predicate": "cites", "target": old.id}]}
+    )
+
+    with pytest.raises(ValidationRefused):
+        writer.supersede(candidate, of=old.id)
+
+
+def test_supersede_refuses_an_unencodable_covered_facet_value(writer):
+    old = writer.add(prop("old"))
+    candidate = prop("new", claim_op="causes").model_copy(
+        update={"facets": {stored.PROPOSITION_FACET: {"op": 0.1}}}
+    )
+
+    with pytest.raises(ValidationRefused):
+        writer.supersede(candidate, of=old.id)
+
+
 def test_supersede_refuses_an_equal_semantic_identity(writer):
     old = writer.add(prop("p"))
 
