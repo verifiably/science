@@ -1,6 +1,6 @@
 # Conformance cut 5 — the family adapters
 
-**Status:** Drafted 2026-08-19, awaiting second reader; NOT frozen.
+**Status:** Drafted and independently read 2026-08-19; NOT frozen.
 
 **Sources:** `2026-08-17-conformance-cut-4.md`; the prospective cut in
 `docs/superpowers/specs/2026-08-19-family-adapters-design.md` §8; and the
@@ -166,16 +166,16 @@ not selected again; every **deferred** bullet names its unblocker.
   one qualifying refusal report closes the intent and no payload is written.
 - **Selected:** attempt a second fulfilling registration for the import intent
   and assert the durable log classifies it malformed.
-- **Selected:** make import request validation fail before intent append, then
-  make intent append fail; in each case assert no payload or report act began
+- **Selected:** make intent append fail; assert no payload or report act began
   and no record was minted.
 - **Deferred:** root-selection failure belongs to the **boundary that selects a
   corpus root**, before an already-rooted `CorpusWriter`; success for every
   other operation kind, the missing-spec run request and its unfulfilling
   report/crash clause, and the complete non-conforming execution remain with
   their respective **run, acquisition, audit, and other operation-family
-  cuts**. Dataset-production's typed intent shape is prior cut-3 standing, not
-  selected again.
+  cuts**. Pre-intent request validation is an implementation promise, not a
+  substitute frozen arm. Dataset-production's typed intent shape is prior cut-3
+  standing, not selected again.
 
 #### M3 — part
 
@@ -261,26 +261,25 @@ use that circular non-test as evidence of acyclicity validation.
   waits on the **rules store and resolver**; catching a raw-written assessment
   waits on the global **audit**.
 
-#### R23 — part
+#### R23 — deferred
 
 ```markdown
 | **R23** | A produced dataset, its ancestry and its durable basis are minted by the boundary (§5.2) | Assert the output dataset's address is the **dataset basis projection over the output manifest's content identities** — deduplicated, sorted, digested (admission ramp §6.2; *amended 2026-08-09, this read "the single output entry's content identity", which a uniform projection cannot return for a one-entry manifest without a cardinality special case inside an identity function*) — and that the run's **`produces`** edge is emitted with the run; attempt to attach `produces` naming a dataset the manifest did **not** emit, and assert the ordinary API offers no such path. Assert **no `produced_by` edge exists in either direction of the API** — the retired representation must not be reachable. **Negative (a) — no nominal handle in identity:** emit byte-identical output under two different **logical names** and assert **one** dataset address results — pinning that the address is not the manifest digest, which carries the name. Assert `derived_from` **resolves as a view** over `produces ∘ transforms`, is **not stored**, and is **not read by independence** — which walks the stamped basis — and that no authored ancestry list is accepted. **Negative (b) — the independence multiplier:** construct two runs sharing an upstream dataset and omit it from one's ancestry in a build that permits authoring; assert the omission **would** make the two assessments read as independent under kernel §4.2.1's disjoint-closure rule, then assert the derived form makes it unspellable. **Negative (c) — omission survives derivation:** classify a shared **empirical** input as auxiliary `reads` **without certification**; assert the closure is **incomplete** and independence is **`not-certified`**, never assumed — pinning that deriving the edge did not make the classification honest. Assert a **certified** exclusion does remove the input from the closure, that the certification is **inline on the `reads` entry** with a rationale and attribution, and that adding or withdrawing it **mints a different recipe** — then assert it mints **no run**, and that the original run is unchanged, until that recipe is **executed**. **Then assert both limits:** a *false* certification still omits the edge and still inflates belief — the guarantee is attribution, not truth; and after a corrected re-execution, assert the **original run and its false certification are still active belief inputs**, with no API path that retires either, pinning §11.13 rather than letting attribution be read as correction. **Replay cardinality:** replay a `dataset-production` run successfully and assert **one dataset address with two `produces` edges from two runs**; assert the lineage view composes over both, and that **no existing dataset node was mutated** to record either — including that the pre-existing dataset's **lineage basis is unchanged** and still names the first run. **Deletion, which the view alone cannot see:** stamp the basis, then **delete the producing run**; assert the dataset does **not** read as a root, that the unresolved basis entry emits **`lineage-incomplete`**, that independence over it is **`not-certified`**, and that kernel §5.1's belief digest **moves** — asserting the stored ref and its `null` resolution are recorded **separately**, since recording either alone loses the deletion. Assert the same for a deleted **ancestor**. Assert a *second* surviving run producing the same address by another route does **not** repair the first basis. **Negative (e) — divergence, not union and not silence:** have `R1` mint `D` from `A`, stamping the basis, then have `R2` produce byte-identical `D` from `B`. Assert independence over `D` becomes **`not-certified`** with a **`lineage-divergent`** finding — not silently unioned into ancestry, which the single basis cannot make durable, and not silently ignored, which would certify `D` independent of `B`-derived evidence while a derivation from `B` demonstrably exists. Assert kernel §5.1's belief digest **moves** when `R2` is added, pinning that the snapshot covers the **producer set** and not only the basis. **Coverage (§11.15):** enumerate producers from a **producer snapshot** whose coverage omits `R2`'s corpus and assert the digest **differs** from the full-coverage one even though every *present* corpus is identical; then make `R2`'s corpus absent **within** coverage and assert `not-present` rather than a silent undiverged reading. **Negative — location is not evidence:** move a dataset between corpora and edit an alias, and assert the belief digest is **unchanged** (world W5) — pinning that the member is the snapshot and not the whole index. **Derivation, not just hashing:** delete `R2`'s entry from a valid snapshot, leave its coverage and receipt intact, and hand it to **explicit import**; assert it is **refused** because rebuilding from the receipt's corpus states does not reproduce the map, that a snapshot carrying **no receipt** is refused as unrecomputable and that a receipt naming corpora rather than **exact states**, or naming a bare version string rather than a fixture-bound rule identity, evaluates to **`malformed`** — refused at import, and returned as `malformed` rather than `unresolvable` by an **audit** that meets one raw-written, since no arriving corpus or rule could ever make it checkable (world §5, W8a). Assert a snapshot whose receipts are **all malformed** is **`unchecked`**, never `contradicted`, with a malformed finding per pair. Assert a fabricated snapshot written straight into place is caught **only under audit** — never on read, which would violate R5. Assert the third case is **not** a refusal: a receipt naming exact states whose **corpora are absent here** imports with a **finding**, writes no validation state, and is checked by a later audit (world §5) — "cannot be checked here" is `not-present`, not `unknown`. Assert a receipt whose covered corpus has **moved to a new state** is likewise **unresolvable** rather than refuted, so a snapshot's completeness evidence is checkable only while the receipt is **`resolvable`** — **each** covered corpus at its own recorded state (world §5, limitation 10). **Two corpora:** make one of two covered corpora move while the other stands still, and assert the receipt is **unresolvable** — one corpus cannot satisfy the other's entry. **The rule is a receipt member too:** mutate the receipt's `producer_snapshot_rule_identity` and assert the **receipt identity moves** while the snapshot's semantic identity and the belief digest do **not**; then install a newer enumeration rule beside the old and assert the receipt **still validates**, stop holding the old rule and assert **`unresolvable`** rather than refuted, and assert a rule whose implementation fails its fixtures **is not that rule** (world W8a). **Negative — the receipt is not a belief input:** move a dataset between two covered corpora, so **both** corpus-state identities in the receipt change while the producers map does not; assert the belief digest is **unchanged**, pinning that exact states sit outside the semantic identity and that the completeness mechanism did not smuggle location back in. **Then assert the residue (§11.14):** delete `R2` and assert certification is **restored** and the resulting state is **indistinguishable** from one where `R2` never existed — no retained prior digest, since belief is a computed view; assert specifically that **no** test can distinguish them, rather than asserting a difference the design cannot deliver. **Merge and the tagged basis (world §4.3):** assert a boundary-minted basis is always **`single`**, and that the **only** transition to `conflict` is a merge of records whose routes differ. Merge two records at one content address with different routes; assert the survivor carries `conflict([both], sorted)`, that no field-selection path chooses between them and **no ordinary API removes a route**, that the dataset is `lineage-divergent` with independence `not-certified`, and — unlike the deletion case — that the conflict **survives** deleting either producing run. Assert merging two `conflict`s **unions** their routes. Assert the traversal over a `conflict` resolves **every** route's refs and certifies nothing, and that divergence is decided on the **tag** before any comparison — no `transforms`-versus-basis comparison is attempted against a set. **Valid state:** assert `conflict` with **fewer than two distinct routes is unconstructible**, so a conflict that never occurred cannot be spelled and there is one representation per fact. **Lifecycle:** assert **no** API resolves a conflict — none retires a route, chooses between two, or records one as wrong — so the state is permanent under this design (§11.13's missing correction lifecycle, reached from another direction). **Then assert two limits, which are not one limit:** a raw filesystem edit *can* drop a route or forge a `single`, and the API guarantee does not reach the filesystem (§11.11) — with `B`'s producing run still present, assert an **audit detects** the forged `single(A)`, since recomputation still has `B` to contradict it. **Then delete `B`'s producing run as well** and assert the audit reports **nothing**: every surviving route resolves and no record of `B` remains. Assert specifically that **no test distinguishes** that corpus from one in which the conflict never arose, rather than asserting a detection the design cannot deliver — the composite of §11.11 and §11.14, where R23 previously claimed a route's removal was always caught while the row above it said no path removes one. **Negative (f) — the replay case is not divergent:** replay `R1`'s recipe; assert the second producer's `transforms` set **equals** the basis, that **no** divergence is reported, and that independence stays certified — pinning that the divergence rule does not fire on the case §5.3 is built to reach. **Negative (g) — self-edges:** run an identity transform that transforms and produces one content identity; assert the run is **valid**, that **no** `D derived_from D` edge appears in the view, that the closure is **not** reported as cyclic, and that the run is **not** divergent — then assert a genuine two-node cycle **is** reported. **Negative (h):** assert an input's role is fixed in the recipe before execution, so reclassifying it mints a **different recipe**, and a different run only on execution; and assert a raw-written lineage basis is caught only under audit, as in R22 |
 ```
 
-- **Selected:** during explicit import, compare a dataset's stamped lineage basis
-  with the producer composition derivable from the bundle union the local
-  corpus. A disagreement is not silently treated as agreement: import preserves
-  the authored basis, reports `lineage-divergent`, and does not certify from the
-  conflicting composition.
 - **Prior, not selected again:** boundary-minted dataset/`produces` shape,
   replay cardinality, inline exclusion mechanics, and cut 4's corpus-local
   `derived_from` view and basis/composition reading.
-- **Deferred:** global producer completeness, coverage, receipts, cross-corpus
-  divergence and independence wait on the **world index**; correction of active
-  false routes waits on **retraction coverage/world standing**; every move,
-  consolidate, and deletion clause waits on those named **family surfaces**;
-  raw-written-basis detection waits on the **audit**; rule-receipt resolution
-  waits on the **rules store**.
+- **Deferred:** the local basis/composition disagreement clause's frozen source
+  mutation is a second dataset-production run, not explicit import; it waits on
+  that **operation-family boundary** rather than being respelled as import
+  behavior. The row's actual explicit-import clauses concern producer snapshots
+  and receipts and therefore wait on the **world index and rules store**. Global
+  producer completeness, coverage, cross-corpus divergence, and independence
+  also wait on the **world index**; correction of active false routes waits on
+  **retraction coverage/world standing**; every move, consolidate, and deletion
+  clause waits on those named **family surfaces**; and raw-written-basis
+  detection waits on the **audit**.
 
 ### 3.3 Retraction
 
@@ -391,11 +390,11 @@ use that circular non-test as evidence of acyclicity validation.
 - **Selected:** refuse node-arm targets of kind note, proposition, and run.
 - **Selected:** refuse a route arm naming a route absent from the locally
   resolved dataset's stamped basis.
-- **Selected:** require an ordinary retraction write's target to resolve before
-  creation, discharging the same termination arm selected under M3.
 - **Deferred:** positive eligibility of an `instrument-certification` waits on
   its **stored kind and registry compile**; reporting raw-written refused cases
-  waits on the global **audit**.
+  waits on the global **audit**. Ordinary-write target resolution remains the
+  single M3 declaration above; C10's frozen text says that termination role is
+  not a new arm.
 
 #### G2c — part
 
@@ -426,13 +425,13 @@ use that circular non-test as evidence of acyclicity validation.
 
 ## 4. Accounting
 
-Cut 5 reads 24 frozen rows: **8 full + 13 part + 3 deferred = 24**.
+Cut 5 reads 24 frozen rows: **8 full + 12 part + 4 deferred = 24**.
 
 | state | rows | n |
 |---|---|---:|
 | full | S2, S3, S4, G7, C1, C2, C4, C5 | 8 |
-| part | M5, T1, T2, M3, R19, R20, R22, R23, C3, C6, C10, G2c, G8 | 13 |
-| deferred | C7, C8, C9 | 3 |
+| part | M5, T1, T2, M3, R19, R20, R22, C3, C6, C10, G2c, G8 | 12 |
+| deferred | R23, C7, C8, C9 | 4 |
 
 This is row accounting, not a denominator of prose arms. Each **Selected**
 bullet in §3 is one declaration unit for N2; a declaration may name a
@@ -477,9 +476,36 @@ The reader must:
    promise; and
 5. rederive §4 and the §5 declaration inventory independently.
 
-Findings and dispositions are recorded here before freeze. Until that occurs,
-there is no freeze block and no implementation task may cite this draft as
-acceptance authority.
+### 6.1 Run and dispositions
+
+The independent reading ran on 2026-08-19 with only §3's quoted frozen rows,
+the family-adapter specification, and §2's boundary declaration. It found and
+closed three overstatements:
+
+1. **T2 pre-intent refusal:** the draft replaced the frozen root-selection
+   failure with request validation failure. The replacement is not a banked arm.
+   **Disposition:** retain only intent-append failure in the selected bullet;
+   keep root selection deferred and identify request validation as unselected.
+2. **R23 import behavior:** the frozen local basis/composition disagreement is
+   triggered by a second dataset-production run. The row's explicit-import
+   clauses instead require producer snapshots, receipts, world corpus states,
+   and rule resolution. **Disposition:** remove the invented import mutation and
+   defer R23; the specification's validation promise narrows rather than
+   expanding the selection.
+3. **C10 declaration count:** ordinary-write target resolution is selected by
+   M3, while C10 says its termination role is not a new arm. **Disposition:**
+   keep the one M3 declaration and remove the duplicate C10 declaration unit.
+
+The reader rederived all 24 row states as **8 full + 12 part + 4 deferred** and
+counted **34** §3 Selected declaration units for Task 16. No selected clause
+requires the world index, global audit, managed holdings root, anchor acts,
+rules store, registry compile, a world-changing family, or authoritative world
+standing. The R19, R20, and R22 selections are exact local explicit-import
+clauses from their frozen rows; R23 has no such locally grounded import arm.
+
+The reading is complete, but the cut remains unfrozen until the banking change.
+There is no freeze block, and no implementation task may cite this draft as
+acceptance authority before banking.
 
 ## 7. Limitations
 
