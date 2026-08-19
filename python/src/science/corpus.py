@@ -65,6 +65,7 @@ from science.errors import (
     MalformedRecord,
     RecordAlreadyMinted,
     RetractionCycleMalformed,
+    RetractionGroundsMissing,
     RetractionTargetIneligible,
     RetractionTargetUnresolvable,
     ReviseKindImmutable,
@@ -729,7 +730,7 @@ def corpus_check(view: ReadView) -> tuple[Finding, ...]:
                         message=f"{node.id}: the stored semantic hash disagrees with the fields it covers",
                     )
                 )
-        except IdentityError as refused:
+        except (IdentityError, MalformedRecord) as refused:
             base_valid = False
             findings.append(
                 Finding(
@@ -953,6 +954,7 @@ class CorpusWriter:
                     raise ImportRefused("import success report is not canonically storable") from caught
             except ScienceError as caught:
                 refused = caught if isinstance(caught, ImportRefused) else ImportRefused(str(caught))
+                finding = str(refused).encode("utf-8", "backslashreplace").decode("utf-8")
                 report = self._import_report(
                     intent,
                     observer=observer,
@@ -960,7 +962,7 @@ class CorpusWriter:
                     opened_at=opened_at,
                     closed_at=closed_at,
                     refs=(),
-                    findings=(str(refused),),
+                    findings=(finding,),
                 )
                 report_node = stored.act_report_node(report)
                 self._operation_port.execute_fulfilling([self._create_op(report_node)], intent_digest)
@@ -982,6 +984,16 @@ class CorpusWriter:
             try:
                 self._validated_retraction(record)
             except MalformedRecord as caught:
+                facet = record.facets.get(stored.RETRACTION_FACET)
+                if isinstance(facet, dict):
+                    grounds = facet.get("grounds")
+                    if "grounds" not in facet or (
+                        isinstance(grounds, list)
+                        and (not grounds or any(type(ground) is not str or not ground for ground in grounds))
+                    ):
+                        raise RetractionGroundsMissing(
+                            f"{record.id}: a retraction names at least one grounds reference"
+                        ) from caught
                 raise ValidationRefused(f"{record.id}: refused by retraction shape validation: {caught}") from caught
             self._resolve_retraction_target(record, self._view)
 

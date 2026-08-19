@@ -395,6 +395,23 @@ def test_post_intent_domain_validation_failure_closes_with_import_refused(writer
     assert Recorder.plans == []
 
 
+def test_unencodable_post_intent_refusal_closes_with_one_canonical_report(writer_with_port):
+    malformed = prop("bad-id")
+    malformed.id = "proposition:\ud800"
+
+    with pytest.raises(ImportRefused) as caught:
+        import_records(writer_with_port, [malformed])
+
+    assert caught.value.report_ref is not None
+    assert len(FakePort.intents) == 1
+    assert len(FakePort.fulfilling) == 1
+    assert Recorder.plans == []
+    report_node = writer_with_port.read_view.get(caught.value.report_ref)
+    (finding,) = report_node.facets["act-report"]["entries"][0]["outcome"]["findings"]
+    assert "proposition:\\ud800" in finding
+    finding.encode("utf-8")
+
+
 def test_malformed_intent_digest_refuses_before_payload_or_report(tmp_path):
     class MalformedDigestPort(FakePort):
         intent_digest = "bad"

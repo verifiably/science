@@ -16,7 +16,7 @@ narrowed unexecutable declarations rather than proxying them with weaker tests.
 | suite | command | result | claim |
 |---|---|---|---|
 | durable family and N2 acceptance | `uv run --frozen python -m tools.cut5_acceptance` | 39 passed | cut-5 discharge |
-| portable unit tests | `uv run --frozen pytest tests -q` | 1,276 passed | behavior; **no** durability claim |
+| portable unit tests | `uv run --frozen pytest tests -q` | 1,278 passed | behavior; **no** durability claim |
 | contributor-guide links and freshness | `uv run --frozen python tools/check_guide.py` | passed | documentation consistency |
 | static checks | `uv run --frozen ruff check .`; `uv run --frozen pyright` | passed; 0 errors | code quality and typing |
 
@@ -24,7 +24,7 @@ The certified acceptance output was:
 
 ```text
 .......................................                                  [100%]
-39 passed in 13.95s
+39 passed in 14.12s
 ```
 
 The runner probes the volume before collection and returns error code `2`,
@@ -33,7 +33,7 @@ certified engine on the repository volume. Its explicit uncertified-volume arm
 also observed fail-closed refusal on `/dev/shm`, with no payload write.
 
 The portable suite excludes `tests/acceptance` by configuration. Its collection
-enumerated 1,276 tests; the full run reached 100% with exit code `0`. It proves
+enumerated 1,278 tests; the full run reached 100% with exit code `0`. It proves
 the portable behavior, while only the acceptance command proves the durable
 arms.
 

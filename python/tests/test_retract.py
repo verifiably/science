@@ -78,6 +78,17 @@ def without_grounds(record: Node) -> Node:
     return stored.stamp_semantic_identity(record)
 
 
+def malformed_grounds(record: Node, grounds) -> Node:
+    facet = dict(record.facets[stored.RETRACTION_FACET])
+    if grounds is None:
+        del facet["grounds"]
+    else:
+        facet["grounds"] = grounds
+    record.facets[stored.RETRACTION_FACET] = facet
+    record.relations = [relation for relation in record.relations if relation.predicate != stored.GROUNDED_IN]
+    return stored.stamp_semantic_identity(record)
+
+
 def test_retract_is_create_only_and_target_untouched(writer):
     target = mint_eligible_assessment(writer)
     before = writer.read_view.get(target.id).model_dump(mode="json")
@@ -232,15 +243,16 @@ def test_malformed_grounds_refuse_before_target_resolution(writer):
         event_token="event-1",
     )
 
-    with pytest.raises(errors.ValidationRefused):
+    with pytest.raises(errors.RetractionGroundsMissing):
         writer.retract(without_grounds(absent))
 
 
-def test_retract_refuses_missing_grounds(writer):
+def test_retract_refuses_missing_grounds_with_the_public_subtype(writer):
     target = mint_eligible_assessment(writer)
 
-    with pytest.raises(errors.ValidationRefused):
-        writer.retract(without_grounds(retraction_for(target)))
+    for grounds in (None, [], [""]):
+        with pytest.raises(errors.RetractionGroundsMissing):
+            writer.retract(malformed_grounds(retraction_for(target), grounds))
 
 
 def test_retract_refuses_a_stale_stamp_at_the_boundary(writer):

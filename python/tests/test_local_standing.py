@@ -201,6 +201,22 @@ def test_corpus_check_reports_a_raw_retraction_with_a_missing_local_target(tmp_p
     ]
 
 
+def test_corpus_check_reports_an_ungoverned_node_with_a_semantic_stamp(tmp_path):
+    malformed = Node(
+        id="note:bad-domain",
+        kind="note",
+        title="bad domain",
+        facets={stored.SEMANTIC_IDENTITY_FACET: {"digest": "x"}},
+    )
+    view = seed(tmp_path, malformed)
+
+    findings = corpus.corpus_check(view)
+
+    assert [(finding.code, finding.ref, finding.detail) for finding in findings] == [
+        ("semantic-hash-stale", malformed.id, "unencodable")
+    ]
+
+
 def test_wrong_retraction_target_content_identity_is_invalid_and_not_applied(tmp_path):
     target = assessment()
     retraction = stored.retraction_node(
