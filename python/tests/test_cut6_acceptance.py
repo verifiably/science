@@ -52,7 +52,12 @@ def test_pytest_receives_the_certified_run_directory_and_its_result(
     n2 = _n2_module(tmp_path)
     monkeypatch.setattr(cut6_acceptance, "ACCEPTANCE", tmp_path)
     monkeypatch.setattr(cut6_acceptance, "work_directory", lambda: tmp_path)
-    monkeypatch.setattr(cut6_acceptance, "probe", lambda _run: None)
+    probe_runs: list[Path] = []
+
+    def probe(run: Path) -> None:
+        probe_runs.append(run)
+
+    monkeypatch.setattr(cut6_acceptance, "probe", probe)
     captured: dict[str, object] = {}
 
     def run(command, **kwargs):
@@ -63,14 +68,16 @@ def test_pytest_receives_the_certified_run_directory_and_its_result(
     monkeypatch.setattr(cut6_acceptance.subprocess, "run", run)
 
     assert cut6_acceptance.main(["-q"]) == returncode
+    assert len(probe_runs) == 1
+    run = probe_runs[0]
     command = captured["command"]
     assert command == [sys.executable, "-m", "pytest", str(n2), "-q"]
     assert captured["cwd"] == cut6_acceptance.PYTHON_ROOT
     assert captured["check"] is False
     environment = captured["env"]
     assert isinstance(environment, dict)
-    roots = {environment[name] for name in ("SCIENCE_CUT4_ROOT", "SCIENCE_CUT5_ROOT", "SCIENCE_CUT6_ROOT")}
-    assert len(roots) == 1
+    for name in ("SCIENCE_CUT4_ROOT", "SCIENCE_CUT5_ROOT", "SCIENCE_CUT6_ROOT"):
+        assert environment[name] == str(run)
     assert not list(tmp_path.glob("run-*"))
 
 
