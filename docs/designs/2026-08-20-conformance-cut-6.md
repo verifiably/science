@@ -1,6 +1,7 @@
 # Conformance cut 6 — the world registry
 
-**Status:** Draft 2026-08-20, awaiting the second reading; not frozen. No
+**Status:** Draft 2026-08-20; second reading discharged 2026-08-20 (§6.1),
+its five findings closed in place; not frozen — freeze occurs at banking. No
 implementation, declaration, sabotage, or test is claimed to exist.
 
 **Sources:** `2026-08-19-conformance-cut-5.md`; the world-registry
@@ -101,11 +102,18 @@ the complete arm inventory that the N2 declarations must enumerate; every
 ```
 
 - **Selected:** admit a corpus whose `corpus_id` an existing admission already
-  makes known, with any differing record content, and assert `CorpusIdKnown`
-  refusal with no file written. The frozen replica exception is satisfied by
-  unspellability: no registry-side replica declaration exists to except —
-  replicating an admitted corpus requires no act, and `replica-of` provenance
-  describes a first arrival, which is not a second admission.
+  makes known and assert `CorpusIdKnown` refusal with no file written — the
+  mutation parameterized over provenance, as the frozen cell's own exception
+  clause invites: a differing `fresh` admission refuses, and a
+  `replica-of(parent)` admission naming an already-admitted id refuses
+  identically, pinning the specification's uniform refusal as a tested fact.
+  Two narrowings are recorded rather than argued away: the frozen **replica
+  exception** is narrowed by interpretation — replicating an admitted corpus
+  requires no registry act at all, so the excepted act's "minting no
+  admission" runs as X6's selected replica-presence arm, and `replica-of`
+  provenance describes only a first arrival — and the frozen **unconditional
+  refusal** is narrowed by the specification's idempotent exact-retry
+  exception, carried as §3.3's admission idempotency labeled unit.
 - **Deferred:** the raw-placed duplicate detected at **build** waits on slice
   2's epoch build. The `duplicate-carrier` finding (§3.3) is its local
   precursor, not its discharge.
@@ -117,8 +125,10 @@ the complete arm inventory that the N2 declarations must enumerate; every
 ```
 
 - **Selected:** emit `retired` and assert no act returns the corpus to live:
-  re-admission refuses on the known id, no un-retire or status-clearing API is
-  spellable, and any differing post-terminal status act refuses.
+  re-admission refuses on the known id, and no un-retire or status-clearing
+  API is spellable. The refusal of a differing post-terminal status act is
+  spec-added behavior and is declared exactly once, as §3.3's status
+  idempotency labeled unit, not here.
 - **Selected:** make an admitted, live corpus unreachable from the configured
   presence set, then restore a byte-copy replica carrying its id at a
   configured root; assert `present` recomputes true with no new admission
@@ -192,8 +202,11 @@ Deferred, each with its unblocker:
 
 ### 3.3 Labeled declarations outside the frozen selection
 
-Eight declarations, on cut 4's `semantic-hash-missing` precedent, each named
-by the world-registry specification §8 and sabotaged like a selected arm:
+Eight declarations, on cut 4's `semantic-hash-missing` precedent, each
+sabotaged like a selected arm. Seven are named by the world-registry
+specification §8.1's idempotency, durable-evidence, and corpus-check bullets;
+the `duplicate-carrier` declaration's authority is instead the specification's
+normative §5.4 and §7 — §8.1's bullet list does not name it:
 
 - **Labeled (idempotency, admission):** repeat an admission with identical
   content; assert idempotent success returning the committed record, no second
@@ -293,6 +306,47 @@ The reader must:
 5. rederive §4's row accounting and the 22-unit declaration inventory
    independently.
 
+### 6.1 Run and dispositions
+
+The independent reading ran on 2026-08-20 with only §3's quoted frozen rows,
+the world-registry specification, and §2's boundary declaration. It required
+no demotions and rederived the accounting independently at **2 full + 2 part
++ 1 deferred = 5** rows and **14 selected + 8 labeled = 22** declaration
+units, agreeing with §4. It found five overstatements of record rather than
+of coverage, all closed before freeze:
+
+1. **X6 spec-added clause:** the differing-post-terminal-act refusal is
+   `StatusTerminal`, spec-added behavior that does not "return the corpus to
+   live," and it appeared both inside X6's first selected bullet and as a
+   labeled unit. **Disposition:** removed from the frozen selection; declared
+   exactly once, as the status idempotency labeled unit. X6 remains full — no
+   frozen arm was removed.
+2. **X5 replica exception discharged by argument:** the frozen exception
+   clause was dissolved by prose rather than run or recorded. **Disposition:**
+   the selected mutation is parameterized to also admit `replica-of` naming
+   an already-admitted id and assert identical refusal, and both narrowings —
+   the exception by interpretation (its runnable content being X6's replica
+   arm) and the unconditional refusal by the exact-retry exception — are now
+   recorded in the bullet.
+3. **§3.3 provenance claim:** the preamble cited specification §8 for all
+   eight labeled declarations; the `duplicate-carrier` arm is named only by
+   the normative §5.4 and §7. **Disposition:** citation corrected; the arm's
+   selection judged sound rather than scope expansion.
+4. **Unstated `nodes` §11.1 prerequisite:** five W13 units are unrunnable
+   before the `nodes` public projection lands, and only the specification
+   recorded the ordering. **Disposition:** carried as limitation 4 with the
+   choreography's ordering.
+5. **X5 narrowing unflagged:** the frozen unconditional refusal was silently
+   restricted to differing content. **Disposition:** folded into item 2's
+   re-word.
+
+Both flagged selections were judged sound: X4's raw-deletion negative as a
+runnable undetectability assertion (claiming no detection, on cut 5's S3
+precedent — with the note that its N2 sabotage must be checked against
+vacuous passing at declaration time), and the labeled `duplicate-carrier`
+arm with its citation corrected. The reading completed before banking; at
+freeze, implementation remains prospective.
+
 ## 7. Limitations
 
 1. **Local is not world.** Presence, uniqueness, and every identity claim stop
@@ -303,14 +357,21 @@ The reader must:
    deletion, or chain removal. X4's negative asserts exactly that bound.
 3. **Genesis is unread.** The mirror is the only readable `world_id`; genesis
    and mirror agreement waits on the log design's chain reader.
-4. **No fork exists.** `fork-of` admission is exercised against
+4. **Five W13 units wait on the `nodes` §11.1 projection.** Every
+   corpus-state-identity arm requires `nodes`' public §11.1 projection API,
+   confirmed absent from that repository's public surface as of 2026-08-20.
+   The specification's choreography (§9 step 6) orders that release before
+   the Science slice, so the arms are runnable at discharge time; if that
+   ordering slips, these units error rather than run, with this limitation as
+   the recorded reason.
+5. **No fork exists.** `fork-of` admission is exercised against
    fixture-authored manifests; no supported operation constructs a fork.
-5. **In-process serialization only.** The world lock serializes cooperating
+6. **In-process serialization only.** The world lock serializes cooperating
    writers in one process; cross-process single-writer deployment remains an
    obligation, not a guarantee.
-6. **Discharge is bounded.** The 22 declaration units are what cut 6 can
+7. **Discharge is bounded.** The 22 declaration units are what cut 6 can
    discharge; deferred clauses and prior-cut evidence are not relabelled as
    cut-6 results.
-7. **Arm boundaries remain a reading.** The frozen cells are prose. That is
+8. **Arm boundaries remain a reading.** The frozen cells are prose. That is
    why the independent reading is a precondition of freeze and why any
    uncertainty is classified toward part or deferral.
