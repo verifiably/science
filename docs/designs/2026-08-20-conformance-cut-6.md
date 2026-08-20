@@ -98,7 +98,7 @@ the complete arm inventory that the N2 declarations must enumerate; every
 #### X5 — part
 
 ```markdown
-| X5 | Duplicate `corpus_id` is refused at admission and detected at build | admit a known id → refused (replica declaration excepted, minting no admission), raw-place two corpora with one id, build → refused, reported |
+| X5 | Duplicate `corpus_id` is refused at admission and detected at build | admit a known id → refused (replica declaration excepted, minting no admission); raw-place two corpora with one id, build → refused, reported |
 ```
 
 - **Selected:** admit a corpus whose `corpus_id` an existing admission already
@@ -169,9 +169,10 @@ W13 is **part**. Selected:
   — the deliberate document-order positive, computed over `nodes`' canonical
   §11.1 projection including `relations` and `facets`.
 - **Selected:** rename a node's file without changing its `uid` or projected
-  content, reformat `corpus.yaml` (whitespace, key order, quoting), reorder
-  its `domains` mapping, and touch every mtime; assert the state identity is
-  unchanged in each case.
+  content, reformat a non-node file other than the manifest, reformat
+  `corpus.yaml` (whitespace, key order, quoting), reorder its `domains`
+  mapping, and touch every mtime; assert the state identity is unchanged in
+  each case.
 - **Selected:** change a manifest field semantically — a pinned contract
   identity, `corpus_id`, fork provenance — and assert the state identity
   moves.
