@@ -17,9 +17,9 @@ below for rationale and frozen guarantees.
 
 ## The designs
 
-Twenty-six documents in `docs/designs/`: the banked redesigns, review disposition,
+Twenty-eight documents in `docs/designs/`: the banked redesigns, review disposition,
 adoption ledger, measurements, rulings, and contributor-guide design written
-2026-08-02 through 2026-08-19. Read them in this order:
+2026-08-02 through 2026-08-20. Read them in this order:
 
 | document | what it rules |
 |---|---|
@@ -49,6 +49,8 @@ adoption ledger, measurements, rulings, and contributor-guide design written
 | `2026-08-18-composition-root-adapter-design.md` | Science's composition root, durable executor adapter, add-only write boundary, read capability boundary, and cut-4 acceptance suite |
 | `2026-08-19-family-adapters-design.md` | supersede, retraction, and explicit-import families at Science's certified composition root |
 | `2026-08-19-conformance-cut-5.md` | the fifth frozen conformance cut, selecting the family-adapter implementation surface |
+| `2026-08-20-world-registry-design.md` | the world-index authoritative slice: world root and mirror, corpus manifest and fresh adoption, corpus-state identity, registry admission, and lifecycle status |
+| `2026-08-20-conformance-cut-6.md` | the sixth frozen conformance cut, selecting the world-registry slice's registry-side and identity arms: 2 rows full, 2 part, 1 deferred, with 8 labeled declarations |
 
 The ledger is the entry point for "what is built, what is not, and what waits on
 what." Every guarantee table is frozen under its identifiers: designs extend and

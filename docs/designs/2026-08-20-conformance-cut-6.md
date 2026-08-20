@@ -1,8 +1,8 @@
 # Conformance cut 6 — the world registry
 
-**Status:** Draft 2026-08-20; second reading discharged 2026-08-20 (§6.1),
-its five findings closed in place; not frozen — freeze occurs at banking. No
-implementation, declaration, sabotage, or test is claimed to exist.
+**Status:** Frozen 2026-08-20; second reader discharged 2026-08-20 (§6.1),
+its five findings and two pre-freeze record corrections closed before freeze.
+No implementation, declaration, sabotage, or test is claimed to exist.
 
 **Sources:** `2026-08-19-conformance-cut-5.md`; the world-registry
 specification `2026-08-20-world-registry-design.md` §8; and the frozen X and W

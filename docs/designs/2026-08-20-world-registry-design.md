@@ -2,22 +2,22 @@
 
 **Date:** 2026-08-20
 
-**Status:** Reviewed 2026-08-20; approved for cut-6 authoring. This document is
-not banked, conformance cut 6 is not yet authored or frozen, and no
-implementation claim is made.
+**Status:** Banked 2026-08-20; reviewed 2026-08-20, conformance cut 6 authored,
+independently second-read, and frozen the same day
+(`2026-08-20-conformance-cut-6.md`). No implementation claim is made.
 
 **Scope:** Slice 1 of the world-index implementation in
-[`2026-08-03-redesign-adoption-ledger.md`](../../designs/2026-08-03-redesign-adoption-ledger.md):
+[`2026-08-03-redesign-adoption-ledger.md`](2026-08-03-redesign-adoption-ledger.md):
 the world root, corpus manifest and fresh-adoption act, corpus-state identity,
 authoritative registry, lifecycle status, and caller-supplied installation
 configuration.
 
 **Inherited authorities:**
-[`2026-08-03-world-index-packaging-design.md`](../../designs/2026-08-03-world-index-packaging-design.md),
+[`2026-08-03-world-index-packaging-design.md`](2026-08-03-world-index-packaging-design.md),
 world-addressing §5 and W13,
-[`2026-08-03-tamper-evident-log-design.md`](../../designs/2026-08-03-tamper-evident-log-design.md),
+[`2026-08-03-tamper-evident-log-design.md`](2026-08-03-tamper-evident-log-design.md),
 and the certified composition root in
-[`2026-08-18-composition-root-adapter-design.md`](../../designs/2026-08-18-composition-root-adapter-design.md).
+[`2026-08-18-composition-root-adapter-design.md`](2026-08-18-composition-root-adapter-design.md).
 
 ## 1. Decision and boundary
 
@@ -631,9 +631,10 @@ is prospective until the cut document records exact declarations.
 - **X6, full row:** monotone order-free status, terminal-state refusals, and
   replica presence becoming true again with no new admission.
 - **W13, slice-1 arms:** fresh opaque minting; no ordinary re-mint API; node
-  content and relation changes moving corpus state; file rename, manifest
-  reformat, mtime, and git changes leaving it fixed; semantic manifest changes
-  moving it; and malformed/unknown/duplicate manifest inputs refusing.
+  content and relation changes moving corpus state; file rename, non-manifest
+  non-node-file reformat, manifest reformat, mtime, and git changes leaving it
+  fixed; semantic manifest changes moving it; and
+  malformed/unknown/duplicate manifest inputs refusing.
 - **Idempotency arms:** exact admission retry, exact terminal-status retry, and
   world initialization retry across registration/mirror separation.
 - **Durable arms:** `world.yaml`, `corpus.yaml`, and registry append on the
@@ -685,9 +686,10 @@ The sequence is fixed:
    disposition;
 4. promote this specification with `git mv` into `docs/designs/`, freeze cut 6,
    and bank both authorities in one change;
-5. update the design corpus from 26 to 27 in that banking change: extend
-   `_COUNT_WORDS`, update the README count sentence/table/date range, and make
-   no unrelated corpus-guard edits;
+5. update the design corpus from 26 to 28 in that banking change — the
+   promotion adds two members, this design and the cut document: extend
+   `_COUNT_WORDS` with 27 and 28, update the README count sentence/table/date
+   range, and make no unrelated corpus-guard edits;
 6. implement and release the public `nodes` §11.1 projection API in its owning
    repository first;
 7. implement the Science slice;
