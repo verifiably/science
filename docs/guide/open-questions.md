@@ -27,6 +27,7 @@ sources:
   - ../designs/2026-08-19-conformance-cut-5.md
   - ../designs/2026-08-20-world-registry-design.md
   - ../designs/2026-08-20-conformance-cut-6.md
+  - ../plans/2026-08-20-conformance-cut-6-results.md
 ---
 
 # Open questions
@@ -177,7 +178,7 @@ implementation**: a guarantee row awaiting code is work, not a question.
   certification is unspellable and existing instruments certify only through a
   successor spec. Open is the cadence: sweep, mint on next authored use, or
   never. ([normative-contract questions](../designs/2026-08-03-normative-contract-design.md#11-open-questions))
-- **Cut 5 is discharged; most of cut 3's deferred boundary stays open.** Cut 3
+- **Cut 6 is discharged; most of cut 3's deferred boundary stays open.** Cut 3
   was frozen 2026-08-11 at the run boundary,
   taking run capture — the seam the verified-holdings record (2026-08-10)
   and the act-report design (2026-08-11) finished designing. Its §5
@@ -191,21 +192,21 @@ implementation**: a guarantee row awaiting code is work, not a question.
   against the certified
   `atoms` engine adopted at Science's composition root, add-only,
   corpus-write minting alone, with no L row selected because registration
-  is engine-supplied. World persistence and anchor carriage remain outside
-  it, each on its own condition — the cut names the *next* persistence
-  cut as anchor carriage's owner, and routes the world index through the
-  `nodes` contract deltas and the index they carry being built — so cut
-  3's one-cut-or-two question is still not ruled. Cut 4's add-only slice and
-  cut 5's supersede, revise, retraction, and explicit-import families are
-  implemented and discharged. The separately deferred
+  is engine-supplied. Cut 6 now lands the authoritative world root, manifest,
+  corpus-state identity, registry, lifecycle, and presence core. Epoch builds,
+  the four derived maps, and anchor carriage and verification remain outside
+  it, each on its own condition, so cut 3's one-cut-or-two question is still not
+  ruled. Cuts 4–6 are implemented and discharged. The separately deferred
   consolidate/move/deletion cut still waits on the world index; anchor carriage
-  remains outside both landed cuts.
+  remains outside these landed cuts.
   ([conformance cut 3](../designs/2026-08-11-conformance-cut-3.md),
   [its deferrals](../designs/2026-08-11-conformance-cut-3.md#5-step-3--fully-deferred-rows-grouped-by-unblocking-subsystem),
   [conformance cut 4](../designs/2026-08-17-conformance-cut-4.md),
   [composition-root adapter design](../designs/2026-08-18-composition-root-adapter-design.md),
   [conformance cut 5](../designs/2026-08-19-conformance-cut-5.md),
-  [cut 5 results](../plans/2026-08-19-conformance-cut-5-results.md))
+  [cut 5 results](../plans/2026-08-19-conformance-cut-5-results.md),
+  [conformance cut 6](../designs/2026-08-20-conformance-cut-6.md),
+  [cut 6 results](../plans/2026-08-20-conformance-cut-6-results.md))
 - **The act-report's residue.** The act-report design (2026-08-11) closed
   the run boundary's report seam: the boundary-minted terminal record of
   an opened operation — or the pre-intent refusal record of a rejected

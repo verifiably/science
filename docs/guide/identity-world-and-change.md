@@ -2,7 +2,7 @@
 title: Identity, world, and change
 status: living
 created: 2026-08-08
-updated: 2026-08-08
+updated: 2026-08-20
 sources:
   - ../designs/2026-08-02-substrate-consolidation-design.md
   - ../designs/2026-08-02-world-addressing-design.md
@@ -11,6 +11,9 @@ sources:
   - ../designs/2026-08-03-world-index-packaging-design.md
   - ../designs/2026-08-03-tamper-evident-log-design.md
   - ../designs/2026-08-04-formal-model-and-claim-calculus-design.md
+  - ../designs/2026-08-20-world-registry-design.md
+  - ../designs/2026-08-20-conformance-cut-6.md
+  - ../plans/2026-08-20-conformance-cut-6-results.md
 ---
 
 # Identity, world, and change
@@ -126,18 +129,13 @@ that the operation was scientifically or administratively authorized.
 
 ## Current state
 
-World addressing, correction, index packaging, and the tamper-evident log are
-designed or banked, not implemented by conformance cut 1. The address scheme was
-re-litigated and **upheld** on 2026-08-08, with three changes that reach this
-page: a human-readable label is now *computed on read* from a pinned authority
-snapshot rather than stored as an alias; two records believed to name one work
-are related by a graded, attributed **coreference attestation** instead of being
-merged, so nothing collapses and nothing becomes irreversible; and storage
-duplication is repaired by a separate, smaller operation that changes no
-address. The cut implements
-canonical identity for typed claims and profiles only. Durable transactions,
-world indexing, and mutation logging wait on the corresponding atoms-layer
-capabilities.
+The authoritative world root, manifest, corpus-state identity, and append-only
+registry core are implemented, including fresh adoption, lifecycle status, and
+configured presence. Epoch publication, the four derived maps, global
+resolution, slice-2 build behavior, and anchor carriage and verification remain
+designed or deferred. The address ruling still governs the eventual derived
+views: labels are computed on read, coreference is graded rather than merged,
+and storage duplication changes no address.
 
 ## Open edges
 

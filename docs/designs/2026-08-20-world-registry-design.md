@@ -2,9 +2,9 @@
 
 **Date:** 2026-08-20
 
-**Status:** Banked 2026-08-20; reviewed 2026-08-20, conformance cut 6 authored,
-independently second-read, and frozen the same day
-(`2026-08-20-conformance-cut-6.md`). No implementation claim is made.
+**Status:** Implemented 2026-08-20; conformance cut 6 discharged
+([results](../plans/2026-08-20-conformance-cut-6-results.md)). The dated
+deferrals in §10 remain.
 
 **Scope:** Slice 1 of the world-index implementation in
 [`2026-08-03-redesign-adoption-ledger.md`](2026-08-03-redesign-adoption-ledger.md):

@@ -2,7 +2,7 @@
 
 **Status:** Frozen 2026-08-20; second reader discharged 2026-08-20 (§6.1),
 its five findings and two pre-freeze record corrections closed before freeze.
-No implementation, declaration, sabotage, or test is claimed to exist.
+Discharged 2026-08-20; [results](../plans/2026-08-20-conformance-cut-6-results.md).
 
 **Sources:** `2026-08-19-conformance-cut-5.md`; the world-registry
 specification `2026-08-20-world-registry-design.md` §8; and the frozen X and W

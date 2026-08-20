@@ -99,6 +99,12 @@ now implement supersede, revise, retraction, and explicit import through the
 certified composition root, with **28 selected declarations** across **8 rows
 in full and 10 in part**; 6 rows remain fully deferred.
 
+**Conformance cut 6** froze and was discharged 2026-08-20. The authoritative
+world root, corpus manifest and fresh adoption, corpus-state identity, registry
+admission, lifecycle status, and presence core now run, with **14 selected + 8
+labeled = 22 declarations** across **2 rows in full and 2 in part**; X7 remains
+fully deferred. See the [results](docs/plans/2026-08-20-conformance-cut-6-results.md).
+
 ```
 python/     the implementation (substrate §11 puts the composition root here)
 ts/         the one shared encoding, and nothing else (formal model lim. 9)

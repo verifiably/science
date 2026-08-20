@@ -2,7 +2,7 @@
 title: Foundations
 status: living
 created: 2026-08-08
-updated: 2026-08-14
+updated: 2026-08-20
 sources:
   - ../designs/2026-08-02-epistemic-kernel-design.md
   - ../designs/2026-08-02-substrate-consolidation-design.md
@@ -12,6 +12,9 @@ sources:
   - ../designs/2026-08-09-admission-ramp-design.md
   - ../designs/2026-08-10-verified-holdings-record-design.md
   - ../designs/2026-08-11-act-report-design.md
+  - ../designs/2026-08-20-world-registry-design.md
+  - ../designs/2026-08-20-conformance-cut-6.md
+  - ../plans/2026-08-20-conformance-cut-6-results.md
 ---
 
 # Foundations
@@ -140,11 +143,11 @@ structural or integrity finding, but it mints nothing and performs no repair.
 
 ## Current state
 
-The kernel, substrate, domain boundary, and formal model are designed or banked.
-The adoption ledger records three implemented slices: cut 1's typed claim
-construction, canonical projection, profile compilation, identity, decode, and
-cross-language parity; cut 2's belief seam; and cut 3's run boundary.
-Persistence, world indexing, and the mutation log remain beyond them.
+The adoption ledger records six landed slices. Cut 6 implements the
+authoritative world root, manifest, corpus-state identity, and append-only
+registry core. Epoch publication, the four derived maps, global resolution,
+slice-2 build behavior, and anchor carriage and verification remain designed or
+deferred.
 
 ## Open edges
 
