@@ -8,11 +8,13 @@ substrate's best-effort path, not through the certified engine.
 
 from __future__ import annotations
 
+import re
 import threading
 import time
 from typing import ClassVar
 
 import pytest
+from fixtures_cut6 import PINS
 from nodes.core.errors import CollisionError, ExecutionError
 from nodes.core.node import Node, NodeMetadata
 from nodes.core.write_plan import CreateOp, DefaultExecutor, DeleteOp, ReplaceOp
@@ -23,12 +25,14 @@ from science.errors import (
     BasisMissing,
     CollisionRefused,
     EligibilityUnmet,
+    ManifestAlreadyPresent,
     RecordAlreadyMinted,
     ScienceError,
     ValidationRefused,
     WriteRefused,
 )
 from science.root import open_corpus
+from science.world import load_manifest, manifest_bytes
 
 PINNED = [{"name": "matrix", "digest": "sha256:" + "ab" * 32}]
 
@@ -79,6 +83,22 @@ def admissible(writer: CorpusWriter, *, observes=True):
 
 
 class TestTheAddPathIsAddOnly:
+    def test_adopt_manifest_mints_and_executes_one_create(self, writer):
+        manifest = writer.adopt_manifest(profile=PINS)
+
+        assert re.fullmatch(r"[0-9a-f]{32}", manifest.corpus_id)
+        assert manifest.forked_from is None
+        assert Recorder.plans[-1] == [CreateOp("corpus.yaml", manifest_bytes(manifest))]
+        assert load_manifest(writer.read_view._corpus.store.root) == manifest
+
+    def test_adopt_manifest_never_remints(self, writer):
+        first = writer.adopt_manifest(profile=PINS)
+
+        with pytest.raises(ManifestAlreadyPresent):
+            writer.adopt_manifest(profile=PINS)
+
+        assert load_manifest(writer.read_view._corpus.store.root) == first
+
     def test_a_mint_emits_exactly_one_create(self, writer):
         writer.add(observed_dataset())
         (plan,) = Recorder.plans

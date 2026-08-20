@@ -12,6 +12,54 @@ class ScienceError(Exception):
     """Base for every error this package raises."""
 
 
+class ManifestMalformed(ScienceError):
+    """A corpus manifest is not its exact closed shape."""
+
+
+class ManifestAlreadyPresent(ScienceError):
+    """Fresh manifest adoption found an existing manifest path."""
+
+
+class ManifestMissing(ScienceError):
+    """A corpus has no manifest file."""
+
+
+class CorpusStateMalformed(ScienceError):
+    """A corpus state value is malformed."""
+
+
+class WorldIdMismatch(ScienceError):
+    """A world identifier disagrees with its expected identity."""
+
+
+class WorldUninitialized(ScienceError):
+    """A world operation needs initialization that has not occurred."""
+
+
+class ProvenanceMismatch(ScienceError):
+    """Recorded provenance does not match its expected source."""
+
+
+class ForkParentUnknown(ScienceError):
+    """A fork names no known parent corpus."""
+
+
+class CorpusIdKnown(ScienceError):
+    """A corpus identifier is already known where freshness is required."""
+
+
+class StatusTargetUnknown(ScienceError):
+    """A status operation names no known target."""
+
+
+class StatusTerminal(ScienceError):
+    """A status transition starts from a terminal status."""
+
+
+class RegistryMalformed(ScienceError):
+    """A world registry is malformed."""
+
+
 class IdentityError(ScienceError):
     """A value or domain was refused by the identity contract."""
 

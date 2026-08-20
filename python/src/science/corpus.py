@@ -35,7 +35,7 @@ from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass
 from itertools import pairwise
 from pathlib import Path
-from typing import Protocol, final
+from typing import TYPE_CHECKING, Protocol, final
 
 from nodes.core.corpus import Corpus
 from nodes.core.errors import CollisionError, ExecutionError
@@ -52,6 +52,7 @@ from yaml import YAMLError
 from science import boundary as boundary_values
 from science import report as report_values
 from science import stored
+from science.consulted import CorpusPins
 from science.dataset import dataset_address
 from science.errors import (
     BasisMissing,
@@ -63,6 +64,8 @@ from science.errors import (
     ImportRefused,
     LoneSurrogate,
     MalformedRecord,
+    ManifestAlreadyPresent,
+    ManifestMalformed,
     RecordAlreadyMinted,
     RetractionCycleMalformed,
     RetractionGroundsMissing,
@@ -86,6 +89,9 @@ from science.report import OperationIntent
 from science.sealed import sealed
 from science.spec import BITWISE_EQUIVALENCE_RULES
 from science.traversal import LineageEntry, Reach, RelationEntry, Step, closure
+
+if TYPE_CHECKING:
+    from science.world import CorpusManifest
 
 __all__ = [
     "DIRECTIONS",
@@ -704,6 +710,22 @@ def corpus_check(view: ReadView) -> tuple[Finding, ...]:
     §4.2.1's stated bound, not a gap here.
     """
     findings: list[Finding] = []
+    manifest_path = view._corpus.store.root / "corpus.yaml"
+    if manifest_path.exists():
+        from science.world import load_manifest
+
+        try:
+            load_manifest(view._corpus.store.root)
+        except ManifestMalformed as refused:
+            findings.append(
+                Finding(
+                    severity="error",
+                    code="manifest-malformed",
+                    ref="corpus.yaml",
+                    detail=str(refused),
+                    message=str(refused),
+                )
+            )
     retraction_targets: dict[str, list[str]] = {}
     for node in view.iter_stored():
         base_valid = True
@@ -879,6 +901,23 @@ class CorpusWriter:
             self._refuse_family_kinds(node)
             self._refuse(node)
             return self._corpus.add(node)
+
+    def adopt_manifest(self, *, profile: CorpusPins) -> CorpusManifest:
+        """Create this corpus's first closed manifest."""
+        from science.world import CorpusManifest, _parse_manifest, manifest_bytes, manifest_projection
+
+        with self._operation:
+            manifest_path = self._corpus.store.root / "corpus.yaml"
+            if manifest_path.exists() or manifest_path.is_symlink():
+                raise ManifestAlreadyPresent(f"{manifest_path}: manifest already present")
+            checked_profile = _parse_manifest(
+                manifest_projection(CorpusManifest(2, "0" * 32, profile))
+            ).profile
+            manifest = CorpusManifest(2, secrets.token_hex(16), checked_profile)
+            self._state.executor_factory(self._corpus.store.root).execute(
+                [CreateOp("corpus.yaml", manifest_bytes(manifest))]
+            )
+            return manifest
 
     def import_bundle(
         self,
