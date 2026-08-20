@@ -352,7 +352,7 @@ git commit -m "feat(root): register every durable plan path"
 
 Add each refusal directly under `ScienceError`; the names are the public distinction, and this slice needs no speculative intermediate error families.
 
-- [x] **Step 1: Create exact shared fixtures.** `fixtures_cut6.py` defines only constants and constructors used by two or more modules:
+- [ ] **Step 1: Create exact shared fixtures.** `fixtures_cut6.py` defines only constants and constructors used by two or more modules:
 
 ```python
 from science.consulted import CorpusPins
@@ -373,7 +373,7 @@ def manifest_document(corpus_id: str = "1" * 32) -> str:
     )
 ```
 
-- [x] **Step 2: Write loader/projection failures first.** In `test_manifest.py`, cover: missing file → `ManifestMissing`; accepted fresh and fork shapes; wrong version; unknown fields at root/profile/fork levels; duplicate `domains` key; uppercase/wrong-length ids; malformed contract identities; a `science` domains key; domain key/prefix disagreement; formatting and mapping-order invariance. Pin this projection:
+- [ ] **Step 2: Write loader/projection failures first.** In `test_manifest.py`, cover: missing file → `ManifestMissing`; accepted fresh and fork shapes; wrong version; unknown fields at root/profile/fork levels; duplicate `domains` key; uppercase/wrong-length ids; malformed contract identities; a `science` domains key; domain key/prefix disagreement; formatting and mapping-order invariance. Pin this projection:
 
 ```python
 assert manifest_projection(manifest) == {
@@ -394,7 +394,7 @@ For a fork, assert the optional member is exactly:
 
 Run `uv run --frozen pytest tests/test_manifest.py -q`; expect collection failure because `science.world` does not exist.
 
-- [x] **Step 3: Implement one strict YAML loader in `science.world`.** Use a private `yaml.SafeLoader` subclass whose mapping constructor rejects a repeated key before constructing the dict. Wrap file I/O, YAML, type, duplicate-key, and validation failures as `ManifestMalformed`, except `FileNotFoundError` which becomes `ManifestMissing`. Validate exact dict types and closed key sets. Use `[a-z][a-z0-9-]*` namespaces, `science:<64 lowerhex>` for the base identity, `<domain>:<64 lowerhex>` for domain identities, 32 lowerhex corpus ids, 64 lowerhex state ids, and exact integer version 2 with booleans refused as integers.
+- [ ] **Step 3: Implement one strict YAML loader in `science.world`.** Use a private `yaml.SafeLoader` subclass whose mapping constructor rejects a repeated key before constructing the dict. Wrap file I/O, YAML, type, duplicate-key, and validation failures as `ManifestMalformed`, except `FileNotFoundError` which becomes `ManifestMissing`. Validate exact dict types and closed key sets. Use `[a-z][a-z0-9-]*` namespaces, `science:<64 lowerhex>` for the base identity, `<domain>:<64 lowerhex>` for domain identities, 32 lowerhex corpus ids, 64 lowerhex state ids, and exact integer version 2 with booleans refused as integers.
 
 Define immutable values:
 
@@ -415,7 +415,7 @@ class CorpusManifest:
 
 `manifest_projection` copies `CorpusPins.domains` from its `MappingProxyType` into an ordinary key-sorted `dict` and omits `forked_from` when absent. `manifest_bytes` uses `yaml.safe_dump(projection, sort_keys=True, allow_unicode=True).encode("utf-8")` so authored bytes are stable but identity remains projection-level.
 
-- [x] **Step 4: Write fresh-adoption and corpus-check failures.** Add to `test_corpus_write.py` using its recording executor:
+- [ ] **Step 4: Write fresh-adoption and corpus-check failures.** Add to `test_corpus_write.py` using its recording executor:
 
 ```python
 def test_adopt_manifest_mints_and_executes_one_create(writer):
@@ -435,11 +435,11 @@ def test_adopt_manifest_never_remints(writer):
 
 Add to `test_manifest.py`: malformed present manifest produces one `Finding(severity="error", code="manifest-malformed", ref="corpus.yaml", detail=<message>)`; absent manifest produces none.
 
-- [x] **Step 5: Implement adoption under the existing operation lock.** In `CorpusWriter.adopt_manifest`, import manifest helpers locally from `science.world` to avoid a module cycle. While holding `self._operation`: validate the profile by round-tripping it through the manifest validator; refuse any existing path at `corpus.yaml`; construct `CorpusManifest(2, secrets.token_hex(16), profile)`; execute `[CreateOp("corpus.yaml", manifest_bytes(manifest))]` through `self._state.executor_factory(self._corpus.store.root)`; return the manifest. Do not call `nodes.Corpus.add` for a non-node file.
+- [ ] **Step 5: Implement adoption under the existing operation lock.** In `CorpusWriter.adopt_manifest`, import manifest helpers locally from `science.world` to avoid a module cycle. While holding `self._operation`: validate the profile by round-tripping it through the manifest validator; refuse any existing path at `corpus.yaml`; construct `CorpusManifest(2, secrets.token_hex(16), profile)`; execute `[CreateOp("corpus.yaml", manifest_bytes(manifest))]` through `self._state.executor_factory(self._corpus.store.root)`; return the manifest. Do not call `nodes.Corpus.add` for a non-node file.
 
 At the start of `corpus_check`, inspect `<root>/corpus.yaml`: absence adds nothing; `load_manifest` success adds nothing; `ManifestMalformed` adds the exact finding and continues checking stored nodes. Do not catch `ManifestMissing` after an existence check.
 
-- [x] **Step 6: Verify and commit.** Run `test_manifest.py`, `test_corpus_write.py`, the full portable suite, Ruff, and Pyright. Commit:
+- [ ] **Step 6: Verify and commit.** Run `test_manifest.py`, `test_corpus_write.py`, the full portable suite, Ruff, and Pyright. Commit:
 
 ```bash
 git commit -m "feat(corpus): add closed manifests and fresh adoption"
