@@ -347,16 +347,41 @@ The outer domain is `science.corpus-state.v1`. Its projection is exactly:
 }
 ```
 
-For each node, Science first obtains `nodes`' public `STANDARD.md` §11.1
-projection—the complete canonical node projection, including relations and
-facets—and separately digests that projection under
-`science.node-content.v1` as the node content identity. The corpus identity
-digests those identities rather than inlining the node projections. Sorting is
-by `uid`, never path or traversal order.
+For each node, Science first obtains `nodes`' public, versioned canonical JSON
+text for the `STANDARD.md` §11.1 projection—the complete canonical node
+projection, including relations and facets. The `nodes` API owns that text and
+pins its cross-language serialization, including JSON number spelling; it may
+also expose the parsed projection as a convenience, but Science consumes the
+text. `nodes` does not mint a digest.
 
-The `nodes` task ships the versioned **projection value**, not a digest of it.
-Science deliberately owns the digest and its `science.node-content.v1` domain;
-`nodes` does not mint a competing content identity for the same projection.
+Science parses the text with `json.loads`, using `parse_int=Decimal` and
+`parse_float=Decimal`, so every JSON number takes its digits from the canonical
+serialization and no binary float is materialized. It then applies this
+uniform, recursive JSON-value lift before calling
+`v1.digest("science.node-content.v1", lifted)`:
+
+```text
+null       -> ["null"]
+boolean b  -> ["boolean", b]
+number n   -> ["number", Decimal(n)]
+string s   -> ["string", s]
+array xs   -> ["array", [lift(x) for x in xs]]
+object m   -> ["object", {key: lift(value) for key, value in m}]
+```
+
+Tagging every JSON type makes the lift injective: an authored object that
+resembles one tag remains an `object` value and cannot collide with that tag.
+Non-standard constants and non-JSON values refuse. `Decimal(str(value))` is
+permitted only if a separately documented value-shaped fallback is ever
+adopted; that fallback must pin CPython's shortest-representation dependence in
+a unit test and is not part of the selected text API.
+
+The lift re-encodes the projection under Science's identity contract; it does
+not re-canonicalize `nodes` semantics. In particular, list order is preserved,
+so relation reordering still moves identity. Science deliberately owns the
+digest and its `science.node-content.v1` domain, and the corpus identity digests
+the resulting node identities rather than inlining node projections. Corpus
+members are sorted by `uid`, never path or traversal order.
 
 The consequences are intentional:
 
@@ -371,15 +396,18 @@ The consequences are intentional:
 
 A corpus with no manifest has no corpus-state identity and raises
 `ManifestMissing`. A malformed manifest raises `ManifestMalformed`. A node that
-cannot be parsed or projected, or a duplicate/colliding `uid` that prevents the
-sorted member set from being formed, raises `CorpusStateMalformed` with the
-original node error chained as `__cause__`.
+cannot be parsed or projected, JSON text that cannot be parsed or lifted, an
+NFC collision between projection keys refused by `v1.encode`, or a
+duplicate/colliding `uid` that prevents the sorted member set from being formed,
+raises `CorpusStateMalformed` with the original parse, projection, lift,
+`KeyCollision`, or corpus collision error chained as `__cause__`.
 
 The required `nodes` §11.1 projection is confirmed absent from its public API as
 of 2026-08-20; it exists only in test support. Ledger row 3 therefore receives a
 `nodes` API task, ordered before Science consumes it, to ship the versioned
-projection value in the owning repository. Science does not copy the test
-helper, invent a local approximation, or ask `nodes` to own the Science digest.
+canonical projection text in the owning repository and pin it in both language
+implementations. Science does not copy the test helper, invent a local
+approximation, or ask `nodes` to own the Science digest.
 
 ## 5. Authoritative registry
 
@@ -577,9 +605,10 @@ explicit-refusal discipline:
 | `RegistryMalformed` | any registry member or content name is invalid |
 | `CorpusStateMalformed` | a node cannot participate in state identity |
 
-`CorpusStateMalformed` always chains the underlying node parse, projection, or
-collision error. Manifest absence and damage retain their own errors rather
-than being wrapped as corpus-state failures.
+`CorpusStateMalformed` always chains the underlying node parse, projection,
+JSON parse/lift, `KeyCollision`, or corpus collision error. Manifest absence
+and damage retain their own errors rather than being wrapped as corpus-state
+failures.
 
 Admission follows §5.2's pinned order. Status follows the analogous order:
 rescan and establish a known target, compute the candidate and accept an exact
@@ -690,8 +719,9 @@ The sequence is fixed:
    promotion adds two members, this design and the cut document: extend
    `_COUNT_WORDS` with 27 and 28, update the README count sentence/table/date
    range, and make no unrelated corpus-guard edits;
-6. implement and release the public `nodes` §11.1 projection API in its owning
-   repository first;
+6. implement and release the public, versioned `nodes` §11.1 canonical JSON
+   text API in its owning repository first, with cross-language serialization
+   parity;
 7. implement the Science slice;
 8. add `n2_arms_cut6.py`, the cut-6 acceptance test, and the new acceptance
    runner, leaving cut 5 untouched;
@@ -705,8 +735,8 @@ The ledger close-out is precise rather than binary:
   rest of the world-index build remain outstanding;
 - artifact 2 becomes **partially landed**: fresh adoption and minting complete;
   fork construction and build-time uniqueness outstanding; and
-- artifact 3 records the shipped §11.1 projection API task without claiming the
-  separate reserved-path work unless it also landed independently.
+- artifact 3 records the shipped §11.1 canonical-text API task without claiming
+  the separate reserved-path work unless it also landed independently.
 
 After correcting those status claims, grep the guide and other user-facing docs
 for propagated statements that still say manifests, corpus ids, or the entire
@@ -726,8 +756,8 @@ reviewed and banked. The first implementation task is the cross-repository
   cut (§8.2).
 - **Genesis/mirror verification — 2026-08-20:** waits on the log design's public
   chain reader and configuration-mismatch audit (§2.2).
-- **Public `nodes` §11.1 projection — confirmed missing 2026-08-20:** lands in
-  `nodes` before Science consumes it (§4).
+- **Public `nodes` §11.1 canonical text — confirmed missing 2026-08-20:** lands
+  with cross-language parity in `nodes` before Science consumes it (§4).
 - **Registry deletion detection:** the registry is chained but unanchored; raw
   deletion remains packaging limitation 1 until the log consumer lands.
 - **Cross-process writers:** in-process locks serialize cooperating Science
