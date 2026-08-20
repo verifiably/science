@@ -9,27 +9,50 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
-from typing import Literal, NoReturn, cast
+from typing import Literal, NoReturn, TypeAlias, cast
 
 import yaml
 from nodes.core.projection import to_canonical_json
-from nodes.core.write_plan import WritePlanExecutor
+from nodes.core.write_plan import CreateOp, WritePlanExecutor
 
 from science.consulted import CorpusPins
-from science.corpus import ReadView
-from science.errors import CorpusStateMalformed, ManifestMalformed, ManifestMissing, WorldUninitialized
+from science.corpus import Finding, ReadView
+from science.errors import (
+    CorpusIdKnown,
+    CorpusStateMalformed,
+    ForkParentUnknown,
+    ManifestMalformed,
+    ManifestMissing,
+    ProvenanceMismatch,
+    RegistryMalformed,
+    StatusTargetUnknown,
+    StatusTerminal,
+    WorldUninitialized,
+)
 from science.identity import v1
 
 __all__ = [
+    "AdmissionProvenance",
+    "AdmissionRecord",
     "CorpusManifest",
+    "CorpusStatus",
+    "ForkOf",
     "ForkedFrom",
+    "Fresh",
     "RegistryView",
+    "ReplicaOf",
+    "StatusRecord",
     "World",
     "WorldConfig",
+    "admission_digest",
+    "admission_projection",
     "corpus_state_identity",
     "load_manifest",
     "manifest_bytes",
     "manifest_projection",
+    "provenance_projection",
+    "status_digest",
+    "status_projection",
 ]
 
 _NAMESPACE = re.compile(r"^[a-z][a-z0-9-]*$")
@@ -51,14 +74,74 @@ class CorpusManifest:
 
 
 @dataclass(frozen=True)
+class Fresh:
+    pass
+
+
+@dataclass(frozen=True)
+class ReplicaOf:
+    parent_corpus_id: str
+
+    def __post_init__(self) -> None:
+        _require_lower_hex(self.parent_corpus_id, 32, "parent_corpus_id")
+
+
+@dataclass(frozen=True)
+class ForkOf:
+    parent_corpus_id: str
+    parent_corpus_state: str
+
+    def __post_init__(self) -> None:
+        _require_lower_hex(self.parent_corpus_id, 32, "parent_corpus_id")
+        _require_lower_hex(self.parent_corpus_state, 64, "parent_corpus_state")
+
+
+AdmissionProvenance: TypeAlias = Fresh | ReplicaOf | ForkOf
+
+
+@dataclass(frozen=True)
+class AdmissionRecord:
+    manifest: CorpusManifest
+    provenance: AdmissionProvenance
+    actor: str
+
+    def __post_init__(self) -> None:
+        if type(self.manifest) is not CorpusManifest:
+            raise TypeError("manifest must be a CorpusManifest")
+        _require_lower_hex(self.manifest.corpus_id, 32, "corpus_id")
+        if type(self.provenance) not in {Fresh, ReplicaOf, ForkOf}:
+            raise TypeError("provenance must be Fresh, ReplicaOf, or ForkOf")
+        _require_actor(self.actor)
+
+    @property
+    def corpus_id(self) -> str:
+        return self.manifest.corpus_id
+
+
+@dataclass(frozen=True)
+class StatusRecord:
+    corpus_id: str
+    status: Literal["retired", "departed"]
+    actor: str
+
+    def __post_init__(self) -> None:
+        _require_lower_hex(self.corpus_id, 32, "corpus_id")
+        if self.status not in {"retired", "departed"}:
+            raise ValueError("status must be 'retired' or 'departed'")
+        _require_actor(self.actor)
+
+
+@dataclass(frozen=True)
 class WorldConfig:
     world_root: Path
     world_id: str
     corpus_roots: tuple[Path, ...]
 
     def __post_init__(self) -> None:
-        if type(self.world_id) is not str or len(self.world_id) != 32 or any(
-            character not in _LOWER_HEX for character in self.world_id
+        if (
+            type(self.world_id) is not str
+            or len(self.world_id) != 32
+            or any(character not in _LOWER_HEX for character in self.world_id)
         ):
             raise ValueError("world_id must be 32 lowercase hexadecimal characters")
         object.__setattr__(self, "world_root", Path(self.world_root).resolve())
@@ -67,8 +150,16 @@ class WorldConfig:
 
 @dataclass(frozen=True)
 class RegistryView:
-    admissions: tuple[object, ...] = ()
-    statuses: tuple[object, ...] = ()
+    admissions: tuple[AdmissionRecord, ...] = ()
+    statuses: tuple[StatusRecord, ...] = ()
+
+
+@dataclass(frozen=True)
+class CorpusStatus:
+    known: bool
+    live: bool
+    present: bool
+    findings: tuple[Finding, ...]
 
 
 @dataclass
@@ -81,6 +172,22 @@ _WORLD_STATES: dict[str, _WorldState] = {}
 _WORLD_STATES_LOCK = threading.Lock()
 
 
+def _require_lower_hex(value: object, length: int, location: str) -> str:
+    if type(value) is not str or len(value) != length or any(character not in _LOWER_HEX for character in value):
+        raise ValueError(f"{location} must be {length} lowercase hexadecimal characters")
+    return value
+
+
+def _require_actor(actor: object) -> str:
+    if type(actor) is not str:
+        raise TypeError("actor must be an exact string")
+    try:
+        v1.encode(actor)
+    except Exception as caught:
+        raise ValueError(f"actor is not encodable: {caught}") from caught
+    return actor
+
+
 class World:
     def __init__(self, config: WorldConfig, executor_factory: Callable[[Path], WritePlanExecutor]) -> None:
         self.config = config
@@ -89,6 +196,69 @@ class World:
             self._state = _WORLD_STATES.setdefault(
                 str(config.world_root), _WorldState(threading.Lock(), RegistryView())
             )
+
+    def registry(self) -> RegistryView:
+        with self._state.lock:
+            self._state.registry = _scan_registry(self.config.world_root)
+            return self._state.registry
+
+    def status(self, corpus_id: str) -> CorpusStatus:
+        with self._state.lock:
+            self._state.registry = _scan_registry(self.config.world_root)
+            _require_lower_hex(corpus_id, 32, "corpus_id")
+            return _reduce_status(self.config, self._state.registry, corpus_id)
+
+    def admit(
+        self,
+        corpus_root: Path,
+        *,
+        provenance: AdmissionProvenance,
+        actor: str,
+    ) -> AdmissionRecord:
+        with self._state.lock:
+            self._state.registry = _scan_registry(self.config.world_root)
+            manifest = load_manifest(corpus_root)
+            _validate_provenance(manifest, provenance)
+            candidate = AdmissionRecord(manifest, provenance, actor)
+            digest = admission_digest(candidate)
+            for record in self._state.registry.admissions:
+                if admission_digest(record) == digest:
+                    return record
+            if any(record.corpus_id == candidate.corpus_id for record in self._state.registry.admissions):
+                raise CorpusIdKnown(f"corpus_id {candidate.corpus_id!r} is already admitted")
+            if isinstance(provenance, ForkOf) and not any(
+                record.corpus_id == provenance.parent_corpus_id for record in self._state.registry.admissions
+            ):
+                raise ForkParentUnknown(f"fork parent {provenance.parent_corpus_id!r} is not admitted")
+            self._executor_factory(self.config.world_root).execute(
+                [CreateOp(f"registry/{digest}.yaml", _record_bytes(admission_projection(candidate)))]
+            )
+            self._state.registry = _scan_registry(self.config.world_root)
+            return next(record for record in self._state.registry.admissions if admission_digest(record) == digest)
+
+    def retire(self, corpus_id: str, *, actor: str) -> StatusRecord:
+        return self._terminal(corpus_id, "retired", actor)
+
+    def depart(self, corpus_id: str, *, actor: str) -> StatusRecord:
+        return self._terminal(corpus_id, "departed", actor)
+
+    def _terminal(self, corpus_id: str, status: Literal["retired", "departed"], actor: str) -> StatusRecord:
+        with self._state.lock:
+            self._state.registry = _scan_registry(self.config.world_root)
+            if not any(record.corpus_id == corpus_id for record in self._state.registry.admissions):
+                raise StatusTargetUnknown(f"corpus_id {corpus_id!r} is not admitted")
+            candidate = StatusRecord(corpus_id, status, actor)
+            digest = status_digest(candidate)
+            for record in self._state.registry.statuses:
+                if status_digest(record) == digest:
+                    return record
+            if any(record.corpus_id == corpus_id for record in self._state.registry.statuses):
+                raise StatusTerminal(f"corpus_id {corpus_id!r} already has terminal status")
+            self._executor_factory(self.config.world_root).execute(
+                [CreateOp(f"registry/{digest}.yaml", _record_bytes(status_projection(candidate)))]
+            )
+            self._state.registry = _scan_registry(self.config.world_root)
+            return next(record for record in self._state.registry.statuses if status_digest(record) == digest)
 
 
 class _ManifestLoader(yaml.SafeLoader):
@@ -224,6 +394,153 @@ def manifest_projection(manifest: CorpusManifest) -> dict[str, object]:
 
 def manifest_bytes(manifest: CorpusManifest) -> bytes:
     return yaml.safe_dump(manifest_projection(manifest), sort_keys=True, allow_unicode=True).encode("utf-8")
+
+
+def provenance_projection(provenance: AdmissionProvenance) -> dict[str, str]:
+    if isinstance(provenance, Fresh):
+        return {"kind": "fresh"}
+    if isinstance(provenance, ReplicaOf):
+        return {"kind": "replica-of", "parent_corpus_id": provenance.parent_corpus_id}
+    if isinstance(provenance, ForkOf):
+        return {
+            "kind": "fork-of",
+            "parent_corpus_id": provenance.parent_corpus_id,
+            "parent_corpus_state": provenance.parent_corpus_state,
+        }
+    raise TypeError("provenance must be Fresh, ReplicaOf, or ForkOf")
+
+
+def admission_projection(record: AdmissionRecord) -> dict[str, object]:
+    return {
+        "record_kind": "admission",
+        "corpus_id": record.corpus_id,
+        "manifest": manifest_projection(record.manifest),
+        "provenance": provenance_projection(record.provenance),
+        "actor": record.actor,
+    }
+
+
+def admission_digest(record: AdmissionRecord) -> str:
+    return v1.digest("science.world-admission.v1", admission_projection(record))
+
+
+def status_projection(record: StatusRecord) -> dict[str, object]:
+    return {
+        "record_kind": "status",
+        "corpus_id": record.corpus_id,
+        "status": record.status,
+        "actor": record.actor,
+    }
+
+
+def status_digest(record: StatusRecord) -> str:
+    return v1.digest("science.world-status.v1", status_projection(record))
+
+
+def _record_bytes(projection: dict[str, object]) -> bytes:
+    return yaml.safe_dump(projection, sort_keys=True, allow_unicode=True).encode("utf-8")
+
+
+def _validate_provenance(manifest: CorpusManifest, provenance: AdmissionProvenance) -> None:
+    if isinstance(provenance, Fresh):
+        matches = manifest.forked_from is None
+    elif isinstance(provenance, ReplicaOf):
+        matches = manifest.forked_from is None and provenance.parent_corpus_id == manifest.corpus_id
+    elif isinstance(provenance, ForkOf):
+        matches = manifest.forked_from == ForkedFrom(provenance.parent_corpus_id, provenance.parent_corpus_state)
+    else:
+        raise TypeError("provenance must be Fresh, ReplicaOf, or ForkOf")
+    if not matches:
+        raise ProvenanceMismatch("admission provenance does not match the corpus manifest")
+
+
+def _parse_provenance(value: object) -> AdmissionProvenance:
+    if type(value) is not dict or type(value.get("kind")) is not str:
+        raise ValueError("admission provenance must be a closed mapping")
+    kind = value["kind"]
+    if kind == "fresh" and set(value) == {"kind"}:
+        return Fresh()
+    if kind == "replica-of" and set(value) == {"kind", "parent_corpus_id"}:
+        return ReplicaOf(value["parent_corpus_id"])
+    if kind == "fork-of" and set(value) == {"kind", "parent_corpus_id", "parent_corpus_state"}:
+        return ForkOf(value["parent_corpus_id"], value["parent_corpus_state"])
+    raise ValueError(f"unknown or malformed admission provenance {kind!r}")
+
+
+def _parse_registry_record(value: object) -> AdmissionRecord | StatusRecord:
+    if type(value) is not dict or type(value.get("record_kind")) is not str:
+        raise ValueError("registry record must be a closed mapping selected by record_kind")
+    if value["record_kind"] == "admission":
+        expected = {"record_kind", "corpus_id", "manifest", "provenance", "actor"}
+        if set(value) != expected:
+            raise ValueError(f"admission record must have exactly {sorted(expected)}")
+        manifest = _parse_manifest(value["manifest"])
+        corpus_id = _require_lower_hex(value["corpus_id"], 32, "corpus_id")
+        if corpus_id != manifest.corpus_id:
+            raise ValueError("admission corpus_id must match its manifest")
+        provenance = _parse_provenance(value["provenance"])
+        _validate_provenance(manifest, provenance)
+        return AdmissionRecord(manifest, provenance, value["actor"])
+    if value["record_kind"] == "status":
+        expected = {"record_kind", "corpus_id", "status", "actor"}
+        if set(value) != expected:
+            raise ValueError(f"status record must have exactly {sorted(expected)}")
+        return StatusRecord(value["corpus_id"], value["status"], value["actor"])
+    raise ValueError(f"unknown registry record_kind {value['record_kind']!r}")
+
+
+def _scan_registry(root: Path) -> RegistryView:
+    registry = Path(root) / "registry"
+    if not registry.exists() and not registry.is_symlink():
+        return RegistryView()
+    try:
+        if registry.is_symlink() or not registry.is_dir():
+            raise ValueError("registry must be a regular directory")
+        admissions: list[AdmissionRecord] = []
+        statuses: list[StatusRecord] = []
+        for path in registry.iterdir():
+            if path.is_symlink() or not path.is_file() or path.suffix != ".yaml":
+                raise ValueError(f"{path.name!r} is not a regular *.yaml registry member")
+            document = yaml.load(path.read_text(encoding="utf-8"), Loader=_ManifestLoader)
+            record = _parse_registry_record(document)
+            digest = admission_digest(record) if isinstance(record, AdmissionRecord) else status_digest(record)
+            if path.name != f"{digest}.yaml":
+                raise ValueError(f"{path.name!r} is not the record's content name")
+            if isinstance(record, AdmissionRecord):
+                admissions.append(record)
+            else:
+                statuses.append(record)
+        return RegistryView(
+            tuple(sorted(admissions, key=admission_digest)),
+            tuple(sorted(statuses, key=status_digest)),
+        )
+    except Exception as caught:
+        raise RegistryMalformed(f"{registry}: malformed registry: {caught}") from caught
+
+
+def _reduce_status(config: WorldConfig, view: RegistryView, corpus_id: str) -> CorpusStatus:
+    known = any(record.corpus_id == corpus_id for record in view.admissions)
+    live = known and not any(record.corpus_id == corpus_id for record in view.statuses)
+    carriers: list[Path] = []
+    for root in dict.fromkeys(path.resolve() for path in config.corpus_roots):
+        try:
+            if load_manifest(root).corpus_id == corpus_id:
+                carriers.append(root)
+        except ManifestMissing:
+            continue
+    findings: tuple[Finding, ...] = ()
+    if len(carriers) > 1:
+        detail = "carriers=" + ",".join(sorted(str(root) for root in carriers))
+        findings = (
+            Finding(
+                severity="error",
+                code="duplicate-carrier",
+                ref=corpus_id,
+                detail=detail,
+                message="multiple configured roots carry this corpus id",
+            ),
+        )
+    return CorpusStatus(known, live, len(carriers) == 1, findings)
 
 
 def _lift_json(value: object) -> object:
