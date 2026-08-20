@@ -186,7 +186,11 @@ def write_intent_projection(plan: WritePlan) -> list[dict[str, str]]:
 def write_intent_digest(plan: WritePlan) -> str:
     """`sha256:`-prefixed digest of the intent projection. The prefix is
     mandatory: the engine's spec compilation checks the format."""
-    return "sha256:" + v1.digest(INTENT_DOMAIN, write_intent_projection(plan))
+    return _write_intent_digest(plan, INTENT_DOMAIN)
+
+
+def _write_intent_digest(plan: WritePlan, domain: str) -> str:
+    return "sha256:" + v1.digest(domain, write_intent_projection(plan))
 
 
 CONSUMER_TAG = "science-corpus-write-v1"
@@ -201,6 +205,9 @@ grammar is used until the design says otherwise. Science's own identity
 domains are unaffected: `INTENT_DOMAIN` above is a `science.identity.v1`
 domain and answers to that grammar, not to the engine's.
 """
+
+WORLD_CONSUMER_TAG = "science-world-write-v1"
+WORLD_INTENT_DOMAIN = "science.world-write-intent.v1"
 
 CREATED_FILE_MODE = 0o644
 """The adapter's one constant, carried by every created and replacement
@@ -231,12 +238,16 @@ class DurableExecutor:
         backend: Backend,
         storage: StorageProfile,
         metadata_root: Path,
+        consumer_tag: str,
+        intent_domain: str,
         fulfills: str | None = None,
     ) -> None:
         self.root = Path(root)
         self._backend = backend
         self._storage = storage
         self._metadata_root = Path(metadata_root)
+        self._consumer_tag = consumer_tag
+        self._intent_domain = intent_domain
         self._fulfills = fulfills
 
     # --- the seam's one method ----------------------------------------------
@@ -249,8 +260,8 @@ class DurableExecutor:
         _refuse_malformed(plan)
         effects, initial_surface, final_surface, payloads = self._compile(plan)
         spec = build_spec(
-            consumer_tag=CONSUMER_TAG,
-            intent_digest=write_intent_digest(plan),
+            consumer_tag=self._consumer_tag,
+            intent_digest=_write_intent_digest(plan, self._intent_domain),
             initial_surface=initial_surface,
             final_surface=final_surface,
             effects=effects,
@@ -259,7 +270,7 @@ class DurableExecutor:
             # constant, so no stale literal can ship here.
             dependencies=(),
             fulfills=self._fulfills,
-            registered_paths=(),
+            registered_paths=tuple(dict.fromkeys(operation.path for operation in plan)),
         )
         self._submit(spec, _PlanPayloads(payloads))
 
@@ -427,6 +438,8 @@ class DurableOperationPort:
             backend=self._backend,
             storage=self._storage,
             metadata_root=self._metadata_root,
+            consumer_tag=CONSUMER_TAG,
+            intent_domain=INTENT_DOMAIN,
             fulfills=fulfills,
         ).execute(plan)
 
@@ -499,12 +512,29 @@ def _durable_executor(root: Path) -> DurableExecutor:
         backend=_PRODUCTION_BACKEND,
         storage=PRODUCTION_STORAGE,
         metadata_root=metadata_root_for(root),
+        consumer_tag=CONSUMER_TAG,
+        intent_domain=INTENT_DOMAIN,
     )
 
 
 def durable_executor_factory() -> Callable[[Path], DurableExecutor]:
     """The stable root-taking factory the write API is built with."""
     return _durable_executor
+
+
+def _world_executor(root: Path) -> DurableExecutor:
+    return DurableExecutor(
+        root,
+        backend=_PRODUCTION_BACKEND,
+        storage=PRODUCTION_STORAGE,
+        metadata_root=metadata_root_for(root),
+        consumer_tag=WORLD_CONSUMER_TAG,
+        intent_domain=WORLD_INTENT_DOMAIN,
+    )
+
+
+def _world_executor_factory() -> Callable[[Path], DurableExecutor]:
+    return _world_executor
 
 
 def open_corpus(corpus_root: Path) -> CorpusWriter:

@@ -32,6 +32,7 @@ from nodes.core.errors import ExecutionError, PlanRefusedError
 from nodes.core.write_plan import CreateOp, DeleteOp, ReplaceOp, WritePlan
 
 from science import root as science_root
+from science.identity import v1
 from science.root import CONSUMER_TAG, CREATED_FILE_MODE, PRODUCTION_STORAGE, DurableExecutor
 
 CONTENT = b"# a node\n"
@@ -60,6 +61,8 @@ def executor(tmp_path) -> DurableExecutor:
         backend=select_backend(),
         storage=PRODUCTION_STORAGE,
         metadata_root=tmp_path.with_name(tmp_path.name + ".metadata"),
+        consumer_tag=CONSUMER_TAG,
+        intent_domain=science_root.INTENT_DOMAIN,
     )
 
 
@@ -222,7 +225,36 @@ class TestTheSpecConstants:
         executor(tmp_path).execute([CreateOp(path="p.md", content=CONTENT)])
         spec = submitted[0][2]
         assert spec.consumer_tag == CONSUMER_TAG
-        assert (spec.dependencies, spec.fulfills, spec.registered_paths) == ((), None, ())
+        assert (spec.dependencies, spec.fulfills, spec.registered_paths) == ((), None, ("p.md",))
+
+    def test_every_plan_path_is_registered(self, tmp_path, submitted):
+        executor(tmp_path).execute(
+            [
+                CreateOp("corpus.yaml", b"manifest"),
+                CreateOp("registry/a.yaml", b"record"),
+            ]
+        )
+        assert submitted[0][2].registered_paths == ("corpus.yaml", "registry/a.yaml")
+
+    def test_duplicate_plan_paths_register_once_in_first_occurrence_order(self, tmp_path, submitted):
+        executor(tmp_path).execute(
+            [
+                CreateOp(path="x", content=b"one"),
+                ReplaceOp(path="x", content=b"two", expected_digest=sha256(b"one").hexdigest()),
+            ]
+        )
+        assert submitted[0][2].registered_paths == ("x",)
+
+    def test_world_executor_uses_world_consumer_and_intent_domains(self, tmp_path, submitted):
+        root = tmp_path / "world"
+        root.mkdir()
+        science_root._world_executor_factory()(root).execute([CreateOp("world.yaml", b"world")])
+        spec = submitted[0][2]
+        assert spec.consumer_tag == "science-world-write-v1"
+        assert spec.intent_digest == "sha256:" + v1.digest(
+            "science.world-write-intent.v1",
+            [{"op": "create", "path": "world.yaml", "content_sha256": sha256(b"world").hexdigest()}],
+        )
 
     def test_the_schema_version_comes_from_the_engines_own_constant(self, tmp_path, submitted):
         executor(tmp_path).execute([CreateOp(path="p.md", content=CONTENT)])
