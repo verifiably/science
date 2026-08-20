@@ -1,0 +1,221 @@
+"""N2 over cut 6's 22 frozen world-registry arms."""
+
+from __future__ import annotations
+
+import os
+import shutil
+from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
+from itertools import count
+from pathlib import Path
+
+import pytest
+from atoms.chain.model import RegisteredEntry
+from atoms.core.errors import PreconditionRefused
+from fixtures_cut6 import PINS
+from n2_arms import (
+    CLASS_NODE_BY_CONSTRUCTION,
+    MIXED_BY_CONSTRUCTION,
+    STALE_BY_CONSTRUCTION,
+    UNCOLLECTED_BY_CONSTRUCTION,
+    VACUOUS_BY_CONSTRUCTION,
+    Arm,
+)
+from n2_arms_cut6 import CUT6_ARMS
+from test_durable_families import chain_entries
+from test_n2 import MalformedArm, audit, baseline
+
+from science import root
+from science.world import Fresh, WorldConfig, admission_digest, status_digest
+
+WORKERS = 8
+_COUNTER = count()
+
+
+@pytest.fixture(scope="session")
+def cut6_work_directory(work_directory) -> Path:
+    configured = os.environ.get("SCIENCE_CUT6_ROOT")
+    work = Path(configured) if configured else work_directory
+    work.mkdir(parents=True, exist_ok=True)
+    return work
+
+
+@pytest.fixture()
+def world_case(cut6_work_directory):
+    suffix = f"{os.getpid()}-{next(_COUNTER)}"
+    world_root = cut6_work_directory / f"world-{suffix}"
+    corpus_root = cut6_work_directory / f"corpus-{suffix}"
+    config = WorldConfig(world_root, "6" * 32, (corpus_root,))
+    try:
+        root.init_world_root(config)
+        assert {path.name for path in world_root.iterdir()} == {".#~chain", "world.yaml"}
+        root.init_corpus_root(corpus_root)
+        root.open_corpus(corpus_root).adopt_manifest(profile=PINS)
+        assert not any((world_root / name).exists() for name in ("registry", "epochs", "rules"))
+        before_admission = chain_entries(world_root)
+        world = root.open_world(config)
+        admission = world.admit(corpus_root, provenance=Fresh(), actor="cut6")
+        assert (world_root / "registry").is_dir()
+        assert not any((world_root / name).exists() for name in ("epochs", "rules"))
+        yield {
+            "world": world,
+            "world_root": world_root,
+            "admission": admission,
+            "before_admission": before_admission,
+            "after_admission": chain_entries(world_root),
+            "corpus_entries": chain_entries(corpus_root),
+        }
+    finally:
+        shutil.rmtree(world_root, ignore_errors=True)
+        shutil.rmtree(root.metadata_root_for(world_root), ignore_errors=True)
+        shutil.rmtree(corpus_root, ignore_errors=True)
+        shutil.rmtree(root.metadata_root_for(corpus_root), ignore_errors=True)
+
+
+def _registrations(entries):
+    return tuple(entry for _, entry in entries if isinstance(entry, RegisteredEntry))
+
+
+def test_world_initialization_recovers_between_genesis_and_mirror(cut6_work_directory, monkeypatch):
+    suffix = f"{os.getpid()}-{next(_COUNTER)}"
+    world_root = cut6_work_directory / f"crash-world-{suffix}"
+    config = WorldConfig(world_root, "7" * 32, ())
+    execute = root.DurableExecutor.execute
+    raised = False
+
+    def crash_once(self, plan):
+        nonlocal raised
+        if not raised:
+            raised = True
+            raise RuntimeError("crash before mirror transaction")
+        return execute(self, plan)
+
+    try:
+        monkeypatch.setattr(root.DurableExecutor, "execute", crash_once)
+        with pytest.raises(RuntimeError, match="crash before mirror"):
+            root.init_world_root(config)
+        assert (world_root / ".#~chain").is_dir()
+        assert not (world_root / "world.yaml").exists()
+        monkeypatch.setattr(root.DurableExecutor, "execute", execute)
+        root.init_world_root(config)
+        entries = chain_entries(world_root)
+        root.init_world_root(config)
+        assert chain_entries(world_root) == entries
+        with pytest.raises(PreconditionRefused):
+            root.init_world_root(WorldConfig(world_root, "8" * 32, ()))
+    finally:
+        shutil.rmtree(world_root, ignore_errors=True)
+        shutil.rmtree(root.metadata_root_for(world_root), ignore_errors=True)
+
+
+def test_world_mirror_registration_names_world_yaml(world_case):
+    (registration,) = _registrations(world_case["before_admission"])
+    assert "world.yaml" in dict(registration.final)
+
+
+def test_manifest_registration_names_corpus_yaml(world_case):
+    (registration,) = _registrations(world_case["corpus_entries"])
+    assert "corpus.yaml" in dict(registration.final)
+
+
+def test_registry_registrations_name_each_record_path(world_case):
+    added = world_case["after_admission"][len(world_case["before_admission"]) :]
+    (registration,) = _registrations(added)
+    admission = world_case["admission"]
+    assert set(dict(registration.final)) == {f"registry/{admission_digest(admission)}.yaml"}
+
+    before_status = chain_entries(world_case["world_root"])
+    status = world_case["world"].retire(admission.corpus_id, actor="cut6")
+    (status_registration,) = _registrations(chain_entries(world_case["world_root"])[len(before_status) :])
+    assert set(dict(status_registration.final)) == {f"registry/{status_digest(status)}.yaml"}
+
+
+@pytest.fixture(scope="session")
+def findings(tmp_path_factory) -> tuple:
+    root_path = tmp_path_factory.mktemp("n2-cut6")
+    with ThreadPoolExecutor(max_workers=WORKERS) as pool:
+        return tuple(
+            pool.map(lambda pair: audit(pair[1], root_path / f"arm{pair[0]}"), enumerate(CUT6_ARMS))
+        )
+
+
+def _report(reason: str, findings: tuple, verdict: str) -> None:
+    offending = [finding for finding in findings if finding.verdict == verdict]
+    if offending:
+        raise MalformedArm(
+            reason + "\n" + "\n".join(f"  {finding.arm.label}\n    {finding.detail}" for finding in offending)
+        )
+
+
+class TestEveryCut6ArmAssertsSomething:
+    def test_no_arm_survives_its_own_sabotage(self, findings):
+        _report("these cut-6 arms survive their own sabotage:", findings, "vacuous")
+
+    def test_no_arm_mixes_a_passing_check_with_a_failing_one(self, findings):
+        _report("these cut-6 arms mix passing and failing checks:", findings, "mixed")
+
+    def test_no_sabotage_stops_a_check_from_running(self, findings):
+        _report("these cut-6 sabotages prevent a check from running:", findings, "uncollected")
+
+    def test_no_sabotage_has_gone_stale(self, findings):
+        _report("these cut-6 sabotages no longer match exactly once:", findings, "stale")
+
+    def test_no_declared_arm_names_anything_coarser_than_a_test(self):
+        for arm in CUT6_ARMS:
+            for check in arm.checks:
+                assert check.split("::")[-1].startswith("test_"), f"{arm.label}: {check}"
+                assert len(check.split("::")) >= 2, f"{arm.label}: {check}"
+
+    def test_every_check_resolves_and_passes_without_the_sabotage(self):
+        every = Arm(
+            row="N2",
+            asserts="every declared cut-6 check resolves and passes against the real package",
+            sabotage=CUT6_ARMS[0].sabotage,
+            checks=tuple(dict.fromkeys(check for arm in CUT6_ARMS for check in arm.checks)),
+        )
+        finding = baseline(every)
+        assert finding.verdict == "resolved", finding.detail
+
+
+class TestTheCut6InventoryIsExact:
+    def test_exactly_one_declaration_exists_per_selected_or_labeled_bullet(self):
+        assert len(CUT6_ARMS) == 22
+
+    def test_declarations_match_the_frozen_row_histogram(self):
+        assert Counter(arm.row for arm in CUT6_ARMS) == {
+            "X4": 2,
+            "X5": 1,
+            "X6": 3,
+            "W13": 8,
+            "labeled:admission-idempotency": 1,
+            "labeled:status-idempotency": 1,
+            "labeled:initialization-idempotency": 1,
+            "labeled:durable-mirror": 1,
+            "labeled:durable-manifest": 1,
+            "labeled:durable-registry": 1,
+            "labeled:duplicate-carrier": 1,
+            "labeled:manifest-malformed": 1,
+        }
+
+    def test_x7_and_slice_2_build_rows_are_absent(self):
+        rows = {arm.row for arm in CUT6_ARMS}
+        assert "X7" not in rows
+        assert not any("build" in row for row in rows)
+
+
+@pytest.mark.parametrize(
+    ("arm", "verdict"),
+    [
+        (VACUOUS_BY_CONSTRUCTION, "vacuous"),
+        (MIXED_BY_CONSTRUCTION, "mixed"),
+        (UNCOLLECTED_BY_CONSTRUCTION, "uncollected"),
+        (STALE_BY_CONSTRUCTION, "stale"),
+    ],
+)
+def test_the_harness_preserves_each_malformed_verdict(tmp_path, arm, verdict):
+    assert audit(arm, tmp_path / verdict).verdict == verdict
+
+
+def test_the_harness_rejects_a_class_node(tmp_path):
+    with pytest.raises(MalformedArm, match="one test function"):
+        audit(CLASS_NODE_BY_CONSTRUCTION, tmp_path / "class-node")

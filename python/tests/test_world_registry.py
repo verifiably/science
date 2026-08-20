@@ -304,6 +304,18 @@ def test_status_retry_is_idempotent_and_differing_terminal_acts_refuse(tmp_path)
     assert len(registry_paths(instance)) == 2
 
 
+def test_retired_corpus_has_no_return_to_live_act(tmp_path):
+    corpus = tmp_path / "corpus"
+    write_manifest(corpus, "1" * 32)
+    instance = make_world(tmp_path, corpus)
+    instance.admit(corpus, provenance=world_module.Fresh(), actor="alice")
+    instance.retire("1" * 32, actor="alice")
+
+    with pytest.raises(CorpusIdKnown):
+        instance.admit(corpus, provenance=world_module.Fresh(), actor="bob")
+    assert not hasattr(instance, "unretire")
+
+
 def test_depart_appends_the_other_terminal_status(tmp_path):
     corpus = tmp_path / "corpus"
     write_manifest(corpus, "1" * 32)
@@ -397,7 +409,7 @@ def test_status_reduction_is_record_order_invariant(tmp_path):
     )
     statuses = (
         world_module.StatusRecord("1" * 32, "retired", "alice"),
-        world_module.StatusRecord("1" * 32, "departed", "bob"),
+        world_module.StatusRecord("2" * 32, "departed", "bob"),
     )
     config = world_module.WorldConfig(tmp_path / "world", "f" * 32, ())
 

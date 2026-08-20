@@ -137,7 +137,7 @@ def _run_check(check: str, package: Path | None) -> CheckRun:
             f"{check!r} does not name one test function outside {HARNESS}; a check must name the one test it means"
         )
     env = {"PATH": "/usr/bin:/bin", "HOME": str(Path.home())}
-    for name in ("SCIENCE_CUT4_ROOT", "SCIENCE_CUT5_ROOT"):
+    for name in ("SCIENCE_CUT4_ROOT", "SCIENCE_CUT5_ROOT", "SCIENCE_CUT6_ROOT"):
         if name in os.environ:
             env[name] = os.environ[name]
     if package is not None:
@@ -290,6 +290,7 @@ def test_an_explicit_uncertified_acceptance_root_is_not_silently_replaced(monkey
     root = shm / f"science-n2-env-{os.getpid()}"
     monkeypatch.setenv("SCIENCE_CUT4_ROOT", str(root))
     monkeypatch.setenv("SCIENCE_CUT5_ROOT", str(root))
+    monkeypatch.setenv("SCIENCE_CUT6_ROOT", str(root))
     try:
         run = _run_check(
             "acceptance/test_durable_families.py::test_supersede_survives_facade_reload",
