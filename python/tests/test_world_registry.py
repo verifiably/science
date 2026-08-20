@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 import pytest
@@ -424,19 +425,18 @@ def test_status_reduction_is_record_order_invariant(tmp_path):
 
 
 def test_replica_restoration_recomputes_presence_without_admission(tmp_path):
-    replica = tmp_path / "replica"
-    write_manifest(replica, "1" * 32)
-    instance = make_world(tmp_path)
-    instance.admit(replica, provenance=world_module.ReplicaOf("1" * 32), actor="alice")
+    original = tmp_path / "original"
+    restoration = tmp_path / "restoration"
+    write_manifest(original, "1" * 32)
+    config = world_module.WorldConfig(tmp_path / "world", "f" * 32, (restoration,))
+    instance = world_module.World(config, DefaultExecutor)
+    instance.admit(original, provenance=world_module.Fresh(), actor="alice")
     before = instance.registry()
 
-    restored = world_module.World(
-        world_module.WorldConfig(instance.config.world_root, "f" * 32, (replica,)),
-        DefaultExecutor,
-    )
-
-    assert restored.status("1" * 32).present is True
-    assert restored.registry() == before
+    assert instance.status("1" * 32).present is False
+    shutil.copytree(original, restoration)
+    assert instance.status("1" * 32).present is True
+    assert instance.registry() == before
 
 
 def test_raw_admission_deletion_is_undetected(tmp_path):
@@ -449,6 +449,7 @@ def test_raw_admission_deletion_is_undetected(tmp_path):
     status = instance.status("1" * 32)
 
     assert (status.known, status.live, status.present) == (False, False, True)
+    assert status.findings == ()
 
 
 @pytest.mark.parametrize(

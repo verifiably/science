@@ -94,8 +94,14 @@ CUT6_ARMS = (
         asserts="no ordinary API remints an existing corpus manifest",
         sabotage=Sabotage(
             module="corpus.py",
-            before="            if manifest_path.exists() or manifest_path.is_symlink():",
-            after="            if False:",
+            before=(
+                "            if manifest_path.exists() or manifest_path.is_symlink():\n"
+                "                raise ManifestAlreadyPresent(f\"{manifest_path}: manifest already present\")"
+            ),
+            after=(
+                "            if manifest_path.exists() or manifest_path.is_symlink():\n"
+                "                manifest_path.unlink()"
+            ),
         ),
         checks=("test_manifest.py::test_existing_manifest_refuses_remint",),
     ),
@@ -177,7 +183,7 @@ CUT6_ARMS = (
     ),
     Arm(
         row="labeled:admission-idempotency",
-        asserts="an exact admission retry succeeds without a second file",
+        asserts="an exact admission retry succeeds without a second file (world-registry specification §8.1)",
         sabotage=Sabotage(
             module="world.py",
             before="                if admission_digest(record) == digest:",
@@ -187,7 +193,7 @@ CUT6_ARMS = (
     ),
     Arm(
         row="labeled:status-idempotency",
-        asserts="exact status retries succeed and differing terminal acts refuse",
+        asserts="exact status retries succeed and differing terminal acts refuse (world-registry specification §8.1)",
         sabotage=Sabotage(
             module="world.py",
             before="                if status_digest(record) == digest:",
@@ -199,7 +205,7 @@ CUT6_ARMS = (
     ),
     Arm(
         row="labeled:initialization-idempotency",
-        asserts="world initialization recovers between genesis and mirror",
+        asserts="world initialization recovers between genesis and mirror (world-registry specification §8.1)",
         sabotage=Sabotage(
             module="root.py",
             before=(
@@ -217,7 +223,7 @@ CUT6_ARMS = (
     ),
     Arm(
         row="labeled:durable-mirror",
-        asserts="the committed mirror registration names world.yaml",
+        asserts="the committed mirror registration names world.yaml (world-registry specification §8.1)",
         sabotage=Sabotage(
             module="root.py",
             before=_REGISTERED_PATHS,
@@ -230,7 +236,7 @@ CUT6_ARMS = (
     ),
     Arm(
         row="labeled:durable-manifest",
-        asserts="the committed manifest registration names corpus.yaml",
+        asserts="the committed manifest registration names corpus.yaml (world-registry specification §8.1)",
         sabotage=Sabotage(
             module="root.py",
             before=_REGISTERED_PATHS,
@@ -243,7 +249,7 @@ CUT6_ARMS = (
     ),
     Arm(
         row="labeled:durable-registry",
-        asserts="committed admission and status registrations name their registry paths",
+        asserts="committed admission and status registrations name their registry paths (world-registry specification §8.1)",
         sabotage=Sabotage(
             module="root.py",
             before=_REGISTERED_PATHS,
@@ -258,7 +264,7 @@ CUT6_ARMS = (
     ),
     Arm(
         row="labeled:duplicate-carrier",
-        asserts="duplicate carriers are reported as a distinct finding",
+        asserts="duplicate carriers are reported as a distinct finding (world-registry specification §5.4 and §7)",
         sabotage=Sabotage(
             module="world.py",
             before="    if len(carriers) > 1:",
@@ -268,7 +274,7 @@ CUT6_ARMS = (
     ),
     Arm(
         row="labeled:manifest-malformed",
-        asserts="corpus check distinguishes a malformed manifest from an absent one",
+        asserts="corpus check distinguishes a malformed manifest from an absent one (world-registry specification §8.1)",
         sabotage=Sabotage(
             module="corpus.py",
             before=(

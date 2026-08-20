@@ -14,6 +14,7 @@ from nodes.core.frontmatter import node_to_markdown
 from nodes.core.relations import Relation
 
 from science import stored, world
+from science.consulted import CorpusPins
 from science.errors import (
     CorpusStateMalformed,
     IdentityError,
@@ -136,6 +137,18 @@ def test_relation_reordering_moves_state(tmp_path):
 def test_filesystem_and_formatting_changes_are_inert(tmp_path):
     run = stored.run_node("inert", title="inert", spec="analysis-spec:s1")
     root = _state_root(tmp_path, run)
+    (root / "corpus.yaml").write_bytes(
+        manifest_bytes(
+            CorpusManifest(
+                2,
+                "1" * 32,
+                CorpusPins(
+                    science_contract=SCIENCE_ID,
+                    domains={"biology": BIOLOGY_ID, "chemistry": "chemistry:" + "c" * 64},
+                ),
+            )
+        )
+    )
     expected = corpus_state_identity(root)
     original = Corpus(root).store.path_for(run.id)
     renamed = root / "renamed" / original.name
@@ -144,8 +157,11 @@ def test_filesystem_and_formatting_changes_are_inert(tmp_path):
     (root / "editor.txt").write_text("one\n", encoding="utf-8")
     (root / "editor.txt").write_text("two\n\n", encoding="utf-8")
     parsed = yaml.safe_load((root / "corpus.yaml").read_text(encoding="utf-8"))
+    assert list(parsed["profile"]["domains"]) == ["biology", "chemistry"]
+    parsed["profile"]["domains"] = dict(reversed(tuple(parsed["profile"]["domains"].items())))
+    assert list(parsed["profile"]["domains"]) == ["chemistry", "biology"]
     (root / "corpus.yaml").write_text(
-        yaml.safe_dump(parsed, default_flow_style=True), encoding="utf-8"
+        yaml.safe_dump(parsed, default_flow_style=True, sort_keys=False), encoding="utf-8"
     )
     for path in root.rglob("*"):
         os.utime(path, None)

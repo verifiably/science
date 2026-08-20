@@ -166,6 +166,11 @@ class TestEveryCut6ArmAssertsSomething:
                 assert check.split("::")[-1].startswith("test_"), f"{arm.label}: {check}"
                 assert len(check.split("::")) >= 2, f"{arm.label}: {check}"
 
+    def test_labeled_declarations_cite_their_frozen_specification(self):
+        assert all(
+            "specification §" in arm.asserts for arm in CUT6_ARMS if arm.row.startswith("labeled:")
+        )
+
     def test_every_check_resolves_and_passes_without_the_sabotage(self):
         every = Arm(
             row="N2",
