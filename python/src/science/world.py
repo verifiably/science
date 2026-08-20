@@ -2,17 +2,29 @@
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass
+from decimal import Decimal
 from pathlib import Path
 from typing import Literal, NoReturn, cast
 
 import yaml
+from nodes.core.projection import to_canonical_json
 
 from science.consulted import CorpusPins
-from science.errors import ManifestMalformed, ManifestMissing
+from science.corpus import ReadView
+from science.errors import CorpusStateMalformed, ManifestMalformed, ManifestMissing
+from science.identity import v1
 
-__all__ = ["CorpusManifest", "ForkedFrom", "load_manifest", "manifest_bytes", "manifest_projection"]
+__all__ = [
+    "CorpusManifest",
+    "ForkedFrom",
+    "corpus_state_identity",
+    "load_manifest",
+    "manifest_bytes",
+    "manifest_projection",
+]
 
 _NAMESPACE = re.compile(r"^[a-z][a-z0-9-]*$")
 _LOWER_HEX = frozenset("0123456789abcdef")
@@ -150,3 +162,52 @@ def manifest_projection(manifest: CorpusManifest) -> dict[str, object]:
 
 def manifest_bytes(manifest: CorpusManifest) -> bytes:
     return yaml.safe_dump(manifest_projection(manifest), sort_keys=True, allow_unicode=True).encode("utf-8")
+
+
+def _lift_json(value: object) -> object:
+    if value is None:
+        return ["null"]
+    if type(value) is bool:
+        return ["boolean", value]
+    if isinstance(value, Decimal):
+        return ["number", value]
+    if type(value) is str:
+        return ["string", value]
+    if type(value) is list:
+        return ["array", [_lift_json(member) for member in value]]
+    if type(value) is dict:
+        lifted: dict[str, object] = {}
+        for key, member in value.items():
+            if type(key) is not str:
+                raise TypeError(f"JSON object key {key!r} is not a string")
+            lifted[key] = _lift_json(member)
+        return ["object", lifted]
+    raise TypeError(f"{type(value).__name__} is not a JSON value")
+
+
+def _reject_json_constant(value: str) -> NoReturn:
+    raise ValueError(f"non-standard JSON constant {value!r}")
+
+
+def corpus_state_identity(corpus_root: Path) -> str:
+    manifest = load_manifest(corpus_root)
+    members: list[dict[str, str]] = []
+    try:
+        view = ReadView.opened_at(corpus_root)
+        for node in view.iter_stored():
+            projection_text = to_canonical_json(node)
+            value = json.loads(
+                projection_text,
+                parse_int=Decimal,
+                parse_float=Decimal,
+                parse_constant=_reject_json_constant,
+            )
+            node_identity = v1.digest("science.node-content.v1", _lift_json(value))
+            members.append({"uid": node.uid, "content_identity": node_identity})
+    except Exception as caught:
+        raise CorpusStateMalformed(f"{corpus_root}: malformed corpus state: {caught}") from caught
+    projection = {
+        "manifest": manifest_projection(manifest),
+        "nodes": sorted(members, key=lambda member: member["uid"]),
+    }
+    return v1.digest("science.corpus-state.v1", projection)
