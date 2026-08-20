@@ -16,8 +16,127 @@ import pytest
 from nodes.core.write_plan import CreateOp, DeleteOp, ReplaceOp
 
 from science import root
-from science.errors import CorpusRootRefused
+from science.errors import CorpusRootRefused, WorldIdMismatch, WorldUninitialized
 from science.identity import v1
+from science.world import WorldConfig, _world_mirror_bytes
+
+
+def patch_world_engine(monkeypatch, calls):
+    def record_registration(_backend, _project_root, _metadata_root, _storage, payload, _surface):
+        calls.append(("register", payload))
+
+    class Recorder:
+        def __init__(self, world_root):
+            self.root = world_root
+
+        def execute(self, plan):
+            calls.append(("execute", plan))
+            for operation in plan:
+                assert isinstance(operation, CreateOp)
+                target = self.root / operation.path
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(operation.content)
+
+    monkeypatch.setattr(root, "register_root", record_registration)
+    monkeypatch.setattr(root, "_world_executor_factory", lambda: lambda world_root: Recorder(world_root))
+
+
+class TestWorldRoots:
+    def test_init_world_registers_genesis_then_creates_mirror(self, monkeypatch, tmp_path):
+        calls = []
+        patch_world_engine(monkeypatch, calls)
+        config = WorldConfig(tmp_path / "world", "1" * 32, ())
+
+        root.init_world_root(config)
+
+        assert calls[0] == (
+            "register",
+            v1.encode({"domain": "science.world-root.v1", "world_id": "1" * 32}),
+        )
+        assert calls[1] == ("execute", [CreateOp("world.yaml", _world_mirror_bytes("1" * 32))])
+
+    def test_init_world_exact_mirror_retry_executes_no_transaction(self, monkeypatch, tmp_path):
+        calls = []
+        patch_world_engine(monkeypatch, calls)
+        config = WorldConfig(tmp_path / "world", "1" * 32, ())
+        root.init_world_root(config)
+        calls.clear()
+
+        root.init_world_root(config)
+
+        assert [kind for kind, _value in calls] == ["register"]
+
+    def test_init_world_refuses_a_file_root_before_registration(self, monkeypatch, tmp_path):
+        calls = []
+        patch_world_engine(monkeypatch, calls)
+        occupied = tmp_path / "world"
+        occupied.write_text("not a world", encoding="utf-8")
+
+        with pytest.raises(CorpusRootRefused):
+            root.init_world_root(WorldConfig(occupied, "1" * 32, ()))
+
+        assert calls == []
+
+    def test_init_world_refuses_a_malformed_mirror_after_registration(self, monkeypatch, tmp_path):
+        calls = []
+        patch_world_engine(monkeypatch, calls)
+        world_root = tmp_path / "world"
+        world_root.mkdir()
+        (world_root / "world.yaml").write_text("oops: true\n", encoding="utf-8")
+
+        with pytest.raises(WorldUninitialized):
+            root.init_world_root(WorldConfig(world_root, "1" * 32, ()))
+
+        assert [kind for kind, _value in calls] == ["register"]
+
+    def test_init_world_refuses_a_mismatched_mirror_after_registration(self, monkeypatch, tmp_path):
+        calls = []
+        patch_world_engine(monkeypatch, calls)
+        world_root = tmp_path / "world"
+        world_root.mkdir()
+        (world_root / "world.yaml").write_bytes(_world_mirror_bytes("2" * 32))
+
+        with pytest.raises(WorldIdMismatch):
+            root.init_world_root(WorldConfig(world_root, "1" * 32, ()))
+
+        assert [kind for kind, _value in calls] == ["register"]
+
+    def test_init_world_creates_only_the_mirror(self, monkeypatch, tmp_path):
+        calls = []
+        patch_world_engine(monkeypatch, calls)
+        world_root = tmp_path / "world"
+
+        root.init_world_root(WorldConfig(world_root, "1" * 32, ()))
+
+        assert (world_root / "world.yaml").is_file()
+        assert not any((world_root / name).exists() for name in ("registry", "epochs", "rules"))
+
+    def test_open_world_returns_an_engine_free_world_without_registering(self, monkeypatch, tmp_path):
+        calls = []
+        patch_world_engine(monkeypatch, calls)
+        config = WorldConfig(tmp_path / "world", "1" * 32, ())
+        config.world_root.mkdir()
+        (config.world_root / "world.yaml").write_bytes(_world_mirror_bytes(config.world_id))
+
+        world = root.open_world(config)
+
+        assert world.config is config
+        assert calls == []
+
+    def test_open_world_refuses_a_mismatched_mirror_without_registering(self, monkeypatch, tmp_path):
+        calls = []
+        patch_world_engine(monkeypatch, calls)
+        config = WorldConfig(tmp_path / "world", "1" * 32, ())
+        config.world_root.mkdir()
+        (config.world_root / "world.yaml").write_bytes(_world_mirror_bytes("2" * 32))
+
+        with pytest.raises(WorldIdMismatch):
+            root.open_world(config)
+
+        assert calls == []
+
+    def test_world_consumer_tag_is_the_world_executor_tag(self):
+        assert root.WORLD_CONSUMER_TAG == "science-world-write-v1"
 
 
 class TestTheMetadataRule:

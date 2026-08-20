@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import re
+import threading
+from collections.abc import Callable
 from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
@@ -11,15 +13,19 @@ from typing import Literal, NoReturn, cast
 
 import yaml
 from nodes.core.projection import to_canonical_json
+from nodes.core.write_plan import WritePlanExecutor
 
 from science.consulted import CorpusPins
 from science.corpus import ReadView
-from science.errors import CorpusStateMalformed, ManifestMalformed, ManifestMissing
+from science.errors import CorpusStateMalformed, ManifestMalformed, ManifestMissing, WorldUninitialized
 from science.identity import v1
 
 __all__ = [
     "CorpusManifest",
     "ForkedFrom",
+    "RegistryView",
+    "World",
+    "WorldConfig",
     "corpus_state_identity",
     "load_manifest",
     "manifest_bytes",
@@ -44,6 +50,47 @@ class CorpusManifest:
     forked_from: ForkedFrom | None = None
 
 
+@dataclass(frozen=True)
+class WorldConfig:
+    world_root: Path
+    world_id: str
+    corpus_roots: tuple[Path, ...]
+
+    def __post_init__(self) -> None:
+        if type(self.world_id) is not str or len(self.world_id) != 32 or any(
+            character not in _LOWER_HEX for character in self.world_id
+        ):
+            raise ValueError("world_id must be 32 lowercase hexadecimal characters")
+        object.__setattr__(self, "world_root", Path(self.world_root).resolve())
+        object.__setattr__(self, "corpus_roots", tuple(Path(root).resolve() for root in self.corpus_roots))
+
+
+@dataclass(frozen=True)
+class RegistryView:
+    admissions: tuple[object, ...] = ()
+    statuses: tuple[object, ...] = ()
+
+
+@dataclass
+class _WorldState:
+    lock: threading.Lock
+    registry: RegistryView
+
+
+_WORLD_STATES: dict[str, _WorldState] = {}
+_WORLD_STATES_LOCK = threading.Lock()
+
+
+class World:
+    def __init__(self, config: WorldConfig, executor_factory: Callable[[Path], WritePlanExecutor]) -> None:
+        self.config = config
+        self._executor_factory = executor_factory
+        with _WORLD_STATES_LOCK:
+            self._state = _WORLD_STATES.setdefault(
+                str(config.world_root), _WorldState(threading.Lock(), RegistryView())
+            )
+
+
 class _ManifestLoader(yaml.SafeLoader):
     pass
 
@@ -56,7 +103,7 @@ def _construct_mapping(loader: _ManifestLoader, node: yaml.MappingNode, deep: bo
             raise yaml.constructor.ConstructorError(None, None, f"duplicate key {key!r}", key_node.start_mark)
         mapping[key] = (
             value_node.value
-            if key in {"corpus_id", "corpus_state"}
+            if key in {"corpus_id", "corpus_state", "world_id"}
             and isinstance(value_node, yaml.ScalarNode)
             and value_node.tag == "tag:yaml.org,2002:int"
             else loader.construct_object(value_node, deep=deep)
@@ -65,6 +112,21 @@ def _construct_mapping(loader: _ManifestLoader, node: yaml.MappingNode, deep: bo
 
 
 _ManifestLoader.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _construct_mapping)
+
+
+def _world_mirror_bytes(world_id: str) -> bytes:
+    return f"world_id: {world_id}\n".encode()
+
+
+def _load_world_mirror(root: Path) -> str:
+    path = Path(root) / "world.yaml"
+    try:
+        document = yaml.load(path.read_text(encoding="utf-8"), Loader=_ManifestLoader)
+        if type(document) is not dict or set(document) != {"world_id"} or type(document["world_id"]) is not str:
+            raise ValueError("world mirror must have exactly world_id")
+        return _lower_hex(document["world_id"], 32, "world_id")
+    except Exception as caught:
+        raise WorldUninitialized(f"{path}: missing or malformed world mirror: {caught}") from caught
 
 
 def _malformed(message: str) -> NoReturn:

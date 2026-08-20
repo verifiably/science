@@ -50,8 +50,9 @@ from nodes.core.errors import ExecutionError, PlanRefusedError
 from nodes.core.write_plan import CreateOp, DeleteOp, ReplaceOp, WritePlan, validate_plan
 
 from science.corpus import CorpusWriter
-from science.errors import CorpusRootRefused
+from science.errors import CorpusRootRefused, WorldIdMismatch
 from science.identity import v1
+from science.world import World, WorldConfig, _load_world_mirror, _world_mirror_bytes
 
 __all__ = [
     "CONSUMER_TAG",
@@ -61,12 +62,16 @@ __all__ = [
     "GENESIS_PAYLOAD",
     "INTENT_DOMAIN",
     "PRODUCTION_STORAGE",
+    "WORLD_CONSUMER_TAG",
+    "WORLD_GENESIS_DOMAIN",
     "DurableExecutor",
     "DurableOperationPort",
     "durable_executor_factory",
     "init_corpus_root",
+    "init_world_root",
     "metadata_root_for",
     "open_corpus",
+    "open_world",
     "write_intent_digest",
     "write_intent_projection",
 ]
@@ -89,6 +94,7 @@ them: changing this constant does not migrate a root, it orphans one.
 """
 
 INTENT_DOMAIN = "science.corpus-write-intent.v1"
+WORLD_GENESIS_DOMAIN = "science.world-root.v1"
 
 PRODUCTION_STORAGE = StorageProfile(profile_id="flush-honoring-disk.v1")
 """The engine's production storage profile, passed through unchanged.
@@ -146,6 +152,31 @@ def init_corpus_root(corpus_root: Path) -> None:
         # nothing, so the registered surface is empty.
         (),
     )
+
+
+def _world_genesis_payload(world_id: str) -> bytes:
+    return v1.encode({"domain": WORLD_GENESIS_DOMAIN, "world_id": world_id})
+
+
+def init_world_root(config: WorldConfig) -> None:
+    root = config.world_root
+    if root.exists() and not root.is_dir():
+        raise CorpusRootRefused(f"{str(root)!r} exists and is not a directory, so it cannot be a world root")
+    root.mkdir(parents=True, exist_ok=True)
+    register_root(
+        _PRODUCTION_BACKEND,
+        str(root),
+        str(metadata_root_for(root)),
+        PRODUCTION_STORAGE,
+        _world_genesis_payload(config.world_id),
+        (),
+    )
+    mirror = root / "world.yaml"
+    if not mirror.exists() and not mirror.is_symlink():
+        _world_executor_factory()(root).execute([CreateOp("world.yaml", _world_mirror_bytes(config.world_id))])
+        return
+    if _load_world_mirror(root) != config.world_id:
+        raise WorldIdMismatch(f"{mirror}: world_id does not match configuration")
 
 
 def write_intent_projection(plan: WritePlan) -> list[dict[str, str]]:
@@ -556,3 +587,10 @@ def open_corpus(corpus_root: Path) -> CorpusWriter:
             metadata_root=metadata_root_for(root),
         ),
     )
+
+
+def open_world(config: WorldConfig) -> World:
+    mirror_id = _load_world_mirror(config.world_root)
+    if mirror_id != config.world_id:
+        raise WorldIdMismatch(f"{config.world_root / 'world.yaml'}: world_id does not match configuration")
+    return World(config, _world_executor_factory())
