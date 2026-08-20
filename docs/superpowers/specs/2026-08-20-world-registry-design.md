@@ -2,9 +2,9 @@
 
 **Date:** 2026-08-20
 
-**Status:** Draft for review. The decisions are settled; this document is not
-banked, conformance cut 6 is not yet authored or frozen, and no implementation
-claim is made.
+**Status:** Reviewed 2026-08-20; approved for cut-6 authoring. This document is
+not banked, conformance cut 6 is not yet authored or frozen, and no
+implementation claim is made.
 
 **Scope:** Slice 1 of the world-index implementation in
 [`2026-08-03-redesign-adoption-ledger.md`](../../designs/2026-08-03-redesign-adoption-ledger.md):
@@ -146,12 +146,19 @@ registration may commit before the mirror transaction, and the same
 caller-held id completes the missing mirror on retry. The id is never minted
 inside a return path where a crash could make it unreadable and unrecoverable.
 
+Initialization already checks configuration against genesis: because the
+configured `world_id` is inside the genesis payload, `register_root` returns the
+existing digest only for the same id and registered surface and otherwise
+raises `PreconditionRefused`. The readback deferral therefore applies only to
+the ordinary `open_world` path, which cannot perform that registration check.
+
 `open_world` requires the mirror and checks its id against `WorldConfig`. An
 absent or malformed mirror raises `WorldUninitialized`; a well-formed different
-id raises `WorldIdMismatch`. The genesis remains authoritative. Agreement
-between genesis and mirror is not checkable through the current public engine
-surface and is therefore deferred, dated 2026-08-20, to the log design's chain
-verification. That design already owns configuration-mismatch findings.
+id raises `WorldIdMismatch`. The genesis remains authoritative. On the open
+path, agreement among configuration, genesis, and mirror is not checkable
+through the current public engine surface and is therefore deferred, dated
+2026-08-20, to the log design's chain verification. That design already owns
+configuration-mismatch findings.
 
 The mirror is neither a second authority nor an anchor. Slice 1's acceptance
 can prove that its successful creation committed a registration entry naming
@@ -347,6 +354,10 @@ facets—and separately digests that projection under
 digests those identities rather than inlining the node projections. Sorting is
 by `uid`, never path or traversal order.
 
+The `nodes` task ships the versioned **projection value**, not a digest of it.
+Science deliberately owns the digest and its `science.node-content.v1` domain;
+`nodes` does not mint a competing content identity for the same projection.
+
 The consequences are intentional:
 
 - changing node content, facets, or relations moves the state;
@@ -367,8 +378,8 @@ original node error chained as `__cause__`.
 The required `nodes` §11.1 projection is confirmed absent from its public API as
 of 2026-08-20; it exists only in test support. Ledger row 3 therefore receives a
 `nodes` API task, ordered before Science consumes it, to ship the versioned
-projection in the owning repository. Science does not copy the test helper or
-invent a local approximation.
+projection value in the owning repository. Science does not copy the test
+helper, invent a local approximation, or ask `nodes` to own the Science digest.
 
 ## 5. Authoritative registry
 
@@ -409,6 +420,10 @@ complete record projection. Each event is serialized as one closed YAML file at
 sequence, or arrival-order field is added, because no reduction may depend on
 one.
 
+Validity is projection-level, not byte-level. Different YAML formatting that
+parses to the same closed projection has the same valid content name; the raw
+serialization bytes are not the record identity.
+
 Loading a registry file parses and validates the closed value, recomputes its
 domain-selected digest, and compares it with the filename. An unknown file,
 directory, unknown field, duplicate key, malformed value, wrong kind, or wrong
@@ -439,13 +454,14 @@ All three provenance arms are authored values. Their manifest checks are:
 
 The refusal order is normative:
 
-1. load the target manifest;
-2. validate the authored provenance against it;
-3. construct the complete admission record, recompute its content name, and
+1. while holding the world lock, rescan and validate the complete registry;
+2. load the target manifest;
+3. validate the authored provenance against it;
+4. construct the complete admission record, recompute its content name, and
    return idempotent success if that exact file already exists;
-4. refuse if any admission already makes the `corpus_id` known;
-5. for `fork-of`, refuse if the parent id is not already admitted;
-6. append the record create-only in one certified world-root transaction.
+5. refuse if any admission already makes the `corpus_id` known;
+6. for `fork-of`, refuse if the parent id is not already admitted;
+7. append the record create-only in one certified world-root transaction.
 
 The exact-file check must precede known-id refusal: an exact retry is necessarily
 a known id and is success, not `CorpusIdKnown`.
@@ -514,7 +530,9 @@ admitted live corpus changes only `present` and appends no admission.
 
 A malformed configured manifest refuses presence resolution rather than being
 treated as a non-match: without loading it, the reader cannot establish which
-id that root carries.
+id that root carries. A configured root with no manifest is an unadopted legal
+partial state and counts as a non-carrier; `ManifestMissing` does not poison
+presence queries for other ids.
 
 ### 5.5 Read and lock discipline
 
