@@ -1,5 +1,9 @@
 # World Registry Slice 1 Implementation Plan
 
+**Status:** Completed and merged 2026-08-20. Cut 6 is discharged; the observed
+results and post-discharge integration record are in
+[`docs/plans/2026-08-20-conformance-cut-6-results.md`](../../plans/2026-08-20-conformance-cut-6-results.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Implement the authoritative world-index core: the public `nodes` §11.1 canonical-text prerequisite, world-root initialization, corpus manifests and state identity, append-only registry admission/status, cut-6 N2 declarations, certified acceptance, and implementation close-out.
@@ -57,9 +61,9 @@
 - Produces TypeScript: `PROJECTION_VERSION = "projection.v1"`; `toCanonical(node: Node): JsonValue`; `toCanonicalJson(node: Node): string`.
 - Produces contract: RFC 8785 text is the normative serialized form. The parsed accessor is convenience only.
 
-- [ ] **Step 1: Amend the Tier-1 contract before code.** In `STANDARD.md` §11.1, retain the exact projection fields and add: version `projection.v1`; `to_canonical_json`/`toCanonicalJson` return RFC 8785 UTF-8 JSON text; non-finite numbers and values outside JSON refuse; object keys follow RFC 8785 UTF-16 ordering; arrays, including relations, preserve source order; any change to value or text is a major projection-version bump. Update §11.2 to name `fixtures/projection.v1.canonical.json` as the byte/text oracle and §12 to make projection-version stability explicit. Amend the dated redesign §2.1 from value-only to value-plus-canonical-text, recording Science's Decimal consumer and retaining Science's digest ownership. Mark only §2.1 landed in that design's status/verdict; keep reserved paths and recoverable construction outstanding. Grep nodes README/docs for the old test-helper-only claim and correct every live propagated status in this commit.
+- [x] **Step 1: Amend the Tier-1 contract before code.** In `STANDARD.md` §11.1, retain the exact projection fields and add: version `projection.v1`; `to_canonical_json`/`toCanonicalJson` return RFC 8785 UTF-8 JSON text; non-finite numbers and values outside JSON refuse; object keys follow RFC 8785 UTF-16 ordering; arrays, including relations, preserve source order; any change to value or text is a major projection-version bump. Update §11.2 to name `fixtures/projection.v1.canonical.json` as the byte/text oracle and §12 to make projection-version stability explicit. Amend the dated redesign §2.1 from value-only to value-plus-canonical-text, recording Science's Decimal consumer and retaining Science's digest ownership. Mark only §2.1 landed in that design's status/verdict; keep reserved paths and recoverable construction outstanding. Grep nodes README/docs for the old test-helper-only claim and correct every live propagated status in this commit.
 
-- [ ] **Step 2: Add dependency locks.** From `nodes/python`, run:
+- [x] **Step 2: Add dependency locks.** From `nodes/python`, run:
 
 ```bash
 uv add 'rfc8785>=0.1.4,<0.2'
@@ -73,7 +77,7 @@ npm install canonicalize@3.0.0
 
 The selected packages are dependency-free implementations of RFC 8785; do not add another canonicalizer or a hashing package.
 
-- [ ] **Step 3: Write the failing Python projection tests.** Move every test import from `tests._canonical` to `nodes.core.projection`. Add these checks to `python/tests/test_parity.py`:
+- [x] **Step 3: Write the failing Python projection tests.** Move every test import from `tests._canonical` to `nodes.core.projection`. Add these checks to `python/tests/test_parity.py`:
 
 ```python
 from nodes.core.projection import PROJECTION_VERSION, to_canonical, to_canonical_json
@@ -104,7 +108,7 @@ def test_projection_text_rejects_non_finite_numbers():
 
 Run `uv run --frozen pytest tests/test_parity.py -q`; expect collection failure because `nodes.core.projection` does not exist.
 
-- [ ] **Step 4: Implement the Python API.** Create `python/src/nodes/core/projection.py` with the complete §11.1 value and the one JCS call:
+- [x] **Step 4: Implement the Python API.** Create `python/src/nodes/core/projection.py` with the complete §11.1 value and the one JCS call:
 
 ```python
 from __future__ import annotations
@@ -156,7 +160,7 @@ def to_canonical_json(node: Node) -> str:
 
 Generate `fixtures/projection.v1.canonical.json` once from `to_canonical_json(node_from_markdown((FIXTURES / "gene_phf19.md").read_text(encoding="utf-8"))) + "\n"`; inspect and commit the literal oracle. Thereafter tests compare to the committed text and never regenerate it in the assertion.
 
-- [ ] **Step 5: Write the failing TypeScript tests.** Replace private-helper imports with `../src/projection.js`. Add:
+- [x] **Step 5: Write the failing TypeScript tests.** Replace private-helper imports with `../src/projection.js`. Add:
 
 ```typescript
 import { PROJECTION_VERSION, toCanonical, toCanonicalJson } from "../src/projection.js";
@@ -184,7 +188,7 @@ it("rejects non-finite numbers", () => {
 
 Run `npm test -- --run tests/parity.test.ts`; expect failure because the public module does not exist.
 
-- [ ] **Step 6: Implement and export the TypeScript API.** Create `ts/src/projection.ts`:
+- [x] **Step 6: Implement and export the TypeScript API.** Create `ts/src/projection.ts`:
 
 ```typescript
 import canonicalize from "canonicalize";
@@ -251,9 +255,9 @@ export function toCanonicalJson(node: Node): string {
 
 Export `PROJECTION_VERSION`, `JsonValue`, `toCanonical`, and `toCanonicalJson` from `ts/src/index.ts`. Delete both private helpers and update all callers to public imports; do not leave forwarding compatibility modules.
 
-- [ ] **Step 7: Verify both languages and the exact shared text.** Run all six nodes gates. Confirm `git diff --check` and `git status --short` show only the named nodes files.
+- [x] **Step 7: Verify both languages and the exact shared text.** Run all six nodes gates. Confirm `git diff --check` and `git status --short` show only the named nodes files.
 
-- [ ] **Step 8: Commit in nodes.** Stage the explicit paths and commit:
+- [x] **Step 8: Commit in nodes.** Stage the explicit paths and commit:
 
 ```bash
 git commit -m "feat(projection): publish projection.v1 canonical JSON text"
@@ -275,7 +279,7 @@ Record the nodes commit id in the Science implementation results later; do not v
 - Produces: `durable_executor_factory() -> Callable[[Path], DurableExecutor]` for corpus roots and private `_world_executor_factory()` for world roots.
 - Guarantees: `registered_paths == tuple(dict.fromkeys(op.path for op in plan))` for every non-empty plan.
 
-- [ ] **Step 1: Write the failing executor tests.** Replace the old assertion that `registered_paths == ()` and add:
+- [x] **Step 1: Write the failing executor tests.** Replace the old assertion that `registered_paths == ()` and add:
 
 ```python
 def test_every_plan_path_is_registered(tmp_path, submitted):
@@ -308,7 +312,7 @@ def test_world_executor_uses_world_consumer_and_intent_domains(tmp_path, submitt
 
 Run `uv run --frozen pytest tests/test_durable_executor.py tests/test_root.py -q`; expect failures on the empty registration tuple and missing world factory.
 
-- [ ] **Step 2: Parameterize without adding another executor.** Add constants:
+- [x] **Step 2: Parameterize without adding another executor.** Add constants:
 
 ```python
 WORLD_CONSUMER_TAG = "science-world-write-v1"
@@ -323,11 +327,11 @@ registered_paths = tuple(dict.fromkeys(operation.path for operation in plan))
 
 Pass that tuple to `build_spec`. Do not register derived parent directories because they are effects, not authored plan paths.
 
-- [ ] **Step 3: Keep the two factories as stable module-level callables.** `_durable_executor` binds corpus constants. `_world_executor` binds world constants. `durable_executor_factory()` and `_world_executor_factory()` return those function objects, not new closures, retaining the existing corpus-root factory pattern.
+- [x] **Step 3: Keep the two factories as stable module-level callables.** `_durable_executor` binds corpus constants. `_world_executor` binds world constants. `durable_executor_factory()` and `_world_executor_factory()` return those function objects, not new closures, retaining the existing corpus-root factory pattern.
 
-- [ ] **Step 4: Verify.** Run the two focused modules, then the full portable Science suite, Ruff, and Pyright.
+- [x] **Step 4: Verify.** Run the two focused modules, then the full portable Science suite, Ruff, and Pyright.
 
-- [ ] **Step 5: Commit.** Stage the three files and commit:
+- [x] **Step 5: Commit.** Stage the three files and commit:
 
 ```bash
 git commit -m "feat(root): register every durable plan path"
@@ -352,7 +356,7 @@ git commit -m "feat(root): register every durable plan path"
 
 Add each refusal directly under `ScienceError`; the names are the public distinction, and this slice needs no speculative intermediate error families.
 
-- [ ] **Step 1: Create exact shared fixtures.** `fixtures_cut6.py` defines only constants and constructors used by two or more modules:
+- [x] **Step 1: Create exact shared fixtures.** `fixtures_cut6.py` defines only constants and constructors used by two or more modules:
 
 ```python
 from science.consulted import CorpusPins
@@ -373,7 +377,7 @@ def manifest_document(corpus_id: str = "1" * 32) -> str:
     )
 ```
 
-- [ ] **Step 2: Write loader/projection failures first.** In `test_manifest.py`, cover: missing file → `ManifestMissing`; accepted fresh and fork shapes; wrong version; unknown fields at root/profile/fork levels; duplicate `domains` key; uppercase/wrong-length ids; malformed contract identities; a `science` domains key; domain key/prefix disagreement; formatting and mapping-order invariance. Pin this projection:
+- [x] **Step 2: Write loader/projection failures first.** In `test_manifest.py`, cover: missing file → `ManifestMissing`; accepted fresh and fork shapes; wrong version; unknown fields at root/profile/fork levels; duplicate `domains` key; uppercase/wrong-length ids; malformed contract identities; a `science` domains key; domain key/prefix disagreement; formatting and mapping-order invariance. Pin this projection:
 
 ```python
 assert manifest_projection(manifest) == {
@@ -394,7 +398,7 @@ For a fork, assert the optional member is exactly:
 
 Run `uv run --frozen pytest tests/test_manifest.py -q`; expect collection failure because `science.world` does not exist.
 
-- [ ] **Step 3: Implement one strict YAML loader in `science.world`.** Use a private `yaml.SafeLoader` subclass whose mapping constructor rejects a repeated key before constructing the dict. Wrap file I/O, YAML, type, duplicate-key, and validation failures as `ManifestMalformed`, except `FileNotFoundError` which becomes `ManifestMissing`. Validate exact dict types and closed key sets. Use `[a-z][a-z0-9-]*` namespaces, `science:<64 lowerhex>` for the base identity, `<domain>:<64 lowerhex>` for domain identities, 32 lowerhex corpus ids, 64 lowerhex state ids, and exact integer version 2 with booleans refused as integers.
+- [x] **Step 3: Implement one strict YAML loader in `science.world`.** Use a private `yaml.SafeLoader` subclass whose mapping constructor rejects a repeated key before constructing the dict. Wrap file I/O, YAML, type, duplicate-key, and validation failures as `ManifestMalformed`, except `FileNotFoundError` which becomes `ManifestMissing`. Validate exact dict types and closed key sets. Use `[a-z][a-z0-9-]*` namespaces, `science:<64 lowerhex>` for the base identity, `<domain>:<64 lowerhex>` for domain identities, 32 lowerhex corpus ids, 64 lowerhex state ids, and exact integer version 2 with booleans refused as integers.
 
 Define immutable values:
 
@@ -415,7 +419,7 @@ class CorpusManifest:
 
 `manifest_projection` copies `CorpusPins.domains` from its `MappingProxyType` into an ordinary key-sorted `dict` and omits `forked_from` when absent. `manifest_bytes` uses `yaml.safe_dump(projection, sort_keys=True, allow_unicode=True).encode("utf-8")` so authored bytes are stable but identity remains projection-level.
 
-- [ ] **Step 4: Write fresh-adoption and corpus-check failures.** Add to `test_corpus_write.py` using its recording executor:
+- [x] **Step 4: Write fresh-adoption and corpus-check failures.** Add to `test_corpus_write.py` using its recording executor:
 
 ```python
 def test_adopt_manifest_mints_and_executes_one_create(writer):
@@ -435,11 +439,11 @@ def test_adopt_manifest_never_remints(writer):
 
 Add to `test_manifest.py`: malformed present manifest produces one `Finding(severity="error", code="manifest-malformed", ref="corpus.yaml", detail=<message>)`; absent manifest produces none.
 
-- [ ] **Step 5: Implement adoption under the existing operation lock.** In `CorpusWriter.adopt_manifest`, import manifest helpers locally from `science.world` to avoid a module cycle. While holding `self._operation`: validate the profile by round-tripping it through the manifest validator; refuse any existing path at `corpus.yaml`; construct `CorpusManifest(2, secrets.token_hex(16), profile)`; execute `[CreateOp("corpus.yaml", manifest_bytes(manifest))]` through `self._state.executor_factory(self._corpus.store.root)`; return the manifest. Do not call `nodes.Corpus.add` for a non-node file.
+- [x] **Step 5: Implement adoption under the existing operation lock.** In `CorpusWriter.adopt_manifest`, import manifest helpers locally from `science.world` to avoid a module cycle. While holding `self._operation`: validate the profile by round-tripping it through the manifest validator; refuse any existing path at `corpus.yaml`; construct `CorpusManifest(2, secrets.token_hex(16), profile)`; execute `[CreateOp("corpus.yaml", manifest_bytes(manifest))]` through `self._state.executor_factory(self._corpus.store.root)`; return the manifest. Do not call `nodes.Corpus.add` for a non-node file.
 
 At the start of `corpus_check`, inspect `<root>/corpus.yaml`: absence adds nothing; `load_manifest` success adds nothing; `ManifestMalformed` adds the exact finding and continues checking stored nodes. Do not catch `ManifestMissing` after an existence check.
 
-- [ ] **Step 6: Verify and commit.** Run `test_manifest.py`, `test_corpus_write.py`, the full portable suite, Ruff, and Pyright. Commit:
+- [x] **Step 6: Verify and commit.** Run `test_manifest.py`, `test_corpus_write.py`, the full portable suite, Ruff, and Pyright. Commit:
 
 ```bash
 git commit -m "feat(corpus): add closed manifests and fresh adoption"
@@ -458,7 +462,7 @@ git commit -m "feat(corpus): add closed manifests and fresh adoption"
 - Produces Science: `corpus_state_identity(corpus_root: Path) -> str`.
 - Private helper: `_lift_json(value: object) -> object`, accepting only values returned by `json.loads` configured with `parse_int=Decimal` and `parse_float=Decimal`.
 
-- [ ] **Step 1: Write the JSON-lift tests before the implementation.** Use `v1.encode(_lift_json(value))` as the observable bytes and cover every tag, including the marker-collision case:
+- [x] **Step 1: Write the JSON-lift tests before the implementation.** Use `v1.encode(_lift_json(value))` as the observable bytes and cover every tag, including the marker-collision case:
 
 ```python
 def test_json_lift_tags_every_type_uniformly():
@@ -491,7 +495,7 @@ def test_lift_preserves_array_order():
 
 Add a parser test that patches `to_canonical_json` to return `'{"n":1e+16,"m":1e-7}'`, spies on `_lift_json`, and asserts it receives `Decimal("1E+16")` and `Decimal("1E-7")`, never `float`.
 
-- [ ] **Step 2: Write state-identity failures.** Build roots with the real nodes default executor; every recomputation reopens through the production read facade. Use these helpers and names, extending the same concrete pattern for the manifest and git cases:
+- [x] **Step 2: Write state-identity failures.** Build roots with the real nodes default executor; every recomputation reopens through the production read facade. Use these helpers and names, extending the same concrete pattern for the manifest and git cases:
 
 ```python
 def _state_root(tmp_path, node):
@@ -564,7 +568,7 @@ For the NFC collision, patch `to_canonical_json` to return `'{"e\\u0301":1,"\\u0
 
 Run `uv run --frozen pytest tests/test_corpus_state.py -q`; expect import failures for `_lift_json` and `corpus_state_identity`.
 
-- [ ] **Step 3: Implement the exact uniform lift.** Put the `bool` branch before `Decimal` and refuse anything else:
+- [x] **Step 3: Implement the exact uniform lift.** Put the `bool` branch before `Decimal` and refuse anything else:
 
 ```python
 def _lift_json(value: object) -> object:
@@ -605,7 +609,7 @@ json.loads(
 
 Do not implement `Decimal(str(float))`; the selected nodes API is text-shaped.
 
-- [ ] **Step 4: Implement the state formula through the read facade.** `corpus_state_identity` first loads the manifest. It then opens `ReadView.opened_at(root)`, iterates `iter_stored()`, calls `to_canonical_json`, parses and lifts, and computes:
+- [x] **Step 4: Implement the state formula through the read facade.** `corpus_state_identity` first loads the manifest. It then opens `ReadView.opened_at(root)`, iterates `iter_stored()`, calls `to_canonical_json`, parses and lifts, and computes:
 
 ```python
 node_identity = v1.digest("science.node-content.v1", lifted)
@@ -619,7 +623,7 @@ return v1.digest("science.corpus-state.v1", projection)
 
 Wrap nodes parse/collision errors, projection errors, JSON errors, lift errors, and `IdentityError` from the node-content digest in `CorpusStateMalformed` with the original exception as `__cause__`. `ReadView.opened_at` already refuses duplicate uids while constructing the nodes index, so do not add a second duplicate scan. Leave `ManifestMissing` and `ManifestMalformed` unwrapped. Outer corpus digest errors are programming errors because its projection is Science-authored and admissible.
 
-- [ ] **Step 5: Verify and commit.** Run the focused module, full portable suite, Ruff, and Pyright. Commit:
+- [x] **Step 5: Verify and commit.** Run the focused module, full portable suite, Ruff, and Pyright. Commit:
 
 ```bash
 git commit -m "feat(world): derive corpus-state identity from complete node projections"
@@ -641,7 +645,7 @@ git commit -m "feat(world): derive corpus-state identity from complete node proj
 - Produces mirror helpers in `science.world`: `_world_mirror_bytes(world_id: str) -> bytes`; `_load_world_mirror(root: Path) -> str`.
 - `World` constructor remains engine-free: `World(config: WorldConfig, executor_factory: Callable[[Path], WritePlanExecutor])`.
 
-- [ ] **Step 1: Write config and mirror tests.** In `test_world.py`:
+- [x] **Step 1: Write config and mirror tests.** In `test_world.py`:
 
 ```python
 def test_world_config_resolves_paths_and_deduplicates_no_roots(tmp_path):
@@ -667,9 +671,9 @@ def test_world_mirror_loader_requires_a_valid_file(tmp_path):
 
 The public `open_world` engine tests belong in `test_root.py`; use monkeypatching there to avoid a certified-volume claim in portable tests.
 
-- [ ] **Step 2: Add the immutable config and mirror parser.** `WorldConfig.__post_init__` requires exact `Path`-coercible inputs, validates 32 lowerhex, resolves the world and each corpus root without deduplicating the caller's tuple, and writes the normalized values with `object.__setattr__`. `_load_world_mirror` uses the same duplicate-key-aware closed YAML discipline as manifests; absence or malformed shape raises `WorldUninitialized`, while a valid mirror with a different id is compared by `World`/`open_world` and raises `WorldIdMismatch`.
+- [x] **Step 2: Add the immutable config and mirror parser.** `WorldConfig.__post_init__` requires exact `Path`-coercible inputs, validates 32 lowerhex, resolves the world and each corpus root without deduplicating the caller's tuple, and writes the normalized values with `object.__setattr__`. `_load_world_mirror` uses the same duplicate-key-aware closed YAML discipline as manifests; absence or malformed shape raises `WorldUninitialized`, while a valid mirror with a different id is compared by `World`/`open_world` and raises `WorldIdMismatch`.
 
-- [ ] **Step 3: Write root-init failures.** In `test_root.py`, patch `register_root` and `_world_executor_factory` with one local helper that records registration and applies only the create plans needed by these tests:
+- [x] **Step 3: Write root-init failures.** In `test_root.py`, patch `register_root` and `_world_executor_factory` with one local helper that records registration and applies only the create plans needed by these tests:
 
 ```python
 def patch_world_engine(monkeypatch, calls):
@@ -718,7 +722,7 @@ Also cover non-directory root refusal, malformed mirror, mirror mismatch, `open_
 
 Add a portable layout test through the recorder: after init, `world.yaml` exists while `registry/`, `epochs/`, and `rules/` do not. It makes no claim about `.#~chain/`, which only the real engine creates. The certified fixture in Task 7 asserts that chain path; after its first admission, only `registry/` joins the authored layout while `epochs/` and `rules/` remain absent.
 
-- [ ] **Step 4: Implement root wiring.** Add the constant and private payload function:
+- [x] **Step 4: Implement root wiring.** Add the constant and private payload function:
 
 ```python
 WORLD_GENESIS_DOMAIN = "science.world-root.v1"
@@ -730,7 +734,7 @@ def _world_genesis_payload(world_id: str) -> bytes:
 
 `init_world_root` validates before `mkdir`, registers with empty genesis baseline, then: absent mirror → one create-only plan through `_world_executor_factory`; present mirror → load and compare, exact success returns, mismatch raises. `open_world` loads and compares the mirror and returns `World(config, _world_executor_factory())`; it never calls `register_root`.
 
-- [ ] **Step 5: Add separate world-root state.** In `science.world`:
+- [x] **Step 5: Add separate world-root state.** In `science.world`:
 
 ```python
 @dataclass
@@ -741,7 +745,7 @@ class _WorldState:
 
 Use `_WORLD_STATES` and `_WORLD_STATES_LOCK`, keyed by resolved world-root string. `World` holds its supplied executor factory directly; the shared state contains only the lock and cached registry view named by the design. The initial `RegistryView` is empty; Task 6 replaces it on every rescan. Do not store a `nodes.Corpus` here.
 
-- [ ] **Step 6: Verify and commit.** Run focused tests, full portable suite, capability-boundary test, Ruff, and Pyright. Commit:
+- [x] **Step 6: Verify and commit.** Run focused tests, full portable suite, capability-boundary test, Ruff, and Pyright. Commit:
 
 ```bash
 git commit -m "feat(root): initialize and open durable world roots"
@@ -761,7 +765,7 @@ git commit -m "feat(root): initialize and open durable world roots"
 - Produces `World.registry()`, `World.status(corpus_id)`, `World.admit(corpus_root, *, provenance, actor)`, `World.retire(corpus_id, *, actor)`, `World.depart(corpus_id, *, actor)`.
 - Private pure reducer: `_reduce_status(config: WorldConfig, view: RegistryView, corpus_id: str) -> CorpusStatus`, which makes record-order invariance directly testable.
 
-- [ ] **Step 1: Pin the record projections and content names.** Write tests asserting exact values:
+- [x] **Step 1: Pin the record projections and content names.** Write tests asserting exact values:
 
 ```python
 assert admission_projection(record) == {
@@ -784,9 +788,9 @@ assert status_digest(record) == v1.digest("science.world-status.v1", status_proj
 
 Replica provenance is `{"kind": "replica-of", "parent_corpus_id": id}`. Fork provenance additionally carries `parent_corpus_state`. Test projection-level validity by rewriting one registry YAML file with different whitespace at the same digest path and asserting the registry still loads.
 
-- [ ] **Step 2: Implement immutable record values and one strict registry loader.** All record constructors validate ids and require actors to be exact strings accepted by `v1.encode`; do not invent an actor vocabulary or non-emptiness rule absent from the design. Serialize with sorted safe YAML. `_scan_registry(root)` returns empty if `registry/` is absent; otherwise every direct member must be a regular `*.yaml` file. Parse with duplicate-key rejection, validate the exact closed shape selected by `record_kind`, reconstruct the value, recompute the kind-specific digest, and require `path.name == f"{digest}.yaml"`. Wrap any failure as `RegistryMalformed` with its cause. Return admissions and statuses sorted by their content digest, never directory iteration order.
+- [x] **Step 2: Implement immutable record values and one strict registry loader.** All record constructors validate ids and require actors to be exact strings accepted by `v1.encode`; do not invent an actor vocabulary or non-emptiness rule absent from the design. Serialize with sorted safe YAML. `_scan_registry(root)` returns empty if `registry/` is absent; otherwise every direct member must be a regular `*.yaml` file. Parse with duplicate-key rejection, validate the exact closed shape selected by `record_kind`, reconstruct the value, recompute the kind-specific digest, and require `path.name == f"{digest}.yaml"`. Wrap any failure as `RegistryMalformed` with its cause. Return admissions and statuses sorted by their content digest, never directory iteration order.
 
-- [ ] **Step 3: Write admission refusal-order tests.** Cover all three provenances and the exact order:
+- [x] **Step 3: Write admission refusal-order tests.** Cover all three provenances and the exact order:
 
 ```python
 def test_exact_admission_retry_is_success_without_second_file(world, fresh_corpus):
@@ -813,11 +817,11 @@ def test_fork_provenance_requires_exact_manifest_and_known_parent(world, fork_fi
 
 Also assert: Fresh against a fork manifest → `ProvenanceMismatch`; ReplicaOf against a fork manifest → mismatch; replica parent must equal the retained manifest id; ForkOf's two parent facts must exactly match `forked_from`; malformed manifest wins before exact retry; provenance mismatch wins before known-id refusal; no refused call creates a file.
 
-- [ ] **Step 4: Implement admission in the normative order.** While holding `self._state.lock`: rescan and replace the cached view; load manifest; validate provenance; build candidate and path; exact existing path returns the loaded matching record; any admission for id → `CorpusIdKnown`; unknown fork parent → `ForkParentUnknown`; execute one `CreateOp`; rescan and return the committed record. The post-write rescan ensures the returned cache represents disk and does not authorize from planned state.
+- [x] **Step 4: Implement admission in the normative order.** While holding `self._state.lock`: rescan and replace the cached view; load manifest; validate provenance; build candidate and path; exact existing path returns the loaded matching record; any admission for id → `CorpusIdKnown`; unknown fork parent → `ForkParentUnknown`; execute one `CreateOp`; rescan and return the committed record. The post-write rescan ensures the returned cache represents disk and does not authorize from planned state.
 
-- [ ] **Step 5: Write and implement terminal status.** Tests cover unknown target, exact retry, other terminal status, same status/different actor, and no file on refusal. Implement one private `_terminal(corpus_id, status, actor)` used by `retire` and `depart`: rescan; require known; build candidate; exact file success; any existing terminal for id → `StatusTerminal`; append; rescan; return. No public reset, purge, replace, delete, or un-retire method exists.
+- [x] **Step 5: Write and implement terminal status.** Tests cover unknown target, exact retry, other terminal status, same status/different actor, and no file on refusal. Implement one private `_terminal(corpus_id, status, actor)` used by `retire` and `depart`: rescan; require known; build candidate; exact file success; any existing terminal for id → `StatusTerminal`; append; rescan; return. No public reset, purge, replace, delete, or un-retire method exists.
 
-- [ ] **Step 6: Write computed-status and rescan tests.** Cover all combinations of `known`, `live`, and `present`; missing configured root manifest as non-carrier; malformed configured manifest refusal; resolved-root deduplication; duplicate carriers; raw registry arrival between reads; status invariance under raw file creation order; replica restoration with unchanged registry; and raw admission deletion remaining undetected.
+- [x] **Step 6: Write computed-status and rescan tests.** Cover all combinations of `known`, `live`, and `present`; missing configured root manifest as non-carrier; malformed configured manifest refusal; resolved-root deduplication; duplicate carriers; raw registry arrival between reads; status invariance under raw file creation order; replica restoration with unchanged registry; and raw admission deletion remaining undetected.
 
 Pin the duplicate finding:
 
@@ -829,11 +833,11 @@ assert [(f.severity, f.code, f.ref) for f in status.findings] == [
 assert status.findings[0].detail == "carriers=" + ",".join(sorted((str(a.resolve()), str(b.resolve()))))
 ```
 
-- [ ] **Step 7: Implement read reduction.** `registry()` acquires the lock, rescans, stores, and returns the immutable view. `status()` does the same, then calculates `known = any(admission.corpus_id == id)`, `live = known and not any(status.corpus_id == id for status in statuses)`. Resolve and deduplicate configured roots; `ManifestMissing` continues, `ManifestMalformed` propagates, matching manifests become carriers. Exactly one carrier means present; zero means absent; more than one means absent plus the finding. Do not catch registry errors or convert them to findings.
+- [x] **Step 7: Implement read reduction.** `registry()` acquires the lock, rescans, stores, and returns the immutable view. `status()` does the same, then calculates `known = any(admission.corpus_id == id)`, `live = known and not any(status.corpus_id == id for status in statuses)`. Resolve and deduplicate configured roots; `ManifestMissing` continues, `ManifestMalformed` propagates, matching manifests become carriers. Exactly one carrier means present; zero means absent; more than one means absent plus the finding. Do not catch registry errors or convert them to findings.
 
-- [ ] **Step 8: Add append-only surface and malformed-store tests.** Assert the public `World` callables are exactly `admit`, `depart`, `registry`, `retire`, `status` plus ordinary object methods; assert no purge/delete/replace/reset spelling. For each malformed registry case—foreign file, directory, duplicate key, unknown field, wrong record kind, invalid id, wrong digest filename—both `registry()` and `status()` raise `RegistryMalformed` and skip nothing.
+- [x] **Step 8: Add append-only surface and malformed-store tests.** Assert the public `World` callables are exactly `admit`, `depart`, `registry`, `retire`, `status` plus ordinary object methods; assert no purge/delete/replace/reset spelling. For each malformed registry case—foreign file, directory, duplicate key, unknown field, wrong record kind, invalid id, wrong digest filename—both `registry()` and `status()` raise `RegistryMalformed` and skip nothing.
 
-- [ ] **Step 9: Verify and commit.** Run `test_world_registry.py`, all world/manifest/state tests, the full portable suite, Ruff, and Pyright. Commit:
+- [x] **Step 9: Verify and commit.** Run `test_world_registry.py`, all world/manifest/state tests, the full portable suite, Ruff, and Pyright. Commit:
 
 ```bash
 git commit -m "feat(world): append admissions and terminal status records"
@@ -853,7 +857,7 @@ git commit -m "feat(world): append admissions and terminal status records"
 - Consumes: one existing test function per `checks` node id; every node id resolves alone and fails under its exact sabotage.
 - Preserves: the existing `audit`, `baseline`, and five malformed-arm verdicts without copying the harness.
 
-- [ ] **Step 1: Give every frozen unit one exact test function.** Reuse the focused tests from Tasks 3–6, renaming where necessary to these stable node ids:
+- [x] **Step 1: Give every frozen unit one exact test function.** Reuse the focused tests from Tasks 3–6, renaming where necessary to these stable node ids:
 
 | unit | row | check |
 |---|---|---|
@@ -880,7 +884,7 @@ git commit -m "feat(world): append admissions and terminal status records"
 | duplicate-carrier finding | labeled:duplicate-carrier | `test_world_registry.py::test_duplicate_carriers_are_a_distinct_finding` |
 | manifest-malformed finding | labeled:manifest-malformed | `test_manifest.py::test_corpus_check_distinguishes_malformed_from_absent_manifest` |
 
-- [ ] **Step 2: Add certified fixtures and durable checks.** In `acceptance/test_n2_cut6.py`, reuse `work_directory` from `acceptance/conftest.py`. Allocate unique world/corpus roots with pid plus a counter, initialize through the real composition root, and clean both roots plus both metadata siblings in `finally`/fixture teardown. Reuse `chain_entries` from `test_durable_families.py`; committed evidence is the `RegisteredEntry.final` mapping, not a claimed replay.
+- [x] **Step 2: Add certified fixtures and durable checks.** In `acceptance/test_n2_cut6.py`, reuse `work_directory` from `acceptance/conftest.py`. Allocate unique world/corpus roots with pid plus a counter, initialize through the real composition root, and clean both roots plus both metadata siblings in `finally`/fixture teardown. Reuse `chain_entries` from `test_durable_families.py`; committed evidence is the `RegisteredEntry.final` mapping, not a claimed replay.
 
 In that fixture, assert the real initialized root contains `world.yaml` and `.#~chain/` but no empty `registry/`, `epochs/`, or `rules/`; after the first admission, assert `registry/` alone has materialized.
 
@@ -895,7 +899,7 @@ assert set(dict(status_registration.final)) == {f"registry/{status_digest}.yaml"
 
 For the crash seam, monkeypatch `root.DurableExecutor.execute` to raise once before executing the mirror plan, assert registration left `.#~chain` but no mirror, restore the method, retry the same config, and then retry once more as a no-op. Finally call `init_world_root` with a different `world_id` and assert the engine raises `PreconditionRefused`.
 
-- [ ] **Step 3: Declare the exact sabotages in `n2_arms_cut6.py`.** Use the standing `Arm` and `Sabotage` values. The 22 source mutations are fixed as follows; the implementation tasks must retain these small, unique source strings or update the declaration and immediately rerun its stale check:
+- [x] **Step 3: Declare the exact sabotages in `n2_arms_cut6.py`.** Use the standing `Arm` and `Sabotage` values. The 22 source mutations are fixed as follows; the implementation tasks must retain these small, unique source strings or update the declaration and immediately rerun its stale check:
 
 | row | source mutation |
 |---|---|
@@ -924,7 +928,7 @@ For the crash seam, monkeypatch `root.DurableExecutor.execute` to raise once bef
 
 The order-invariance check calls `_reduce_status` directly with a `RegistryView` and its reversed tuples. This makes a last-record sabotage observable; filesystem creation order is deliberately erased by content-name scanning and cannot serve as the test input.
 
-- [ ] **Step 4: Assert the declaration inventory, not merely its length.** Add:
+- [x] **Step 4: Assert the declaration inventory, not merely its length.** Add:
 
 ```python
 assert len(CUT6_ARMS) == 22
@@ -946,13 +950,13 @@ assert Counter(arm.row for arm in CUT6_ARMS) == {
 
 Also assert X7 is absent and no arm row names a slice-2 build.
 
-- [ ] **Step 5: Reuse the cut-5 N2 test shape.** `test_n2_cut6.py` defines one session `findings` fixture over `CUT6_ARMS`; checks `vacuous`, `mixed`, `uncollected`, `stale`; rejects class nodes; verifies every unsabotaged node resolves; and runs the four synthetic malformed-arm verdicts. Import these from the existing harness rather than copying their implementation.
+- [x] **Step 5: Reuse the cut-5 N2 test shape.** `test_n2_cut6.py` defines one session `findings` fixture over `CUT6_ARMS`; checks `vacuous`, `mixed`, `uncollected`, `stale`; rejects class nodes; verifies every unsabotaged node resolves; and runs the four synthetic malformed-arm verdicts. Import these from the existing harness rather than copying their implementation.
 
-- [ ] **Step 6: Propagate only the new acceptance-root environment.** In `test_n2.py`, add `SCIENCE_CUT6_ROOT` to `_run_check`'s allowlist and to the explicit uncertified-root regression. Do not add CUT6 arms to cuts 1–3's `all_arms`; cut 6 owns its certified acceptance module, as cuts 4 and 5 do.
+- [x] **Step 6: Propagate only the new acceptance-root environment.** In `test_n2.py`, add `SCIENCE_CUT6_ROOT` to `_run_check`'s allowlist and to the explicit uncertified-root regression. Do not add CUT6 arms to cuts 1–3's `all_arms`; cut 6 owns its certified acceptance module, as cuts 4 and 5 do.
 
-- [ ] **Step 7: Run red/green at declaration granularity.** First run the 22 unsabotaged checks individually via the new baseline test. Then run each `audit` and require `sound`; a stale, mixed, vacuous, or uncollected verdict is a task failure, not a reason to weaken the sabotage. Run the full portable suite after the cut-6 module's portable dependencies pass.
+- [x] **Step 7: Run red/green at declaration granularity.** First run the 22 unsabotaged checks individually via the new baseline test. Then run each `audit` and require `sound`; a stale, mixed, vacuous, or uncollected verdict is a task failure, not a reason to weaken the sabotage. Run the full portable suite after the cut-6 module's portable dependencies pass.
 
-- [ ] **Step 8: Commit.** Stage the three paths and commit:
+- [x] **Step 8: Commit.** Stage the three paths and commit:
 
 ```bash
 git commit -m "test(cut6): declare and sabotage the 22 frozen units"
@@ -971,11 +975,11 @@ git commit -m "test(cut6): declare and sabotage the 22 frozen units"
 - Uses `SCIENCE_CUT6_ROOT`; default work directory is `<repo>/.cut6-acceptance`.
 - Returns `2` when the engine refuses the volume tuple, never a skip or success.
 
-- [ ] **Step 1: Write runner guards first.** Mirror `test_cut5_acceptance.py` without importing or editing cut 5. Cover: missing `acceptance/test_n2_cut6.py` refuses before probe; probe refusal returns `PROBE_REFUSED`; pytest return code is propagated; temporary run directory is removed on success and failure; child environment contains `SCIENCE_CUT6_ROOT`, `SCIENCE_CUT5_ROOT`, and `SCIENCE_CUT4_ROOT` all bound to the certified run directory because reused older acceptance fixtures consult their own names.
+- [x] **Step 1: Write runner guards first.** Mirror `test_cut5_acceptance.py` without importing or editing cut 5. Cover: missing `acceptance/test_n2_cut6.py` refuses before probe; probe refusal returns `PROBE_REFUSED`; pytest return code is propagated; temporary run directory is removed on success and failure; child environment contains `SCIENCE_CUT6_ROOT`, `SCIENCE_CUT5_ROOT`, and `SCIENCE_CUT4_ROOT` all bound to the certified run directory because reused older acceptance fixtures consult their own names.
 
-- [ ] **Step 2: Implement the runner.** The probe creates one `WorldConfig(run / "probe-world", "0" * 32, ())`, calls `init_world_root`, and always removes the world root and `metadata_root_for(root)`. After a successful probe, run only `acceptance/test_n2_cut6.py`; its declared checks invoke any needed portable and durable nodes individually. Use `subprocess.run([sys.executable, "-m", "pytest", str(n2), *argv], cwd=PYTHON_ROOT, check=False, env=...)`. Remove the run directory in `finally`.
+- [x] **Step 2: Implement the runner.** The probe creates one `WorldConfig(run / "probe-world", "0" * 32, ())`, calls `init_world_root`, and always removes the world root and `metadata_root_for(root)`. After a successful probe, run only `acceptance/test_n2_cut6.py`; its declared checks invoke any needed portable and durable nodes individually. Use `subprocess.run([sys.executable, "-m", "pytest", str(n2), *argv], cwd=PYTHON_ROOT, check=False, env=...)`. Remove the run directory in `finally`.
 
-- [ ] **Step 3: Verify portable guards.** Run:
+- [x] **Step 3: Verify portable guards.** Run:
 
 ```bash
 uv run --frozen pytest tests/test_cut6_acceptance.py -q
@@ -984,7 +988,7 @@ uv run --frozen ruff check .
 uv run --frozen pyright src
 ```
 
-- [ ] **Step 4: Run certified acceptance.** From `python/`:
+- [x] **Step 4: Run certified acceptance.** From `python/`:
 
 ```bash
 uv run --frozen python -m tools.cut6_acceptance -q
@@ -992,7 +996,7 @@ uv run --frozen python -m tools.cut6_acceptance -q
 
 Require exit 0 and retain the exact test count and elapsed output for Task 9. Then explicitly point `SCIENCE_CUT6_ROOT` at `/dev/shm/science-cut6-refusal` and require exit 2 with the engine's allowlist/barrier refusal and no payload file.
 
-- [ ] **Step 5: Commit.** Stage the runner and guard and commit:
+- [x] **Step 5: Commit.** Stage the runner and guard and commit:
 
 ```bash
 git commit -m "test(cut6): add the certified acceptance runner"
@@ -1013,15 +1017,15 @@ git commit -m "test(cut6): add the certified acceptance runner"
 **Interfaces:**
 - Produces the historical record of what actually ran; no frozen row text or cut accounting changes.
 
-- [ ] **Step 1: Run the complete final gate from fresh state.** Run both nodes language gate sets at the committed Task-1 revision. From Science `python/`, run the portable suite, Ruff, Pyright, `tools/check_guide.py`, the 12-test design-corpus guard, and certified cut-6 acceptance. Run `git diff --check` in both repositories. Record exact commands, pass counts, and certified volume result from their fresh outputs.
+- [x] **Step 1: Run the complete final gate from fresh state.** Run both nodes language gate sets at the committed Task-1 revision. From Science `python/`, run the portable suite, Ruff, Pyright, `tools/check_guide.py`, the 12-test design-corpus guard, and certified cut-6 acceptance. Run `git diff --check` in both repositories. Record exact commands, pass counts, and certified volume result from their fresh outputs.
 
-- [ ] **Step 2: Write the results record from observed output.** Follow `docs/plans/2026-08-19-conformance-cut-5-results.md`: date/subject; a command-result-claim table; exact certified output; the 2 full + 2 part + 1 deferred row accounting; all 14 selected and 8 labeled units grouped by X4/X5/X6/W13/labeled behavior; the `c309db9` feasibility clarification; the nodes prerequisite commit; and explicit non-claims—epochs/build, X7, X5 build arm, fork constructor, chain replay/refutation, genesis/mirror open-path verification, anchor carriage, registry deletion detection, and cross-process locking.
+- [x] **Step 2: Write the results record from observed output.** Follow `docs/plans/2026-08-19-conformance-cut-5-results.md`: date/subject; a command-result-claim table; exact certified output; the 2 full + 2 part + 1 deferred row accounting; all 14 selected and 8 labeled units grouped by X4/X5/X6/W13/labeled behavior; the `c309db9` feasibility clarification; the nodes prerequisite commit; and explicit non-claims—epochs/build, X7, X5 build arm, fork constructor, chain replay/refutation, genesis/mirror open-path verification, anchor carriage, registry deletion detection, and cross-process locking.
 
-- [ ] **Step 3: Correct design and cut status without rewriting history.** World design status becomes “Implemented 2026-08-20; conformance cut 6 discharged” and retains dated deferrals. Cut status remains frozen and adds “discharged 2026-08-20; results at …”; do not edit quoted rows, selected bullets, or 22-unit accounting.
+- [x] **Step 3: Correct design and cut status without rewriting history.** World design status becomes “Implemented 2026-08-20; conformance cut 6 discharged” and retains dated deferrals. Cut status remains frozen and adds “discharged 2026-08-20; results at …”; do not edit quoted rows, selected bullets, or 22-unit accounting.
 
-- [ ] **Step 4: Close the ledger precisely.** Row 1 says the authoritative core landed while epochs and four maps remain outstanding. Row 2 becomes **partially landed**: fresh adoption/minting and state identity complete; fork construction and build-time uniqueness outstanding. Row 3 names the shipped versioned §11.1 RFC 8785 text API and its nodes commit, while leaving reserved paths, recoverable construction, and digest-id hazards at their actual states. The Plan B gate note says slice 1 landed and slice 2 remains.
+- [x] **Step 4: Close the ledger precisely.** Row 1 says the authoritative core landed while epochs and four maps remain outstanding. Row 2 becomes **partially landed**: fresh adoption/minting and state identity complete; fork construction and build-time uniqueness outstanding. Row 3 names the shipped versioned §11.1 RFC 8785 text API and its nodes commit, while leaving reserved paths, recoverable construction, and digest-id hazards at their actual states. The Plan B gate note says slice 1 landed and slice 2 remains.
 
-- [ ] **Step 5: Run the required propagated-claim grep and correct only live user-facing claims.** Run:
+- [x] **Step 5: Run the required propagated-claim grep and correct only live user-facing claims.** Run:
 
 ```bash
 rg -n "implementation prospective|remains prospective|world index.*unbuilt|world indexing.*unbuilt|corpus manifest.*unbuilt|corpus_id.*unbuilt|Everything else in the design corpus is unbuilt" README.md python/README.md docs/guide docs/designs
@@ -1029,12 +1033,12 @@ rg -n "implementation prospective|remains prospective|world index.*unbuilt|world
 
 At minimum, replace `python/README.md`'s blanket “Everything else … unbuilt” with a pointer to the ledger plus a short statement that cuts 1–6 have landed their selected slices. In `identity-world-and-change.md` and `foundations.md`, state that the authoritative world root/manifest/registry core is implemented while epoch publication, maps, global resolution, anchor verification, and slice-2 build behavior remain designed or deferred. Add the world-registry design, cut, and results to those pages' `sources`, and set affected guide `updated` dates to `2026-08-20`. Do not change conceptual prose that was already future-tense by design rather than an implementation-status claim.
 
-- [ ] **Step 6: Verify documentation and repository cleanliness.** Run `tools/check_guide.py`, `test_designs_corpus.py`, `git diff --check`, and the grep again. Any remaining hit must be either a dated historical statement or an explicit slice-2 deferral; explain that classification in the results record if it could be mistaken for drift.
+- [x] **Step 6: Verify documentation and repository cleanliness.** Run `tools/check_guide.py`, `test_designs_corpus.py`, `git diff --check`, and the grep again. Any remaining hit must be either a dated historical statement or an explicit slice-2 deferral; explain that classification in the results record if it could be mistaken for drift.
 
-- [ ] **Step 7: Commit the discharge landing.** Stage only the results/status/ledger/guide files and commit:
+- [x] **Step 7: Commit the discharge landing.** Stage only the results/status/ledger/guide files and commit:
 
 ```bash
 git commit -m "docs(cut6): record world-registry discharge"
 ```
 
-- [ ] **Step 8: Final verification after the commit.** Re-run `git status --short --branch`, the portable Science gate, and cut-6 acceptance. Confirm the nodes prerequisite commit is reachable in the nodes repository and the Science worktree is clean. Report both commit ids and the exact final pass counts.
+- [x] **Step 8: Final verification after the commit.** Re-run `git status --short --branch`, the portable Science gate, and cut-6 acceptance. Confirm the nodes prerequisite commit is reachable in the nodes repository and the Science worktree is clean. Report both commit ids and the exact final pass counts.

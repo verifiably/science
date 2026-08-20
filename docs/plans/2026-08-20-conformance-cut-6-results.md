@@ -146,3 +146,25 @@ None claims that the authoritative registry core is still unbuilt.
 - Raw registry deletion is not detected; the chain remains unanchored.
 - Locks serialize cooperating writers in one process only; cross-process
   single-writer operation remains a deployment obligation.
+
+## 6. Post-discharge review and integration
+
+The tables above remain the historical discharge evidence from commit
+`923e487`; they are not rewritten with later runs. Final whole-branch review
+then added strict non-JSON projection refusal in `nodes` (`5a00bba`) and
+hardened Science's manifest, installation-config, and W13 facet boundaries
+(`fdea7a7`). The review found no remaining critical, important, or minor
+issues after that fix range was re-read.
+
+`nodes` merged to its `main` first. Science then merged to `main`; its first
+bare, non-overlay run exposed that Science's lock still described the older
+`nodes-core` dependency set. Commit `567ebb4` refreshed that lock with the
+already-declared `rfc8785` dependency. No product or cut-accounting change was
+needed.
+
+The final merged-state gates reported:
+
+- `nodes`: 531 Python tests and 359 TypeScript tests in 44 files;
+- Science: 1,404 portable tests and all 19 certified cut-6 tests; and
+- Ruff, Pyright source checks, TypeScript typecheck, Biome, the guide checker,
+  the 12-test design-corpus guard, and repository whitespace checks all clean.
