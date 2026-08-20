@@ -80,9 +80,9 @@ GENESIS_DOMAIN = "science.corpus-root.v1"
 """The registration chain's genesis domain.
 
 The payload deliberately carries **no corpus identity**: corpus manifests and
-`corpus_id` minting are the ledger's second artifact and are unbuilt. When
-identity arrives it binds through a later chain entry, never by rewriting
-genesis — a genesis rewrite is not a correction, it is a different chain.
+`corpus_id` minting are root-local acts, not genesis members. An adopted
+identity binds through a later chain entry, never by rewriting genesis — a
+genesis rewrite is not a correction, it is a different chain.
 """
 
 GENESIS_PAYLOAD = v1.encode({"domain": GENESIS_DOMAIN})

@@ -115,9 +115,12 @@ def test_node_content_and_produces_relations_move_state_while_semantic_identity_
         }
     )
     states.append(_replace(root, retargeted))
+    facet_only = retargeted.model_copy(deep=True)
+    facet_only.facets["review"] = {"member": "changed"}
+    states.append(_replace(root, facet_only))
     assert len(set(states)) == len(states)
     assert {
-        stored.stored_semantic_hash(node) for node in (run, body_edit, removed, added, retargeted)
+        stored.stored_semantic_hash(node) for node in (run, body_edit, removed, added, retargeted, facet_only)
     } == {semantic}
 
 

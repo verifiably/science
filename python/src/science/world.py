@@ -138,6 +138,8 @@ class WorldConfig:
     corpus_roots: tuple[Path, ...]
 
     def __post_init__(self) -> None:
+        if type(self.corpus_roots) is not tuple:
+            raise TypeError("corpus_roots must be an exact tuple")
         if (
             type(self.world_id) is not str
             or len(self.world_id) != 32

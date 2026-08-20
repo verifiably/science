@@ -904,14 +904,21 @@ class CorpusWriter:
 
     def adopt_manifest(self, *, profile: CorpusPins) -> CorpusManifest:
         """Create this corpus's first closed manifest."""
-        from science.world import CorpusManifest, _parse_manifest, manifest_bytes, manifest_projection
+        from science.world import CorpusManifest, _parse_manifest, manifest_bytes
 
         with self._operation:
             manifest_path = self._corpus.store.root / "corpus.yaml"
             if manifest_path.exists() or manifest_path.is_symlink():
                 raise ManifestAlreadyPresent(f"{manifest_path}: manifest already present")
             checked_profile = _parse_manifest(
-                manifest_projection(CorpusManifest(2, "0" * 32, profile))
+                {
+                    "manifest_version": 2,
+                    "corpus_id": "0" * 32,
+                    "profile": {
+                        "science_contract": profile.science_contract,
+                        "domains": dict(profile.domains),
+                    },
+                }
             ).profile
             manifest = CorpusManifest(2, secrets.token_hex(16), checked_profile)
             self._state.executor_factory(self._corpus.store.root).execute(

@@ -26,6 +26,7 @@ from science.errors import (
     CollisionRefused,
     EligibilityUnmet,
     ManifestAlreadyPresent,
+    ManifestMalformed,
     RecordAlreadyMinted,
     ScienceError,
     ValidationRefused,
@@ -98,6 +99,17 @@ class TestTheAddPathIsAddOnly:
             writer.adopt_manifest(profile=PINS)
 
         assert load_manifest(writer.read_view._corpus.store.root) == first
+
+    def test_adopt_manifest_refuses_malformed_profile_before_execution(self, writer):
+        malformed = type(PINS)(
+            science_contract=PINS.science_contract,
+            domains={**PINS.domains, 1: "biology:" + "b" * 64},
+        )
+
+        with pytest.raises(ManifestMalformed):
+            writer.adopt_manifest(profile=malformed)
+
+        assert Recorder.plans == []
 
     def test_a_mint_emits_exactly_one_create(self, writer):
         writer.add(observed_dataset())

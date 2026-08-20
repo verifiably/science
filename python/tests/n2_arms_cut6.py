@@ -107,12 +107,13 @@ CUT6_ARMS = (
     ),
     Arm(
         row="W13",
-        asserts="node content and produces relations move state while semantic identity stands",
+        asserts="node content, produces relations, and facets move state while semantic identity stands",
         sabotage=Sabotage(
             module="world.py",
             before='            node_identity = v1.digest("science.node-content.v1", _lift_json(value))',
             after=(
                 '            value.pop("relations", None)\n'
+                '            value.pop("facets", None)\n'
                 '            node_identity = v1.digest("science.node-content.v1", _lift_json(value))'
             ),
         ),

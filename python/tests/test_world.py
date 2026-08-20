@@ -16,6 +16,12 @@ def test_world_config_resolves_paths_without_deduplicating_corpus_roots(tmp_path
     assert config.corpus_roots == (corpus.resolve(), corpus.resolve())
 
 
+@pytest.mark.parametrize("corpus_roots", ["corpus", b"corpus"])
+def test_world_config_requires_corpus_roots_tuple(tmp_path, corpus_roots):
+    with pytest.raises(TypeError, match="corpus_roots"):
+        WorldConfig(tmp_path, "1" * 32, corpus_roots)
+
+
 @pytest.mark.parametrize("world_id", ["", "A" * 32, "a" * 31, "g" * 32])
 def test_world_config_refuses_malformed_id(tmp_path, world_id):
     with pytest.raises(ValueError, match="world_id"):
