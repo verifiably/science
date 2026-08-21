@@ -35,6 +35,7 @@ from pathlib import Path
 from types import ModuleType
 
 import pytest
+from nodes.core.errors import NodesError
 from nodes.core.node import Node
 from pydantic import ValidationError as PydanticValidationError
 from test_world_build import ALPHA, BETA, GAMMA, corpus_at, sample_nodes, slug_for
@@ -50,7 +51,7 @@ from test_world_receipts import (
 from yaml import YAMLError
 
 from science import stored
-from science.errors import ResolutionRefused, SemanticHashStale
+from science.errors import ResolutionRefused, SemanticHashMissing, SemanticHashStale
 from science.world import epoch, read, registry
 
 # --- the harness -------------------------------------------------------------
@@ -199,19 +200,22 @@ class TestBoundResolution:
             read.resolve_address(world, published, address)
 
     def test_resolution_refuses_every_present_carrier_read_fault(self, tmp_path):
-        """`read._CARRIER_READ_FAULTS` is adequate, driven rather than read.
+        """Every member of `read._CARRIER_READ_FAULTS`, driven rather than read.
 
         The narrowed catch replaced a bare `except Exception`, and a narrowing
-        is only as good as the list — the arm above never reaches it, because
-        an unreadable *manifest* is converted earlier by the presence
-        reduction. So every shape a corrupt present carrier can actually fail
-        with is driven through `resolve_address` here, and each is asserted by
-        its own cause type: narrowing the tuple back down would let one escape
-        raw and fail the `ResolutionRefused` expectation rather than quietly
-        widen the surface.
+        is only as good as the list. The ambiguity arm above never reaches it —
+        an unreadable *manifest* is converted earlier, by the presence
+        reduction — so this is the only place the list is exercised at all, and
+        it exercises **all seven** members: a tuple member with no shape behind
+        it is an assertion nobody checked, which is how three escapees
+        (`YAMLError`, pydantic's `ValidationError`, `UnicodeError`) shipped in
+        the first place.
 
-        The record is restored between shapes and the address re-resolves, so
-        each refusal is attributable to the mutation that caused it.
+        Each shape asserts its own `__cause__` type, so removing a member does
+        not quietly widen the escape surface — it lets that shape out raw and
+        fails the `ResolutionRefused` expectation. The record is restored
+        between shapes and the address re-resolves, so every refusal is
+        attributable to the mutation that caused it.
         """
         roots = corpora(tmp_path, {ALPHA: sample_nodes("one")})
         world = world_over(tmp_path, roots)
@@ -223,6 +227,11 @@ class TestBoundResolution:
         stamped = intact.decode("utf-8")
         digest_line = next(line for line in stamped.splitlines() if line.strip().startswith("digest:"))
 
+        unstamped = "".join(
+            line
+            for line in stamped.splitlines(keepends=True)
+            if "semantic-identity:" not in line and "digest:" not in line
+        )
         shapes: dict[str, tuple[bytes, type[Exception]]] = {
             # A governed record whose stored stamp disagrees with the fields it
             # covers: §8.3's corruption, decided on the read path.
@@ -230,6 +239,9 @@ class TestBoundResolution:
                 stamped.replace(digest_line, digest_line[:-8] + "deadbeef").encode("utf-8"),
                 SemanticHashStale,
             ),
+            # A governed record carrying no stamp at all — a raw write that
+            # skipped even self-stamping.
+            "missing semantic hash": (unstamped.encode("utf-8"), SemanticHashMissing),
             # Front matter that is not YAML at all.
             "unparsable front matter": (b"---\nid: [\n---\n", YAMLError),
             # Front matter that parses and is not a node.
@@ -237,6 +249,15 @@ class TestBoundResolution:
                 stamped.replace(digest_line + "\n", "").encode("utf-8"),
                 PydanticValidationError,
             ),
+            # A node the `nodes` store itself refuses: its own identifier rule.
+            "an identifier the store refuses": (
+                stamped.replace("id: dataset:one", "id: NOT A REF").encode("utf-8"),
+                NodesError,
+            ),
+            # Bytes that are not UTF-8. Both `Store.read_file` and the index
+            # rebuild decode without a wrapper, and `UnicodeError` is a
+            # `ValueError` — neither `OSError` nor any of the above catches it.
+            "bytes that are not UTF-8": (intact.replace(b"dataset one", b"dataset \xff\xfe"), UnicodeError),
         }
         for label, (content, cause) in shapes.items():
             record.write_bytes(content)
@@ -256,6 +277,12 @@ class TestBoundResolution:
         assert isinstance(refusal.value.__cause__, OSError)
         record.chmod(0o644)
         assert type(read.resolve_address(world, published, address)) is read.Resolved
+
+        # Closed against the tuple: a member with no shape driving it is the
+        # gap this arm exists to prevent, so the arm fails when one is added
+        # without one.
+        driven = {SemanticHashStale, SemanticHashMissing, YAMLError, PydanticValidationError, NodesError}
+        assert driven | {UnicodeError, OSError} == set(read._CARRIER_READ_FAULTS)
 
 
 # --- Step 3: the bound stamp, and what it does not claim ----------------------
@@ -370,9 +397,10 @@ class TestTheBoundStamp:
         # The **namespace walk** catches what the grep cannot: a name
         # re-exported into `belief` or `closure` through a third module whose
         # own source never mentions the world package. It is non-vacuous — the
-        # origin sets are populated with `science.admission`, `science.claim`,
-        # `science.lineage` and the rest, which the count below pins so a walk
-        # that silently started reading nothing would fail rather than pass.
+        # origin sets are populated (`science.lineage`, `science.record` and
+        # `science.verification` are in both; `belief` carries a dozen more),
+        # which the count below pins so a walk that silently started reading
+        # nothing would fail rather than pass.
         for module in (belief, closure):
             source = Path(inspect.getsourcefile(module)).read_text(encoding="utf-8")
             assert "science.world" not in source, module

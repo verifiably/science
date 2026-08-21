@@ -148,24 +148,38 @@ _CARRIER_READ_FAULTS = (
     NodesError,
     PydanticValidationError,
     YAMLError,
+    UnicodeError,
     OSError,
 )
-"""What reading a present carrier can legitimately fail with (§8.3).
+"""What reading a present carrier is converted to `ResolutionRefused` for (§8.3).
 
 Named rather than caught as `Exception`, because the refusal this converts to
 is a *finding* about the carrier — "this world cannot say what it holds" — and
 a bare catch would report a programming error in this module as one instead.
-An `AttributeError` from a wrong call here is a bug and stays a bug.
+An `AttributeError` out of a wrong call here is a bug, and stays a bug and
+escapes; the `nodes` store raising one on a malformed `relations:` entry is an
+upstream hardening question and not this module's to paper over.
 
-The six are the surface `ReadView.opened_at` / `resolve` / `get` actually
-refuses across, and the list was widened after an arm drove each shape through
-it rather than settled by reading the call chain. A governed record with no
-semantic-identity stamp or a stale one is §8.3's corruption, decided on the
-read path. A stored document whose front matter is not YAML raises out of the
-parser, and one whose front matter parses but is not a `Node` raises pydantic's
-`ValidationError` — the `nodes` store does not wrap either on the read path,
-so neither is a `NodesError`. `NodesError` itself covers what the store refuses
-about its own layout, and `OSError` the filesystem underneath all of it.
+**Every member is driven through this catch by an arm**
+(`test_resolution_refuses_every_present_carrier_read_fault`), which is the only
+claim made about the list. It is deliberately not "and nothing else can
+happen": `ReadView.opened_at` -> `Corpus.__init__` -> `node_from_markdown`
+reaches `yaml.safe_load` and a bare `Node(...)` construction with no wrapper of
+its own, so what surfaces here is whatever those raise, and the honest posture
+is a list each of whose members has been *seen*, extended when a new shape is
+seen. Three of the seven were added exactly that way, after arms found them
+escaping raw.
+
+What each covers: a governed record with no semantic-identity stamp
+(`SemanticHashMissing`) or a stale one (`SemanticHashStale`) is §8.3's
+corruption, decided on the read path. Front matter that is not YAML raises out
+of the parser (`YAMLError`); front matter that parses and is not a `Node`
+raises pydantic's `ValidationError`; bytes that are not UTF-8 raise
+`UnicodeError` from the decode both `Store.read_file` and the index rebuild
+perform — the `nodes` store wraps none of the three on the read path, so none
+of them is a `NodesError`. `NodesError` itself covers what the store refuses
+about its own layout and identifiers, and `OSError` the filesystem underneath
+all of it.
 """
 
 
