@@ -121,6 +121,24 @@ surface, so existing `from science.world import ...` imports remain valid.
 Cut 6's committed `world.py` sabotage paths remain historical evidence; no
 file is recreated to satisfy them.
 
+Cut 6 therefore keeps running by reading that evidence where it lives. Its
+declaration table and both acceptance runners are frozen, so the amendment is
+confined to `tests/acceptance/test_n2_cut6.py`, which is neither. Its `findings`
+fixture `git archive`s the repository at the commit that discharged cut 6 into a
+temporary directory and points the harness's `PACKAGE` and `TESTS` globals at
+it for the length of the audit. Both move together: a check taken from the
+current suite imports `science.world.registry`, which the pre-promotion package
+does not have. The pinned run carries both halves of the pairing — every
+declared check is also run against an unmutated copy of that package, so a
+`sound` verdict still means "fails with the sabotage, passes without it" — and
+a third direction runs every declared check against the working tree unpinned,
+so a check that is renamed away or that stops passing under later slice-2 work
+still turns cut 6 red. What the pin gives up is that weakening a current check
+while leaving it green is no longer caught by cut 6's mutation direction.
+Moving the pin forward is only correct as a new conformance cut with
+re-declared arms, and the branch must be integrated preserving that commit in
+history.
+
 `root.py` remains the only module importing `atoms`. It gains the chain-read
 and epoch-publication wiring, using the existing durable executor vocabulary,
 including `CreateOp`, `ReplaceOp`, and `DeleteOp`. It injects required chain
