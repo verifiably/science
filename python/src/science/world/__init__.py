@@ -1,8 +1,9 @@
 """The world layer: closed manifests, the rules store, and pure derivation.
 
 Slice 1's registry lives in `science.world.registry`, slice 2's rules store in
-`science.world.rules`, its epoch carrier in `science.world.epoch` and its pure
-derivations in `science.world.derive`; this module is the package's import
+`science.world.rules`, its epoch carrier and publication in
+`science.world.epoch`, its pure derivations in `science.world.derive` and its
+read surface in `science.world.read`; this module is the package's import
 surface and re-exports them unchanged. The private names below are the seams
 `science.root`, `science.corpus`, and the suite already reach for through
 `science.world`, kept importable so the promotion moves no caller. Anything
@@ -47,9 +48,21 @@ from science.world.epoch import (
     CURRENT_POINTER,
     DERIVATION_KINDS,
     ENUMERATED_SOURCE_KINDS,
+    EPOCH_DOMAIN,
     EPOCH_MEMBERS,
+    MEMBER_KEYS,
+    RECEIPT_DOMAIN,
+    RECEIPT_IDENTITY_KEYS,
+    RECEIPT_KEYS,
+    RECEIPT_KINDS,
     RETRACTION_RESOLUTIONS,
+    DerivationBindings,
+    Epoch,
+    build_epoch,
+    packaging_identity_of,
+    receipt_identity,
 )
+from science.world.read import current_epoch, open_epoch
 from science.world.registry import (
     AdmissionProvenance,
     AdmissionRecord,
@@ -104,9 +117,15 @@ __all__ = [
     "CURRENT_POINTER",
     "DERIVATION_KINDS",
     "ENUMERATED_SOURCE_KINDS",
+    "EPOCH_DOMAIN",
     "EPOCH_MEMBERS",
     "FIXTURE_SET_DOMAIN",
+    "MEMBER_KEYS",
     "PRODUCER_SNAPSHOT_DOMAIN",
+    "RECEIPT_DOMAIN",
+    "RECEIPT_IDENTITY_KEYS",
+    "RECEIPT_KEYS",
+    "RECEIPT_KINDS",
     "RECEIPT_OUTCOMES",
     "RETRACTION_ENUMERATION_DOMAIN",
     "RETRACTION_RESOLUTIONS",
@@ -123,7 +142,9 @@ __all__ = [
     "CoreferenceMap",
     "CorpusManifest",
     "CorpusStatus",
+    "DerivationBindings",
     "DerivationReceipt",
+    "Epoch",
     "ForkOf",
     "ForkedFrom",
     "Fresh",
@@ -142,9 +163,11 @@ __all__ = [
     "admission_projection",
     "belief_input_identity",
     "binding_for",
+    "build_epoch",
     "certification_inventory",
     "coreference_map",
     "corpus_state_identity",
+    "current_epoch",
     "derivation_receipts",
     "fixture_set_identity",
     "implementation_identity",
@@ -153,10 +176,13 @@ __all__ = [
     "manifest_bytes",
     "manifest_projection",
     "member_content_digest",
+    "open_epoch",
+    "packaging_identity_of",
     "parse_rule_document",
     "producer_snapshot",
     "producers_map_projection",
     "provenance_projection",
+    "receipt_identity",
     "remove_rule_binding",
     "retraction_discovery_map",
     "retraction_discovery_map_projection",

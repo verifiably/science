@@ -17,12 +17,14 @@ That makes the epochs directory the place — the only place — where a world c
 answer "what evidence would I strand if I stopped holding this pair?", which is
 what `science.world.rules.remove_rule_binding` must report.
 
-The second is a build's **coherent preflight and capture** (§5.2, §5.3), at the
-bottom of this module: the two acts that read live state, and the frozen
-`_BuildDraft` that separates them from everything pure. They are here rather
-than beside the derivations because an epoch is what they are gathering the
-inputs for, and because the draft's shape — anchors, coverage, captured states,
-the build-start world head — is §6.1's layout read backwards.
+The second is a build's **coherent preflight and capture** (§5.2, §5.3) and the
+**publication** that follows it (§5.4, §6.3), in the bottom half of this
+module: the acts that read live state, the frozen `_BuildDraft` that separates
+them from everything pure, and the one transaction that turns derived bytes
+into a retained epoch. They are here rather than beside the derivations because
+an epoch is what they are gathering the inputs for, and because the draft's
+shape — anchors, coverage, captured states, the build-start world head — is
+§6.1's layout read backwards.
 
 A receipt identity is the digest under `RECEIPT_DOMAIN` of the canonical
 projection ``(receipt kind, subject projection identity, sorted corpus-state
@@ -66,11 +68,18 @@ retraction enumeration projection inside the retraction receipt and the
 certification inventory inside the certification receipt — so one closed set
 across all four kinds would be wrong in both directions at once.
 
-**Deliberately not here yet.** Publishing, opening, selecting and deleting
-epochs are later acts, and so is the pure derivation between capture and
-publication. This module recomputes no member digest and no packaging identity:
-the scanner locates carriers and reads receipts, full carrier validation
-belongs to the open act, and a build stops at its draft.
+**Two readings of a carrier, and the weaker one is deliberate.** The sever scan
+answers "which receipts does this world retain", and it stops at the member
+set: it recomputes no digest and no packaging identity, because §4.3's removal
+report is about the receipts a carrier holds, not about the name the directory
+holding them was given, and a stricter scan would make one damaged epoch block
+every removal in its world. `_locked_open_epoch` is the strong reading, and it
+is what every *read* of an epoch goes through: the exact member set, every
+closed document, and the recomputed packaging identity.
+
+**Deliberately not here yet.** Selecting `current` and reading through an epoch
+belong to `science.world.read`; deleting one is later still. Nothing beneath
+``epochs/`` is written by any act but the one publication transaction below.
 
 **Layering.** The *carrier* half knows nothing of the rules store: a receipt
 names a binding as two digests, and reading a receipt does not require holding
@@ -83,13 +92,14 @@ between the two modules resolvable in every order.
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from types import MappingProxyType
 from typing import cast
 
 import yaml
+from nodes.core.write_plan import CreateOp, ReplaceOp, WritePlan
 
 from science import stored
 from science.corpus import ReadView, _acyclic_postorder, _root_state_for, _validated_retraction_facet
@@ -100,6 +110,7 @@ from science.errors import (
     CoverageUnresolvable,
     EnumeratedKindUngoverned,
     EpochMalformed,
+    EpochUnknown,
 )
 from science.identity import v1
 
@@ -115,12 +126,18 @@ __all__ = [
     "CURRENT_POINTER",
     "DERIVATION_KINDS",
     "ENUMERATED_SOURCE_KINDS",
+    "EPOCH_DOMAIN",
     "EPOCH_MEMBERS",
+    "MEMBER_KEYS",
     "RECEIPT_DOMAIN",
     "RECEIPT_IDENTITY_KEYS",
     "RECEIPT_KEYS",
     "RECEIPT_KINDS",
     "RETRACTION_RESOLUTIONS",
+    "DerivationBindings",
+    "Epoch",
+    "build_epoch",
+    "packaging_identity_of",
     "receipt_identity",
 ]
 
@@ -144,12 +161,46 @@ extra one are the same failure, `EpochMalformed`. This is the module's one
 declaration of the inventory; every act over epochs reads it from here.
 """
 
+EPOCH_DOMAIN = "science.epoch.v1"
+"""§6.2's packaging-identity domain.
+
+It names *publication bytes* and nothing else. No map location, epoch path or
+packaging digest enters a semantic identity or a belief input, so this domain
+never appears in the producer snapshot's formula and never will.
+"""
+
 CURRENT_POINTER = "current"
 """The one-line operational pointer beside the epoch directories.
 
 It is a member of ``epochs/``, not of an epoch, and it is a regular file rather
 than a symlink. Named here so every walk of ``epochs/`` agrees about the one
 entry that is not a carrier.
+"""
+
+MEMBER_KEYS: Mapping[str, tuple[str, ...]] = MappingProxyType(
+    {
+        "address-map.yaml": ("addresses",),
+        "producers-map.yaml": ("producers",),
+        "retraction-discovery-map.yaml": ("targets",),
+        "coreference-map.yaml": ("pairs",),
+        "producer-snapshot.yaml": ("coverage", "producers"),
+        "anchors.yaml": ("corpora", "world"),
+        "coverage.yaml": ("coverage",),
+    }
+)
+"""The closed top-level key set of each epoch member that is not a receipt.
+
+The seven of them, keyed exactly as `EPOCH_MEMBERS` names them, and disjoint
+from `RECEIPT_KEYS` by construction: the four receipts are read by the
+permissive floor below, because their contract is the receipt validator's to
+enforce (§8.2) and a closed reading here would take it away.
+
+Anchors carry the covered corpora's triples under ``corpora`` and the
+build-start world-chain head under ``world``, rather than one list with the
+world head folded into it. §6.1 asks for both in one member and does not say
+how; keeping them apart is what stops a covered corpus from being read as the
+world anchor, and the two are genuinely different subjects — a world id is not
+a `corpus_id`, and only one of them is what the epoch was anchored *against*.
 """
 
 RECEIPT_KINDS: Mapping[str, str] = MappingProxyType(
@@ -248,6 +299,16 @@ class _ReceiptCarrier:
     member being absent, which an empty coverage is not."""
     rule_identity: str | None
     implementation_identity: str | None
+    document: Mapping[object, object]
+    """The whole parsed document, deep-frozen, exactly as the member carried it.
+
+    The five members above are what *this* layer lifts; the receipt validator
+    (§8.2) has to see everything else too — a key outside
+    `RECEIPT_KEYS[member]`, a subject projection that must be re-derived and
+    compared — and it may not reach past the carrier to the bytes to find it.
+    Carrying the document here is what lets one read of one member serve both
+    layers without a second, divergent parse.
+    """
 
     @property
     def missing(self) -> tuple[str, ...]:
@@ -324,21 +385,35 @@ def _retained_receipt_bindings_locked(world_root: Path) -> tuple[_ReceiptCarrier
     return tuple(carriers)
 
 
-def _receipts_of(directory: Path) -> tuple[_ReceiptCarrier, ...]:
-    """The four receipts of one closed carrier, in §6.1's member order."""
-    members: dict[str, Path] = {}
+def _carrier_members(directory: Path) -> Mapping[str, bytes]:
+    """One carrier's exact eleven members, read as bytes in §6.1's order.
+
+    The one place a carrier's member set is decided, for the sever scan above
+    and for the open act below alike. It stops at the *set*: recomputing the
+    packaging identity is the open act's step, and folding it in here would
+    make one world's damaged epoch refuse every rule removal in that world —
+    §4.3's report is computed over the receipts a carrier holds, not over the
+    name the directory holding them was given.
+    """
+    members: dict[str, bytes] = {}
     for path in directory.iterdir():
         if path.is_symlink() or not path.is_file():
             raise EpochMalformed(f"{path}: an epoch member is a regular file")
-        members[path.name] = path
+        members[path.name] = path.read_bytes()
     if set(members) != set(EPOCH_MEMBERS):
         raise EpochMalformed(
             f"{directory}: the member set is not the closed epoch layout; "
             f"missing {sorted(set(EPOCH_MEMBERS) - set(members))}, "
             f"unexpected {sorted(set(members) - set(EPOCH_MEMBERS))}"
         )
+    return MappingProxyType({member: members[member] for member in EPOCH_MEMBERS})
+
+
+def _receipts_of(directory: Path) -> tuple[_ReceiptCarrier, ...]:
+    """The four receipts of one closed carrier, in §6.1's member order."""
+    members = _carrier_members(directory)
     return tuple(
-        _parse_receipt(directory.name, member, members[member].read_bytes())
+        _parse_receipt(directory.name, member, members[member])
         for member in EPOCH_MEMBERS
         if member in RECEIPT_KINDS
     )
@@ -376,6 +451,7 @@ def _parse_receipt(packaging_identity: str, member: str, content: bytes) -> _Rec
             None if states is None else _corpus_states(states),
             _lift_text(document, "rule_identity"),
             _lift_text(document, "implementation_identity"),
+            cast(Mapping[object, object], _deep_frozen(document)),
         )
     except Exception as caught:
         raise EpochMalformed(f"{packaging_identity}/{member}: {caught}") from caught
@@ -420,6 +496,316 @@ def _require_text(value: object, location: str) -> str:
     if type(value) is not str:
         raise ValueError(f"{location} is text, not {type(value).__name__}")
     return value
+
+
+def _deep_frozen(value: object) -> object:
+    """A parsed document with nothing a reader can write through.
+
+    An `Epoch` is immutable, and a mapping held behind a frozen field is not:
+    without this, a caller could edit the coverage declaration of an opened
+    epoch and hand the result to a bound read, which would then answer for a
+    coverage no publication ever made. Mappings become read-only views and
+    sequences become tuples; scalars are already immutable and pass through.
+    """
+    if type(value) is dict:
+        mapping: dict[object, object] = value
+        return MappingProxyType({key: _deep_frozen(member) for key, member in mapping.items()})
+    if type(value) is list:
+        members: list[object] = value
+        return tuple(_deep_frozen(member) for member in members)
+    return value
+
+
+# --- the closed carrier, and opening one (§6.1, §6.2, §8.1) -------------------
+#
+# The lower of §8.2's two layers, at its full strength. The scan above answers
+# "which receipts does this world retain"; what follows answers "are these the
+# exact eleven documents this directory's name claims", which is a strictly
+# stronger question and the one every read of an epoch must have answered
+# first.
+#
+# The world lock is the caller's throughout: `_locked_open_epoch` never takes
+# it and the lock is not reentrant, exactly as `rules._locked_resolve_rule_binding`
+# is written. Publication holds it too, which is what makes an in-flight
+# transaction invisible rather than briefly indistinguishable from damage.
+
+
+def packaging_identity_of(members: Mapping[str, bytes]) -> str:
+    """§6.2: `science.epoch.v1` over sorted `(member name, member content
+    digest)` pairs, where a member content digest is the 64-character lowercase
+    SHA-256 hex of that member's exact bytes.
+
+    Taken over the complete member bytes and nothing else. It is computed
+    *before* publication and then names the directory the members are created
+    in, so the name is a claim about bytes that the bytes themselves settle —
+    which is what makes recomputing it on open a real check rather than a
+    restatement of the path.
+    """
+    return v1.digest(
+        EPOCH_DOMAIN,
+        [[name, rules.member_content_digest(content)] for name, content in sorted(members.items())],
+    )
+
+
+@dataclass(frozen=True)
+class Epoch:
+    """One opened epoch: its packaging identity and its parsed members.
+
+    Immutable through and through — the mappings are read-only views and the
+    parsed documents are deep-frozen — because an epoch is published bytes, and
+    a reader holding one must not be able to produce an answer bound to a
+    stamp no publication ever made.
+
+    `members` is the exact bytes, kept because they are what the packaging
+    identity digests and what a rebuild compares against. `documents` is those
+    bytes parsed, keyed the same way. `receipts` is the four receipt carriers,
+    handed on to the receipt validator whether or not they honour §7.5's
+    contract (§8.2).
+    """
+
+    packaging_identity: str
+    members: Mapping[str, bytes]
+    documents: Mapping[str, Mapping[object, object]]
+    receipts: Mapping[str, _ReceiptCarrier]
+    coverage: tuple[tuple[str, str], ...]
+    """§6.1's `coverage.yaml`, as sorted `(corpus_id, corpus_state)` pairs. The
+    source of the bound stamp (§8.3)."""
+    anchors: tuple[_Anchor, ...]
+    world_anchor: _Anchor
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "members", MappingProxyType(dict(self.members)))
+        object.__setattr__(self, "documents", MappingProxyType(dict(self.documents)))
+        object.__setattr__(self, "receipts", MappingProxyType(dict(self.receipts)))
+
+
+def _locked_open_epoch(world_root: Path, packaging_identity: str) -> Epoch:
+    """§8.1's private locked loader: one named epoch, fully validated.
+
+    The caller holds the world lock and has already crossed the recovery
+    barrier; this takes neither, because the lock is not reentrant and because
+    a loader that completed recovery itself could not be reused by an act that
+    had to complete it earlier.
+
+    The order is §8.1's: the exact member set, then every closed document, then
+    the recomputed packaging identity. Every failure is `EpochMalformed` with
+    the underlying refusal as its cause — except an absence, which is
+    `EpochUnknown`, because "there is no such epoch" and "there is one and it
+    is broken" are answers a caller acts on differently.
+    """
+    if not _PACKAGING_IDENTITY.fullmatch(packaging_identity):
+        raise EpochUnknown(f"{packaging_identity!r} is not a packaging identity, so no epoch is named by it")
+    directory = Path(world_root) / "epochs" / packaging_identity
+    if directory.is_symlink():
+        raise EpochMalformed(f"{directory}: an epoch carrier is not a symbolic link")
+    if not directory.exists():
+        raise EpochUnknown(f"{directory}: this world retains no epoch under that packaging identity")
+    if not directory.is_dir():
+        raise EpochMalformed(f"{directory}: an epoch carrier is a directory")
+    members = _carrier_members(directory)
+    documents: dict[str, Mapping[object, object]] = {}
+    receipts: dict[str, _ReceiptCarrier] = {}
+    for member, content in members.items():
+        if member in RECEIPT_KINDS:
+            receipts[member] = _parse_receipt(packaging_identity, member, content)
+            documents[member] = receipts[member].document
+        else:
+            documents[member] = _parse_member(packaging_identity, member, content)
+    recomputed = packaging_identity_of(members)
+    if recomputed != packaging_identity:
+        raise EpochMalformed(
+            f"{directory}: the members recompute the packaging identity {recomputed}, "
+            "so this directory does not hold the epoch its name claims"
+        )
+    return Epoch(
+        packaging_identity,
+        members,
+        documents,
+        receipts,
+        _covered_states(documents["coverage.yaml"]),
+        _corpus_anchors(documents["anchors.yaml"]),
+        _anchor(cast(Mapping[object, object], documents["anchors.yaml"]["world"])),
+    )
+
+
+def _locked_current_identity(world_root: Path) -> str | None:
+    """The packaging identity `epochs/current` names, or `None` where this
+    world has published nothing.
+
+    The pointer is a regular file holding one line: the packaging identity and
+    a newline. Nothing else is a pointer — not a symlink, not a longer
+    document, not a bare identity without its terminator — because an
+    operational convenience whose spelling was negotiable would be a second,
+    weaker way to name an epoch. The caller holds the world lock.
+    """
+    path = Path(world_root) / "epochs" / CURRENT_POINTER
+    if path.is_symlink():
+        raise EpochMalformed(f"{path}: the current pointer is not a symbolic link")
+    if not path.exists():
+        return None
+    if not path.is_file():
+        raise EpochMalformed(f"{path}: the current pointer is a regular file")
+    content = path.read_bytes()
+    try:
+        named = content.decode("utf-8")
+    except UnicodeDecodeError as caught:
+        raise EpochMalformed(f"{path}: the current pointer is not UTF-8 text") from caught
+    if not named.endswith("\n") or not _PACKAGING_IDENTITY.fullmatch(named[:-1]):
+        raise EpochMalformed(f"{path}: the current pointer is one line naming one packaging identity")
+    return named[:-1]
+
+
+def _current_pointer_bytes(packaging_identity: str) -> bytes:
+    """The pointer's exact bytes. One line, one identity, one newline."""
+    return f"{packaging_identity}\n".encode()
+
+
+def _parse_member(packaging_identity: str, member: str, content: bytes) -> Mapping[object, object]:
+    """One non-receipt member, read as the closed document §6.1 requires.
+
+    The same duplicate-key, unknown-field and malformed-value discipline the
+    registry uses, applied to each member's own shape. It stops at *shape*: it
+    does not ask whether the address map is singular, whether a producers entry
+    names a run the epoch also records, or whether a coreference balance is
+    arithmetically reachable. Those are semantic questions, and two of these
+    members have no receipt to re-derive them from — §8.1's member-digest and
+    packaging-identity recompute is their integrity check, and inventing a
+    further outcome for them here would be inventing an authority.
+    """
+    try:
+        document = yaml.load(content.decode("utf-8"), Loader=registry._ManifestLoader)
+        if type(document) is not dict:
+            raise ValueError("an epoch member is a mapping")
+        keys = MEMBER_KEYS[member]
+        if tuple(sorted(document)) != keys:
+            raise ValueError(f"the document has exactly {list(keys)}; got {sorted(document)}")
+        _MEMBER_CHECKS[member](document)
+        return cast(Mapping[object, object], _deep_frozen(document))
+    except Exception as caught:
+        raise EpochMalformed(f"{packaging_identity}/{member}: {caught}") from caught
+
+
+def _entries(value: object, keys: tuple[str, ...], location: str) -> tuple[Mapping[str, object], ...]:
+    """A member's list of closed entries, each with exactly `keys`."""
+    if type(value) is not list:
+        raise ValueError(f"{location} is a list, not {type(value).__name__}")
+    members: list[object] = value
+    return tuple(_closed_entry(entry, keys, location) for entry in members)
+
+
+def _closed_entry(value: object, keys: tuple[str, ...], location: str) -> Mapping[str, object]:
+    if type(value) is not dict:
+        raise ValueError(f"an entry of {location} is a mapping, not {type(value).__name__}")
+    entry: dict[object, object] = value
+    if tuple(sorted(str(key) for key in entry)) != keys or any(type(key) is not str for key in entry):
+        raise ValueError(f"an entry of {location} has exactly {list(keys)}; got {sorted(map(str, entry))}")
+    return cast(Mapping[str, object], entry)
+
+
+def _text_members(value: object, location: str) -> tuple[str, ...]:
+    if type(value) is not list:
+        raise ValueError(f"{location} is a list, not {type(value).__name__}")
+    members: list[object] = value
+    return tuple(_require_text(member, f"a member of {location}") for member in members)
+
+
+def _check_addresses(document: Mapping[object, object]) -> None:
+    for entry in _entries(document["addresses"], ("address", "corpus_id", "uid"), "addresses"):
+        for key in ("address", "corpus_id", "uid"):
+            _require_text(entry[key], key)
+
+
+def _check_producers(document: Mapping[object, object]) -> None:
+    for entry in _entries(document["producers"], ("dataset", "runs"), "producers"):
+        _require_text(entry["dataset"], "dataset")
+        _text_members(entry["runs"], "runs")
+
+
+def _check_targets(document: Mapping[object, object]) -> None:
+    for entry in _entries(document["targets"], ("retractions", "target"), "targets"):
+        _require_text(entry["target"], "target")
+        _text_members(entry["retractions"], "retractions")
+
+
+def _check_pairs(document: Mapping[object, object]) -> None:
+    for entry in _entries(
+        document["pairs"], ("balance", "distinct_key_count", "endpoints"), "pairs"
+    ):
+        endpoints = entry["endpoints"]
+        if type(endpoints) is not list or len(endpoints) != 2:
+            raise ValueError("a coreference pair names exactly two endpoints")
+        _text_members(endpoints, "endpoints")
+        for key in ("balance", "distinct_key_count"):
+            if type(entry[key]) is not int:
+                raise ValueError(f"{key} is an integer, not {type(entry[key]).__name__}")
+
+
+def _check_snapshot(document: Mapping[object, object]) -> None:
+    _text_members(document["coverage"], "coverage")
+    _check_producers(document)
+
+
+_ANCHOR_KEYS = ("genesis_digest", "head_digest", "subject")
+
+
+def _check_anchors(document: Mapping[object, object]) -> None:
+    subjects = [
+        _anchor(entry).subject for entry in _entries(document["corpora"], _ANCHOR_KEYS, "corpora")
+    ]
+    if subjects != sorted(subjects):
+        raise ValueError("the corpus anchors are not sorted by subject")
+    if len(set(subjects)) != len(subjects):
+        raise ValueError("one subject is anchored twice")
+    _anchor(_closed_entry(document["world"], _ANCHOR_KEYS, "world"))
+
+
+def _check_coverage(document: Mapping[object, object]) -> None:
+    covered = [
+        _require_text(entry["corpus_id"], "corpus_id")
+        for entry in _entries(document["coverage"], ("corpus_id", "corpus_state"), "coverage")
+        if _require_text(entry["corpus_state"], "corpus_state")
+    ]
+    if covered != sorted(covered):
+        raise ValueError("the coverage declaration is not sorted by corpus_id")
+    if len(set(covered)) != len(covered):
+        raise ValueError("one corpus is covered twice")
+
+
+_MEMBER_CHECKS: Mapping[str, Callable[[Mapping[object, object]], None]] = MappingProxyType(
+    {
+        "address-map.yaml": _check_addresses,
+        "producers-map.yaml": _check_producers,
+        "retraction-discovery-map.yaml": _check_targets,
+        "coreference-map.yaml": _check_pairs,
+        "producer-snapshot.yaml": _check_snapshot,
+        "anchors.yaml": _check_anchors,
+        "coverage.yaml": _check_coverage,
+    }
+)
+
+
+def _anchor(entry: Mapping[str, object] | Mapping[object, object]) -> _Anchor:
+    return _Anchor(
+        _require_text(entry["subject"], "subject"),
+        _require_text(entry["genesis_digest"], "genesis_digest"),
+        _require_text(entry["head_digest"], "head_digest"),
+    )
+
+
+def _corpus_anchors(document: Mapping[object, object]) -> tuple[_Anchor, ...]:
+    corpora: tuple[object, ...] = cast(tuple[object, ...], document["corpora"])
+    return tuple(_anchor(cast(Mapping[object, object], entry)) for entry in corpora)
+
+
+def _covered_states(document: Mapping[object, object]) -> tuple[tuple[str, str], ...]:
+    coverage: tuple[object, ...] = cast(tuple[object, ...], document["coverage"])
+    return tuple(
+        (
+            _require_text(cast(Mapping[object, object], entry)["corpus_id"], "corpus_id"),
+            _require_text(cast(Mapping[object, object], entry)["corpus_state"], "corpus_state"),
+        )
+        for entry in coverage
+    )
 
 
 # --- coherent preflight and capture (§5.2, §5.3) ------------------------------
@@ -569,14 +955,30 @@ class _BuildDraft:
 
 
 def _declared_coverage(coverage: frozenset[str]) -> tuple[str, ...]:
-    """The declared covered ids, sorted. Never the registry's live set.
+    """The declared covered ids, sorted and non-empty. Never the registry's
+    live set.
 
     §5.2's closing sentence is a rule about what a build may *substitute*, and
     the only way to keep it is to have no path that reads liveness as a
     default. The caller declares; this checks the shape and orders it.
+
+    **An empty coverage is refused, and that is a decision rather than a
+    consequence.** Nothing in §5 or §6 makes an empty capture unrepresentable:
+    the maps would be empty, the receipts would carry an empty state list, and
+    the anchors would still name the world. What such an epoch cannot do is
+    answer. §8.3 makes every address outside the observed coverage `Unknown`,
+    and §8.4 makes every edge `indeterminate` wherever the epoch's coverage
+    does not contain the live-id set — so an epoch declaring nothing answers
+    nothing in any world holding a live corpus, and pointing `current` at one
+    would disable every read the epoch exists to serve without a single
+    refusal being raised. A caller that arrived here with an empty set filtered
+    its coverage down to nothing, and is told so at the point the mistake was
+    made rather than at the point a reader notices.
     """
     if not isinstance(coverage, (frozenset, set)):
         raise TypeError("a build's coverage is a set of stable corpus ids")
+    if not coverage:
+        raise ValueError("a build covers at least one corpus; an epoch declaring no coverage answers nothing")
     return tuple(sorted(registry._require_lower_hex(corpus_id, 32, "corpus_id") for corpus_id in coverage))
 
 
@@ -826,6 +1228,259 @@ def _recheck_rule_bindings(world: registry.World, draft: _BuildDraft) -> Mapping
     corpora may move between capture and publication, and receipts name the
     exact captured states rather than the present ones.
     """
-    declared = {kind: held.binding for kind, held in draft.held.items()}
     with world._state.lock:
-        return rules._locked_resolve_rule_bindings(world.config.world_root, declared)
+        return _locked_recheck_rule_bindings(world.config.world_root, draft)
+
+
+def _locked_recheck_rule_bindings(world_root: Path, draft: _BuildDraft) -> Mapping[str, rules._HeldRule]:
+    """The recheck itself, under a world lock the caller already holds.
+
+    Publication needs the recheck and the transaction inside **one** hold of
+    the lock, not two. Removal computes its sever report from the retained
+    epochs and deletes, all under this same lock; a publication that released
+    it between the recheck and the commit would let a removal run entirely
+    inside that window, see no epoch to report, and leave behind exactly the
+    thing §5.4 is written to prevent — a published receipt naming a pair this
+    world has already stopped holding, severed by a report that never
+    mentioned it. So the lock-taking act above is the one an isolated caller
+    uses, and this is the one publication composes with.
+    """
+    declared = {kind: held.binding for kind, held in draft.held.items()}
+    return rules._locked_resolve_rule_bindings(world_root, declared)
+
+
+# --- publication (§5.4, §6.3) -------------------------------------------------
+#
+# Everything above is either pure or read-only. What follows is the one act
+# that writes beneath ``epochs/``, and it writes exactly once: every byte is
+# derived before the world lock is reacquired, and what happens inside the lock
+# is a recheck, an inspection, and one plan.
+#
+# There is no staging writer, no sequence file and no second commit protocol.
+# Crash atomicity and durability are the engine's properties of that single
+# transaction, relied on and never re-implemented.
+
+
+@dataclass(frozen=True)
+class DerivationBindings:
+    """The four exact rule bindings one build names (§5.2).
+
+    Named fields rather than a mapping keyed by receipt kind, because a build
+    input naming three derivations, or five, is not a build input at all —
+    and a shape with exactly four slots says so at construction instead of at
+    the first missing lookup. `by_kind` performs the join to §7.5's kind
+    vocabulary, which is the rules store's business nowhere else: the store is
+    keyed by identity and knows nothing of kinds.
+    """
+
+    producer: rules.RuleBinding
+    retraction: rules.RuleBinding
+    certification: rules.RuleBinding
+    coreference: rules.RuleBinding
+
+    def __post_init__(self) -> None:
+        for kind, binding in self.by_kind().items():
+            if type(binding) is not rules.RuleBinding:
+                raise TypeError(f"the {kind!r} binding must be an exact RuleBinding")
+
+    def by_kind(self) -> Mapping[str, rules.RuleBinding]:
+        """The same four, keyed as `DERIVATION_KINDS` keys them."""
+        return MappingProxyType(
+            {
+                "producer": self.producer,
+                "retraction-enumeration": self.retraction,
+                "certification-enumeration": self.certification,
+                "coreference-reduction": self.coreference,
+            }
+        )
+
+
+def build_epoch(
+    world: registry.World,
+    *,
+    coverage: frozenset[str],
+    bindings: DerivationBindings,
+) -> Epoch:
+    """Build and publish one epoch over exactly this declared coverage.
+
+    Three phases, and the order between them is the whole of §5.4. Capture
+    reads live state under each corpus's own hold and produces a frozen draft.
+    Derivation is pure and produces the complete member bytes and, from those
+    bytes, the packaging identity — **before** any lock is reacquired, so
+    nothing that could refuse or take time happens inside the critical section.
+    Publication then takes the world lock once and, under it, crosses the
+    recovery barrier, rechecks the four bindings, inspects any carrier already
+    holding this name, and submits at most one plan.
+
+    The answer is the epoch read back from what was published, not the values
+    that were about to be: an `Epoch` a caller holds always means bytes that
+    are on disk under the name it carries.
+    """
+    draft = _capture_build_inputs(world, coverage=coverage, bindings=bindings.by_kind())
+    members = _derived_members(draft)
+    packaging_identity = packaging_identity_of(members)
+    world_root = world.config.world_root
+    with world._state.lock:
+        # The barrier first, exactly as preflight takes it first: every world
+        # file inspected below — the same-name carrier, the pointer — is then
+        # inspected after recovery rather than beside it.
+        world._chain_head(world_root)
+        _locked_recheck_rule_bindings(world_root, draft)
+        plan = _locked_publication_plan(world_root, packaging_identity, members)
+        if plan:
+            world._executor_factory(world_root).execute(plan)
+        return _locked_open_epoch(world_root, packaging_identity)
+
+
+def _derived_members(draft: _BuildDraft) -> Mapping[str, bytes]:
+    """§6.1's eleven members, as the exact bytes this build would publish.
+
+    Pure: the draft is the only input, and there is no path from here to a
+    corpus root, a registry or a pointer. The four rules run once each over
+    the one captured projection; the two maps that are not receipt subjects
+    fold over the same capture.
+    """
+    snapshot = derive.producer_snapshot(draft.run("producer"))
+    enumeration = derive.retraction_enumeration(draft.run("retraction-enumeration"))
+    inventory = derive.certification_inventory(draft.run("certification-enumeration"))
+    coreference = derive.coreference_map(draft.run("coreference-reduction"))
+    receipts = derive.derivation_receipts(
+        snapshot=snapshot,
+        enumeration=enumeration,
+        inventory=inventory,
+        coreference=coreference,
+        corpus_states=draft.corpus_states,
+        bindings=draft.bindings,
+    )
+    members: dict[str, bytes] = {
+        "address-map.yaml": _document_bytes(
+            derive.address_map_projection(derive.address_map(draft.capture))
+        ),
+        "producers-map.yaml": _document_bytes(derive.producers_map_projection(snapshot.producers)),
+        "retraction-discovery-map.yaml": _document_bytes(
+            derive.retraction_discovery_map_projection(derive.retraction_discovery_map(draft.capture))
+        ),
+        "coreference-map.yaml": _document_bytes(coreference.projection()),
+        "producer-snapshot.yaml": _document_bytes(snapshot.projection()),
+        "anchors.yaml": _document_bytes(_anchors_projection(draft)),
+        "coverage.yaml": _document_bytes(_coverage_projection(draft)),
+    }
+    for receipt in receipts:
+        members[receipt.member] = _document_bytes(_receipt_projection(receipt))
+    if set(members) != set(EPOCH_MEMBERS):
+        raise EpochMalformed(
+            f"a build derived {sorted(members)}, which is not the closed epoch layout {sorted(EPOCH_MEMBERS)}"
+        )
+    return MappingProxyType({member: members[member] for member in EPOCH_MEMBERS})
+
+
+def _document_bytes(projection: Mapping[str, object]) -> bytes:
+    """One member's bytes: the canonical dump of its projection.
+
+    The same deterministic encoding the registry and the rules store use, so
+    an epoch member and a registry record are one reading of "a closed YAML
+    document" rather than two.
+    """
+    return yaml.safe_dump(dict(projection), sort_keys=True, allow_unicode=True).encode("utf-8")
+
+
+def _anchors_projection(draft: _BuildDraft) -> dict[str, object]:
+    """§6.1's anchors: one triple per covered corpus, sorted by subject, and
+    the build-start world-chain head beside them."""
+    return {
+        "corpora": [
+            {
+                "subject": anchor.subject,
+                "genesis_digest": anchor.genesis_digest,
+                "head_digest": anchor.head_digest,
+            }
+            for anchor in sorted(draft.anchors, key=lambda anchor: anchor.subject)
+        ],
+        "world": {
+            "subject": draft.world_anchor.subject,
+            "genesis_digest": draft.world_anchor.genesis_digest,
+            "head_digest": draft.world_anchor.head_digest,
+        },
+    }
+
+
+def _coverage_projection(draft: _BuildDraft) -> dict[str, object]:
+    """§6.1's coverage: the declared ids and each one's captured state.
+
+    Read from the captured states rather than from the declaration, because
+    the two cannot differ — `derive.Capture` derives its coverage from what it
+    captured — and taking it from one place means no build can publish a
+    declaration its receipts disagree with.
+    """
+    return {
+        "coverage": [
+            {"corpus_id": corpus_id, "corpus_state": corpus_state}
+            for corpus_id, corpus_state in draft.corpus_states
+        ]
+    }
+
+
+def _receipt_projection(receipt: derive.DerivationReceipt) -> dict[str, object]:
+    """One receipt member's document: §7.5's five identity members, and the
+    subject projection the two projection-bearing kinds carry inside it."""
+    projection: dict[str, object] = {
+        "kind": receipt.kind,
+        "subject": receipt.subject_identity,
+        "corpus_states": [
+            {"corpus_id": corpus_id, "corpus_state": corpus_state}
+            for corpus_id, corpus_state in receipt.corpus_states
+        ],
+        "rule_identity": receipt.rule_identity,
+        "implementation_identity": receipt.implementation_identity,
+    }
+    if receipt.enumeration is not None:
+        projection["enumeration"] = dict(receipt.enumeration)
+    if receipt.inventory is not None:
+        projection["inventory"] = dict(receipt.inventory)
+    if set(projection) != RECEIPT_KEYS[receipt.member]:
+        raise EpochMalformed(
+            f"{receipt.member}: a receipt document carries exactly {sorted(RECEIPT_KEYS[receipt.member])}"
+        )
+    return projection
+
+
+def _locked_publication_plan(
+    world_root: Path, packaging_identity: str, members: Mapping[str, bytes]
+) -> WritePlan:
+    """The one transaction, or nothing at all. The caller holds the world lock.
+
+    First publication is eleven creates and a create for the pointer. Later
+    publication is the same eleven creates and a replace. An exact rebuild —
+    the content-addressed epoch already stands and is byte-identical — creates
+    nothing, because no member is ever overwritten, and a pointer already
+    naming it leaves nothing to do at all.
+
+    A same-name carrier is validated in full before any of that. It cannot be
+    byte-different and still pass: its members would recompute a different
+    packaging identity and `_locked_open_epoch` would refuse. The byte
+    comparison below is therefore not a second chance to fail but the
+    statement of what "already exists" was allowed to mean.
+    """
+    directory = world_root / "epochs" / packaging_identity
+    operations: list[CreateOp | ReplaceOp] = []
+    if directory.exists() or directory.is_symlink():
+        retained = _locked_open_epoch(world_root, packaging_identity)
+        if dict(retained.members) != dict(members):
+            raise EpochMalformed(f"{directory}: a retained epoch of this name holds different bytes")
+    else:
+        operations.extend(
+            CreateOp(f"epochs/{packaging_identity}/{member}", members[member]) for member in EPOCH_MEMBERS
+        )
+    pointer = _locked_current_identity(world_root)
+    content = _current_pointer_bytes(packaging_identity)
+    if pointer is None:
+        operations.append(CreateOp(f"epochs/{CURRENT_POINTER}", content))
+    elif pointer != packaging_identity:
+        operations.append(
+            ReplaceOp(
+                f"epochs/{CURRENT_POINTER}",
+                content,
+                rules.member_content_digest(_current_pointer_bytes(pointer)),
+            )
+        )
+    return operations

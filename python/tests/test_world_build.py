@@ -24,6 +24,7 @@ within a second", which is a different and much weaker claim.
 
 from __future__ import annotations
 
+import shutil
 import subprocess
 import sys
 import threading
@@ -31,6 +32,7 @@ from dataclasses import FrozenInstanceError, fields
 from pathlib import Path
 
 import pytest
+import yaml
 from fixtures_cut6 import PINS
 from nodes.core.corpus import Corpus
 from nodes.core.node import Node
@@ -47,6 +49,7 @@ from science.errors import (
     CoverageUnknown,
     CoverageUnresolvable,
     EnumeratedKindUngoverned,
+    EpochMalformed,
     ManifestMalformed,
     RetractionTargetUnresolvable,
     RuleNotHeld,
@@ -142,9 +145,9 @@ def node_target(node: Node) -> stored.NodeTarget:
     )
 
 
-def sample_nodes() -> tuple[Node, ...]:
+def sample_nodes(slug: str = "one") -> tuple[Node, ...]:
     """One dataset, one run producing it, one verification, and a retraction of
-    the verification.
+    the verification, all named after `slug`.
 
     Enough that all four derivations have something to say: the producer
     snapshot sees the `produces` edge, the retraction enumeration and the
@@ -156,26 +159,38 @@ def sample_nodes() -> tuple[Node, ...]:
     the ordinary path. A retraction the corpus itself would refuse to judge is
     a separate arm, and it is written as one.
     """
-    dataset = stored.dataset_node("one", title="dataset one")
-    run = stored.run_node("one", title="run one", spec="analysis-spec:one", produces=[dataset.id])
+    dataset = stored.dataset_node(slug, title=f"dataset {slug}")
+    run = stored.run_node(slug, title=f"run {slug}", spec=f"analysis-spec:{slug}", produces=[dataset.id])
     verification = stored.verification_node(
-        "one",
-        title="verification one",
+        slug,
+        title=f"verification {slug}",
         assessment="i" * 64,
-        assessment_ref="assessment:one",
+        assessment_ref=f"assessment:{slug}",
         scope="clean-environment",
         verdict="passed",
     )
     retraction = stored.retraction_node(
-        title="retraction one",
+        title=f"retraction {slug}",
         target=node_target(verification),
         reason="authored-error",
         rationale="the verification was wrong",
         grounds=[dataset.id],
         actor="alice",
-        event_token="event-one",
+        event_token=f"event-{slug}",
     )
     return (dataset, run, verification, retraction)
+
+
+def slug_for(corpus_id: str, coverage: tuple[str, ...]) -> str:
+    """One record-name slug per corpus in a multi-corpus fixture.
+
+    Two corpora claiming one address is corruption the address map refuses
+    outright (§7.2, and `derive.address_map` refuses it even when the two
+    claims agree), so a fixture covering several corpora has to give each its
+    own records. A single-corpus fixture keeps the plain `one` the arms that
+    name records by hand were written against.
+    """
+    return "one" if len(coverage) == 1 else corpus_id[0]
 
 
 def install_bindings(world: registry.World) -> dict[str, rules.RuleBinding]:
@@ -193,7 +208,10 @@ def admitted_world(
     chain_head: ChainHeads | None = None,
 ) -> tuple[registry.World, dict[str, rules.RuleBinding], dict[str, Path]]:
     """A world holding the four rules with every id in `coverage` admitted."""
-    roots = {corpus_id: corpus_at(tmp_path / corpus_id[:6], corpus_id, sample_nodes()) for corpus_id in coverage}
+    roots = {
+        corpus_id: corpus_at(tmp_path / corpus_id[:6], corpus_id, sample_nodes(slug_for(corpus_id, coverage)))
+        for corpus_id in coverage
+    }
     world = make_world(tmp_path, *roots.values(), chain_head=chain_head)
     for corpus_root in roots.values():
         world.admit(corpus_root, provenance=registry.Fresh(), actor="alice")
@@ -274,7 +292,7 @@ class TestTheCompositionRootReadsTheChain:
         assert world._corpus_executor_factory is composition_root.durable_executor_factory()
 
 
-@pytest.mark.parametrize("module", ["derive", "epoch", "registry", "rules"])
+@pytest.mark.parametrize("module", ["derive", "epoch", "read", "registry", "rules"])
 def test_each_world_module_imports_first_without_a_cycle(module):
     """Every world module is importable *first* in a fresh interpreter.
 
@@ -1009,3 +1027,128 @@ class TestThePrePublicationRecheck:
         assert draft.bindings == {
             kind: (binding.rule_identity, binding.implementation_identity) for kind, binding in bindings.items()
         }
+
+
+# --- Step 7 (deferred from Task 8 by ruling R4): publication ------------------
+#
+# These three arms need a published epoch, which did not exist while the rest of
+# this module was written. They stay here rather than moving to
+# `test_world_epoch.py` because what they are about is the *build* — that an
+# epoch is a function of the captured corpora and of nothing else, and that a
+# binding removed after capture stops one.
+
+
+def publish(world: registry.World, coverage: tuple[str, ...], bindings: dict[str, rules.RuleBinding]):
+    return epoch.build_epoch(
+        world,
+        coverage=frozenset(coverage),
+        bindings=epoch.DerivationBindings(
+            producer=bindings["producer"],
+            retraction=bindings["retraction-enumeration"],
+            certification=bindings["certification-enumeration"],
+            coreference=bindings["coreference-reduction"],
+        ),
+    )
+
+
+def carrier_bytes(world: registry.World, packaging_identity: str) -> dict[str, bytes]:
+    directory = world.config.world_root / "epochs" / packaging_identity
+    return {path.name: path.read_bytes() for path in sorted(directory.iterdir())}
+
+
+def test_delete_and_rebuild_reconstructs_all_four_maps(tmp_path):
+    """X1. The epoch is a function of the covered corpora and nothing else.
+
+    The published carrier is removed from the filesystem outright — the loss
+    an operator's `rm -rf`, a restore from a partial backup, or a wiped volume
+    would produce — and the same build is run again over the same, untouched
+    corpora. Every one of the four derived maps comes back byte-identical, and
+    so does the directory naming them: a packaging identity that moved would
+    mean some input other than the corpora had entered the derivation.
+    """
+    world, bindings, _roots = admitted_world(tmp_path, (ALPHA, BETA))
+    published = publish(world, (ALPHA, BETA), bindings)
+    before = carrier_bytes(world, published.packaging_identity)
+    maps = (
+        "address-map.yaml",
+        "producers-map.yaml",
+        "retraction-discovery-map.yaml",
+        "coreference-map.yaml",
+    )
+    assert set(maps) < set(before)
+    shutil.rmtree(world.config.world_root / "epochs" / published.packaging_identity)
+
+    rebuilt = publish(world, (ALPHA, BETA), bindings)
+
+    assert rebuilt.packaging_identity == published.packaging_identity
+    assert carrier_bytes(world, rebuilt.packaging_identity) == before
+    for member in maps:
+        assert rebuilt.members[member] == before[member], member
+    assert yaml.safe_load(rebuilt.members["producers-map.yaml"]) == {
+        "producers": [
+            {"dataset": f"dataset:{slug_for(corpus_id, (ALPHA, BETA))}", "runs": [f"run:{slug_for(corpus_id, (ALPHA, BETA))}"]}
+            for corpus_id in (ALPHA, BETA)
+        ]
+    }
+
+
+def test_rebuild_discards_all_map_only_edits(tmp_path):
+    """X1's other half. A published map is not an input to anything.
+
+    An edited map is refused rather than adopted while its carrier stands —
+    the directory no longer recomputes its own name, and no member is
+    overwritten to make it fit. Once the tampered carrier is gone the same
+    build reproduces the original bytes exactly, so the edit leaves no trace
+    anywhere: it never reached a corpus, and a corpus is the only thing a
+    derivation reads.
+    """
+    world, bindings, _roots = admitted_world(tmp_path, (ALPHA,))
+    published = publish(world, (ALPHA,), bindings)
+    directory = world.config.world_root / "epochs" / published.packaging_identity
+    pristine = carrier_bytes(world, published.packaging_identity)
+    forged = yaml.safe_dump(
+        {"addresses": [{"address": "dataset:forged", "corpus_id": ALPHA, "uid": "u" * 26}]},
+        sort_keys=True,
+        allow_unicode=True,
+    ).encode("utf-8")
+    (directory / "address-map.yaml").write_bytes(forged)
+
+    with pytest.raises(EpochMalformed):
+        publish(world, (ALPHA,), bindings)
+
+    assert (directory / "address-map.yaml").read_bytes() == forged, "the edit was overwritten in place"
+
+    shutil.rmtree(directory)
+    rebuilt = publish(world, (ALPHA,), bindings)
+
+    assert rebuilt.packaging_identity == published.packaging_identity
+    assert carrier_bytes(world, rebuilt.packaging_identity) == pristine
+    assert b"dataset:forged" not in rebuilt.members["address-map.yaml"]
+
+
+def test_removed_rule_before_publication_refuses(monkeypatch, tmp_path):
+    """§5.4. Removal won the race, so nothing is published.
+
+    The removal is interposed between capture and publication — the exact
+    window the recheck exists for — and the whole build refuses with
+    `RuleNotHeld`. No epoch directory, no `current` pointer, and no
+    transaction: an epoch whose receipt named a pair this world had already
+    stopped holding would be evidence nobody could resolve here.
+    """
+    world, bindings, _roots = admitted_world(tmp_path, (ALPHA,))
+    capture = epoch._capture_build_inputs
+    removed: list[rules.RuleBinding] = []
+
+    def capture_then_remove(world_, **keywords):
+        draft = capture(world_, **keywords)
+        rules.remove_rule_binding(world_, bindings["coreference-reduction"])
+        removed.append(bindings["coreference-reduction"])
+        return draft
+
+    monkeypatch.setattr(epoch, "_capture_build_inputs", capture_then_remove)
+
+    with pytest.raises(RuleNotHeld):
+        publish(world, (ALPHA,), bindings)
+
+    assert removed == [bindings["coreference-reduction"]]
+    assert not (world.config.world_root / "epochs").exists()

@@ -92,6 +92,14 @@ class EpochMalformed(ScienceError):
     this."""
 
 
+class EpochUnknown(ScienceError):
+    """An explicitly named epoch does not exist. It is the honest answer to a
+    name — nothing is retained under this packaging identity, and nothing about
+    the bytes of any other epoch is implied. A world whose ``current`` pointer
+    has never been written answers the same way: it has published no epoch, and
+    inventing one to point at would be worse than saying so."""
+
+
 class BuildContended(ScienceError):
     """An epoch build asked for a root's coherent capture and found the
     operation lock already held. The build refuses at once rather than queue:
