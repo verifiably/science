@@ -1,12 +1,41 @@
 # By kind, refs sorted and distinct, and nothing about where a ref lives or
 # whether it resolves.
 input:
-  certifications:
-    - ["verification", "ref-2"]
-    - ["assessment", "ref-1"]
-    - ["verification", "ref-1"]
-    - ["verification", "ref-2"]
   coverage: ["corpus-b", "corpus-a"]
+  records:
+    - corpus_id: "corpus-a"
+      address: "certification:two"
+      uid: "uid-certification-two"
+      kind: "instrument-certification"
+      deprecated_ids: []
+      produces: []
+      retraction: null
+      certification:
+        kind: "verification"
+        ref: "ref-2"
+      coreference: null
+    - corpus_id: "corpus-a"
+      address: "certification:one"
+      uid: "uid-certification-one"
+      kind: "instrument-certification"
+      deprecated_ids: []
+      produces: []
+      retraction: null
+      certification:
+        kind: "assessment"
+        ref: "ref-1"
+      coreference: null
+    - corpus_id: "corpus-b"
+      address: "certification:three"
+      uid: "uid-certification-three"
+      kind: "instrument-certification"
+      deprecated_ids: []
+      produces: []
+      retraction: null
+      certification:
+        kind: "verification"
+        ref: "ref-1"
+      coreference: null
 expected:
   by_kind:
     - kind: "assessment"

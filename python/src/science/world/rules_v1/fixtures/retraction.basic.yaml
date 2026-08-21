@@ -1,15 +1,43 @@
-# The same ref found twice with one resolution is one finding; two resolutions
-# for one ref are both kept.
+# Every retraction record in every covered corpus, each keeping its own
+# resolution, sorted. Non-retraction records contribute nothing, and the
+# retraction's target is not a member here — the retraction-discovery map is
+# where targets group.
 input:
-  found:
-    - ["retraction-b", "resolved"]
-    - ["retraction-a", "unresolvable"]
-    - ["retraction-b", "resolved"]
-    - ["retraction-a", "resolved"]
   coverage: ["corpus-b", "corpus-a"]
+  records:
+    - corpus_id: "corpus-b"
+      address: "retraction:beta"
+      uid: "uid-retraction-beta"
+      kind: "retraction"
+      deprecated_ids: []
+      produces: []
+      retraction:
+        target: "dataset:two"
+        resolution: "upheld"
+      certification: null
+      coreference: null
+    - corpus_id: "corpus-a"
+      address: "retraction:alpha"
+      uid: "uid-retraction-alpha"
+      kind: "retraction"
+      deprecated_ids: []
+      produces: []
+      retraction:
+        target: "dataset:one"
+        resolution: "overturned"
+      certification: null
+      coreference: null
+    - corpus_id: "corpus-a"
+      address: "dataset:one"
+      uid: "uid-dataset-one"
+      kind: "dataset"
+      deprecated_ids: []
+      produces: []
+      retraction: null
+      certification: null
+      coreference: null
 expected:
   found:
-    - ["retraction-a", "resolved"]
-    - ["retraction-a", "unresolvable"]
-    - ["retraction-b", "resolved"]
+    - ["retraction:alpha", "overturned"]
+    - ["retraction:beta", "upheld"]
   coverage: ["corpus-a", "corpus-b"]

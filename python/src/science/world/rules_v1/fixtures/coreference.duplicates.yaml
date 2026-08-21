@@ -1,7 +1,9 @@
-# Alice's two submissions differ only in their event token, which is outside
-# the deduplication key, so they are one unit; her second grounds is another.
-# Bob offsets, and does not retract. The second pair sits in another corpus,
-# because the reduction is over the declared coverage and not over one corpus.
+# The duplicate-weighting arm, alone. Four submissions of one stance on one
+# grounds by one attester, differing only in the event token the ruling puts
+# deliberately outside the deduplication key (world address ruling §5.2). They
+# are one unit of weight ±1: a retry, a re-import, or an attempt to stack
+# weight cannot manufacture a balance. A reduction that counted records, or
+# that kept the event token in the key, publishes 4 for both members.
 input:
   coverage: ["corpus-a", "corpus-b"]
   records:
@@ -14,7 +16,7 @@ input:
       retraction: null
       certification: null
       coreference:
-        endpoints: ["address-b", "address-a"]
+        endpoints: ["address-a", "address-b"]
         stance: 1
         actor: "alice"
         grounds: "grounds-1"
@@ -42,12 +44,12 @@ input:
       retraction: null
       certification: null
       coreference:
-        endpoints: ["address-a", "address-b"]
+        endpoints: ["address-b", "address-a"]
         stance: 1
         actor: "alice"
-        grounds: "grounds-2"
+        grounds: "grounds-1"
         event_token: "event-3"
-    - corpus_id: "corpus-a"
+    - corpus_id: "corpus-b"
       address: "coreference:four"
       uid: "uid-coreference-four"
       kind: "coreference-attestation"
@@ -57,29 +59,12 @@ input:
       certification: null
       coreference:
         endpoints: ["address-a", "address-b"]
-        stance: -1
-        actor: "bob"
-        grounds: "grounds-3"
+        stance: 1
+        actor: "alice"
+        grounds: "grounds-1"
         event_token: "event-4"
-    - corpus_id: "corpus-b"
-      address: "coreference:five"
-      uid: "uid-coreference-five"
-      kind: "coreference-attestation"
-      deprecated_ids: []
-      produces: []
-      retraction: null
-      certification: null
-      coreference:
-        endpoints: ["address-c", "address-a"]
-        stance: -1
-        actor: "bob"
-        grounds: "grounds-4"
-        event_token: "event-5"
 expected:
   pairs:
     - endpoints: ["address-a", "address-b"]
       balance: 1
-      distinct_key_count: 3
-    - endpoints: ["address-a", "address-c"]
-      balance: -1
       distinct_key_count: 1

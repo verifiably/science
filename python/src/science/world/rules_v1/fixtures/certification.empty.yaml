@@ -1,6 +1,6 @@
 input:
-  certifications: []
   coverage: ["corpus-a"]
+  records: []
 expected:
   by_kind: []
   coverage: ["corpus-a"]

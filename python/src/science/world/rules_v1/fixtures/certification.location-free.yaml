@@ -1,0 +1,47 @@
+# Location-free and resolution-free (§7.6). `ref-shared` is certified under one
+# kind in two covered corpora and enters the inventory once, carrying neither
+# corpus. Nothing in the expected document names a corpus except the coverage
+# declaration itself, and the two certifying records sit at different
+# addresses — so an inventory that keyed by the certifying record, or that kept
+# the corpus beside the ref, cannot produce these bytes.
+input:
+  coverage: ["corpus-a", "corpus-b"]
+  records:
+    - corpus_id: "corpus-a"
+      address: "certification:here"
+      uid: "uid-certification-here"
+      kind: "instrument-certification"
+      deprecated_ids: []
+      produces: []
+      retraction: null
+      certification:
+        kind: "verification"
+        ref: "ref-shared"
+      coreference: null
+    - corpus_id: "corpus-b"
+      address: "certification:there"
+      uid: "uid-certification-there"
+      kind: "instrument-certification"
+      deprecated_ids: []
+      produces: []
+      retraction: null
+      certification:
+        kind: "verification"
+        ref: "ref-shared"
+      coreference: null
+    - corpus_id: "corpus-b"
+      address: "certification:other"
+      uid: "uid-certification-other"
+      kind: "instrument-certification"
+      deprecated_ids: []
+      produces: []
+      retraction: null
+      certification:
+        kind: "verification"
+        ref: "ref-only-there"
+      coreference: null
+expected:
+  by_kind:
+    - kind: "verification"
+      refs: ["ref-only-there", "ref-shared"]
+  coverage: ["corpus-a", "corpus-b"]

@@ -1,5 +1,7 @@
-# No coverage member: the coreference map is outside belief and carries none.
+# The captured view declares its coverage, and the coreference subject does not
+# carry it: an empty reduction is `pairs: []` and nothing else (§7.6).
 input:
-  attestations: []
+  coverage: ["corpus-a"]
+  records: []
 expected:
   pairs: []

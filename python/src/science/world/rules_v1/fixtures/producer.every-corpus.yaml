@@ -1,0 +1,40 @@
+# The omission arm. Three covered corpora each hold one run producing the same
+# reproduced dataset. A snapshot that stopped after the first captured corpus,
+# or that kept one producer per dataset, publishes a dataset with fewer
+# producers than the covered world holds — and world §5.3 relies on a
+# reproduced dataset carrying at least two.
+input:
+  coverage: ["corpus-a", "corpus-b", "corpus-c"]
+  records:
+    - corpus_id: "corpus-a"
+      address: "run:one"
+      uid: "uid-run-one"
+      kind: "run"
+      deprecated_ids: []
+      produces: ["dataset:shared"]
+      retraction: null
+      certification: null
+      coreference: null
+    - corpus_id: "corpus-b"
+      address: "run:two"
+      uid: "uid-run-two"
+      kind: "run"
+      deprecated_ids: []
+      produces: ["dataset:shared"]
+      retraction: null
+      certification: null
+      coreference: null
+    - corpus_id: "corpus-c"
+      address: "run:three"
+      uid: "uid-run-three"
+      kind: "run"
+      deprecated_ids: []
+      produces: ["dataset:shared"]
+      retraction: null
+      certification: null
+      coreference: null
+expected:
+  producers:
+    - dataset: "dataset:shared"
+      runs: ["run:one", "run:three", "run:two"]
+  coverage: ["corpus-a", "corpus-b", "corpus-c"]

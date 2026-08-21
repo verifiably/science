@@ -1,8 +1,9 @@
-"""The world layer: closed corpus manifests and the fixture-bound rules store.
+"""The world layer: closed manifests, the rules store, and pure derivation.
 
-Slice 1's registry lives in `science.world.registry` and slice 2's rules store
-in `science.world.rules`; this module is the package's import surface and
-re-exports both unchanged. The private names below are the seams
+Slice 1's registry lives in `science.world.registry`, slice 2's rules store in
+`science.world.rules`, its epoch carrier in `science.world.epoch` and its pure
+derivations in `science.world.derive`; this module is the package's import
+surface and re-exports them unchanged. The private names below are the seams
 `science.root`, `science.corpus`, and the suite already reach for through
 `science.world`, kept importable so the promotion moves no caller. Anything
 that *replaces* one of them — a monkeypatched global — must patch the module
@@ -11,6 +12,37 @@ where the binding the implementation reads lives.
 
 from __future__ import annotations
 
+from science.world.derive import (
+    BELIEF_INPUT_KIND,
+    CERTIFICATION_INVENTORY_DOMAIN,
+    COREFERENCE_MAP_DOMAIN,
+    PRODUCER_SNAPSHOT_DOMAIN,
+    RECEIPT_OUTCOMES,
+    RETRACTION_ENUMERATION_DOMAIN,
+    Capture,
+    CapturedCertification,
+    CapturedCoreference,
+    CapturedCorpus,
+    CapturedRecord,
+    CapturedRetraction,
+    CertificationInventory,
+    CoreferenceMap,
+    DerivationReceipt,
+    ProducerSnapshot,
+    address_map,
+    address_map_projection,
+    belief_input_identity,
+    certification_inventory,
+    coreference_map,
+    derivation_receipts,
+    producer_snapshot,
+    producers_map_projection,
+    retraction_discovery_map,
+    retraction_discovery_map_projection,
+    retraction_enumeration,
+    retraction_enumeration_identity,
+    retraction_enumeration_projection,
+)
 from science.world.registry import (
     AdmissionProvenance,
     AdmissionRecord,
@@ -59,15 +91,31 @@ from science.world.rules import _HeldRule as _HeldRule
 from science.world.rules import _resolve_rule_binding as _resolve_rule_binding
 
 __all__ = [
+    "BELIEF_INPUT_KIND",
+    "CERTIFICATION_INVENTORY_DOMAIN",
+    "COREFERENCE_MAP_DOMAIN",
     "FIXTURE_SET_DOMAIN",
+    "PRODUCER_SNAPSHOT_DOMAIN",
+    "RECEIPT_OUTCOMES",
+    "RETRACTION_ENUMERATION_DOMAIN",
     "RULE_DOMAIN",
     "AdmissionProvenance",
     "AdmissionRecord",
+    "Capture",
+    "CapturedCertification",
+    "CapturedCoreference",
+    "CapturedCorpus",
+    "CapturedRecord",
+    "CapturedRetraction",
+    "CertificationInventory",
+    "CoreferenceMap",
     "CorpusManifest",
     "CorpusStatus",
+    "DerivationReceipt",
     "ForkOf",
     "ForkedFrom",
     "Fresh",
+    "ProducerSnapshot",
     "RegistryView",
     "ReplicaOf",
     "RuleBinding",
@@ -76,10 +124,16 @@ __all__ = [
     "StatusRecord",
     "World",
     "WorldConfig",
+    "address_map",
+    "address_map_projection",
     "admission_digest",
     "admission_projection",
+    "belief_input_identity",
     "binding_for",
+    "certification_inventory",
+    "coreference_map",
     "corpus_state_identity",
+    "derivation_receipts",
     "fixture_set_identity",
     "implementation_identity",
     "install_rule_binding",
@@ -88,8 +142,15 @@ __all__ = [
     "manifest_projection",
     "member_content_digest",
     "parse_rule_document",
+    "producer_snapshot",
+    "producers_map_projection",
     "provenance_projection",
     "remove_rule_binding",
+    "retraction_discovery_map",
+    "retraction_discovery_map_projection",
+    "retraction_enumeration",
+    "retraction_enumeration_identity",
+    "retraction_enumeration_projection",
     "rule_document_bytes",
     "rule_identity",
     "shipped_rule_bundles",

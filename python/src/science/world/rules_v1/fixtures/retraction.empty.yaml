@@ -1,6 +1,8 @@
+# A covered corpus holding no retraction enumerates to "none found here",
+# which is a statement about the declared coverage and not about the world.
 input:
-  found: []
   coverage: ["corpus-a"]
+  records: []
 expected:
   found: []
   coverage: ["corpus-a"]

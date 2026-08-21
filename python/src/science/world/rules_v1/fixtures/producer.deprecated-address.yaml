@@ -1,0 +1,32 @@
+# Retired addresses ride in the captured view — publishing them is the address
+# map's job (§7.2), and a captured view that dropped them would leave the epoch
+# answering `unknown` for an address the world can still resolve. They are not
+# producers: a snapshot that folded a record's `deprecated_ids` into the map
+# would publish `dataset:retired` as a second dataset and `run:retired` as a
+# second producer of `dataset:live`.
+input:
+  coverage: ["corpus-a"]
+  records:
+    - corpus_id: "corpus-a"
+      address: "dataset:live"
+      uid: "uid-dataset-live"
+      kind: "dataset"
+      deprecated_ids: ["dataset:retired"]
+      produces: []
+      retraction: null
+      certification: null
+      coreference: null
+    - corpus_id: "corpus-a"
+      address: "run:live"
+      uid: "uid-run-live"
+      kind: "run"
+      deprecated_ids: ["run:retired"]
+      produces: ["dataset:live"]
+      retraction: null
+      certification: null
+      coreference: null
+expected:
+  producers:
+    - dataset: "dataset:live"
+      runs: ["run:live"]
+  coverage: ["corpus-a"]
