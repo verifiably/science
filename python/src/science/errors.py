@@ -154,6 +154,50 @@ class EnumeratedKindUngoverned(ScienceError):
     ordinary empty enumeration and is not this."""
 
 
+class ResolutionRefused(ScienceError):
+    """A bound address resolution met ambiguity or corruption (§8.3).
+
+    Two configured roots claiming one `corpus_id`, a present carrier whose
+    manifest cannot be read, or a present carrier that does not produce the
+    `uid` the epoch mapped the address to. All three are refusals and none of
+    them is `NotPresent`: absence is "this corpus is not carried here", and
+    letting corruption borrow that answer would tell a caller the record is
+    safely elsewhere when what actually happened is that this world cannot say
+    what it holds.
+    """
+
+
+class EdgeIndeterminate(ScienceError):
+    """A coreference expansion would have traversed an indeterminate edge (§8.4).
+
+    Inspecting an edge state may answer `indeterminate`; *expanding* through
+    one may not, because an expansion that skipped the edge would be reporting
+    a coreference set as if the edge had been established inactive.
+
+    The refusal names every unestablished input rather than stating that
+    something was indeterminate: `missing_coverage` is the sorted live
+    `corpus_id` values the epoch's coverage does not contain, and
+    `receipt_outcome` is the exact non-``validated`` outcome of the coreference
+    receipt, or `None` where the receipt validated and only coverage was
+    short. A caller acts on those two differently — one is fixed by building a
+    wider epoch, the other by holding a rule or restoring a corpus — so a
+    generic message would be a refusal nobody can clear.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        missing_coverage: tuple[str, ...] = (),
+        receipt_outcome: str | None = None,
+    ) -> None:
+        if not missing_coverage and receipt_outcome is None:
+            raise ValueError("an indeterminate edge names at least one unestablished input")
+        super().__init__(message)
+        self.missing_coverage = missing_coverage
+        self.receipt_outcome = receipt_outcome
+
+
 class IdentityError(ScienceError):
     """A value or domain was refused by the identity contract."""
 

@@ -63,9 +63,10 @@ therefore has nowhere to put a semantic identity or a belief member at all;
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from types import MappingProxyType
+from typing import Literal, cast
 
 from science.closure import RetractionEnumeration
 from science.errors import RuleNonconformant
@@ -79,6 +80,7 @@ __all__ = [
     "PRODUCER_SNAPSHOT_DOMAIN",
     "RECEIPT_OUTCOMES",
     "RETRACTION_ENUMERATION_DOMAIN",
+    "SUBJECT_DOMAINS",
     "Capture",
     "CapturedCertification",
     "CapturedCoreference",
@@ -89,6 +91,8 @@ __all__ = [
     "CoreferenceMap",
     "DerivationReceipt",
     "ProducerSnapshot",
+    "ReceiptKind",
+    "ReceiptOutcome",
     "address_map",
     "address_map_projection",
     "belief_input_identity",
@@ -102,6 +106,8 @@ __all__ = [
     "retraction_enumeration",
     "retraction_enumeration_identity",
     "retraction_enumeration_projection",
+    "subject_identity",
+    "subject_projection",
 ]
 
 PRODUCER_SNAPSHOT_DOMAIN = "science.producer-snapshot.v1"
@@ -118,6 +124,46 @@ contract; deciding one is Task 10's receipt validator, which reads this set.
 
 BELIEF_INPUT_KIND = "producer"
 """The one receipt kind whose subject identity is a belief input (§7.3)."""
+
+ReceiptKind = Literal["producer", "retraction-enumeration", "certification-enumeration", "coreference-reduction"]
+"""§7.5's four kinds, as a type. The *values* live in `epoch.RECEIPT_KINDS`,
+which is where the join to §6.1's member names is; this exists so a signature
+naming a kind says which four it means."""
+
+
+@dataclass(frozen=True)
+class ReceiptOutcome:
+    """One receipt's validation verdict, and why (§7.5).
+
+    Three members and no more. `outcome` is the whole answer — the closed set
+    §7.5 fixes — and `kind` says which receipt it is the answer for, because a
+    verdict travelling without its subject is a verdict a caller has to
+    remember the provenance of. `detail` is the finding in words: which key was
+    outside the closed set, which corpus no longer stands where it stood, which
+    pair is not held. It exists because every non-``validated`` outcome names
+    something a caller can act on, and an outcome that made the caller re-derive
+    that themselves would be a verdict they could only trust or ignore.
+
+    There is no member for the rebuilt subject and none for the epoch. A
+    validation result is not a second, weaker way to obtain either.
+    """
+
+    kind: ReceiptKind
+    outcome: str
+    detail: str
+
+    def __post_init__(self) -> None:
+        if self.kind not in _KINDS:
+            raise ValueError(f"{self.kind!r} is not one of {sorted(_KINDS)}")
+        if self.outcome not in RECEIPT_OUTCOMES:
+            raise ValueError(f"{self.outcome!r} is not one of {list(RECEIPT_OUTCOMES)}")
+        _require_text(self.detail, "detail")
+
+    @property
+    def validated(self) -> bool:
+        """Whether this receipt rebuilt to the subject it named. Read by the
+        edge query, which admits exactly one of the four outcomes."""
+        return self.outcome == "validated"
 
 
 # --- the captured view -------------------------------------------------------
@@ -630,6 +676,66 @@ def coreference_map(produced: object) -> CoreferenceMap:
         pairs[(left, right)] = (balance, count)
     _require_ordered(endpoints, "the pairs of a coreference map")
     return CoreferenceMap(pairs=pairs)
+
+
+SUBJECT_DOMAINS: Mapping[str, str] = MappingProxyType(
+    {
+        "producer": PRODUCER_SNAPSHOT_DOMAIN,
+        "retraction-enumeration": RETRACTION_ENUMERATION_DOMAIN,
+        "certification-enumeration": CERTIFICATION_INVENTORY_DOMAIN,
+        "coreference-reduction": COREFERENCE_MAP_DOMAIN,
+    }
+)
+"""Each receipt kind's subject-identity domain (§7.6).
+
+The four domains are declared individually above because each belongs to its
+own subject; this is the join to §7.5's kind vocabulary, and it exists so that
+a validator rebuilding "the subject this kind names" reads one table instead of
+branching four times.
+"""
+
+_SUBJECT_PARSERS: Mapping[str, Callable[[object], object]] = MappingProxyType(
+    {
+        "producer": producer_snapshot,
+        "retraction-enumeration": retraction_enumeration,
+        "certification-enumeration": certification_inventory,
+        "coreference-reduction": coreference_map,
+    }
+)
+
+
+def subject_projection(kind: str, produced: object) -> dict[str, object]:
+    """One derivation's return, parsed and canonically projected by kind.
+
+    The receipt validator rebuilds a subject by running the exact named
+    implementation and comparing what came back with what the epoch published.
+    That comparison is over the §7.6 *projection* — the canonical value the
+    subject identity digests — so the parse and the projection have to be one
+    step, taken the same way here as at build time. `RuleNonconformant` for a
+    return that is not this kind's subject at all.
+    """
+    parsed = _SUBJECT_PARSERS[_require_kind(kind)](produced)
+    if kind == "retraction-enumeration":
+        return retraction_enumeration_projection(cast(RetractionEnumeration, parsed))
+    return cast("ProducerSnapshot | CertificationInventory | CoreferenceMap", parsed).projection()
+
+
+def subject_identity(kind: str, projection: Mapping[str, object]) -> str:
+    """The §7.6 identity of one subject projection, under its kind's domain.
+
+    Taken over the projection rather than over the parsed value, so that a
+    projection lifted back out of a published member digests to exactly what
+    the member's own subject digested. The kind discriminant selects the
+    domain; it never enters the digested value, because the four domains are
+    already disjoint.
+    """
+    return v1.digest(SUBJECT_DOMAINS[_require_kind(kind)], dict(projection))
+
+
+def _require_kind(kind: str) -> str:
+    if kind not in SUBJECT_DOMAINS:
+        raise ValueError(f"{kind!r} is not one of the four receipt kinds {sorted(SUBJECT_DOMAINS)}")
+    return kind
 
 
 # --- the one receipt contract ------------------------------------------------

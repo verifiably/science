@@ -657,7 +657,25 @@ class TestOpening:
                 continue
             parameters = set(inspect.signature(value).parameters)
             assert not parameters & {"member", "member_name", "epoch_member"}, name
-        assert sorted(read.__all__) == ["current_epoch", "open_epoch"]
+        # The read surface is pinned closed rather than sampled. Task 10 grew
+        # it — receipt validation, the two bound queries and the answer types —
+        # and what it must never gain is an act whose subject is one member of
+        # one epoch, so the list is restated here every time it changes.
+        assert sorted(read.__all__) == [
+            "BoundStamp",
+            "EDGE_STATES",
+            "EdgeAnswer",
+            "Location",
+            "NotPresent",
+            "Resolved",
+            "Unknown",
+            "coreference_edge",
+            "current_epoch",
+            "expand_coreference",
+            "open_epoch",
+            "resolve_address",
+            "validate_receipt",
+        ]
         assert [
             name
             for name in vars(epoch.Epoch)

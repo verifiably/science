@@ -585,6 +585,24 @@ def _reduce_status(config: WorldConfig, view: RegistryView, corpus_id: str) -> C
     return CorpusStatus(known, live, len(carriers) == 1, findings)
 
 
+def _live_corpus_ids(view: RegistryView) -> tuple[str, ...]:
+    """This world's live span: every admitted `corpus_id` with no terminal
+    status, sorted and distinct.
+
+    The registry's reduction and nothing else. A `corpus_id` this world has
+    been *configured* with a carrier root for is not in the span — a directory
+    on disk is a claim, and §2's admission is what grants one — and a corpus
+    that has been retired or departed has left it, which is exactly the fact
+    that makes an epoch built over a wider coverage keep answering.
+
+    `_reduce_status` answers the same question one `corpus_id` at a time and
+    reads the filesystem to do it, because it also reports presence. This does
+    not touch the filesystem at all: a span is a statement about the registry.
+    """
+    terminal = {record.corpus_id for record in view.statuses}
+    return tuple(sorted({record.corpus_id for record in view.admissions} - terminal))
+
+
 def _lift_json(value: object) -> object:
     if value is None:
         return ["null"]
