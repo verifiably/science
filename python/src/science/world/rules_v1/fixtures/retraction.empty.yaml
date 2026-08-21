@@ -1,0 +1,6 @@
+input:
+  found: []
+  coverage: ["corpus-a"]
+expected:
+  found: []
+  coverage: ["corpus-a"]

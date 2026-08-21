@@ -1,0 +1,16 @@
+# By kind, refs sorted and distinct, and nothing about where a ref lives or
+# whether it resolves.
+input:
+  certifications:
+    - ["verification", "ref-2"]
+    - ["assessment", "ref-1"]
+    - ["verification", "ref-1"]
+    - ["verification", "ref-2"]
+  coverage: ["corpus-b", "corpus-a"]
+expected:
+  by_kind:
+    - kind: "assessment"
+      refs: ["ref-1"]
+    - kind: "verification"
+      refs: ["ref-1", "ref-2"]
+  coverage: ["corpus-a", "corpus-b"]

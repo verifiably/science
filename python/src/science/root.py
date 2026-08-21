@@ -53,6 +53,7 @@ from science.corpus import CorpusWriter
 from science.errors import CorpusRootRefused, WorldIdMismatch
 from science.identity import v1
 from science.world import World, WorldConfig, _load_world_mirror, _world_mirror_bytes
+from science.world.rules import RuleBinding, install_rule_binding, shipped_rule_bundles
 
 __all__ = [
     "CONSUMER_TAG",
@@ -69,6 +70,7 @@ __all__ = [
     "durable_executor_factory",
     "init_corpus_root",
     "init_world_root",
+    "install_shipped_world_rules",
     "metadata_root_for",
     "open_corpus",
     "open_world",
@@ -587,6 +589,19 @@ def open_corpus(corpus_root: Path) -> CorpusWriter:
             metadata_root=metadata_root_for(root),
         ),
     )
+
+
+def install_shipped_world_rules(world: World) -> tuple[RuleBinding, ...]:
+    """Hold this package's four v1 enumeration rules in one world — the
+    explicit act, never a side effect of initialization or opening.
+
+    It mirrors adoption: shipping content and holding it are two decisions, and
+    a world that installed whatever its installed package happened to carry
+    would be resolving receipts against a store nobody chose. Each bundle is
+    one create-only transaction, and re-running the act over unchanged content
+    submits none.
+    """
+    return tuple(install_rule_binding(world, bundle) for bundle in shipped_rule_bundles())
 
 
 def open_world(config: WorldConfig) -> World:

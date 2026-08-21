@@ -1,0 +1,8 @@
+# A covered corpus that produced nothing is an empty snapshot, never an absent
+# one: the coverage is part of the answer.
+input:
+  produces: []
+  coverage: ["corpus-a"]
+expected:
+  producers: []
+  coverage: ["corpus-a"]

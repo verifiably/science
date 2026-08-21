@@ -1,0 +1,5 @@
+# No coverage member: the coreference map is outside belief and carries none.
+input:
+  attestations: []
+expected:
+  pairs: []

@@ -1,0 +1,15 @@
+# The same ref found twice with one resolution is one finding; two resolutions
+# for one ref are both kept.
+input:
+  found:
+    - ["retraction-b", "resolved"]
+    - ["retraction-a", "unresolvable"]
+    - ["retraction-b", "resolved"]
+    - ["retraction-a", "resolved"]
+  coverage: ["corpus-b", "corpus-a"]
+expected:
+  found:
+    - ["retraction-a", "resolved"]
+    - ["retraction-a", "unresolvable"]
+    - ["retraction-b", "resolved"]
+  coverage: ["corpus-a", "corpus-b"]

@@ -1,0 +1,16 @@
+# One dataset with two runs, one with one, and a repeated edge that adds
+# nothing. Both members and coverage arrive unsorted.
+input:
+  produces:
+    - ["dataset-b", "run-1"]
+    - ["dataset-a", "run-2"]
+    - ["dataset-a", "run-1"]
+    - ["dataset-a", "run-2"]
+  coverage: ["corpus-b", "corpus-a"]
+expected:
+  producers:
+    - dataset: "dataset-a"
+      runs: ["run-1", "run-2"]
+    - dataset: "dataset-b"
+      runs: ["run-1"]
+  coverage: ["corpus-a", "corpus-b"]

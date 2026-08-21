@@ -1,0 +1,39 @@
+# Endpoints are stored with left < right whichever way they were submitted.
+# Alice's two submissions differ only in their event token, which is outside
+# the deduplication key, so they are one unit; her second grounds is another.
+# Bob offsets, and does not retract.
+input:
+  attestations:
+    - endpoints: ["address-b", "address-a"]
+      stance: 1
+      actor: "alice"
+      grounds: "grounds-1"
+      event: "event-1"
+    - endpoints: ["address-a", "address-b"]
+      stance: 1
+      actor: "alice"
+      grounds: "grounds-1"
+      event: "event-2"
+    - endpoints: ["address-a", "address-b"]
+      stance: 1
+      actor: "alice"
+      grounds: "grounds-2"
+      event: "event-3"
+    - endpoints: ["address-a", "address-b"]
+      stance: -1
+      actor: "bob"
+      grounds: "grounds-3"
+      event: "event-4"
+    - endpoints: ["address-c", "address-a"]
+      stance: -1
+      actor: "bob"
+      grounds: "grounds-4"
+      event: "event-5"
+expected:
+  pairs:
+    - endpoints: ["address-a", "address-b"]
+      balance: 1
+      distinct_key_count: 3
+    - endpoints: ["address-a", "address-c"]
+      balance: -1
+      distinct_key_count: 1

@@ -60,6 +60,22 @@ class RegistryMalformed(ScienceError):
     """A world registry is malformed."""
 
 
+class RuleCollision(ScienceError):
+    """A content-addressed rule path exists with different bytes."""
+
+
+class RuleNonconformant(ScienceError):
+    """An implementation fails the normative fixtures at install."""
+
+
+class RuleNotHeld(ScienceError):
+    """An exact rule binding is absent at preflight or the pre-publication
+    recheck. Every failed identity recomputation, every unreadable stored
+    member and every fixture the stored implementation no longer satisfies
+    reaches the caller as this one refusal: the pair is not held, and a
+    partial hold is not a weaker kind of hold."""
+
+
 class BuildContended(ScienceError):
     """An epoch build asked for a root's coherent capture and found the
     operation lock already held. The build refuses at once rather than queue:
