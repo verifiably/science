@@ -2,7 +2,9 @@
 
 **Date:** 2026-08-20
 **Status:** Banked 2026-08-20 with conformance cut 7; implementation is
-prospective.
+prospective. Amended 2026-08-21 to pin the four receipt-subject projection
+identities and the member-content digest algorithm; cut-7 accounting is
+unchanged.
 **Scope:** adoption-ledger artifact 1; the build-time uniqueness half of
 artifact 2; anchor carriage needed by artifact 5.
 **Inherits:** `2026-08-02-world-addressing-design.md` §5 and §5.1;
@@ -139,6 +141,10 @@ This design pins both:
   sorted `(member name, member content digest)` pairs; and
 - a rule identity is the digest under `science.enumeration-rule.v1` of
   `(symbol, fixture-set identity)`.
+
+For both the fixture-set formula above and the epoch-packaging formula in
+§6.2, a **member content digest** is the 64-character lowercase SHA-256 hex
+digest of that member's exact bytes.
 
 Both domain strings are minted here. The fixture set is the normative half.
 Each conforming implementation has a separate implementation content
@@ -445,6 +451,78 @@ validated | refuted | unresolvable | malformed
 The coreference receipt carries no semantic identity and is never a belief
 input. Any outcome other than `validated` makes every covered edge
 `indeterminate` at query time.
+
+### 7.6 Subject projection identities (amended 2026-08-21)
+
+The inherited contracts define what belongs to each receipt subject, but did
+not assign digest domains or one canonical encoding. This amendment pins both.
+The definitions are those contracts'; the four domain strings are minted here.
+Each identity is `science.identity.v1`'s digest of the following exact
+projection under the named domain:
+
+**Producer snapshot — `science.producer-snapshot.v1`:**
+
+```python
+{
+    "producers": [
+        {"dataset": dataset, "runs": list(sorted(runs))}
+        for dataset, runs in sorted(producers.items())
+    ],
+    "coverage": list(sorted(coverage)),
+}
+```
+
+This is the semantic snapshot identity and the only belief input among the
+four.
+
+**Retraction enumeration — `science.retraction-enumeration.v1`:**
+
+```python
+{
+    "found": [list(pair) for pair in sorted(found)],
+    "coverage": list(sorted(coverage)),
+}
+```
+
+Each `pair` is exactly `(retraction_ref, resolution)`, keeping every found ref
+attached to its resolution.
+
+**Certification inventory — `science.certification-inventory.v1`:**
+
+```python
+{
+    "by_kind": [
+        {"kind": kind, "refs": list(sorted(refs))}
+        for kind, refs in sorted(by_kind.items())
+    ],
+    "coverage": list(sorted(coverage)),
+}
+```
+
+It remains location-free and resolution-free.
+
+**Coreference map — `science.coreference-map.v1`:**
+
+```python
+{
+    "pairs": [
+        {
+            "endpoints": [left, right],
+            "balance": balance,
+            "distinct_key_count": count,
+        }
+        for (left, right), (balance, count) in sorted(coreference.items())
+    ],
+}
+```
+
+Each endpoint pair is stored with `left < right`; no coverage, edge state, or
+belief member enters this subject identity.
+
+These projections use mappings, lists, strings, and integers exactly as shown;
+there is no tuple-versus-list, map-order, or installation-local encoding choice
+left to an implementation. The receipt identity in §7.5 digests the resulting
+subject projection identity, not the subject bytes a second time.
 
 ## 8. Read surface and staleness
 
