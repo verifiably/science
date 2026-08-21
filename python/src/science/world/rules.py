@@ -49,10 +49,11 @@ from pathlib import Path
 from types import MappingProxyType
 
 import yaml
-from nodes.core.write_plan import CreateOp, WritePlan
+from nodes.core.write_plan import CreateOp, DeleteOp, WritePlan
 
-from science.errors import RuleCollision, RuleNonconformant, RuleNotHeld
+from science.errors import RuleBindingUnknown, RuleCollision, RuleNonconformant, RuleNotHeld
 from science.identity import v1
+from science.world import epoch
 from science.world.registry import World, _ManifestLoader
 
 __all__ = [
@@ -60,12 +61,14 @@ __all__ = [
     "RULE_DOMAIN",
     "RuleBinding",
     "RuleBundle",
+    "RuleRemovalReport",
     "binding_for",
     "fixture_set_identity",
     "implementation_identity",
     "install_rule_binding",
     "member_content_digest",
     "parse_rule_document",
+    "remove_rule_binding",
     "rule_document_bytes",
     "rule_identity",
     "shipped_rule_bundles",
@@ -420,6 +423,111 @@ def _read_fixtures(directory: Path) -> tuple[tuple[str, bytes], ...]:
             raise _RuleRefusal(f"{path.name!r} is not a regular fixture member")
         members.append((path.name, path.read_bytes()))
     return _ordered(members)
+
+
+# --- explicit removal -------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class RuleRemovalReport:
+    """What one removal unheld, and what evidence it severed.
+
+    `severed_receipts` names every receipt carried by a retained epoch of this
+    world that named the removed pair and so loses *this* store's resolution
+    path. Whether such a receipt is `unresolvable` is not this world's call
+    alone — another consulted store may hold the same pair — so the report
+    states what was severed here and stops there.
+
+    Identities are sorted and distinct. Two epochs may carry the same receipt;
+    the receipt severed is one receipt either way.
+    """
+
+    binding: RuleBinding
+    severed_receipts: tuple[str, ...]
+
+
+def remove_rule_binding(world: World, binding: RuleBinding) -> RuleRemovalReport:
+    """Unhold one exact pair, in one delete-only world-root transaction.
+
+    The act is the inverse of `install_rule_binding` and nothing wider. It
+    deletes the named implementation member and — only when that was the final
+    implementation held for the rule — the shared normative half, `rule.yaml`
+    and every fixture member. A sibling implementation of the same rule is not
+    a successor to be tidied away: it is another held pair, and receipts naming
+    it keep resolving. Emptied directories are nonsemantic and are left where
+    they are; there is no tombstone and no sweep.
+
+    The sever report is computed from the retained epochs *before* anything is
+    deleted, and a carrier this world cannot read refuses the whole act. That
+    ordering is the point of the report: removal may make evidence
+    unresolvable, but it may not do so silently, and a scan that quietly
+    skipped a damaged epoch would be exactly that.
+    """
+    with world._state.lock:
+        world_root = world.config.world_root
+        directory = world_root / "rules" / binding.rule_identity
+        try:
+            _locked_resolve_rule_binding(world_root, binding)
+            held = _held_implementations(directory / "implementations")
+        except (RuleNotHeld, _RuleRefusal) as caught:
+            raise RuleBindingUnknown(
+                f"{binding.rule_identity}/{binding.implementation_identity}: no held exact pair"
+            ) from caught
+        severed = tuple(
+            sorted(
+                {
+                    receipt.identity
+                    for receipt in epoch._retained_receipt_bindings_locked(world_root)
+                    if receipt.binding == (binding.rule_identity, binding.implementation_identity)
+                }
+            )
+        )
+        world._executor_factory(world_root).execute(_delete_plan(directory, binding, held))
+    return RuleRemovalReport(binding, severed)
+
+
+def _held_implementations(directory: Path) -> tuple[str, ...]:
+    """Every implementation member name held for one rule, sorted.
+
+    Removal turns on whether the named pair is the rule's last one, so the
+    sibling set is read with the same discipline as the fixture set: a stored
+    entry that is not a regular content-addressed member leaves the store
+    unable to say what is held, and removal refuses rather than guesses.
+    """
+    if directory.is_symlink() or not directory.is_dir():
+        raise _RuleRefusal(f"{directory}: no implementation directory")
+    names: list[str] = []
+    for path in directory.iterdir():
+        if path.is_symlink() or not path.is_file() or not re.fullmatch(r"[0-9a-f]{64}", path.name):
+            raise _RuleRefusal(f"{path.name!r} is not a content-addressed implementation member")
+        names.append(path.name)
+    return tuple(sorted(names))
+
+
+def _delete_plan(directory: Path, binding: RuleBinding, held: Sequence[str]) -> WritePlan:
+    """The one transaction, innermost member first.
+
+    The implementation goes before the normative half it was verified against,
+    so no prefix of the plan ever leaves a rule holding fixtures it cannot bind
+    to an implementation from.
+    """
+    prefix = f"rules/{binding.rule_identity}"
+    implementation = binding.implementation_identity
+    plan = [
+        _delete_op(
+            f"{prefix}/implementations/{implementation}",
+            directory / "implementations" / implementation,
+        )
+    ]
+    if tuple(held) == (implementation,):
+        for path in sorted((directory / "fixtures").iterdir()):
+            plan.append(_delete_op(f"{prefix}/fixtures/{path.name}", path))
+        plan.append(_delete_op(f"{prefix}/rule.yaml", directory / "rule.yaml"))
+    return plan
+
+
+def _delete_op(path: str, target: Path) -> DeleteOp:
+    return DeleteOp(path, member_content_digest(target.read_bytes()))
 
 
 # --- shared checks ----------------------------------------------------------

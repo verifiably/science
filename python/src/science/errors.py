@@ -76,6 +76,22 @@ class RuleNotHeld(ScienceError):
     partial hold is not a weaker kind of hold."""
 
 
+class RuleBindingUnknown(ScienceError):
+    """Explicit removal names no held exact pair. Removal is the inverse of the
+    install act, not a sweep: it unholds the one
+    ``(rule_identity, implementation_identity)`` it was handed, and a pair this
+    store does not hold is a refusal rather than a no-op, because a silent
+    success would tell its caller that evidence naming that pair had been
+    severed here when nothing was."""
+
+
+class EpochMalformed(ScienceError):
+    """An epoch carrier fails its closed layout or packaging identity. It is a
+    *carrier* failure: a receipt document that reaches the receipt validator
+    and violates the receipt contract is validation outcome ``malformed``, not
+    this."""
+
+
 class BuildContended(ScienceError):
     """An epoch build asked for a root's coherent capture and found the
     operation lock already held. The build refuses at once rather than queue:
