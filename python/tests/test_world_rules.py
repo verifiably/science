@@ -69,8 +69,24 @@ def bundle(
     return rules.RuleBundle(symbol=symbol, fixtures=fixtures, implementation=implementation)
 
 
+def unread_chain(root: Path) -> tuple[str, str]:
+    """The chain reader a world that never builds an epoch is handed.
+
+    A `World` takes the reader explicitly, so these arms have to say something
+    about it; saying "nothing here reads a chain" out loud is stronger than a
+    stub that quietly answers, because a chain read creeping into one of these
+    acts would then be a failure rather than a pair of invented digests.
+    """
+    raise AssertionError(f"{root}: this arm builds no epoch and reads no chain")
+
+
 def make_world(tmp_path: Path) -> world_module.World:
-    return world_module.World(world_module.WorldConfig(tmp_path / "world", "f" * 32, ()), DefaultExecutor)
+    return world_module.World(
+        world_module.WorldConfig(tmp_path / "world", "f" * 32, ()),
+        DefaultExecutor,
+        chain_head=unread_chain,
+        corpus_executor_factory=DefaultExecutor,
+    )
 
 
 def recording_world(tmp_path: Path) -> tuple[world_module.World, list[tuple[object, ...]]]:
@@ -85,7 +101,15 @@ def recording_world(tmp_path: Path) -> tuple[world_module.World, list[tuple[obje
             plans.append(tuple(plan))
             self.inner.execute(plan)
 
-    return world_module.World(world_module.WorldConfig(tmp_path / "world", "f" * 32, ()), Recorder), plans
+    return (
+        world_module.World(
+            world_module.WorldConfig(tmp_path / "world", "f" * 32, ()),
+            Recorder,
+            chain_head=unread_chain,
+            corpus_executor_factory=DefaultExecutor,
+        ),
+        plans,
+    )
 
 
 def stored_members(world: world_module.World) -> dict[str, bytes]:
@@ -435,7 +459,12 @@ def test_shipped_rules_install_from_a_built_wheel(tmp_path):
         unpacked, world_root = sys.argv[1], sys.argv[2]
         assert Path(rules.__file__).is_relative_to(unpacked), rules.__file__
 
-        world = World(WorldConfig(world_root, "a" * 32, ()), DefaultExecutor)
+        world = World(
+            WorldConfig(world_root, "a" * 32, ()),
+            DefaultExecutor,
+            chain_head=lambda root: ("unread", "unread"),
+            corpus_executor_factory=DefaultExecutor,
+        )
         bindings = [rules.install_rule_binding(world, shipped) for shipped in rules.shipped_rule_bundles()]
         print(
             json.dumps(

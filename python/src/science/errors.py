@@ -106,6 +106,46 @@ class BuildHold(ScienceError):
     something a writer can silently straddle."""
 
 
+class CoverageUnknown(ScienceError):
+    """A build declared a `corpus_id` the world has never admitted. Coverage is
+    declared, never inferred: a build that fell back to the registry's live set
+    would publish an epoch whose scope nobody chose, and a corpus whose only
+    credential is a manifest on a configured root has claimed admission rather
+    than been granted it."""
+
+
+class CoverageNotLive(ScienceError):
+    """A build declared an admitted `corpus_id` that has since been retired or
+    departed. Coverage is a statement about what the epoch *reports on*, and a
+    terminal corpus is one the world has said it no longer reports on."""
+
+
+class CoverageUnresolvable(ScienceError):
+    """A covered `corpus_id` has no presently configured carrier root, or more
+    than one. Both are the same failure — the build cannot say which bytes it
+    would capture — and neither is repairable by choosing: an epoch built from
+    whichever root sorted first would carry a state identity whose provenance
+    depended on configuration order."""
+
+
+class CaptureDrift(ScienceError):
+    """A covered corpus's state identity moved between the two computations
+    inside one capture hold. The hold excludes every corpus writer, so the
+    mover was a raw filesystem edit. The whole capture is discarded and nothing
+    is published; the build does not retry, because a silent retry would turn
+    an operator editing a corpus under a running build into a build that
+    eventually succeeded without saying so."""
+
+
+class EnumeratedKindUngoverned(ScienceError):
+    """A captured record claims a kind that one of the four epoch derivations
+    enumerates but that has no governed stored-kind definition (§13). The
+    record can be neither derived from — no contract says what its fields mean
+    — nor silently omitted, which would publish an enumeration that quietly
+    disagreed with the corpus it names. An *absence* of such records is an
+    ordinary empty enumeration and is not this."""
+
+
 class IdentityError(ScienceError):
     """A value or domain was refused by the identity contract."""
 

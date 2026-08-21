@@ -43,6 +43,13 @@ from science.world.derive import (
     retraction_enumeration_identity,
     retraction_enumeration_projection,
 )
+from science.world.epoch import (
+    CURRENT_POINTER,
+    DERIVATION_KINDS,
+    ENUMERATED_SOURCE_KINDS,
+    EPOCH_MEMBERS,
+    RETRACTION_RESOLUTIONS,
+)
 from science.world.registry import (
     AdmissionProvenance,
     AdmissionRecord,
@@ -94,10 +101,15 @@ __all__ = [
     "BELIEF_INPUT_KIND",
     "CERTIFICATION_INVENTORY_DOMAIN",
     "COREFERENCE_MAP_DOMAIN",
+    "CURRENT_POINTER",
+    "DERIVATION_KINDS",
+    "ENUMERATED_SOURCE_KINDS",
+    "EPOCH_MEMBERS",
     "FIXTURE_SET_DOMAIN",
     "PRODUCER_SNAPSHOT_DOMAIN",
     "RECEIPT_OUTCOMES",
     "RETRACTION_ENUMERATION_DOMAIN",
+    "RETRACTION_RESOLUTIONS",
     "RULE_DOMAIN",
     "AdmissionProvenance",
     "AdmissionRecord",

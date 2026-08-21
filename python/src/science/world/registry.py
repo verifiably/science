@@ -191,9 +191,35 @@ def _require_actor(actor: object) -> str:
 
 
 class World:
-    def __init__(self, config: WorldConfig, executor_factory: Callable[[Path], WritePlanExecutor]) -> None:
+    """One world root, its registry, and the two capabilities a build needs.
+
+    `chain_head` is the whole of Science's access to the engine's chain: it is
+    handed a root and answers `(genesis_digest, tip)`, having completed
+    recovery first. Nothing engine-shaped crosses this boundary — no
+    `ChainView`, no backend, no storage profile — which is what keeps
+    `science.root` the one module that imports `atoms`.
+
+    `corpus_executor_factory` is the factory the *corpus* write API is built
+    with, and it is here because a coherent capture must take the same
+    per-root operation lock a writer takes. `corpus._root_state_for` keeps one
+    state per root and refuses a second factory for a root it already holds, so
+    a build reaching for a corpus with the world's own factory would be a build
+    that could not run in a process that had also opened that corpus. It is
+    never used to write: a capture reads.
+    """
+
+    def __init__(
+        self,
+        config: WorldConfig,
+        executor_factory: Callable[[Path], WritePlanExecutor],
+        *,
+        chain_head: Callable[[Path], tuple[str, str]],
+        corpus_executor_factory: Callable[[Path], WritePlanExecutor],
+    ) -> None:
         self.config = config
         self._executor_factory = executor_factory
+        self._chain_head = chain_head
+        self._corpus_executor_factory = corpus_executor_factory
         with _WORLD_STATES_LOCK:
             self._state = _WORLD_STATES.setdefault(
                 str(config.world_root), _WorldState(threading.Lock(), RegistryView())
@@ -520,9 +546,16 @@ def _scan_registry(root: Path) -> RegistryView:
         raise RegistryMalformed(f"{registry}: malformed registry: {caught}") from caught
 
 
-def _reduce_status(config: WorldConfig, view: RegistryView, corpus_id: str) -> CorpusStatus:
-    known = any(record.corpus_id == corpus_id for record in view.admissions)
-    live = known and not any(record.corpus_id == corpus_id for record in view.statuses)
+def _carrier_roots(config: WorldConfig, corpus_id: str) -> tuple[Path, ...]:
+    """Every configured root whose manifest presently claims `corpus_id`.
+
+    One authority for "which bytes are this corpus", read by the status
+    reduction and by a build's preflight alike. A root configured twice is one
+    carrier; a root with no manifest is not a carrier, because a directory that
+    has not yet adopted one has made no claim. A *malformed* manifest is
+    neither, and refuses: a root that claims something unreadable is a
+    configuration fault, not an absence.
+    """
     carriers: list[Path] = []
     for root in dict.fromkeys(path.resolve() for path in config.corpus_roots):
         try:
@@ -530,6 +563,13 @@ def _reduce_status(config: WorldConfig, view: RegistryView, corpus_id: str) -> C
                 carriers.append(root)
         except ManifestMissing:
             continue
+    return tuple(carriers)
+
+
+def _reduce_status(config: WorldConfig, view: RegistryView, corpus_id: str) -> CorpusStatus:
+    known = any(record.corpus_id == corpus_id for record in view.admissions)
+    live = known and not any(record.corpus_id == corpus_id for record in view.statuses)
+    carriers = _carrier_roots(config, corpus_id)
     findings: tuple[Finding, ...] = ()
     if len(carriers) > 1:
         detail = "carriers=" + ",".join(sorted(str(root) for root in carriers))

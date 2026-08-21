@@ -1017,7 +1017,12 @@ class TestShippedFixtures:
 
         from science.world.registry import World, WorldConfig
 
-        world = World(WorldConfig(tmp_path / "world", "f" * 32, ()), DefaultExecutor)
+        world = World(
+            WorldConfig(tmp_path / "world", "f" * 32, ()),
+            DefaultExecutor,
+            chain_head=lambda root: pytest.fail(f"{root}: a derivation arm read a chain"),
+            corpus_executor_factory=DefaultExecutor,
+        )
         for bundle in rules.shipped_rule_bundles():
             binding = rules.install_rule_binding(world, bundle)
             held = rules._resolve_rule_binding(world, binding)

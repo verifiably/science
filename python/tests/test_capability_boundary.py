@@ -34,10 +34,19 @@ wearing the costume of a static assertion.
 """
 WRITE_API = "corpus.py"
 COMPOSITION_ROOT = "root.py"
+WORLD_PACKAGE = "world"
+"""The world layer, which now reaches the engine's chain and must not do so
+directly. `World` receives one `(genesis_digest, tip)` callback; `root.py`
+implements it with `atoms.read_chain`, and no `ChainView` — nor any other
+engine type — crosses the package boundary."""
 
 
 def modules() -> list[Path]:
     return sorted(path for path in PACKAGE.rglob("*.py"))
+
+
+def world_modules() -> list[Path]:
+    return sorted(path for path in (PACKAGE / WORLD_PACKAGE).rglob("*.py"))
 
 
 def relative(path: Path) -> str:
@@ -119,3 +128,47 @@ class TestTheCompositionRootIsTheOneAtomsImporter:
     def test_the_composition_root_does_import_atoms(self):
         imported = imported_modules(parsed(PACKAGE / COMPOSITION_ROOT))
         assert any(name == "atoms" or name.startswith("atoms.") for name in imported)
+
+
+class TestTheWorldPackageHoldsNoEngineCapability:
+    """The same rule, stated over the package that most nearly needs to break it.
+
+    The world layer is where recovery-completing chain reads enter Science: a
+    build's anchors are chain digests, and preflight completes recovery before
+    it inspects a single world file. It gets there through an injected
+    `Callable[[Path], tuple[str, str]]` and never through `atoms`, so the two
+    digests are the only engine-derived values that exist above the composition
+    root. Asserting it here, over `science/world/` by name, means a future
+    module in that package cannot pass by being one of many.
+    """
+
+    def test_the_world_package_is_not_empty(self):
+        # Otherwise a rename to a package this test cannot find would score as
+        # a clean sweep of nothing.
+        assert len(world_modules()) >= 4
+
+    @pytest.mark.parametrize("module", world_modules(), ids=relative)
+    def test_no_world_module_imports_atoms(self, module):
+        offending = [
+            imported
+            for imported in imported_modules(parsed(module))
+            if imported == "atoms" or imported.startswith("atoms.")
+        ]
+        assert offending == [], f"{relative(module)} imports {offending}"
+
+    @pytest.mark.parametrize("module", world_modules(), ids=relative)
+    def test_no_world_module_names_an_engine_chain_view(self, module):
+        assert "ChainView" not in names_of(parsed(module)), f"{relative(module)} names ChainView"
+        assert "read_chain" not in names_of(parsed(module)), f"{relative(module)} names read_chain"
+
+    def test_the_check_would_see_a_world_module_reading_the_chain(self, tmp_path):
+        offender = tmp_path / "epoch.py"
+        offender.write_text(
+            "from atoms.coordinator.commands import read_chain\n\n\n"
+            "def head(root, backend, storage) -> ChainView:\n"
+            "    return read_chain(backend, str(root), str(root), storage)\n",
+            encoding="utf-8",
+        )
+        tree = parsed(offender)
+        assert any(name.startswith("atoms") for name in imported_modules(tree))
+        assert {"ChainView", "read_chain"} <= names_of(tree)

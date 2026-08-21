@@ -41,7 +41,7 @@ projection value. No world, corpus, path or executor is reachable from it.
 from __future__ import annotations
 
 import re
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from hashlib import sha256
 from importlib import resources
@@ -415,6 +415,25 @@ def _locked_resolve_rule_binding(world_root: Path, binding: RuleBinding) -> _Hel
     except _RuleRefusal as caught:
         raise RuleNotHeld(f"{directory}: {caught}") from caught
     return _HeldRule(binding, stored.symbol, stored.source, invoke)
+
+
+def _locked_resolve_rule_bindings(
+    world_root: Path, bindings: Mapping[str, RuleBinding]
+) -> Mapping[str, _HeldRule]:
+    """Every named exact pair, resolved under one already-held world lock.
+
+    A build resolves its four bindings at preflight and the same four again
+    before publication, and both moments want the same thing: all of them held,
+    or the first refusal. Resolution runs in sorted key order so that a world
+    holding none of them refuses on the same one every time — a refusal whose
+    identity depended on mapping order would make the failure mode unpinnable.
+
+    The caller holds the world lock; this must not take it, and the lock is not
+    reentrant.
+    """
+    return MappingProxyType(
+        {name: _locked_resolve_rule_binding(world_root, bindings[name]) for name in sorted(bindings)}
+    )
 
 
 def _locked_stored_rule(world_root: Path, binding: RuleBinding) -> _StoredRule:

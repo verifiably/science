@@ -8,13 +8,21 @@ inventory. Nothing else writes beneath ``epochs/`` except the one-line
 ``current`` pointer, which is a member of the *directory* ``epochs/`` and never
 of an epoch.
 
-What this module holds today is the part the rules store needs: **which
-receipts a retained epoch carries, and which exact rule binding each one
-names.** A receipt is what makes a derived map re-checkable, so it records the
-exact ``(rule_identity, implementation_identity)`` that produced its subject
-(§7.5). That makes the epochs directory the place — the only place — where a
-world can answer "what evidence would I strand if I stopped holding this
-pair?", which is what `science.world.rules.remove_rule_binding` must report.
+**Two things live here, and they meet only at the draft.** The first is the
+part the rules store needs: **which receipts a retained epoch carries, and
+which exact rule binding each one names.** A receipt is what makes a derived
+map re-checkable, so it records the exact
+``(rule_identity, implementation_identity)`` that produced its subject (§7.5).
+That makes the epochs directory the place — the only place — where a world can
+answer "what evidence would I strand if I stopped holding this pair?", which is
+what `science.world.rules.remove_rule_binding` must report.
+
+The second is a build's **coherent preflight and capture** (§5.2, §5.3), at the
+bottom of this module: the two acts that read live state, and the frozen
+`_BuildDraft` that separates them from everything pure. They are here rather
+than beside the derivations because an epoch is what they are gathering the
+inputs for, and because the draft's shape — anchors, coverage, captured states,
+the build-start world head — is §6.1's layout read backwards.
 
 A receipt identity is the digest under `RECEIPT_DOMAIN` of the canonical
 projection ``(receipt kind, subject projection identity, sorted corpus-state
@@ -58,14 +66,18 @@ retraction enumeration projection inside the retraction receipt and the
 certification inventory inside the certification receipt — so one closed set
 across all four kinds would be wrong in both directions at once.
 
-**Deliberately not here yet.** Building, publishing, opening, selecting and
-deleting epochs are later acts. This module recomputes no member digest and no
-packaging identity: the scanner locates carriers and reads receipts, and full
-carrier validation belongs to the open act.
+**Deliberately not here yet.** Publishing, opening, selecting and deleting
+epochs are later acts, and so is the pure derivation between capture and
+publication. This module recomputes no member digest and no packaging identity:
+the scanner locates carriers and reads receipts, full carrier validation
+belongs to the open act, and a build stops at its draft.
 
-**Layering.** Nothing here knows the rules *store*: a receipt names a binding
-as two digests, and reading a receipt does not require holding what it names.
-That keeps the removal act, which does need both, the only place the two meet.
+**Layering.** The *carrier* half knows nothing of the rules store: a receipt
+names a binding as two digests, and reading a receipt does not require holding
+what it names. The build half does need the store — preflight resolves four
+exact pairs and runs their fixtures — and reaches it through
+`science.world.rules` at call time, which is also what keeps the import cycle
+between the two modules resolvable in every order.
 """
 
 from __future__ import annotations
@@ -75,20 +87,40 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from types import MappingProxyType
+from typing import cast
 
 import yaml
 
-from science.errors import EpochMalformed
+from science import stored
+from science.corpus import ReadView, _acyclic_postorder, _root_state_for, _validated_retraction_facet
+from science.errors import (
+    CaptureDrift,
+    CoverageNotLive,
+    CoverageUnknown,
+    CoverageUnresolvable,
+    EnumeratedKindUngoverned,
+    EpochMalformed,
+)
 from science.identity import v1
-from science.world.registry import _ManifestLoader
+
+# Module form, and every use below is at call time. `derive` and `rules` both
+# import this module back, and only the module form survives every import
+# order: a name-form import of either would bind at *this* module's import
+# time, which is exactly the moment the partially-initialised cycle cannot
+# satisfy. Nothing here may touch `derive.<name>` or `rules.<name>` at module
+# level for the same reason.
+from science.world import derive, registry, rules
 
 __all__ = [
     "CURRENT_POINTER",
+    "DERIVATION_KINDS",
+    "ENUMERATED_SOURCE_KINDS",
     "EPOCH_MEMBERS",
     "RECEIPT_DOMAIN",
     "RECEIPT_IDENTITY_KEYS",
     "RECEIPT_KEYS",
     "RECEIPT_KINDS",
+    "RETRACTION_RESOLUTIONS",
     "receipt_identity",
 ]
 
@@ -332,7 +364,7 @@ def _parse_receipt(packaging_identity: str, member: str, content: bytes) -> _Rec
     in the layer this split exists to take it out of.
     """
     try:
-        document = yaml.load(content.decode("utf-8"), Loader=_ManifestLoader)
+        document = yaml.load(content.decode("utf-8"), Loader=registry._ManifestLoader)
         if type(document) is not dict:
             raise ValueError("a receipt is a mapping")
         states = document.get("corpus_states")
@@ -388,3 +420,390 @@ def _require_text(value: object, location: str) -> str:
     if type(value) is not str:
         raise ValueError(f"{location} is text, not {type(value).__name__}")
     return value
+
+
+# --- coherent preflight and capture (§5.2, §5.3) ------------------------------
+#
+# The two halves of an epoch build that touch live state, and the frozen draft
+# that separates them from everything pure. Preflight answers "may this build
+# run, over exactly these corpora, with exactly these four rules" while holding
+# the world lock. Capture then takes each covered corpus's operation lock in
+# turn and, under that one exclusion, reads its chain head, its corpus-state
+# identity, its stored nodes, and its corpus-state identity again.
+#
+# Publication is not here. What leaves is `_BuildDraft`, and the discipline it
+# encodes is that nothing downstream can re-read a corpus: the draft carries no
+# carrier path, no view and no handle, so a derivation that wanted to peek at
+# live state would have to be handed one by its caller.
+
+DERIVATION_KINDS: tuple[str, ...] = tuple(
+    RECEIPT_KINDS[member] for member in EPOCH_MEMBERS if member in RECEIPT_KINDS
+)
+"""§5.2's four derivations, keyed as §7.5 keys their receipts, in §6.1's order.
+
+Derived from the member inventory rather than written out again: a build input
+that named three kinds, or a fifth, has not described an epoch, and the one
+place that says which four there are is `RECEIPT_KINDS`.
+"""
+
+ENUMERATED_SOURCE_KINDS: tuple[str, ...] = (
+    "coreference-attestation",
+    "instrument-certification",
+    "retraction",
+    "run",
+)
+"""The stored kinds the four epoch derivations read a record *as*.
+
+A `run` contributes its `produces` edges to the producer snapshot, a
+`retraction` its target and resolution to the enumeration and the discovery
+map, and the remaining two would contribute a certification and a coreference
+attestation. Membership here is what makes a kind's governance a build's
+business: every other stored kind contributes only its address and `uid`, which
+the address map reads without any contract for the record's fields.
+
+This is deliberately not a blocklist of the two deferred kinds. The refusal is
+computed against `stored.SEMANTIC_DOMAINS`, so the day either kind gains its
+charter and a governed stored-kind definition, the refusal stops firing without
+an edit here — and a *new* enumerated kind that arrives ungoverned starts
+refusing without one either.
+"""
+
+RETRACTION_OVERTURNED = "overturned"
+RETRACTION_UPHELD = "upheld"
+RETRACTION_RESOLUTIONS: tuple[str, ...] = (RETRACTION_OVERTURNED, RETRACTION_UPHELD)
+"""The closed resolution vocabulary a capture attaches to a found retraction.
+
+`derive.CapturedRetraction` takes the resolution as opaque non-empty text
+because a pure derivation has no way to decide one; capture does, and closing
+the vocabulary here is what stops two builds of one corpus from spelling the
+same corpus-local judgement differently and minting two enumeration identities
+for it. A retraction is `upheld` when nothing in its own corpus retracts it and
+`overturned` when something standing does — exactly
+`corpus.standing_in_local_view`'s judgement, which is corpus-local and
+non-authoritative by design.
+"""
+
+
+@dataclass(frozen=True)
+class _Anchor:
+    """One `(subject, genesis_digest, head_digest)` triple, as §6.1 stores it.
+
+    The subject is a covered `corpus_id` for a corpus anchor and the world id
+    for the build-start world anchor. The two digests are exactly what the
+    injected callback returned: this layer never learns what an entry is.
+    """
+
+    subject: str
+    genesis_digest: str
+    head_digest: str
+
+
+@dataclass(frozen=True)
+class _Preflight:
+    """What §5.2 retains for the rest of one build.
+
+    `carriers` is the pinned `corpus_id -> carrier root` mapping, in sorted id
+    order, and it is pinned rather than re-derived: a build that resolved a
+    carrier twice could capture one corpus and anchor another.
+    """
+
+    coverage: tuple[str, ...]
+    carriers: Mapping[str, Path]
+    world_anchor: _Anchor
+    held: Mapping[str, rules._HeldRule]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "carriers", MappingProxyType(dict(self.carriers)))
+        object.__setattr__(self, "held", MappingProxyType(dict(self.held)))
+
+
+@dataclass(frozen=True)
+class _BuildDraft:
+    """Everything one build carries out of its holds, and nothing else.
+
+    Captured values, the per-corpus anchors, the declared coverage and its
+    captured states, the build-start world head, and the four exact rules as
+    resolved — their bytes and the entry point loaded from those bytes.
+
+    There is no carrier path here, and that absence is the point. §5.3's "only
+    captured values leave the hold" is not a convention a publisher has to
+    remember if the draft simply has nowhere to put a root: derivation and
+    publication cannot re-read a corpus because they are not told where one is.
+    """
+
+    coverage: tuple[str, ...]
+    capture: derive.Capture
+    anchors: tuple[_Anchor, ...]
+    world_anchor: _Anchor
+    held: Mapping[str, rules._HeldRule]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "held", MappingProxyType(dict(self.held)))
+
+    @property
+    def corpus_states(self) -> tuple[tuple[str, str], ...]:
+        """The one sorted `(corpus_id, corpus_state)` sequence every receipt of
+        this epoch carries. One value, not four: §7.5 requires the four
+        receipts to agree, and there is nowhere here for a per-kind state."""
+        return self.capture.corpus_states
+
+    @property
+    def bindings(self) -> Mapping[str, tuple[str, str]]:
+        """Each derivation's exact `(rule_identity, implementation_identity)`,
+        ready for `derive.derivation_receipts`."""
+        return MappingProxyType(
+            {
+                kind: (held.binding.rule_identity, held.binding.implementation_identity)
+                for kind, held in self.held.items()
+            }
+        )
+
+    def run(self, kind: str) -> object:
+        """Run one resolved derivation over the one captured projection.
+
+        Every kind is handed the same `rule_input()` value, which is what makes
+        "enumerated once, fed to all four" a property of the draft rather than
+        of whoever remembers to reuse the argument.
+        """
+        return self.held[kind].invoke(self.capture.rule_input())
+
+
+def _declared_coverage(coverage: frozenset[str]) -> tuple[str, ...]:
+    """The declared covered ids, sorted. Never the registry's live set.
+
+    §5.2's closing sentence is a rule about what a build may *substitute*, and
+    the only way to keep it is to have no path that reads liveness as a
+    default. The caller declares; this checks the shape and orders it.
+    """
+    if not isinstance(coverage, (frozenset, set)):
+        raise TypeError("a build's coverage is a set of stable corpus ids")
+    return tuple(sorted(registry._require_lower_hex(corpus_id, 32, "corpus_id") for corpus_id in coverage))
+
+
+def _declared_bindings(bindings: Mapping[str, rules.RuleBinding]) -> Mapping[str, rules.RuleBinding]:
+    """Exactly one exact pair per receipt kind. Three is not an epoch."""
+    if set(bindings) != set(DERIVATION_KINDS):
+        raise ValueError(
+            f"a build names one exact rule binding per receipt kind {sorted(DERIVATION_KINDS)}; "
+            f"got {sorted(bindings)}"
+        )
+    for kind, binding in bindings.items():
+        if type(binding) is not rules.RuleBinding:
+            raise TypeError(f"the {kind!r} binding must be an exact RuleBinding")
+    return MappingProxyType(dict(bindings))
+
+
+def _preflight(
+    world: registry.World,
+    *,
+    coverage: frozenset[str],
+    bindings: Mapping[str, rules.RuleBinding],
+) -> _Preflight:
+    """§5.2, in the order §5.2 writes it, under `_WorldState.lock` throughout.
+
+    The chain read comes first and completes recovery, so every world file
+    inspected below is inspected after recovery rather than beside it. The
+    registry rescan follows; then, for each covered id in sorted order,
+    admission, liveness and carrier uniqueness — in that order, so that a
+    world with two faults reports the one that is decided first rather than the
+    one that happens to be cheapest to find. The four exact bindings resolve
+    last, with their fixtures run, because a build whose coverage is
+    inadmissible has no business executing rule content at all.
+
+    The world lock is plain and blocking. Holding it across a registry rescan
+    and four fixture runs is short and serializes against registry appends and
+    rule removal; §5.1's no-queueing rule is about corpus capture and does not
+    reach here.
+    """
+    covered = _declared_coverage(coverage)
+    declared = _declared_bindings(bindings)
+    config = world.config
+    with world._state.lock:
+        genesis_digest, head_digest = world._chain_head(config.world_root)
+        world._state.registry = registry._scan_registry(config.world_root)
+        view = world._state.registry
+        carriers: dict[str, Path] = {}
+        for corpus_id in covered:
+            if not any(record.corpus_id == corpus_id for record in view.admissions):
+                raise CoverageUnknown(
+                    f"{corpus_id}: declared coverage names a corpus this world has not admitted"
+                )
+            if any(record.corpus_id == corpus_id for record in view.statuses):
+                raise CoverageNotLive(f"{corpus_id}: declared coverage names a corpus with terminal status")
+            roots = registry._carrier_roots(config, corpus_id)
+            if len(roots) != 1:
+                detail = ",".join(sorted(str(root) for root in roots)) or "none"
+                raise CoverageUnresolvable(
+                    f"{corpus_id}: exactly one configured carrier root is required; carriers={detail}"
+                )
+            carriers[corpus_id] = roots[0]
+        held = rules._locked_resolve_rule_bindings(config.world_root, declared)
+    return _Preflight(covered, carriers, _Anchor(config.world_id, genesis_digest, head_digest), held)
+
+
+def _capture(world: registry.World, preflight: _Preflight) -> _BuildDraft:
+    """§5.3: sorted, serial, and one hold per corpus.
+
+    The whole of a corpus's coherent capture — chain head, state, enumeration,
+    state again — happens inside `capture()`, which never waits: a build that
+    queued behind a corpus operation could park the writer queue behind itself.
+    Serial rather than concurrent, because holding several corpora's operation
+    locks at once is a lock order this layer would then have to own, and the
+    coherence guarantee is per corpus and gains nothing from overlap.
+
+    The drift comparison is inside the hold so the refusal is attributable to
+    it, and it discards by simply not returning: no partial draft exists to be
+    salvaged, and there is no retry. Silently trying again would convert an
+    operator editing a corpus underneath a running build into a build that
+    quietly succeeded on the second look.
+    """
+    captured: list[derive.CapturedCorpus] = []
+    anchors: list[_Anchor] = []
+    for corpus_id in preflight.coverage:
+        carrier = preflight.carriers[corpus_id]
+        state = _root_state_for(carrier, world._corpus_executor_factory)
+        with state.lock.capture():
+            genesis_digest, head_digest = world._chain_head(carrier)
+            before = registry.corpus_state_identity(carrier)
+            records = _captured_records(carrier)
+            after = registry.corpus_state_identity(carrier)
+            if before != after:
+                raise CaptureDrift(
+                    f"{corpus_id}: {carrier}: the corpus state moved inside the capture hold "
+                    f"({before} -> {after}); the whole capture is discarded and nothing is published"
+                )
+        captured.append(derive.CapturedCorpus(corpus_id, before, records))
+        anchors.append(_Anchor(corpus_id, genesis_digest, head_digest))
+    return _BuildDraft(
+        preflight.coverage,
+        derive.Capture(tuple(captured)),
+        tuple(anchors),
+        preflight.world_anchor,
+        preflight.held,
+    )
+
+
+def _capture_build_inputs(
+    world: registry.World,
+    *,
+    coverage: frozenset[str],
+    bindings: Mapping[str, rules.RuleBinding],
+) -> _BuildDraft:
+    """Preflight, then coherent capture: everything a build reads from live
+    state, in one act with one frozen result."""
+    return _capture(world, _preflight(world, coverage=coverage, bindings=bindings))
+
+
+def _captured_records(corpus_root: Path) -> tuple[derive.CapturedRecord, ...]:
+    """One corpus's stored nodes, enumerated **once**, as captured records.
+
+    The enumeration is `ReadView.iter_stored`, the same unvalidated read
+    `registry.corpus_state_identity` takes. That is deliberate: the two state
+    computations and this pass have to agree about what the corpus holds, and a
+    validating read would refuse records the captured state identity counted,
+    leaving the two halves of one coherent capture describing different
+    corpora. Record validity is the read side's question (`ReadView.get`), not
+    the capture's.
+
+    Governance is this pass's question, and it is asked before any record is
+    built. `EnumeratedKindUngoverned` refuses the whole capture: a record whose
+    kind one of the four maps enumerates but which has no governed stored-kind
+    definition can be neither derived from nor silently omitted.
+    """
+    view = ReadView.opened_at(corpus_root)
+    nodes = tuple(view.iter_stored())
+    for node in nodes:
+        if node.kind in ENUMERATED_SOURCE_KINDS and node.kind not in stored.SEMANTIC_DOMAINS:
+            raise EnumeratedKindUngoverned(
+                f"{corpus_root}: {node.id}: kind {node.kind!r} is enumerated by an epoch derivation "
+                "but has no governed stored-kind definition; the capture is discarded rather than "
+                "derived from or silently narrowed"
+            )
+    facets = {node.id: _validated_retraction_facet(node) for node in nodes if node.kind == "retraction"}
+    standing = _standing_retractions(view, facets)
+    return tuple(
+        derive.CapturedRecord(
+            address=node.id,
+            uid=node.uid,
+            kind=node.kind,
+            deprecated_ids=tuple(node.deprecated_ids),
+            produces=tuple(
+                relation.target
+                for relation in node.relations
+                if relation.predicate == stored.PRODUCES and relation.source == node.id
+            ),
+            retraction=(
+                None
+                if node.id not in facets
+                else derive.CapturedRetraction(
+                    _retraction_target(facets[node.id]),
+                    RETRACTION_UPHELD if standing.get(node.id, True) else RETRACTION_OVERTURNED,
+                )
+            ),
+        )
+        for node in nodes
+    )
+
+
+def _retraction_target(facet: Mapping[str, object]) -> str:
+    """The target identity §7.4's discovery map groups on.
+
+    A node-arm retraction names its target by the ref the author wrote, and
+    that ref is what travels: turning it into a live address here would make
+    the map's keys depend on a resolution the epoch already publishes an
+    address map for. A route-arm retraction names an embedded route rather than
+    a record, and its route identity keeps it disjoint from a node-arm
+    retraction of the same dataset — two genuinely different claims that a
+    shared dataset key would silently merge.
+    """
+    target = cast(Mapping[str, str], facet["target"])
+    return target["ref"] if target["arm"] == "node" else target["route_identity"]
+
+
+def _standing_retractions(view: ReadView, facets: Mapping[str, Mapping[str, object]]) -> Mapping[str, bool]:
+    """Which of this corpus's retractions still stand, in one fold.
+
+    The same judgement `corpus.standing_in_local_view` makes, computed for
+    every retraction at once instead of one at a time, because the capture pass
+    may enumerate the corpus only once. Only node-arm retractions subtract
+    standing — a route-arm target names an embedded route, not a record — and
+    the target ref is resolved through the corpus index here, exactly as the
+    corpus-local judgement resolves it, so a retraction naming another by a
+    deprecated id still overturns it.
+
+    `_acyclic_postorder` is the corpus's own traversal, reused rather than
+    reimplemented: a retraction cycle is `RetractionCycleMalformed` here for
+    the same reason it is there.
+    """
+    targets: dict[str, list[str]] = {}
+    for address, facet in facets.items():
+        target = cast(Mapping[str, str], facet["target"])
+        if target["arm"] != "node":
+            continue
+        resolved = view.resolve(target["ref"])
+        if resolved is not None:
+            targets.setdefault(resolved, []).append(address)
+    graph = {target: tuple(sorted(retractions)) for target, retractions in targets.items()}
+    standing: dict[str, bool] = {}
+    for target in _acyclic_postorder(graph):
+        standing[target] = not any(standing[retraction] for retraction in graph.get(target, ()))
+    return standing
+
+
+def _recheck_rule_bindings(world: registry.World, draft: _BuildDraft) -> Mapping[str, rules._HeldRule]:
+    """§5.4's pre-publication recheck: the same four exact pairs, still held.
+
+    It reacquires the world lock — the same lock removal takes — which is what
+    gives binding removal and epoch publication a determined order without
+    holding the world lock across corpus enumeration. If removal won the race,
+    this raises `RuleNotHeld` and the caller publishes nothing.
+
+    It reads no corpus. Every value publication needs from live corpus state
+    was captured under the corpus's own hold, and a second look here would be a
+    freshness claim the staleness contract explicitly does not make: covered
+    corpora may move between capture and publication, and receipts name the
+    exact captured states rather than the present ones.
+    """
+    declared = {kind: held.binding for kind, held in draft.held.items()}
+    with world._state.lock:
+        return rules._locked_resolve_rule_bindings(world.config.world_root, declared)

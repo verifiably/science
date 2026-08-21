@@ -32,10 +32,23 @@ def write_manifest(root: Path, corpus_id: str, forked_from: tuple[str, str] | No
     (root / "corpus.yaml").write_bytes(world_module.manifest_bytes(manifest))
 
 
+def unread_chain(root: Path) -> tuple[str, str]:
+    """The chain reader a world that never builds an epoch is handed.
+
+    A `World` takes the reader explicitly, so these arms have to say something
+    about it; saying "nothing here reads a chain" out loud is stronger than a
+    stub that quietly answers, because a chain read creeping into one of these
+    acts would then be a failure rather than a pair of invented digests.
+    """
+    raise AssertionError(f"{root}: this arm builds no epoch and reads no chain")
+
+
 def make_world(tmp_path: Path, *corpus_roots: Path) -> world_module.World:
     return world_module.World(
         world_module.WorldConfig(tmp_path / "world", "f" * 32, corpus_roots),
         DefaultExecutor,
+        chain_head=unread_chain,
+        corpus_executor_factory=DefaultExecutor,
     )
 
 
@@ -265,7 +278,12 @@ def test_admission_uses_one_create_only_plan_through_the_supplied_executor(tmp_p
             plans.append(tuple(plan))
             self.inner.execute(plan)
 
-    instance = world_module.World(world_module.WorldConfig(tmp_path / "world", "f" * 32, (corpus,)), Recorder)
+    instance = world_module.World(
+        world_module.WorldConfig(tmp_path / "world", "f" * 32, (corpus,)),
+        Recorder,
+        chain_head=unread_chain,
+        corpus_executor_factory=DefaultExecutor,
+    )
     record = instance.admit(corpus, provenance=world_module.Fresh(), actor="alice")
 
     assert plans == [
@@ -429,7 +447,9 @@ def test_replica_restoration_recomputes_presence_without_admission(tmp_path):
     restoration = tmp_path / "restoration"
     write_manifest(original, "1" * 32)
     config = world_module.WorldConfig(tmp_path / "world", "f" * 32, (restoration,))
-    instance = world_module.World(config, DefaultExecutor)
+    instance = world_module.World(
+        config, DefaultExecutor, chain_head=unread_chain, corpus_executor_factory=DefaultExecutor
+    )
     instance.admit(original, provenance=world_module.Fresh(), actor="alice")
     before = instance.registry()
 
