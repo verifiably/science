@@ -36,7 +36,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from itertools import pairwise
 from pathlib import Path
-from typing import TYPE_CHECKING, Protocol, final
+from typing import TYPE_CHECKING, Literal, Protocol, final
 
 from nodes.core.corpus import Corpus
 from nodes.core.errors import CollisionError, ExecutionError
@@ -250,7 +250,7 @@ class OperationLock:
 
     def __init__(self) -> None:
         self._condition = threading.Condition()
-        self._holder: str | None = None
+        self._holder: Literal["writer", "capture"] | None = None
         self._capture_generation = 0
 
     def __enter__(self) -> OperationLock:
@@ -274,13 +274,33 @@ class OperationLock:
         return self
 
     def __exit__(self, exc_type: object, exc: object, traceback: object) -> None:
+        """Release a writer's hold, refusing to release anyone else's.
+
+        The bare `threading.Lock` this replaced raised on an unbalanced
+        release, and losing that would be a regression: a writer's `__exit__`
+        clearing a *capture's* hold is precisely the corruption the capture
+        exists to prevent, and it would leave two holders believing they had
+        the root. Only the pairing is checked, because only the pairing can be
+        got wrong from outside.
+        """
         with self._condition:
+            if self._holder != "writer":
+                raise RuntimeError(
+                    f"operation lock released as a writer while held as {self._holder!r}: "
+                    "an unbalanced release, not a state this lock can repair"
+                )
             self._holder = None
             self._condition.notify_all()
 
     @contextmanager
     def capture(self) -> Iterator[None]:
-        """Take it for one coherent capture, or refuse. This never waits."""
+        """Take it for one coherent capture, or refuse. This never waits.
+
+        The release below carries no pairing guard, because there is no pairing
+        to get wrong: it is inside this generator, reachable only past a `yield`
+        that only a successful acquisition reaches. Guarding it would raise from
+        a `finally` and mask whatever the build was already failing on.
+        """
         with self._condition:
             if self._holder is not None:
                 raise BuildContended(

@@ -14,6 +14,9 @@ from __future__ import annotations
 
 import threading
 from collections.abc import Callable
+from typing import cast
+
+import pytest
 
 from science.corpus import OperationLock
 from science.errors import BuildContended, BuildHold
@@ -72,7 +75,11 @@ def gated_lock() -> tuple[OperationLock, GatedLock]:
     """
     lock = OperationLock()
     gated = GatedLock()
-    lock._condition = threading.Condition(gated)
+    # `Condition` needs only acquire/release from its lock, and falls back to
+    # them when the lock supplies no `_release_save`/`_acquire_restore`/
+    # `_is_owned` — which is exactly how `GatedLock` gets onto the wait path.
+    # The cast says that to a checker; it changes nothing at runtime.
+    lock._condition = threading.Condition(cast(threading.Lock, gated))
     return lock, gated
 
 
@@ -127,6 +134,24 @@ def test_a_free_writer_holds_it_and_frees_it() -> None:
     take_as_capture(lock)  # nor is a later capture: the release left nothing
 
 
+def test_an_unbalanced_writer_release_raises_and_clears_nothing() -> None:
+    """The bare lock raised on an unbalanced release; losing that would let a
+    writer's `__exit__` quietly hand away a capture's hold."""
+    lock = OperationLock()
+
+    with pytest.raises(RuntimeError):
+        lock.__exit__(None, None, None)  # nothing held at all
+
+    with lock.capture():
+        with pytest.raises(RuntimeError):
+            lock.__exit__(None, None, None)  # held, but not by a writer
+        attempt, refused = spawn(lambda: take_as_writer(lock))
+        joined(attempt)
+        assert isinstance(refused[0], BuildHold)  # the capture still holds it
+
+    take_as_writer(lock)  # and the capture's own release still frees it
+
+
 def test_a_writer_behind_a_writer_queues_and_then_acquires() -> None:
     lock, gated = gated_lock()
     order: list[str] = []
@@ -138,7 +163,10 @@ def test_a_writer_behind_a_writer_queues_and_then_acquires() -> None:
     lock.__enter__()  # the first writer holds it
     order.append("first")
     second, refused = spawn(second_writer, gate=gated)
-    assert gated.parked.wait(timeout=WAIT)  # queued inside the condition, not refused
+    # `parked` says only that the second writer released the mutex, which a
+    # refusal would also do; that it *queued* is settled below, by having
+    # acquired without refusing and strictly after the first writer left.
+    assert gated.parked.wait(timeout=WAIT)
     lock.__exit__(None, None, None)
 
     joined(second)
