@@ -152,6 +152,18 @@ class RuleBundle:
 
 
 @dataclass(frozen=True)
+class _StoredRule:
+    """One exact pair's stored members, each verified to recompute its own
+    name. It says what the store *holds under this name*, not whether running
+    it still works — `_HeldRule` is that, and is strictly stronger."""
+
+    binding: RuleBinding
+    symbol: str
+    fixtures: tuple[tuple[str, bytes], ...]
+    source: bytes
+
+
+@dataclass(frozen=True)
 class _HeldRule:
     """A verified binding: the stored symbol, the exact source, and the entry
     point loaded from it. Build and receipt code takes the callable *and* the
@@ -390,8 +402,37 @@ def _resolve_rule_binding(world: World, binding: RuleBinding) -> _HeldRule:
 
 
 def _locked_resolve_rule_binding(world_root: Path, binding: RuleBinding) -> _HeldRule:
-    """The held check itself. The caller holds the world lock; this must not
-    take it, and the lock is not reentrant."""
+    """The held check itself: every stored member recomputes its own name, and
+    the entry point loaded from those bytes satisfies every stored fixture. The
+    caller holds the world lock; this must not take it, and the lock is not
+    reentrant."""
+    directory = world_root / "rules" / binding.rule_identity
+    try:
+        stored = _locked_stored_rule(world_root, binding)
+        invoke = _load_entry_point(stored.symbol, stored.source)
+        _run_fixtures(stored.symbol, invoke, stored.fixtures)
+    except _RuleRefusal as caught:
+        raise RuleNotHeld(f"{directory}: {caught}") from caught
+    return _HeldRule(binding, stored.symbol, stored.source, invoke)
+
+
+def _locked_stored_rule(world_root: Path, binding: RuleBinding) -> _StoredRule:
+    """The stored members of one exact pair, each recomputing its own name.
+
+    This is the *naming* half of the held check, without the *running* half.
+    The two answer different questions. "Are these the bytes this pair names?"
+    is what makes an act on stored content safe: without it a tampered member
+    could be run — or deleted — under a name it no longer has. "Does this
+    implementation still satisfy its fixtures?" is what makes it trustworthy to
+    run, and an act that only deletes does not need an answer.
+
+    Resolution needs both and takes both. Removal (§4.3) needs the first alone,
+    so that a store you can install into does not become a store you cannot
+    clean up: an intact, correctly named binding whose implementation has
+    stopped conforming is exactly the binding an operator most needs to be able
+    to unhold. The caller holds the world lock and names the refusal;
+    `_RuleRefusal` stays neutral between them.
+    """
     directory = world_root / "rules" / binding.rule_identity
     try:
         symbol = parse_rule_document(_read_member(directory / "rule.yaml"))
@@ -401,11 +442,9 @@ def _locked_resolve_rule_binding(world_root: Path, binding: RuleBinding) -> _Hel
         source = _read_member(directory / "implementations" / binding.implementation_identity)
         if implementation_identity(source) != binding.implementation_identity:
             raise _RuleRefusal("the stored implementation does not recompute its content identity")
-        invoke = _load_entry_point(symbol, source)
-        _run_fixtures(symbol, invoke, fixtures)
-    except (RuleNotHeld, _RuleRefusal) as caught:
-        raise RuleNotHeld(f"{directory}: {caught}") from caught
-    return _HeldRule(binding, symbol, source, invoke)
+    except RuleNotHeld as caught:
+        raise _RuleRefusal(str(caught)) from caught
+    return _StoredRule(binding, symbol, fixtures, source)
 
 
 def _read_member(path: Path) -> bytes:
@@ -452,7 +491,11 @@ def remove_rule_binding(world: World, binding: RuleBinding) -> RuleRemovalReport
     The act is the inverse of `install_rule_binding` and nothing wider. It
     deletes the named implementation member and — only when that was the final
     implementation held for the rule — the shared normative half, `rule.yaml`
-    and every fixture member. A sibling implementation of the same rule is not
+    and every fixture member. Every stored member is verified to recompute its
+    own name first, because deleting the fixtures means asserting they are the
+    fixtures this pair names; the fixtures are *not* run, because a binding
+    whose implementation has stopped conforming is still one an operator must
+    be able to unhold (`_locked_stored_rule` carries the full reasoning). A sibling implementation of the same rule is not
     a successor to be tidied away: it is another held pair, and receipts naming
     it keep resolving. Emptied directories are nonsemantic and are left where
     they are; there is no tombstone and no sweep.
@@ -467,11 +510,11 @@ def remove_rule_binding(world: World, binding: RuleBinding) -> RuleRemovalReport
         world_root = world.config.world_root
         directory = world_root / "rules" / binding.rule_identity
         try:
-            _locked_resolve_rule_binding(world_root, binding)
+            _locked_stored_rule(world_root, binding)
             held = _held_implementations(directory / "implementations")
-        except (RuleNotHeld, _RuleRefusal) as caught:
+        except _RuleRefusal as caught:
             raise RuleBindingUnknown(
-                f"{binding.rule_identity}/{binding.implementation_identity}: no held exact pair"
+                f"{binding.rule_identity}/{binding.implementation_identity}: no stored exact pair: {caught}"
             ) from caught
         severed = tuple(
             sorted(

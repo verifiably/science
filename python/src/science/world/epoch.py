@@ -19,19 +19,37 @@ pair?", which is what `science.world.rules.remove_rule_binding` must report.
 A receipt identity is the digest under `RECEIPT_DOMAIN` of the canonical
 projection ``(receipt kind, subject projection identity, sorted corpus-state
 pairs, rule identity, implementation identity)``. The kind discriminant is what
-keeps the four receipt subjects disjoint under one domain, and it is carried
-*inside* the document as well as implied by the member name — a document whose
-discriminant disagrees with the member holding it is malformed, because two
-readings of the same receipt would then disagree about which subject it
-attests.
+keeps the four receipt subjects disjoint under one domain. It is carried
+*inside* the document as well as implied by the member name, and the identity
+digests the document's own value: a document whose discriminant disagrees with
+the member holding it still has one identity, and which of the two readings is
+wrong is the validator's finding to make.
+
+**Two layers, and this module is the lower one** (§8.2). Reading a receipt out
+of a carrier and judging whether that receipt honours its contract are separate
+questions with separate outcomes. What refuses here is *structural
+unreadability*: bytes that are not a YAML mapping, a duplicate key, or a
+document from which the five identity-bearing members of §7.5 cannot be lifted
+as strings. Everything a reader can still lift a binding out of is handed on
+intact — a discriminant disagreeing with its member, a value that is not an
+identity, an unsorted or repeated corpus state, a key outside the kind's
+declared set. Those are receipt-contract violations, and §8.2 assigns them
+receipt outcome ``malformed``, not `EpochMalformed`. Turning one into a carrier
+failure would close the path §8.2 exists to keep open, where a malformed
+coreference receipt opens, evaluates as ``malformed``, and leaves its edges
+``indeterminate``.
+
+`RECEIPT_KEYS` therefore *declares* the closed per-kind contract without
+enforcing it: the receipt validator is what enforces it. The two
+projection-bearing kinds carry more than the identity members — §7.5 puts the
+retraction enumeration projection inside the retraction receipt and the
+certification inventory inside the certification receipt — so one closed set
+across all four kinds would be wrong in both directions at once.
 
 **Deliberately not here yet.** Building, publishing, opening, selecting and
 deleting epochs are later acts. This module recomputes no member digest and no
 packaging identity: the scanner locates carriers and reads receipts, and full
-carrier validation belongs to the open act. The receipt shape parsed here is
-the identity-bearing part of §7.5, not the whole receipt — the retraction and
-certification receipts additionally carry their own subject projections, which
-arrive with the code that writes them.
+carrier validation belongs to the open act.
 
 **Layering.** Nothing here knows the rules *store*: a receipt names a binding
 as two digests, and reading a receipt does not require holding what it names.
@@ -56,6 +74,8 @@ __all__ = [
     "CURRENT_POINTER",
     "EPOCH_MEMBERS",
     "RECEIPT_DOMAIN",
+    "RECEIPT_IDENTITY_KEYS",
+    "RECEIPT_KEYS",
     "RECEIPT_KINDS",
     "receipt_identity",
 ]
@@ -101,10 +121,34 @@ RECEIPT_KINDS: Mapping[str, str] = MappingProxyType(
 RECEIPT_DOMAIN = "science.derivation-receipt.v1"
 """One domain for the receipt family; §7.5's kind member keeps them disjoint."""
 
-_RECEIPT_KEYS = frozenset({"kind", "subject", "corpus_states", "rule_identity", "implementation_identity"})
-_STATE_KEYS = frozenset({"corpus_id", "corpus_state"})
+RECEIPT_IDENTITY_KEYS: frozenset[str] = frozenset(
+    {"kind", "subject", "corpus_states", "rule_identity", "implementation_identity"}
+)
+"""The five members every receipt carries, and the only ones its identity
+digests. They are what this layer must be able to lift out of a document; a
+document it cannot lift them from is unreadable rather than merely wrong."""
+
+RECEIPT_KEYS: Mapping[str, frozenset[str]] = MappingProxyType(
+    {
+        "producer-receipt.yaml": RECEIPT_IDENTITY_KEYS,
+        "retraction-receipt.yaml": RECEIPT_IDENTITY_KEYS | {"enumeration"},
+        "certification-receipt.yaml": RECEIPT_IDENTITY_KEYS | {"inventory"},
+        "coreference-receipt.yaml": RECEIPT_IDENTITY_KEYS,
+    }
+)
+"""The closed key set each receipt kind's document carries — §7.5's contract.
+
+The two projection-bearing kinds carry one member more than the identity
+members: the retraction receipt holds its retraction enumeration projection
+(``enumeration``) and the certification receipt its location-free,
+resolution-free inventory (``inventory``), neither of which is a further epoch
+member. Their subject *projections* are read and checked by the receipt
+validator, which is also what enforces this closure as outcome ``malformed``
+(§8.2). The carrier layer below declares the contract and does not police it.
+"""
+
+_STATE_KEYS = ("corpus_id", "corpus_state")
 _PACKAGING_IDENTITY = re.compile(r"[0-9a-f]{64}")
-_LOWER_HEX = re.compile(r"[0-9a-f]+")
 
 
 def receipt_identity(
@@ -118,13 +162,16 @@ def receipt_identity(
 
     Each corpus-state pair encodes as a two-member list, the same shape the
     fixture-set pairs use, so one reading of "a pair" serves the whole slice.
+    The formula names *sorted* pairs, so the sort belongs here rather than to
+    whoever assembled the sequence — `rules.fixture_set_identity` orders its
+    members for the same reason.
     """
     return v1.digest(
         RECEIPT_DOMAIN,
         [
             kind,
             subject_identity,
-            [[corpus_id, corpus_state] for corpus_id, corpus_state in corpus_states],
+            [[corpus_id, corpus_state] for corpus_id, corpus_state in sorted(corpus_states)],
             rule_identity,
             implementation_identity,
         ],
@@ -143,8 +190,12 @@ class _ReceiptCarrier:
     packaging_identity: str
     member: str
     kind: str
+    """The discriminant the *document* carries, which is what the identity
+    digests. `RECEIPT_KINDS[member]` is what it should be; whether the two
+    agree is the validator's question, not this layer's."""
     subject_identity: str
     corpus_states: tuple[tuple[str, str], ...]
+    """As the document orders them. `receipt_identity` sorts."""
     rule_identity: str
     implementation_identity: str
 
@@ -222,51 +273,64 @@ def _receipts_of(directory: Path) -> tuple[_ReceiptCarrier, ...]:
 
 
 def _parse_receipt(packaging_identity: str, member: str, content: bytes) -> _ReceiptCarrier:
-    """One receipt document, closed over §7.5's five identity-bearing members."""
+    """Lift §7.5's five identity-bearing members out of one receipt document.
+
+    This is the structural floor and nothing above it. It refuses only what
+    leaves no receipt to hand on: bytes that are not a YAML mapping, a
+    duplicate key, an absent identity member, or one whose value is not the
+    string the identity formula digests. What it does **not** check is the
+    receipt *contract* — that the discriminant matches the member, that the
+    keys are exactly `RECEIPT_KEYS[member]`, that each digest is an identity,
+    that the corpus states are sorted and distinct. Those are §8.2's receipt
+    outcome ``malformed``, and the validator that decides them reuses this
+    extraction without inheriting a refusal policy that would hide them.
+    """
     try:
         document = yaml.load(content.decode("utf-8"), Loader=_ManifestLoader)
-        if type(document) is not dict or set(document) != _RECEIPT_KEYS:
-            raise ValueError(f"a receipt must have exactly {sorted(_RECEIPT_KEYS)}")
-        if document["kind"] != RECEIPT_KINDS[member]:
-            raise ValueError(f"kind {document['kind']!r} does not discriminate this member")
+        if type(document) is not dict:
+            raise ValueError("a receipt is a mapping")
+        missing = sorted(RECEIPT_IDENTITY_KEYS - set(document))
+        if missing:
+            raise ValueError(f"a receipt carries {sorted(RECEIPT_IDENTITY_KEYS)}; missing {missing}")
         return _ReceiptCarrier(
             packaging_identity,
             member,
-            RECEIPT_KINDS[member],
-            _require_digest(document["subject"], 64, "subject"),
+            _require_text(document["kind"], "kind"),
+            _require_text(document["subject"], "subject"),
             _corpus_states(document["corpus_states"]),
-            _require_digest(document["rule_identity"], 64, "rule_identity"),
-            _require_digest(document["implementation_identity"], 64, "implementation_identity"),
+            _require_text(document["rule_identity"], "rule_identity"),
+            _require_text(document["implementation_identity"], "implementation_identity"),
         )
     except Exception as caught:
         raise EpochMalformed(f"{packaging_identity}/{member}: {caught}") from caught
 
 
 def _corpus_states(value: object) -> tuple[tuple[str, str], ...]:
-    """The captured corpus-state identity for every covered corpus.
+    """The captured corpus-state pair for every covered corpus, as written.
 
-    Stored sorted and distinct, and read back the same way: the receipt
-    identity digests this sequence, so a document free to spell one covered set
-    two ways would be free to name one receipt two identities.
+    Sortedness and distinctness are contract, not structure: an unsorted or
+    repeated sequence is still a sequence of pairs, and `receipt_identity`
+    sorts what it digests. Only a shape with no pair in it refuses.
     """
     if type(value) is not list:
-        raise ValueError("corpus_states must be a list")
+        raise ValueError("corpus_states is a list")
     states: list[tuple[str, str]] = []
     for entry in value:
-        if type(entry) is not dict or set(entry) != _STATE_KEYS:
-            raise ValueError(f"a corpus state must have exactly {sorted(_STATE_KEYS)}")
+        if type(entry) is not dict or any(key not in entry for key in _STATE_KEYS):
+            raise ValueError(f"a corpus state carries {list(_STATE_KEYS)}")
         states.append(
             (
-                _require_digest(entry["corpus_id"], 32, "corpus_id"),
-                _require_digest(entry["corpus_state"], 64, "corpus_state"),
+                _require_text(entry["corpus_id"], "corpus_id"),
+                _require_text(entry["corpus_state"], "corpus_state"),
             )
         )
-    if states != sorted(states) or len({corpus_id for corpus_id, _state in states}) != len(states):
-        raise ValueError("corpus_states must be sorted and name each corpus once")
     return tuple(states)
 
 
-def _require_digest(value: object, length: int, location: str) -> str:
-    if type(value) is not str or len(value) != length or not _LOWER_HEX.fullmatch(value):
-        raise ValueError(f"{location} must be {length} lowercase hexadecimal characters")
+def _require_text(value: object, location: str) -> str:
+    """An identity-bearing member is a string. *Which* string — an identity, a
+    known discriminant — is the validator's question; that it is text at all is
+    this layer's, because the digest is over text."""
+    if type(value) is not str:
+        raise ValueError(f"{location} is text, not {type(value).__name__}")
     return value
