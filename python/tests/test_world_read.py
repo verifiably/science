@@ -31,6 +31,7 @@ from __future__ import annotations
 import inspect
 from dataclasses import FrozenInstanceError, fields
 from pathlib import Path
+from types import ModuleType
 
 import pytest
 from nodes.core.node import Node
@@ -292,12 +293,18 @@ class TestTheBoundStamp:
         assert [field.name for field in fields(belief.SuppliedContext) if "epoch" in field.name] == []
         assert "producer_snapshot_identity" in [field.name for field in fields(belief.SuppliedContext)]
 
-        # Structural, not only nominal: neither module can reach the epoch read
-        # surface at all.
+        # Structural, not textual: nothing bound in either module's namespace
+        # comes from the world package, so neither can reach an epoch read at
+        # all. Grepping the source would fail on a comment that merely
+        # mentioned the package, and pass a module that imported it inside a
+        # function.
         for module in (belief, closure):
-            source = Path(inspect.getsourcefile(module)).read_text(encoding="utf-8")
-            assert "science.world" not in source, module
-            assert "current_epoch" not in source, module
+            bound = vars(module).values()
+            origins = {
+                value.__name__ if isinstance(value, ModuleType) else getattr(value, "__module__", "")
+                for value in bound
+            }
+            assert not [name for name in origins if name and name.startswith("science.world")], module
 
     def test_belief_is_invariant_to_availability_and_requires_snapshot(self, tmp_path):
         """The belief input an epoch contributes does not move with
@@ -545,6 +552,29 @@ class TestCoreferenceEdges:
             "inventory",
         ]
         assert derive.BELIEF_INPUT_KIND != "coreference-reduction"
+
+    def test_unreadable_manifest_leaves_edges_indeterminate_rather_than_raising(self, tmp_path):
+        """§8.4 promises a state for every edge, so a corrupt manifest cannot
+        answer with an exception.
+
+        The companion of `test_unreadable_carrier_manifest_is_unresolvable_...`
+        in `test_world_receipts.py`: that arm pins the outcome, this one pins
+        that the outcome is what the two queries actually see, including the
+        expansion that refuses by name rather than by whatever the registry
+        happened to raise.
+        """
+        world, _bindings, roots, published = coreference_world(
+            tmp_path, {ALPHA: linked_nodes("a")}, (ALPHA,)
+        )
+        assert read.coreference_edge(world, published, "run:a", "dataset:a").state == "active"
+
+        (roots[ALPHA] / "corpus.yaml").write_bytes(b"corpus_id: []\n")
+
+        answer = read.coreference_edge(world, published, "run:a", "dataset:a")
+        assert answer.state == "indeterminate"
+        assert answer.receipt_outcome == "unresolvable"
+        with pytest.raises(read.EdgeIndeterminate, match="unresolvable"):
+            read.expand_coreference(world, published, "run:a")
 
     def test_edge_indeterminate_names_missing_span_and_receipt_outcome(self, tmp_path):
         """The refusal names every unestablished input, by name.

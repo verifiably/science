@@ -15,15 +15,24 @@ belief, and the reason is structural rather than a convention — a snapshot is
 retrieved by its own identity from whichever retained epoch carries it.
 
 **One lock, taken before the recovery barrier.** Every act here acquires
-`_WorldState.lock` first, crosses the recovery barrier second, and holds the
-lock through every carrier read and every validation. Publication holds the
-same lock across its whole transaction, so a reader arriving mid-publication
-waits and then sees the finished epoch: it cannot mistake an applied prefix for
-a malformed carrier. The lock is not reentrant, which is why `current_epoch`
-reaches `epoch._locked_open_epoch` directly rather than calling `open_epoch` —
-re-entry would not be a style question here, it would deadlock. Every
-`_locked_*` helper below obeys the same rule: the caller holds the lock and the
-helper never re-takes it.
+`_WorldState.lock` first and crosses the recovery barrier second. Opening an
+epoch holds it through the whole carrier read, because publication holds the
+same lock across its whole transaction and a reader arriving mid-publication
+must wait and then see the finished epoch rather than mistake an applied prefix
+for a malformed carrier. The lock is not reentrant, which is why
+`current_epoch` reaches `epoch._locked_open_epoch` directly rather than calling
+`open_epoch` — re-entry would not be a style question here, it would deadlock.
+Every `_locked_*` helper below obeys the same rule: the caller holds the lock
+and the helper never re-takes it.
+
+**What the lock does not cover is as deliberate.** Receipt validation takes it
+for the recovery barrier and the rules-store resolution — a read of the store
+that rule removal writes to under the same lock — and releases it before a
+single corpus is opened. The corpus reads and the rule run that follow are
+exactly the work `build_epoch` keeps outside its own critical section, and the
+exclusion they need is per corpus and is taken per corpus. Holding the world
+lock across them would put every registry append and every rule install behind
+one enumeration of every covered corpus, on every coreference edge query.
 
 **Receipt validation is the upper of §8.2's two layers.** The carrier layer
 refuses bytes it cannot read; this layer judges whether a receipt that *did*
@@ -71,6 +80,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import cast
 
+from nodes.core.errors import NodesError
+
 from science.corpus import ReadView, _root_state_for
 from science.errors import (
     CaptureDrift,
@@ -80,6 +91,8 @@ from science.errors import (
     ResolutionRefused,
     RuleNonconformant,
     RuleNotHeld,
+    SemanticHashMissing,
+    SemanticHashStale,
 )
 
 # Module form for the same reason `epoch` imports `rules` that way: every use
@@ -122,6 +135,20 @@ _SUBJECT_KEYS: Mapping[str, str] = {
     "certification-enumeration": "inventory",
 }
 """The two subjects §7.5 puts *inside* their receipts instead."""
+
+_CARRIER_READ_FAULTS = (SemanticHashMissing, SemanticHashStale, NodesError, OSError)
+"""What reading a present carrier can legitimately fail with (§8.3).
+
+Named rather than caught as `Exception`, because the refusal this converts to
+is a *finding* about the carrier — "this world cannot say what it holds" — and
+a bare catch would report a programming error in this module as one instead.
+The four are the whole surface `ReadView.opened_at` / `resolve` / `get`
+refuses across: a governed record carrying no semantic-identity stamp or a
+stale one (§8.3's corruption, decided on the read path), anything the `nodes`
+store itself refuses about its own layout or documents, and the filesystem
+underneath both. An `AttributeError` from a wrong call here is a bug and stays
+a bug.
+"""
 
 
 # --- opening one epoch (§8.1) -------------------------------------------------
@@ -179,20 +206,35 @@ def validate_receipt(
     the act returns *before* the world lock is taken — an unsound contract is
     not something a store or a corpus can repair.
 
-    **Availability**, under the world lock. The exact
-    `(rule_identity, implementation_identity)` pair must be held here, with its
-    fixtures run, and every named corpus must presently stand at the exact
-    state the receipt named. Either failing is ``unresolvable``: nothing was
-    rebuilt, so nothing was contradicted.
+    **Availability.** The exact `(rule_identity, implementation_identity)` pair
+    must be held here, with its fixtures run — that resolution takes the world
+    lock, because it is a read of the rules store and rule removal writes to it
+    under the same lock. Every named corpus must then presently stand at the
+    exact state the receipt named, which is a read of each corpus under each
+    corpus's own hold. Either failing is ``unresolvable``: nothing was rebuilt,
+    so nothing was contradicted. A configured root claiming a manifest this
+    world cannot read is ``unresolvable`` too — the named state cannot be
+    reached — rather than an exception, because §8.4 makes an edge whose
+    receipt is anything but ``validated`` ``indeterminate``, and a query that
+    raised instead would have no answer to give.
 
-    **The rebuild**, still under that lock. The exact held implementation runs
-    over the corpora as re-read, and the canonical §7.6 projection it produces
-    is compared byte for byte with the one this epoch published — the member
-    for the two subjects §6.1 stores as members, the receipt's own carried
-    projection for the two §7.5 stores inside receipts — and the subject
-    identity is recomputed over it. Agreement is ``validated``; an omission, a
-    wrong reduction, or a subject identity naming something else is
-    ``refuted``.
+    **The rebuild.** The exact held implementation runs over the corpora as
+    re-read, and the canonical §7.6 projection it produces is compared byte for
+    byte with the one this epoch published — the member for the two subjects
+    §6.1 stores as members, the receipt's own carried projection for the two
+    §7.5 stores inside receipts — and the subject identity is recomputed over
+    it. Agreement is ``validated``; an omission, a wrong reduction, or a
+    subject identity naming something else is ``refuted``.
+
+    **The world lock is released before any corpus is opened**, and the rebuild
+    runs outside it. `build_epoch` states the principle for the identical work:
+    derivation happens before the lock is reacquired, "so nothing that could
+    refuse or take time happens inside the critical section". A validation that
+    held the world lock across an enumeration of every covered corpus and a run
+    of loaded rule code would serialize every registry append and every rule
+    install in the world behind one query — and every coreference edge query
+    performs exactly that validation. The exclusion validation actually needs
+    is per corpus, and `_standing` takes it per corpus.
 
     A receipt that reached here at all has already passed the carrier layer.
     This never catches `EpochMalformed` to recover a contract fault, and never
@@ -212,7 +254,6 @@ def validate_receipt(
     world_root = world.config.world_root
     with world._state.lock:
         world._chain_head(world_root)
-        world._state.registry = registry._scan_registry(world_root)
         try:
             held = rules._locked_resolve_rule_binding(world_root, binding)
         except RuleNotHeld as caught:
@@ -221,26 +262,40 @@ def validate_receipt(
                 "unresolvable",
                 f"the exact pair this receipt names is not held here: {caught}",
             )
-        captured: list[derive.CapturedCorpus] = []
-        for corpus_id, corpus_state in named_states:
+    # The world lock is released before a single corpus is opened. Everything
+    # below is a corpus read and a rule run — exactly the work `build_epoch`
+    # keeps outside its own critical section — and holding the world lock
+    # across it would serialize every registry append and every rule install
+    # in this world behind one enumeration of every covered corpus. The
+    # exclusion that matters is per corpus and is taken per corpus, below.
+    captured: list[derive.CapturedCorpus] = []
+    for corpus_id, corpus_state in named_states:
+        try:
             carriers = registry._carrier_roots(world.config, corpus_id)
-            if len(carriers) != 1:
-                detail = ",".join(sorted(str(root) for root in carriers)) or "none"
-                return derive.ReceiptOutcome(
-                    kind,
-                    "unresolvable",
-                    f"{corpus_id}: exactly one carrier of a named corpus is required; carriers={detail}",
-                )
-            standing = _locked_standing(world, corpus_id, corpus_state, carriers[0])
-            if standing is None:
-                return derive.ReceiptOutcome(
-                    kind,
-                    "unresolvable",
-                    f"{corpus_id}: {carriers[0]}: this corpus no longer stands at the state "
-                    f"{corpus_state} the receipt named",
-                )
-            captured.append(standing)
-        produced = held.invoke(derive.Capture(tuple(captured)).rule_input())
+        except ManifestMalformed as caught:
+            return derive.ReceiptOutcome(
+                kind,
+                "unresolvable",
+                f"{corpus_id}: a configured root claims a manifest this world cannot read, so the "
+                f"named state cannot be reached: {caught}",
+            )
+        if len(carriers) != 1:
+            detail = ",".join(sorted(str(root) for root in carriers)) or "none"
+            return derive.ReceiptOutcome(
+                kind,
+                "unresolvable",
+                f"{corpus_id}: exactly one carrier of a named corpus is required; carriers={detail}",
+            )
+        standing = _standing(world, corpus_id, corpus_state, carriers[0])
+        if standing is None:
+            return derive.ReceiptOutcome(
+                kind,
+                "unresolvable",
+                f"{corpus_id}: {carriers[0]}: this corpus no longer stands at the state "
+                f"{corpus_state} the receipt named",
+            )
+        captured.append(standing)
+    produced = held.invoke(derive.Capture(tuple(captured)).rule_input())
     try:
         rebuilt = derive.subject_projection(kind, produced)
     except RuleNonconformant as caught:
@@ -351,12 +406,16 @@ def _contract_fault(kind: str, member: str, receipt: epoch._ReceiptCarrier) -> s
     return None
 
 
-def _locked_standing(
+def _standing(
     world: registry.World, corpus_id: str, corpus_state: str, carrier: Path
 ) -> derive.CapturedCorpus | None:
     """One named corpus, re-read at the state the receipt named, or `None`.
 
-    The re-read happens inside that corpus's own capture hold, exactly as
+    The caller does **not** hold the world lock here, and must not: this takes
+    the corpus's own operation lock and runs an enumeration under it, which is
+    the one thing `build_epoch` keeps out of its critical section.
+
+    The re-read happens inside that corpus's capture hold, exactly as
     `epoch._capture` does it, and for the same reason: a state read outside the
     hold could be overtaken by a writer before the enumeration, and validation
     would then refute a receipt that was right about a corpus nobody had
@@ -517,6 +576,15 @@ def resolve_address(
     `ResolutionRefused`. None of them may borrow `NotPresent`: that answer
     tells a caller the record is safely elsewhere, and here what actually
     happened is that this world cannot say what it holds.
+
+    An unreadable manifest is a refusal *here* and outcome ``unresolvable`` in
+    `validate_receipt`, and the asymmetry is the two sections talking about two
+    different things. §8.3 closes this act's answer set at three arms and names
+    the malformed manifest as one of the refusals, so there is no arm for it to
+    become. §8.4 says an edge whose receipt is anything but ``validated`` is
+    ``indeterminate``, which is an answer rather than a refusal — a query that
+    raised instead would leave the caller with nothing where the specification
+    promises a state.
     """
     stamp = _stamp(published)
     recorded = _address_map(published)
@@ -545,7 +613,7 @@ def resolve_address(
             view = ReadView.opened_at(carrier)
             live = view.resolve(address)
             produced = None if live is None else view.get(live).uid
-        except Exception as caught:
+        except _CARRIER_READ_FAULTS as caught:
             raise ResolutionRefused(
                 f"{address}: {corpus_id}: {carrier}: the present carrier cannot be read: {caught}"
             ) from caught

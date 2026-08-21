@@ -379,11 +379,21 @@ class TestReceiptOutcomes:
             calls.append(f"binding:{binding}")
             raise AssertionError("availability was consulted before well-formedness")
 
+        def refuse_carriers(config, corpus_id):
+            calls.append(f"carriers:{corpus_id}")
+            raise AssertionError("availability was consulted before well-formedness")
+
         broken_carriers = [
             repackage(world, published, {"producer-receipt.yaml": receipt})
             for receipt in malformed_documents.values()
         ]
+        # All three seams, not two. Resolving carriers is the *first* thing the
+        # availability phase does per corpus, and it has an `unresolvable`
+        # return of its own; a validator that counted carriers before reading
+        # the receipt would still pass an arm that stubbed only the two later
+        # seams, because this fixture has exactly one carrier.
         monkeypatch.setattr(registry, "corpus_state_identity", refuse_state)
+        monkeypatch.setattr(registry, "_carrier_roots", refuse_carriers)
         monkeypatch.setattr(rules, "_locked_resolve_rule_binding", refuse_binding)
         for broken in broken_carriers:
             assert read.validate_receipt(world, broken, "producer").outcome == "malformed"
@@ -624,6 +634,70 @@ class TestReceiptOutcomes:
         assert set(supplied) == {"coverage", "records"}
         assert not hasattr(draft, "carriers")
         assert not any("root" in field for field in draft.__dataclass_fields__)
+
+    def test_validation_holds_the_world_lock_only_for_the_binding_resolution(self, tmp_path, monkeypatch):
+        """The rule run and the corpus reads happen with the world lock free.
+
+        `build_epoch` states the principle for the identical work: derivation
+        happens before the lock is reacquired, "so nothing that could refuse or
+        take time happens inside the critical section". Validation does the
+        same work — one enumeration of every covered corpus, then loaded rule
+        code over it — and every coreference edge query performs a validation,
+        so holding the world lock across it would serialize every registry
+        append and every rule install in this world behind one query.
+
+        Observed at the three seams rather than argued: the lock is held while
+        the rules store is read, because rule removal writes to that store
+        under the same lock, and free for everything after.
+        """
+        world, _bindings, _roots, published = published_world(tmp_path)
+        observed: dict[str, bool] = {}
+        real_state = registry.corpus_state_identity
+        real_resolve = rules._locked_resolve_rule_binding
+
+        def watched_state(corpus_root):
+            observed["corpus read"] = world._state.lock.locked()
+            return real_state(corpus_root)
+
+        def watched_resolve(world_root, binding):
+            observed["binding resolution"] = world._state.lock.locked()
+            held = real_resolve(world_root, binding)
+
+            def watched_invoke(value):
+                observed["rule run"] = world._state.lock.locked()
+                return held.invoke(value)
+
+            return rules._HeldRule(held.binding, held.symbol, held.source, watched_invoke)
+
+        monkeypatch.setattr(registry, "corpus_state_identity", watched_state)
+        monkeypatch.setattr(rules, "_locked_resolve_rule_binding", watched_resolve)
+
+        assert read.validate_receipt(world, published, "producer").outcome == "validated"
+
+        assert observed == {"binding resolution": True, "corpus read": False, "rule run": False}
+
+    def test_unreadable_carrier_manifest_is_unresolvable_rather_than_an_exception(self, tmp_path):
+        """A configured root claiming a manifest this world cannot read makes
+        every named state unreachable, and that is an outcome.
+
+        `registry._carrier_roots` refuses a malformed manifest rather than
+        treating it as an absence — a root that claims something unreadable is
+        a configuration fault — and that refusal reaches validation. It is
+        converted here instead of propagating, because §8.4 makes an edge whose
+        receipt is anything but ``validated`` ``indeterminate``, and a query
+        that raised would leave the caller with nothing where the specification
+        promises a state. `resolve_address` converts the same fault the other
+        way, to `ResolutionRefused`, because §8.3 closes *its* answer set at
+        three arms and names the malformed manifest as one of the refusals.
+        """
+        world, _bindings, roots, published = published_world(tmp_path)
+        assert outcomes(world, published) == dict.fromkeys(epoch.DERIVATION_KINDS, "validated")
+
+        (roots[ALPHA] / "corpus.yaml").write_bytes(b"corpus_id: []\n")
+
+        assert outcomes(world, published) == dict.fromkeys(epoch.DERIVATION_KINDS, "unresolvable")
+        producer = read.validate_receipt(world, published, "producer")
+        assert ALPHA in producer.detail and "cannot read" in producer.detail
 
     def test_an_unknown_receipt_kind_is_refused_rather_than_answered(self, tmp_path):
         """§7.5 has four kinds. A fifth is a caller error, not an outcome."""
