@@ -1,15 +1,39 @@
-"""N2 over cut 6's 22 frozen world-registry arms."""
+"""N2 over cut 6's 22 frozen world-registry arms.
+
+**The sabotage direction is audited against the commit that discharged cut 6.**
+Cut 6's declarations name `world.py`, and slice 2 promoted that module to the
+`science/world/` package. The declaration table and both runners are frozen, and
+the design forbids recreating `world.py` as a shim: cut 6's committed sabotage
+paths "remain historical evidence; no file is recreated to satisfy them". So the
+sabotage half of the audit runs against the repository as it stood at
+`CUT6_SOURCE_COMMIT` — the pre-promotion tree the 22 arms were written against,
+package and suite together, because a sabotage of the historical package has to
+be checked by the tests that shipped with it.
+
+**The live tree is still audited, by the other direction.**
+`test_every_check_resolves_and_passes_without_the_sabotage` runs every declared
+check against the working tree with no sabotage and no override, so a check that
+is renamed away, or that stops passing because slice-2 work broke the behaviour
+it names, still turns this module red. What the pin gives up is narrower and
+worth stating plainly: weakening a *current* check — leaving its name and its
+green result in place while removing what it asserts — is no longer caught here,
+because the mutation direction now reads the historical copy of that check.
+"""
 
 from __future__ import annotations
 
+import io
 import os
 import shutil
+import subprocess
+import tarfile
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from itertools import count
 from pathlib import Path
 
 import pytest
+import test_n2
 from atoms.chain.model import RegisteredEntry
 from atoms.core.errors import PreconditionRefused
 from fixtures_cut6 import PINS
@@ -30,6 +54,53 @@ from science.world import Fresh, WorldConfig, admission_digest, status_digest
 
 WORKERS = 8
 _COUNTER = count()
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+
+CUT6_SOURCE_COMMIT = "4a7dc19dd08d8899417d17f7dfee9eb2dbd1318e"
+"""The last commit whose tree holds `python/src/science/world.py`.
+
+Every cut-6 sabotage is a literal substring of a file in this tree. Moving the
+pin forward is only correct when the arms are re-declared against a newer tree,
+which is a new conformance cut rather than an edit to this one.
+"""
+
+
+def _historical_tree(destination: Path) -> Path:
+    """Materialize the repository at `CUT6_SOURCE_COMMIT`, read-only evidence.
+
+    `git archive` rather than a checkout or a worktree: nothing is written into
+    the repository, the extraction is a plain tarball into a temporary
+    directory, and the whole repository comes along so that a test resolving a
+    repo-relative path finds the same layout it was written against.
+    """
+    archive = subprocess.run(
+        ["git", "-C", str(REPO_ROOT), "archive", CUT6_SOURCE_COMMIT],
+        check=True,
+        stdout=subprocess.PIPE,
+    ).stdout
+    destination.mkdir(parents=True, exist_ok=True)
+    with tarfile.open(fileobj=io.BytesIO(archive)) as tar:
+        tar.extractall(destination, filter="data")
+    python_root = destination / "python"
+    if not (python_root / "src" / "science" / "world.py").is_file():
+        raise AssertionError(
+            f"{CUT6_SOURCE_COMMIT} does not hold python/src/science/world.py, so it is not the tree "
+            "cut 6's sabotages were declared against"
+        )
+    return python_root
+
+
+def test_the_pinned_cut6_source_commit_is_an_ancestor_of_the_working_tree():
+    """The pin has to belong to this history, or the audit is against a stranger."""
+    completed = subprocess.run(
+        ["git", "-C", str(REPO_ROOT), "merge-base", "--is-ancestor", CUT6_SOURCE_COMMIT, "HEAD"],
+        check=False,
+    )
+    assert completed.returncode == 0, (
+        f"{CUT6_SOURCE_COMMIT} is not an ancestor of HEAD, so cut 6's sabotage direction would be "
+        "auditing a tree this branch never had"
+    )
 
 
 @pytest.fixture(scope="session")
@@ -132,11 +203,25 @@ def test_registry_registrations_name_each_record_path(world_case):
 
 @pytest.fixture(scope="session")
 def findings(tmp_path_factory) -> tuple:
+    """The 22 arms, audited against the tree they were declared against.
+
+    `test_n2.PACKAGE` and `test_n2.TESTS` are the two globals the harness reads
+    to decide what gets copied and mutated and where the named checks are run
+    from, so redirecting both — and only for the length of this audit — moves
+    the whole sabotage direction onto the historical pair. They are restored
+    before any other test in this module runs, which is what keeps
+    `test_every_check_resolves_and_passes_without_the_sabotage` pointed at the
+    working tree.
+    """
     root_path = tmp_path_factory.mktemp("n2-cut6")
-    with ThreadPoolExecutor(max_workers=WORKERS) as pool:
-        return tuple(
-            pool.map(lambda pair: audit(pair[1], root_path / f"arm{pair[0]}"), enumerate(CUT6_ARMS))
-        )
+    historical = _historical_tree(root_path / "cut6-source")
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(test_n2, "PACKAGE", historical / "src" / "science")
+        patch.setattr(test_n2, "TESTS", historical / "tests")
+        with ThreadPoolExecutor(max_workers=WORKERS) as pool:
+            return tuple(
+                pool.map(lambda pair: audit(pair[1], root_path / f"arm{pair[0]}"), enumerate(CUT6_ARMS))
+            )
 
 
 def _report(reason: str, findings: tuple, verdict: str) -> None:

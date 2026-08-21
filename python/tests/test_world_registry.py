@@ -8,7 +8,7 @@ import yaml
 from fixtures_cut6 import PINS
 from nodes.core.write_plan import CreateOp, DefaultExecutor
 
-import science.world as world_module
+import science.world.registry as world_module
 from science.errors import (
     CorpusIdKnown,
     ForkParentUnknown,
