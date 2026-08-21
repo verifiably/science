@@ -29,12 +29,14 @@ quietly treating it as inactive.
 from __future__ import annotations
 
 import inspect
+import os
 from dataclasses import FrozenInstanceError, fields
 from pathlib import Path
 from types import ModuleType
 
 import pytest
 from nodes.core.node import Node
+from pydantic import ValidationError as PydanticValidationError
 from test_world_build import ALPHA, BETA, GAMMA, corpus_at, sample_nodes, slug_for
 from test_world_receipts import (
     corpora,
@@ -45,9 +47,10 @@ from test_world_receipts import (
     repackage,
     world_over,
 )
+from yaml import YAMLError
 
 from science import stored
-from science.errors import ResolutionRefused
+from science.errors import ResolutionRefused, SemanticHashStale
 from science.world import epoch, read, registry
 
 # --- the harness -------------------------------------------------------------
@@ -195,6 +198,65 @@ class TestBoundResolution:
         with pytest.raises(ResolutionRefused, match="manifest"):
             read.resolve_address(world, published, address)
 
+    def test_resolution_refuses_every_present_carrier_read_fault(self, tmp_path):
+        """`read._CARRIER_READ_FAULTS` is adequate, driven rather than read.
+
+        The narrowed catch replaced a bare `except Exception`, and a narrowing
+        is only as good as the list — the arm above never reaches it, because
+        an unreadable *manifest* is converted earlier by the presence
+        reduction. So every shape a corrupt present carrier can actually fail
+        with is driven through `resolve_address` here, and each is asserted by
+        its own cause type: narrowing the tuple back down would let one escape
+        raw and fail the `ResolutionRefused` expectation rather than quietly
+        widen the surface.
+
+        The record is restored between shapes and the address re-resolves, so
+        each refusal is attributable to the mutation that caused it.
+        """
+        roots = corpora(tmp_path, {ALPHA: sample_nodes("one")})
+        world = world_over(tmp_path, roots)
+        published = publish(world, (ALPHA,), hold_shipped(world))
+        address = an_address_in(published, ALPHA)
+        assert address == "dataset:one", "the shapes below tamper with this record by name"
+        record = roots[ALPHA] / "dataset" / "one.md"
+        intact = record.read_bytes()
+        stamped = intact.decode("utf-8")
+        digest_line = next(line for line in stamped.splitlines() if line.strip().startswith("digest:"))
+
+        shapes: dict[str, tuple[bytes, type[Exception]]] = {
+            # A governed record whose stored stamp disagrees with the fields it
+            # covers: §8.3's corruption, decided on the read path.
+            "stale semantic hash": (
+                stamped.replace(digest_line, digest_line[:-8] + "deadbeef").encode("utf-8"),
+                SemanticHashStale,
+            ),
+            # Front matter that is not YAML at all.
+            "unparsable front matter": (b"---\nid: [\n---\n", YAMLError),
+            # Front matter that parses and is not a node.
+            "front matter that is not a node": (
+                stamped.replace(digest_line + "\n", "").encode("utf-8"),
+                PydanticValidationError,
+            ),
+        }
+        for label, (content, cause) in shapes.items():
+            record.write_bytes(content)
+            with pytest.raises(ResolutionRefused, match="cannot be read") as refusal:
+                read.resolve_address(world, published, address)
+            assert isinstance(refusal.value.__cause__, cause), label
+            record.write_bytes(intact)
+            assert type(read.resolve_address(world, published, address)) is read.Resolved, label
+
+        # And the filesystem underneath all of it.
+        record.chmod(0o000)
+        if os.access(record, os.R_OK):
+            record.chmod(0o644)
+            pytest.skip("this user reads through mode bits, so the OSError arm cannot be driven")
+        with pytest.raises(ResolutionRefused, match="cannot be read") as refusal:
+            read.resolve_address(world, published, address)
+        assert isinstance(refusal.value.__cause__, OSError)
+        record.chmod(0o644)
+        assert type(read.resolve_address(world, published, address)) is read.Resolved
+
 
 # --- Step 3: the bound stamp, and what it does not claim ----------------------
 
@@ -293,18 +355,34 @@ class TestTheBoundStamp:
         assert [field.name for field in fields(belief.SuppliedContext) if "epoch" in field.name] == []
         assert "producer_snapshot_identity" in [field.name for field in fields(belief.SuppliedContext)]
 
-        # Structural, not textual: nothing bound in either module's namespace
-        # comes from the world package, so neither can reach an epoch read at
-        # all. Grepping the source would fail on a comment that merely
-        # mentioned the package, and pass a module that imported it inside a
-        # function.
+        # Two checks, and neither subsumes the other — they catch opposite
+        # evasions, so both stay.
+        #
+        # The **source grep** catches an import this module's own text
+        # performs, *including one inside a function body*. A function-local
+        # `from science.world import read` binds a local at call time and never
+        # enters module globals, so the namespace walk below cannot see it; the
+        # text can. It is also the only one of the two that can say anything
+        # about the word `current_epoch`, which is not a name either module
+        # binds but is exactly the selector §8.1 forbids belief from reaching
+        # for.
+        #
+        # The **namespace walk** catches what the grep cannot: a name
+        # re-exported into `belief` or `closure` through a third module whose
+        # own source never mentions the world package. It is non-vacuous — the
+        # origin sets are populated with `science.admission`, `science.claim`,
+        # `science.lineage` and the rest, which the count below pins so a walk
+        # that silently started reading nothing would fail rather than pass.
         for module in (belief, closure):
-            bound = vars(module).values()
+            source = Path(inspect.getsourcefile(module)).read_text(encoding="utf-8")
+            assert "science.world" not in source, module
+            assert "current_epoch" not in source, module
             origins = {
                 value.__name__ if isinstance(value, ModuleType) else getattr(value, "__module__", "")
-                for value in bound
+                for value in vars(module).values()
             }
-            assert not [name for name in origins if name and name.startswith("science.world")], module
+            assert len([name for name in origins if name.startswith("science.")]) >= 3, module
+            assert not [name for name in origins if name.startswith("science.world")], module
 
     def test_belief_is_invariant_to_availability_and_requires_snapshot(self, tmp_path):
         """The belief input an epoch contributes does not move with

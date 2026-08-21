@@ -22,8 +22,12 @@ must wait and then see the finished epoch rather than mistake an applied prefix
 for a malformed carrier. The lock is not reentrant, which is why
 `current_epoch` reaches `epoch._locked_open_epoch` directly rather than calling
 `open_epoch` — re-entry would not be a style question here, it would deadlock.
-Every `_locked_*` helper below obeys the same rule: the caller holds the lock
-and the helper never re-takes it.
+No `_locked_*` helper is *defined* in this module: the three it calls —
+`epoch._locked_open_epoch`, `epoch._locked_current_identity` and
+`rules._locked_resolve_rule_binding` — carry the discipline in their own
+prefix, and every call to one below sits inside a `with world._state.lock`
+block. A helper here whose name gained that prefix would be claiming the caller
+holds a lock it does not.
 
 **What the lock does not cover is as deliberate.** Receipt validation takes it
 for the recovery barrier and the rules-store resolution — a read of the store
@@ -81,6 +85,8 @@ from pathlib import Path
 from typing import cast
 
 from nodes.core.errors import NodesError
+from pydantic import ValidationError as PydanticValidationError
+from yaml import YAMLError
 
 from science.corpus import ReadView, _root_state_for
 from science.errors import (
@@ -136,18 +142,30 @@ _SUBJECT_KEYS: Mapping[str, str] = {
 }
 """The two subjects §7.5 puts *inside* their receipts instead."""
 
-_CARRIER_READ_FAULTS = (SemanticHashMissing, SemanticHashStale, NodesError, OSError)
+_CARRIER_READ_FAULTS = (
+    SemanticHashMissing,
+    SemanticHashStale,
+    NodesError,
+    PydanticValidationError,
+    YAMLError,
+    OSError,
+)
 """What reading a present carrier can legitimately fail with (§8.3).
 
 Named rather than caught as `Exception`, because the refusal this converts to
 is a *finding* about the carrier — "this world cannot say what it holds" — and
 a bare catch would report a programming error in this module as one instead.
-The four are the whole surface `ReadView.opened_at` / `resolve` / `get`
-refuses across: a governed record carrying no semantic-identity stamp or a
-stale one (§8.3's corruption, decided on the read path), anything the `nodes`
-store itself refuses about its own layout or documents, and the filesystem
-underneath both. An `AttributeError` from a wrong call here is a bug and stays
-a bug.
+An `AttributeError` from a wrong call here is a bug and stays a bug.
+
+The six are the surface `ReadView.opened_at` / `resolve` / `get` actually
+refuses across, and the list was widened after an arm drove each shape through
+it rather than settled by reading the call chain. A governed record with no
+semantic-identity stamp or a stale one is §8.3's corruption, decided on the
+read path. A stored document whose front matter is not YAML raises out of the
+parser, and one whose front matter parses but is not a `Node` raises pydantic's
+`ValidationError` — the `nodes` store does not wrap either on the read path,
+so neither is a `NodesError`. `NodesError` itself covers what the store refuses
+about its own layout, and `OSError` the filesystem underneath all of it.
 """
 
 
