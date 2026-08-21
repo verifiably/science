@@ -956,7 +956,6 @@ class TestExplicitRemoval:
             "receipt-not-yaml",
             "receipt-not-a-mapping",
             "receipt-duplicate-key",
-            "receipt-missing-key",
             "receipt-non-text-identity",
             "receipt-states-not-a-list",
             "receipt-state-without-its-pair",
@@ -972,9 +971,11 @@ class TestExplicitRemoval:
         """Removal may make evidence unresolvable; it may not do so silently.
         A carrier it cannot read is a sever report it cannot write.
 
-        Every arm here is a *carrier* failure in §8.2's sense: the closed
-        layout is broken, or a receipt yields no binding to report. A receipt
-        that merely violates its contract is the next test's business.
+        Every arm here is a *carrier* failure in §8.2's closed sense: invalid
+        YAML, or a missing/extra/unreadable epoch **member** — one of the
+        eleven files — or a member that is present and is not the shape the
+        identity formula digests. A receipt that merely violates its contract,
+        an *omitted* identity key included, is the next test's business.
         """
         world, plans = recording_world(tmp_path)
         binding = rules.install_rule_binding(world, bundle())
@@ -996,15 +997,6 @@ class TestExplicitRemoval:
             receipt.write_bytes(b"- kind: producer\n")
         elif sabotage == "receipt-duplicate-key":
             receipt.write_bytes(receipt.read_bytes() + b"kind: producer\n")
-        elif sabotage == "receipt-missing-key":
-            # No rule identity is no binding: nothing to name as severed.
-            receipt.write_bytes(
-                b"".join(
-                    line + b"\n"
-                    for line in receipt.read_bytes().splitlines()
-                    if not line.startswith(b"rule_identity:")
-                )
-            )
         elif sabotage == "receipt-non-text-identity":
             receipt.write_bytes(
                 receipt.read_bytes().replace(
@@ -1051,17 +1043,26 @@ class TestExplicitRemoval:
             ("receipt-unsorted-states", 4),
             ("receipt-duplicate-state", 4),
             ("receipt-short-digest", 3),
+            ("receipt-no-rule-identity", 3),
+            ("receipt-no-kind", 3),
+            ("receipt-null-subject", 3),
         ],
     )
     def test_a_receipt_that_violates_its_contract_is_not_a_carrier_failure(self, tmp_path, sabotage, severed):
         """§8.2: carrier validation and receipt validation are separate layers.
 
         Each sabotage here breaks the receipt *contract* while leaving a
-        readable binding, so it is receipt outcome `malformed` for the
-        validator to return — not `EpochMalformed`, which would close the path
-        §8.2 exists to keep open. The scan reads straight through and removal
-        proceeds; the severed count moves only where the sabotage moved the
-        binding itself.
+        document that still parses, so it is receipt outcome `malformed` for
+        the validator to return — not `EpochMalformed`, which would close the
+        path §8.2 exists to keep open. The scan reads straight through and
+        removal proceeds; the severed count moves only where the sabotage cost
+        the receipt its identity or its binding.
+
+        The three arms that drop a member below the identity are worth naming.
+        A receipt that carried too little to have an identity is not severed —
+        not because naming it is awkward, but because §7.5 already put it at
+        `malformed`, an outcome decided before resolvability is ever asked,
+        which no change to what this store holds can move.
         """
         world = make_world(tmp_path)
         binding = rules.install_rule_binding(world, bundle())
@@ -1082,7 +1083,7 @@ class TestExplicitRemoval:
             document = yaml.safe_load(receipt.read_text(encoding="utf-8"))
             document["corpus_states"] = [document["corpus_states"][0]] * 2
             receipt.write_bytes(yaml.safe_dump(document, sort_keys=True).encode("utf-8"))
-        else:
+        elif sabotage == "receipt-short-digest":
             # A value that is not an identity is still text: the receipt reads,
             # and it simply no longer names the pair being removed.
             receipt.write_bytes(
@@ -1090,6 +1091,38 @@ class TestExplicitRemoval:
                     f"rule_identity: {binding.rule_identity}".encode(), b"rule_identity: abcdef"
                 )
             )
+        elif sabotage == "receipt-null-subject":
+            receipt.write_bytes(receipt.read_bytes().replace(b"subject: ", b"subject: null # "))
+        else:
+            # An *omitted* identity member. The bytes still decode, still parse
+            # as YAML, still yield a mapping — every structural property holds,
+            # and §7.5's closing sentence puts an unsound receipt contract at
+            # outcome `malformed`. §8.2's carrier list names epoch *members*,
+            # never receipt keys.
+            omitted = b"rule_identity:" if sabotage == "receipt-no-rule-identity" else b"kind:"
+            receipt.write_bytes(
+                b"".join(
+                    line + b"\n" for line in receipt.read_bytes().splitlines() if not line.startswith(omitted)
+                )
+            )
+
+        # The scan is what must not refuse; prove it reads this carrier.
+        scanned = epoch._retained_receipt_bindings_locked(world.config.world_root)
+        assert len(scanned) == 4
+        bent = next(one for one in scanned if one.member == "producer-receipt.yaml")
+        if sabotage == "receipt-no-rule-identity":
+            assert bent.missing == ("rule_identity",)
+            assert bent.binding is None and bent.identity is None
+        elif sabotage == "receipt-no-kind":
+            assert bent.missing == ("kind",)
+            assert bent.binding == (binding.rule_identity, binding.implementation_identity)
+            assert bent.identity is None
+        elif sabotage == "receipt-null-subject":
+            assert bent.missing == ("subject",)
+            assert bent.identity is None
+        else:
+            assert bent.missing == ()
+            assert bent.identity is not None
 
         report = rules.remove_rule_binding(world, binding)
 

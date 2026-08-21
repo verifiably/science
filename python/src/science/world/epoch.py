@@ -28,16 +28,28 @@ wrong is the validator's finding to make.
 **Two layers, and this module is the lower one** (§8.2). Reading a receipt out
 of a carrier and judging whether that receipt honours its contract are separate
 questions with separate outcomes. What refuses here is *structural
-unreadability*: bytes that are not a YAML mapping, a duplicate key, or a
-document from which the five identity-bearing members of §7.5 cannot be lifted
-as strings. Everything a reader can still lift a binding out of is handed on
-intact — a discriminant disagreeing with its member, a value that is not an
-identity, an unsorted or repeated corpus state, a key outside the kind's
-declared set. Those are receipt-contract violations, and §8.2 assigns them
-receipt outcome ``malformed``, not `EpochMalformed`. Turning one into a carrier
-failure would close the path §8.2 exists to keep open, where a malformed
-coreference receipt opens, evaluates as ``malformed``, and leaves its edges
+unreadability*: bytes that are not a YAML mapping, a duplicate key, or a value
+that is present and is not the text the identity formula digests. Everything a
+reader can still lift *something* out of is handed on intact — a discriminant
+disagreeing with its member, a value that is not an identity, an unsorted or
+repeated corpus state, a key outside the kind's declared set, and an identity
+member the document simply omits. Those are receipt-contract violations, and
+§8.2's carrier list is closed and names none of them: it is "invalid YAML, a
+missing or extra epoch **member**, a bad member content name, or a
+packaging-identity mismatch", where a member is one of the eleven files. A
+missing receipt *key* is §7.5's own closing sentence instead — "An unsound
+receipt contract is ``malformed``" — and turning one into a carrier failure
+would close the path §8.2 exists to keep open, where a malformed coreference
+receipt opens, evaluates as ``malformed``, and leaves its edges
 ``indeterminate``.
+
+An omitted identity member is therefore read as *absent*, not as a refusal:
+`_ReceiptCarrier` holds each of the five as optional and `missing` names the
+ones the document did not carry, which is exactly the finding the validator
+has to report. Such a receipt has no identity — there is nothing to digest —
+and it names no binding, which is the honest answer rather than a convenient
+one: §7.5 puts an unsound contract at ``malformed`` before resolvability is
+ever asked, so no act that changes what a store *holds* can move its outcome.
 
 `RECEIPT_KEYS` therefore *declares* the closed per-kind contract without
 enforcing it: the receipt validator is what enforces it. The two
@@ -185,39 +197,67 @@ class _ReceiptCarrier:
     The subject itself is not here: the identity digests the subject's
     projection identity, and severing evidence is decided by the binding, so
     the sever report never needs to reconstruct a map.
+
+    Each of the five identity members is optional, because a document may
+    simply omit one and that is a receipt-contract fault rather than an
+    unreadable carrier (§7.5, §8.2). `missing` names what was omitted; a
+    receipt missing anything has no `identity` and names no `binding`.
     """
 
     packaging_identity: str
     member: str
-    kind: str
+    kind: str | None
     """The discriminant the *document* carries, which is what the identity
     digests. `RECEIPT_KINDS[member]` is what it should be; whether the two
     agree is the validator's question, not this layer's."""
-    subject_identity: str
-    corpus_states: tuple[tuple[str, str], ...]
-    """As the document orders them. `receipt_identity` sorts."""
-    rule_identity: str
-    implementation_identity: str
+    subject_identity: str | None
+    corpus_states: tuple[tuple[str, str], ...] | None
+    """As the document orders them; `receipt_identity` sorts. `None` is the
+    member being absent, which an empty coverage is not."""
+    rule_identity: str | None
+    implementation_identity: str | None
 
     @property
-    def binding(self) -> tuple[str, str]:
-        """The exact pair this receipt names, as ``(rule, implementation)``.
+    def missing(self) -> tuple[str, ...]:
+        """The identity members this document did not carry, by document key.
+
+        Empty for a receipt whose contract is sound this far. Non-empty is the
+        validator's ``malformed`` finding, ready to report.
+        """
+        return tuple(
+            key
+            for key, value in (
+                ("corpus_states", self.corpus_states),
+                ("implementation_identity", self.implementation_identity),
+                ("kind", self.kind),
+                ("rule_identity", self.rule_identity),
+                ("subject", self.subject_identity),
+            )
+            if value is None
+        )
+
+    @property
+    def binding(self) -> tuple[str, str] | None:
+        """The exact pair this receipt names, as ``(rule, implementation)``,
+        or `None` where it named no pair.
 
         Two digests, compared as two digests: a receipt naming a *sibling*
         implementation of the same rule shares the first member and differs in
         the second, which is exactly the distinction removal turns on.
         """
+        if self.rule_identity is None or self.implementation_identity is None:
+            return None
         return (self.rule_identity, self.implementation_identity)
 
     @property
-    def identity(self) -> str:
-        return receipt_identity(
-            self.kind,
-            self.subject_identity,
-            self.corpus_states,
-            self.rule_identity,
-            self.implementation_identity,
-        )
+    def identity(self) -> str | None:
+        """This receipt's identity, or `None` where the document carried too
+        little to have one. An identity over invented members would be an
+        identity for a receipt nobody wrote."""
+        binding = self.binding
+        if self.kind is None or self.subject_identity is None or self.corpus_states is None or binding is None:
+            return None
+        return receipt_identity(self.kind, self.subject_identity, self.corpus_states, *binding)
 
 
 def _retained_receipt_bindings_locked(world_root: Path) -> tuple[_ReceiptCarrier, ...]:
@@ -277,32 +317,46 @@ def _parse_receipt(packaging_identity: str, member: str, content: bytes) -> _Rec
 
     This is the structural floor and nothing above it. It refuses only what
     leaves no receipt to hand on: bytes that are not a YAML mapping, a
-    duplicate key, an absent identity member, or one whose value is not the
-    string the identity formula digests. What it does **not** check is the
-    receipt *contract* — that the discriminant matches the member, that the
-    keys are exactly `RECEIPT_KEYS[member]`, that each digest is an identity,
-    that the corpus states are sorted and distinct. Those are §8.2's receipt
-    outcome ``malformed``, and the validator that decides them reuses this
-    extraction without inheriting a refusal policy that would hide them.
+    duplicate key, or a member that is present and is not the shape the
+    identity formula digests. An *absent* identity member is lifted as `None`
+    rather than refused — the document still parsed, and §7.5 assigns an
+    unsound receipt contract to outcome ``malformed``.
+
+    What this does **not** check is the receipt *contract* — that every
+    identity member is there, that the discriminant matches the member, that
+    the keys are exactly `RECEIPT_KEYS[member]`, that each digest is an
+    identity, that the corpus states are sorted and distinct. Those are §8.2's
+    receipt outcome ``malformed``, and the validator that decides them extends
+    this extraction without inheriting a refusal policy that would hide them.
+    Recovering any of it by catching `EpochMalformed` would put the policy back
+    in the layer this split exists to take it out of.
     """
     try:
         document = yaml.load(content.decode("utf-8"), Loader=_ManifestLoader)
         if type(document) is not dict:
             raise ValueError("a receipt is a mapping")
-        missing = sorted(RECEIPT_IDENTITY_KEYS - set(document))
-        if missing:
-            raise ValueError(f"a receipt carries {sorted(RECEIPT_IDENTITY_KEYS)}; missing {missing}")
+        states = document.get("corpus_states")
         return _ReceiptCarrier(
             packaging_identity,
             member,
-            _require_text(document["kind"], "kind"),
-            _require_text(document["subject"], "subject"),
-            _corpus_states(document["corpus_states"]),
-            _require_text(document["rule_identity"], "rule_identity"),
-            _require_text(document["implementation_identity"], "implementation_identity"),
+            _lift_text(document, "kind"),
+            _lift_text(document, "subject"),
+            None if states is None else _corpus_states(states),
+            _lift_text(document, "rule_identity"),
+            _lift_text(document, "implementation_identity"),
         )
     except Exception as caught:
         raise EpochMalformed(f"{packaging_identity}/{member}: {caught}") from caught
+
+
+def _lift_text(document: dict[object, object], key: str) -> str | None:
+    """One identity member as written, or `None` where it was not written.
+
+    A YAML ``null`` and an omitted key are the same absence here: neither is
+    the text the identity digests, and neither is a carrier failure.
+    """
+    value = document.get(key)
+    return None if value is None else _require_text(value, key)
 
 
 def _corpus_states(value: object) -> tuple[tuple[str, str], ...]:

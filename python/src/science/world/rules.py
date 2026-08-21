@@ -159,6 +159,7 @@ class _StoredRule:
 
     binding: RuleBinding
     symbol: str
+    document: bytes
     fixtures: tuple[tuple[str, bytes], ...]
     source: bytes
 
@@ -435,7 +436,8 @@ def _locked_stored_rule(world_root: Path, binding: RuleBinding) -> _StoredRule:
     """
     directory = world_root / "rules" / binding.rule_identity
     try:
-        symbol = parse_rule_document(_read_member(directory / "rule.yaml"))
+        document = _read_member(directory / "rule.yaml")
+        symbol = parse_rule_document(document)
         fixtures = _read_fixtures(directory / "fixtures")
         if rule_identity(symbol, fixtures) != binding.rule_identity:
             raise _RuleRefusal("the stored symbol and fixtures do not recompute the rule identity")
@@ -444,7 +446,7 @@ def _locked_stored_rule(world_root: Path, binding: RuleBinding) -> _StoredRule:
             raise _RuleRefusal("the stored implementation does not recompute its content identity")
     except RuleNotHeld as caught:
         raise _RuleRefusal(str(caught)) from caught
-    return _StoredRule(binding, symbol, fixtures, source)
+    return _StoredRule(binding, symbol, document, fixtures, source)
 
 
 def _read_member(path: Path) -> bytes:
@@ -495,10 +497,12 @@ def remove_rule_binding(world: World, binding: RuleBinding) -> RuleRemovalReport
     own name first, because deleting the fixtures means asserting they are the
     fixtures this pair names; the fixtures are *not* run, because a binding
     whose implementation has stopped conforming is still one an operator must
-    be able to unhold (`_locked_stored_rule` carries the full reasoning). A sibling implementation of the same rule is not
-    a successor to be tidied away: it is another held pair, and receipts naming
-    it keep resolving. Emptied directories are nonsemantic and are left where
-    they are; there is no tombstone and no sweep.
+    be able to unhold (`_locked_stored_rule` carries the full reasoning).
+
+    A sibling implementation of the same rule is not a successor to be tidied
+    away: it is another held pair, and receipts naming it keep resolving.
+    Emptied directories are nonsemantic and are left where they are; there is
+    no tombstone and no sweep.
 
     The sever report is computed from the retained epochs *before* anything is
     deleted, and a carrier this world cannot read refuses the whole act. That
@@ -510,23 +514,38 @@ def remove_rule_binding(world: World, binding: RuleBinding) -> RuleRemovalReport
         world_root = world.config.world_root
         directory = world_root / "rules" / binding.rule_identity
         try:
-            _locked_stored_rule(world_root, binding)
+            stored = _locked_stored_rule(world_root, binding)
             held = _held_implementations(directory / "implementations")
         except _RuleRefusal as caught:
             raise RuleBindingUnknown(
                 f"{binding.rule_identity}/{binding.implementation_identity}: no stored exact pair: {caught}"
             ) from caught
-        severed = tuple(
-            sorted(
-                {
-                    receipt.identity
-                    for receipt in epoch._retained_receipt_bindings_locked(world_root)
-                    if receipt.binding == (binding.rule_identity, binding.implementation_identity)
-                }
-            )
-        )
-        world._executor_factory(world_root).execute(_delete_plan(directory, binding, held))
+        severed = _severed_receipts(world_root, binding)
+        world._executor_factory(world_root).execute(_delete_plan(stored, held))
     return RuleRemovalReport(binding, severed)
+
+
+def _severed_receipts(world_root: Path, binding: RuleBinding) -> tuple[str, ...]:
+    """Every retained receipt identity that loses this store's resolution path.
+
+    Sorted and distinct: two epochs may carry one receipt, and the receipt
+    severed is one receipt either way.
+
+    A receipt the carrier layer could read but that did not carry all five of
+    §7.5's identity members is *not* severed, and this is the one subtlety
+    worth stating. Such a receipt has no identity to report, but the reason it
+    is left out is not that it is awkward to name: §7.5 puts an unsound receipt
+    contract at outcome ``malformed``, which is decided before resolvability is
+    ever asked, so no change to what this store holds can move it. It was
+    already the validator's finding, and it still is.
+    """
+    pair = (binding.rule_identity, binding.implementation_identity)
+    severed: set[str] = set()
+    for receipt in epoch._retained_receipt_bindings_locked(world_root):
+        identity = receipt.identity
+        if identity is not None and receipt.binding == pair:
+            severed.add(identity)
+    return tuple(sorted(severed))
 
 
 def _held_implementations(directory: Path) -> tuple[str, ...]:
@@ -547,30 +566,28 @@ def _held_implementations(directory: Path) -> tuple[str, ...]:
     return tuple(sorted(names))
 
 
-def _delete_plan(directory: Path, binding: RuleBinding, held: Sequence[str]) -> WritePlan:
+def _delete_plan(stored: _StoredRule, held: Sequence[str]) -> WritePlan:
     """The one transaction, innermost member first.
+
+    Every path and every `expected_digest` comes from the members
+    `_locked_stored_rule` just verified, so the bytes the plan claims to delete
+    are the bytes whose names were checked — the plan does not go back to the
+    directory for a second, unverified listing.
 
     The implementation goes before the normative half it was verified against,
     so no prefix of the plan ever leaves a rule holding fixtures it cannot bind
     to an implementation from.
     """
-    prefix = f"rules/{binding.rule_identity}"
-    implementation = binding.implementation_identity
-    plan = [
-        _delete_op(
-            f"{prefix}/implementations/{implementation}",
-            directory / "implementations" / implementation,
-        )
-    ]
+    prefix = f"rules/{stored.binding.rule_identity}"
+    implementation = stored.binding.implementation_identity
+    plan = [DeleteOp(f"{prefix}/implementations/{implementation}", member_content_digest(stored.source))]
     if tuple(held) == (implementation,):
-        for path in sorted((directory / "fixtures").iterdir()):
-            plan.append(_delete_op(f"{prefix}/fixtures/{path.name}", path))
-        plan.append(_delete_op(f"{prefix}/rule.yaml", directory / "rule.yaml"))
+        plan.extend(
+            DeleteOp(f"{prefix}/fixtures/{name}", member_content_digest(content))
+            for name, content in stored.fixtures
+        )
+        plan.append(DeleteOp(f"{prefix}/rule.yaml", member_content_digest(stored.document)))
     return plan
-
-
-def _delete_op(path: str, target: Path) -> DeleteOp:
-    return DeleteOp(path, member_content_digest(target.read_bytes()))
 
 
 # --- shared checks ----------------------------------------------------------
