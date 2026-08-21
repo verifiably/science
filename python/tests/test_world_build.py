@@ -986,7 +986,19 @@ class TestUngovernedKindsAreRefusedNotAssumed:
 
 
 class TestThePrePublicationRecheck:
-    def test_it_reacquires_the_world_lock_and_reads_no_corpus(self, monkeypatch, tmp_path):
+    """§5.4's recheck, exercised as the function publication actually calls.
+
+    There is one recheck and it takes no lock: `_WorldState.lock` is a plain
+    `threading.Lock`, and publication needs the recheck and the transaction
+    inside one hold of it, so a lock-taking wrapper could not be the thing
+    publication used. These arms therefore hold the lock themselves, exactly as
+    `build_epoch` does. That publication takes that lock *once* — never
+    releasing and reacquiring between the recheck and the commit — is pinned by
+    `test_world_epoch.py`'s
+    `test_publication_takes_the_world_lock_once_and_rechecks_inside_it`.
+    """
+
+    def test_it_runs_under_the_held_world_lock_and_reads_no_corpus(self, monkeypatch, tmp_path):
         world, bindings, roots = admitted_world(tmp_path, (ALPHA,))
         draft = build(world, (ALPHA,), bindings)
         locked: list[bool] = []
@@ -1002,7 +1014,8 @@ class TestThePrePublicationRecheck:
         monkeypatch.setattr(epoch, "_captured_records", lambda root: pytest.fail("the recheck read a corpus"))
         generation = lock_for(roots[ALPHA])._capture_generation
 
-        held = epoch._recheck_rule_bindings(world, draft)
+        with world._state.lock:
+            held = epoch._locked_recheck_rule_bindings(world.config.world_root, draft)
 
         assert locked == [True]
         assert set(held) == set(epoch.DERIVATION_KINDS)
@@ -1014,14 +1027,15 @@ class TestThePrePublicationRecheck:
 
         rules.remove_rule_binding(world, bindings["coreference-reduction"])
 
-        with pytest.raises(RuleNotHeld):
-            epoch._recheck_rule_bindings(world, draft)
+        with pytest.raises(RuleNotHeld), world._state.lock:
+            epoch._locked_recheck_rule_bindings(world.config.world_root, draft)
 
     def test_an_untouched_store_rechecks_the_same_four_pairs(self, tmp_path):
         world, bindings, _roots = admitted_world(tmp_path, (ALPHA,))
         draft = build(world, (ALPHA,), bindings)
 
-        held = epoch._recheck_rule_bindings(world, draft)
+        with world._state.lock:
+            held = epoch._locked_recheck_rule_bindings(world.config.world_root, draft)
 
         assert {kind: value.binding for kind, value in held.items()} == bindings
         assert draft.bindings == {

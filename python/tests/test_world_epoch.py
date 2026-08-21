@@ -465,6 +465,59 @@ class TestExactRebuild:
         assert epochs_tree(world) == before
         assert rebuilt.members == first.members
 
+    def test_publication_takes_the_world_lock_once_and_rechecks_inside_it(self, monkeypatch, tmp_path):
+        """§5.4's ordering, counted rather than inferred.
+
+        Two acquisitions in the whole build and no more: preflight takes the
+        world lock and releases it before any corpus is captured, and
+        publication takes it once and holds it across the recheck, the
+        same-name inspection, the transaction and the read-back. The count is
+        the assertion that matters. `remove_rule_binding` computes its sever
+        report and submits its delete plan under one hold of this same lock, so
+        a publication that released and reacquired between the recheck and the
+        commit could be straddled entirely by one removal — and unlike a
+        re-entrant call, which would deadlock loudly, that edit would leave
+        every other arm here green.
+        """
+        world, recorder, bindings, _roots = admitted_world(tmp_path)
+        counting = CountingLock()
+        world._state.lock = counting
+        marks: list[tuple[str, int, bool]] = []
+
+        def mark(stage: str) -> None:
+            marks.append((stage, counting.acquisitions, counting.locked()))
+
+        recheck = epoch._locked_recheck_rule_bindings
+        planner = epoch._locked_publication_plan
+        loader = epoch._locked_open_epoch
+        monkeypatch.setattr(
+            epoch,
+            "_locked_recheck_rule_bindings",
+            lambda world_root, draft: (mark("recheck"), recheck(world_root, draft))[1],
+        )
+        monkeypatch.setattr(
+            epoch,
+            "_locked_publication_plan",
+            lambda world_root, identity, members: (
+                mark("plan"),
+                planner(world_root, identity, members),
+            )[1],
+        )
+        monkeypatch.setattr(
+            epoch,
+            "_locked_open_epoch",
+            lambda world_root, identity: (mark("open"), loader(world_root, identity))[1],
+        )
+        recorder.interpose = lambda root, plan: (mark("execute"), DefaultExecutor(root).execute(plan))[1]
+
+        published = publish(world, (ALPHA,), bindings)
+
+        assert counting.acquisitions == 2, "the build took the world lock more than preflight and publication"
+        assert [stage for stage, _count, _locked in marks] == ["recheck", "plan", "execute", "open"]
+        assert {(count, locked) for _stage, count, locked in marks} == {(2, True)}
+        assert not counting.locked()
+        assert published.packaging_identity in {path.name for path in (world.config.world_root / "epochs").iterdir()}
+
     @pytest.mark.parametrize("damage", ["incomplete", "malformed", "extra-member", "byte-different"])
     def test_a_differing_same_name_carrier_refuses_without_overwriting(self, tmp_path, damage):
         world, recorder, bindings, _roots = admitted_world(tmp_path)
@@ -538,6 +591,51 @@ class TestOpening:
         assert published.packaging_identity in str(refusal.value)
         with pytest.raises(EpochMalformed):
             read.current_epoch(world)
+
+    @pytest.mark.parametrize(
+        ("coverage", "fault"),
+        [
+            (
+                [{"corpus_id": BETA, "corpus_state": ""}, {"corpus_id": ALPHA, "corpus_state": "x"}],
+                "not sorted",
+            ),
+            (
+                [{"corpus_id": ALPHA, "corpus_state": ""}, {"corpus_id": ALPHA, "corpus_state": "x"}],
+                "covered twice",
+            ),
+        ],
+    )
+    def test_an_unstamped_coverage_entry_does_not_escape_the_declaration_checks(
+        self, tmp_path, coverage, fault
+    ):
+        """The bound stamp's source is checked entry by entry, not entry by
+        entry *that happens to carry a state*.
+
+        Both carriers below are impeccable everywhere else — eleven members,
+        closed documents, a directory name their own bytes recompute — and both
+        declare a coverage that is unsorted or repeats a `corpus_id`, with the
+        offending entry carrying an empty `corpus_state`. An empty string is
+        text, so it passes validation; it is also falsy, so a check written as
+        a comprehension *filter* would drop that entry before sortedness and
+        distinctness were decided and hand §8.3 a stamp nobody vouched for.
+        """
+        world, _recorder, bindings, _roots = admitted_world(tmp_path, (ALPHA, BETA))
+        published = publish(world, (ALPHA, BETA), bindings)
+        members = dict(carrier_bytes(world, published.packaging_identity))
+        members["coverage.yaml"] = yaml.safe_dump(
+            {"coverage": coverage}, sort_keys=True, allow_unicode=True
+        ).encode("utf-8")
+        forged = formula_packaging_identity(members)
+        directory = world.config.world_root / "epochs" / forged
+        directory.mkdir()
+        for name, content in members.items():
+            (directory / name).write_bytes(content)
+
+        with pytest.raises(EpochMalformed) as refusal:
+            read.open_epoch(world, forged)
+
+        assert fault in str(refusal.value)
+        assert "coverage.yaml" in str(refusal.value)
 
     def test_public_surface_has_no_individual_epoch_member_mutation(self, tmp_path):
         """An epoch is written whole and read whole. There is no act that

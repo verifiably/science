@@ -760,10 +760,21 @@ def _check_anchors(document: Mapping[object, object]) -> None:
 
 
 def _check_coverage(document: Mapping[object, object]) -> None:
+    """§6.1's coverage declaration: sorted, distinct, and both members text.
+
+    Every entry is validated by `_covered_pair` as a *statement* and its
+    `corpus_id` is collected unconditionally, exactly as `_check_anchors`
+    validates through `_anchor`. Writing the state check as a comprehension
+    filter instead would make it validate and select at once: an entry whose
+    `corpus_state` was the empty string is text, so it passes, and is falsy, so
+    it would drop out of `covered` before the sortedness and distinctness
+    checks ever saw its `corpus_id` — and §6.1 makes this member the source of
+    the bound stamp, so an unsorted or repeating declaration reaching a
+    consumer is not a cosmetic fault.
+    """
     covered = [
-        _require_text(entry["corpus_id"], "corpus_id")
+        _covered_pair(entry)[0]
         for entry in _entries(document["coverage"], ("corpus_id", "corpus_state"), "coverage")
-        if _require_text(entry["corpus_state"], "corpus_state")
     ]
     if covered != sorted(covered):
         raise ValueError("the coverage declaration is not sorted by corpus_id")
@@ -797,15 +808,23 @@ def _corpus_anchors(document: Mapping[object, object]) -> tuple[_Anchor, ...]:
     return tuple(_anchor(cast(Mapping[object, object], entry)) for entry in corpora)
 
 
+def _covered_pair(entry: Mapping[str, object] | Mapping[object, object]) -> tuple[str, str]:
+    """One coverage entry as a `(corpus_id, corpus_state)` pair.
+
+    Both members are validated here, so a caller that needs only one of them
+    still gets both checked. That is the whole reason this exists rather than
+    two inline lifts: a check written where its value is consumed becomes a
+    check that only runs when that value is wanted.
+    """
+    return (
+        _require_text(entry["corpus_id"], "corpus_id"),
+        _require_text(entry["corpus_state"], "corpus_state"),
+    )
+
+
 def _covered_states(document: Mapping[object, object]) -> tuple[tuple[str, str], ...]:
     coverage: tuple[object, ...] = cast(tuple[object, ...], document["coverage"])
-    return tuple(
-        (
-            _require_text(cast(Mapping[object, object], entry)["corpus_id"], "corpus_id"),
-            _require_text(cast(Mapping[object, object], entry)["corpus_state"], "corpus_state"),
-        )
-        for entry in coverage
-    )
+    return tuple(_covered_pair(cast(Mapping[object, object], entry)) for entry in coverage)
 
 
 # --- coherent preflight and capture (§5.2, §5.3) ------------------------------
@@ -1214,36 +1233,31 @@ def _standing_retractions(view: ReadView, facets: Mapping[str, Mapping[str, obje
     return standing
 
 
-def _recheck_rule_bindings(world: registry.World, draft: _BuildDraft) -> Mapping[str, rules._HeldRule]:
+def _locked_recheck_rule_bindings(world_root: Path, draft: _BuildDraft) -> Mapping[str, rules._HeldRule]:
     """§5.4's pre-publication recheck: the same four exact pairs, still held.
 
-    It reacquires the world lock — the same lock removal takes — which is what
-    gives binding removal and epoch publication a determined order without
-    holding the world lock across corpus enumeration. If removal won the race,
-    this raises `RuleNotHeld` and the caller publishes nothing.
+    The world lock — the same lock removal takes — is the caller's, already
+    held, and this must not take it: it is a plain `threading.Lock`, so a
+    second acquisition inside the same thread is a deadlock rather than a
+    style question.
+
+    That the caller holds it *across* the recheck and the transaction is the
+    point, not an implementation detail. `rules.remove_rule_binding` computes
+    its sever report from the retained epochs **and** submits its delete plan
+    under one hold of this lock. A publication that released between the
+    recheck and the commit could be straddled entirely by one removal: the
+    removal would see no epoch to report, and the epoch would land carrying
+    receipts naming a pair this world had already stopped holding. One
+    acquisition closes that, and `test_world_epoch.py`'s
+    `test_publication_takes_the_world_lock_once_and_rechecks_inside_it` pins
+    it — a release and reacquire would reopen the race without deadlocking, so
+    only a counted assertion catches it.
 
     It reads no corpus. Every value publication needs from live corpus state
-    was captured under the corpus's own hold, and a second look here would be a
-    freshness claim the staleness contract explicitly does not make: covered
+    was captured under the corpus's own hold, and a second look here would be
+    a freshness claim the staleness contract explicitly does not make: covered
     corpora may move between capture and publication, and receipts name the
     exact captured states rather than the present ones.
-    """
-    with world._state.lock:
-        return _locked_recheck_rule_bindings(world.config.world_root, draft)
-
-
-def _locked_recheck_rule_bindings(world_root: Path, draft: _BuildDraft) -> Mapping[str, rules._HeldRule]:
-    """The recheck itself, under a world lock the caller already holds.
-
-    Publication needs the recheck and the transaction inside **one** hold of
-    the lock, not two. Removal computes its sever report from the retained
-    epochs and deletes, all under this same lock; a publication that released
-    it between the recheck and the commit would let a removal run entirely
-    inside that window, see no epoch to report, and leave behind exactly the
-    thing §5.4 is written to prevent — a published receipt naming a pair this
-    world has already stopped holding, severed by a report that never
-    mentioned it. So the lock-taking act above is the one an isolated caller
-    uses, and this is the one publication composes with.
     """
     declared = {kind: held.binding for kind, held in draft.held.items()}
     return rules._locked_resolve_rule_bindings(world_root, declared)
