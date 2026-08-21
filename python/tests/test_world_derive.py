@@ -16,7 +16,7 @@ behaviour depends on the installation around it.
 from __future__ import annotations
 
 import ast
-from dataclasses import fields
+from dataclasses import dataclass, fields
 
 import pytest
 
@@ -493,6 +493,19 @@ class TestCoreferenceReduction:
         wider = capture(DUPLICATES.corpora[0], corpus("corpus-b", at="b"))
         assert coreference_of(wider).identity() == coreference_of(DUPLICATES).identity()
 
+    def test_the_map_type_carries_the_reductions_invariants_itself(self):
+        # Not only the parser: a value built by hand digests just as readily as
+        # one parsed from a rule's return, so an unordered pair would mint a
+        # second, wrong identity for a reduction the rule got right.
+        with pytest.raises(ValueError, match="left < right"):
+            derive.CoreferenceMap(pairs={("address-b", "address-a"): (1, 1)})
+        with pytest.raises(ValueError, match="unit-weight"):
+            derive.CoreferenceMap(pairs={("address-a", "address-b"): (3, 2)})
+        with pytest.raises(ValueError, match="no distinct key"):
+            derive.CoreferenceMap(pairs={("address-a", "address-b"): (0, 0)})
+        with pytest.raises(ValueError, match="two endpoints"):
+            derive.CoreferenceMap(pairs={("address-a",): (1, 1)})  # pyright: ignore[reportArgumentType]
+
 
 # --- Step 3: subject identities and the one receipt contract -----------------
 
@@ -642,6 +655,32 @@ class TestReceipts:
                 bindings={"producer": (digest("1"), digest("2"))},
             )
 
+    def test_a_subject_coverage_that_disagrees_with_the_captured_states_refuses(self):
+        # §7.5: "the exact captured corpus-state identity for every covered
+        # corpus". A subject declaring one coverage beside states naming
+        # another is a receipt whose two halves describe two builds.
+        wide = capture(
+            corpus("corpus-a", record("run:alpha", kind="run", produces=("dataset:one",)), at="a"),
+            corpus("corpus-b", at="b"),
+        )
+        narrow = capture(wide.corpora[0])
+        for subject, pattern in (
+            ({"snapshot": snapshot_of(narrow)}, "producer snapshot"),
+            ({"enumeration": enumeration_of(narrow)}, "retraction enumeration"),
+            ({"inventory": inventory_of(narrow)}, "certification inventory"),
+        ):
+            arguments = {
+                "snapshot": snapshot_of(wide),
+                "enumeration": enumeration_of(wide),
+                "inventory": inventory_of(wide),
+                "coreference": coreference_of(wide),
+                "corpus_states": wide.corpus_states,
+                "bindings": BINDINGS,
+                **subject,
+            }
+            with pytest.raises(ValueError, match=pattern):
+                derive.derivation_receipts(**arguments)  # pyright: ignore[reportArgumentType]
+
     def test_each_receipt_names_its_own_subject_identity(self):
         produced = {one.kind: one.subject_identity for one in receipts_over(TWO_CORPORA)}
         assert produced == {
@@ -737,6 +776,12 @@ FAILURE_MODE_FIXTURES = {
     # Step 5's five named failure modes, each with the shipped fixture whose
     # expected bytes an implementation with that defect cannot produce.
     #
+    # This is a *claim*, not documentation: `TestFixturesDiscriminate` runs a
+    # reducer carrying each defect and asserts the named fixture is among the
+    # ones that refuse it. A filename list on its own would prove nothing —
+    # `rules._run_fixtures` only ever checks the shipped implementation, so a
+    # fixture gutted down to its happy path stays green forever.
+    #
     # `deprecated-address loss` is the one that is only half a rule's business:
     # publishing retired addresses is the address map's job and the address map
     # is not a rule (§5.2 names four), so the fixture pins the half a rule can
@@ -748,6 +793,198 @@ FAILURE_MODE_FIXTURES = {
     "deprecated-address loss": "producer.deprecated-address.yaml",
     "retraction target loss": "retraction.several-per-target.yaml",
 }
+
+
+@dataclass(frozen=True)
+class Mutation:
+    """One deliberately defective reducer, and every shipped fixture of its
+    rule that must refuse it.
+
+    The set is exact in both directions. A fixture that refuses a defect it was
+    not written for is worth knowing about, and a fixture that stops refusing
+    the defect it exists for is the regression Step 5 is guarding against.
+    """
+
+    symbol: str
+    source: bytes
+    refused_by: frozenset[str]
+
+
+MUTATIONS: dict[str, Mutation] = {
+    "omission": Mutation(
+        "derive_producer_snapshot",
+        b'''
+def derive_producer_snapshot(capture):
+    producers = {}
+    first = None
+    for record in capture["records"]:
+        if first is None:
+            first = record["corpus_id"]
+        if record["corpus_id"] != first:
+            continue
+        for dataset in record["produces"]:
+            producers.setdefault(dataset, set()).add(record["address"])
+    return {
+        "producers": [
+            {"dataset": d, "runs": sorted(r)} for d, r in sorted(producers.items())
+        ],
+        "coverage": sorted(capture["coverage"]),
+    }
+''',
+        frozenset({"producer.basic.yaml", "producer.every-corpus.yaml"}),
+    ),
+    "deprecated-address loss": Mutation(
+        "derive_producer_snapshot",
+        b'''
+def derive_producer_snapshot(capture):
+    producers = {}
+    for record in capture["records"]:
+        for dataset in record["produces"]:
+            for address in (record["address"], *record["deprecated_ids"]):
+                producers.setdefault(dataset, set()).add(address)
+    return {
+        "producers": [
+            {"dataset": d, "runs": sorted(r)} for d, r in sorted(producers.items())
+        ],
+        "coverage": sorted(capture["coverage"]),
+    }
+''',
+        frozenset({"producer.deprecated-address.yaml"}),
+    ),
+    "retraction target loss": Mutation(
+        "enumerate_retractions",
+        b'''
+def enumerate_retractions(capture):
+    by_target = {}
+    for record in capture["records"]:
+        retraction = record["retraction"]
+        if retraction is None:
+            continue
+        by_target[retraction["target"]] = (record["address"], retraction["resolution"])
+    return {
+        "found": [[ref, resolution] for ref, resolution in sorted(by_target.values())],
+        "coverage": sorted(capture["coverage"]),
+    }
+''',
+        frozenset({"retraction.several-per-target.yaml"}),
+    ),
+    "location leakage": Mutation(
+        "enumerate_certifications",
+        b'''
+def enumerate_certifications(capture):
+    by_kind = {}
+    for record in capture["records"]:
+        certification = record["certification"]
+        if certification is None:
+            continue
+        key = certification["kind"] + "@" + record["corpus_id"]
+        by_kind.setdefault(key, set()).add(certification["ref"])
+    return {
+        "by_kind": [{"kind": k, "refs": sorted(r)} for k, r in sorted(by_kind.items())],
+        "coverage": sorted(capture["coverage"]),
+    }
+''',
+        frozenset({"certification.basic.yaml", "certification.location-free.yaml"}),
+    ),
+    "duplicate coreference weighting": Mutation(
+        "reduce_coreference",
+        b'''
+def reduce_coreference(capture):
+    units = {}
+    for record in capture["records"]:
+        a = record["coreference"]
+        if a is None:
+            continue
+        endpoints = tuple(sorted(a["endpoints"]))
+        units.setdefault(endpoints, set()).add(
+            (a["stance"], a["actor"], a["grounds"], a["event_token"])
+        )
+    return {
+        "pairs": [
+            {
+                "endpoints": [left, right],
+                "balance": sum(s for s, _a, _g, _e in d),
+                "distinct_key_count": len(d),
+            }
+            for (left, right), d in sorted(units.items())
+        ]
+    }
+''',
+        frozenset({"coreference.basic.yaml", "coreference.duplicates.yaml"}),
+    ),
+    "wrong sorting": Mutation(
+        "reduce_coreference",
+        b'''
+def reduce_coreference(capture):
+    units = {}
+    for record in capture["records"]:
+        a = record["coreference"]
+        if a is None:
+            continue
+        endpoints = tuple(a["endpoints"])
+        units.setdefault(endpoints, set()).add((a["stance"], a["actor"], a["grounds"]))
+    return {
+        "pairs": [
+            {
+                "endpoints": [left, right],
+                "balance": sum(s for s, _a, _g in d),
+                "distinct_key_count": len(d),
+            }
+            for (left, right), d in units.items()
+        ]
+    }
+''',
+        frozenset(
+            {"coreference.basic.yaml", "coreference.duplicates.yaml", "coreference.unsorted.yaml"}
+        ),
+    ),
+}
+
+
+def refusing_fixtures(symbol: str, source: bytes) -> frozenset[str]:
+    """Which of `symbol`'s shipped fixtures this implementation fails.
+
+    The verdict is the store's own, one fixture at a time:
+    `rules._load_entry_point` gives the ABI a rule is actually run under, and
+    `rules._run_fixtures` is the `v1.encode(produced) == v1.encode(expected)`
+    comparison that decides conformance at install and at every resolution. A
+    raise is a refusal too — an implementation that blows up on a fixture has
+    not satisfied it, and `_run_fixtures` already folds that into
+    `_RuleRefusal`.
+    """
+    invoke = rules._load_entry_point(symbol, source)
+    refused: set[str] = set()
+    for member in shipped(symbol).fixtures:
+        try:
+            rules._run_fixtures(symbol, invoke, (member,))
+        except rules._RuleRefusal:
+            refused.add(member[0])
+    return frozenset(refused)
+
+
+class TestFixturesDiscriminate:
+    """Step 5's point: the fixtures are normative because they *catch* things.
+
+    `rules._run_fixtures` only ever runs the shipped implementation, so nothing
+    in the store notices a fixture that has stopped discriminating. These arms
+    are that notice.
+    """
+
+    def test_every_shipped_implementation_satisfies_every_shipped_fixture(self):
+        # The positive direction. Without it the arms below would still pass
+        # against a fixture set that refuses everything, defect or not.
+        for bundle in rules.shipped_rule_bundles():
+            assert refusing_fixtures(bundle.symbol, bundle.implementation) == frozenset(), bundle.symbol
+
+    @pytest.mark.parametrize("mode", sorted(MUTATIONS))
+    def test_a_defective_reducer_is_refused_by_exactly_the_named_fixtures(self, mode):
+        mutation = MUTATIONS[mode]
+        assert refusing_fixtures(mutation.symbol, mutation.source) == mutation.refused_by
+
+    @pytest.mark.parametrize("mode", sorted(FAILURE_MODE_FIXTURES))
+    def test_each_named_failure_mode_is_caught_by_its_dedicated_fixture(self, mode):
+        # This is what makes `FAILURE_MODE_FIXTURES` a claim rather than a list.
+        assert FAILURE_MODE_FIXTURES[mode] in MUTATIONS[mode].refused_by
 
 
 class TestShippedFixtures:

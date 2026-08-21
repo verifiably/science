@@ -562,7 +562,38 @@ class CoreferenceMap:
     pairs: Mapping[tuple[str, str], tuple[int, int]]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "pairs", MappingProxyType(dict(self.pairs)))
+        """The reduction's invariants belong to the *type*, not only to the
+        parser that builds one from a rule's return.
+
+        `coreference_map` refuses the same three faults as `RuleNonconformant`,
+        because there they are a statement about what an implementation
+        returned. Here they are a statement about what a coreference map *is*:
+        §7.6 stores every pair with `left < right`, and the world-address
+        ruling §5.2's unit weights make `abs(balance) <= count` arithmetic
+        rather than convention. Without this, a value constructed directly with
+        `("b", "a")` would project unordered endpoints straight into a digest —
+        a second, wrong identity for a reduction the rule got right.
+        """
+        pairs: dict[tuple[str, str], tuple[int, int]] = {}
+        for endpoints, reduced in dict(self.pairs).items():
+            if type(endpoints) is not tuple or len(endpoints) != 2:
+                raise ValueError("a coreference pair is keyed by exactly two endpoints")
+            left, right = endpoints
+            _require_text(left, "endpoint")
+            _require_text(right, "endpoint")
+            if not left < right:
+                raise ValueError(f"the endpoints {[left, right]} are not stored with left < right")
+            if type(reduced) is not tuple or len(reduced) != 2:
+                raise ValueError(f"{endpoints} must reduce to an exact (balance, distinct_key_count) pair")
+            balance, count = reduced
+            if type(balance) is not int or type(count) is not int:
+                raise ValueError(f"{endpoints} reduces to two integers")
+            if count < 1:
+                raise ValueError(f"{endpoints} is published having reduced no distinct key")
+            if abs(balance) > count:
+                raise ValueError(f"a balance of {balance} cannot come from {count} unit-weight keys")
+            pairs[endpoints] = reduced
+        object.__setattr__(self, "pairs", MappingProxyType(pairs))
 
     def projection(self) -> dict[str, object]:
         return {
@@ -696,10 +727,28 @@ def derivation_receipts(
     `(rule_identity, implementation_identity)` that ran. Exactly the four kinds
     are required: a build that resolved three bindings has not derived an
     epoch.
+
+    The three subjects that declare a coverage must declare *this* epoch's, and
+    the states must name exactly the corpora they cover. §7.5 says a receipt
+    carries "the exact captured corpus-state identity for every covered
+    corpus", so a snapshot declaring one coverage beside states naming another
+    is a receipt whose two halves describe two builds. The check costs nothing
+    and Task 9 derives both from one `Capture`; it exists so that the invariant
+    is the type's rather than the publisher's to remember.
     """
     if set(bindings) != _KINDS:
         raise ValueError(f"one binding per receipt kind is required; got {sorted(bindings)}")
     states = tuple(sorted((corpus_id, corpus_state) for corpus_id, corpus_state in corpus_states))
+    covered = tuple(corpus_id for corpus_id, _state in states)
+    for declared, what in (
+        (snapshot.coverage, "the producer snapshot"),
+        (enumeration.coverage, "the retraction enumeration"),
+        (inventory.coverage, "the certification inventory"),
+    ):
+        if tuple(sorted(declared)) != covered:
+            raise ValueError(
+                f"{what} declares coverage {sorted(declared)}, but the captured states name {list(covered)}"
+            )
     subjects: Mapping[str, tuple[str, Mapping[str, object] | None, Mapping[str, object] | None]] = {
         "producer": (snapshot.identity(), None, None),
         "retraction-enumeration": (
