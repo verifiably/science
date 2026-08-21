@@ -763,17 +763,39 @@ def _retraction_target(facet: Mapping[str, object]) -> str:
 def _standing_retractions(view: ReadView, facets: Mapping[str, Mapping[str, object]]) -> Mapping[str, bool]:
     """Which of this corpus's retractions still stand, in one fold.
 
-    The same judgement `corpus.standing_in_local_view` makes, computed for
-    every retraction at once instead of one at a time, because the capture pass
-    may enumerate the corpus only once. Only node-arm retractions subtract
-    standing — a route-arm target names an embedded route, not a record — and
-    the target ref is resolved through the corpus index here, exactly as the
-    corpus-local judgement resolves it, so a retraction naming another by a
-    deprecated id still overturns it.
+    `corpus.standing_in_local_view`'s **graph** half, computed for every
+    retraction at once instead of one at a time, because the capture pass may
+    enumerate the corpus only once. Only node-arm retractions subtract standing
+    — a route-arm target names an embedded route, not a record — and the target
+    ref is resolved through the corpus index here, exactly as the corpus-local
+    judgement resolves it, so a retraction naming another by a deprecated id
+    still overturns it. `_acyclic_postorder` is the corpus's own traversal,
+    reused rather than reimplemented: a retraction cycle is
+    `RetractionCycleMalformed` here for the same reason it is there.
 
-    `_acyclic_postorder` is the corpus's own traversal, reused rather than
-    reimplemented: a retraction cycle is `RetractionCycleMalformed` here for
-    the same reason it is there.
+    **What this deliberately does not do, and the divergence it creates.**
+    `standing_in_local_view` first puts every retraction through
+    `CorpusWriter._resolve_retraction_target`, which enforces target
+    eligibility, exact resolution and a matching target content identity, and
+    raises `RetractionTargetIneligible` / `RetractionTargetUnresolvable` when
+    any of it fails. This does none of that. So on a corpus whose retraction
+    target has drifted, the corpus *declines to judge* while capture records
+    `upheld` or `overturned` — and that resolution reaches the retraction
+    enumeration projection and its published identity.
+
+    That is a choice, not an oversight. Those two refusals are `WriteRefused`
+    subclasses: they are the admission gate's verdict on an *act*, not a
+    finding about stored content, and re-running them here would make an epoch
+    build a second, later admission gate over records the corpus already holds
+    — one raw-imported retraction anywhere in any covered corpus would then
+    make the whole world unbuildable. §5.3 closes capture's refusal surface at
+    `EnumeratedKindUngoverned` and `CaptureDrift` and names no target-validity
+    requirement, and the resolution a capture publishes is a claim about the
+    retraction graph ("nothing standing in this corpus retracts this
+    retraction"), never a claim that the retraction's own target still
+    resolves. A reader checks that through the epoch's address map and the
+    retraction-discovery map, which is what they are for. Pinned by
+    `test_world_build.py::TestSerialCapture`'s drifted-target arm.
     """
     targets: dict[str, list[str]] = {}
     for address, facet in facets.items():

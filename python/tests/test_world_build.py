@@ -38,7 +38,7 @@ from nodes.core.write_plan import DefaultExecutor
 
 from science import root as composition_root
 from science import stored
-from science.corpus import CorpusWriter, _root_state_for
+from science.corpus import CorpusWriter, ReadView, _root_state_for, standing_in_local_view
 from science.errors import (
     BuildContended,
     BuildHold,
@@ -47,6 +47,8 @@ from science.errors import (
     CoverageUnknown,
     CoverageUnresolvable,
     EnumeratedKindUngoverned,
+    ManifestMalformed,
+    RetractionTargetUnresolvable,
     RuleNotHeld,
 )
 from science.world import derive, epoch, registry, rules
@@ -128,26 +130,52 @@ def corpus_at(root: Path, corpus_id: str, nodes: tuple[Node, ...] = ()) -> Path:
     return root
 
 
+def node_target(node: Node) -> stored.NodeTarget:
+    """A retraction target naming `node` exactly as the write boundary would.
+
+    The content identity is the target's *present* stamp, so a retraction built
+    with this is one `corpus.standing_in_local_view` can judge. Arms that want
+    a drifted target say so by not using this.
+    """
+    return stored.NodeTarget(
+        ref=node.id, resolved=node.id, content_identity=stored.stored_semantic_hash(node)
+    )
+
+
 def sample_nodes() -> tuple[Node, ...]:
-    """One dataset, one run producing it, and one retraction naming the run.
+    """One dataset, one run producing it, one verification, and a retraction of
+    the verification.
 
     Enough that all four derivations have something to say: the producer
     snapshot sees the `produces` edge, the retraction enumeration and the
     discovery map see the retraction, and the certification and coreference
     reductions see the empty enumerations §13 defers them to.
+
+    The retraction is a *well-formed* one — an eligible target kind, resolving
+    exactly, with a matching content identity — so the ordinary arms exercise
+    the ordinary path. A retraction the corpus itself would refuse to judge is
+    a separate arm, and it is written as one.
     """
     dataset = stored.dataset_node("one", title="dataset one")
     run = stored.run_node("one", title="run one", spec="analysis-spec:one", produces=[dataset.id])
+    verification = stored.verification_node(
+        "one",
+        title="verification one",
+        assessment="i" * 64,
+        assessment_ref="assessment:one",
+        scope="clean-environment",
+        verdict="passed",
+    )
     retraction = stored.retraction_node(
         title="retraction one",
-        target=stored.NodeTarget(ref=run.id, resolved=run.id, content_identity="d" * 64),
+        target=node_target(verification),
         reason="authored-error",
-        rationale="the run was misconfigured",
+        rationale="the verification was wrong",
         grounds=[dataset.id],
         actor="alice",
         event_token="event-one",
     )
-    return (dataset, run, retraction)
+    return (dataset, run, verification, retraction)
 
 
 def install_bindings(world: registry.World) -> dict[str, rules.RuleBinding]:
@@ -393,6 +421,76 @@ class TestPreflightOrder:
             build(world, (ALPHA, BETA), bindings)
 
         assert BETA in str(refusal.value)
+
+    def test_liveness_is_decided_before_the_carrier_count(self, tmp_path):
+        """The edge the retired-with-one-carrier arm cannot see.
+
+        Both of these ids are non-live *and* carrier-faulty at once, so the two
+        candidate orders give different answers: checking the carrier first
+        would report `CoverageUnresolvable`. Only `CoverageNotLive` is correct,
+        because a corpus the world has said it no longer reports on is not a
+        corpus whose bytes the build should be looking for at all.
+        """
+        # Two carriers for a retired id.
+        first = corpus_at(tmp_path / "first", ALPHA, sample_nodes())
+        second = corpus_at(tmp_path / "second", ALPHA, sample_nodes())
+        duplicated = make_world(tmp_path / "duplicated", first, second)
+        duplicated.admit(first, provenance=registry.Fresh(), actor="alice")
+        duplicated.retire(ALPHA, actor="alice")
+
+        with pytest.raises(CoverageNotLive) as retired_duplicate:
+            build(duplicated, (ALPHA,), install_bindings(duplicated))
+
+        # No carrier at all for a retired id.
+        beta_root = corpus_at(tmp_path / "beta", BETA, sample_nodes())
+        absent = make_world(tmp_path / "absent", first)
+        absent.admit(beta_root, provenance=registry.Fresh(), actor="alice")
+        absent.depart(BETA, actor="alice")
+
+        with pytest.raises(CoverageNotLive) as departed_absent:
+            build(absent, (BETA,), install_bindings(absent))
+
+        assert ALPHA in str(retired_duplicate.value)
+        assert BETA in str(departed_absent.value)
+
+    def test_admission_is_decided_before_the_carrier_count(self, tmp_path):
+        """The other edge: two carriers for an id nobody admitted.
+
+        Carrier-first would report `CoverageUnresolvable` — a complaint about
+        which bytes to read for a corpus this world has never agreed to read at
+        all. Admission-before-liveness needs no arm of its own: a status record
+        is refused unless its target is admitted, so a non-live unadmitted id
+        is unconstructible.
+        """
+        first = corpus_at(tmp_path / "first", GAMMA, sample_nodes())
+        second = corpus_at(tmp_path / "second", GAMMA, sample_nodes())
+        world = make_world(tmp_path, first, second)
+        bindings = install_bindings(world)
+
+        with pytest.raises(CoverageUnknown) as refusal:
+            build(world, (GAMMA,), bindings)
+
+        assert GAMMA in str(refusal.value)
+
+    def test_a_malformed_carrier_manifest_escapes_preflight_as_itself(self, tmp_path):
+        """A root that claims something unreadable is neither of the coverage
+        faults, and is not folded into one.
+
+        `CoverageUnresolvable` says "no carrier" or "several"; both are verdicts
+        about a countable set. A manifest the loader cannot parse is a state in
+        which the count cannot be reached, and reporting it as a count would
+        erase a configuration fault behind a coverage one.
+        """
+        alpha_root = corpus_at(tmp_path / "alpha", ALPHA, sample_nodes())
+        broken = tmp_path / "broken"
+        broken.mkdir()
+        (broken / "corpus.yaml").write_text("manifest_version: 9\n", encoding="utf-8")
+        world = make_world(tmp_path, alpha_root, broken)
+        world.admit(alpha_root, provenance=registry.Fresh(), actor="alice")
+        bindings = install_bindings(world)
+
+        with pytest.raises(ManifestMalformed):
+            build(world, (ALPHA,), bindings)
 
     def test_an_unheld_binding_refuses_after_the_coverage_resolves(self, tmp_path):
         world, bindings, _roots = admitted_world(tmp_path, (ALPHA,))
@@ -708,17 +806,17 @@ class TestSerialCapture:
         assert all(resolution in epoch.RETRACTION_RESOLUTIONS for _ref, resolution in enumeration.found)
 
     def test_a_retracted_retraction_is_captured_as_overturned(self, tmp_path):
-        dataset, run, first = sample_nodes()
+        dataset, run, verification, first = sample_nodes()
         counter = stored.retraction_node(
             title="counter retraction",
-            target=stored.NodeTarget(ref=first.id, resolved=first.id, content_identity="e" * 64),
+            target=node_target(first),
             reason="authored-error",
             rationale="the first retraction was wrong",
             grounds=[dataset.id],
             actor="bob",
             event_token="event-two",
         )
-        corpus_root = corpus_at(tmp_path / "alpha", ALPHA, (dataset, run, first, counter))
+        corpus_root = corpus_at(tmp_path / "alpha", ALPHA, (dataset, run, verification, first, counter))
         world = make_world(tmp_path, corpus_root)
         world.admit(corpus_root, provenance=registry.Fresh(), actor="alice")
         bindings = install_bindings(world)
@@ -738,7 +836,51 @@ class TestSerialCapture:
         draft = build(world, (ALPHA,), bindings)
         discovery = derive.retraction_discovery_map(draft.capture)
 
-        assert set(discovery) == {"run:one"}
+        assert set(discovery) == {"verification:one"}
+
+    def test_a_drifted_retraction_target_is_captured_though_the_corpus_declines_to_judge(self, tmp_path):
+        """The documented divergence between capture and `standing_in_local_view`.
+
+        `standing_in_local_view` resolves each retraction's target through the
+        write boundary's admission check — eligible kind, exact resolution,
+        matching content identity — and raises when any of it fails. Capture
+        does not: it builds the retraction *graph* from resolvable node-arm
+        edges and nothing else, so on a corpus whose retraction target has
+        drifted the corpus declines to judge and the capture still records a
+        resolution.
+
+        This arm exists so that divergence is pinned rather than discovered.
+        `_standing_retractions` says which half it skips and why; the reason is
+        that target validity is an admission check whose refusals are
+        `WriteRefused` subclasses, and §5.3's capture refusal surface is closed
+        at `EnumeratedKindUngoverned` and `CaptureDrift`.
+        """
+        dataset, run, verification, _sound = sample_nodes()
+        drifted = stored.retraction_node(
+            title="drifted retraction",
+            target=stored.NodeTarget(
+                ref=verification.id, resolved=verification.id, content_identity="d" * 64
+            ),
+            reason="authored-error",
+            rationale="the verification moved under this retraction",
+            grounds=[dataset.id],
+            actor="alice",
+            event_token="event-drift",
+        )
+        corpus_root = corpus_at(tmp_path / "alpha", ALPHA, (dataset, run, verification, drifted))
+        with pytest.raises(RetractionTargetUnresolvable):
+            standing_in_local_view(ReadView.opened_at(corpus_root), verification.id)
+        world = make_world(tmp_path, corpus_root)
+        world.admit(corpus_root, provenance=registry.Fresh(), actor="alice")
+        bindings = install_bindings(world)
+
+        draft = build(world, (ALPHA,), bindings)
+
+        assert {
+            record.address: record.retraction.resolution
+            for record in draft.capture.corpora[0].records
+            if record.retraction is not None
+        } == {drifted.id: "upheld"}
 
     def test_only_immutable_captured_values_leave_the_hold(self, tmp_path):
         world, bindings, roots = admitted_world(tmp_path, (ALPHA,))
@@ -769,9 +911,8 @@ def test_build_refuses_ungoverned_enumerated_record(tmp_path, kind):
     capture rather than deriving from it or quietly leaving it out.
     """
     assert kind not in stored.SEMANTIC_DOMAINS
-    dataset, run, retraction = sample_nodes()
     claimant = Node(id=f"{kind}:claim", kind=kind, title="an ungoverned claim")
-    corpus_root = corpus_at(tmp_path / "alpha", ALPHA, (dataset, run, retraction))
+    corpus_root = corpus_at(tmp_path / "alpha", ALPHA, sample_nodes())
     Corpus(corpus_root).add(claimant)
     world = make_world(tmp_path, corpus_root)
     world.admit(corpus_root, provenance=registry.Fresh(), actor="alice")
@@ -789,13 +930,17 @@ class TestUngovernedKindsAreRefusedNotAssumed:
     def test_the_refusal_precedes_every_derivation(self, monkeypatch, tmp_path):
         # No captured view is ever assembled, so no reducer can have read one:
         # the refusal is raised while the pass is still walking stored records.
-        dataset, run, retraction = sample_nodes()
-        corpus_root = corpus_at(tmp_path / "alpha", ALPHA, (dataset, run, retraction))
+        corpus_root = corpus_at(tmp_path / "alpha", ALPHA, sample_nodes())
         Corpus(corpus_root).add(Node(id="coreference-attestation:c", kind="coreference-attestation", title="c"))
         world = make_world(tmp_path, corpus_root)
         world.admit(corpus_root, provenance=registry.Fresh(), actor="alice")
         bindings = install_bindings(world)
-        monkeypatch.setattr(derive, "Capture", lambda *_a, **_k: pytest.fail("a capture reached derivation"))
+        # `CapturedRecord`, not `Capture`: the latter is built only after every
+        # corpus is captured, so patching it would pass even if the pass had
+        # already turned the ungoverned record into a captured one.
+        monkeypatch.setattr(
+            derive, "CapturedRecord", lambda **_k: pytest.fail("an ungoverned record became a captured record")
+        )
 
         with pytest.raises(EnumeratedKindUngoverned):
             build(world, (ALPHA,), bindings)
