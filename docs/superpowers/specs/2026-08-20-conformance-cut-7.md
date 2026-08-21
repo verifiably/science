@@ -1,6 +1,8 @@
 # Conformance cut 7 — the epoch carrier
 
-**Status:** Draft — awaiting the independent second reader; not frozen.
+**Status:** Draft — second reader discharged 2026-08-20 (§6.1), its seven
+findings closed in this draft; not frozen. Freeze is blocked on the
+specification amendment named by §7 limitation 3.
 
 **Sources:** `2026-08-20-conformance-cut-6.md`; the epoch-carrier
 specification `2026-08-20-world-index-slice-2-design.md` §11; and the frozen
@@ -55,7 +57,8 @@ In scope:
   edge query;
 - the whole-epoch GC act and its sever report;
 - the belief closure's existing supplied-snapshot-identity argument, only as
-  far as the invariance arms selected in §3.2 reach it;
+  far as the arms selected in §3 reach it — W8a's belief-invariance unit,
+  X3's input-shape unit, and X12's belief-boundary unit;
 - committed registration-entry evidence and the published epoch bytes on the
   certified tuple, decoded from the engine-owned chain as acceptance
   evidence; and
@@ -121,7 +124,11 @@ the complete arm inventory that the N2 declarations must enumerate; every
 ```
 
 - **Selected:** interrupt publication by killing the writer at every
-  observable stage boundary of the one-transaction write; on the next entry
+  observable stage boundary of the one-transaction write — stated narrowing:
+  intra-transaction stages belong to the engine's certified recovery and are
+  not Science-observable, so the frozen "every stage" resolves to the
+  Science-visible boundaries and is not silently read down later; on the
+  next entry
   through the recovery barrier, assert `current` names either the prior
   epoch or the new, complete epoch — never nothing, never incomplete
   content — and that a rolled-forward committed transaction yields the
@@ -213,7 +220,11 @@ the complete arm inventory that the N2 declarations must enumerate; every
   receipts' corpus-state identity describe one view, and a chain head
   captured outside the lock hold that captured its state is unconstructible
   through the build: the only head-capture site is inside the hold, and the
-  sabotage relocating it outside the hold must fail the declared checks.
+  sabotage relocating it outside the hold must fail the declared checks —
+  which must interpose a corpus write between the state capture and the
+  relocated head capture, since without an interleaved write the sabotage
+  passes vacuously; N2's declaration is checked against that vacuousness at
+  declaration time.
 - **Selected:** the ABA negative as an undetectability assertion, on cut 5's
   S3 and cut 6's X4 precedent: raw-move a covered corpus `A → B → A` within
   one capture; assert the pre/post identities match, the build publishes,
@@ -285,8 +296,10 @@ the complete arm inventory that the N2 declarations must enumerate; every
   (address map and inventory projection) and its omission-refutes arm wait
   on the governed kind (normative-contract §7.6).
 - **Deferred:** the in-coverage `coreference-attestation` membership arms
-  (inside/outside the published balance) and the populated wrong-balance
-  instance wait on the governed kind (world address ruling §5.2).
+  (inside/outside the published balance), the coreference omission-refutes
+  instance of the "each receipted projection" clause, and the populated
+  wrong-balance instance wait on the governed kind (world address ruling
+  §5.2).
 
 ### 3.2 W8a — the derived-maps row
 
@@ -300,9 +313,10 @@ not, and the two absent governed kinds.
 
 - **Selected (rebuild identity):** delete the world index (the retained
   epochs) and rebuild from the corpora alone; assert the address, producers,
-  retraction, and coreference maps all reconstruct identically — the two
-  kind-empty maps reconstruct identically empty, recorded as the
-  empty-enumeration instance.
+  retraction, and coreference maps all reconstruct identically. The rebuild
+  fixture carries populated address, producers, and retraction maps — only
+  the coreference map is kind-empty, and it reconstructs identically empty,
+  recorded as the empty-enumeration instance.
 - **Selected (derived, never authoritative):** edit each map in a published
   epoch only; assert the rebuild discards every edit.
 - **Selected (producers coverage arm):** build over a narrower corpus set
@@ -334,9 +348,11 @@ not, and the two absent governed kinds.
   X10's unit, cross-referenced.
 - **Selected (conformance and agreement):** assert a binding whose
   implementation fails its fixtures is not held — validation `unresolvable`,
-  a resolvable failure, never `malformed`; assert two evaluations in the
-  same availability context return the same outcome for one receipt, an
-  evaluation lacking the rule returns `unresolvable`, and the same
+  a resolvable failure, never `malformed`; assert two installations — two
+  world roots over the same corpora, each resolving the binding and the
+  states from its own store — in the same availability context return the
+  same outcome for one receipt, an installation lacking the rule returns
+  `unresolvable`, and the same
   `(snapshot, receipt)` pair moves `unresolvable → validated` when the
   needed corpus state or binding becomes available — agreement within an
   availability context and across nothing else.
@@ -354,9 +370,11 @@ not, and the two absent governed kinds.
   no-implicit-latest half is X3's unit, cross-referenced.
 - **Selected (absent is not empty, narrow):** hold out a corpus inside
   coverage that holds a producing run; assert that run's address resolves
-  `NotPresent`, never `Unknown` and never `Resolved`. The divergence-reading
-  half ("the dataset does not read as undiverged") defers with the
-  epoch-consuming divergence report.
+  `NotPresent`, never `Unknown` and never `Resolved` — and assert the
+  frozen contrast: a producer outside coverage resolves `Unknown`, the
+  unsuspected case, which is sub-problem 4 §11.15's stated limit rather
+  than a detection. The divergence-reading half ("the dataset does not read
+  as undiverged") defers with the epoch-consuming divergence report.
 - **Deferred:** the coreference omission-refutes arm and the coreference
   coverage arm (a pair's balance differing under narrower coverage with
   `belief_input_digest` unchanged) wait on the `coreference-attestation`
@@ -511,6 +529,48 @@ The reader must:
    disposition (§3.4) — and that no unit is counted at two homes; and
 5. rederive §4's row accounting and the 48-unit declaration inventory
    independently.
+
+### 6.1 Run and dispositions
+
+The independent reading ran on 2026-08-20 with only §3's quoted frozen rows,
+the epoch-carrier specification, and §2's boundary declaration. It
+byte-verified all eleven quotations against their sources, found no
+demotable selection, judged all four flagged selections sound, confirmed
+single-homing in both directions, and rederived the row accounting and the
+48-unit inventory exactly. Seven findings, all closed in this draft before
+freeze:
+
+1. **§2's belief-closure clause under-licensed its own selections** — it
+   named only §3.2's invariance arms while X3's input-shape unit and X12's
+   belief-boundary unit also reach the closure. The clause now names all
+   three.
+2. **W8a's rebuild-identity bullet miscounted the kind-empty maps** — the
+   retraction kind exists, so calling two maps kind-empty would have let the
+   rebuild arm run with an unnecessarily degenerate retraction map. The
+   bullet now requires populated address, producers, and retraction maps and
+   names only the coreference map as kind-empty.
+3. **X12's cell silently omitted the coreference omission-refutes
+   instance** of its "each receipted projection" clause — neither selected
+   nor deferred. It is now in the coreference deferred bullet with the kind
+   as unblocker.
+4. **W8a's agreement arm was weakened from "two installations" to "two
+   evaluations"**, which bare determinism would satisfy vacuously. The
+   bullet now requires two world roots over the same corpora, each
+   resolving the binding and states from its own store.
+5. **W8a's outside-coverage contrast clause was silently dropped** from the
+   absent-is-not-empty bullet. The `Unknown` contrast is now selected within
+   that unit, with §11.15's stated limit named.
+6. **X9's head-relocation sabotage could pass vacuously** without an
+   interleaved corpus write between state capture and the relocated head
+   capture. The bullet now requires the interposed write and pins the
+   vacuousness check to N2 declaration time.
+7. **X2's stage narrowing was disclosed but not stated** — the bullet now
+   says outright that intra-transaction stages belong to the engine's
+   certified recovery and are not Science-observable.
+
+Findings 1–4 were correct-severity; 5–7 record-severity. None changed the
+unit count or any row state: the closures reword, extend, or re-home
+assertions inside their existing units, and §4's accounting stands.
 
 ## 7. Limitations
 
