@@ -60,6 +60,20 @@ class RegistryMalformed(ScienceError):
     """A world registry is malformed."""
 
 
+class BuildContended(ScienceError):
+    """An epoch build asked for a root's coherent capture and found the
+    operation lock already held. The build refuses at once rather than queue:
+    waiting behind a corpus operation is what would let a build park the
+    writer queue behind itself."""
+
+
+class BuildHold(ScienceError):
+    """A corpus write met an epoch build's coherent capture — present when the
+    write arrived, or begun and ended while the write waited in the writer
+    queue. The write is refused rather than re-queued, so a capture is never
+    something a writer can silently straddle."""
+
+
 class IdentityError(ScienceError):
     """A value or domain was refused by the identity contract."""
 

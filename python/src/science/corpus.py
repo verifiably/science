@@ -32,6 +32,7 @@ from __future__ import annotations
 import secrets
 import threading
 from collections.abc import Callable, Iterator, Sequence
+from contextlib import contextmanager
 from dataclasses import dataclass
 from itertools import pairwise
 from pathlib import Path
@@ -56,6 +57,8 @@ from science.consulted import CorpusPins
 from science.dataset import dataset_address
 from science.errors import (
     BasisMissing,
+    BuildContended,
+    BuildHold,
     BundleMemberHeld,
     CollisionRefused,
     EligibilityUnmet,
@@ -99,6 +102,7 @@ __all__ = [
     "CorpusWriter",
     "Finding",
     "LineageAdjacency",
+    "OperationLock",
     "OperationPort",
     "ReadView",
     "RelationAdjacency",
@@ -215,9 +219,87 @@ class ReadView:
         return node
 
 
+@final
+class OperationLock:
+    """The per-root operation lock, held either by a corpus writer or by an
+    epoch build's coherent capture.
+
+    One `threading.Condition` carries the whole state: which kind of holder has
+    it, if any, and a capture generation that only ever counts up. Writers
+    cooperate exactly as the bare lock made them — a writer behind a writer
+    queues — but a capture is neither something to queue behind nor something
+    that queues:
+
+    - a capture arriving to any holder raises `BuildContended` at once. A build
+      that waits on a corpus operation is a build that can park the whole
+      writer queue behind itself, so it never waits.
+    - a writer that sees a `capture` on arrival raises `BuildHold`, and so does
+      a writer that wakes from the queue to find the generation moved. It never
+      waits again after observing that capture.
+
+    The generation is what makes the second refusal decidable at all: a woken
+    writer cannot see a capture that has already released, only the count it
+    left behind. A writer that already holds the lock is untouched by it — the
+    snapshot and its comparison exist only on the not-yet-acquired path.
+
+    All of this is in-process. Single-writer deployment across processes stays
+    a stated obligation; no file lock here would make it otherwise.
+    """
+
+    __slots__ = ("_capture_generation", "_condition", "_holder")
+
+    def __init__(self) -> None:
+        self._condition = threading.Condition()
+        self._holder: str | None = None
+        self._capture_generation = 0
+
+    def __enter__(self) -> OperationLock:
+        """Take it as a writer, queueing behind another writer but never
+        behind — or across — a capture."""
+        with self._condition:
+            if self._holder == "capture":
+                raise BuildHold(
+                    "a corpus operation cannot proceed: an epoch build holds this root's "
+                    "coherent capture (build-hold)"
+                )
+            snapshot = self._capture_generation
+            while self._holder is not None:
+                self._condition.wait()
+                if self._holder == "capture" or self._capture_generation != snapshot:
+                    raise BuildHold(
+                        "a corpus operation cannot proceed: an epoch build's coherent capture "
+                        "ran while it waited for this root's operation lock (build-hold)"
+                    )
+            self._holder = "writer"
+        return self
+
+    def __exit__(self, exc_type: object, exc: object, traceback: object) -> None:
+        with self._condition:
+            self._holder = None
+            self._condition.notify_all()
+
+    @contextmanager
+    def capture(self) -> Iterator[None]:
+        """Take it for one coherent capture, or refuse. This never waits."""
+        with self._condition:
+            if self._holder is not None:
+                raise BuildContended(
+                    f"an epoch build cannot capture this root: its operation lock is held as "
+                    f"{self._holder!r} (build-contended); the build refuses rather than queue"
+                )
+            self._holder = "capture"
+            self._capture_generation += 1
+        try:
+            yield
+        finally:
+            with self._condition:
+                self._holder = None
+                self._condition.notify_all()
+
+
 @dataclass
 class _RootState:
-    lock: threading.Lock
+    lock: OperationLock
     corpus: Corpus
     view: ReadView
     executor_factory: Callable[[Path], WritePlanExecutor]
@@ -260,7 +342,7 @@ def _root_state_for(root: Path, executor_factory: Callable[[Path], WritePlanExec
         state = _ROOT_STATES.get(key)
         if state is None:
             corpus = Corpus(resolved, executor_factory=executor_factory)
-            state = _RootState(threading.Lock(), corpus, ReadView(corpus), executor_factory)
+            state = _RootState(OperationLock(), corpus, ReadView(corpus), executor_factory)
             _ROOT_STATES[key] = state
         elif state.executor_factory is not executor_factory:
             raise ScienceError(f"corpus root {key!r} is already open with a different executor factory")
