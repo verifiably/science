@@ -57,7 +57,8 @@ Out of scope:
 - **epochs and builds**: the address/producers/retraction/coreference maps,
   every derivation receipt, coverage declarations, `current`, staleness, and
   GC;
-- the **rules store**, anchored head members, and any `atoms` chain-read API;
+- the **rules store**, anchored head members, and any `atoms` chain-read API
+  (none existed at cut-6 freeze);
 - **full chain replay or refutation** and **genesis-to-mirror agreement** —
   the deferred log reader's claims; committed registration-entry evidence is
   the whole durable claim here;
@@ -67,6 +68,11 @@ Out of scope:
   obligation; and
 - the `nodes` **reserved-path contract** — `corpus.yaml`'s survival of the
   observed `*.md` walk is relied on and not certified.
+
+> **Dated recast 2026-08-20:** world-index slice 2 §2 now banks the prospective
+> public `atoms.read_chain` contract. The command remains outside this frozen
+> cut and is not backported. Genesis-to-mirror verification remains deferred
+> on audit ownership, not on the ability to specify a reader.
 
 Raw filesystem writes may construct negative fixtures; they are not registry
 operations and do not make the build, the audit, or deletion part of the

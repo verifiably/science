@@ -124,9 +124,16 @@ The canonical genesis payload carries `WORLD_GENESIS_DOMAIN` and the supplied
 `world_id`. Registration is explicit and idempotent on the same payload and
 registered-root facts, exactly as corpus-root registration is today.
 
-The public engine has no chain-read API. Science therefore cannot read the
-genesis payload back during ordinary operation. Initialization writes a
-root-local `world.yaml` mirror with the closed shape:
+At this slice's freeze, the public engine had no chain-read API, so Science
+could not read the genesis payload back during ordinary operation.
+
+> **Dated recast 2026-08-20:** world-index slice 2 §2 now banks the prospective
+> public `atoms.read_chain` contract. Its implementation remains a prerequisite
+> to that slice. Genesis-to-mirror verification still waits on the
+> configuration-mismatch audit's ownership decision; reader availability no
+> longer owns that deferral.
+
+Initialization writes a root-local `world.yaml` mirror with the closed shape:
 
 ```yaml
 world_id: 0123456789abcdef0123456789abcdef

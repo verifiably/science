@@ -1,8 +1,8 @@
 # Conformance cut 7 — the epoch carrier
 
-**Status:** Draft — second reader discharged 2026-08-20 (§6.1), its seven
-findings closed in this draft; not frozen. Freeze is blocked on the
-specification amendment named by §7 limitation 3.
+**Status:** Frozen 2026-08-20; second reader discharged 2026-08-20 (§6.1),
+its seven findings and the carrier-authority prerequisite closed before
+freeze. Implementation is prospective.
 
 **Sources:** `2026-08-20-conformance-cut-6.md`; the epoch-carrier
 specification `2026-08-20-world-index-slice-2-design.md` §11; and the frozen
@@ -46,9 +46,9 @@ In scope:
   pure derivation, the pre-publication binding recheck, and one-transaction
   publication with the `current` pointer;
 - the four map derivations over the ten governed stored kinds — with
-  `retraction` the only enumerated-map source kind that exists today — the
-  producer snapshot and its existing semantic identity, and the four receipts
-  on the one receipt contract;
+  `retraction` the only one of the three receipt-specific enumerated record
+  kinds that exists today — the producer snapshot and its existing semantic
+  identity, and the four receipts on the one receipt contract;
 - receipt validation — the rebuild evaluator and its
   `validated | refuted | unresolvable | malformed` outcomes — exercised
   directly and against fixture-authored receipt documents;
@@ -73,7 +73,8 @@ Out of scope:
   requiring a real in-coverage record of either kind is deferred on the
   kind's own charter (normative-contract §7.6; world address ruling §5.2),
   and the build refuses an ungoverned record of an enumerated kind rather
-  than deriving from it (§3.3, authority pending — §7 limitation 3);
+  than deriving from it (`EnumeratedKindUngoverned`, specification §5.3,
+  §10, §13; §3.3 here);
 - **W15** — its row is not read; attestation write semantics arrive with the
   kind;
 - **log verification**, L1–L13, the explicit anchor act, replay, and
@@ -394,9 +395,7 @@ not, and the two absent governed kinds.
 ### 3.3 Labeled declarations outside the frozen selection
 
 Ten declarations, on cut 4's `semantic-hash-missing` precedent, each
-sabotaged like a selected arm. Nine are named by the epoch-carrier
-specification; the tenth's authority is a pending specification amendment,
-flagged for the second reader:
+sabotaged like a selected arm and named by the epoch-carrier specification:
 
 - **Labeled (lock, capture generation):** a writer that entered the wait
   queue and wakes after a capture began and ended must refuse `BuildHold` by
@@ -434,10 +433,9 @@ flagged for the second reader:
   message fails the declared check (specification §8.4).
 - **Labeled (capture, ungoverned enumerated kind):** a record whose kind is
   an enumerated map kind but is present only as ungoverned prose refuses the
-  build during capture — nothing derives from unvalidated content and
-  nothing is silently dropped. **Authority pending:** the specification
-  amendment recording the two-kind deferral and this refusal must land
-  before freeze (§7 limitation 3).
+  build with `EnumeratedKindUngoverned` during capture — nothing derives
+  from unvalidated content and nothing is silently dropped (specification
+  §5.3, §10, §13).
 - **Labeled (durable evidence, world transactions):** on the certified
   tuple, assert the rule-install, rule-removal, and GC-deletion transactions
   each commit a registration entry naming their world-root paths;
@@ -520,7 +518,7 @@ The reader must:
    open-time recomputation refusal; X12's empty-enumeration wrong-balance
    instance and W8a's kind-empty rebuild instance, both recorded as
    degenerate rather than claimed as the populated arms; X9's
-   head-outside-hold unconstructibility method; and the pending-authority
+   head-outside-hold unconstructibility method; and the then-pending-authority
    labeled declaration (ungoverned enumerated kind), which must not survive
    to freeze unless the specification amendment lands;
 4. check every cross-reference for single-homing — the retraction omission
@@ -537,8 +535,7 @@ the epoch-carrier specification, and §2's boundary declaration. It
 byte-verified all eleven quotations against their sources, found no
 demotable selection, judged all four flagged selections sound, confirmed
 single-homing in both directions, and rederived the row accounting and the
-48-unit inventory exactly. Seven findings, all closed in this draft before
-freeze:
+48-unit inventory exactly. Seven findings, all closed before freeze:
 
 1. **§2's belief-closure clause under-licensed its own selections** — it
    named only §3.2's invariance arms while X3's input-shape unit and X12's
@@ -583,22 +580,19 @@ assertions inside their existing units, and §4's accounting stands.
 2. **No persistence-cut harness.** X2's power-fail arm is deferred, not
    argued away; committed registration-entry evidence plus the engine's A8
    certification is the whole durable claim.
-3. **One labeled authority is pending.** The ungoverned-enumerated-kind
-   refusal awaits its specification amendment; freeze is blocked until the
-   amendment lands or the declaration is withdrawn.
-4. **`atoms.read_chain` is prospective.** The cut consumes the specification
+3. **`atoms.read_chain` is prospective.** The cut consumes the specification
    §2 contract; N2 gates on the landed command and this cut re-certifies
    nothing in that repository.
-5. **The evaluator is exercised without its future callers.** Import, audit,
+4. **The evaluator is exercised without its future callers.** Import, audit,
    and the diagnostic query defer with their surfaces; when they land, they
    must call the evaluator this cut certifies, not reimplement it — that
    architecture arm defers with them.
-6. **Cut 5 and cut 6 are prefixes, never edits.** Their runners and meaning
+5. **Cut 5 and cut 6 are prefixes, never edits.** Their runners and meaning
    are untouched; cut 6's committed `world.py` sabotage paths remain
    historical evidence across the package promotion.
-7. **Cross-process locking is out of scope.** The `OperationLock` arms are
+6. **Cross-process locking is out of scope.** The `OperationLock` arms are
    in-process; single-writer deployment across processes remains the stated
    obligation.
-8. **World resolution is not claimed.** The resolution refusals are local
+7. **World resolution is not claimed.** The resolution refusals are local
    carrier checks over configured roots; no world-scale resolution or
    federation claim is made.

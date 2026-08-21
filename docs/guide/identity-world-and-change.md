@@ -13,6 +13,8 @@ sources:
   - ../designs/2026-08-04-formal-model-and-claim-calculus-design.md
   - ../designs/2026-08-20-world-registry-design.md
   - ../designs/2026-08-20-conformance-cut-6.md
+  - ../designs/2026-08-20-world-index-slice-2-design.md
+  - ../designs/2026-08-20-conformance-cut-7.md
   - ../plans/2026-08-20-conformance-cut-6-results.md
 ---
 
@@ -78,10 +80,11 @@ states and world-level records through four maps:
 - target record to its retractions;
 - endpoint pair to its coreference balance.
 
-An epoch identity commits to its coverage and derived contents. A mutable
-“current epoch” pointer is an operational convenience only: belief and other
-scientific answers must bind to an explicit epoch and return that binding. An
-older epoch may answer only inside its stated coverage and state.
+An epoch's packaging identity commits to its coverage and derived contents. A
+mutable “current epoch” pointer is an operational convenience only: belief
+binds to an explicit producer-snapshot identity, while epoch read answers carry
+the packaging identity and coverage they came from. An older epoch may answer
+only inside its stated coverage and state.
 
 ### Correction is additive
 
