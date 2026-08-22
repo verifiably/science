@@ -155,11 +155,23 @@ def repackage(world: registry.World, published: epoch.Epoch, changes: dict[str, 
     return read.open_epoch(world, packaging_identity)
 
 
+RECEIPT_KINDS: tuple[derive.ReceiptKind, ...] = (
+    "producer",
+    "retraction-enumeration",
+    "certification-enumeration",
+    "coreference-reduction",
+)
+"""§7.5's four kinds, named as literals so the arms below type-check.
+
+`epoch.DERIVATION_KINDS` stays the authority on which four there are and in
+what order; `outcomes` asserts the two agree rather than trusting this copy.
+"""
+
+
 def outcomes(world: registry.World, published: epoch.Epoch) -> dict[str, str]:
     """Every receipt kind's outcome, in §6.1's member order."""
-    return {
-        kind: read.validate_receipt(world, published, kind).outcome for kind in epoch.DERIVATION_KINDS
-    }
+    assert RECEIPT_KINDS == epoch.DERIVATION_KINDS
+    return {kind: read.validate_receipt(world, published, kind).outcome for kind in RECEIPT_KINDS}
 
 
 PRODUCER_FOLD = '            producers.setdefault(dataset, set()).add(record["address"])\n'
@@ -704,4 +716,6 @@ class TestReceiptOutcomes:
         world, _bindings, _roots, published = published_world(tmp_path)
 
         with pytest.raises(ValueError, match="receipt kind"):
-            read.validate_receipt(world, published, "producer-snapshot")
+            # A kind outside `ReceiptKind` on purpose: the arm exercises the
+            # runtime refusal of a fifth kind.
+            read.validate_receipt(world, published, "producer-snapshot")  # pyright: ignore[reportArgumentType]

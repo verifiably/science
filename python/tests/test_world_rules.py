@@ -20,7 +20,7 @@ from pathlib import Path
 
 import pytest
 import yaml
-from nodes.core.write_plan import CreateOp, DefaultExecutor
+from nodes.core.write_plan import CreateOp, DefaultExecutor, DeleteOp, WriteOp, WritePlan
 from test_root import patch_world_engine
 
 import science.world.registry as world_module
@@ -89,15 +89,15 @@ def make_world(tmp_path: Path) -> world_module.World:
     )
 
 
-def recording_world(tmp_path: Path) -> tuple[world_module.World, list[tuple[object, ...]]]:
+def recording_world(tmp_path: Path) -> tuple[world_module.World, list[tuple[WriteOp, ...]]]:
     """A world whose executor keeps every plan it is handed."""
-    plans: list[tuple[object, ...]] = []
+    plans: list[tuple[WriteOp, ...]] = []
 
     class Recorder:
         def __init__(self, world_root: Path) -> None:
             self.inner = DefaultExecutor(world_root)
 
-        def execute(self, plan) -> None:
+        def execute(self, plan: WritePlan) -> None:
             plans.append(tuple(plan))
             self.inner.execute(plan)
 
@@ -744,7 +744,9 @@ class TestExplicitRemoval:
         assert [(operation.op, operation.path) for operation in plans[0]] == [
             ("delete", f"rules/{removed.rule_identity}/implementations/{removed.implementation_identity}")
         ]
-        assert plans[0][0].expected_digest == sha256(SOURCE).hexdigest()
+        deletion = plans[0][0]
+        assert isinstance(deletion, DeleteOp), deletion
+        assert deletion.expected_digest == sha256(SOURCE).hexdigest()
 
         # Neither the shared normative half, nor the sibling, nor any epoch moved.
         assert stored_members(world) == {
@@ -775,7 +777,9 @@ class TestExplicitRemoval:
         assert report.binding == binding
         assert len(report.severed_receipts) == 4
         assert len(plans) == 1
-        assert [(operation.op, operation.path, operation.expected_digest) for operation in plans[0]] == [
+        deletions = [operation for operation in plans[0] if isinstance(operation, DeleteOp)]
+        assert len(deletions) == len(plans[0])
+        assert [(operation.op, operation.path, operation.expected_digest) for operation in deletions] == [
             (
                 "delete",
                 f"rules/{binding.rule_identity}/implementations/{binding.implementation_identity}",
@@ -914,7 +918,9 @@ class TestExplicitRemoval:
                 for member in RECEIPT_MEMBERS
             )
         )
-        assert [(operation.op, operation.path, operation.expected_digest) for operation in plans[0]] == [
+        deletions = [operation for operation in plans[0] if isinstance(operation, DeleteOp)]
+        assert len(deletions) == len(plans[0])
+        assert [(operation.op, operation.path, operation.expected_digest) for operation in deletions] == [
             (
                 "delete",
                 f"rules/{broken.rule_identity}/implementations/{broken.implementation_identity}",

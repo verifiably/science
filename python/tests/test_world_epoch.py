@@ -26,14 +26,15 @@ from __future__ import annotations
 
 import inspect
 import threading
+from collections.abc import Callable
 from dataclasses import FrozenInstanceError
 from hashlib import sha256
 from pathlib import Path
-from typing import Self
+from typing import Any, Self
 
 import pytest
 import yaml
-from nodes.core.write_plan import CreateOp, DefaultExecutor, ReplaceOp
+from nodes.core.write_plan import CreateOp, DefaultExecutor, ReplaceOp, WriteOp, WritePlan
 from test_world_build import (
     ALPHA,
     BETA,
@@ -64,14 +65,14 @@ class Recorder:
     """
 
     def __init__(self) -> None:
-        self.plans: list[list[object]] = []
-        self.interpose = None
+        self.plans: list[list[WriteOp]] = []
+        self.interpose: Callable[[Path, list[WriteOp]], None] | None = None
 
     def __call__(self, root: Path) -> _RecordingExecutor:
         return _RecordingExecutor(Path(root), self)
 
     @property
-    def epoch_plans(self) -> list[list[object]]:
+    def epoch_plans(self) -> list[list[WriteOp]]:
         """Only the plans that touch ``epochs/``. Rule installation submits
         create-only plans through the same factory, and an arm counting *epoch*
         transactions must not count those."""
@@ -83,7 +84,7 @@ class _RecordingExecutor:
         self.root = root
         self._recorder = recorder
 
-    def execute(self, plan) -> None:
+    def execute(self, plan: WritePlan) -> None:
         self._recorder.plans.append(list(plan))
         if self._recorder.interpose is not None:
             self._recorder.interpose(self.root, list(plan))
@@ -190,9 +191,13 @@ def epochs_tree(world: registry.World) -> dict[str, bytes]:
     }
 
 
-def document(world: registry.World, packaging_identity: str, member: str) -> object:
+def document(world: registry.World, packaging_identity: str, member: str) -> dict[str, Any]:
+    """One epoch member, parsed. Every member §6 defines is a mapping keyed by
+    string, so the arms below may index the result without re-asserting it."""
     path = world.config.world_root / "epochs" / packaging_identity / member
-    return yaml.safe_load(path.read_text(encoding="utf-8"))
+    parsed = yaml.safe_load(path.read_text(encoding="utf-8"))
+    assert isinstance(parsed, dict), member
+    return parsed
 
 
 def formula_packaging_identity(members: dict[str, bytes]) -> str:
@@ -371,12 +376,14 @@ class TestPublicationIsOneTransaction:
         assert len(recorder.epoch_plans) == 1
         plan = recorder.epoch_plans[0]
         assert all(type(operation) is CreateOp for operation in plan)
-        assert [operation.path for operation in plan] == [
+        creates = [operation for operation in plan if isinstance(operation, CreateOp)]
+        assert len(creates) == len(plan)
+        assert [operation.path for operation in creates] == [
             *(f"epochs/{published.packaging_identity}/{member}" for member in epoch.EPOCH_MEMBERS),
             f"epochs/{epoch.CURRENT_POINTER}",
         ]
-        assert plan[-1].content == f"{published.packaging_identity}\n".encode()
-        assert [operation.content for operation in plan[:-1]] == [
+        assert creates[-1].content == f"{published.packaging_identity}\n".encode()
+        assert [operation.content for operation in creates[:-1]] == [
             published.members[member] for member in epoch.EPOCH_MEMBERS
         ]
 
@@ -394,6 +401,7 @@ class TestPublicationIsOneTransaction:
             f"epochs/{second.packaging_identity}/{member}" for member in epoch.EPOCH_MEMBERS
         ]
         pointer = plan[-1]
+        assert isinstance(pointer, ReplaceOp), pointer
         assert pointer.path == f"epochs/{epoch.CURRENT_POINTER}"
         assert pointer.content == f"{second.packaging_identity}\n".encode()
         assert pointer.expected_digest == sha256(f"{first.packaging_identity}\n".encode()).hexdigest()
@@ -446,8 +454,10 @@ class TestExactRebuild:
         assert len(recorder.epoch_plans) == 3
         plan = recorder.epoch_plans[2]
         assert [type(operation) for operation in plan] == [ReplaceOp]
-        assert plan[0].path == f"epochs/{epoch.CURRENT_POINTER}"
-        assert plan[0].content == f"{first.packaging_identity}\n".encode()
+        rewrite = plan[0]
+        assert isinstance(rewrite, ReplaceOp), rewrite
+        assert rewrite.path == f"epochs/{epoch.CURRENT_POINTER}"
+        assert rewrite.content == f"{first.packaging_identity}\n".encode()
         assert epochs_tree(world) == {
             **before,
             epoch.CURRENT_POINTER: f"{first.packaging_identity}\n".encode(),
@@ -481,7 +491,9 @@ class TestExactRebuild:
         """
         world, recorder, bindings, _roots = admitted_world(tmp_path)
         counting = CountingLock()
-        world._state.lock = counting
+        # A duck-typed stand-in for the state's `threading.Lock`; the arm counts
+        # acquisitions, which the real lock does not expose.
+        world._state.lock = counting  # pyright: ignore[reportAttributeAccessIssue]
         marks: list[tuple[str, int, bool]] = []
 
         def mark(stage: str) -> None:
@@ -692,14 +704,16 @@ class TestOpening:
         assert rebuilt.packaging_identity == first.packaging_identity
 
         opened = read.open_epoch(world, first.packaging_identity)
+        # Four deliberate static-contract violations, each exercising the runtime
+        # refusal that an opened epoch is immutable through and through.
         with pytest.raises(FrozenInstanceError):
-            opened.packaging_identity = "x" * 64
+            opened.packaging_identity = "x" * 64  # pyright: ignore[reportAttributeAccessIssue]
         with pytest.raises(TypeError):
-            opened.members["anchors.yaml"] = b""
+            opened.members["anchors.yaml"] = b""  # pyright: ignore[reportIndexIssue]
         with pytest.raises(TypeError):
-            opened.documents["coverage.yaml"]["coverage"] = ()
+            opened.documents["coverage.yaml"]["coverage"] = ()  # pyright: ignore[reportIndexIssue]
         with pytest.raises(TypeError):
-            opened.receipts["producer-receipt.yaml"] = None
+            opened.receipts["producer-receipt.yaml"] = None  # pyright: ignore[reportIndexIssue]
 
     def test_a_contract_violating_receipt_still_opens(self, tmp_path):
         """§8.2's reachability requirement, and the one arm that proves it.
@@ -739,6 +753,7 @@ class TestOpening:
         assert carrier.missing == ()
         assert set(opened.documents["coreference-receipt.yaml"]) != epoch.RECEIPT_KEYS["coreference-receipt.yaml"]
         assert opened.documents["coreference-receipt.yaml"]["note"] == "a key no receipt kind declares"
+        assert carrier.corpus_states is not None
         assert list(carrier.corpus_states) == sorted(carrier.corpus_states, reverse=True)
 
     def test_an_absent_epoch_is_unknown_and_a_damaged_one_is_malformed(self, tmp_path):
@@ -834,7 +849,8 @@ class TestTheLockedOpen:
         world, _recorder, bindings, _roots = admitted_world(tmp_path, chain_head=heads)
         published = publish(world, (ALPHA,), bindings)
         counting = CountingLock()
-        world._state.lock = counting
+        # Same duck-typed stand-in: this arm counts that `open_epoch` acquires once.
+        world._state.lock = counting  # pyright: ignore[reportAttributeAccessIssue]
         order: list[str] = []
         heads.observe = lambda _target: order.append("barrier")
         pointer = epoch._locked_current_identity
@@ -868,7 +884,7 @@ class TestTheLockedOpen:
         arrived = threading.Event()
         release = threading.Event()
 
-        def half_apply(root: Path, plan) -> None:
+        def half_apply(root: Path, plan: list[WriteOp]) -> None:
             DefaultExecutor(root).execute(plan[:5])
             halfway.set()
             assert release.wait(JOIN_TIMEOUT), "the gated publication was never released"
@@ -920,7 +936,8 @@ class TestTheLockedOpen:
 
         assert not builder.is_alive() and not consumer.is_alive()
         assert [type(one) for one in outcome] == [epoch.Epoch, epoch.Epoch]
-        assert {one.packaging_identity for one in outcome} == {partial.name}
+        opened_pair = [one for one in outcome if isinstance(one, epoch.Epoch)]
+        assert {one.packaging_identity for one in opened_pair} == {partial.name}
         assert [names for name, names in observed if name == "reader"] == [tuple(sorted(epoch.EPOCH_MEMBERS))]
 
     def test_no_reader_observes_a_deletion_in_flight(self, tmp_path):

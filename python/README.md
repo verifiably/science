@@ -9,8 +9,14 @@ limitation 9: **M10 is the only cross-implementation row**).
 ```
 uv run --frozen pytest -q
 uv run --frozen ruff check .
-uv run --frozen pyright src
+uv run --frozen pyright
 ```
+
+`pyright` takes no path argument. Naming one narrows the check to that subtree
+and hides every diagnostic outside it — which is how `tests/` drifted once
+already after the
+[test-typing cleanup](../docs/superpowers/plans/2026-08-17-python-tests-pyright.md)
+landed. The gate is the whole project or it is not the gate.
 
 ## What is here
 

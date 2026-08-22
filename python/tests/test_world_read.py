@@ -305,7 +305,7 @@ class TestTheBoundStamp:
             for entry in document(published, "coverage.yaml")["coverage"]
         )
 
-        answers: list[object] = [
+        answers: list[read.Resolved | read.NotPresent | read.Unknown | read.EdgeAnswer] = [
             read.resolve_address(world, published, an_address_in(published, ALPHA)),
             read.resolve_address(world, published, RETIRED),
             read.resolve_address(world, published, "dataset:never-observed"),
@@ -347,20 +347,24 @@ class TestTheBoundStamp:
             assert "stamp" in parameters, answer_type
             assert parameters["stamp"].default is inspect.Parameter.empty, answer_type
             with pytest.raises(TypeError):
-                answer_type()
+                # Deliberately omitting the required arguments: the arm exercises
+                # the runtime refusal that an unstamped answer is unconstructible.
+                answer_type()  # pyright: ignore[reportCallIssue]
 
         # Frozen, so a stamp cannot be swapped out after the fact either.
         built = read.Unknown(stamp)
+        # Two more deliberate violations, exercising the frozen dataclasses' refusal.
         with pytest.raises(FrozenInstanceError):
-            built.stamp = read.BoundStamp("e" * 64, ())
+            built.stamp = read.BoundStamp("e" * 64, ())  # pyright: ignore[reportAttributeAccessIssue]
         with pytest.raises(FrozenInstanceError):
-            stamp.coverage = ()
+            stamp.coverage = ()  # pyright: ignore[reportAttributeAccessIssue]
 
         # Small dataclasses, not a generic result framework: the union's arms
         # share no base beyond `object` and carry no machinery.
         for answer_type in answer_types:
             assert answer_type.__mro__ == (answer_type, object), answer_type
-            assert answer_type.__dataclass_params__.frozen
+            # `dataclasses` publishes `frozen` only through this generated attribute.
+            assert answer_type.__dataclass_params__.frozen  # pyright: ignore[reportAttributeAccessIssue]
 
     def test_belief_has_no_current_epoch_input(self):
         """No belief API accepts an epoch, a pointer, or the word `current`.
@@ -402,7 +406,9 @@ class TestTheBoundStamp:
         # which the count below pins so a walk that silently started reading
         # nothing would fail rather than pass.
         for module in (belief, closure):
-            source = Path(inspect.getsourcefile(module)).read_text(encoding="utf-8")
+            source_file = inspect.getsourcefile(module)
+            assert source_file is not None, module
+            source = Path(source_file).read_text(encoding="utf-8")
             assert "science.world" not in source, module
             assert "current_epoch" not in source, module
             origins = {

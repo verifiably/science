@@ -477,7 +477,9 @@ class TestCoreferenceReduction:
                 at="a",
             )
         )
-        assert [pair["endpoints"] for pair in coreference_of(many).projection()["pairs"]] == [
+        pairs = coreference_of(many).projection()["pairs"]
+        assert isinstance(pairs, list)
+        assert [pair["endpoints"] for pair in pairs] == [
             ["address-a", "address-b"],
             ["address-a", "address-c"],
         ]
@@ -488,7 +490,9 @@ class TestCoreferenceReduction:
         # the same attestations under two coverages are one identity.
         projection = coreference_of(DUPLICATES).projection()
         assert set(projection) == {"pairs"}
-        assert set(projection["pairs"][0]) == {"endpoints", "balance", "distinct_key_count"}
+        pairs = projection["pairs"]
+        assert isinstance(pairs, list)
+        assert set(pairs[0]) == {"endpoints", "balance", "distinct_key_count"}
 
         wider = capture(DUPLICATES.corpora[0], corpus("corpus-b", at="b"))
         assert coreference_of(wider).identity() == coreference_of(DUPLICATES).identity()
@@ -998,6 +1002,7 @@ class TestShippedFixtures:
         for bundle in rules.shipped_rule_bundles():
             for name, content in bundle.fixtures:
                 supplied, _expected = rules._parse_fixture_document(name, content)
+                assert isinstance(supplied, dict), name
                 assert set(supplied) == {"coverage", "records"}, name
                 for entry in supplied["records"]:
                     assert set(entry) == {
@@ -1037,7 +1042,9 @@ class TestShippedFixtures:
         projection = TWO_CORPORA.rule_input()
         assert set(projection) == {"coverage", "records"}
         assert projection["coverage"] == ["corpus-a", "corpus-b"]
-        assert projection["records"][0] == {
+        records = projection["records"]
+        assert isinstance(records, list)
+        assert records[0] == {
             "address": "dataset:one",
             "certification": None,
             "coreference": None,

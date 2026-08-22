@@ -28,6 +28,7 @@ import shutil
 import subprocess
 import sys
 import threading
+from collections.abc import Callable
 from dataclasses import FrozenInstanceError, fields
 from pathlib import Path
 
@@ -91,7 +92,7 @@ class ChainHeads:
     def __init__(self) -> None:
         self.roots: list[Path] = []
         self.observations: list[object] = []
-        self.observe = None
+        self.observe: Callable[[Path], object] | None = None
         self.gate: threading.Event | None = None
         self.gate_root: Path | None = None
         self.entered = threading.Event()
@@ -140,9 +141,9 @@ def node_target(node: Node) -> stored.NodeTarget:
     with this is one `corpus.standing_in_local_view` can judge. Arms that want
     a drifted target say so by not using this.
     """
-    return stored.NodeTarget(
-        ref=node.id, resolved=node.id, content_identity=stored.stored_semantic_hash(node)
-    )
+    stamp = stored.stored_semantic_hash(node)
+    assert stamp is not None, f"{node.id} carries no stamp to name"
+    return stored.NodeTarget(ref=node.id, resolved=node.id, content_identity=stamp)
 
 
 def sample_nodes(slug: str = "one") -> tuple[Node, ...]:
@@ -905,15 +906,17 @@ class TestSerialCapture:
 
         draft = build(world, (ALPHA,), bindings)
 
+        # Deliberate static-contract violations: the arm exercises the runtime
+        # refusal that nothing captured under the hold can be rewritten after it.
         with pytest.raises(FrozenInstanceError):
-            draft.coverage = ()
+            draft.coverage = ()  # pyright: ignore[reportAttributeAccessIssue]
         with pytest.raises(FrozenInstanceError):
-            draft.capture.corpora[0].records[0].address = "x"
+            draft.capture.corpora[0].records[0].address = "x"  # pyright: ignore[reportAttributeAccessIssue]
         assert not any(isinstance(getattr(draft, field.name), Path) for field in fields(draft))
         assert str(roots[ALPHA]) not in repr(draft.capture)
         assert type(draft.capture.corpora) is tuple
         with pytest.raises(TypeError):
-            draft.held["producer"] = None
+            draft.held["producer"] = None  # pyright: ignore[reportIndexIssue]
 
 
 # --- Step 4: the ungoverned enumerated kinds ----------------------------------
