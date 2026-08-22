@@ -2,7 +2,7 @@
 title: Contracts and adoption
 status: living
 created: 2026-08-08
-updated: 2026-08-20
+updated: 2026-08-21
 sources:
   - ../designs/2026-08-03-normative-contract-design.md
   - ../designs/2026-08-03-redesign-adoption-ledger.md
@@ -152,11 +152,11 @@ fitted result into independent validation.
 
 ## Current state
 
-Cuts 1–6 have landed their implementation slices. Cut 7 is frozen before
-implementation at the world-index epoch carrier: rules, coherent capture,
-derived maps and receipts, publication, bounded reads, GC, and anchor carriage.
-The complete normative contract cut, the two governed stored kinds,
-world-index slice 2 implementation, and mutation-log verification remain open.
+Cuts 1–7 have landed their implementation slices. Cut 7 discharged the
+world-index epoch carrier — rules, coherent capture, derived maps and receipts,
+publication, bounded reads, GC, and anchor carriage — on a branch that is not
+yet merged. The complete normative contract cut, the two governed stored kinds,
+and mutation-log verification remain open.
 Consult the ledger for the current state rather than carrying these sentences
 into a status report.
 

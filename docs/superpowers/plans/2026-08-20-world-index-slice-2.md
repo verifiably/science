@@ -1,8 +1,18 @@
 # World Index Slice 2 Implementation Plan
 
-**Status:** Revised 2026-08-21 after the first owner review; awaiting finding closure.
-No implementation work starts until this plan and the cross-repository `atoms` design in
-Task 1 are approved.
+**Status:** Executed. All 14 tasks are complete (plus an inserted Task 13.5 that restored
+the project-wide Pyright gate) on branch `design/world-index-slice-2`, head `be96250`, base
+`f3a14bf`. Conformance cut 7's 48 declarations are discharged on the certified tuple; the
+results are recorded in `docs/plans/2026-08-20-conformance-cut-7-results.md`.
+
+**This branch is not merged.** There is no integration commit, and nothing here claims one.
+
+> **Integration constraint — merge preserving history.** Cut 6's 22 arms all declare
+> `module="world.py"`, and Task 3 moved that file to `world/registry.py`.
+> `python/tests/acceptance/test_n2_cut6.py` was amended to audit cut 6's source mutations
+> against the pre-move tree at commit **`4a7dc19`**, and Task 12 added a freeze guard
+> pinning that amended file to **`c8c0b12`**. A squash merge, or a rebase that orphans
+> `4a7dc19`, reds cut 6 permanently and cannot be repaired without editing a frozen cut.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use
 > `superpowers:executing-plans` to implement this plan task-by-task. Use
@@ -781,6 +791,18 @@ recheck; publication exact rebuild; read resolution refusals; read edge-query sp
 capture ungoverned kind; durable world transactions = 10.
 
 **Exact check-node inventory:**
+
+> **Annotation added at close-out — do not transcribe this table literally.** Every
+> function named below exists verbatim in the landed tree, but **31 of the 45 pre-existing
+> ones are methods on a class**, and `pytest file.py::method` exits 4 — which the N2
+> harness scores `uncollected`, not `sound`. Declared as spelled here, 31 arms would look
+> like declarations and assert nothing. Cut 1 already spells node ids with the class
+> segment between the file and the function, and the landed `python/tests/n2_arms_cut7.py`
+> does too: `test_world_epoch.py::TestOpening::test_open_epoch_refuses_raw_member_edit`,
+> not `test_world_epoch.py::test_open_epoch_refuses_raw_member_edit`. The file and function
+> names are the frozen ones; only the resolvable class segment is added. No unit is
+> renumbered or re-homed — reducing the landed declarations back to `file::function`
+> reproduces this table set-identically.
 
 | row/unit | check node |
 |---|---|

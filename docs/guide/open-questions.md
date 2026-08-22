@@ -2,7 +2,7 @@
 title: Open questions
 status: living
 created: 2026-08-08
-updated: 2026-08-20
+updated: 2026-08-21
 sources:
   - ../designs/2026-08-02-epistemic-kernel-design.md
   - ../designs/2026-08-02-substrate-consolidation-design.md
@@ -171,7 +171,7 @@ implementation**: a guarantee row awaiting code is work, not a question.
   certification is unspellable and existing instruments certify only through a
   successor spec. Open is the cadence: sweep, mint on next authored use, or
   never. ([normative-contract questions](../designs/2026-08-03-normative-contract-design.md#11-open-questions))
-- **Cut 7 is frozen; most of cut 3's deferred boundary stays open.** Cut 3
+- **Cut 7 is discharged; most of cut 3's deferred boundary stays open.** Cut 3
   was frozen 2026-08-11 at the run boundary,
   taking run capture — the seam the verified-holdings record (2026-08-10)
   and the act-report design (2026-08-11) finished designing. Its §5
@@ -186,12 +186,13 @@ implementation**: a guarantee row awaiting code is work, not a question.
   `atoms` engine adopted at Science's composition root, add-only,
   corpus-write minting alone, with no L row selected because registration
   is engine-supplied. Cut 6 lands the authoritative world root, manifest,
-  corpus-state identity, registry, lifecycle, and presence core. Cut 7 now
-  freezes the epoch build, four maps and receipts, rules store, bounded reads,
-  GC, and anchor carrier; its implementation remains prospective, and anchor
-  verification remains outside it. Cuts 4–6 are implemented and discharged.
-  The separately deferred consolidate/move/deletion cut still waits on the
-  implemented world index.
+  corpus-state identity, registry, lifecycle, and presence core. Cut 7 froze
+  the epoch build, four maps and receipts, rules store, bounded reads,
+  GC, and anchor carrier, and discharged all 48 declarations on the certified
+  tuple; anchor verification remains outside it. Cuts 4–7 are implemented and
+  discharged, cut 7 on a branch that is not yet merged.
+  The separately deferred consolidate/move/deletion cut no longer waits on the
+  world index.
   ([conformance cut 3](../designs/2026-08-11-conformance-cut-3.md),
   [its deferrals](../designs/2026-08-11-conformance-cut-3.md#5-step-3--fully-deferred-rows-grouped-by-unblocking-subsystem),
   [conformance cut 4](../designs/2026-08-17-conformance-cut-4.md),
@@ -201,7 +202,8 @@ implementation**: a guarantee row awaiting code is work, not a question.
   [conformance cut 6](../designs/2026-08-20-conformance-cut-6.md),
   [cut 6 results](../plans/2026-08-20-conformance-cut-6-results.md),
   [epoch-carrier design](../designs/2026-08-20-world-index-slice-2-design.md),
-  [conformance cut 7](../designs/2026-08-20-conformance-cut-7.md))
+  [conformance cut 7](../designs/2026-08-20-conformance-cut-7.md),
+  [cut 7 results](../plans/2026-08-20-conformance-cut-7-results.md))
 - **The act-report's residue.** The act-report design (2026-08-11) closed
   the run boundary's report seam: the boundary-minted terminal record of
   an opened operation — or the pre-intent refusal record of a rejected

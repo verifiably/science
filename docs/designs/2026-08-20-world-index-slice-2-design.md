@@ -1,10 +1,15 @@
 # World-index slice 2 — epoch carrier design
 
 **Date:** 2026-08-20
-**Status:** Banked 2026-08-20 with conformance cut 7; implementation is
-prospective. Amended 2026-08-21 to pin the four receipt-subject projection
-identities and the member-content digest algorithm; cut-7 accounting is
-unchanged.
+**Status:** Banked 2026-08-20 with conformance cut 7. Amended 2026-08-21 to pin
+the four receipt-subject projection identities and the member-content digest
+algorithm; cut-7 accounting is unchanged. **Implemented on branch
+`design/world-index-slice-2` (head `be96250`, base `f3a14bf`) and cut 7's 48
+declarations discharged on the certified tuple — see
+`../plans/2026-08-20-conformance-cut-7-results.md`. That branch is not merged:
+there is no integration commit, and it must be integrated preserving history
+(results record §7).** §9's empty-directory sentence was corrected in the same
+landing; it was wrong as banked.
 **Scope:** adoption-ledger artifact 1; the build-time uniqueness half of
 artifact 2; anchor carriage needed by artifact 5.
 **Inherits:** `2026-08-02-world-addressing-design.md` §5 and §5.1;
@@ -221,7 +226,10 @@ Nonconformance raises `RuleNonconformant` before publication.
 `remove_rule_binding` unholds one exact pair. An unknown pair raises
 `RuleBindingUnknown`. The world-root transaction deletes the implementation
 member and, when it was the final implementation for that rule, `rule.yaml`
-and the fixture members. Empty directories are nonsemantic and may remain.
+and the fixture members. The emptied directory remains: the executor deletes
+files, not directories. Nothing enumerates `rules/`, so no scan can read an
+emptied directory as a holding — every resolution here is by exact path, and a
+rule whose `rule.yaml` is gone is simply not held.
 
 The return value reports every receipt in this world that names the removed
 pair and therefore loses this store's resolution path. Receipt validation is
@@ -637,7 +645,17 @@ the target and scans the other retained epochs needed to compute the sever
 report.
 
 One world-root transaction contains a `DeleteOp` for every target member.
-Empty directories are nonsemantic and may remain. The returned report names
+The emptied directory remains — the executor deletes files, not directories —
+**and every scan of `epochs/` ignores it.** Nonsemantic has to mean *ignored*
+rather than merely unfilled: an empty directory read as a carrier is a carrier
+missing all eleven members, so one deletion would otherwise make every later
+scan of `epochs/` refuse forever, would make the repeated deletion below report
+`EpochMalformed` instead of `EpochUnknown`, and would block republishing the
+same bytes into that name. The consequence is stated rather than hidden: an
+externally destroyed carrier — `rm epochs/<id>/*` with the directory left
+standing — is indistinguishable from a deleted one, so `open_epoch` answers
+`EpochUnknown` where it once answered `EpochMalformed`. That is forced by this
+section's own no-tombstone decision. The returned report names
 the actor, producer-snapshot identity, and four receipt identities carried by
 the deleted epoch, flagging each identity not carried by any other epoch in
 this world after the deletion.
@@ -667,7 +685,7 @@ refusals have no synthetic cause.
 | rules | `RuleBindingUnknown` | explicit removal names no held exact pair |
 | rules | `RuleNonconformant` | an implementation fails the normative fixtures at install |
 | epoch | `EpochMalformed` | the epoch carrier fails its closed layout or packaging identity |
-| epoch | `EpochUnknown` | an explicitly named epoch does not exist |
+| epoch | `EpochUnknown` | an explicitly named epoch does not exist — including an emptied `epochs/<id>/` directory, which §9 ignores rather than reading as an eleven-member-short carrier |
 | epoch | `EpochCurrent` | GC attempted to delete the current epoch |
 | read | `ResolutionRefused` | carrier ambiguity or corruption prevents an honest resolution state |
 | read | `EdgeIndeterminate` | expansion reaches an edge the epoch cannot establish; carries uncovered corpus ids and/or the non-`validated` receipt outcome |

@@ -107,9 +107,13 @@ admission, lifecycle status, and presence core now run, with **14 selected + 8
 labeled = 22 declarations** across **2 rows in full and 2 in part**; X7 remains
 fully deferred. See the [results](docs/plans/2026-08-20-conformance-cut-6-results.md).
 
-**Conformance cut 7** froze 2026-08-20 before implementation, selecting the
-world-index epoch carrier with **38 selected + 10 labeled = 48 declarations**
-across **7 rows in full and 4 in part**. Its implementation is prospective.
+**Conformance cut 7** froze 2026-08-20 and was discharged 2026-08-21. The
+world-index epoch carrier — the rules store, coherent capture, four derived maps
+and their receipts, epoch publication with `current`, bounded reads, whole-epoch
+GC, and anchor carriage — now runs, with **38 selected + 10 labeled = 48
+declarations** across **7 rows in full and 4 in part**. See the
+[results](docs/plans/2026-08-20-conformance-cut-7-results.md). The work is on
+branch `design/world-index-slice-2` and **is not yet merged**.
 
 ```
 python/     the implementation (substrate §11 puts the composition root here)

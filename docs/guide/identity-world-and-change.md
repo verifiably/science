@@ -2,7 +2,7 @@
 title: Identity, world, and change
 status: living
 created: 2026-08-08
-updated: 2026-08-20
+updated: 2026-08-21
 sources:
   - ../designs/2026-08-02-substrate-consolidation-design.md
   - ../designs/2026-08-02-world-addressing-design.md
@@ -134,9 +134,10 @@ that the operation was scientifically or administratively authorized.
 
 The authoritative world root, manifest, corpus-state identity, and append-only
 registry core are implemented, including fresh adoption, lifecycle status, and
-configured presence. Epoch publication, the four derived maps, global
-resolution, slice-2 build behavior, and anchor carriage and verification remain
-designed or deferred. The address ruling still governs the eventual derived
+configured presence. Epoch publication, the four derived maps and their
+fixture-bound receipts, bounded reads, whole-epoch GC, and anchor carriage are
+implemented too, on a branch not yet merged. Global resolution and anchor
+verification remain designed or deferred. The address ruling still governs the eventual derived
 views: labels are computed on read, coreference is graded rather than merged,
 and storage duplication changes no address.
 
