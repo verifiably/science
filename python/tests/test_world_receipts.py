@@ -155,13 +155,16 @@ def repackage(world: registry.World, published: epoch.Epoch, changes: dict[str, 
     return read.open_epoch(world, packaging_identity)
 
 
-RECEIPT_KINDS: tuple[derive.ReceiptKind, ...] = (
+TEST_RECEIPT_KINDS: tuple[derive.ReceiptKind, ...] = (
     "producer",
     "retraction-enumeration",
     "certification-enumeration",
     "coreference-reduction",
 )
 """§7.5's four kinds, named as literals so the arms below type-check.
+
+Not `epoch.RECEIPT_KINDS`, which is the differently-shaped member-to-kind
+mapping this module also reads.
 
 `epoch.DERIVATION_KINDS` stays the authority on which four there are and in
 what order; `outcomes` asserts the two agree rather than trusting this copy.
@@ -170,8 +173,8 @@ what order; `outcomes` asserts the two agree rather than trusting this copy.
 
 def outcomes(world: registry.World, published: epoch.Epoch) -> dict[str, str]:
     """Every receipt kind's outcome, in §6.1's member order."""
-    assert RECEIPT_KINDS == epoch.DERIVATION_KINDS
-    return {kind: read.validate_receipt(world, published, kind).outcome for kind in RECEIPT_KINDS}
+    assert TEST_RECEIPT_KINDS == epoch.DERIVATION_KINDS
+    return {kind: read.validate_receipt(world, published, kind).outcome for kind in TEST_RECEIPT_KINDS}
 
 
 PRODUCER_FOLD = '            producers.setdefault(dataset, set()).add(record["address"])\n'

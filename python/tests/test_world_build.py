@@ -906,7 +906,7 @@ class TestSerialCapture:
 
         draft = build(world, (ALPHA,), bindings)
 
-        # Deliberate static-contract violations: the arm exercises the runtime
+        # Two deliberate static-contract violations, exercising the runtime
         # refusal that nothing captured under the hold can be rewritten after it.
         with pytest.raises(FrozenInstanceError):
             draft.coverage = ()  # pyright: ignore[reportAttributeAccessIssue]
@@ -915,6 +915,7 @@ class TestSerialCapture:
         assert not any(isinstance(getattr(draft, field.name), Path) for field in fields(draft))
         assert str(roots[ALPHA]) not in repr(draft.capture)
         assert type(draft.capture.corpora) is tuple
+        # A third, exercising the same refusal for the held rule bindings.
         with pytest.raises(TypeError):
             draft.held["producer"] = None  # pyright: ignore[reportIndexIssue]
 

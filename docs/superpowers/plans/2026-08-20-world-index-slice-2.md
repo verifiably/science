@@ -93,9 +93,9 @@ units.
 - Use conventional commits without attribution trailers. Stage only named paths; never
   use `git add -A` or `git commit -a`.
 - `atoms` gates, from `python/`: `uv run --frozen pytest -q`,
-  `uv run --frozen ruff check .`, `uv run --frozen pyright src`.
+  `uv run --frozen ruff check .`, `uv run --frozen pyright`.
 - Science gates, from `python/`: `uv run --frozen pytest -q`,
-  `uv run --frozen ruff check .`, `uv run --frozen pyright src`.
+  `uv run --frozen ruff check .`, `uv run --frozen pyright`.
 
 ---
 
@@ -213,7 +213,7 @@ Expect import/attribute failures for `ChainView`, `Entry`, and `read_chain`.
 uv run --frozen pytest tests/test_coordinator_commands.py tests/test_coordinator_architecture.py tests/test_packaging.py -q
 uv run --frozen pytest -q
 uv run --frozen ruff check .
-uv run --frozen pyright src
+uv run --frozen pyright
 ```
 
 - [ ] **Step 6: Correct landing status and commit.** Update the approved design's status
@@ -252,7 +252,7 @@ slice-1 behavior and bytes do not change.
 ```bash
 uv run --frozen pytest -q
 uv run --frozen ruff check .
-uv run --frozen pyright src
+uv run --frozen pyright
 ```
 
 - [ ] **Step 2: Perform the plain move.** Use `git mv`; create `world/__init__.py` that
@@ -918,7 +918,7 @@ portable acceptance, and certified durable arms. It refuses off the certified tu
 uv run --frozen pytest tests/acceptance/test_n2_cut7.py -q
 uv run --frozen pytest -q
 uv run --frozen ruff check .
-uv run --frozen pyright src
+uv run --frozen pyright
 ```
 
 - [ ] **Step 5: Run certified acceptance.** On the certified host/tuple:
