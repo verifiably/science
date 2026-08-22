@@ -100,6 +100,15 @@ class EpochUnknown(ScienceError):
     inventing one to point at would be worse than saying so."""
 
 
+class EpochCurrent(ScienceError):
+    """Whole-epoch garbage collection named the epoch ``epochs/current`` names.
+    Deletion is explicit consumer policy, and the one epoch a world is pointing
+    at is not something a consumer may unpublish as a side effect of tidying:
+    the pointer would be left naming nothing, and every act that follows it
+    would refuse. Moving `current` is publication's business, so the refusal
+    names the state rather than offering to repoint it."""
+
+
 class BuildContended(ScienceError):
     """An epoch build asked for a root's coherent capture and found the
     operation lock already held. The build refuses at once rather than queue:

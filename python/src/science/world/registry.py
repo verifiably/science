@@ -5,7 +5,8 @@ from __future__ import annotations
 import json
 import re
 import threading
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
@@ -287,6 +288,30 @@ class World:
             )
             self._state.registry = _scan_registry(self.config.world_root)
             return next(record for record in self._state.registry.statuses if status_digest(record) == digest)
+
+
+@contextmanager
+def _locked_barrier(world: World) -> Iterator[Path]:
+    """The one world-lock acquisition and the recovery barrier, in that order.
+
+    Every act over ``epochs/`` — opening one, following ``current``, resolving
+    an address, publishing, deleting — begins the same way: take
+    `_WorldState.lock`, then hand the world root to the injected chain callback
+    so recovery of any interrupted transaction completes *inside* the critical
+    section. The order is the whole point (§8.1). Taking the lock second would
+    let a reader cross a barrier that a publication then invalidated; crossing
+    the barrier second, but outside the lock, would let two acts recover at
+    once.
+
+    The lock is not reentrant, so everything the body calls must be a
+    `_locked_*` helper that assumes the hold rather than taking it again. The
+    world root is yielded because every one of those helpers is keyed by it and
+    reading it twice from the config is how the two could drift apart.
+    """
+    with world._state.lock:
+        world_root = world.config.world_root
+        world._chain_head(world_root)
+        yield world_root
 
 
 class _ManifestLoader(yaml.SafeLoader):

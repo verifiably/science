@@ -93,13 +93,14 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable, Mapping
+from collections.abc import Set as AbstractSet
 from dataclasses import dataclass
 from pathlib import Path
 from types import MappingProxyType
 from typing import cast
 
 import yaml
-from nodes.core.write_plan import CreateOp, ReplaceOp, WritePlan
+from nodes.core.write_plan import CreateOp, DeleteOp, ReplaceOp, WritePlan
 
 from science import stored
 from science.corpus import ReadView, _acyclic_postorder, _root_state_for, _validated_retraction_facet
@@ -109,6 +110,7 @@ from science.errors import (
     CoverageUnknown,
     CoverageUnresolvable,
     EnumeratedKindUngoverned,
+    EpochCurrent,
     EpochMalformed,
     EpochUnknown,
 )
@@ -134,9 +136,13 @@ __all__ = [
     "RECEIPT_KEYS",
     "RECEIPT_KINDS",
     "RETRACTION_RESOLUTIONS",
+    "SNAPSHOT_SUBJECT",
     "DerivationBindings",
     "Epoch",
+    "EpochDeletionReport",
+    "SeveredIdentity",
     "build_epoch",
+    "delete_epoch",
     "packaging_identity_of",
     "receipt_identity",
 ]
@@ -381,8 +387,28 @@ def _retained_receipt_bindings_locked(world_root: Path) -> tuple[_ReceiptCarrier
             continue
         if entry.is_symlink() or not entry.is_dir() or not _PACKAGING_IDENTITY.fullmatch(entry.name):
             raise EpochMalformed(f"{entry}: nothing but epoch carriers and {CURRENT_POINTER!r} lives here")
+        if _emptied(entry):
+            continue
         carriers.extend(_receipts_of(entry))
     return tuple(carriers)
+
+
+def _emptied(directory: Path) -> bool:
+    """Whether this entry beneath ``epochs/`` holds nothing at all.
+
+    §9 deletes an epoch by deleting each of its eleven members and calls the
+    directory left behind nonsemantic. Nonsemantic has to mean *ignored* rather
+    than merely unfilled: an empty directory read as a carrier is a carrier
+    missing all eleven members, so one deletion would make every later scan of
+    ``epochs/`` refuse — the sever report `science.world.rules` computes
+    included — and would make §9's own "a repeated deletion raises
+    `EpochUnknown`" report `EpochMalformed` instead.
+
+    It is asked *after* the name check, never instead of it: an empty directory
+    whose name is not a packaging identity is still something nobody but this
+    package may put here, and it still refuses.
+    """
+    return not any(directory.iterdir())
 
 
 def _carrier_members(directory: Path) -> Mapping[str, bytes]:
@@ -602,6 +628,8 @@ def _locked_open_epoch(world_root: Path, packaging_identity: str) -> Epoch:
         raise EpochUnknown(f"{directory}: this world retains no epoch under that packaging identity")
     if not directory.is_dir():
         raise EpochMalformed(f"{directory}: an epoch carrier is a directory")
+    if _emptied(directory):
+        raise EpochUnknown(f"{directory}: this world retains no epoch under that packaging identity")
     members = _carrier_members(directory)
     documents: dict[str, Mapping[object, object]] = {}
     receipts: dict[str, _ReceiptCarrier] = {}
@@ -1333,12 +1361,10 @@ def build_epoch(
     draft = _capture_build_inputs(world, coverage=coverage, bindings=bindings.by_kind())
     members = _derived_members(draft)
     packaging_identity = packaging_identity_of(members)
-    world_root = world.config.world_root
-    with world._state.lock:
-        # The barrier first, exactly as preflight takes it first: every world
-        # file inspected below — the same-name carrier, the pointer — is then
-        # inspected after recovery rather than beside it.
-        world._chain_head(world_root)
+    # The barrier first, exactly as preflight takes it first: every world file
+    # inspected below — the same-name carrier, the pointer — is then inspected
+    # after recovery rather than beside it.
+    with registry._locked_barrier(world) as world_root:
         _locked_recheck_rule_bindings(world_root, draft)
         plan = _locked_publication_plan(world_root, packaging_identity, members)
         if plan:
@@ -1474,10 +1500,15 @@ def _locked_publication_plan(
     packaging identity and `_locked_open_epoch` would refuse. The byte
     comparison below is therefore not a second chance to fail but the
     statement of what "already exists" was allowed to mean.
+
+    A directory this name's epoch was *deleted* from is not a same-name
+    carrier: §9 leaves it empty and calls it nonsemantic, so republishing the
+    same bytes creates the eleven members back into it rather than reading a
+    carrier that holds none of them.
     """
     directory = world_root / "epochs" / packaging_identity
     operations: list[CreateOp | ReplaceOp] = []
-    if directory.exists() or directory.is_symlink():
+    if directory.is_symlink() or (directory.exists() and not (directory.is_dir() and _emptied(directory))):
         retained = _locked_open_epoch(world_root, packaging_identity)
         if dict(retained.members) != dict(members):
             raise EpochMalformed(f"{directory}: a retained epoch of this name holds different bytes")
@@ -1498,3 +1529,167 @@ def _locked_publication_plan(
             )
         )
     return operations
+
+
+# --- whole-epoch garbage collection (§9) --------------------------------------
+
+
+SNAPSHOT_SUBJECT = "producer-snapshot"
+"""§9's fifth identity, named as a subject beside `DERIVATION_KINDS`' four.
+
+The producer snapshot is the one subject an epoch carries whose identity is not
+a receipt's own. It is labelled here rather than by the member holding it,
+because the report is about identities and a `.yaml` filename in it would be
+the carrier layer leaking into a consumer's vocabulary."""
+
+
+@dataclass(frozen=True)
+class SeveredIdentity:
+    """One identity a deleted epoch carried, and whether anything still does.
+
+    `subject` names what the identity is the identity *of* — one of
+    `DERIVATION_KINDS`' four receipt kinds, or `SNAPSHOT_SUBJECT` for the
+    producer snapshot — so the five entries of a report read in §7.5's own
+    vocabulary rather than in a second one invented for reporting. It is the
+    kind the *member* declares (`RECEIPT_KINDS`), not the discriminant the
+    document happens to carry: where those two disagree the document is a
+    contract fault for the receipt validator to find, and the report would be
+    filing it under a heading nobody asked about.
+
+    `retained_elsewhere` is the whole point of the report: an identity another
+    retained epoch of this world still carries survives the deletion, and one
+    no other epoch carries does not. It is a statement about *this* world and
+    stops there, exactly as `rules.RuleRemovalReport` does — another consulted
+    world may hold the same publication, and this act cannot see it.
+    """
+
+    subject: str
+    identity: str
+    retained_elsewhere: bool
+
+
+@dataclass(frozen=True)
+class EpochDeletionReport:
+    """What one `delete_epoch` removed, and what it severed.
+
+    §9 asks for the actor, the producer-snapshot identity and the four receipt
+    identities the deleted epoch carried, each flagged with whether any other
+    retained epoch still carries it.
+
+    `snapshot` is optional and `receipts` may hold fewer than four, for one
+    reason: an identity is read from the receipt document that names it, and a
+    receipt that omitted one of §7.5's five identity members has no identity at
+    all (`_ReceiptCarrier.identity`). Such a receipt is *not* reported as
+    severed, and the reason is `rules._severed_receipts`' reason: §7.5 already
+    puts an unsound receipt contract at outcome ``malformed``, decided before
+    resolvability is ever asked, so no deletion can move it. Reporting an
+    identity for it would mean inventing one nobody published.
+    """
+
+    actor: str
+    packaging_identity: str
+    snapshot: SeveredIdentity | None
+    receipts: tuple[SeveredIdentity, ...]
+
+    @property
+    def severed(self) -> tuple[str, ...]:
+        """The identities this deletion left nothing in this world carrying,
+        sorted and distinct."""
+        entries = (*(() if self.snapshot is None else (self.snapshot,)), *self.receipts)
+        return tuple(sorted({entry.identity for entry in entries if not entry.retained_elsewhere}))
+
+
+def delete_epoch(world: registry.World, packaging_identity: str, *, actor: str) -> EpochDeletionReport:
+    """Delete one whole retained epoch, and report what it severed (§9).
+
+    Explicit consumer policy. Nothing in this package calls it, no schedule
+    triggers it, and there is no act that deletes one member of an epoch: an
+    epoch is published whole and it is removed whole.
+
+    Under one acquisition of the world lock, and in this order: cross the
+    recovery barrier, read and validate `current`, refuse `EpochCurrent` for
+    the epoch the pointer names, then open the target. `current` is checked
+    before the target is opened because "you may not delete this one" is an
+    answer about the world's state rather than about the target's bytes, and a
+    consumer who asked to delete the current epoch is owed that answer even if
+    the carrier underneath it is also damaged.
+
+    Every *other* retained epoch is then opened with the same private locked
+    loader, because the report's question — is this identity still carried
+    here? — is a question about what those epochs hold, and §8.1's carrier rule
+    is that an epoch this world cannot read refuses the act that reads it. A
+    damaged epoch elsewhere therefore refuses the whole deletion with
+    `EpochMalformed`, exactly as a damaged carrier refuses a rule removal: a
+    sever report computed over a scan that quietly skipped one would be the
+    silent unresolvability §4.3 refuses to produce.
+
+    One transaction, holding a `DeleteOp` for each of the eleven members. The
+    emptied directory stays where it is; §9 calls it nonsemantic and `_emptied`
+    is what makes that true rather than merely stated. There is no tombstone:
+    a repeated call raises `EpochUnknown`, and slice 2 claims no exact retry
+    after commit.
+    """
+    actor = registry._require_actor(actor)
+    with registry._locked_barrier(world) as world_root:
+        current = _locked_current_identity(world_root)
+        if current == packaging_identity:
+            raise EpochCurrent(
+                f"{world_root / 'epochs' / CURRENT_POINTER} names {packaging_identity}, "
+                "so deleting it would leave this world pointing at nothing"
+            )
+        target = _locked_open_epoch(world_root, packaging_identity)
+        elsewhere: set[str] = set()
+        for retained in _retained_identities_locked(world_root):
+            if retained == packaging_identity:
+                continue
+            elsewhere |= _carried_identities(_locked_open_epoch(world_root, retained))
+        report = _deletion_report(actor, target, elsewhere)
+        world._executor_factory(world_root).execute(
+            [
+                DeleteOp(f"epochs/{packaging_identity}/{member}", rules.member_content_digest(content))
+                for member, content in target.members.items()
+            ]
+        )
+    return report
+
+
+def _retained_identities_locked(world_root: Path) -> tuple[str, ...]:
+    """Every packaging identity this world retains, sorted and distinct.
+
+    Read off the one epoch scanner rather than by walking ``epochs/`` a second
+    time. Every carrier holds four receipts, so a carrier the scan reached is a
+    carrier this answers with, and a directory the scan refused refuses here
+    too — which is the enumeration's own share of §8.1's carrier rule.
+    """
+    return tuple(sorted({carrier.packaging_identity for carrier in _retained_receipt_bindings_locked(world_root)}))
+
+
+def _carried_identities(published: Epoch) -> frozenset[str]:
+    """The identities one opened epoch carries: its four receipts and the
+    producer snapshot its producer receipt names as its subject.
+
+    The snapshot identity is read from the producer receipt rather than
+    recomputed from ``producer-snapshot.yaml``, because §7.5 *defines* that
+    receipt's subject to be the published snapshot's identity, and because a
+    report has to compare like with like: the four receipt identities have no
+    source but the receipt documents, so taking the fifth from anywhere else
+    would compare one epoch's claim against another's rederivation and call the
+    difference a sever.
+    """
+    carried = {receipt.identity for receipt in published.receipts.values()}
+    carried.add(published.receipts["producer-receipt.yaml"].subject_identity)
+    return frozenset(identity for identity in carried if identity is not None)
+
+
+def _deletion_report(actor: str, target: Epoch, elsewhere: AbstractSet[str]) -> EpochDeletionReport:
+    """§9's report over the target's own carried identities, in member order."""
+    producer = target.receipts["producer-receipt.yaml"].subject_identity
+    snapshot = None if producer is None else SeveredIdentity(SNAPSHOT_SUBJECT, producer, producer in elsewhere)
+    receipts: list[SeveredIdentity] = []
+    for member in EPOCH_MEMBERS:
+        if member not in RECEIPT_KINDS:
+            continue
+        identity = target.receipts[member].identity
+        if identity is not None:
+            receipts.append(SeveredIdentity(RECEIPT_KINDS[member], identity, identity in elsewhere))
+    return EpochDeletionReport(actor, target.packaging_identity, snapshot, tuple(receipts))

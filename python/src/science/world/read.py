@@ -15,19 +15,20 @@ belief, and the reason is structural rather than a convention — a snapshot is
 retrieved by its own identity from whichever retained epoch carries it.
 
 **One lock, taken before the recovery barrier.** Every act here acquires
-`_WorldState.lock` first and crosses the recovery barrier second. Opening an
-epoch holds it through the whole carrier read, because publication holds the
-same lock across its whole transaction and a reader arriving mid-publication
-must wait and then see the finished epoch rather than mistake an applied prefix
-for a malformed carrier. The lock is not reentrant, which is why
-`current_epoch` reaches `epoch._locked_open_epoch` directly rather than calling
-`open_epoch` — re-entry would not be a style question here, it would deadlock.
-No `_locked_*` helper is *defined* in this module: the three it calls —
-`epoch._locked_open_epoch`, `epoch._locked_current_identity` and
-`rules._locked_resolve_rule_binding` — carry the discipline in their own
-prefix, and every call to one below sits inside a `with world._state.lock`
-block. A helper here whose name gained that prefix would be claiming the caller
-holds a lock it does not.
+`_WorldState.lock` first and crosses the recovery barrier second, and it does
+so through the one `registry._locked_barrier` that fixes that order for
+publication and deletion too. Opening an epoch holds it through the whole
+carrier read, because publication holds the same lock across its whole
+transaction and a reader arriving mid-publication must wait and then see the
+finished epoch rather than mistake an applied prefix for a malformed carrier.
+The lock is not reentrant, which is why `current_epoch` reaches
+`epoch._locked_open_epoch` directly rather than calling `open_epoch` — re-entry
+would not be a style question here, it would deadlock. No `_locked_*` helper is
+*defined* in this module: the three it calls — `epoch._locked_open_epoch`,
+`epoch._locked_current_identity` and `rules._locked_resolve_rule_binding` —
+carry the discipline in their own prefix, and every call to one below sits
+inside a `registry._locked_barrier(world)` block. A helper here whose name
+gained that prefix would be claiming the caller holds a lock it does not.
 
 **What the lock does not cover is as deliberate.** Receipt validation takes it
 for the recovery barrier and the rules-store resolution — a read of the store
@@ -195,9 +196,8 @@ def open_epoch(world: registry.World, packaging_identity: str) -> epoch.Epoch:
     under. A receipt that parses and then violates §7.5's contract is *not* a
     carrier failure and opens (§8.2).
     """
-    with world._state.lock:
-        world._chain_head(world.config.world_root)
-        return epoch._locked_open_epoch(world.config.world_root, packaging_identity)
+    with registry._locked_barrier(world) as world_root:
+        return epoch._locked_open_epoch(world_root, packaging_identity)
 
 
 def current_epoch(world: registry.World) -> epoch.Epoch:
@@ -208,15 +208,14 @@ def current_epoch(world: registry.World) -> epoch.Epoch:
     moment rather than at two. A world that has published nothing has no
     current epoch, and says so: `EpochUnknown`, never an invented answer.
     """
-    with world._state.lock:
-        world._chain_head(world.config.world_root)
-        named = epoch._locked_current_identity(world.config.world_root)
+    with registry._locked_barrier(world) as world_root:
+        named = epoch._locked_current_identity(world_root)
         if named is None:
             raise EpochUnknown(
-                f"{world.config.world_root / 'epochs' / epoch.CURRENT_POINTER}: "
+                f"{world_root / 'epochs' / epoch.CURRENT_POINTER}: "
                 "this world has published no epoch, so it selects none"
             )
-        return epoch._locked_open_epoch(world.config.world_root, named)
+        return epoch._locked_open_epoch(world_root, named)
 
 
 # --- receipt validation (§7.5, §8.2) ------------------------------------------
@@ -283,9 +282,7 @@ def validate_receipt(
     binding = rules.RuleBinding(
         cast(str, receipt.rule_identity), cast(str, receipt.implementation_identity)
     )
-    world_root = world.config.world_root
-    with world._state.lock:
-        world._chain_head(world_root)
+    with registry._locked_barrier(world) as world_root:
         try:
             held = rules._locked_resolve_rule_binding(world_root, binding)
         except RuleNotHeld as caught:
@@ -623,9 +620,8 @@ def resolve_address(
     if address not in recorded:
         return Unknown(stamp)
     corpus_id, uid = recorded[address]
-    with world._state.lock:
-        world._chain_head(world.config.world_root)
-        world._state.registry = registry._scan_registry(world.config.world_root)
+    with registry._locked_barrier(world) as world_root:
+        world._state.registry = registry._scan_registry(world_root)
         try:
             status = registry._reduce_status(world.config, world._state.registry, corpus_id)
         except ManifestMalformed as caught:
