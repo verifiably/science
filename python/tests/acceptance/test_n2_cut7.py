@@ -49,6 +49,7 @@ from pathlib import Path
 
 import pytest
 import test_n2
+import test_world_build
 from atoms.chain.model import RegisteredEntry
 from fixtures_cut6 import PINS
 from n2_arms import (
@@ -90,12 +91,20 @@ Cut 7 touches none of cut 5's or cut 6's surfaces; this pin is used here only
 to assert that, byte for byte.
 """
 
-FROZEN_PRIOR_CUT_FILES = (
-    "python/tests/n2_arms_cut5.py",
-    "python/tests/n2_arms_cut6.py",
-    "python/tools/cut5_acceptance.py",
-    "python/tools/cut6_acceptance.py",
-)
+FROZEN_PRIOR_CUT_FILES = {
+    "python/tests/n2_arms_cut5.py": CUT6_SOURCE_COMMIT,
+    "python/tests/n2_arms_cut6.py": CUT6_SOURCE_COMMIT,
+    "python/tools/cut5_acceptance.py": CUT6_SOURCE_COMMIT,
+    "python/tools/cut6_acceptance.py": CUT6_SOURCE_COMMIT,
+    # Cut 6's *acceptance module* is not frozen in the same sense — slice 2
+    # rewrote it, at `c8c0b12`, to audit the pre-move tree — but it is pinned by
+    # that ruling and no later task may drift it either. So it is guarded
+    # against the commit that gave it its present content rather than against
+    # the pre-move tree it audits, which it has legitimately differed from since
+    # `f703913`.
+    "python/tests/acceptance/test_n2_cut6.py": "c8c0b12",
+}
+"""Each prior-cut surface and the commit whose content it must still hold."""
 
 SYMBOL_KINDS = {
     "derive_producer_snapshot": "producer",
@@ -113,6 +122,18 @@ identity and knows nothing of kinds. Task 9 deliberately did not add
 there. Two copies of one table is a defect waiting to happen and is reported as
 a concern rather than hidden by a helper.
 """
+
+
+def test_the_duplicated_symbol_kind_join_still_agrees_with_its_original():
+    """The two copies of one table, pinned equal.
+
+    There is no public shipped-symbol -> receipt-kind join in `science`, so this
+    module carries a second copy of `test_world_build.SYMBOL_KINDS`. Two copies
+    of one table is a defect waiting to happen: a rename that updated one of
+    them would surface as a bare `KeyError` inside `shipped_bindings` rather
+    than as "the two tables disagree". This says which it is.
+    """
+    assert SYMBOL_KINDS == test_world_build.SYMBOL_KINDS
 
 
 def shipped_bindings(world: registry.World) -> epoch.DerivationBindings:
@@ -292,8 +313,9 @@ observed rather than assumed.
 """
 
 
-def _attempt(case, bindings, stage: str, standing: str) -> str:
+def _attempt(case, bindings, stage: str, standing: str, attempted: list[str]) -> str:
     """Kill one publication at `stage`, then re-enter through the barrier."""
+    attempted.append(stage)
     world, config = case["world"], case["config"]
     target = _target_identity(world, case["corpus_id"], bindings)
     calls: list[int] = []
@@ -364,8 +386,9 @@ def test_recovery_barrier_never_selects_partial_epoch(durable_world):
 
     _extra_record(case["corpus_root"], "before-the-commit-side")
     standing = first.packaging_identity
+    attempted: list[str] = []
     for stage in ("capture", "derive", "recheck", "plan", "pre-commit", "second-transaction"):
-        standing = _attempt(case, bindings, stage, standing)
+        standing = _attempt(case, bindings, stage, standing, attempted)
     assert standing != first.packaging_identity, (
         "`second-transaction` never fired, so the publication that followed it published nothing "
         "and the commit-side stages below would be exact rebuilds"
@@ -375,18 +398,12 @@ def test_recovery_barrier_never_selects_partial_epoch(durable_world):
     # they would fire against an empty plan and observe nothing.
     _extra_record(case["corpus_root"], "after-the-commit-side")
     for stage in ("post-commit", "read-back"):
-        standing = _attempt(case, bindings, stage, standing)
+        standing = _attempt(case, bindings, stage, standing, attempted)
 
-    assert set(PUBLICATION_STAGES) == {
-        "capture",
-        "derive",
-        "recheck",
-        "plan",
-        "pre-commit",
-        "second-transaction",
-        "post-commit",
-        "read-back",
-    }
+    # Every boundary was actually killed at, in order. A stage silently dropped
+    # from one of the two loops above is a boundary this arm claims to cover and
+    # does not, which nothing else here would notice.
+    assert tuple(attempted) == PUBLICATION_STAGES
 
 
 def test_publication_registration_names_epoch_and_current(durable_world):
@@ -707,7 +724,6 @@ class TestTheCut7InventoryIsExact:
             "world/derive.py",
             "world/epoch.py",
             "world/read.py",
-            "world/registry.py",
             "world/rules.py",
         }
 
@@ -722,15 +738,21 @@ class TestTheCut7InventoryIsExact:
 
 class TestNoPriorCutDeclarationIsRehomedOrEdited:
     def test_the_frozen_prior_cut_files_are_byte_identical_to_their_pinned_versions(self):
-        for path in FROZEN_PRIOR_CUT_FILES:
+        for path, pin in FROZEN_PRIOR_CUT_FILES.items():
             completed = subprocess.run(
-                ["git", "-C", str(REPO_ROOT), "diff", "--quiet", CUT6_SOURCE_COMMIT, "HEAD", "--", path],
+                ["git", "-C", str(REPO_ROOT), "diff", "--quiet", pin, "HEAD", "--", path],
                 check=False,
             )
             assert completed.returncode == 0, (
-                f"{path} has moved since {CUT6_SOURCE_COMMIT}; cut 5's and cut 6's declarations and "
-                "runners are frozen and cut 7 edits neither"
+                f"{path} has moved since {pin}; cut 5's and cut 6's declarations, runners and pinned "
+                "audit are frozen, and cut 7 edits none of them"
             )
+
+    def test_the_guard_covers_cut_6s_pinned_acceptance_module(self):
+        # Named rather than implied: it is the one prior-cut surface slice 2 did
+        # change, so a guard that quietly omitted it would stay green through a
+        # later edit to the very file an earlier ruling pinned.
+        assert "python/tests/acceptance/test_n2_cut6.py" in FROZEN_PRIOR_CUT_FILES
 
     def test_no_cut7_arm_claims_a_check_a_prior_cut_declared(self):
         prior = {check for arm in (*CUT5_ARMS, *CUT6_ARMS) for check in arm.checks}

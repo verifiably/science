@@ -288,15 +288,32 @@ def test_an_explicit_uncertified_acceptance_root_is_not_silently_replaced(monkey
     if not shm.is_dir():
         raise AssertionError("/dev/shm is required for the N2 child-environment regression")
     root = shm / f"science-n2-env-{os.getpid()}"
-    monkeypatch.setenv("SCIENCE_CUT4_ROOT", str(root))
-    monkeypatch.setenv("SCIENCE_CUT5_ROOT", str(root))
-    monkeypatch.setenv("SCIENCE_CUT6_ROOT", str(root))
+    for name in ("SCIENCE_CUT4_ROOT", "SCIENCE_CUT5_ROOT", "SCIENCE_CUT6_ROOT"):
+        monkeypatch.setenv(name, str(root))
     try:
         run = _run_check(
             "acceptance/test_durable_families.py::test_supersede_survives_facade_reload",
             None,
         )
         assert run.returncode == FAILED
+        # And the same, one variable later, for the cut-7 root.
+        #
+        # The other three are **unset** first, and that is what makes this
+        # non-vacuous rather than tidy: `cut7_work_directory` falls back to
+        # `work_directory`, which reads `SCIENCE_CUT4_ROOT`, so leaving that
+        # pointed at the uncertified directory would fail the child by a route
+        # that says nothing about `SCIENCE_CUT7_ROOT`. With only the cut-7
+        # variable set, the child reaches this directory through the forwarding
+        # in `_run_check` or not at all — and not at all means falling back to
+        # the certified default and reporting green for a root nobody certified.
+        for name in ("SCIENCE_CUT4_ROOT", "SCIENCE_CUT5_ROOT", "SCIENCE_CUT6_ROOT"):
+            monkeypatch.delenv(name)
+        monkeypatch.setenv("SCIENCE_CUT7_ROOT", str(root))
+        cut7 = _run_check(
+            "acceptance/test_n2_cut7.py::test_publication_registration_names_epoch_and_current",
+            None,
+        )
+        assert cut7.returncode == FAILED
     finally:
         shutil.rmtree(root, ignore_errors=True)
 

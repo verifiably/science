@@ -11,9 +11,8 @@ against `science/world.py`; slice 2 promoted that module to the
 `science/world/` package, and the cut records that cut 6's committed paths
 "remain historical evidence" rather than being recreated. Every arm below names
 a path that exists in the present tree — `world/epoch.py`, `world/read.py`,
-`world/rules.py`, `world/derive.py`, `world/registry.py`, `corpus.py`,
-`closure.py`, `belief.py`, `root.py` — and `test_n2_cut7.py` asserts none of
-them is `world.py`.
+`world/rules.py`, `world/derive.py`, `corpus.py`, `closure.py`, `belief.py`,
+`root.py` — and `test_n2_cut7.py` asserts none of them is `world.py`.
 
 **Every check is one test function, fully qualified.** The frozen cut's
 inventory names each check as ``<file>::<function>``; most of those functions
@@ -957,11 +956,18 @@ CUT7_ARMS: tuple[Arm, ...] = (
         sabotage=Sabotage(
             module="root.py",
             before=_REGISTERED_PATHS,
+            # All three halves at once, and that is the point rather than a
+            # convenience: this arm asserts rule install *and* rule removal
+            # *and* GC deletion, so a filter reaching only `rules/` would leave
+            # the deletion half unfalsified — a partly vacuous arm, which is
+            # exactly what this harness exists to refuse. `world.yaml`,
+            # `corpus.yaml` and `registry/` stay registered so the fixture's own
+            # construction is untouched and the arm fails on what it names.
             after=(
                 "            registered_paths=tuple(\n"
                 "                path\n"
                 "                for path in dict.fromkeys(operation.path for operation in plan)\n"
-                '                if not path.startswith("rules/")\n'
+                '                if not path.startswith(("rules/", "epochs/"))\n'
                 "            ),"
             ),
         ),
