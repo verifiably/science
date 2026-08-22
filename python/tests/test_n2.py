@@ -137,7 +137,7 @@ def _run_check(check: str, package: Path | None) -> CheckRun:
             f"{check!r} does not name one test function outside {HARNESS}; a check must name the one test it means"
         )
     env = {"PATH": "/usr/bin:/bin", "HOME": str(Path.home())}
-    for name in ("SCIENCE_CUT4_ROOT", "SCIENCE_CUT5_ROOT", "SCIENCE_CUT6_ROOT"):
+    for name in ("SCIENCE_CUT4_ROOT", "SCIENCE_CUT5_ROOT", "SCIENCE_CUT6_ROOT", "SCIENCE_CUT7_ROOT"):
         if name in os.environ:
             env[name] = os.environ[name]
     if package is not None:
