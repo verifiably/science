@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import IO
 
 from atoms.chain.errors import ChainStateInvalid
-from atoms.coordinator.commands import append_intent, register_root, run_transaction
+from atoms.coordinator.commands import append_intent, read_chain, register_root, run_transaction
 from atoms.core.effects import CreateDirectory, CreateFileNoClobber, DeletePath, Effect, ReplaceFile
 from atoms.core.errors import (
     AtomsError,
@@ -53,6 +53,7 @@ from science.corpus import CorpusWriter
 from science.errors import CorpusRootRefused, WorldIdMismatch
 from science.identity import v1
 from science.world import World, WorldConfig, _load_world_mirror, _world_mirror_bytes
+from science.world.rules import RuleBinding, install_rule_binding, shipped_rule_bundles
 
 __all__ = [
     "CONSUMER_TAG",
@@ -66,9 +67,11 @@ __all__ = [
     "WORLD_GENESIS_DOMAIN",
     "DurableExecutor",
     "DurableOperationPort",
+    "chain_head_reader",
     "durable_executor_factory",
     "init_corpus_root",
     "init_world_root",
+    "install_shipped_world_rules",
     "metadata_root_for",
     "open_corpus",
     "open_world",
@@ -568,6 +571,34 @@ def _world_executor_factory() -> Callable[[Path], DurableExecutor]:
     return _world_executor
 
 
+def _chain_head(root: Path) -> tuple[str, str]:
+    """One root's `(genesis_digest, tip)`, with recovery already completed.
+
+    `read_chain` takes the project lock and resolves recovery before it
+    projects, so the two digests are chain state rather than whatever a
+    survivor left behind. Only the digests are returned: the `ChainView` — its
+    entries, its engine types — stops here, which is what lets the world layer
+    anchor an epoch to a chain without importing the engine that keeps one.
+    """
+    view = read_chain(
+        _PRODUCTION_BACKEND,
+        str(root),
+        str(metadata_root_for(root)),
+        PRODUCTION_STORAGE,
+    )
+    return (view.genesis_digest, view.tip)
+
+
+def chain_head_reader() -> Callable[[Path], tuple[str, str]]:
+    """The stable root-taking chain reader a `World` is built with.
+
+    Stable in the same sense as `durable_executor_factory`: the same function
+    object every call, so a caller can assert that a world holds *this*
+    reader rather than one that merely behaves like it.
+    """
+    return _chain_head
+
+
 def open_corpus(corpus_root: Path) -> CorpusWriter:
     """The composition root's product: a write API bound to one corpus root,
     writing through the certified engine.
@@ -589,8 +620,26 @@ def open_corpus(corpus_root: Path) -> CorpusWriter:
     )
 
 
+def install_shipped_world_rules(world: World) -> tuple[RuleBinding, ...]:
+    """Hold this package's four v1 enumeration rules in one world — the
+    explicit act, never a side effect of initialization or opening.
+
+    It mirrors adoption: shipping content and holding it are two decisions, and
+    a world that installed whatever its installed package happened to carry
+    would be resolving receipts against a store nobody chose. Each bundle is
+    one create-only transaction, and re-running the act over unchanged content
+    submits none.
+    """
+    return tuple(install_rule_binding(world, bundle) for bundle in shipped_rule_bundles())
+
+
 def open_world(config: WorldConfig) -> World:
     mirror_id = _load_world_mirror(config.world_root)
     if mirror_id != config.world_id:
         raise WorldIdMismatch(f"{config.world_root / 'world.yaml'}: world_id does not match configuration")
-    return World(config, _world_executor_factory())
+    return World(
+        config,
+        _world_executor_factory(),
+        chain_head=chain_head_reader(),
+        corpus_executor_factory=durable_executor_factory(),
+    )

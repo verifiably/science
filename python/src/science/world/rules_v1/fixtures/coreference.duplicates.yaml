@@ -1,0 +1,70 @@
+# The duplicate-weighting arm, alone. Four submissions of one stance on one
+# grounds by one attester, differing only in the event token the ruling puts
+# deliberately outside the deduplication key (world address ruling §5.2). They
+# are one unit of weight ±1: a retry, a re-import, or an attempt to stack
+# weight cannot manufacture a balance. A reduction that counted records, or
+# that kept the event token in the key, publishes 4 for both members.
+input:
+  coverage: ["corpus-a", "corpus-b"]
+  records:
+    - corpus_id: "corpus-a"
+      address: "coreference:one"
+      uid: "uid-coreference-one"
+      kind: "coreference-attestation"
+      deprecated_ids: []
+      produces: []
+      retraction: null
+      certification: null
+      coreference:
+        endpoints: ["address-a", "address-b"]
+        stance: 1
+        actor: "alice"
+        grounds: "grounds-1"
+        event_token: "event-1"
+    - corpus_id: "corpus-a"
+      address: "coreference:two"
+      uid: "uid-coreference-two"
+      kind: "coreference-attestation"
+      deprecated_ids: []
+      produces: []
+      retraction: null
+      certification: null
+      coreference:
+        endpoints: ["address-a", "address-b"]
+        stance: 1
+        actor: "alice"
+        grounds: "grounds-1"
+        event_token: "event-2"
+    - corpus_id: "corpus-a"
+      address: "coreference:three"
+      uid: "uid-coreference-three"
+      kind: "coreference-attestation"
+      deprecated_ids: []
+      produces: []
+      retraction: null
+      certification: null
+      coreference:
+        endpoints: ["address-b", "address-a"]
+        stance: 1
+        actor: "alice"
+        grounds: "grounds-1"
+        event_token: "event-3"
+    - corpus_id: "corpus-b"
+      address: "coreference:four"
+      uid: "uid-coreference-four"
+      kind: "coreference-attestation"
+      deprecated_ids: []
+      produces: []
+      retraction: null
+      certification: null
+      coreference:
+        endpoints: ["address-a", "address-b"]
+        stance: 1
+        actor: "alice"
+        grounds: "grounds-1"
+        event_token: "event-4"
+expected:
+  pairs:
+    - endpoints: ["address-a", "address-b"]
+      balance: 1
+      distinct_key_count: 1

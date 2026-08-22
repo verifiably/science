@@ -1,0 +1,59 @@
+# The sorting arm. Every pair is authored with its endpoints reversed and the
+# pairs arrive in descending order, so a reduction that stored endpoints as
+# authored, or emitted pairs in encounter order, cannot produce these bytes.
+# Sorting the endpoints is also what makes `{A, B}` one pair however either
+# attestation was authored: `address-a`/`address-z` here is submitted both
+# ways and reduces to a single member.
+input:
+  coverage: ["corpus-a"]
+  records:
+    - corpus_id: "corpus-a"
+      address: "coreference:one"
+      uid: "uid-coreference-one"
+      kind: "coreference-attestation"
+      deprecated_ids: []
+      produces: []
+      retraction: null
+      certification: null
+      coreference:
+        endpoints: ["address-z", "address-m"]
+        stance: 1
+        actor: "alice"
+        grounds: "grounds-1"
+        event_token: "event-1"
+    - corpus_id: "corpus-a"
+      address: "coreference:two"
+      uid: "uid-coreference-two"
+      kind: "coreference-attestation"
+      deprecated_ids: []
+      produces: []
+      retraction: null
+      certification: null
+      coreference:
+        endpoints: ["address-z", "address-a"]
+        stance: 1
+        actor: "alice"
+        grounds: "grounds-1"
+        event_token: "event-2"
+    - corpus_id: "corpus-a"
+      address: "coreference:three"
+      uid: "uid-coreference-three"
+      kind: "coreference-attestation"
+      deprecated_ids: []
+      produces: []
+      retraction: null
+      certification: null
+      coreference:
+        endpoints: ["address-a", "address-z"]
+        stance: -1
+        actor: "bob"
+        grounds: "grounds-2"
+        event_token: "event-3"
+expected:
+  pairs:
+    - endpoints: ["address-a", "address-z"]
+      balance: 0
+      distinct_key_count: 2
+    - endpoints: ["address-m", "address-z"]
+      balance: 1
+      distinct_key_count: 1

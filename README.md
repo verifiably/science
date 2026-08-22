@@ -17,7 +17,7 @@ below for rationale and frozen guarantees.
 
 ## The designs
 
-Twenty-eight documents in `docs/designs/`: the banked redesigns, review disposition,
+Thirty documents in `docs/designs/`: the banked redesigns, review disposition,
 adoption ledger, measurements, rulings, and contributor-guide design written
 2026-08-02 through 2026-08-20. Read them in this order:
 
@@ -51,6 +51,8 @@ adoption ledger, measurements, rulings, and contributor-guide design written
 | `2026-08-19-conformance-cut-5.md` | the fifth frozen conformance cut, selecting the family-adapter implementation surface |
 | `2026-08-20-world-registry-design.md` | the world-index authoritative slice: world root and mirror, corpus manifest and fresh adoption, corpus-state identity, registry admission, and lifecycle status |
 | `2026-08-20-conformance-cut-6.md` | the sixth frozen conformance cut, selecting the world-registry slice's registry-side and identity arms: 2 rows full, 2 part, 1 deferred, with 8 labeled declarations |
+| `2026-08-20-world-index-slice-2-design.md` | the world-index epoch carrier: rules, coherent capture, four derived maps and receipts, publication, bounded reads, and whole-epoch GC |
+| `2026-08-20-conformance-cut-7.md` | the seventh frozen conformance cut, selecting the epoch carrier: 7 rows full, 4 part, with 38 selected and 10 labeled declarations |
 
 The ledger is the entry point for "what is built, what is not, and what waits on
 what." Every guarantee table is frozen under its identifiers: designs extend and
@@ -104,6 +106,14 @@ world root, corpus manifest and fresh adoption, corpus-state identity, registry
 admission, lifecycle status, and presence core now run, with **14 selected + 8
 labeled = 22 declarations** across **2 rows in full and 2 in part**; X7 remains
 fully deferred. See the [results](docs/plans/2026-08-20-conformance-cut-6-results.md).
+
+**Conformance cut 7** froze 2026-08-20 and was discharged 2026-08-21. The
+world-index epoch carrier — the rules store, coherent capture, four derived maps
+and their receipts, epoch publication with `current`, bounded reads, whole-epoch
+GC, and anchor carriage — now runs, with **38 selected + 10 labeled = 48
+declarations** across **7 rows in full and 4 in part**. See the
+[results](docs/plans/2026-08-20-conformance-cut-7-results.md). The work is on
+branch `design/world-index-slice-2` and **is not yet merged**.
 
 ```
 python/     the implementation (substrate §11 puts the composition root here)

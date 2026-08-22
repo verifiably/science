@@ -1,0 +1,7 @@
+# The captured view declares its coverage, and the coreference subject does not
+# carry it: an empty reduction is `pairs: []` and nothing else (§7.6).
+input:
+  coverage: ["corpus-a"]
+  records: []
+expected:
+  pairs: []

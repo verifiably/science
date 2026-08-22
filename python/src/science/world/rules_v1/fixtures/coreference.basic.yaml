@@ -1,0 +1,85 @@
+# Alice's two submissions differ only in their event token, which is outside
+# the deduplication key, so they are one unit; her second grounds is another.
+# Bob offsets, and does not retract. The second pair sits in another corpus,
+# because the reduction is over the declared coverage and not over one corpus.
+input:
+  coverage: ["corpus-a", "corpus-b"]
+  records:
+    - corpus_id: "corpus-a"
+      address: "coreference:one"
+      uid: "uid-coreference-one"
+      kind: "coreference-attestation"
+      deprecated_ids: []
+      produces: []
+      retraction: null
+      certification: null
+      coreference:
+        endpoints: ["address-b", "address-a"]
+        stance: 1
+        actor: "alice"
+        grounds: "grounds-1"
+        event_token: "event-1"
+    - corpus_id: "corpus-a"
+      address: "coreference:two"
+      uid: "uid-coreference-two"
+      kind: "coreference-attestation"
+      deprecated_ids: []
+      produces: []
+      retraction: null
+      certification: null
+      coreference:
+        endpoints: ["address-a", "address-b"]
+        stance: 1
+        actor: "alice"
+        grounds: "grounds-1"
+        event_token: "event-2"
+    - corpus_id: "corpus-a"
+      address: "coreference:three"
+      uid: "uid-coreference-three"
+      kind: "coreference-attestation"
+      deprecated_ids: []
+      produces: []
+      retraction: null
+      certification: null
+      coreference:
+        endpoints: ["address-a", "address-b"]
+        stance: 1
+        actor: "alice"
+        grounds: "grounds-2"
+        event_token: "event-3"
+    - corpus_id: "corpus-a"
+      address: "coreference:four"
+      uid: "uid-coreference-four"
+      kind: "coreference-attestation"
+      deprecated_ids: []
+      produces: []
+      retraction: null
+      certification: null
+      coreference:
+        endpoints: ["address-a", "address-b"]
+        stance: -1
+        actor: "bob"
+        grounds: "grounds-3"
+        event_token: "event-4"
+    - corpus_id: "corpus-b"
+      address: "coreference:five"
+      uid: "uid-coreference-five"
+      kind: "coreference-attestation"
+      deprecated_ids: []
+      produces: []
+      retraction: null
+      certification: null
+      coreference:
+        endpoints: ["address-c", "address-a"]
+        stance: -1
+        actor: "bob"
+        grounds: "grounds-4"
+        event_token: "event-5"
+expected:
+  pairs:
+    - endpoints: ["address-a", "address-b"]
+      balance: 1
+      distinct_key_count: 3
+    - endpoints: ["address-a", "address-c"]
+      balance: -1
+      distinct_key_count: 1

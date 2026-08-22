@@ -1,0 +1,40 @@
+# One dataset with two runs, one with one, and a repeated edge on one record
+# that adds nothing. Records, edges and coverage all arrive unsorted, and the
+# two runs sit in different corpora.
+input:
+  coverage: ["corpus-b", "corpus-a"]
+  records:
+    - corpus_id: "corpus-b"
+      address: "run:zulu"
+      uid: "uid-run-zulu"
+      kind: "run"
+      deprecated_ids: []
+      produces: ["dataset:zeta"]
+      retraction: null
+      certification: null
+      coreference: null
+    - corpus_id: "corpus-a"
+      address: "run:alpha"
+      uid: "uid-run-alpha"
+      kind: "run"
+      deprecated_ids: []
+      produces: ["dataset:zeta", "dataset:alpha", "dataset:alpha"]
+      retraction: null
+      certification: null
+      coreference: null
+    - corpus_id: "corpus-a"
+      address: "dataset:alpha"
+      uid: "uid-dataset-alpha"
+      kind: "dataset"
+      deprecated_ids: []
+      produces: []
+      retraction: null
+      certification: null
+      coreference: null
+expected:
+  producers:
+    - dataset: "dataset:alpha"
+      runs: ["run:alpha"]
+    - dataset: "dataset:zeta"
+      runs: ["run:alpha", "run:zulu"]
+  coverage: ["corpus-a", "corpus-b"]

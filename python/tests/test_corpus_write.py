@@ -23,6 +23,7 @@ from science import stored
 from science.corpus import CorpusWriter
 from science.errors import (
     BasisMissing,
+    BuildHold,
     CollisionRefused,
     EligibilityUnmet,
     ManifestAlreadyPresent,
@@ -421,3 +422,58 @@ class TestTheOperationLock:
         assert isinstance(outcome[0], CollisionRefused)
         assert len(plans) == 1
         assert not one.is_alive() and not two.is_alive()
+
+    def test_a_write_during_a_capture_refuses_and_commits_nothing(self, tmp_path):
+        """The build's capture excludes writers without queueing them: the add
+        refuses where it stands, and nothing of it reaches the executor."""
+        Recorder.plans = []
+        writer = CorpusWriter(tmp_path, Recorder)
+        node = observed_dataset("captured")
+        outcome: list[BaseException | None] = [None]
+
+        def add_under_capture():
+            try:
+                writer.add(node)
+            except BaseException as caught:  # noqa: BLE001 - the outcome is the assertion
+                outcome[0] = caught
+
+        with writer._state.lock.capture():
+            attempt = threading.Thread(target=add_under_capture)
+            attempt.start()
+            # Bounded: a writer that queued behind the capture would still be
+            # alive here, and this join would be the thing that reports it.
+            attempt.join(timeout=10)
+            assert not attempt.is_alive()
+
+        assert isinstance(outcome[0], BuildHold)
+        assert Recorder.plans == []
+        assert not writer.read_view.holds(node.id)
+
+    def test_cooperating_writers_still_serialize_and_succeed(self, tmp_path):
+        """No capture, no refusal: four writers released together all land."""
+        Recorder.plans = []
+        writers = [CorpusWriter(tmp_path, Recorder) for _ in range(4)]
+        nodes = [observed_dataset(f"co{index}") for index in range(4)]
+        together = threading.Barrier(len(writers))
+        failures: list[BaseException] = []
+
+        def add(writer, node):
+            try:
+                together.wait(timeout=10)  # every writer arrives at once
+                writer.add(node)
+            except BaseException as caught:  # noqa: BLE001 - the outcome is the assertion
+                failures.append(caught)
+
+        threads = [
+            threading.Thread(target=add, args=(writer, node))
+            for writer, node in zip(writers, nodes)
+        ]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(timeout=10)
+            assert not thread.is_alive()
+
+        assert failures == []
+        assert len(Recorder.plans) == len(nodes)
+        assert all(writers[0].read_view.holds(node.id) for node in nodes)

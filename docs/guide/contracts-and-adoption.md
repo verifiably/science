@@ -2,7 +2,7 @@
 title: Contracts and adoption
 status: living
 created: 2026-08-08
-updated: 2026-08-12
+updated: 2026-08-21
 sources:
   - ../designs/2026-08-03-normative-contract-design.md
   - ../designs/2026-08-03-redesign-adoption-ledger.md
@@ -13,6 +13,8 @@ sources:
   - ../designs/2026-08-09-conformance-cut-2.md
   - ../designs/2026-08-11-act-report-design.md
   - ../designs/2026-08-11-conformance-cut-3.md
+  - ../designs/2026-08-20-world-index-slice-2-design.md
+  - ../designs/2026-08-20-conformance-cut-7.md
 ---
 
 # Contracts and adoption
@@ -150,15 +152,13 @@ fitted result into independent validation.
 
 ## Current state
 
-The ledger records conformance cut 1 and the multi-corpus typing exercise as
-landed work. Conformance cut 2 is frozen and its slice landed 2026-08-09: the
-derived admission state, the assessment admission gate, the belief input
-closure digest, and `science.belief.v1` under an exact binding. The
-normative-contract design is banked, but a complete normative contract cut,
-instrument certification, persistence, world index, and mutation log remain
-outside all three cuts; run capture landed with cut 3's slice on 2026-08-12.
-Consult the ledger for the current state rather
-than carrying these sentences into a status report.
+Cuts 1–7 have landed their implementation slices. Cut 7 discharged the
+world-index epoch carrier — rules, coherent capture, derived maps and receipts,
+publication, bounded reads, GC, and anchor carriage — on a branch that is not
+yet merged. The complete normative contract cut, the two governed stored kinds,
+and mutation-log verification remain open.
+Consult the ledger for the current state rather than carrying these sentences
+into a status report.
 
 The contributor guide has no ledger artifact of its own. That is deliberate:
 it documents the system, does not implement a system boundary, and no adoption

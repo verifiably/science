@@ -60,6 +60,153 @@ class RegistryMalformed(ScienceError):
     """A world registry is malformed."""
 
 
+class RuleCollision(ScienceError):
+    """A content-addressed rule path exists with different bytes."""
+
+
+class RuleNonconformant(ScienceError):
+    """An implementation fails the normative fixtures at install."""
+
+
+class RuleNotHeld(ScienceError):
+    """An exact rule binding is absent at preflight or the pre-publication
+    recheck. Every failed identity recomputation, every unreadable stored
+    member and every fixture the stored implementation no longer satisfies
+    reaches the caller as this one refusal: the pair is not held, and a
+    partial hold is not a weaker kind of hold."""
+
+
+class RuleBindingUnknown(ScienceError):
+    """Explicit removal names no held exact pair. Removal is the inverse of the
+    install act, not a sweep: it unholds the one
+    ``(rule_identity, implementation_identity)`` it was handed, and a pair this
+    store does not hold is a refusal rather than a no-op, because a silent
+    success would tell its caller that evidence naming that pair had been
+    severed here when nothing was."""
+
+
+class EpochMalformed(ScienceError):
+    """An epoch carrier fails its closed layout or packaging identity. It is a
+    *carrier* failure: a receipt document that reaches the receipt validator
+    and violates the receipt contract is validation outcome ``malformed``, not
+    this."""
+
+
+class EpochUnknown(ScienceError):
+    """An explicitly named epoch does not exist. It is the honest answer to a
+    name — nothing is retained under this packaging identity, and nothing about
+    the bytes of any other epoch is implied. A world whose ``current`` pointer
+    has never been written answers the same way: it has published no epoch, and
+    inventing one to point at would be worse than saying so."""
+
+
+class EpochCurrent(ScienceError):
+    """Whole-epoch garbage collection named the epoch ``epochs/current`` names.
+    Deletion is explicit consumer policy, and the one epoch a world is pointing
+    at is not something a consumer may unpublish as a side effect of tidying:
+    the pointer would be left naming nothing, and every act that follows it
+    would refuse. Moving `current` is publication's business, so the refusal
+    names the state rather than offering to repoint it."""
+
+
+class BuildContended(ScienceError):
+    """An epoch build asked for a root's coherent capture and found the
+    operation lock already held. The build refuses at once rather than queue:
+    waiting behind a corpus operation is what would let a build park the
+    writer queue behind itself."""
+
+
+class BuildHold(ScienceError):
+    """A corpus write met an epoch build's coherent capture — present when the
+    write arrived, or begun and ended while the write waited in the writer
+    queue. The write is refused rather than re-queued, so a capture is never
+    something a writer can silently straddle."""
+
+
+class CoverageUnknown(ScienceError):
+    """A build declared a `corpus_id` the world has never admitted. Coverage is
+    declared, never inferred: a build that fell back to the registry's live set
+    would publish an epoch whose scope nobody chose, and a corpus whose only
+    credential is a manifest on a configured root has claimed admission rather
+    than been granted it."""
+
+
+class CoverageNotLive(ScienceError):
+    """A build declared an admitted `corpus_id` that has since been retired or
+    departed. Coverage is a statement about what the epoch *reports on*, and a
+    terminal corpus is one the world has said it no longer reports on."""
+
+
+class CoverageUnresolvable(ScienceError):
+    """A covered `corpus_id` has no presently configured carrier root, or more
+    than one. Both are the same failure — the build cannot say which bytes it
+    would capture — and neither is repairable by choosing: an epoch built from
+    whichever root sorted first would carry a state identity whose provenance
+    depended on configuration order."""
+
+
+class CaptureDrift(ScienceError):
+    """A covered corpus's state identity moved between the two computations
+    inside one capture hold. The hold excludes every corpus writer, so the
+    mover was a raw filesystem edit. The whole capture is discarded and nothing
+    is published; the build does not retry, because a silent retry would turn
+    an operator editing a corpus under a running build into a build that
+    eventually succeeded without saying so."""
+
+
+class EnumeratedKindUngoverned(ScienceError):
+    """A captured record claims a kind that one of the four epoch derivations
+    enumerates but that has no governed stored-kind definition (§13). The
+    record can be neither derived from — no contract says what its fields mean
+    — nor silently omitted, which would publish an enumeration that quietly
+    disagreed with the corpus it names. An *absence* of such records is an
+    ordinary empty enumeration and is not this."""
+
+
+class ResolutionRefused(ScienceError):
+    """A bound address resolution met ambiguity or corruption (§8.3).
+
+    Two configured roots claiming one `corpus_id`, a present carrier whose
+    manifest cannot be read, or a present carrier that does not produce the
+    `uid` the epoch mapped the address to. All three are refusals and none of
+    them is `NotPresent`: absence is "this corpus is not carried here", and
+    letting corruption borrow that answer would tell a caller the record is
+    safely elsewhere when what actually happened is that this world cannot say
+    what it holds.
+    """
+
+
+class EdgeIndeterminate(ScienceError):
+    """A coreference expansion would have traversed an indeterminate edge (§8.4).
+
+    Inspecting an edge state may answer `indeterminate`; *expanding* through
+    one may not, because an expansion that skipped the edge would be reporting
+    a coreference set as if the edge had been established inactive.
+
+    The refusal names every unestablished input rather than stating that
+    something was indeterminate: `missing_coverage` is the sorted live
+    `corpus_id` values the epoch's coverage does not contain, and
+    `receipt_outcome` is the exact non-``validated`` outcome of the coreference
+    receipt, or `None` where the receipt validated and only coverage was
+    short. A caller acts on those two differently — one is fixed by building a
+    wider epoch, the other by holding a rule or restoring a corpus — so a
+    generic message would be a refusal nobody can clear.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        missing_coverage: tuple[str, ...] = (),
+        receipt_outcome: str | None = None,
+    ) -> None:
+        if not missing_coverage and receipt_outcome is None:
+            raise ValueError("an indeterminate edge names at least one unestablished input")
+        super().__init__(message)
+        self.missing_coverage = missing_coverage
+        self.receipt_outcome = receipt_outcome
+
+
 class IdentityError(ScienceError):
     """A value or domain was refused by the identity contract."""
 

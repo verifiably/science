@@ -2,7 +2,7 @@
 title: Identity, world, and change
 status: living
 created: 2026-08-08
-updated: 2026-08-20
+updated: 2026-08-21
 sources:
   - ../designs/2026-08-02-substrate-consolidation-design.md
   - ../designs/2026-08-02-world-addressing-design.md
@@ -13,6 +13,8 @@ sources:
   - ../designs/2026-08-04-formal-model-and-claim-calculus-design.md
   - ../designs/2026-08-20-world-registry-design.md
   - ../designs/2026-08-20-conformance-cut-6.md
+  - ../designs/2026-08-20-world-index-slice-2-design.md
+  - ../designs/2026-08-20-conformance-cut-7.md
   - ../plans/2026-08-20-conformance-cut-6-results.md
 ---
 
@@ -78,10 +80,11 @@ states and world-level records through four maps:
 - target record to its retractions;
 - endpoint pair to its coreference balance.
 
-An epoch identity commits to its coverage and derived contents. A mutable
-“current epoch” pointer is an operational convenience only: belief and other
-scientific answers must bind to an explicit epoch and return that binding. An
-older epoch may answer only inside its stated coverage and state.
+An epoch's packaging identity commits to its coverage and derived contents. A
+mutable “current epoch” pointer is an operational convenience only: belief
+binds to an explicit producer-snapshot identity, while epoch read answers carry
+the packaging identity and coverage they came from. An older epoch may answer
+only inside its stated coverage and state.
 
 ### Correction is additive
 
@@ -131,9 +134,10 @@ that the operation was scientifically or administratively authorized.
 
 The authoritative world root, manifest, corpus-state identity, and append-only
 registry core are implemented, including fresh adoption, lifecycle status, and
-configured presence. Epoch publication, the four derived maps, global
-resolution, slice-2 build behavior, and anchor carriage and verification remain
-designed or deferred. The address ruling still governs the eventual derived
+configured presence. Epoch publication, the four derived maps and their
+fixture-bound receipts, bounded reads, whole-epoch GC, and anchor carriage are
+implemented too, on a branch not yet merged. Global resolution and anchor
+verification remain designed or deferred. The address ruling still governs the eventual derived
 views: labels are computed on read, coreference is graded rather than merged,
 and storage duplication changes no address.
 

@@ -124,9 +124,16 @@ The canonical genesis payload carries `WORLD_GENESIS_DOMAIN` and the supplied
 `world_id`. Registration is explicit and idempotent on the same payload and
 registered-root facts, exactly as corpus-root registration is today.
 
-The public engine has no chain-read API. Science therefore cannot read the
-genesis payload back during ordinary operation. Initialization writes a
-root-local `world.yaml` mirror with the closed shape:
+At this slice's freeze, the public engine had no chain-read API, so Science
+could not read the genesis payload back during ordinary operation.
+
+> **Dated recast 2026-08-20:** world-index slice 2 §2 now banks the prospective
+> public `atoms.read_chain` contract. Its implementation remains a prerequisite
+> to that slice. Genesis-to-mirror verification still waits on the
+> configuration-mismatch audit's ownership decision; reader availability no
+> longer owns that deferral.
+
+Initialization writes a root-local `world.yaml` mirror with the closed shape:
 
 ```yaml
 world_id: 0123456789abcdef0123456789abcdef
@@ -766,6 +773,20 @@ reviewed and banked. The first implementation task is the cross-repository
   the declared reservation remains ledger artifact 3 (§1.2).
 - **All derived world-index behavior:** epochs, maps, receipts, rules, current,
   staleness, GC, and anchored members remain slice 2.
+
+> **Dated amendment 2026-08-21.** Slice 2 has landed and conformance cut 7 is
+> discharged (`2026-08-20-world-index-slice-2-design.md`; results at
+> `../plans/2026-08-20-conformance-cut-7-results.md`), so the two deferrals above
+> that named it are answered: X5's build-side duplicate-carrier refusal is
+> implemented — a coverage naming two carriers with one `corpus_id` refuses
+> `CoverageUnresolvable` at preflight, with the `duplicate-carrier` finding still
+> emitted — and X7 is discharged in full, along with epochs, the four maps and
+> receipts, the rules store, `current`, bounded reads, GC, and anchored members.
+> The slice-1 boundary statements above are unchanged: they describe what slice 1
+> contains, and that is still what it contains. Slice 2 is on branch
+> `design/world-index-slice-2` and is **not yet merged**; fork construction,
+> genesis/mirror verification, registry deletion detection, cross-process writers,
+> and the reserved manifest path are untouched by it.
 
 No `atoms` amendment is required for slice 1. The mirror ruling removes the
 runtime genesis-read consumer, and the fork deferral removes the runtime

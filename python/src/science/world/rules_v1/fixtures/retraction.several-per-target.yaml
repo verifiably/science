@@ -1,0 +1,47 @@
+# The target-loss arm. `retraction:one` and `retraction:two` name one target,
+# which the event token makes two genuinely distinct retraction events
+# (correction lifecycle §4). An enumeration keyed by target publishes one of
+# them and silently drops the other; this enumeration is keyed by the
+# retraction, so all three survive and their resolutions stay attached.
+input:
+  coverage: ["corpus-a", "corpus-b"]
+  records:
+    - corpus_id: "corpus-a"
+      address: "retraction:one"
+      uid: "uid-retraction-one"
+      kind: "retraction"
+      deprecated_ids: []
+      produces: []
+      retraction:
+        target: "assessment:target"
+        resolution: "upheld"
+      certification: null
+      coreference: null
+    - corpus_id: "corpus-a"
+      address: "retraction:two"
+      uid: "uid-retraction-two"
+      kind: "retraction"
+      deprecated_ids: []
+      produces: []
+      retraction:
+        target: "assessment:target"
+        resolution: "overturned"
+      certification: null
+      coreference: null
+    - corpus_id: "corpus-b"
+      address: "retraction:three"
+      uid: "uid-retraction-three"
+      kind: "retraction"
+      deprecated_ids: []
+      produces: []
+      retraction:
+        target: "assessment:other"
+        resolution: "upheld"
+      certification: null
+      coreference: null
+expected:
+  found:
+    - ["retraction:one", "upheld"]
+    - ["retraction:three", "upheld"]
+    - ["retraction:two", "overturned"]
+  coverage: ["corpus-a", "corpus-b"]

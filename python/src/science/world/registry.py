@@ -5,7 +5,8 @@ from __future__ import annotations
 import json
 import re
 import threading
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
@@ -191,9 +192,35 @@ def _require_actor(actor: object) -> str:
 
 
 class World:
-    def __init__(self, config: WorldConfig, executor_factory: Callable[[Path], WritePlanExecutor]) -> None:
+    """One world root, its registry, and the two capabilities a build needs.
+
+    `chain_head` is the whole of Science's access to the engine's chain: it is
+    handed a root and answers `(genesis_digest, tip)`, having completed
+    recovery first. Nothing engine-shaped crosses this boundary — no
+    `ChainView`, no backend, no storage profile — which is what keeps
+    `science.root` the one module that imports `atoms`.
+
+    `corpus_executor_factory` is the factory the *corpus* write API is built
+    with, and it is here because a coherent capture must take the same
+    per-root operation lock a writer takes. `corpus._root_state_for` keeps one
+    state per root and refuses a second factory for a root it already holds, so
+    a build reaching for a corpus with the world's own factory would be a build
+    that could not run in a process that had also opened that corpus. It is
+    never used to write: a capture reads.
+    """
+
+    def __init__(
+        self,
+        config: WorldConfig,
+        executor_factory: Callable[[Path], WritePlanExecutor],
+        *,
+        chain_head: Callable[[Path], tuple[str, str]],
+        corpus_executor_factory: Callable[[Path], WritePlanExecutor],
+    ) -> None:
         self.config = config
         self._executor_factory = executor_factory
+        self._chain_head = chain_head
+        self._corpus_executor_factory = corpus_executor_factory
         with _WORLD_STATES_LOCK:
             self._state = _WORLD_STATES.setdefault(
                 str(config.world_root), _WorldState(threading.Lock(), RegistryView())
@@ -261,6 +288,30 @@ class World:
             )
             self._state.registry = _scan_registry(self.config.world_root)
             return next(record for record in self._state.registry.statuses if status_digest(record) == digest)
+
+
+@contextmanager
+def _locked_barrier(world: World) -> Iterator[Path]:
+    """The one world-lock acquisition and the recovery barrier, in that order.
+
+    Every act over ``epochs/`` — opening one, following ``current``, resolving
+    an address, publishing, deleting — begins the same way: take
+    `_WorldState.lock`, then hand the world root to the injected chain callback
+    so recovery of any interrupted transaction completes *inside* the critical
+    section. The order is the whole point (§8.1). Taking the lock second would
+    let a reader cross a barrier that a publication then invalidated; crossing
+    the barrier second, but outside the lock, would let two acts recover at
+    once.
+
+    The lock is not reentrant, so everything the body calls must be a
+    `_locked_*` helper that assumes the hold rather than taking it again. The
+    world root is yielded because every one of those helpers is keyed by it and
+    reading it twice from the config is how the two could drift apart.
+    """
+    with world._state.lock:
+        world_root = world.config.world_root
+        world._chain_head(world_root)
+        yield world_root
 
 
 class _ManifestLoader(yaml.SafeLoader):
@@ -520,9 +571,16 @@ def _scan_registry(root: Path) -> RegistryView:
         raise RegistryMalformed(f"{registry}: malformed registry: {caught}") from caught
 
 
-def _reduce_status(config: WorldConfig, view: RegistryView, corpus_id: str) -> CorpusStatus:
-    known = any(record.corpus_id == corpus_id for record in view.admissions)
-    live = known and not any(record.corpus_id == corpus_id for record in view.statuses)
+def _carrier_roots(config: WorldConfig, corpus_id: str) -> tuple[Path, ...]:
+    """Every configured root whose manifest presently claims `corpus_id`.
+
+    One authority for "which bytes are this corpus", read by the status
+    reduction and by a build's preflight alike. A root configured twice is one
+    carrier; a root with no manifest is not a carrier, because a directory that
+    has not yet adopted one has made no claim. A *malformed* manifest is
+    neither, and refuses: a root that claims something unreadable is a
+    configuration fault, not an absence.
+    """
     carriers: list[Path] = []
     for root in dict.fromkeys(path.resolve() for path in config.corpus_roots):
         try:
@@ -530,6 +588,13 @@ def _reduce_status(config: WorldConfig, view: RegistryView, corpus_id: str) -> C
                 carriers.append(root)
         except ManifestMissing:
             continue
+    return tuple(carriers)
+
+
+def _reduce_status(config: WorldConfig, view: RegistryView, corpus_id: str) -> CorpusStatus:
+    known = any(record.corpus_id == corpus_id for record in view.admissions)
+    live = known and not any(record.corpus_id == corpus_id for record in view.statuses)
+    carriers = _carrier_roots(config, corpus_id)
     findings: tuple[Finding, ...] = ()
     if len(carriers) > 1:
         detail = "carriers=" + ",".join(sorted(str(root) for root in carriers))
@@ -543,6 +608,24 @@ def _reduce_status(config: WorldConfig, view: RegistryView, corpus_id: str) -> C
             ),
         )
     return CorpusStatus(known, live, len(carriers) == 1, findings)
+
+
+def _live_corpus_ids(view: RegistryView) -> tuple[str, ...]:
+    """This world's live span: every admitted `corpus_id` with no terminal
+    status, sorted and distinct.
+
+    The registry's reduction and nothing else. A `corpus_id` this world has
+    been *configured* with a carrier root for is not in the span — a directory
+    on disk is a claim, and §2's admission is what grants one — and a corpus
+    that has been retired or departed has left it, which is exactly the fact
+    that makes an epoch built over a wider coverage keep answering.
+
+    `_reduce_status` answers the same question one `corpus_id` at a time and
+    reads the filesystem to do it, because it also reports presence. This does
+    not touch the filesystem at all: a span is a statement about the registry.
+    """
+    terminal = {record.corpus_id for record in view.statuses}
+    return tuple(sorted({record.corpus_id for record in view.admissions} - terminal))
 
 
 def _lift_json(value: object) -> object:

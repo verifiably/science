@@ -2,7 +2,7 @@
 title: Foundations
 status: living
 created: 2026-08-08
-updated: 2026-08-20
+updated: 2026-08-21
 sources:
   - ../designs/2026-08-02-epistemic-kernel-design.md
   - ../designs/2026-08-02-substrate-consolidation-design.md
@@ -143,10 +143,11 @@ structural or integrity finding, but it mints nothing and performs no repair.
 
 ## Current state
 
-The adoption ledger records six landed slices. Cut 6 implements the
+The adoption ledger records seven landed slices. Cut 6 implements the
 authoritative world root, manifest, corpus-state identity, and append-only
-registry core. Epoch publication, the four derived maps, global resolution,
-slice-2 build behavior, and anchor carriage and verification remain designed or
+registry core; cut 7 adds epoch publication, the four derived maps and their
+receipts, bounded reads, whole-epoch GC, and anchor carriage, on a branch not
+yet merged. Global resolution and anchor verification remain designed or
 deferred.
 
 ## Open edges
