@@ -1,6 +1,6 @@
 """N2 over cut 7's 48 frozen epoch-carrier arms, and the acceptance nodes four of them name.
 
-**Three things live here and they are not the same thing.**
+**Four things live here and they are not the same thing.**
 
 1. **The declaration accounting.** `docs/designs/2026-08-20-conformance-cut-7.md`
    is the frozen authority: §3's `Selected` and `Labeled` bullets *are* the unit
@@ -22,6 +22,18 @@
    `test_anchored_head_describes_the_captured_corpus_view`, is portable and is
    not a declared check — it is the **witness** X9's relocated-head arm is
    measured against, and §6.1 finding 6 is why it exists.
+
+4. **The acceptance surface itself**, which is wider than the declarations. The
+   *portable journey* walks one world end to end — four shipped rules held
+   explicitly, two corpora admitted, two epochs published and read back, all
+   four receipts validated, every arm of §8.3's resolution union and every
+   §8.4 edge state this slice can reach, then the rule removal and the
+   whole-epoch deletion with their sever reports — and asserts nothing about
+   crashes. `test_published_anchors_name_the_committed_chains` is its durable
+   counterpart: the anchored triples, compared against the engine's own
+   committed entries rather than against the callback that produced them.
+   Neither is a declared check; both are what `tools/cut7_acceptance.py`
+   discharges the cut by running.
 
 **Why the witness exists.** Cut 7 §3.1 requires the head-relocation sabotage to
 interpose a real corpus write between the state capture and the relocated head
@@ -73,10 +85,13 @@ from nodes.core.corpus import Corpus
 from nodes.core.write_plan import DefaultExecutor
 from test_durable_families import chain_entries
 from test_n2 import MalformedArm, audit, baseline
-from test_world_build import ALPHA, corpus_at, sample_nodes
+from test_world_build import ALPHA, BETA, corpus_at, sample_nodes
+from test_world_read import RETIRED, coreference_successor, linked_nodes
+from test_world_receipts import corpora, document, publish, world_over
 
 from science import root, stored
-from science.world import epoch, read, registry, rules
+from science.errors import EpochCurrent, EpochUnknown
+from science.world import derive, epoch, read, registry, rules
 
 WORKERS = 8
 _COUNTER = count()
@@ -204,6 +219,321 @@ def test_anchored_head_describes_the_captured_corpus_view(tmp_path):
     assert anchor.subject == ALPHA
     assert anchor.head_digest == dict(published.coverage)[ALPHA]
     assert published.world_anchor.subject == world.config.world_id
+
+
+# --- the portable journey -----------------------------------------------------
+#
+# One world, walked end to end with the portable executor: the four shipped
+# rules explicitly held, two corpora admitted, two epochs published, both read
+# back, all four receipts validated, every arm of the resolution union and every
+# edge state this slice can reach exercised, and then the two severing acts.
+#
+# It asserts nothing about crashes. Durability is the certified tuple's subject
+# and it is claimed below, by arms that read the engine's own chain; what these
+# arms claim is that the acts of the slice compose — that the epoch a build
+# published is the epoch `current` selects, that the receipts it carries resolve
+# against the store the build read them from, and that removing one of those
+# inputs is reported rather than discovered later as an unresolvable receipt.
+
+
+DERIVATION_KINDS: tuple[derive.ReceiptKind, ...] = (
+    "producer",
+    "retraction-enumeration",
+    "certification-enumeration",
+    "coreference-reduction",
+)
+"""§7.5's four kinds, spelled as the literal type `validate_receipt` takes.
+
+`epoch.DERIVATION_KINDS` is the same four as plain text, and
+`test_the_receipt_kinds_walked_here_are_the_four_the_carrier_declares` pins the
+two equal. They are written out rather than cast because a cast would make a
+fifth kind — or a renamed one — a runtime surprise instead of a type error.
+"""
+
+
+@dataclasses.dataclass(frozen=True)
+class Journey:
+    """One walked world: its corpora, its build input, and its two epochs.
+
+    `superseded` is the first publication, still retained and still openable by
+    identity; `current` is the second, which the pointer names. Two are needed
+    rather than one because the two acts at the end of the walk are about the
+    difference: an epoch may be deleted only when it is not the current one, and
+    a sever report is a statement about what the *other* retained epochs still
+    carry.
+    """
+
+    world: registry.World
+    roots: dict[str, Path]
+    bindings: epoch.DerivationBindings
+    superseded: epoch.Epoch
+    current: epoch.Epoch
+
+
+def journey_corpora(tmp_path: Path) -> dict[str, Path]:
+    """Two corpora: one carrying a retired address, both carrying linked runs.
+
+    The runs are what the coreference successor below reduces into pairs, and
+    the retired address is what makes `NotPresent` distinguishable from
+    `Unknown` — §7.2 records a `deprecated_ids` entry exactly as it records a
+    live one, so the address survives its corpus going away. Exactly one corpus
+    carries it: `derive.address_map` refuses a repeated address even when the
+    two claims agree.
+    """
+    withdrawn = stored.dataset_node("a-successor", title="dataset a successor")
+    return corpora(
+        tmp_path,
+        {
+            ALPHA: (*linked_nodes("a"), withdrawn.model_copy(update={"deprecated_ids": [RETIRED]})),
+            BETA: linked_nodes("b"),
+        },
+        prefix="journey",
+    )
+
+
+@pytest.fixture()
+def journey(tmp_path) -> Journey:
+    """The whole build path, run for real, before any arm asserts anything.
+
+    The four shipped rules are held by the composition root's own explicit act
+    and the coreference rule is then *also* bound to a sibling implementation:
+    the shipped reduction reads an attestation kind §13 defers, so on a real
+    corpus it publishes an empty map and every edge in it is `inactive`. The
+    successor reduces `produces` edges instead, satisfies every normative
+    fixture of the rule it implements, and is what lets `active` be reached at
+    all in this slice.
+    """
+    roots = journey_corpora(tmp_path)
+    world = world_over(tmp_path, roots, name="journey-world")
+    bindings = dataclasses.replace(
+        shipped_bindings(world),
+        coreference=rules.install_rule_binding(world, coreference_successor()),
+    )
+    superseded = publish(world, (ALPHA, BETA), bindings)
+    _extra_record(roots[BETA], "b-later")
+    current = publish(world, (ALPHA, BETA), bindings)
+    assert current.packaging_identity != superseded.packaging_identity
+    return Journey(world, roots, bindings, superseded, current)
+
+
+def test_the_receipt_kinds_walked_here_are_the_four_the_carrier_declares():
+    assert DERIVATION_KINDS == epoch.DERIVATION_KINDS
+
+
+def test_a_published_epoch_opens_by_identity_and_through_current(journey: Journey):
+    """Both ways in, and they reach the same bytes.
+
+    Opening by identity is a question about one carrier; opening through
+    `current` is a question about the pointer *and* that carrier. A world where
+    the two disagreed would publish one epoch and serve another, so the two
+    routes are asserted to land on the same eleven members rather than merely on
+    the same name.
+    """
+    by_identity = read.open_epoch(journey.world, journey.current.packaging_identity)
+    through_current = read.current_epoch(journey.world)
+    assert by_identity.packaging_identity == journey.current.packaging_identity
+    assert through_current.packaging_identity == journey.current.packaging_identity
+    assert dict(by_identity.members) == dict(through_current.members)
+    assert set(by_identity.members) == set(epoch.EPOCH_MEMBERS)
+    assert epoch.packaging_identity_of(by_identity.members) == by_identity.packaging_identity
+
+    # The superseded epoch is retained, not overwritten: publication replaces a
+    # pointer and nothing else.
+    earlier = read.open_epoch(journey.world, journey.superseded.packaging_identity)
+    assert earlier.packaging_identity == journey.superseded.packaging_identity
+    assert earlier.packaging_identity != through_current.packaging_identity
+
+    with pytest.raises(EpochUnknown):
+        read.open_epoch(journey.world, "0" * 64)
+
+
+def test_all_four_receipts_validate_against_the_world_that_published_them(journey: Journey):
+    """Nothing has moved since capture, so every receipt rebuilds to its subject.
+
+    This is the baseline the two severing arms below are read against: a
+    ``validated`` receipt is one whose exact pair is still held here and whose
+    named corpora still stand where they stood, re-derived and compared byte for
+    byte. An arm that only ever saw a broken receipt would not know which half
+    of that the break was.
+    """
+    outcomes = {kind: read.validate_receipt(journey.world, journey.current, kind) for kind in DERIVATION_KINDS}
+    assert len(outcomes) == 4
+    for kind, outcome in outcomes.items():
+        assert outcome.kind == kind
+        assert outcome.outcome == "validated", (kind, outcome.detail)
+        assert outcome.validated
+
+
+def test_resolution_answers_resolved_not_present_and_unknown(journey: Journey):
+    """§8.3's three arms, all three from one publication.
+
+    The line between `NotPresent` and `Unknown` is what the epoch recorded and
+    never what is here now, so both are taken against the *same* epoch: one
+    address it recorded whose corpus has stopped being carried, and one address
+    it never observed at all.
+    """
+    addresses = {
+        entry["address"]: (entry["corpus_id"], entry["uid"])
+        for entry in document(journey.current, "address-map.yaml")["addresses"]
+    }
+    stamp = read.BoundStamp(journey.current.packaging_identity, journey.current.coverage)
+
+    resolved = read.resolve_address(journey.world, journey.current, "dataset:a")
+    assert isinstance(resolved, read.Resolved)
+    assert resolved.location == read.Location(*addresses["dataset:a"])
+    assert resolved.stamp == stamp
+
+    # A retired address is a recorded one, and resolves to its successor's uid.
+    retired = read.resolve_address(journey.world, journey.current, RETIRED)
+    assert isinstance(retired, read.Resolved)
+    assert retired.location == read.Location(*addresses[RETIRED])
+
+    unknown = read.resolve_address(journey.world, journey.current, "dataset:never-observed")
+    assert isinstance(unknown, read.Unknown)
+    assert unknown.stamp == stamp
+
+    # Now BETA stops answering to its `corpus_id`. The epoch still records what
+    # it carried, so those addresses are absent rather than unknown.
+    (journey.roots[BETA] / "corpus.yaml").unlink()
+    absent = read.resolve_address(journey.world, journey.current, "dataset:b")
+    assert isinstance(absent, read.NotPresent)
+    assert absent.stamp == stamp
+    assert isinstance(read.resolve_address(journey.world, journey.current, "dataset:a"), read.Resolved)
+    assert isinstance(
+        read.resolve_address(journey.world, journey.current, "dataset:never-observed"), read.Unknown
+    )
+
+
+def test_edges_answer_active_inactive_and_indeterminate(journey: Journey):
+    """§8.4's three states, and the expansion that refuses rather than guess.
+
+    `active` and `inactive` come from the stored balance of a reduction this
+    world can still stand behind. `indeterminate` is reached here through the
+    coverage half of §8.4 — a live corpus the publication never observed — and
+    through the receipt half in the removal arm below, which is the other input
+    the section names.
+    """
+    assert read.EDGE_STATES == ("active", "inactive", "indeterminate")
+
+    active = read.coreference_edge(journey.world, journey.current, "run:a", "dataset:a")
+    assert active.state == "active"
+    assert active.missing_coverage == () and active.receipt_outcome is None
+
+    # A pair the reduction never recorded is established `inactive`, not unknown.
+    inactive = read.coreference_edge(journey.world, journey.current, "run:a", "run:a-two")
+    assert inactive.state == "inactive"
+    assert read.expand_coreference(journey.world, journey.current, "dataset:a") == ("run:a", "run:a-two")
+
+    # An epoch over ALPHA alone did not observe BETA, which is live here.
+    narrow = publish(journey.world, (ALPHA,), journey.bindings)
+    narrowed = read.coreference_edge(journey.world, narrow, "run:a", "dataset:a")
+    assert narrowed.state == "indeterminate"
+    assert narrowed.missing_coverage == (BETA,)
+    assert narrowed.receipt_outcome is None
+    with pytest.raises(read.EdgeIndeterminate) as refusal:
+        read.expand_coreference(journey.world, narrow, "dataset:a")
+    assert refusal.value.missing_coverage == (BETA,)
+
+
+def test_removing_a_binding_reports_the_receipts_it_severed(journey: Journey):
+    """§4.3: the removal names what lost this store's resolution path.
+
+    Both retained epochs carry a coreference receipt naming the removed pair, so
+    both identities are severed, and the report is the *only* place that is said
+    — after the act, the receipts are simply ``unresolvable`` and nothing
+    remains to say what made them so.
+    """
+    severed_here = set()
+    for published in (journey.superseded, journey.current):
+        identity = published.receipts["coreference-receipt.yaml"].identity
+        assert identity is not None
+        severed_here.add(identity)
+
+    report = rules.remove_rule_binding(journey.world, journey.bindings.coreference)
+    assert report.binding == journey.bindings.coreference
+    assert set(report.severed_receipts) == severed_here
+    assert report.severed_receipts == tuple(sorted(severed_here))
+
+    # The consequence the report predicted, now observable.
+    outcome = read.validate_receipt(journey.world, journey.current, "coreference-reduction")
+    assert outcome.outcome == "unresolvable"
+    answer = read.coreference_edge(journey.world, journey.current, "run:a", "dataset:a")
+    assert answer.state == "indeterminate"
+    assert answer.receipt_outcome == "unresolvable"
+    assert answer.missing_coverage == ()
+    with pytest.raises(read.EdgeIndeterminate) as refusal:
+        read.expand_coreference(journey.world, journey.current, "dataset:a")
+    assert refusal.value.receipt_outcome == "unresolvable"
+
+    # The three receipts whose pairs are still held are untouched: removal is
+    # the inverse of one installation and nothing wider.
+    for kind in ("producer", "retraction-enumeration", "certification-enumeration"):
+        still = read.validate_receipt(journey.world, journey.current, kind)
+        assert still.outcome == "validated", (kind, still.detail)
+
+
+def _receipt_identities(published: epoch.Epoch) -> set[str]:
+    """The four receipt identities one epoch carries, read off its carriers."""
+    identities = set()
+    for member in sorted(epoch.RECEIPT_KINDS):
+        identity = published.receipts[member].identity
+        assert identity is not None, member
+        identities.add(identity)
+    assert len(identities) == 4
+    return identities
+
+
+def _snapshot_identity(published: epoch.Epoch) -> str:
+    """§9's fifth identity: the producer snapshot's own subject identity.
+
+    Taken from the producer receipt's `subject`, which is what digests the
+    projection — not from the receipt's identity, which digests the capture as
+    well and therefore moves whenever any covered corpus does.
+    """
+    subject = published.receipts["producer-receipt.yaml"].subject_identity
+    assert subject is not None
+    return subject
+
+
+def test_deleting_a_noncurrent_epoch_reports_the_identities_it_severed(journey: Journey):
+    """§9: the current epoch is undeletable, and the other one reports both answers.
+
+    The record added between the two publications is a plain dataset, so it
+    moved BETA's corpus state and changed no `produces` edge. That splits the
+    report exactly along the line §9 draws. All four receipt identities digest
+    the captured `corpus_states`, so all four are severed — including the
+    *producer receipt*. The *producer snapshot* identity digests the projection
+    instead, the projection did not move, and the current epoch still carries
+    it: `retained_elsewhere`, and not severed.
+
+    Both answers in one report is the point. A fixture where everything severed
+    would leave the flag asserted in one direction only, which is how a report
+    that always said `False` would go unnoticed.
+    """
+    with pytest.raises(EpochCurrent):
+        epoch.delete_epoch(journey.world, journey.current.packaging_identity, actor="cut7-acceptance")
+
+    report = epoch.delete_epoch(
+        journey.world, journey.superseded.packaging_identity, actor="cut7-acceptance"
+    )
+    assert report.actor == "cut7-acceptance"
+    assert report.packaging_identity == journey.superseded.packaging_identity
+    assert report.snapshot is not None
+    assert report.snapshot.subject == epoch.SNAPSHOT_SUBJECT
+    assert report.snapshot.retained_elsewhere is True
+    assert report.snapshot.identity == _snapshot_identity(journey.current)
+
+    assert {entry.subject for entry in report.receipts} == set(DERIVATION_KINDS)
+    assert not any(entry.retained_elsewhere for entry in report.receipts)
+    severed_receipts = {entry.identity for entry in report.receipts}
+    assert severed_receipts == _receipt_identities(journey.superseded)
+    assert severed_receipts.isdisjoint(_receipt_identities(journey.current))
+    assert report.severed == tuple(sorted(severed_receipts))
+
+    # Deleted whole, and the pointer is untouched.
+    with pytest.raises(EpochUnknown):
+        read.open_epoch(journey.world, journey.superseded.packaging_identity)
+    assert read.current_epoch(journey.world).packaging_identity == journey.current.packaging_identity
 
 
 # --- the certified tuple ------------------------------------------------------
@@ -442,6 +772,69 @@ def test_publication_registration_names_epoch_and_current(durable_world):
         f"epochs/{second.packaging_identity}/{member}" for member in epoch.EPOCH_MEMBERS
     } | {pointer}
     assert read.current_epoch(case["world"]).packaging_identity == second.packaging_identity
+
+
+def _chain_bounds(chain_root: Path) -> tuple[str, str]:
+    """One root's `(genesis_digest, tip)`, decoded from the engine's own entries.
+
+    Read off the committed chain files rather than through
+    `root.chain_head_reader()`, which is the very callback the anchoring layer
+    was handed: asking that callback again would compare the world's answer with
+    itself. `atoms` states the correspondence — a `ChainView`'s genesis digest is
+    its first entry's and its tip is the last — and consuming it here is the
+    consumption cut 7 §5 allows, not a second certification of `read_chain`.
+    """
+    entries = chain_entries(chain_root)
+    assert entries, f"{chain_root}: the engine's chain carries no entry to anchor against"
+    return (entries[0][0], entries[-1][0])
+
+
+def test_published_anchors_name_the_committed_chains(durable_world):
+    """X2/X9 durably: the anchored tuple names the chains the engine actually kept.
+
+    Portably the head callback is a stub, so "the epoch anchored a head" is a
+    statement about a fixture. Here the world is the composition root's own
+    product, its callback is the engine's chain reader, and the triples the
+    carrier published are compared against the entries on disk.
+
+    The world anchor is taken **before** the publication because §5.2 captures
+    it at build start: the transaction that writes the epoch moves the world
+    chain past the head that epoch anchored, and an anchor that had followed it
+    would be naming the act rather than its starting point. The corpus anchor is
+    taken after, and must not have moved — nothing wrote to the corpus.
+    """
+    case = durable_world
+    world = case["world"]
+    bindings = shipped_bindings(world)
+    world_at_build_start = _chain_bounds(case["world_root"])
+    corpus_chain = _chain_bounds(case["corpus_root"])
+
+    published = epoch.build_epoch(world, coverage=frozenset({case["corpus_id"]}), bindings=bindings)
+
+    (anchor,) = published.anchors
+    assert anchor.subject == case["corpus_id"]
+    assert (anchor.genesis_digest, anchor.head_digest) == corpus_chain
+    assert _chain_bounds(case["corpus_root"]) == corpus_chain, (
+        "nothing wrote to the corpus, so the chain the epoch anchored is still its chain"
+    )
+
+    assert published.world_anchor.subject == case["config"].world_id
+    assert (
+        published.world_anchor.genesis_digest,
+        published.world_anchor.head_digest,
+    ) == world_at_build_start
+
+    genesis, moved_tip = _chain_bounds(case["world_root"])
+    assert genesis == world_at_build_start[0]
+    assert moved_tip != world_at_build_start[1], (
+        "the publication committed, so the world chain moved past the head the epoch anchored"
+    )
+
+    # The captured state and the anchored head describe one view of one corpus,
+    # which is what the portable witness above asserts against a stub.
+    assert dict(published.coverage) == {
+        case["corpus_id"]: registry.corpus_state_identity(case["corpus_root"])
+    }
 
 
 def test_world_transactions_register_every_path(durable_world):
