@@ -153,7 +153,14 @@ class TestTheTwoIdentities:
 
     def test_the_symbol_moves_only_the_rule_identity(self):
         assert rules.rule_identity("other_symbol", FIXTURES) != rules.rule_identity(SYMBOL, FIXTURES)
-        assert rules.fixture_set_identity(FIXTURES) == rules.fixture_set_identity(FIXTURES)
+        # Not `fixture_set_identity(FIXTURES) == fixture_set_identity(FIXTURES)`,
+        # which cannot fail: the function takes no symbol. What can fail is the
+        # symbol leaking into the *fixture-set half* of the rule identity — a
+        # salted or symbol-mixed fixture-set digest — so pin that the changed
+        # symbol reuses the unchanged fixture-set identity verbatim.
+        assert rules.rule_identity("other_symbol", FIXTURES) == v1.digest(
+            rules.RULE_DOMAIN, ["other_symbol", rules.fixture_set_identity(FIXTURES)]
+        )
         assert rules.binding_for(bundle()).implementation_identity == rules.implementation_identity(SOURCE)
 
     def test_a_fixture_name_moves_both_identities(self):

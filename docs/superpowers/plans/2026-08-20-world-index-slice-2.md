@@ -1,8 +1,8 @@
 # World Index Slice 2 Implementation Plan
 
 **Status:** Executed. All 14 tasks are complete (plus an inserted Task 13.5 that restored
-the project-wide Pyright gate) on branch `design/world-index-slice-2`, head `be96250`, base
-`f3a14bf`. Conformance cut 7's 48 declarations are discharged on the certified tuple; the
+the project-wide Pyright gate) on branch `design/world-index-slice-2`, based on `f3a14bf` on
+`main`; see the branch's close-out commit for the final documentation state. Conformance cut 7's 48 declarations are discharged on the certified tuple; the
 results are recorded in `docs/plans/2026-08-20-conformance-cut-7-results.md`.
 
 **This branch is not merged.** There is no integration commit, and nothing here claims one.

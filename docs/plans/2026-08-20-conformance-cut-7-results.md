@@ -11,8 +11,9 @@ here.** Cut 7 froze on 2026-08-20 and results are recorded separately, which is
 what this document is.
 
 **Integration state.** Every commit named below is on the implementation branch
-`design/world-index-slice-2`, whose head is `be96250` and whose base is
-`f3a14bf` on `main`. **This branch is not merged.** There is no integration
+`design/world-index-slice-2`, whose base is `f3a14bf` on `main`; see the
+branch's close-out commit for the final documentation state. **This branch is
+not merged.** There is no integration
 commit, and no claim in this record depends on one. Read §7 before merging: the
 branch has a history-preservation constraint.
 
@@ -141,7 +142,7 @@ corpora.
 
 ## 3. Commit identities
 
-Base `f3a14bf` on `main`; head `be96250`. In order:
+Base `f3a14bf` on `main`. The commits this discharge measured, in order:
 
 | commit | subject |
 |---|---|
@@ -288,6 +289,26 @@ The audit resolves `4a7dc19` as a real object; if that commit is not reachable
 from the integration commit, the cut-6 acceptance runner cannot check out the
 tree its arms name and there is no way to repair it without editing a frozen
 cut. Integrate with a merge that preserves this branch's history.
+
+**It reds cut 7 as well, and loudly.** `tests/acceptance/test_n2_cut7.py`'s
+`FROZEN_PRIOR_CUT_FILES` pins five prior-cut surfaces — cut 5's and cut 6's
+declaration modules, both runners, and cut 6's amended acceptance module —
+against `4a7dc19` and `c8c0b12`. The guard shells out to `git diff --quiet
+<pin> HEAD`; an unreachable pin makes git exit 128, which is not 0, so the
+assertion fires with the path and the pin named. That is the useful asymmetry:
+cut 6 degrades into an acceptance run that cannot check out the tree its arms
+name, while cut 7 fails in the ordinary test suite with a message that says
+which commit went missing.
+
+**Mitigation: put a signed git tag on `4a7dc19`** (and keep `c8c0b12`
+reachable), so neither commit can be collected as an unreferenced object.
+
+**The lifetime of this constraint is indefinite.** It is not discharged by
+merging: `4a7dc19` and `c8c0b12` must stay reachable from *every future
+integration commit*, not merely from the first one. Any later history rewrite —
+a repository migration, a `filter-branch`, an archival squash of old branches —
+silently inherits it as a blocker, and per the frozen-cut rule the resulting red
+cannot be repaired by editing the cut.
 
 ## 8. Known limitations of the landed implementation
 

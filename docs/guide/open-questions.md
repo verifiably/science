@@ -146,6 +146,16 @@ implementation**: a guarantee row awaiting code is work, not a question.
 - **Multi-product workflows.** Dataset-production v1 emits one product. A later
   shape needs to say whether one differing product fails the whole replay or
   creates separately verifiable results. ([computation question](../designs/2026-08-02-computation-reproducibility-design.md#13-open-questions))
+- **A publishable belief-input snapshot.** Recomputing a belief without holding
+  the corpora needs the digest's members published apart from the content they
+  name. The world index already carries one such member, which argues for a
+  single artifact — an argument, not yet a decision.
+  ([computation question](../designs/2026-08-02-computation-reproducibility-design.md#13-open-questions))
+- **Where the scope-derivation rule is versioned.** That rule's identity enters
+  every verification address, so it needs one: with the belief policy, with
+  `science.identity.v1`, or on its own.
+  ([computation question](../designs/2026-08-02-computation-reproducibility-design.md#13-open-questions))
+
 ## Contracts and adoption
 
 - **Recency and corroboration — the holdings record's residue.** The

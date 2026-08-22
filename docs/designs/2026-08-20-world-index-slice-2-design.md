@@ -4,7 +4,8 @@
 **Status:** Banked 2026-08-20 with conformance cut 7. Amended 2026-08-21 to pin
 the four receipt-subject projection identities and the member-content digest
 algorithm; cut-7 accounting is unchanged. **Implemented on branch
-`design/world-index-slice-2` (head `be96250`, base `f3a14bf`) and cut 7's 48
+`design/world-index-slice-2`, based on `f3a14bf` on `main` — see the branch's
+close-out commit for the final documentation state — and cut 7's 48
 declarations discharged on the certified tuple — see
 `../plans/2026-08-20-conformance-cut-7-results.md`. That branch is not merged:
 there is no integration commit, and it must be integrated preserving history
