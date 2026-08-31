@@ -48,9 +48,10 @@ Rulings from the 2026-08-31 session, recorded so they are not re-derived.
    deterministic server-side handler, and one harness-neutral prompt teaching
    an agent when and how to invoke it — the prompt is the agent-side
    workflow, not sugar. CLI and MCP expose handlers 1:1. Kernel primitives
-   are never exposed publicly: the endpoint receives a command name and
-   inputs and nothing else, selects the handler, binds actor and effective
-   permit, and performs the kernel calls internally. A unit that only
+   are never exposed publicly: the endpoint receives a command name, its
+   inputs and the protocol fields of §6 — nothing else — selects the
+   handler, binds actor and effective permit, and performs the kernel calls
+   internally. A unit that only
    orchestrates other commands and owns no deterministic endpoint is a
    skill, not a command.
 3. **A command's source is a directory**: `commands/<name>/command.toml`
@@ -117,9 +118,15 @@ families = ["registry", "epoch", "corpus-stored"]
   families and no others; nothing at runtime scopes what a handler may read.
   A runtime read facade is a possible later hardening and is not claimed
   here. Write classes, by contrast, *are* runtime-enforced (§4).
-- **`output_budget`** is required, in bytes, with no default and no
-  framework maximum in this sub-project; §5.3 of the layer design makes it
-  the contract, and the renderer (§7) makes it a test.
+- **`output_budget`** is required, in bytes, with no default, and must be
+  at least **`MIN_OUTPUT_BUDGET`** — a framework constant derived from the
+  fixed protocol overhead (the truncation marker, the largest cursor
+  encoding, and one complete UTF-8 character), published by the framework
+  and asserted by its own test, so that §7.2's progress guarantee is
+  satisfiable at every legal budget. A declaration below the minimum is a
+  build refusal. There is deliberately **no framework maximum**; §5.3 of
+  the layer design makes the declared number the contract, and the renderer
+  (§7) makes it a test.
 
 ### 3.3 Write classes
 
@@ -130,7 +137,7 @@ dimensions — see §4.2 for the capability model):
 |---|---|---|
 | `read-only` | none | none |
 | `coordination` | the coordination contract's kinds (sub-project 1) | `corpus-write` |
-| `mints:<k1,…>` | the named kinds | `corpus-write` ∪ ⋃ `KIND_ACTS[kᵢ]` |
+| `mints:<k1,…>` | the named kinds | exactly the declared routes (below) |
 | `publishes` | the publication kinds (sub-project 5) | `publish` |
 
 A `mints` class must name kinds that exist in the governing contract the
@@ -139,6 +146,27 @@ sub-project 1 lands there is no coordination contract, so a
 `coordination`-class command cannot ship — which is exactly decision 1's
 scope: it exists only in test fixtures until then. Likewise `publishes`
 until sub-project 5.
+
+**The declaration selects the minting route; nothing is inferred by
+union.** A kind can be mintable through more than one entry point — a `run`
+record enters through the run boundary or through ordinary corpus writing —
+so deriving act families as the union of every route capable of minting a
+kind would over-require, and a session permitting only one valid route
+would wrongly refuse the command: a union is not least privilege. Instead a
+`mints` declaration carries a `[write]` table naming its route per kind:
+
+```toml
+[write]
+route = "run"            # one of beliefs' act families; or a per-kind
+                         #   table when kinds take different routes
+```
+
+`route` may be omitted exactly when every declared kind has a single
+admissible route in `KIND_ACTS` (§4.1), in which case the build derives it;
+when any kind is route-ambiguous, omission is a build refusal. A declared
+route that `KIND_ACTS` does not admit for its kind is likewise a build
+refusal. The required act families are then exactly the declared (or
+uniquely derived) routes — no more.
 
 ### 3.4 Build refusals
 
@@ -167,24 +195,35 @@ is tracked there as `beliefs-96a24a`.
   `lifecycle`, and, when sub-project 5 lands, `publish`.
 
 `beliefs` also owns **`KIND_ACTS`**, a closed mapping from each mintable
-kind to the act families whose operations mint it (for example `dataset` and
-`run` to `run`; `holdings-observation` to `holdings`; ordinary records to
-`corpus-write` alone). Its full contents are settled with `beliefs-96a24a`'s
-plan; the mapping is data, exported read-only, and is what lets a
-declaration's write class be translated into a capability requirement
-without `science` knowing act families exist.
+kind to the set of act families **admissible as its minting route** (for
+example `holdings-observation` to `{holdings}`; a `run` record to
+`{run, corpus-write}`; most ordinary records to `{corpus-write}` alone).
+It is **validation data, not a requirement derivation**: the declaration
+selects its route (§3.3), and `KIND_ACTS` is what the build checks the
+selection against — and what lets a single-route kind's declaration omit
+the selection. Its full contents are settled with `beliefs-96a24a`'s plan;
+the mapping is exported read-only.
 
 ### 4.2 Requirements, not permits, cross the layer boundary
 
 §5.2 of the layer design is literal: `science` never sees, threads, or
 constructs a permit. `beliefs` exports a **`RequiredCapabilities`** value
 with constructors — `RequiredCapabilities.none()`, `.coordination()`,
-`.for_kinds(kinds)`, `.publishes()` — and the session exposes
-`WriterSession.check(required)`, which returns nothing or a structured
-refusal (§6.3). `science` compiles a declaration's write class to a
-requirement through those constructors and asks; it never holds either
-frozenset. `WritePermit.full()` exists in `beliefs` for its own launcher
-constructors (§5.1) and is not importable policy for `science` code.
+`.for_kinds(kinds, routes)`, `.publishes()` — and the session exposes
+**`WriterSession.scoped(required)`**, which either returns an
+**invocation-scoped writer** or a structured refusal (§6.3). The scoped
+writer is a facade whose **effective permit is exactly the requirement**:
+`scoped` checks the requirement against the session's permit (the
+declaration-time refusal) and binds the invocation's kernel entry points to
+the requirement, not to the session's ceiling — so a handler that exceeds
+its declaration is refused **at the act** even under an attended session's
+full permit. The session's own permit is only ever a ceiling; no act runs
+under it directly. `science` compiles a declaration's write class to a
+requirement through the constructors and asks; it never holds either
+frozenset, and a handler never receives the `WriterSession` — a `read-only`
+command receives no writer at all (§6.1). `WritePermit.full()` exists in
+`beliefs` for its own launcher constructors (§5.1) and is not importable
+policy for `science` code.
 
 ### 4.3 Enforcement at every entry point
 
@@ -199,16 +238,24 @@ structured fields (§6.3), and on the run boundary surfaces as the existing
 on the interactive path daily because the attended session holds a full
 permit through the same mechanism, not around it.
 
-### 4.4 Acts without log evidence are not command-reachable
+### 4.4 Acts without corpus-chain evidence are not command-reachable
 
-`adopt_manifest` writes the manifest through a direct `CreateOp` with no
-operation intent, and the root lifecycle acts (`init_*`, `replicate_root`,
-`restore_root`, `fork_*`) write outside any chain. They remain permit-gated
-(family `lifecycle`), but **no write class maps to `lifecycle`**, so no
-command — shipped or synthetic — can reach them: they are launcher- and
-operator-time library operations. The session ledger (§5.2) therefore only
-ever claims acts that have chain evidence, and §7.1's ledger-versus-chain
-comparison never meets an act that could not appear in a chain.
+Three act families write without corpus-chain evidence: `lifecycle`
+(`adopt_manifest` writes the manifest through a direct `CreateOp` with no
+operation intent; `init_*`, `replicate_root`, `restore_root`, `fork_*`
+write outside any chain), `registry` (`World.admit`/`retire`/`depart`
+commit through the world registry, not a corpus log), and `epoch`
+(`build_epoch`, `delete_epoch`, `install_rule_binding` likewise). All
+three remain permit-gated, but **no write class maps to any of them**: the
+command-reachable act families are exactly `corpus-write`, `run`,
+`holdings`, and — with sub-project 5 — `publish`. Lifecycle, registry and
+epoch acts are launcher- and operator-time library operations. A future
+command that wants one is a spec amendment whose first obligation is to
+define the ledger evidence for that family — what the session can claim
+and §7.1's comparison can check — not merely to map a class to it. The
+session ledger (§5.2) therefore only ever claims acts that have
+corpus-chain evidence, and the ledger-versus-chain comparison never meets
+an act that could not appear in a chain.
 
 ## 5. Writer sessions in `beliefs`
 
@@ -226,7 +273,9 @@ fixes the **actor** as `session:<session-id>`. The session sets every
 intent's `actor` itself; no caller of the session supplies one, which is
 where `actor` stops being a caller-supplied string. The returned
 `WriterSession` is the **trusted server-side object**: it lives in the
-endpoint process and wraps the permit-bound entry points and the ledger. It
+endpoint process, wraps the permit-bound entry points and the ledger, and
+is touched only by the dispatcher — handlers receive at most the
+invocation-scoped writer of §4.2. It
 is distinct from the **session handle** — the transport address and
 per-session token an actor process will hold — which does not exist until
 sub-project 6 builds the sandbox; naming the distinction now is what lets 6
@@ -240,8 +289,12 @@ written with append-then-fsync before any result is reported. Typed lines:
 
 - `session-open` — session id, actor, world id, permit summary, timestamp.
 - `invocation-open` — invocation id, command name, canonical inputs, input
-  digest (§6.2), timestamp. Written for **every** invocation, reads
-  included: the ledger doubles as the paging basis (§7.3).
+  digest (§6.2), timestamp. Written for **write-class invocations only**:
+  the ledger is write evidence, not a query store. Reads leave no ledger
+  trace, and read continuation is stateless (§7.3) — persisting every read's
+  canonical inputs would quietly turn the governing write ledger into a
+  durable record of what was asked, a boundary this design declines to
+  cross.
 - `act` — invocation id, corpus id, **chain entry digest**, and the
   **minted record identities** (uid and id). The pair is deliberate: the
   entry digest ties the line to the chain, the record identities are what
@@ -273,28 +326,40 @@ matching no open invocation is foreign, exactly as §7.1 already rules.
 
 ### 6.1 Dispatch order
 
-A request names a command and its inputs, plus optional protocol fields.
-The dispatcher, in order: (1) resolve the command or refuse
-`unknown-command`; (2) validate and canonicalize inputs against the
-declaration or refuse `invalid-input`; (3) compile the write class to a
-`RequiredCapabilities` and `session.check` it — the declaration-time permit
-refusal, before the handler runs; (4) append `invocation-open`; (5) invoke
-the handler, whose kernel writes pass through the session and may still
-refuse at the act if the body exceeds its declaration; (6) render under the
-budget (§7); (7) append `invocation-close`. Continuation requests (§7.3)
-are a dispatcher operation handled before this pipeline and never reach a
-handler through it.
+A request names a command and its inputs, plus the protocol fields
+`invocation_id` and `cursor` (both optional). The dispatcher, in order:
+(1) resolve the command or refuse `unknown-command`; (2) validate and
+canonicalize inputs against the declaration or refuse `invalid-input`;
+(3) compile the write class to a `RequiredCapabilities` and call
+`session.scoped(required)` — the declaration-time permit refusal, before
+the handler runs; the result is the invocation-scoped writer, or nothing
+for a `read-only` command; (4) for a write-class invocation, claim the
+invocation id and append `invocation-open` (§6.2); (5) invoke the handler
+with the read context and, for writes, the scoped writer — never the
+session — so a body exceeding its declaration is refused at the act;
+(6) render under the budget (§7); (7) for writes, append
+`invocation-close`. A request carrying `cursor` is a continuation (§7.3),
+handled by the dispatcher before this pipeline; it never reaches a write
+handler.
 
 ### 6.2 Invocation identity and retry
 
-The caller may supply an **`invocation_id`** (protocol field, opaque token);
-absent one, the dispatcher mints one and returns it with the result. For a
-write-class invocation the dispatcher deduplicates within the session
-against the ledger before step 5: a matching `invocation-open` with
-`invocation-close` returns the recorded outcome re-rendered (no re-execution);
-a matching open without close refuses **`outcome-unknown`** — the write may
+The caller may supply an **`invocation_id`** (protocol field, opaque
+token, exposed on every wire surface — §9); absent one, the dispatcher
+mints one and returns it with the result. For a write-class invocation the
+dispatcher deduplicates within the session against the ledger before
+step 5, and the claim is **atomic**: one session dispatch lock serializes
+steps 4–7 for write-class invocations, so two concurrent requests bearing
+the same id cannot both find "no match" and both execute. Under the lock:
+a matching `invocation-open` with `invocation-close` and the **same
+command and input digest** returns the recorded outcome re-rendered (no
+re-execution); a matching open (either state) whose command or input
+digest **differs** refuses `input-mismatch` — an invocation id names one
+invocation, and reuse with a different payload is a caller error, never a
+second execution; a matching open without close refuses
+**`outcome-unknown`** — the write may
 or may not have committed, and the framework never re-executes into that
-uncertainty; no match proceeds. The honest limit is stated rather than
+uncertainty; no match claims the id and proceeds. The honest limit is stated rather than
 papered over: deduplication is **session-scoped**. A retry against a new
 session is not deduplicated; the durable ledger of the crashed session is
 the operator's diagnostic, and the `outcome-unknown` finding of §5.3 is what
@@ -348,47 +413,52 @@ byte of report content; progress is a renderer test, not a hope.
 
 ### 7.3 Continuation is a dispatcher operation
 
-A cursor is an opaque token encoding `(session id, invocation id, position,
-report digest)` — a **validated reference into the durable session
-ledgers**, never a carrier of inputs and never a general re-execution
-handle. `continue(cursor)` — the CLI's `science continue <cursor>`, the MCP
-tool `science-continue` — is handled by the dispatcher before command
-dispatch:
+A continuation is a request carrying the `cursor` protocol field, handled
+by the dispatcher before command dispatch; it is never a general
+re-execution handle, and cursors carry no inputs. The two cursor forms
+match the two invocation classes:
 
-- It resolves the cursor's session ledger under the operations root (any
-  endpoint over the same operations root can continue, so CLI paging works
-  across process-per-invocation sessions) and the `invocation-open` line, or
-  refuses `unknown-cursor`.
-- **Read continuation** re-executes the read handler with the ledgered
-  canonical inputs, re-renders in full, and compares the fresh report's
-  digest to the cursor's: equal emits the next window; different refuses
-  `stale-cursor` — the world moved, and the caller re-runs the command
-  rather than receiving a spliced view. Nothing is cached; the handle leads
-  back into the world.
-- **Write continuation never calls the write handler.** It re-renders only
-  what the ledger proves: the invocation's minted record identities, loaded
-  back through ordinary reads. A write is executed at most once per
-  invocation, and no cursor changes that.
-
-If a caller supplies inputs alongside a cursor (the stateless CLI form),
-their canonical digest must equal the ledgered input digest or the request
-refuses `input-mismatch`.
+- **Read cursors are stateless.** A read cursor encodes `(command name,
+  input digest, report digest, position)` and references nothing durable —
+  reads leave no ledger trace (§5.2). Continuation is the same command
+  invoked again with the same inputs plus the cursor: the dispatcher
+  verifies the canonical input digest against the cursor's or refuses
+  `input-mismatch`, re-executes the read handler, re-renders in full, and
+  compares the fresh report's digest to the cursor's — equal emits the
+  next window; different refuses `stale-cursor`: the world moved, and the
+  caller re-runs the command rather than receiving a spliced view. Nothing
+  is cached; the handle leads back into the world, and it works across
+  processes because it depends on nothing but the world.
+- **Write cursors are ledger references, and write continuation never
+  calls the write handler.** A write cursor encodes `(session id,
+  invocation id, position, report digest)`; the dispatcher resolves the
+  session ledger under the operations root — any endpoint over the same
+  operations root can continue — or refuses `unknown-cursor`, then
+  re-renders only what the ledger proves: the invocation's minted record
+  identities, loaded back through ordinary reads. A write is executed at
+  most once per invocation, and no cursor changes that.
 
 ### 7.4 The write-audit rule
 
-For a write-class invocation the renderer receives the invocation's `act`
-lines and refuses to serialize any `record` block whose identity is not
-among the minted record identities — the write returns its own record and
-nothing else, plus the refusal if there was one. The predecessor's audit
-echo is thereby unrepresentable, and the rule is a renderer test with a
-mutation that fails it (§11).
+For a write-class invocation the report may contain **only** `record`
+blocks, and the renderer — receiving the invocation's `act` lines —
+refuses to serialize one whose identity is not among the minted record
+identities. Handler-authored `heading`, `keyvals`, `finding` and `text`
+blocks are refused outright for writes: any of them is a channel for the
+predecessor's audit echo, which checking record blocks alone would not
+close. What a write invocation emits is its minted records, the
+dispatcher-rendered refusal envelope if there was one, and the renderer's
+own framing — nothing else. The rule is a renderer test with mutations
+that fail it, per block kind (§11).
 
 ## 8. The preamble
 
 One `commands/PREAMBLE.md`, prepended by the adapter generator to every
 emitted prompt body and versioned with the commands. Content, kept short
 enough to be read every time: there is one world, read through the current
-view; every write is a kernel act that returns a record or a refusal; report
+view — with the exception stated in the preamble itself that until
+sub-project 1 lands no view exists and commands read world state directly,
+as `status` does; every write is a kernel act that returns a record or a refusal; report
 refusals verbatim and never write around them; results are budgeted, and the
 cursor is how you continue; a command's inputs are the whole interface —
 there is nothing to reach around.
@@ -407,12 +477,15 @@ session open.
 ### 9.2 CLI
 
 `science`, stdlib `argparse`, zero dependencies. One subcommand per shipped
-command, options compiled from the declaration, `--config` global, plus the
-framework verbs `continue`, `serve`, `mcp`, `adapters`, `build`. Exit
+command, options compiled from the declaration, plus the global protocol
+options `--config`, `--invocation-id` and `--continue <cursor>` (the wire
+form of §6's protocol fields — continuation is the same subcommand re-run
+with its inputs and the cursor), plus the
+framework verbs `serve`, `mcp`, `adapters`, `build`. Exit
 codes: `0` success, `1` internal error, `2` invalid invocation (argparse's
-own convention), `3` refused. **Read-only commands run in-process**
-(each invocation an ephemeral attended session, so its ledger still exists
-for paging). **Write-class commands go through the service process** —
+own convention), `3` refused. **Read-only commands run in-process** as
+ephemeral attended sessions — read cursors are stateless (§7.3), so paging
+needs nothing from a dead session. **Write-class commands go through the service process** —
 `science serve`, the CLI's service of §5.2 of the layer design, same
 endpoint core as the MCP server over a local socket — never an in-process
 writer opened per invocation around the endpoint architecture. In this
@@ -424,8 +497,11 @@ exercised by the synthetic exemplars in tests.
 `science mcp serve`, stdio transport, one attended session per server
 lifetime; the harness configuration that starts it is the person's launcher.
 The tool list is generated 1:1 from the declarations — name, `purpose` as
-description, input JSON Schema from the canonical inputs — plus
-`science-continue`. Tool calls enter the same dispatcher.
+description, input JSON Schema from the canonical inputs **plus the
+optional protocol properties `invocation_id` and `cursor`**, which the
+reserved input names of §3.2 guarantee can never collide with a command's
+own inputs. There is no separate continuation tool; a call carrying
+`cursor` is a continuation. Tool calls enter the same dispatcher.
 
 ### 9.4 Equivalence
 
@@ -474,17 +550,23 @@ this spec does not claim otherwise.
 Every check in N2's harness shape — the assertion, the source mutation that
 falsifies it, the test that catches the mutation:
 
-- **`beliefs`:** per-entry-point permit refusal before any effect;
-  endpoint-set actor (a caller-supplied actor has nowhere to enter);
-  ledger append-before-report; reconciliation classifying a covered,
-  an `outcome-unknown`, and a foreign entry distinctly.
-- **`science`:** declaration build refusals (each §3.4 case); budget
+- **`beliefs`:** per-entry-point permit refusal before any effect; the
+  invocation-scoped writer refusing an act inside the session's ceiling
+  but outside the requirement; endpoint-set actor (a caller-supplied actor
+  has nowhere to enter); ledger append-before-report; reconciliation
+  classifying a covered, an `outcome-unknown`, and a foreign entry
+  distinctly.
+- **`science`:** declaration build refusals (each §3.4 case, the
+  route-ambiguity and below-minimum-budget refusals included); budget
   enforcement, oversized-block progress, deterministic serialization;
-  write-audit refusal of a foreign record block; read continuation's
-  stale-cursor on a mutated world and write continuation's
-  never-calls-the-handler; retry dedup and `outcome-unknown`; the
-  `status` reader test on a fixture world; the adapter tree diff; the
-  CLI/MCP byte-equivalence test.
+  write-audit refusal per block kind — a foreign record block and each
+  handler-authored non-record block; read continuation's stale-cursor on a
+  mutated world and input-mismatch on altered inputs, and write
+  continuation's never-calls-the-handler; retry dedup, the concurrent
+  same-id race resolving to one execution under the dispatch lock,
+  id-reuse `input-mismatch`, and `outcome-unknown`; the `status` reader
+  test on a fixture world; the adapter tree diff; the CLI/MCP
+  byte-equivalence test.
 
 ## 12. The knowledge-model pressure points, carried in
 
@@ -539,8 +621,18 @@ as tasks under `--spec command-framework` once this spec is approved.
   the endpoint architecture the moment it exists; reads are the only
   in-process path.
 - **Cursors carrying canonical inputs.** An opaque blob that re-executes
-  whatever it says is a confused-deputy handle; a ledger-validated
-  reference is not.
+  whatever it says is a confused-deputy handle; a read cursor that only
+  *verifies* caller-supplied inputs by digest, and a write cursor that is a
+  ledger-validated reference, are not.
+- **Ledgering every read for continuation.** Persisting each read's
+  canonical inputs would grow the governing write ledger into a durable
+  query store, a data boundary this design declines to cross without
+  retention rules it does not need; stateless read cursors cost a
+  recomputation instead.
+- **Deriving act families as the union of a kind's routes.** Over-requires
+  every route capable of minting the kind and wrongly refuses a session
+  permitting one valid route; the declaration selects, `KIND_ACTS`
+  validates.
 - **String-prefix refusal parsing at the endpoint.** Clients matching on
   message prefixes is the predecessor's habit; codes are data.
 - **A per-command budget default.** A default is where the 21 MB read
