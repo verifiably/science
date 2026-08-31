@@ -120,13 +120,14 @@ families = ["registry", "epoch", "corpus-stored"]
   here. Write classes, by contrast, *are* runtime-enforced (§4).
 - **`output_budget`** is required, in bytes, with no default, and must be
   at least **`MIN_OUTPUT_BUDGET`** — a framework constant derived from the
-  fixed protocol overhead (the truncation marker, the largest cursor
-  encoding, and one complete UTF-8 character), published by the framework
-  and asserted by its own test, so that §7.2's progress guarantee is
-  satisfiable at every legal budget. A declaration below the minimum is a
-  build refusal. There is deliberately **no framework maximum**; §5.3 of
-  the layer design makes the declared number the contract, and the renderer
-  (§7) makes it a test.
+  fixed protocol overhead: the truncation marker, `MAX_CURSOR_BYTES` (a
+  real maximum, because every cursor field has a fixed grammar or width —
+  §6.2, §7.3), and one complete UTF-8 character. Both constants are
+  published by the framework and asserted by its own test, so §7.2's
+  progress guarantee is satisfiable at every legal budget. A declaration
+  below the minimum is a build refusal. There is deliberately **no
+  framework maximum**; §5.3 of the layer design makes the declared number
+  the contract, and the renderer (§7) makes it a test.
 
 ### 3.3 Write classes
 
@@ -152,21 +153,21 @@ union.** A kind can be mintable through more than one entry point — a `run`
 record enters through the run boundary or through ordinary corpus writing —
 so deriving act families as the union of every route capable of minting a
 kind would over-require, and a session permitting only one valid route
-would wrongly refuse the command: a union is not least privilege. Instead a
-`mints` declaration carries a `[write]` table naming its route per kind:
+would wrongly refuse the command: a union is not least privilege. The one
+schema form is a kind-to-route map:
 
 ```toml
-[write]
-route = "run"            # one of beliefs' act families; or a per-kind
-                         #   table when kinds take different routes
+[write.routes]
+run = "run"              # <declared kind> = <act family>
+dataset = "run"
 ```
 
-`route` may be omitted exactly when every declared kind has a single
-admissible route in `KIND_ACTS` (§4.1), in which case the build derives it;
-when any kind is route-ambiguous, omission is a build refusal. A declared
-route that `KIND_ACTS` does not admit for its kind is likewise a build
-refusal. The required act families are then exactly the declared (or
-uniquely derived) routes — no more.
+A kind with a single admissible route in `KIND_ACTS` (§4.1) **may be
+omitted** from the map, and the build derives its route; a route-ambiguous
+kind **must** appear, and its omission is a build refusal. Also build
+refusals: a map key that is not one of the class's declared kinds, and a
+route `KIND_ACTS` does not admit for its kind. The required act families
+are then exactly the mapped (or uniquely derived) routes — no more.
 
 ### 3.4 Build refusals
 
@@ -264,11 +265,15 @@ an act that could not appear in a chain.
 `beliefs` exports launcher constructors, not a raw session:
 
 - `open_attended_session(world_config, operations_root)` — full permit by
-  construction; the interactive constructor every §2 fronting uses.
+  construction; the interactive constructor. The MCP server and the CLI's
+  service process open one; a CLI read invocation opens none (§9.2) — a
+  session exists to bind writes, and a `read-only` requirement needs no
+  session to be judged.
 - A run-session constructor with a tier parameter arrives with sub-project 6
   and is out of scope here beyond the seam existing.
 
-Opening mints a **fresh session identity** — a digest-shaped token — and
+Opening mints a **fresh session identity** — a 32-lowercase-hex token
+(§6.2's identifier bound) — and
 fixes the **actor** as `session:<session-id>`. The session sets every
 intent's `actor` itself; no caller of the session supplies one, which is
 where `actor` stops being a caller-supplied string. The returned
@@ -281,27 +286,47 @@ per-session token an actor process will hold — which does not exist until
 sub-project 6 builds the sandbox; naming the distinction now is what lets 6
 add the boundary without changing this API.
 
-### 5.2 The session ledger
+### 5.2 The session ledger, and the intent every session write carries
 
-An append-only JSONL file at
+**Every session-mediated write is intent-fulfilling, the ordinary corpus
+route included.** The run and holdings routes already append actor-bearing
+intents, but the ordinary corpus-write route (`CorpusWriter.add`,
+`retract`, `supersede`, `revise`) publishes records that fulfill no
+intent — so a crashed session's corpus writes would be unattributable and
+§5.3's reconciliation, like §7.1's interval-membership test, could never
+name them. The session therefore performs every ordinary corpus write as
+intent plus fulfillment: it appends
+`OperationIntent(kind = corpus-write, event_token, actor = session actor)`
+and publishes the record through the existing fulfilling execution path.
+`corpus-write` is not in the kernel's closed operation-kind set, so this
+is a **versioned act-report amendment** adding the operation kind — the
+same amendment discipline the layer design's §6.1 uses for `publish` —
+banked in `beliefs` with the writer-session task before any session
+ships. Direct library use of `CorpusWriter` outside a session is
+unchanged, bounded as ever by the single-writer deployment obligation.
+
+The ledger itself is an append-only JSONL file at
 `<operations root>/sessions/<session-id>/ledger.v1`, outside every corpus,
 written with append-then-fsync before any result is reported. Typed lines:
 
 - `session-open` — session id, actor, world id, permit summary, timestamp.
-- `invocation-open` — invocation id, command name, canonical inputs, input
-  digest (§6.2), timestamp. Written for **write-class invocations only**:
-  the ledger is write evidence, not a query store. Reads leave no ledger
-  trace, and read continuation is stateless (§7.3) — persisting every read's
-  canonical inputs would quietly turn the governing write ledger into a
-  durable record of what was asked, a boundary this design declines to
-  cross.
+- `invocation-open` — invocation id, command name, **input digest** (§6.2),
+  timestamp — the digest only, not the canonical inputs: deduplication
+  compares digests and write continuation re-renders from minted
+  identities, so the inputs themselves would be durable data nothing
+  needs. Written for **write-class invocations only**: the ledger is write
+  evidence, not a query store. Reads leave no ledger trace, and read
+  continuation is stateless (§7.3).
 - `act` — invocation id, corpus id, **chain entry digest**, and the
   **minted record identities** (uid and id). The pair is deliberate: the
   entry digest ties the line to the chain, the record identities are what
   the write-audit rule (§7.4) and continuation (§7.3) verify against;
   neither substitutes for the other.
-- `invocation-close` — invocation id, outcome (`done` or a refusal code),
-  minted record identities in total.
+- `invocation-close` — invocation id, and the outcome: `done` with the
+  minted record identities in total, or the **full structured refusal
+  envelope** `{code, message, data}` (§6.3) — persisted whole because
+  deduplication promises to re-render the recorded outcome (§6.2), and a
+  bare code could not reconstruct it.
 - `session-close`.
 
 §7.1 of the layer design compares chain intervals against this ledger
@@ -330,10 +355,11 @@ A request names a command and its inputs, plus the protocol fields
 `invocation_id` and `cursor` (both optional). The dispatcher, in order:
 (1) resolve the command or refuse `unknown-command`; (2) validate and
 canonicalize inputs against the declaration or refuse `invalid-input`;
-(3) compile the write class to a `RequiredCapabilities` and call
-`session.scoped(required)` — the declaration-time permit refusal, before
-the handler runs; the result is the invocation-scoped writer, or nothing
-for a `read-only` command; (4) for a write-class invocation, claim the
+(3) compile the write class to a `RequiredCapabilities`; a `read-only`
+command's requirement is `none`, satisfied with or without a session
+(§9.2's sessionless CLI reads included), and yields no writer; otherwise
+call `session.scoped(required)` — the declaration-time permit refusal,
+before the handler runs — for the invocation-scoped writer; (4) for a write-class invocation, claim the
 invocation id and append `invocation-open` (§6.2); (5) invoke the handler
 with the read context and, for writes, the scoped writer — never the
 session — so a body exceeding its declaration is refused at the act;
@@ -344,9 +370,14 @@ handler.
 
 ### 6.2 Invocation identity and retry
 
-The caller may supply an **`invocation_id`** (protocol field, opaque
-token, exposed on every wire surface — §9); absent one, the dispatcher
-mints one and returns it with the result. For a write-class invocation the
+The caller may supply an **`invocation_id`** (protocol field, exposed on
+every wire surface — §9) with the fixed grammar
+`^[A-Za-z0-9_-]{1,64}$` — opaque in meaning, bounded in form, refused
+`invalid-input` outside the grammar; absent one, the dispatcher mints a
+32-lowercase-hex token and returns it with the result. Session identities
+share the 32-hex form (§5.1). These bounds, with the digest fields' fixed
+widths and the fixed-width `u64` cursor positions, are what make
+`MAX_CURSOR_BYTES` (§3.2) a real number. For a write-class invocation the
 dispatcher deduplicates within the session against the ledger before
 step 5, and the claim is **atomic**: one session dispatch lock serializes
 steps 4–7 for write-class invocations, so two concurrent requests bearing
@@ -415,8 +446,14 @@ byte of report content; progress is a renderer test, not a hope.
 
 A continuation is a request carrying the `cursor` protocol field, handled
 by the dispatcher before command dispatch; it is never a general
-re-execution handle, and cursors carry no inputs. The two cursor forms
-match the two invocation classes:
+re-execution handle, and cursors carry no inputs. Every cursor field is
+bounded — command names by §3.1's grammar, identifiers by §6.2's,
+digests at their fixed hex width, positions as fixed-width `u64`
+`(block index, intra-block byte offset)` pairs — and the versioned
+encoding over them therefore has a computable maximum, published as
+`MAX_CURSOR_BYTES` and asserted by test. A cursor that does not parse
+under the encoding's grammar refuses `unknown-cursor`. The two cursor
+forms match the two invocation classes:
 
 - **Read cursors are stateless.** A read cursor encodes `(command name,
   input digest, report digest, position)` and references nothing durable —
@@ -483,9 +520,10 @@ form of §6's protocol fields — continuation is the same subcommand re-run
 with its inputs and the cursor), plus the
 framework verbs `serve`, `mcp`, `adapters`, `build`. Exit
 codes: `0` success, `1` internal error, `2` invalid invocation (argparse's
-own convention), `3` refused. **Read-only commands run in-process** as
-ephemeral attended sessions — read cursors are stateless (§7.3), so paging
-needs nothing from a dead session. **Write-class commands go through the service process** —
+own convention), `3` refused. **Read-only commands run in-process with
+only the read context** — no `WriterSession` is opened and no ledger is
+touched (§4.2, §5.2); read cursors are stateless (§7.3), so paging needs
+nothing a process could leave behind. **Write-class commands go through the service process** —
 `science serve`, the CLI's service of §5.2 of the layer design, same
 endpoint core as the MCP server over a local socket — never an in-process
 writer opened per invocation around the endpoint architecture. In this
@@ -553,9 +591,12 @@ falsifies it, the test that catches the mutation:
 - **`beliefs`:** per-entry-point permit refusal before any effect; the
   invocation-scoped writer refusing an act inside the session's ceiling
   but outside the requirement; endpoint-set actor (a caller-supplied actor
-  has nowhere to enter); ledger append-before-report; reconciliation
-  classifying a covered, an `outcome-unknown`, and a foreign entry
-  distinctly.
+  has nowhere to enter); every session corpus write leaving an
+  actor-bearing `corpus-write` intent (a mutation dropping the intent is
+  caught by reconciliation's attribution test); ledger
+  append-before-report; refusal-envelope persistence round-tripping
+  through `invocation-close`; reconciliation classifying a covered, an
+  `outcome-unknown`, and a foreign entry distinctly.
 - **`science`:** declaration build refusals (each §3.4 case, the
   route-ambiguity and below-minimum-budget refusals included); budget
   enforcement, oversized-block progress, deterministic serialization;
