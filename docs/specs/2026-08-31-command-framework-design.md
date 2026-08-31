@@ -1,8 +1,8 @@
 # Command framework — design
 
 **Date:** 2026-08-31
-**Status:** draft — design approved in session 2026-08-31 with the interface
-and security revisions incorporated; spec review pending
+**Status:** approved in session 2026-08-31, after two review rounds
+(interface/security revisions and the end-to-end trace fixes)
 **Scope:** sub-project 2 of the user/autonomy layer design (`beliefs`
 `docs/superpowers/specs/2026-08-29-user-and-autonomy-layer-design.md`, §5 and
 §8 item 2): the command declaration schema, write classes, the budgeted
