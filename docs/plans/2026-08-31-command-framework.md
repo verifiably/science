@@ -14,7 +14,7 @@
 
 - Package: distribution `verifiably-science`, import name `science`, console script `science`.
 - CLI has zero third-party dependencies; `pytest` is a dev dependency only.
-- Command name grammar `^[a-z][a-z0-9]*(-[a-z0-9]+)*$`, max 32 bytes; module = name with `-`→`_`.
+- Command name grammar `^[a-z][a-z0-9]*(-[a-z0-9]+)*$`, max 32 bytes; module = name with `-`→`_`. Input name grammar is snake_case (`^[a-z][a-z0-9]*(_[a-z0-9]+)*$`, max 32 bytes) so inputs bind as Python keyword parameters; CLI flags map `_`→`-`.
 - Reserved command names: `continue`, `serve`, `mcp`, `adapters`, `build`. Reserved input names: `cursor`, `invocation_id`, `view`, `session`, `config`.
 - Input types (closed): `string`, `int`, `bool`, `enum`, `list-of-string`.
 - `invocation_id` grammar `^[A-Za-z0-9_-]{1,64}$`; minted ids and session ids are 32 lowercase hex.
@@ -56,7 +56,7 @@ build-backend = "hatchling.build"
 name = "verifiably-science"
 version = "0.1.0"
 description = "The daily surface of Science: commands over the beliefs kernel."
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 dependencies = []
 
 [project.scripts]
@@ -69,7 +69,9 @@ dev = ["pytest>=8"]
 packages = ["src/science"]
 ```
 
-Check beliefs' `python/pyproject.toml` `requires-python` first and copy its floor verbatim if it differs from 3.12. `python/src/science/__init__.py` and `python/src/science/commands/__init__.py` are empty files.
+The floor matches beliefs' own `requires-python = ">=3.11"` — never a
+higher one, since science imports beliefs into the same interpreter.
+`python/src/science/__init__.py` and `python/src/science/commands/__init__.py` are empty files.
 
 - [ ] **Step 2: Write the failing schema tests**
 
@@ -241,6 +243,28 @@ def test_malformed_toml_is_a_declaration_error(tmp_path):
     with pytest.raises(DeclarationError) as e:
         load_declaration(d, kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)
     assert "TOML" in str(e.value)
+
+
+def test_hyphenated_input_name_refused(tmp_path):
+    toml = GOOD + '\n[inputs.multi-word]\ntype = "string"\nrequired = false\ndoc = "x"\n'
+    d = write_command(tmp_path, "status", toml)
+    with pytest.raises(DeclarationError):  # cannot bind through **canonical
+        load_declaration(d, kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)
+
+
+def test_multiline_purpose_refused(tmp_path):
+    toml = GOOD.replace('purpose = "Show the world."', 'purpose = "Two\\nlines."')
+    d = write_command(tmp_path, "status", toml)
+    with pytest.raises(DeclarationError):
+        load_declaration(d, kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)
+
+
+def test_stray_file_in_command_directory_refused(tmp_path):
+    d = write_command(tmp_path, "status", GOOD)
+    (d / "notes.txt").write_text("stray")
+    with pytest.raises(DeclarationError) as e:
+        load_declaration(d, kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)
+    assert "notes.txt" in str(e.value)
 ```
 
 Budget-floor refusal is added in Task 4 when `MIN_OUTPUT_BUDGET` exists; leave it out here.
@@ -263,6 +287,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 NAME_RE = re.compile(r"^[a-z][a-z0-9]*(-[a-z0-9]+)*$")
+# Inputs are snake_case: they must bind as Python keyword parameters through
+# `**canonical`, which a hyphenated name cannot. The CLI maps `_` -> `-` for
+# its flags; the wire schemas carry the snake_case name verbatim.
+INPUT_NAME_RE = re.compile(r"^[a-z][a-z0-9]*(_[a-z0-9]+)*$")
 MAX_NAME_BYTES = 32
 RESERVED_COMMANDS = frozenset({"continue", "serve", "mcp", "adapters", "build"})
 RESERVED_INPUTS = frozenset({"cursor", "invocation_id", "view", "session", "config"})
@@ -329,7 +357,8 @@ def _parse_inputs(raw: Mapping, path: Path) -> tuple[InputSpec, ...]:
     for name, spec in raw.items():
         _require(isinstance(spec, dict), path, f"inputs.{name}", "must be a table")
         _require(name not in RESERVED_INPUTS, path, f"inputs.{name}", "reserved input name")
-        _require(bool(NAME_RE.match(name.replace("_", "-"))), path, f"inputs.{name}", "bad input name")
+        _require(bool(INPUT_NAME_RE.match(name)) and len(name.encode()) <= MAX_NAME_BYTES,
+                 path, f"inputs.{name}", "input names are snake_case, max 32 bytes")
         typ = spec.get("type")
         _require(typ in INPUT_TYPES, path, f"inputs.{name}.type", f"must be one of {sorted(INPUT_TYPES)}")
         required = spec.get("required")
@@ -392,6 +421,9 @@ def load_declaration(dir_path: Path, *, kind_acts: Mapping[str, frozenset[str]],
     path = dir_path / "command.toml"
     _require(path.is_file(), path, "command.toml", "missing")
     _require((dir_path / "prompt.md").is_file(), dir_path / "prompt.md", "prompt.md", "missing")
+    entries = {p.name for p in dir_path.iterdir()}
+    _require(entries == {"command.toml", "prompt.md"}, path, "directory",
+             f"holds exactly command.toml and prompt.md; found {sorted(entries)}")
     try:
         raw = tomllib.loads(path.read_text())
     except tomllib.TOMLDecodeError as e:
@@ -405,7 +437,8 @@ def load_declaration(dir_path: Path, *, kind_acts: Mapping[str, frozenset[str]],
     _require(name not in RESERVED_COMMANDS, path, "name", "reserved name")
     _require(dir_path.name == name, path, "name", f"directory {dir_path.name!r} != name {name!r}")
     purpose = raw.get("purpose")
-    _require(isinstance(purpose, str) and purpose, path, "purpose", "must be a non-empty string")
+    _require(type(purpose) is str and purpose and "\n" not in purpose,
+             path, "purpose", "must be one non-empty line")
     budget = raw.get("output_budget")
     _require(type(budget) is int and budget > 0, path, "output_budget",
              "must be a positive integer (not a bool)")
@@ -456,7 +489,7 @@ git commit -m "feat(schema): declaration schema with write classes and route sel
 
 **Interfaces:**
 - Consumes: `Declaration`, `InputSpec` from Task 1.
-- Produces: `canonicalize(decl, provided: Mapping) -> dict` (validates, applies defaults, drops absent optionals; raises `Refused` with code `invalid-input`); `input_digest(canonical: Mapping) -> str` (64-hex SHA-256 of canonical JSON); `Refusal(code, message, data)` frozen dataclass; `Refused(Exception)` with `.refusal`; `CODES` frozenset; `INVOCATION_ID_RE`; `mint_token() -> str` (32 lowercase hex).
+- Produces: `canonicalize(decl, provided: Mapping) -> dict` (validates, applies defaults, drops absent optionals; raises `Refused` with code `invalid-input`); `input_digest(canonical: Mapping) -> str` (64-hex SHA-256 of canonical JSON); `Refusal(code, message, data)` frozen dataclass; `Refused(Exception)` with `.refusal` and `.invocation_id: str | None` (set by the write dispatcher so a refusal never loses the minted id); `envelope(refusal) -> dict` — the one wire form `{code, message, data}` every transport uses; `CODES` frozenset; `INVOCATION_ID_RE`; `mint_token() -> str` (32 lowercase hex).
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -566,9 +599,19 @@ class Refusal:
 
 
 class Refused(Exception):
-    def __init__(self, refusal: Refusal) -> None:
+    """Carries the structured envelope, and — when a write dispatcher had
+    already minted or accepted an invocation id — that id, so no transport
+    loses it on refusal and callers can still dedup a retry."""
+
+    def __init__(self, refusal: Refusal, invocation_id: str | None = None) -> None:
         self.refusal = refusal
+        self.invocation_id = invocation_id
         super().__init__(f"{refusal.code}: {refusal.message}")
+
+
+def envelope(refusal: Refusal) -> dict:
+    """The one wire form of a refusal: exactly the spec §6.3 triple."""
+    return {"code": refusal.code, "message": refusal.message, "data": dict(refusal.data)}
 
 
 def mint_token() -> str:
@@ -1291,10 +1334,14 @@ beliefs = { path = "../../beliefs/python", editable = true }
 
 The relative path resolves because the science and beliefs checkouts are
 siblings. When executing inside `.worktrees/<branch>` (where `../..` is the
-science checkout itself), make it resolve once from the science repo root:
+science checkout itself), make it resolve with one command that derives
+**both** ends from `--git-common-dir`, so it works from any cwd in either
+the main checkout or a worktree:
 
 ```bash
-ln -sfn "$(git rev-parse --path-format=absolute --git-common-dir)/../../beliefs" .worktrees/beliefs
+COMMON="$(git rev-parse --path-format=absolute --git-common-dir)"   # <science>/.git
+mkdir -p "$COMMON/../.worktrees"
+ln -sfn "$COMMON/../../beliefs" "$COMMON/../.worktrees/beliefs"
 ```
 
 and add `.worktrees/` to `.gitignore` alongside Task 8's `.framework-test/`.
@@ -1766,7 +1813,35 @@ def test_production_tree_ships_only_status():
     assert [d.name for d in decls] == ["status"]
     handlers = resolve_handlers(decls)
     assert callable(handlers["status"])
-```
+
+
+def test_status_performs_exactly_its_declared_read_families(monkeypatch):
+    """N2: the declared `reads` families are a contract — record which read
+    surfaces the handler touches through a spying context and compare to the
+    declaration. Adding a read family to the handler, or dropping one from
+    the declaration, fails this test."""
+    from types import SimpleNamespace
+    import science.commands.status as status_mod
+    used = set()
+
+    class SpyWorld:
+        def registry(self):
+            used.add("registry")
+            return SimpleNamespace(admissions=(), statuses=(), log_heads=())
+        def status(self, cid):
+            raise AssertionError("no corpora in the spy world")
+
+    def spy_current_epoch(world):
+        used.add("epoch")
+        from beliefs.errors import EpochUnknown
+        raise EpochUnknown("spy world has none")
+
+    monkeypatch.setattr(status_mod, "current_epoch", spy_current_epoch)
+    spy_ctx = SimpleNamespace(world=SpyWorld(),
+                              read_views=lambda: used.add("corpus-stored") or ())
+    status_mod.handle(spy_ctx)
+    declared = set(next(d for d in production_tree() if d.name == "status").reads)
+    assert used == declared
 
 - [ ] **Step 4: Run tests to verify they fail**
 
@@ -1871,11 +1946,21 @@ def resolve_handlers(decls) -> dict:
         if handle is None:
             raise DeclarationError(decl.directory, "handler", f"{handler_module(decl.name)} has no handle()")
         params = inspect.signature(handle).parameters
-        declared = {i.name for i in decl.inputs}
+        declared = {i.name: i for i in decl.inputs}
         accepted = {n for n in params if n not in ("ctx", "writer")}
-        if declared != accepted:
+        if set(declared) != accepted:
             raise DeclarationError(decl.directory, "handler",
                                    f"handler accepts {sorted(accepted)}, declaration says {sorted(declared)}")
+        for name, spec in declared.items():
+            default = params[name].default
+            if spec.required and default is not inspect.Parameter.empty:
+                raise DeclarationError(decl.directory, "handler",
+                                       f"required input {name!r} must have no handler default")
+            if not spec.required and default is not None:
+                # An absent optional is absent from **canonical, so the
+                # parameter's own default is what the handler sees: None.
+                raise DeclarationError(decl.directory, "handler",
+                                       f"optional input {name!r} must default to None")
         handlers[decl.name] = handle
     return handlers
 ```
@@ -2269,7 +2354,7 @@ from it, not from memory.
 
 **Interfaces:**
 - Consumes: `Dispatcher`, `production_tree`, `resolve_handlers`, `ReadContext`, `load_config`, `Refused`.
-- Produces: `PROTOCOL_VERSION = "2026-07-28"`; `tool_schema(decl) -> dict` (JSON Schema: declared inputs + optional `invocation_id` and `cursor` string properties); `handle_request(req, dispatcher, decls) -> dict` — a JSON-RPC 2.0 responder for `tools/list` and `tools/call` that **rejects a request without `params._meta`** (`-32600`); no `initialize` handling exists to keep obsolete clients honest; `serve(config_path, stdin, stdout, session=None) -> None` (the `session` parameter is wired to the attended writer session in Task 12; until then every command it can serve is read-only). Tool results carry the rendered text as content, `isError` on refusals with text `refused [<code>] <message>`, and `structuredContent: {"invocation_id": …}` so callers can reuse minted ids.
+- Produces: `PROTOCOL_VERSION = "2026-07-28"`; `tool_schema(decl) -> dict` (JSON Schema: declared inputs + optional `invocation_id` and `cursor` string properties); `handle_request(req, dispatcher, decls) -> dict` — a JSON-RPC 2.0 responder for `tools/list` and `tools/call` that **rejects a request without `params._meta`** (`-32600`); no `initialize` handling exists to keep obsolete clients honest; `serve(config_path, stdin, stdout, session=None) -> None` (the `session` parameter is wired to the attended writer session in Task 12; until then every command it can serve is read-only). Tool results carry the rendered text as content and `structuredContent: {"invocation_id": …}` so callers can reuse minted ids; a refusal result sets `isError`, keeps the human text `refused [<code>] <message>`, and carries the full spec §6.3 envelope (and the invocation id when one was bound) in `structuredContent` — structured `data` is never discarded into parseable text.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -2283,10 +2368,10 @@ from science.mcp import handle_request, tool_schema
 from science.loader import production_tree
 
 
-META = {  # every 2026-07-28 request carries these; spellings from the spec page
-    "protocolVersion": "2026-07-28",
-    "clientInfo": {"name": "science-tests", "version": "0"},
-    "capabilities": {},
+META = {  # every 2026-07-28 request carries these namespaced keys
+    "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+    "io.modelcontextprotocol/clientInfo": {"name": "science-tests", "version": "0"},
+    "io.modelcontextprotocol/clientCapabilities": {},
 }
 
 
@@ -2324,10 +2409,10 @@ def test_missing_or_incomplete_meta_is_a_protocol_error():
     bare = {"jsonrpc": "2.0", "id": 9, "method": "tools/list", "params": {}}
     assert handle_request(bare, dispatcher=None, decls=())["error"]["code"] == -32600
     wrong_version = rpc("tools/list")
-    wrong_version["params"]["_meta"]["protocolVersion"] = "2025-06-18"
+    wrong_version["params"]["_meta"]["io.modelcontextprotocol/protocolVersion"] = "2025-06-18"
     assert handle_request(wrong_version, dispatcher=None, decls=())["error"]["code"] == -32600
     no_client = rpc("tools/list")
-    del no_client["params"]["_meta"]["clientInfo"]
+    del no_client["params"]["_meta"]["io.modelcontextprotocol/clientInfo"]
     assert handle_request(no_client, dispatcher=None, decls=())["error"]["code"] == -32600
 
 
@@ -2372,6 +2457,9 @@ def test_refusal_becomes_tool_error(certified_work):
         rpc("tools/call", {"name": "status", "arguments": {"cursor": "junk"}}), dispatcher, decls)
     assert res["result"]["isError"] is True
     assert "unknown-cursor" in res["result"]["content"][0]["text"]
+    structured = res["result"]["structuredContent"]["refusal"]
+    assert structured["code"] == "unknown-cursor"
+    assert isinstance(structured["message"], str) and isinstance(structured["data"], dict)
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
@@ -2420,15 +2508,18 @@ def tool_schema(decl: Declaration) -> dict:
 PROTOCOL_VERSION = "2026-07-28"  # the ruling above; no pre-2026 fallbacks
 
 
+_NS = "io.modelcontextprotocol/"  # MCP's namespaced _meta keys
+
+
 def _meta_error(meta: object) -> str | None:
     if not isinstance(meta, dict):
         return "request _meta is required"
-    if meta.get("protocolVersion") != PROTOCOL_VERSION:
-        return f"protocolVersion must be {PROTOCOL_VERSION}"
-    if not isinstance(meta.get("clientInfo"), dict):
-        return "clientInfo is required"
-    if not isinstance(meta.get("capabilities"), dict):
-        return "capabilities is required"
+    if meta.get(_NS + "protocolVersion") != PROTOCOL_VERSION:
+        return f"{_NS}protocolVersion must be {PROTOCOL_VERSION}"
+    if not isinstance(meta.get(_NS + "clientInfo"), dict):
+        return f"{_NS}clientInfo is required"
+    if not isinstance(meta.get(_NS + "clientCapabilities"), dict):
+        return f"{_NS}clientCapabilities is required"
     return None
 
 
@@ -2452,8 +2543,13 @@ def handle_request(req: dict, dispatcher: Dispatcher, decls) -> dict:
                                  "structuredContent": {"invocation_id": out.invocation_id},
                                  "isError": False})
         except Refused as e:
+            from science.refusal import envelope
+            structured = {"refusal": envelope(e.refusal)}
+            if e.invocation_id is not None:
+                structured["invocation_id"] = e.invocation_id
             return _result(rid, {"content": [{"type": "text",
                                               "text": f"refused [{e.refusal.code}] {e.refusal.message}"}],
+                                 "structuredContent": structured,
                                  "isError": True})
     return {"jsonrpc": "2.0", "id": rid,
             "error": {"code": -32601, "message": f"method not found: {method}"}}
@@ -2510,6 +2606,9 @@ git commit -m "feat(mcp): stdio MCP server with CLI transport-equivalence test"
 
 **Files:**
 - Modify: `python/src/science/dispatch.py`
+- Modify: `python/src/science/loader.py` (`production_kind_acts` exact import)
+- Modify: `python/src/science/mcp.py` (open the attended session)
+- Create: `python/tests/helpers/synthetic.py` (synthetic declarations + handlers, shared with Task 13)
 - Test: `python/tests/test_write_dispatch.py`
 
 **Interfaces:**
@@ -2519,35 +2618,32 @@ git commit -m "feat(mcp): stdio MCP server with CLI transport-equivalence test"
   - `beliefs.session.open_attended_session(world_config, operations_root) -> WriterSession`
   - `WriterSession.session_id: str` (32 hex), `WriterSession.actor: str`
   - `WriterSession.scoped(required) -> ScopedWriter` (raises `PermitExceeded` when the requirement exceeds the session permit — the declaration-time refusal)
-  - `WriterSession.claim_invocation(invocation_id, command, input_digest) -> Claim` where `Claim` is one of `Fresh`, `Done(outcome)`, `Open`, `Mismatch` (ledger-backed, called under the dispatch lock)
+  - `WriterSession.close() -> None` — appends the ledger's `session-close` line (spec §5.2); idempotent, and every endpoint calls it in a `finally`
+  - `WriterSession.claim_invocation(invocation_id, command, input_digest) -> Claim` where `Claim` is the closed union `ClaimFresh | ClaimDone(outcome) | ClaimOpen | ClaimMismatch` — importable types, matched exhaustively, anything else a hard error (fail closed, never fall through to execution)
+  - `beliefs.session.KernelRefusalValue(value)` — the exception a `ScopedWriter` raises to carry a **value-style** kernel refusal (`RunRefused`, `AdmissionRefused`, …): a scoped writer never returns a refusal value, so the dispatcher has exactly one normalization path; the wrapped value exposes `.reason`
   - `WriterSession.close_invocation(invocation_id, outcome)` where outcome is `{"done": [[uid, id], …]}` or `{"refusal": {code, message, data}}` — the persisted envelope of spec §5.2
   - `WriterSession.invocation_acts(invocation_id) -> tuple[ActLine, ...]` with `ActLine.record_ids: tuple[tuple[str, str], ...]` — `(uid, id)` pairs
   - `beliefs.session.open_ledger_reader(operations_root, session_id) -> LedgerReader` with `LedgerReader.invocation(invocation_id) -> InvocationRecord | None` carrying `.command`, `.acts` (as above) and `.outcome` — the accessor write continuation resolves cursors through, and `.command` is what binds a cursor to its command
   - `ScopedWriter` mirroring the `CorpusWriter` write methods, permit-checked per act
-- Produces: the write branch of `Dispatcher.invoke` (spec §6.1 steps 3–7 for writes, §6.2 dedup under one `threading.Lock`, §7.4 audit via `audit_write_report`); **completion ordering** (spec §6.1/§5.2, ruled here): handler → collect minted `(uid, id)` pairs from the session's acts → `audit_write_report` → `close_invocation` → render → return. The ledger records act truth, never rendering success: an audit violation still closes `done` with the minted pairs (the acts committed) and then raises `AuditViolation` as an internal error — the caller sees exit 1, never the echoed report, and a dedup retry replays canonically from the ledger. A handler refusal closes with the persisted refusal envelope, in that order, before re-raising as `Refused`. Write-cursor continuation resolves the ledger via `open_ledger_reader`, re-renders from the ledger's `(uid, id)` pairs only, and never calls the write handler or canonicalizes inputs. Refusal translation: `PermitExceeded` → `permit-exceeded`, other `WriteRefused` → `kernel-refused` with the subclass name in `data`. Write handler signature: `handle(ctx, writer, **inputs) -> Report`; the handler's report is audited, but **what renders — on the first response as much as on replay — is the canonical ledger-rebuilt report** (`_minted_report`), so authored kind/title text around a real identity pair has no path to the caller. Also produced here: `science.mcp.serve` opens the attended session (`open_attended_session`) and passes it to its dispatcher — until this task the MCP server runs with `session=None`; the CLI service process is Task 13's, wired there. Finally, `loader.production_kind_acts` is rewritten from its pre-permit `return {}` to `from beliefs.permit import KIND_ACTS; return dict(KIND_ACTS)` — an exact import, no fallback.
+- Produces: the write branch of `Dispatcher.invoke` (spec §6.1 steps 3–7 for writes, §6.2 dedup under one `threading.Lock`, §7.4 audit via `audit_write_report`); **completion ordering** (spec §6.1/§5.2, ruled here): handler → collect minted `(uid, id)` pairs from the session's acts → `audit_write_report` → `close_invocation` → render → return. The ledger records act truth, never rendering success: an audit violation still closes `done` with the minted pairs (the acts committed) and then raises `AuditViolation` as an internal error — the caller sees exit 1, never the echoed report, and a dedup retry replays canonically from the ledger. A handler refusal closes with the persisted refusal envelope, in that order, before re-raising as `Refused`. Write-cursor continuation resolves the ledger via `open_ledger_reader`, re-renders from the ledger's `(uid, id)` pairs only, and never calls the write handler or canonicalizes inputs. Refusal translation is one function, `_kernel_refusal`: `PermitExceeded` → `permit-exceeded` with requirement/capability data, `KernelRefusalValue` → `kernel-refused` with the value's type name and `.reason` in `data`, other `WriteRefused` → `kernel-refused` with the subclass name in `data`; every write-path `Refused` carries the invocation id. Write handler signature: `handle(ctx, writer, **inputs) -> Report`; the handler's report is audited, but **what renders — on the first response as much as on replay — is the canonical ledger-rebuilt report** (`_minted_report`), so authored kind/title text around a real identity pair has no path to the caller.
 
-- [ ] **Step 1: Write the failing tests**
+- [ ] **Step 1: Write the shared synthetic module, then the failing tests**
 
-`python/tests/test_write_dispatch.py` — these run against a real attended session over the fixture world; the synthetic commands live in the test module and are passed to `Dispatcher` directly (handler injection is the fixture path; production resolution stays convention-bound):
+`python/tests/helpers/synthetic.py` — the one definition of the synthetic
+declarations and handlers; Task 13 extends this module with the
+fixture-tree loader. Real contract kinds only: `proposition` is the
+simplest mintable kind (Task 8's fixture already writes them); `source` is
+the foreign kind the lying handler reaches for:
 
 ```python
-import threading
+from pathlib import Path
 
-import pytest
-
-from science.dispatch import Dispatcher
 from science.cursor import MIN_OUTPUT_BUDGET
-from science.refusal import Refused
 from science.report import Text, record_block
 from science.schema import Declaration, InputSpec, WriteClass
-from pathlib import Path
-from tests.helpers.world import (
-    build_fixture_world, fixture_proposition_node, fixture_source_node,
-)
 
-# Real contract kinds only: proposition is the simplest mintable kind
-# (Task 8's fixture already writes them); source is the foreign kind the
-# lying handler reaches for.
+from tests.helpers.world import fixture_proposition_node, fixture_source_node
+
 MINT_CLAIM = Declaration("mint-claim", "fixture",
                          WriteClass("mints", ("proposition",), {"proposition": "corpus-write"}),
                          MIN_OUTPUT_BUDGET, (InputSpec("slug", "string", True, "d"),), (), Path("."))
@@ -2572,15 +2668,49 @@ def echoing_handler(ctx, writer, *, slug):
     return (Text("audit echo!"),)  # non-record block in a write report
 
 
+def forging_handler(ctx, writer, *, slug):
+    from science.report import RecordBlock
+    node = writer.add(fixture_proposition_node(slug))
+    # A real (uid, id) pair wearing authored kind/title: passes the audit's
+    # identity check, but the canonical render must not show it.
+    return (RecordBlock(node.uid, node.id, "verification", "FORGED TITLE"),)
+
+
+HANDLERS = {"mint-claim": mint_claim_handler, "overreach": overreach_handler}
+```
+
+`python/tests/test_write_dispatch.py` — runs against a real attended
+session over the fixture world; handler injection is the fixture path,
+production resolution stays convention-bound:
+
+```python
+import threading
+
+import pytest
+
+from science.dispatch import Dispatcher
+from science.cursor import MIN_OUTPUT_BUDGET
+from science.refusal import Refused
+from science.schema import Declaration
+from pathlib import Path
+from tests.helpers.synthetic import (
+    HANDLERS, MINT_CLAIM, OVERREACH, echoing_handler, forging_handler,
+)
+from tests.helpers.world import build_fixture_world
+
+
 @pytest.fixture
 def rig(certified_work):
     from beliefs.session import open_attended_session
     from science.config import ReadContext
     cfg = build_fixture_world(certified_work)
     session = open_attended_session(cfg.world, cfg.operations_root)
-    decls = (MINT_CLAIM, OVERREACH)
-    handlers = {"mint-claim": mint_claim_handler, "overreach": overreach_handler}
-    return Dispatcher(decls, handlers, ReadContext.open(cfg), session=session), session
+    dispatcher = Dispatcher((MINT_CLAIM, OVERREACH), dict(HANDLERS),
+                            ReadContext.open(cfg), session=session)
+    try:
+        yield dispatcher, session
+    finally:
+        session.close()  # the session-close ledger line, exercised every test
 
 
 def test_write_returns_only_its_record(rig):
@@ -2626,7 +2756,10 @@ def test_concurrent_same_id_executes_once(rig):
     for t in threads: t.start()
     for t in threads: t.join()
     assert len(session.invocation_acts("C" * 8)) == 1
-    assert len(results) + len(errors) == 8 and results
+    # All eight succeed identically: one executes, seven replay canonically.
+    assert not errors and len(results) == 8
+    assert len({r.text for r in results}) == 1
+    assert {r.invocation_id for r in results} == {"C" * 8}
 
 
 def test_audit_echo_is_unrepresentable_and_ledger_stays_true(rig):
@@ -2648,9 +2781,53 @@ def test_refusal_replay_is_exact(rig):
     acts_after_first = len(session.invocation_acts("F" * 8))
     with pytest.raises(Refused) as again:
         d.invoke("overreach", {}, invocation_id="F" * 8)
+    # Code, message, data, AND the invocation id all survive replay.
     assert again.value.refusal.code == first.value.refusal.code
     assert again.value.refusal.message == first.value.refusal.message
+    assert dict(again.value.refusal.data) == dict(first.value.refusal.data)
+    assert first.value.invocation_id == again.value.invocation_id == "F" * 8
     assert len(session.invocation_acts("F" * 8)) == acts_after_first  # not re-executed
+
+
+def test_value_style_kernel_refusal_normalizes(rig):
+    from beliefs.session import KernelRefusalValue
+    d, _ = rig
+
+    class FakeRunRefused:
+        reason = "recipe-mismatch: fixture"
+
+    def value_refusing_handler(ctx, writer, *, slug):
+        raise KernelRefusalValue(FakeRunRefused())
+
+    d._handlers["mint-claim"] = value_refusing_handler
+    with pytest.raises(Refused) as e:
+        d.invoke("mint-claim", {"slug": "v"}, invocation_id="H" * 8)
+    assert e.value.refusal.code == "kernel-refused"
+    assert e.value.refusal.data["kind"] == "FakeRunRefused"
+    assert "recipe-mismatch" in e.value.refusal.data["reason"]
+    assert e.value.invocation_id == "H" * 8
+
+
+def test_forged_kind_and_title_never_render(rig):
+    d, _ = rig
+    d._handlers["mint-claim"] = forging_handler
+    out = d.invoke("mint-claim", {"slug": "forge"})
+    # The identity pair is real, so the audit passes — but the canonical
+    # ledger-rebuilt render shows the record's true kind and title.
+    assert "FORGED TITLE" not in out.text and "verification" not in out.text
+    assert "[proposition] proposition:forge" in out.text
+
+
+def test_write_cursor_bound_to_its_command(rig):
+    d, _ = rig
+    small = Declaration("mint-claim", "fixture", MINT_CLAIM.write_class,
+                        MIN_OUTPUT_BUDGET, MINT_CLAIM.inputs, (), Path("."))
+    d._decls["mint-claim"] = small
+    first = d.invoke("mint-claim", {"slug": "long-" + "n" * 200}, invocation_id="J" * 8)
+    cursor = first.text.rsplit("cursor ", 1)[1].strip()
+    with pytest.raises(Refused) as e:
+        d.invoke("overreach", {}, cursor=cursor)  # a different command
+    assert e.value.refusal.code == "input-mismatch"
 
 
 def test_open_invocation_refuses_outcome_unknown(rig):
@@ -2692,8 +2869,22 @@ Expected: FAIL — `NotImplementedError` from the read-only dispatcher (or `Impo
 Replace the `NotImplementedError` branches:
 
 ```python
-# __init__ gains: self._lock = threading.Lock()
+Replace `Dispatcher.__init__` in full (the lock is the only addition):
 
+```python
+    def __init__(self, declarations, handlers: Mapping[str, Callable],
+                 read_context, session=None) -> None:
+        self._decls = {d.name: d for d in declarations}
+        self._handlers = dict(handlers)
+        self._ctx = read_context
+        self._session = session
+        self._lock = threading.Lock()  # serializes write-class steps 4-7
+```
+
+(add `import threading` at the top of `dispatch.py`), then add the write
+branch:
+
+```python
     def _required(self, decl: Declaration):
         from beliefs.permit import RequiredCapabilities
         wc = decl.write_class
@@ -2708,36 +2899,50 @@ Replace the `NotImplementedError` branches:
                 return RequiredCapabilities.publishes()
         raise AssertionError(wc.kind)
 
+    @staticmethod
+    def _kernel_refusal(e) -> Refusal:
+        """The one normalization path for every kernel refusal shape."""
+        from beliefs.permit import PermitExceeded
+        from beliefs.session import KernelRefusalValue
+        if isinstance(e, PermitExceeded):
+            return Refusal("permit-exceeded", str(e),
+                           {"requirement": str(e.requirement), "capability": str(e.capability)})
+        if isinstance(e, KernelRefusalValue):
+            value = e.value
+            return Refusal("kernel-refused", str(value.reason),
+                           {"kind": type(value).__name__, "reason": str(value.reason)})
+        return Refusal("kernel-refused", str(e), {"kind": type(e).__name__})
+
     def _invoke_write(self, decl, canonical, invocation_id):
         from beliefs.permit import PermitExceeded
         from beliefs.errors import WriteRefused
+        from beliefs.session import (
+            ClaimDone, ClaimFresh, ClaimMismatch, ClaimOpen, KernelRefusalValue,
+        )
         from science.render import audit_write_report
         if self._session is None:
             raise Refused(Refusal("permit-exceeded", "no writer session on this surface"))
         try:
             writer = self._session.scoped(self._required(decl))
         except PermitExceeded as e:
-            raise Refused(Refusal("permit-exceeded", str(e),
-                                  {"requirement": str(e.requirement), "capability": str(e.capability)}))
+            raise Refused(self._kernel_refusal(e))
         iid = invocation_id or mint_token()
         with self._lock:
             claim = self._session.claim_invocation(iid, decl.name, input_digest(canonical))
-            kind = type(claim).__name__
-            if kind == "Done":
+            if isinstance(claim, ClaimDone):
                 return Outcome(self._replay_outcome(decl, claim.outcome, iid, (0, 0)), iid)
-            if kind == "Open":
+            if isinstance(claim, ClaimOpen):
                 raise Refused(Refusal("outcome-unknown",
-                                      "a prior attempt is open; its outcome is unknown"))
-            if kind == "Mismatch":
+                                      "a prior attempt is open; its outcome is unknown"), iid)
+            if isinstance(claim, ClaimMismatch):
                 raise Refused(Refusal("input-mismatch",
-                                      "invocation_id was used with a different payload"))
+                                      "invocation_id was used with a different payload"), iid)
+            if not isinstance(claim, ClaimFresh):  # fail closed, never execute
+                raise TypeError(f"unknown claim type from the session: {claim!r}")
             try:
                 report = self._handlers[decl.name](self._ctx, writer, **canonical)
-            except PermitExceeded as e:
-                return self._close_refused(iid, Refusal("permit-exceeded", str(e)))
-            except WriteRefused as e:
-                return self._close_refused(
-                    iid, Refusal("kernel-refused", str(e), {"kind": type(e).__name__}))
+            except (PermitExceeded, KernelRefusalValue, WriteRefused) as e:
+                return self._close_refused(iid, self._kernel_refusal(e))
             minted = frozenset(
                 tuple(pair) for act in self._session.invocation_acts(iid)
                 for pair in act.record_ids)
@@ -2758,10 +2963,9 @@ Replace the `NotImplementedError` branches:
                                               iid, (0, 0)), iid)
 
     def _close_refused(self, iid, refusal: Refusal):
-        envelope = {"code": refusal.code, "message": refusal.message,
-                    "data": dict(refusal.data)}
-        self._session.close_invocation(iid, {"refusal": envelope})
-        raise Refused(refusal)
+        from science.refusal import envelope
+        self._session.close_invocation(iid, {"refusal": envelope(refusal)})
+        raise Refused(refusal, iid)
 
     def _render_write(self, budget: int, report, iid: str,
                       position: tuple[int, int]) -> str:
@@ -2784,7 +2988,7 @@ Replace the `NotImplementedError` branches:
                         position: tuple[int, int]) -> str:
         if "refusal" in outcome:
             r = outcome["refusal"]
-            raise Refused(Refusal(r["code"], r["message"], r.get("data", {})))
+            raise Refused(Refusal(r["code"], r["message"], r.get("data", {})), iid)
         report = self._minted_report(outcome["done"])
         return self._render_write(decl.output_budget, report, iid, position)
 ```
@@ -2827,12 +3031,45 @@ handler call, never canonicalization:
 ```
 
 `_render_write` uses the canonical report's digest exactly as the read
-path does, so replayed pages and first-render pages share cursors. Wire
-the attended session into the MCP server only: `science.mcp.serve` calls
-`open_attended_session(config.world, config.operations_root)` and passes
-the session to its `Dispatcher` (this replaces Task 11's `session=None`;
-the CLI's service process is created, already session-bearing, in
-Task 13).
+path does, so replayed pages and first-render pages share cursors.
+
+Then two exact companion edits. In `loader.py`, replace the body of
+`production_kind_acts`:
+
+```python
+def production_kind_acts() -> dict[str, frozenset[str]]:
+    from beliefs.permit import KIND_ACTS  # exact import; no fallback
+    return dict(KIND_ACTS)
+```
+
+In `mcp.py`, replace `serve`'s dispatcher construction so the MCP server
+owns the attended session for its process lifetime and closes it on the
+way out (the CLI's service process is created, already session-bearing,
+in Task 13):
+
+```python
+def serve(config_path: Path, stdin=None, stdout=None) -> None:
+    from beliefs.session import open_attended_session
+    from science.config import ReadContext, load_config
+    from science.loader import production_tree, resolve_handlers
+    stdin = stdin or sys.stdin
+    stdout = stdout or sys.stdout
+    decls = production_tree()
+    config = load_config(config_path)
+    session = open_attended_session(config.world, config.operations_root)
+    try:
+        dispatcher = Dispatcher(decls, resolve_handlers(decls),
+                                ReadContext.open(config), session=session)
+        for line in stdin:
+            if not line.strip():
+                continue
+            response = handle_request(json.loads(line), dispatcher, decls)
+            if response is not None:
+                stdout.write(json.dumps(response) + "\n")
+                stdout.flush()
+    finally:
+        session.close()  # the ledger's session-close line, crash or EOF alike
+```
 
 - [ ] **Step 4: Run the full suite to verify it passes**
 
@@ -2842,7 +3079,9 @@ Expected: PASS, including every earlier task's tests.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add python/src/science/dispatch.py python/tests/test_write_dispatch.py python/tests/helpers/world.py
+git add python/src/science/dispatch.py python/src/science/loader.py \
+        python/src/science/mcp.py python/tests/helpers/synthetic.py \
+        python/tests/test_write_dispatch.py
 git commit -m "feat(dispatch): write dispatch with scoped permits, atomic claims, and dedup"
 ```
 
@@ -2854,7 +3093,7 @@ git commit -m "feat(dispatch): write dispatch with scoped permits, atomic claims
 - Create: `python/src/science/serve.py`
 - Modify: `python/src/science/cli.py` (`serve` verb; `_via_service`)
 - Create: `python/tests/fixtures/commands/` (synthetic declarations: `mint-claim/`, `overreach/`, `coord-note/`, `pub-view/` — each a real `command.toml` + one-line `prompt.md`)
-- Create: `python/tests/helpers/synthetic.py` (the one definition of the synthetic declarations + handlers, shared by Tasks 12–13 tests)
+- Modify: `python/tests/helpers/synthetic.py` (add the fixture-tree loader; Task 12 created the module)
 - Test: `python/tests/test_serve.py`, `python/tests/test_synthetic_tree.py`
 
 **Interfaces:**
@@ -2863,7 +3102,10 @@ git commit -m "feat(dispatch): write dispatch with scoped permits, atomic claims
 
 - [ ] **Step 1: Write the synthetic declarations**
 
-`python/tests/fixtures/commands/mint-claim/command.toml` (the others follow the same shape with `write_class = "coordination"` and `write_class = "publishes"`; `overreach/` duplicates `mint-claim`'s declaration under its own name):
+All four, in full. Each directory also gets a one-line `prompt.md`:
+`Test fixture; never shipped.`
+
+`python/tests/fixtures/commands/mint-claim/command.toml`:
 
 ```toml
 schema_version = 1
@@ -2875,6 +3117,57 @@ output_budget = 4096
 type = "string"
 required = true
 doc = "Slug of the proposition."
+```
+
+`python/tests/fixtures/commands/overreach/command.toml`:
+
+```toml
+schema_version = 1
+name = "overreach"
+purpose = "Synthetic exemplar whose body exceeds its declaration."
+write_class = "mints:proposition"
+output_budget = 4096
+```
+
+`python/tests/fixtures/commands/coord-note/command.toml`:
+
+```toml
+schema_version = 1
+name = "coord-note"
+purpose = "Synthetic coordination exemplar; schema and dispatch shape only."
+write_class = "coordination"
+output_budget = 4096
+[inputs.text]
+type = "string"
+required = true
+doc = "Note text."
+```
+
+`python/tests/fixtures/commands/pub-view/command.toml`:
+
+```toml
+schema_version = 1
+name = "pub-view"
+purpose = "Synthetic publish exemplar; schema and dispatch shape only."
+write_class = "publishes"
+output_budget = 4096
+```
+
+Then extend `python/tests/helpers/synthetic.py` with the tree loader:
+
+```python
+def synthetic_decls_and_handlers():
+    from science.schema import load_command_tree
+    root = Path(__file__).parents[1] / "fixtures" / "commands"
+    kind_acts = {"proposition": frozenset({"corpus-write"})}
+    decls = load_command_tree(root, kind_acts=kind_acts,
+                              contract_kinds=frozenset(kind_acts))
+    def unreachable(ctx, writer, **inputs):
+        raise AssertionError("dispatch must refuse before this handler runs")
+    handlers = dict(HANDLERS)
+    handlers["coord-note"] = unreachable  # no coordination contract yet
+    handlers["pub-view"] = unreachable    # no publish act family yet
+    return decls, handlers
 ```
 
 `python/tests/test_synthetic_tree.py` proves the tree loads and classifies (schema + dispatch shape for `coordination` and `publishes`, which cannot act until sub-projects 1 and 5):
@@ -2911,12 +3204,18 @@ def test_declaration_time_refusal_for_class_above_permit(certified_work):
     cfg = build_fixture_world(certified_work)
     session = open_attended_session(cfg.world, cfg.operations_root)
     d = Dispatcher(decls, {"pub-view": lambda ctx, writer: ()}, ReadContext.open(cfg), session=session)
-    with pytest.raises(Refused) as e:
-        d.invoke("pub-view", {})
-    assert e.value.refusal.code == "permit-exceeded"
+    try:
+        with pytest.raises(Refused) as e:
+            d.invoke("pub-view", {})
+        assert e.value.refusal.code == "permit-exceeded"
+    finally:
+        session.close()
 ```
 
-(If beliefs' attended full permit includes `publish` before sub-project 5 exists, change the test to open the session with whatever narrower constructor beliefs provides for tests, or assert on the act-time refusal instead — the declaration-time check against a permit lacking the family is the behavior under test, not one particular session shape.)
+(This refusal is deterministic, not conditional: the act-family enumeration
+gains `publish` only when sub-project 5 lands — spec §4.1 — so today's
+`WritePermit.full()` cannot contain it, and a `publishes` requirement
+always exceeds an attended session's permit at declaration time.)
 
 - [ ] **Step 2: Write the failing service tests**
 
@@ -2951,6 +3250,36 @@ def test_service_round_trip_and_cli_routing(certified_work):
         assert len(reply["invocation_id"]) == 32
     finally:
         server.shutdown()
+        server.server_close()
+
+
+def _ask(sock_path, payload):
+    with socket.socket(socket.AF_UNIX) as s:
+        s.connect(str(sock_path))
+        s.sendall(json.dumps(payload).encode() + b"\n")
+        return json.loads(s.makefile().readline())
+
+
+def test_service_refusal_carries_envelope_and_replays(certified_work):
+    from tests.helpers.synthetic import synthetic_decls_and_handlers
+    cfg = build_fixture_world(certified_work)
+    decls, handlers = synthetic_decls_and_handlers()
+    sock_path = cfg.operations_root / "service.sock"
+    server = serve(cfg, sock_path, declarations=decls, handlers=handlers)
+    t = threading.Thread(target=server.serve_forever, daemon=True)
+    t.start()
+    try:
+        req = {"command": "overreach", "inputs": {}, "invocation_id": "K" * 8,
+               "cursor": None}
+        first = _ask(sock_path, req)
+        again = _ask(sock_path, req)
+        assert not first["ok"]
+        assert set(first["refusal"]) == {"code", "message", "data"}
+        assert first["invocation_id"] == "K" * 8
+        assert again == first  # code, message, data, id — all replay exactly
+    finally:
+        server.shutdown()
+        server.server_close()
 
 
 def test_existing_socket_refuses_startup(certified_work):
@@ -3032,7 +3361,82 @@ def serve(config: ScienceConfig, socket_path: Path, declarations=None, handlers=
     return socketserver.ThreadingUnixStreamServer(str(socket_path), Handler)
 ```
 
-Move the synthetic declarations/handlers used by Tasks 12–13 tests into `tests/helpers/synthetic.py` (`synthetic_decls_and_handlers()` loads `tests/fixtures/commands` through `load_command_tree` and returns the declarations with the handler functions Task 12 defined) so both the write-dispatch tests and this task share one definition. In `cli.py`: `_service_socket(config) = config.operations_root / "service.sock"`; `_via_service` connects, sends one request line, prints `text` on stdout and `invocation-id: <id>` on stderr (so callers can retry safely), or the refusal (exit 3); on `ConnectionRefusedError`/missing socket it writes `refused [permit-exceeded] no writer service; start one with: science serve` to stderr and returns 3. The `serve` verb loads config, builds the production server, and calls `serve_forever()`.
+The service's `Handler` also carries the refusal's invocation id when the
+dispatcher attached one: build the error reply as
+
+```python
+                except Refused as e:
+                    from science.refusal import envelope
+                    reply = {"ok": False, "refusal": envelope(e.refusal)}
+                    if e.invocation_id is not None:
+                        reply["invocation_id"] = e.invocation_id
+```
+
+and give the server a `server_close` override so shutdown writes the
+ledger's `session-close` line:
+
+```python
+    class Server(socketserver.ThreadingUnixStreamServer):
+        def server_close(self) -> None:
+            super().server_close()
+            session.close()
+```
+
+(return `Server(str(socket_path), Handler)`; the test's `finally:
+server.shutdown()` gains `server.server_close()`.)
+
+In `cli.py`, the exact routing code:
+
+```python
+def _service_socket(config) -> Path:
+    return config.operations_root / "service.sock"
+
+
+def _via_service(ns, decl, inputs) -> int:
+    import json as _json
+    import socket as _socket
+    from science.config import load_config, resolve_config_path
+    try:
+        config = load_config(resolve_config_path(ns.config))
+        sock_path = _service_socket(config)
+        with _socket.socket(_socket.AF_UNIX) as s:
+            s.connect(str(sock_path))
+            s.sendall(_json.dumps({"command": decl.name, "inputs": inputs,
+                                   "invocation_id": ns.invocation_id,
+                                   "cursor": ns.cursor}).encode() + b"\n")
+            reply = _json.loads(s.makefile().readline())
+    except (FileNotFoundError, ConnectionRefusedError):
+        sys.stderr.write("refused [permit-exceeded] no writer service; "
+                         "start one with: science serve\n")
+        return EXIT_REFUSED
+    except Refused as e:
+        sys.stderr.write(f"refused [{e.refusal.code}] {e.refusal.message}\n")
+        return EXIT_REFUSED
+    if reply["ok"]:
+        sys.stdout.write(reply["text"])
+        sys.stderr.write(f"invocation-id: {reply['invocation_id']}\n")
+        return EXIT_OK
+    refusal = reply["refusal"]
+    sys.stderr.write(f"refused [{refusal['code']}] {refusal['message']}\n")
+    if "invocation_id" in reply:
+        sys.stderr.write(f"invocation-id: {reply['invocation_id']}\n")
+    return EXIT_REFUSED
+```
+
+and the `serve` verb, added to `_framework_verb` before the fallthrough:
+
+```python
+    if ns.command == "serve":
+        from science.config import load_config, resolve_config_path
+        from science.serve import serve as build_server
+        config = load_config(resolve_config_path(ns.config))
+        server = build_server(config, _service_socket(config))
+        try:
+            server.serve_forever()
+        finally:
+            server.server_close()
+        return EXIT_OK
+```
 
 - [ ] **Step 5: Run the full suite, then the whole tree build**
 

@@ -544,7 +544,8 @@ exercised by the synthetic exemplars in tests.
 lifetime; the harness configuration that starts it is the person's launcher.
 The server pins **MCP protocol revision `2026-07-28`** — the revision that
 retired the `initialize` handshake, requires every request to carry `_meta`
-(protocol version, client info, client capabilities), and **removed
+with the namespaced `io.modelcontextprotocol/` keys (protocol version,
+client info, client capabilities), and **removed
 protocol sessions entirely**: requests are independent. The attended
 **writer** session is not an MCP concept at all — it is launcher-owned
 process state, bound to the server process from spawn to exit, that those
