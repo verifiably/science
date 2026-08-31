@@ -534,6 +534,12 @@ exercised by the synthetic exemplars in tests.
 
 `science mcp serve`, stdio transport, one attended session per server
 lifetime; the harness configuration that starts it is the person's launcher.
+The server pins **MCP protocol revision `2026-07-28`** — the revision that
+retired the `initialize` handshake, requires request `_meta`, and made
+protocol sessions explicit — and the attended **writer** session binds to
+the server *process* (spawn to exit), not to any MCP protocol session:
+several protocol sessions over one process share the one writer session and
+its ledger, which is attended use by the same person under one full permit.
 The tool list is generated 1:1 from the declarations — name, `purpose` as
 description, input JSON Schema from the canonical inputs **plus the
 optional protocol properties `invocation_id` and `cursor`**, which the

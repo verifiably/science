@@ -586,22 +586,32 @@ git commit -m "feat(protocol): canonical inputs, digests, and the refusal envelo
 - Test: `python/tests/test_report.py`
 
 **Interfaces:**
-- Consumes: nothing.
-- Produces: frozen block dataclasses `Heading(text)`, `KeyVals(title, pairs: tuple[tuple[str, str], ...])`, `RecordBlock(record_id, kind, body)`, `Finding(text)`, `Text(text)`; type alias `Block`; `Report = tuple[Block, ...]`; `serialize_block(block) -> str` (deterministic, newline-terminated).
+- Consumes: nothing (the factory takes any object with `uid`, `id`, `kind`, `title` attributes — the `nodes` `Node` shape — so this task needs no beliefs import).
+- Produces: frozen block dataclasses `Heading(text)`, `KeyVals(title, pairs: tuple[tuple[str, str], ...])`, `RecordBlock(uid, record_id, kind, title)`, `Finding(text)`, `Text(text)`; the factory `record_block(node) -> RecordBlock` — **the only intended way to build one**: every field is derived from the kernel record, so a handler cannot author free text into a record block (that channel is the audit echo, spec §7.4); type alias `Block`; `Report = tuple[Block, ...]`; `serialize_block(block) -> str` (deterministic, newline-terminated).
 
 - [ ] **Step 1: Write the failing test**
 
 `python/tests/test_report.py`:
 
 ```python
-from science.report import Finding, Heading, KeyVals, RecordBlock, Text, serialize_block
+from types import SimpleNamespace
+
+from science.report import (
+    Finding, Heading, KeyVals, RecordBlock, Text, record_block, serialize_block,
+)
+
+
+def test_record_block_is_derived_from_the_record():
+    node = SimpleNamespace(uid="u" * 32, id="proposition:x", kind="proposition", title="claim")
+    block = record_block(node)
+    assert block == RecordBlock("u" * 32, "proposition:x", "proposition", "claim")
 
 
 def test_serialization_is_deterministic_and_distinct():
     blocks = (
         Heading("World"),
         KeyVals("epoch", (("packaging", "abc"), ("coverage", "2"))),
-        RecordBlock("proposition:x", "proposition", "claim text"),
+        RecordBlock("u" * 32, "proposition:x", "proposition", "claim"),
         Finding("chain head moved"),
         Text("plain"),
     )
@@ -611,7 +621,7 @@ def test_serialization_is_deterministic_and_distinct():
     assert len(set(outs)) == len(outs)
     assert "## World" in outs[0]
     assert "packaging: abc" in outs[1]
-    assert "[proposition] proposition:x" in outs[2]
+    assert "[proposition] proposition:x" in outs[2] and "u" * 32 in outs[2]
     assert outs[3].startswith("! ")
 ```
 
@@ -642,9 +652,15 @@ class KeyVals:
 
 @dataclass(frozen=True)
 class RecordBlock:
+    uid: str
     record_id: str
     kind: str
-    body: str
+    title: str
+
+
+def record_block(node) -> RecordBlock:
+    """Derive a record block from a kernel record; handlers never author one."""
+    return RecordBlock(node.uid, node.id, node.kind, node.title)
 
 
 @dataclass(frozen=True)
@@ -668,8 +684,8 @@ def serialize_block(block: Block) -> str:
         case KeyVals(title, pairs):
             lines = [f"{title}:"] + [f"  {k}: {v}" for k, v in pairs]
             return "\n".join(lines) + "\n"
-        case RecordBlock(record_id, kind, body):
-            return f"[{kind}] {record_id}\n{body}\n"
+        case RecordBlock(uid, record_id, kind, title):
+            return f"[{kind}] {record_id} uid={uid}\n{title}\n"
         case Finding(text):
             return f"! {text}\n"
         case Text(text):
@@ -730,7 +746,8 @@ def test_maximal_cursor_fits_published_bound():
     assert MIN_OUTPUT_BUDGET > MAX_CURSOR_BYTES
 
 
-@pytest.mark.parametrize("junk", ["", "scur1.", "nope", "scur1.!!!!", "scur2.AAAA"])
+@pytest.mark.parametrize("junk", ["", "scur1.", "nope", "scur1.!!!!", "scur2.AAAA",
+                                  "scur1." + "A" * 4096])  # last: over the size cap
 def test_garbage_refuses_unknown_cursor(junk):
     with pytest.raises(Refused) as e:
         decode(junk)
@@ -832,6 +849,8 @@ def encode(cursor: ReadCursor | WriteCursor) -> str:
 
 
 def decode(token: str) -> ReadCursor | WriteCursor:
+    if len(token.encode()) > MAX_CURSOR_BYTES:  # cap before any parsing
+        _refuse("over the size bound")
     if not token.startswith(_PREFIX):
         _refuse("bad prefix")
     body = token[len(_PREFIX):]
@@ -906,7 +925,7 @@ git commit -m "feat(cursor): bounded cursor encoding with computed size constant
 
 **Interfaces:**
 - Consumes: `Report`, `serialize_block` (Task 3); `MARKER_TEMPLATE`, `MIN_OUTPUT_BUDGET`, `encode` (Task 4).
-- Produces: `RenderedPage(text: str, next_position: tuple[int, int] | None, report_digest: str)`; `render_page(report, *, budget: int, position: tuple[int, int] = (0, 0), cursor_for: Callable[[tuple[int, int], str], str]) -> RenderedPage`; `report_digest(report) -> str`; `AuditViolation(Exception)`; `audit_write_report(report, minted_ids: frozenset[str]) -> None`.
+- Produces: `RenderedPage(text: str, next_position: tuple[int, int] | None, report_digest: str)`; `render_page(report, *, budget: int, position: tuple[int, int] = (0, 0), cursor_for: Callable[[tuple[int, int], str], str]) -> RenderedPage`; `report_digest(report) -> str`; `AuditViolation(Exception)`; `audit_write_report(report, minted: frozenset[tuple[str, str]]) -> None` — `minted` is the ledger's `(uid, id)` identity pairs (spec §5.2), and a record block passes only when **both** identities match a minted pair.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -972,10 +991,12 @@ def test_digest_stable():
 
 
 def test_write_audit_rules():
-    minted = frozenset({"note:n1"})
-    audit_write_report((RecordBlock("note:n1", "note", "body"),), minted)
-    with pytest.raises(AuditViolation):  # foreign record
-        audit_write_report((RecordBlock("note:other", "note", "b"),), minted)
+    minted = frozenset({("u" * 32, "note:n1")})
+    audit_write_report((RecordBlock("u" * 32, "note:n1", "note", "t"),), minted)
+    with pytest.raises(AuditViolation):  # foreign record id
+        audit_write_report((RecordBlock("u" * 32, "note:other", "note", "t"),), minted)
+    with pytest.raises(AuditViolation):  # right id, wrong uid — both must match
+        audit_write_report((RecordBlock("v" * 32, "note:n1", "note", "t"),), minted)
     for block in (Heading("h"), Finding("f"), Text("t")):
         with pytest.raises(AuditViolation):  # any non-record block
             audit_write_report((block,), minted)
@@ -1020,12 +1041,13 @@ def report_digest(report: Report) -> str:
     return h.hexdigest()
 
 
-def audit_write_report(report: Report, minted_ids: frozenset[str]) -> None:
+def audit_write_report(report: Report, minted: frozenset[tuple[str, str]]) -> None:
     for block in report:
         if not isinstance(block, RecordBlock):
             raise AuditViolation(f"write reports carry record blocks only, got {type(block).__name__}")
-        if block.record_id not in minted_ids:
-            raise AuditViolation(f"record {block.record_id!r} was not minted by this invocation")
+        if (block.uid, block.record_id) not in minted:
+            raise AuditViolation(
+                f"record ({block.uid!r}, {block.record_id!r}) was not minted by this invocation")
 
 
 def _utf8_prefix(data: bytes, limit: int) -> bytes:
@@ -1093,8 +1115,8 @@ git commit -m "feat(render): budgeted renderer with guaranteed progress and writ
 - Test: `python/tests/test_config.py`
 
 **Interfaces:**
-- Consumes: `beliefs.root.WorldConfig` and `beliefs.root.open_world` — verify the exact import path and constructor fields in the beliefs checkout first (`WorldConfig(world_root, world_id, corpus_roots)`; `open_world(config) -> World` at `beliefs/root.py:1674`); `Refusal`, `Refused` (Task 2).
-- Produces: `ScienceConfig(world: "beliefs WorldConfig", operations_root: Path)`; `load_config(path: Path) -> ScienceConfig`; `resolve_config_path(cli_value: str | None, env: Mapping) -> Path` (CLI flag beats `SCIENCE_CONFIG`; neither present raises `Refused` `invalid-input`); `ReadContext(world, config)` with `ReadContext.open(config: ScienceConfig) -> ReadContext`.
+- Consumes: `from beliefs.world import WorldConfig` (the canonical import — a frozen dataclass at `beliefs/world/registry.py:137` with fields `world_root: Path`, `world_id: str`, `corpus_roots: tuple[Path, ...]`; its `__post_init__` requires `world_id` to be exactly 32 lowercase hex characters and `corpus_roots` to be an exact `tuple`, and resolves both path fields); `from beliefs.root import open_world` (`root.py:1674`, `(config: WorldConfig) -> World`); `Refusal`, `Refused` (Task 2).
+- Produces: `ScienceConfig(world: WorldConfig, operations_root: Path)`; `load_config(path: Path) -> ScienceConfig`; `resolve_config_path(cli_value: str | None, env: Mapping) -> Path` (CLI flag beats `SCIENCE_CONFIG`; neither present raises `Refused` `invalid-input`); `ReadContext(world, config)` with `ReadContext.open(config: ScienceConfig) -> ReadContext` (Task 8 adds its corpus-read helpers).
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -1109,23 +1131,26 @@ from science.config import load_config, resolve_config_path
 from science.refusal import Refused
 
 
-def write_config(tmp_path: Path) -> Path:
+WORLD_ID = "deadbeef" * 4  # WorldConfig requires 32 lowercase hex characters
+
+
+def write_config(tmp_path: Path, world_id: str = WORLD_ID, extra: str = "") -> Path:
     world_root = tmp_path / "world"
     ops = tmp_path / "ops"
     corpus = tmp_path / "corpora" / "one"
     cfg = tmp_path / "science.toml"
     cfg.write_text(f"""
 world_root = "{world_root}"
-world_id = "w-test"
+world_id = "{world_id}"
 corpus_roots = ["{corpus}"]
 operations_root = "{ops}"
-""")
+{extra}""")
     return cfg
 
 
 def test_load_config_builds_beliefs_worldconfig(tmp_path):
     cfg = load_config(write_config(tmp_path))
-    assert cfg.world.world_id == "w-test"
+    assert cfg.world.world_id == WORLD_ID
     assert cfg.operations_root == tmp_path / "ops"
     assert [Path(p).name for p in cfg.world.corpus_roots] == ["one"]
 
@@ -1136,6 +1161,18 @@ def test_missing_field_refused(tmp_path):
     with pytest.raises(Refused) as e:
         load_config(p)
     assert e.value.refusal.code == "invalid-input"
+
+
+def test_bad_world_id_wrong_types_and_unknown_keys_refused(tmp_path):
+    with pytest.raises(Refused):
+        load_config(write_config(tmp_path, world_id="w-test"))  # not 32-hex
+    with pytest.raises(Refused):
+        load_config(write_config(tmp_path, extra='stray = 1\n'))  # unknown key
+    p = tmp_path / "types.toml"
+    p.write_text(f'world_root = 3\nworld_id = "{WORLD_ID}"\n'
+                 'corpus_roots = "not-a-list"\noperations_root = "/x"\n')
+    with pytest.raises(Refused):
+        load_config(p)
 
 
 def test_resolution_order(tmp_path):
@@ -1153,19 +1190,21 @@ Expected: FAIL — no module `science.config`.
 
 - [ ] **Step 3: Implement `config.py`**
 
-First run `python -c "from beliefs.root import WorldConfig, open_world; help(WorldConfig)"` inside the beliefs environment and confirm the constructor fields; adjust the two marked lines if they differ. Add beliefs as a dependency: in `python/pyproject.toml` set `dependencies = ["verifiably-beliefs"]` and, until it is published, a `[tool.uv.sources]` (or pip `-e`) entry pointing at the beliefs checkout — never a vendored copy.
+Add beliefs as a dependency: in `python/pyproject.toml` set `dependencies = ["verifiably-beliefs"]` and, until it is published, a `[tool.uv.sources]` (or pip `-e`) entry pointing at the beliefs checkout — never a vendored copy.
 
 ```python
 """Launcher configuration: one TOML file, loaded straight into beliefs' WorldConfig."""
 from __future__ import annotations
 
 import os
+import re
 import tomllib
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
-from beliefs.root import WorldConfig, open_world
+from beliefs.root import open_world
+from beliefs.world import WorldConfig
 
 from science.refusal import Refusal, Refused
 
@@ -1180,14 +1219,29 @@ def _refuse(message: str) -> None:
     raise Refused(Refusal("invalid-input", message))
 
 
+_WORLD_ID_RE = re.compile(r"^[0-9a-f]{32}$")  # WorldConfig's own rule, checked here first
+_KEYS = ("world_root", "world_id", "corpus_roots", "operations_root")
+
+
 def load_config(path: Path) -> ScienceConfig:
     if not path.is_file():
         _refuse(f"config file not found: {path}")
     raw = tomllib.loads(path.read_text())
-    for key in ("world_root", "world_id", "corpus_roots", "operations_root"):
+    unknown = set(raw) - set(_KEYS)
+    if unknown:
+        _refuse(f"config has unknown keys {sorted(unknown)}")
+    for key in _KEYS:
         if key not in raw:
             _refuse(f"config missing {key!r}")
-    world = WorldConfig(  # adjust field names here if beliefs' constructor differs
+    for key in ("world_root", "world_id", "operations_root"):
+        if not isinstance(raw[key], str):
+            _refuse(f"config {key!r} must be a string")
+    if not (isinstance(raw["corpus_roots"], list)
+            and all(isinstance(p, str) for p in raw["corpus_roots"])):
+        _refuse("config 'corpus_roots' must be a list of strings")
+    if not _WORLD_ID_RE.match(raw["world_id"]):
+        _refuse("config 'world_id' must be 32 lowercase hex characters")
+    world = WorldConfig(
         world_root=Path(raw["world_root"]),
         world_id=raw["world_id"],
         corpus_roots=tuple(Path(p) for p in raw["corpus_roots"]),
@@ -1398,9 +1452,17 @@ class Dispatcher:
         from science.render import report_digest as fresh_digest
         if fresh_digest(report) != cur.report_digest:
             raise Refused(Refusal("stale-cursor", "the world moved; re-run the command"))
+        self._check_position(report, cur.block, cur.offset)
         iid = invocation_id or mint_token()
         page = self._render(decl, canonical, report, (cur.block, cur.offset))
         return Outcome(page, iid)
+
+    @staticmethod
+    def _check_position(report, block: int, offset: int) -> None:
+        """Semantic position validation: within the report the digest just proved."""
+        from science.report import serialize_block
+        if block >= len(report) or offset >= len(serialize_block(report[block]).encode()):
+            raise Refused(Refusal("stale-cursor", "cursor position is outside the report"))
 ```
 
 - [ ] **Step 4: Run tests to verify they pass**
@@ -1428,8 +1490,8 @@ git commit -m "feat(dispatch): read dispatch with stateless cursor continuation"
 - Test: `python/tests/test_status.py`
 
 **Interfaces:**
-- Consumes: `ReadContext` (Task 6); beliefs reads — verify each against the beliefs checkout before use: `World.registry()` and `World.status(corpus_id)` (`world/registry.py:250,255`), `current_epoch(world)` (`world/read.py:203`), `open_corpus(root)` → `CorpusWriter.read_view()` → `ReadView.iter_stored()` (`corpus.py`). When the beliefs permit change lands, `open_corpus` grows a permit parameter — reads then pass whatever read/none permit beliefs defines; keep that call in one place (`ReadContext` helper) so the change is one line.
-- Produces: `science.commands.status.handle(ctx) -> Report`; `loader.production_tree() -> tuple[Declaration, ...]` + `loader.resolve_handlers(decls) -> dict[str, Callable]` (imports `science.commands.<module>` per Task 1's `handler_module`, refusing a missing or signature-mismatched handler with `DeclarationError`); fixture helper `build_fixture_world(tmp_path) -> ScienceConfig` returning a world with one corpus and a few records.
+- Consumes (exact, from the beliefs tree): `World.registry() -> RegistryView` — a frozen dataclass of tuples, **not iterable**: enumerate corpus ids as `[r.corpus_id for r in view.admissions]`, terminal ids as `{r.corpus_id for r in view.statuses}` (`world/registry.py:155`); `World.status(corpus_id) -> CorpusStatus(known, live, present, findings)` (`registry.py:162`); `current_epoch(world) -> Epoch` which **raises `EpochUnknown`** (import `from beliefs.errors import EpochUnknown`) when no epoch exists, with `Epoch.packaging_identity: str` (`world/read.py:203`, `errors.py:113`); `ReadView.opened_at(root)` — the read-only corpus opener, no writer involved (`corpus.py:152`), whose `iter_stored()` yields `nodes` `Node` objects (`.kind`, `.uid`, `.id`, `.title`), unvalidated; `load_manifest(root).corpus_id` (`world/registry.py:493`); the fixture recipe below, mirrored from beliefs' own `world_case` fixture (`python/tests/acceptance/test_n2_cut6.py:155`).
+- Produces: `science.commands.status.handle(ctx) -> Report`; `loader.production_tree()` + `loader.resolve_handlers(decls)` (imports `science.commands.<module>` per Task 1's `handler_module`, refusing a missing or signature-mismatched handler with `DeclarationError`); `ReadContext.read_views() -> tuple[tuple[str, ReadView], ...]` and `ReadContext.load_record(uid, record_id) -> Node`; conftest fixture `certified_work` (a fresh directory on a certified volume — beliefs' real engine refuses tmpfs roots, so **never `tmp_path`** for a live world); fixture helpers `build_fixture_world(work) -> ScienceConfig`, `add_one_more_record(cfg)`, `fixture_proposition_node(slug)`, `fixture_source_node(slug)`.
 
 - [ ] **Step 1: Write the declaration and prompt**
 
@@ -1455,35 +1517,83 @@ if it ends with a truncation marker, continue with the cursor it names
 rather than summarizing what you have not seen.
 ```
 
-- [ ] **Step 2: Write the fixture-world helper**
+- [ ] **Step 2: Write the conftest and the fixture-world helper**
 
-`python/tests/helpers/world.py` — the construction sequence is `init_corpus_root` → `open_corpus` → `adopt_manifest` → `init_world_root` → `open_world` → `World.admit`, then a couple of records through the writer. **Copy the exact pin values and any record-construction helpers from beliefs' own test suite** (search `~/d/beliefs/python/tests` for `adopt_manifest` and `World.admit` usages and mirror the nearest fixture; beliefs' `fixtures/` directory holds ready corpora if constructing proves deeper than this sketch — adopt whichever its own tests use):
+`python/tests/conftest.py` — mirror beliefs' certified-volume discipline
+(its acceptance conftest states `/tmp` is a tmpfs with no barrier-option
+table, which the real engine refuses):
 
 ```python
+import os
+import shutil
+import uuid
 from pathlib import Path
 
-from beliefs.root import init_corpus_root, init_world_root, open_corpus, open_world, WorldConfig
+import pytest
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+@pytest.fixture()
+def certified_work():
+    base = Path(os.environ.get("SCIENCE_TEST_ROOT", REPO_ROOT / ".framework-test"))
+    work = base / uuid.uuid4().hex
+    work.mkdir(parents=True)
+    try:
+        yield work
+    finally:
+        shutil.rmtree(work, ignore_errors=True)  # metadata siblings live inside work
+```
+
+(Add `.framework-test/` to `.gitignore` in the same commit.)
+
+`python/tests/helpers/world.py` — the exact recipe of beliefs'
+`world_case` fixture (`acceptance/test_n2_cut6.py:155`), with pins in the
+format `adopt_manifest` validates (`"<namespace>:<64 hex>"`, mirroring
+beliefs' `fixtures_cut6.PINS`); `Fresh()` is the no-field provenance for a
+local admission, and `proposition_node` is the simplest mintable record —
+its factory stamps the semantic identity itself, so there is no separate
+stamping step:
+
+```python
+import secrets
+from pathlib import Path
+
+from beliefs import stored
+from beliefs.consulted import CorpusPins
+from beliefs.root import init_corpus_root, init_world_root, open_corpus, open_world
+from beliefs.world import Fresh, WorldConfig
 
 from science.config import ScienceConfig
 
+PINS = CorpusPins(science_contract="science:" + "a" * 64,
+                  domains={"biology": "biology:" + "b" * 64})
 
-def build_fixture_world(tmp_path: Path) -> ScienceConfig:
-    corpus_root = tmp_path / "corpora" / "one"
-    world_root = tmp_path / "world"
-    corpus_root.parent.mkdir(parents=True)
+
+def fixture_proposition_node(slug: str):
+    return stored.proposition_node(slug, title=slug, claim={"operator": "affects"})
+
+
+def fixture_source_node(slug: str):
+    return stored.source_node(slug, title=slug, identifiers={"doi": "10.1/" + slug})
+
+
+def build_fixture_world(work: Path) -> ScienceConfig:
+    corpus_root = work / "corpus"
+    config = WorldConfig(work / "world", secrets.token_hex(16), (corpus_root,))
+    init_world_root(config)
     init_corpus_root(corpus_root)
     writer = open_corpus(corpus_root)
-    manifest = writer.adopt_manifest(profile=_fixture_pins())  # pins copied from beliefs tests
-    config = WorldConfig(world_root=world_root, world_id=_fixture_world_id(),
-                         corpus_roots=(corpus_root,))
-    init_world_root(config)
+    writer.adopt_manifest(profile=PINS)
     world = open_world(config)
-    world.admit(corpus_root, provenance=_fixture_provenance(), actor="fixture")
-    _write_fixture_records(writer)  # e.g. one proposition + one source, via beliefs' node factories
-    return ScienceConfig(world=config, operations_root=tmp_path / "ops")
-```
+    world.admit(corpus_root, provenance=Fresh(), actor="fixture")
+    writer.add(fixture_proposition_node("p1"))
+    return ScienceConfig(world=config, operations_root=work / "ops")
 
-The three `_fixture_*` helpers hold the values mirrored from beliefs' tests; keep them in this file, commented with the beliefs test they mirror. If `World.admit`'s provenance vocabulary makes a fresh adoption anything other than a plain local admission, mirror exactly what beliefs' own admission tests pass.
+
+def add_one_more_record(cfg: ScienceConfig) -> None:
+    open_corpus(cfg.world.corpus_roots[0]).add(fixture_proposition_node("p2"))
+```
 
 - [ ] **Step 3: Write the failing tests**
 
@@ -1499,21 +1609,21 @@ from science.report import Heading, KeyVals
 from tests.helpers.world import build_fixture_world
 
 
-def test_status_renders_registry_epoch_and_counts(tmp_path):
-    cfg = build_fixture_world(tmp_path)
+def test_status_renders_registry_epoch_and_counts(certified_work):
+    cfg = build_fixture_world(certified_work)
     ctx = ReadContext.open(cfg)
     report = handle(ctx)
     text = "".join(str(b) for b in report)
     assert isinstance(report[0], Heading)
-    assert "one" in text or "corpus" in text.lower()
-    assert "no current epoch" in text.lower() or "epoch" in text.lower()
+    assert "no current epoch" in text.lower()  # the fixture publishes no epoch
     kinds = [b for b in report if isinstance(b, KeyVals)]
-    assert kinds, "expected per-corpus record counts"
+    assert any("proposition" in str(b) for b in kinds), "expected per-corpus counts by kind"
+    assert "live=True" in text  # CorpusStatus of the admitted corpus
 
 
-def test_status_mutation_is_caught(tmp_path):
+def test_status_mutation_is_caught(certified_work):
     # N2 shape: adding a record must change the counts the report carries.
-    cfg = build_fixture_world(tmp_path)
+    cfg = build_fixture_world(certified_work)
     before = handle(ReadContext.open(cfg))
     from tests.helpers.world import add_one_more_record
     add_one_more_record(cfg)
@@ -1527,8 +1637,6 @@ def test_production_tree_ships_only_status():
     handlers = resolve_handlers(decls)
     assert callable(handlers["status"])
 ```
-
-Add `add_one_more_record(cfg)` to the helper: reopen the corpus writer and add one more record of a kind the fixture already uses.
 
 - [ ] **Step 4: Run tests to verify they fail**
 
@@ -1545,39 +1653,56 @@ from __future__ import annotations
 
 from collections import Counter
 
+from beliefs.errors import EpochUnknown
+from beliefs.world.read import current_epoch
+
 from science.report import Heading, KeyVals, Report, Text
 
 
 def handle(ctx) -> Report:
     world = ctx.world
     blocks: list = [Heading("World status")]
-    registry = world.registry()
-    corpus_ids = sorted(registry) if hasattr(registry, "__iter__") else []
-    rows = tuple((cid, str(world.status(cid))) for cid in corpus_ids)
-    blocks.append(KeyVals("corpora", rows or (("none", "no corpora admitted"),)))
-    from beliefs.world.read import current_epoch
-    epoch = current_epoch(world)
-    if epoch is None:
-        blocks.append(Text("No current epoch."))
-    else:
-        blocks.append(KeyVals("epoch", (("packaging", str(epoch.packaging_identity)),)))
+    view = world.registry()  # RegistryView: tuples, not iterable itself
+    corpus_ids = sorted(r.corpus_id for r in view.admissions)
+    rows = []
     for cid in corpus_ids:
-        counts = Counter(rec.kind for rec in ctx.read_view(cid).iter_stored())
+        s = world.status(cid)  # CorpusStatus(known, live, present, findings)
+        rows.append((cid, f"known={s.known} live={s.live} present={s.present}"))
+    blocks.append(KeyVals("corpora", tuple(rows) or (("none", "no corpora admitted"),)))
+    try:
+        epoch = current_epoch(world)
+        blocks.append(KeyVals("epoch", (("packaging", epoch.packaging_identity),)))
+    except EpochUnknown:
+        blocks.append(Text("No current epoch."))
+    for cid, read_view in ctx.read_views():
+        counts = Counter(node.kind for node in read_view.iter_stored())
         blocks.append(KeyVals(f"records in {cid}",
                               tuple((k, str(v)) for k, v in sorted(counts.items()))))
     return tuple(blocks)
 ```
 
-Adjust the registry/epoch attribute names to what beliefs actually returns (inspect in a REPL against the fixture world); keep the block structure. Add to `ReadContext` (Task 6's `config.py`) the one corpus-read helper this needs:
+Add to `ReadContext` (Task 6's `config.py`) the corpus-read helpers —
+`ReadView.opened_at` is the read-only opener, and the manifest carries the
+corpus id, so no writer and no registry lookup is involved:
 
 ```python
-    def read_view(self, corpus_id: str):
-        from beliefs.root import open_corpus
-        root = self._root_for(corpus_id)  # map corpus_id -> configured corpus_roots entry
-        return open_corpus(root).read_view()
-```
+    def read_views(self) -> tuple[tuple[str, "ReadView"], ...]:
+        from beliefs.corpus import ReadView
+        from beliefs.world.registry import load_manifest
+        pairs = []
+        for root in self.config.world.corpus_roots:
+            pairs.append((load_manifest(root).corpus_id, ReadView.opened_at(root)))
+        return tuple(sorted(pairs))
 
-with `_root_for` resolving through the world registry (or, if beliefs exposes a direct `world.corpus(corpus_id)` accessor, use that instead — prefer the world's own resolution over path matching).
+    def load_record(self, uid: str, record_id: str):
+        from science.refusal import Refusal, Refused
+        for _, view in self.read_views():
+            if view.holds(record_id):
+                node = view.get(record_id)  # validates the semantic stamp
+                if node.uid == uid:
+                    return node
+        raise Refused(Refusal("unknown-cursor", f"record {record_id!r} not found"))
+```
 
 `python/src/science/loader.py`:
 
@@ -1629,13 +1754,13 @@ def resolve_handlers(decls) -> dict:
 - [ ] **Step 6: Run tests to verify they pass**
 
 Run: `cd python && uv run --group dev pytest tests/test_status.py -q`
-Expected: PASS. Expect to iterate on the fixture helper against beliefs' real API; the two `status` tests are the definition of done, not the sketch.
+Expected: PASS.
 
 - [ ] **Step 7: Commit**
 
 ```bash
 git add commands/ python/src/science/commands/status.py python/src/science/loader.py \
-        python/src/science/config.py python/tests/helpers python/tests/test_status.py
+        python/src/science/config.py python/tests .gitignore
 git commit -m "feat(status): shipped read exemplar over a beliefs fixture world"
 ```
 
@@ -1660,7 +1785,7 @@ from science.cli import build_parser, main
 from science.cursor import MIN_OUTPUT_BUDGET
 from science.schema import Declaration, InputSpec, WriteClass
 from pathlib import Path
-from tests.helpers.world import build_fixture_world
+from tests.helpers.world import write_cli_config
 
 
 def test_parser_compiles_inputs():
@@ -1675,16 +1800,16 @@ def test_parser_compiles_inputs():
     assert e.value.code == 2
 
 
-def test_status_end_to_end(tmp_path, capsys):
-    cfg_path = _write_cli_config(tmp_path)
+def test_status_end_to_end(certified_work, capsys):
+    cfg_path = write_cli_config(certified_work)
     code = main(["status", "--config", str(cfg_path)])
     out = capsys.readouterr().out
     assert code == 0
     assert "World status" in out
 
 
-def test_refusal_exits_3(tmp_path, capsys):
-    cfg_path = _write_cli_config(tmp_path)
+def test_refusal_exits_3(certified_work, capsys):
+    cfg_path = write_cli_config(certified_work)
     code = main(["status", "--config", str(cfg_path), "--continue", "scur1.garbage"])
     assert code == 3
     assert "unknown-cursor" in capsys.readouterr().err
@@ -1693,11 +1818,15 @@ def test_refusal_exits_3(tmp_path, capsys):
 def test_missing_config_exits_3(capsys, monkeypatch):
     monkeypatch.delenv("SCIENCE_CONFIG", raising=False)
     assert main(["status"]) == 3
+```
 
+Add `write_cli_config(work)` to `tests/helpers/world.py` (both this task
+and Task 11 use it):
 
-def _write_cli_config(tmp_path):
-    cfg = build_fixture_world(tmp_path)
-    path = tmp_path / "science.toml"
+```python
+def write_cli_config(work: Path) -> Path:
+    cfg = build_fixture_world(work)
+    path = work / "science.toml"
     path.write_text(f"""
 world_root = "{cfg.world.world_root}"
 world_id = "{cfg.world.world_id}"
@@ -1730,8 +1859,9 @@ from science.schema import Declaration
 EXIT_OK, EXIT_INTERNAL, EXIT_USAGE, EXIT_REFUSED = 0, 1, 2, 3
 
 
-def _add_command(sub: argparse._SubParsersAction, decl: Declaration) -> None:
-    p = sub.add_parser(decl.name, help=decl.purpose)
+def _add_command(sub: argparse._SubParsersAction, decl: Declaration,
+                 common: argparse.ArgumentParser) -> None:
+    p = sub.add_parser(decl.name, help=decl.purpose, parents=[common])
     for spec in decl.inputs:
         flag = "--" + spec.name.replace("_", "-")
         kwargs: dict = {"required": spec.required, "help": spec.doc, "dest": spec.name}
@@ -1749,16 +1879,28 @@ def _add_command(sub: argparse._SubParsersAction, decl: Declaration) -> None:
         p.add_argument(flag, **kwargs)
 
 
+def _protocol_options() -> argparse.ArgumentParser:
+    """Shared parent so `science status --config …` parses: argparse only
+    accepts an option after the subcommand if the subparser declares it."""
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument("--config")
+    common.add_argument("--invocation-id", dest="invocation_id")
+    common.add_argument("--continue", dest="cursor")
+    return common
+
+
 def build_parser(decls) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="science")
-    parser.add_argument("--config")
-    parser.add_argument("--invocation-id", dest="invocation_id")
-    parser.add_argument("--continue", dest="cursor")
+    common = _protocol_options()
     sub = parser.add_subparsers(dest="command", required=True)
     for decl in decls:
-        _add_command(sub, decl)
-    for verb in ("serve", "mcp", "adapters", "build"):
-        sub.add_parser(verb)
+        _add_command(sub, decl, common)
+    for verb in ("serve", "build"):
+        sub.add_parser(verb, parents=[common])
+    mcp = sub.add_parser("mcp", parents=[common])
+    mcp.add_argument("mode", choices=["serve"])
+    adapters = sub.add_parser("adapters", parents=[common])
+    adapters.add_argument("mode", choices=["build"])
     return parser
 
 
@@ -1909,7 +2051,10 @@ MCP = {"mcpServers": {"science": {"command": "science", "args": ["mcp", "serve"]
 
 
 def _skill_md(decl: Declaration, preamble: str, prompt: str) -> str:
-    front = f"---\nname: {decl.name}\ndescription: {decl.purpose}\n---\n\n"
+    # json.dumps produces a valid YAML double-quoted scalar, so a purpose
+    # containing ':' or quotes cannot break the frontmatter.
+    front = (f"---\nname: {json.dumps(decl.name)}\n"
+             f"description: {json.dumps(decl.purpose)}\n---\n\n")
     return front + preamble.strip() + "\n\n" + prompt.strip() + "\n"
 
 
@@ -1934,7 +2079,7 @@ def build_adapter(decls, commands_root: Path, skills_root: Path, out: Path) -> N
             shutil.copytree(authored, out / "skills" / authored.name)
 ```
 
-In `cli.py`, replace `_framework_verb` so `adapters` regenerates the committed tree and `build` validates:
+In `cli.py`, replace `_framework_verb` so `adapters build` (the spec's verb, `ns.mode` from Task 9's parser) regenerates the committed tree and `build` validates:
 
 ```python
 def _framework_verb(ns) -> int:
@@ -1945,7 +2090,7 @@ def _framework_verb(ns) -> int:
         resolve_handlers(decls)
         sys.stdout.write(f"ok: {len(decls)} command(s)\n")
         return EXIT_OK
-    if ns.command == "adapters":
+    if ns.command == "adapters":  # parser guarantees ns.mode == "build"
         from science.adapters import build_adapter
         build_adapter(decls, COMMANDS_ROOT, REPO_ROOT / "skills",
                       REPO_ROOT / "adapters" / "claude-code")
@@ -1953,11 +2098,11 @@ def _framework_verb(ns) -> int:
     raise NotImplementedError(f"{ns.command} arrives in a later task")
 ```
 
-(`science adapters` regenerating in place is fine: the tree is committed, so drift shows in `git diff`, and the test compares against a fresh build.)
+(`science adapters build` regenerating in place is fine: the tree is committed, so drift shows in `git diff`, and the test compares against a fresh build.)
 
 - [ ] **Step 5: Generate the committed tree, then run tests to verify they pass**
 
-Run: `cd python && uv run science adapters && cd .. && git add adapters/ && cd python && uv run --group dev pytest tests/test_adapters.py -q`
+Run: `cd python && uv run science adapters build && cd .. && git add adapters/ && cd python && uv run --group dev pytest tests/test_adapters.py -q`
 Expected: PASS.
 
 - [ ] **Step 6: Commit**
@@ -1975,9 +2120,25 @@ git commit -m "feat(adapters): Claude Code plugin generator with committed tree 
 - Modify: `python/src/science/cli.py` (wire `mcp serve`)
 - Test: `python/tests/test_mcp.py`
 
+**Protocol ruling (resolves the version question before any code):** the
+server pins **MCP `2026-07-28`** — the current revision, which retired the
+`initialize`/`initialized` handshake, requires request `_meta`, and made
+protocol sessions explicit. The design's "one attended session per server
+lifetime" (spec §9.3) is unaffected: the **writer** session binds to the
+server *process* (spawn to exit), not to any MCP protocol session, and if a
+harness runs several protocol sessions over one process they share that one
+attended writer session — same person, full permit, one ledger. This ruling
+is recorded in spec §9.3. **Step 0 of this task:** read the pinned
+revision's tools page and release notes
+(`modelcontextprotocol.io/specification/2026-07-28/server/tools`,
+`blog.modelcontextprotocol.io/posts/2026-07-28/`) and mirror the exact
+request/response envelope — the code below fixes the dispatch logic and our
+side of the contract; field spellings come from the spec page, and the
+tests are written from it, not from memory.
+
 **Interfaces:**
 - Consumes: `Dispatcher`, `production_tree`, `resolve_handlers`, `ReadContext`, `load_config`, `Refused`.
-- Produces: `tool_schema(decl) -> dict` (JSON Schema: declared inputs + optional `invocation_id` and `cursor` string properties); `serve(config_path: Path, stdin, stdout) -> None` — a JSON-RPC 2.0 loop handling `initialize`, `notifications/initialized`, `tools/list`, `tools/call`; refusals return an MCP tool error (`isError: true`) whose text is `refused [<code>] <message>`.
+- Produces: `PROTOCOL_VERSION = "2026-07-28"`; `tool_schema(decl) -> dict` (JSON Schema: declared inputs + optional `invocation_id` and `cursor` string properties); `handle_request(req, dispatcher, decls) -> dict` — a JSON-RPC 2.0 responder for `tools/list` and `tools/call` that **rejects a request without `params._meta`** (`-32600`); no `initialize` handling exists to keep obsolete clients honest; `serve(config_path, stdin, stdout, session=None) -> None` (the `session` parameter is wired to the attended writer session in Task 12; until then every command it can serve is read-only). Tool results carry the rendered text as content, `isError` on refusals with text `refused [<code>] <message>`, and `structuredContent: {"invocation_id": …}` so callers can reuse minted ids.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -1992,7 +2153,9 @@ from science.loader import production_tree
 
 
 def rpc(method, params=None, id=1):
-    return {"jsonrpc": "2.0", "id": id, "method": method, "params": params or {}}
+    body = dict(params or {})
+    body.setdefault("_meta", {})  # required by MCP 2026-07-28
+    return {"jsonrpc": "2.0", "id": id, "method": method, "params": body}
 
 
 def test_tool_schema_carries_inputs_and_protocol_fields():
@@ -2003,12 +2166,12 @@ def test_tool_schema_carries_inputs_and_protocol_fields():
     assert schema["name"] == "status" and schema["description"] == decl.purpose
 
 
-def test_tools_list_and_call(tmp_path):
+def test_tools_list_and_call(certified_work):
     from tests.helpers.world import build_fixture_world
     from science.config import ReadContext
     from science.dispatch import Dispatcher
     from science.loader import resolve_handlers
-    cfg = build_fixture_world(tmp_path)
+    cfg = build_fixture_world(certified_work)
     decls = production_tree()
     dispatcher = Dispatcher(decls, resolve_handlers(decls), ReadContext.open(cfg))
     listed = handle_request(rpc("tools/list"), dispatcher, decls)
@@ -2016,39 +2179,45 @@ def test_tools_list_and_call(tmp_path):
     called = handle_request(rpc("tools/call", {"name": "status", "arguments": {}}), dispatcher, decls)
     text = called["result"]["content"][0]["text"]
     assert "World status" in text
+    assert len(called["result"]["structuredContent"]["invocation_id"]) == 32
 
 
-def test_transport_equivalence_cli_vs_mcp(tmp_path, capsys):
+def test_missing_meta_is_a_protocol_error():
+    req = {"jsonrpc": "2.0", "id": 9, "method": "tools/list", "params": {}}
+    res = handle_request(req, dispatcher=None, decls=())
+    assert res["error"]["code"] == -32600
+
+
+def test_initialize_is_gone():
+    res = handle_request(rpc("initialize"), dispatcher=None, decls=())
+    assert res["error"]["code"] == -32601  # retired by MCP 2026-07-28; no legacy shim
+
+
+def test_transport_equivalence_cli_vs_mcp(certified_work, capsys):
     """Spec §9.4: byte-identical payloads, not merely equivalent dispatch."""
     from science.cli import main
-    from tests.helpers.world import build_fixture_world
-    from science.config import ReadContext
+    from science.config import ReadContext, load_config
     from science.dispatch import Dispatcher
     from science.loader import resolve_handlers
-    cfg = build_fixture_world(tmp_path)
-    cfg_path = tmp_path / "science.toml"
-    cfg_path.write_text(f"""
-world_root = "{cfg.world.world_root}"
-world_id = "{cfg.world.world_id}"
-corpus_roots = ["{cfg.world.corpus_roots[0]}"]
-operations_root = "{cfg.operations_root}"
-""")
+    from tests.helpers.world import write_cli_config
+    cfg_path = write_cli_config(certified_work)
     assert main(["status", "--config", str(cfg_path)]) == 0
     cli_text = capsys.readouterr().out
     decls = production_tree()
-    dispatcher = Dispatcher(decls, resolve_handlers(decls), ReadContext.open(cfg))
+    dispatcher = Dispatcher(decls, resolve_handlers(decls),
+                            ReadContext.open(load_config(cfg_path)))
     mcp_text = handle_request(
         rpc("tools/call", {"name": "status", "arguments": {}}), dispatcher, decls,
     )["result"]["content"][0]["text"]
     assert cli_text == mcp_text
 
 
-def test_refusal_becomes_tool_error(tmp_path):
+def test_refusal_becomes_tool_error(certified_work):
     from tests.helpers.world import build_fixture_world
     from science.config import ReadContext
     from science.dispatch import Dispatcher
     from science.loader import resolve_handlers
-    cfg = build_fixture_world(tmp_path)
+    cfg = build_fixture_world(certified_work)
     decls = production_tree()
     dispatcher = Dispatcher(decls, resolve_handlers(decls), ReadContext.open(cfg))
     res = handle_request(
@@ -2100,18 +2269,18 @@ def tool_schema(decl: Declaration) -> dict:
     return {"name": decl.name, "description": decl.purpose, "inputSchema": schema}
 
 
-def handle_request(req: dict, dispatcher: Dispatcher, decls) -> dict | None:
+PROTOCOL_VERSION = "2026-07-28"  # the ruling above; no pre-2026 fallbacks
+
+
+def handle_request(req: dict, dispatcher: Dispatcher, decls) -> dict:
     rid, method = req.get("id"), req.get("method")
-    if method == "initialize":
-        return _result(rid, {"protocolVersion": "2024-11-05",
-                             "capabilities": {"tools": {}},
-                             "serverInfo": {"name": "science", "version": "0.1.0"}})
-    if method == "notifications/initialized":
-        return None
+    params = req.get("params") or {}
+    if not isinstance(params.get("_meta"), dict):  # required by 2026-07-28
+        return {"jsonrpc": "2.0", "id": rid,
+                "error": {"code": -32600, "message": "request _meta is required"}}
     if method == "tools/list":
         return _result(rid, {"tools": [tool_schema(d) for d in decls]})
     if method == "tools/call":
-        params = req.get("params", {})
         arguments = dict(params.get("arguments", {}))
         cursor = arguments.pop("cursor", None)
         invocation_id = arguments.pop("invocation_id", None)
@@ -2119,6 +2288,7 @@ def handle_request(req: dict, dispatcher: Dispatcher, decls) -> dict | None:
             out = dispatcher.invoke(params.get("name", ""), arguments,
                                     invocation_id=invocation_id, cursor=cursor)
             return _result(rid, {"content": [{"type": "text", "text": out.text}],
+                                 "structuredContent": {"invocation_id": out.invocation_id},
                                  "isError": False})
         except Refused as e:
             return _result(rid, {"content": [{"type": "text",
@@ -2132,14 +2302,15 @@ def _result(rid, payload) -> dict:
     return {"jsonrpc": "2.0", "id": rid, "result": payload}
 
 
-def serve(config_path: Path, stdin=None, stdout=None) -> None:
+def serve(config_path: Path, stdin=None, stdout=None, session=None) -> None:
     from science.config import ReadContext, load_config
     from science.loader import production_tree, resolve_handlers
     stdin = stdin or sys.stdin
     stdout = stdout or sys.stdout
     decls = production_tree()
     dispatcher = Dispatcher(decls, resolve_handlers(decls),
-                            ReadContext.open(load_config(config_path)))
+                            ReadContext.open(load_config(config_path)),
+                            session=session)  # Task 12 wires the attended session
     for line in stdin:
         if not line.strip():
             continue
@@ -2152,14 +2323,12 @@ def serve(config_path: Path, stdin=None, stdout=None) -> None:
 In `cli.py`'s `_framework_verb`, add before the fallthrough:
 
 ```python
-    if ns.command == "mcp":
+    if ns.command == "mcp":  # Task 9's parser guarantees ns.mode == "serve"
         from science.config import resolve_config_path
         from science.mcp import serve
         serve(resolve_config_path(ns.config))
         return EXIT_OK
 ```
-
-and give the `mcp` subparser a positional `serve` argument: `mcp_parser = sub.add_parser("mcp"); mcp_parser.add_argument("mode", choices=["serve"])` (adjust `build_parser` accordingly; `ns.command == "mcp"` routes on it).
 
 - [ ] **Step 4: Run the full suite to verify it passes**
 
@@ -2189,10 +2358,11 @@ git commit -m "feat(mcp): stdio MCP server with CLI transport-equivalence test"
   - `WriterSession.session_id: str` (32 hex), `WriterSession.actor: str`
   - `WriterSession.scoped(required) -> ScopedWriter` (raises `PermitExceeded` when the requirement exceeds the session permit — the declaration-time refusal)
   - `WriterSession.claim_invocation(invocation_id, command, input_digest) -> Claim` where `Claim` is one of `Fresh`, `Done(outcome)`, `Open`, `Mismatch` (ledger-backed, called under the dispatch lock)
-  - `WriterSession.close_invocation(invocation_id, outcome)` where outcome is `done` + minted ids or a refusal envelope dict
-  - `WriterSession.invocation_acts(invocation_id) -> tuple[ActLine, ...]` with `ActLine.record_ids`
+  - `WriterSession.close_invocation(invocation_id, outcome)` where outcome is `{"done": [[uid, id], …]}` or `{"refusal": {code, message, data}}` — the persisted envelope of spec §5.2
+  - `WriterSession.invocation_acts(invocation_id) -> tuple[ActLine, ...]` with `ActLine.record_ids: tuple[tuple[str, str], ...]` — `(uid, id)` pairs
+  - `beliefs.session.open_ledger_reader(operations_root, session_id) -> LedgerReader` with `LedgerReader.invocation(invocation_id) -> InvocationRecord | None` carrying `.acts` (as above) and `.outcome` — the accessor write continuation resolves cursors through
   - `ScopedWriter` mirroring the `CorpusWriter` write methods, permit-checked per act
-- Produces: the write branch of `Dispatcher.invoke` (spec §6.1 steps 3–7 for writes, §6.2 dedup under one `threading.Lock`, §7.4 audit via `audit_write_report`), write-cursor continuation (`_continue` write arm: resolve the ledger via the session/operations root, re-render minted records, never call the handler), and refusal-envelope translation: `PermitExceeded` → `Refusal("permit-exceeded", …)`, other `WriteRefused`/kernel refusals → `Refusal("kernel-refused", message, {"kind": type(e).__name__})`. Write handler signature: `handle(ctx, writer, **inputs) -> Report`.
+- Produces: the write branch of `Dispatcher.invoke` (spec §6.1 steps 3–7 for writes, §6.2 dedup under one `threading.Lock`, §7.4 audit via `audit_write_report`); **completion ordering** (spec §6.1/§5.2, ruled here): handler → collect minted `(uid, id)` pairs from the session's acts → `audit_write_report` → `close_invocation` → render → return. The ledger records act truth, never rendering success: an audit violation still closes `done` with the minted pairs (the acts committed) and then raises `AuditViolation` as an internal error — the caller sees exit 1, never the echoed report, and a dedup retry replays canonically from the ledger. A handler refusal closes with the persisted refusal envelope, in that order, before re-raising as `Refused`. Write-cursor continuation resolves the ledger via `open_ledger_reader`, re-renders from the ledger's `(uid, id)` pairs only, and never calls the write handler or canonicalizes inputs. Refusal translation: `PermitExceeded` → `permit-exceeded`, other `WriteRefused` → `kernel-refused` with the subclass name in `data`. Write handler signature: `handle(ctx, writer, **inputs) -> Report`; record blocks come from `record_block(node)` over what the writer returned. Also produced here: `science.mcp.serve` and `science.serve` open the attended session (`open_attended_session`) and pass it to their dispatchers — until this task the MCP server runs with `session=None`.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -2206,52 +2376,55 @@ import pytest
 from science.dispatch import Dispatcher
 from science.cursor import MIN_OUTPUT_BUDGET
 from science.refusal import Refused
-from science.report import RecordBlock, Text
+from science.report import Text, record_block
 from science.schema import Declaration, InputSpec, WriteClass
 from pathlib import Path
-from tests.helpers.world import build_fixture_world, fixture_note_node
+from tests.helpers.world import (
+    build_fixture_world, fixture_proposition_node, fixture_source_node,
+)
 
-# The fixture kind vocabulary must match what the fixture corpus's pinned
-# contract actually admits; `note` here stands for whatever ordinary kind
-# the beliefs fixture profile allows. Rename consistently when wiring.
-MINT_NOTE = Declaration("mint-note", "fixture", WriteClass("mints", ("note",), {"note": "corpus-write"}),
-                        MIN_OUTPUT_BUDGET, (InputSpec("text", "string", True, "d"),), (), Path("."))
-OVERREACH = Declaration("overreach", "fixture", WriteClass("mints", ("note",), {"note": "corpus-write"}),
+# Real contract kinds only: proposition is the simplest mintable kind
+# (Task 8's fixture already writes them); source is the foreign kind the
+# lying handler reaches for.
+MINT_CLAIM = Declaration("mint-claim", "fixture",
+                         WriteClass("mints", ("proposition",), {"proposition": "corpus-write"}),
+                         MIN_OUTPUT_BUDGET, (InputSpec("slug", "string", True, "d"),), (), Path("."))
+OVERREACH = Declaration("overreach", "fixture",
+                        WriteClass("mints", ("proposition",), {"proposition": "corpus-write"}),
                         MIN_OUTPUT_BUDGET, (), (), Path("."))
 
 
-def mint_note_handler(ctx, writer, *, text):
-    node = writer.add(fixture_note_node(text))
-    return (RecordBlock(node.id, node.kind, text),)
+def mint_claim_handler(ctx, writer, *, slug):
+    node = writer.add(fixture_proposition_node(slug))
+    return (record_block(node),)
 
 
 def overreach_handler(ctx, writer):
-    # The body lies: declared note, mints a proposition -> act-time PermitExceeded.
-    from tests.helpers.world import fixture_proposition_node
-    writer.add(fixture_proposition_node("sneaky"))
+    # The body lies: declared proposition, mints a source -> act-time PermitExceeded.
+    writer.add(fixture_source_node("sneaky"))
     return (Text("never rendered"),)
 
 
-def echoing_handler(ctx, writer, *, text):
-    writer.add(fixture_note_node(text))
+def echoing_handler(ctx, writer, *, slug):
+    writer.add(fixture_proposition_node(slug))
     return (Text("audit echo!"),)  # non-record block in a write report
 
 
 @pytest.fixture
-def rig(tmp_path):
+def rig(certified_work):
     from beliefs.session import open_attended_session
     from science.config import ReadContext
-    cfg = build_fixture_world(tmp_path)
+    cfg = build_fixture_world(certified_work)
     session = open_attended_session(cfg.world, cfg.operations_root)
-    decls = (MINT_NOTE, OVERREACH)
-    handlers = {"mint-note": mint_note_handler, "overreach": overreach_handler}
+    decls = (MINT_CLAIM, OVERREACH)
+    handlers = {"mint-claim": mint_claim_handler, "overreach": overreach_handler}
     return Dispatcher(decls, handlers, ReadContext.open(cfg), session=session), session
 
 
 def test_write_returns_only_its_record(rig):
     d, _ = rig
-    out = d.invoke("mint-note", {"text": "hello"})
-    assert "hello" in out.text and "audit echo" not in out.text
+    out = d.invoke("mint-claim", {"slug": "hello"})
+    assert "proposition:hello" in out.text and "audit echo" not in out.text
 
 
 def test_act_time_refusal_when_body_exceeds_declaration(rig):
@@ -2263,17 +2436,17 @@ def test_act_time_refusal_when_body_exceeds_declaration(rig):
 
 def test_dedup_replays_without_reexecution(rig):
     d, session = rig
-    first = d.invoke("mint-note", {"text": "once"}, invocation_id="A" * 8)
-    again = d.invoke("mint-note", {"text": "once"}, invocation_id="A" * 8)
+    first = d.invoke("mint-claim", {"slug": "once"}, invocation_id="A" * 8)
+    again = d.invoke("mint-claim", {"slug": "once"}, invocation_id="A" * 8)
     assert first.text == again.text
     assert len(session.invocation_acts("A" * 8)) == 1  # one act, not two
 
 
 def test_id_reuse_with_different_payload_refused(rig):
     d, _ = rig
-    d.invoke("mint-note", {"text": "x"}, invocation_id="B" * 8)
+    d.invoke("mint-claim", {"slug": "x"}, invocation_id="B" * 8)
     with pytest.raises(Refused) as e:
-        d.invoke("mint-note", {"text": "y"}, invocation_id="B" * 8)
+        d.invoke("mint-claim", {"slug": "y"}, invocation_id="B" * 8)
     assert e.value.refusal.code == "input-mismatch"
 
 
@@ -2283,7 +2456,7 @@ def test_concurrent_same_id_executes_once(rig):
 
     def call():
         try:
-            results.append(d.invoke("mint-note", {"text": "race"}, invocation_id="C" * 8))
+            results.append(d.invoke("mint-claim", {"slug": "race"}, invocation_id="C" * 8))
         except Refused as e:
             errors.append(e)
 
@@ -2294,26 +2467,58 @@ def test_concurrent_same_id_executes_once(rig):
     assert len(results) + len(errors) == 8 and results
 
 
-def test_audit_echo_is_unrepresentable(rig, tmp_path):
+def test_audit_echo_is_unrepresentable_and_ledger_stays_true(rig):
+    from science.render import AuditViolation
     d, session = rig
-    d._handlers["mint-note"] = echoing_handler
-    with pytest.raises(Exception):  # AuditViolation surfaces as internal error, never rendered
-        d.invoke("mint-note", {"text": "z"})
+    d._handlers["mint-claim"] = echoing_handler
+    with pytest.raises(AuditViolation):  # internal error; the echo is never rendered
+        d.invoke("mint-claim", {"slug": "z"}, invocation_id="E" * 8)
+    # The acts committed, so the ledger closed `done` — and a dedup retry
+    # replays canonically from the ledger, bypassing the echoing handler.
+    replay = d.invoke("mint-claim", {"slug": "z"}, invocation_id="E" * 8)
+    assert "audit echo" not in replay.text and "proposition:z" in replay.text
+
+
+def test_refusal_replay_is_exact(rig):
+    d, session = rig
+    with pytest.raises(Refused) as first:
+        d.invoke("overreach", {}, invocation_id="F" * 8)
+    acts_after_first = len(session.invocation_acts("F" * 8))
+    with pytest.raises(Refused) as again:
+        d.invoke("overreach", {}, invocation_id="F" * 8)
+    assert again.value.refusal.code == first.value.refusal.code
+    assert again.value.refusal.message == first.value.refusal.message
+    assert len(session.invocation_acts("F" * 8)) == acts_after_first  # not re-executed
+
+
+def test_open_invocation_refuses_outcome_unknown(rig):
+    d, session = rig
+    # Simulate a crashed prior attempt: claimed and opened, never closed.
+    from science.canonical import canonicalize, input_digest
+    digest = input_digest(canonicalize(MINT_CLAIM, {"slug": "crashed"}))
+    session.claim_invocation("G" * 8, "mint-claim", digest)
+    with pytest.raises(Refused) as e:
+        d.invoke("mint-claim", {"slug": "crashed"}, invocation_id="G" * 8)
+    assert e.value.refusal.code == "outcome-unknown"
 
 
 def test_write_cursor_rerenders_without_handler(rig):
     d, session = rig
-    big = "n" * (MIN_OUTPUT_BUDGET * 2)
-    first = d.invoke("mint-note", {"text": big}, invocation_id="D" * 8)
-    if "cursor" not in first.text:
-        pytest.skip("fixture record too small to truncate; grow `big`")
+    # A tiny declared budget forces truncation of even one record block.
+    small = Declaration("mint-claim", "fixture", MINT_CLAIM.write_class,
+                        MIN_OUTPUT_BUDGET, MINT_CLAIM.inputs, (), Path("."))
+    d._decls["mint-claim"] = small
+    first = d.invoke("mint-claim", {"slug": "long-" + "n" * 200}, invocation_id="D" * 8)
+    assert "cursor" in first.text
     cursor = first.text.rsplit("cursor ", 1)[1].strip()
-    d._handlers["mint-note"] = lambda *a, **k: pytest.fail("write handler must not run on continuation")
-    second = d.invoke("mint-note", {}, cursor=cursor)
+    d._handlers["mint-claim"] = lambda *a, **k: pytest.fail("write handler must not run on continuation")
+    second = d.invoke("mint-claim", {}, cursor=cursor)
     assert second.text
 ```
 
-Also add `fixture_note_node(text)` / `fixture_proposition_node(text)` to `tests/helpers/world.py`, built with beliefs' node factories exactly as the fixture records of Task 8 are.
+(`fixture_proposition_node` and `fixture_source_node` are Task 8's helpers;
+slugs must fit beliefs' slug rules, so keep them short lowercase-hyphen
+strings.)
 
 - [ ] **Step 2: Run tests to verify they fail**
 
@@ -2357,7 +2562,7 @@ Replace the `NotImplementedError` branches:
             claim = self._session.claim_invocation(iid, decl.name, input_digest(canonical))
             kind = type(claim).__name__
             if kind == "Done":
-                return Outcome(self._replay(decl, claim.outcome, iid), iid)
+                return Outcome(self._replay_outcome(decl, claim.outcome, iid, (0, 0)), iid)
             if kind == "Open":
                 raise Refused(Refusal("outcome-unknown",
                                       "a prior attempt is open; its outcome is unknown"))
@@ -2367,21 +2572,95 @@ Replace the `NotImplementedError` branches:
             try:
                 report = self._handlers[decl.name](self._ctx, writer, **canonical)
             except PermitExceeded as e:
-                refusal = Refusal("permit-exceeded", str(e))
-                self._session.close_invocation(iid, {"refusal": _envelope(refusal)})
-                raise Refused(refusal)
+                return self._close_refused(iid, Refusal("permit-exceeded", str(e)))
             except WriteRefused as e:
-                refusal = Refusal("kernel-refused", str(e), {"kind": type(e).__name__})
-                self._session.close_invocation(iid, {"refusal": _envelope(refusal)})
-                raise Refused(refusal)
+                return self._close_refused(
+                    iid, Refusal("kernel-refused", str(e), {"kind": type(e).__name__}))
             minted = frozenset(
-                rid for act in self._session.invocation_acts(iid) for rid in act.record_ids)
-            audit_write_report(report, minted)
-            self._session.close_invocation(iid, {"done": sorted(minted)})
-            return Outcome(self._render_write(decl, report, iid, (0, 0)), iid)
+                tuple(pair) for act in self._session.invocation_acts(iid)
+                for pair in act.record_ids)
+            try:
+                audit_write_report(report, minted)
+            finally:
+                # Close FIRST in every case: the ledger records act truth, and
+                # the acts committed whether or not the report survives audit.
+                self._session.close_invocation(iid, {"done": sorted(minted)})
+            # An AuditViolation has propagated past the close above as an
+            # internal error; the echoed report is never rendered. Otherwise:
+            return Outcome(self._render_write(decl.output_budget, report, iid, (0, 0)), iid)
+
+    def _close_refused(self, iid, refusal: Refusal):
+        envelope = {"code": refusal.code, "message": refusal.message,
+                    "data": dict(refusal.data)}
+        self._session.close_invocation(iid, {"refusal": envelope})
+        raise Refused(refusal)
+
+    def _render_write(self, budget: int, report, iid: str,
+                      position: tuple[int, int]) -> str:
+        def cursor_for(pos, rdigest):
+            return encode(WriteCursor(self._session.session_id, iid, rdigest,
+                                      pos[0], pos[1]))
+        return render_page(report, budget=budget, position=position,
+                           cursor_for=cursor_for).text
+
+    def _minted_report(self, pairs) -> Report:
+        """The canonical write report: record blocks rebuilt from ledger pairs."""
+        from science.report import record_block
+        blocks = []
+        for uid, record_id in pairs:
+            node = self._ctx.load_record(uid, record_id)  # read-path lookup; see below
+            blocks.append(record_block(node))
+        return tuple(blocks)
+
+    def _replay_outcome(self, decl, outcome: dict, iid: str,
+                        position: tuple[int, int]) -> str:
+        if "refusal" in outcome:
+            r = outcome["refusal"]
+            raise Refused(Refusal(r["code"], r["message"], r.get("data", {})))
+        report = self._minted_report(outcome["done"])
+        return self._render_write(decl.output_budget, report, iid, position)
 ```
 
-with `_render_write` issuing `WriteCursor(self._session.session_id, iid, digest, pos, off)` cursors, `_replay` re-rendering a `done` outcome by loading each minted record id through the read context into `RecordBlock`s (and a stored refusal outcome by re-raising its envelope as `Refused`), `_envelope(r) = {"code": r.code, "message": r.message, "data": dict(r.data)}`, and the write arm of `_continue` resolving the cursor's session ledger through `beliefs.session` (`open_ledger_reader(operations_root, session_id)` or whatever accessor beliefs ships — `unknown-cursor` when the session directory is absent), collecting that invocation's minted ids, re-rendering exactly as `_replay` does from position `(cur.block, cur.offset)`, and never touching `self._handlers`.
+The write arm of `_continue` (replacing its `NotImplementedError`) — never a
+handler call, never canonicalization:
+
+```python
+        if isinstance(cur, WriteCursor):
+            from beliefs.session import open_ledger_reader
+            operations_root = self._ctx.config.operations_root
+            try:
+                reader = open_ledger_reader(operations_root, cur.session_id)
+            except FileNotFoundError:
+                raise Refused(Refusal("unknown-cursor", "no such session ledger"))
+            record = reader.invocation(cur.invocation_id)
+            if record is None:
+                raise Refused(Refusal("unknown-cursor", "no such invocation in that session"))
+            if "refusal" in record.outcome:
+                raise Refused(Refusal("unknown-cursor",
+                                      "that invocation refused; nothing to page"))
+            report = self._minted_report(record.outcome["done"])
+            from science.render import report_digest as fresh_digest
+            if fresh_digest(report) != cur.report_digest:
+                raise Refused(Refusal("stale-cursor", "the records changed; re-run"))
+            self._check_position(report, cur.block, cur.offset)
+            iid = invocation_id or mint_token()
+            budget = self._decls[command].output_budget if command in self._decls \
+                else max(d.output_budget for d in self._decls.values())
+            page = render_page(report, budget=budget, position=(cur.block, cur.offset),
+                               cursor_for=lambda pos, rd: encode(
+                                   WriteCursor(cur.session_id, cur.invocation_id, rd,
+                                               pos[0], pos[1])))
+            return Outcome(page.text, iid)
+```
+
+`ReadContext` (Task 6's `config.py`) gains `load_record(uid, record_id)`:
+resolve through the read path the fixture already exercises and refuse
+`unknown-cursor` if the record is absent. `_render_write` uses the actual
+per-invocation `Report` digest exactly as the read path does, so replayed
+pages and first-render pages share cursors. Finally, wire the attended
+session into the servers: `science.mcp.serve` and `science.serve` call
+`open_attended_session(config.world, config.operations_root)` and pass the
+session to their `Dispatcher` (this replaces Task 11's `session=None`).
 
 - [ ] **Step 4: Run the full suite to verify it passes**
 
@@ -2402,27 +2681,28 @@ git commit -m "feat(dispatch): write dispatch with scoped permits, atomic claims
 **Files:**
 - Create: `python/src/science/serve.py`
 - Modify: `python/src/science/cli.py` (`serve` verb; `_via_service`)
-- Create: `python/tests/fixtures/commands/` (synthetic declarations: `mint-note/`, `overreach/`, `coord-note/`, `pub-view/` — each a real `command.toml` + one-line `prompt.md`)
+- Create: `python/tests/fixtures/commands/` (synthetic declarations: `mint-claim/`, `overreach/`, `coord-note/`, `pub-view/` — each a real `command.toml` + one-line `prompt.md`)
+- Create: `python/tests/helpers/synthetic.py` (the one definition of the synthetic declarations + handlers, shared by Tasks 12–13 tests)
 - Test: `python/tests/test_serve.py`, `python/tests/test_synthetic_tree.py`
 
 **Interfaces:**
 - Consumes: `Dispatcher` with write branch (Task 12); `open_attended_session` (beliefs); `Refusal/Refused`, `production_tree`.
-- Produces: `serve(config: ScienceConfig, socket_path: Path) -> Server` — a Unix-socket JSON-lines service holding one attended session for its lifetime; wire protocol: request `{"command": str, "inputs": {…}, "invocation_id": str | null, "cursor": str | null}`, response `{"ok": true, "text": str, "invocation_id": str}` or `{"ok": false, "refusal": {code, message, data}}`; socket at `<operations_root>/service.sock`; CLI `science serve` runs it, and `_via_service` connects for any write-class command, refusing with a plain message naming `science serve` when the socket is absent.
+- Produces: `serve(config: ScienceConfig, socket_path: Path, declarations=None, handlers=None) -> Server` — a Unix-socket JSON-lines service holding one attended session for its lifetime; `declarations`/`handlers` default to the production tree and are injection points for tests (production code never imports test modules); a socket path that already exists **refuses at startup** with a message naming the path — never a silent unlink (a stale socket from a crash is the operator's to remove); wire protocol: request `{"command": str, "inputs": {…}, "invocation_id": str | null, "cursor": str | null}`, response `{"ok": true, "text": str, "invocation_id": str}` or `{"ok": false, "refusal": {code, message, data}}`; socket at `<operations_root>/service.sock`; CLI `science serve` runs it, and `_via_service` connects for any write-class command — printing the reply's `invocation-id: <id>` to stderr so callers can retry safely — refusing with a plain message naming `science serve` when the socket is absent. **Landing step:** update this repo's `README.md` ("Nothing is built yet" is false once this task lands) and the spec's Status header to implemented, in the same commit — a doc's status goes stale at the merge, not later.
 
 - [ ] **Step 1: Write the synthetic declarations**
 
-`python/tests/fixtures/commands/mint-note/command.toml` (the others follow the same shape with `write_class = "coordination"` and `write_class = "publishes"`; `overreach/` duplicates `mint-note`'s declaration under its own name):
+`python/tests/fixtures/commands/mint-claim/command.toml` (the others follow the same shape with `write_class = "coordination"` and `write_class = "publishes"`; `overreach/` duplicates `mint-claim`'s declaration under its own name):
 
 ```toml
 schema_version = 1
-name = "mint-note"
+name = "mint-claim"
 purpose = "Synthetic write exemplar."
-write_class = "mints:note"
+write_class = "mints:proposition"
 output_budget = 4096
-[inputs.text]
+[inputs.slug]
 type = "string"
 required = true
-doc = "Body of the note."
+doc = "Slug of the proposition."
 ```
 
 `python/tests/test_synthetic_tree.py` proves the tree loads and classifies (schema + dispatch shape for `coordination` and `publishes`, which cannot act until sub-projects 1 and 5):
@@ -2432,7 +2712,7 @@ import pytest
 
 from science.schema import load_command_tree
 
-KIND_ACTS = {"note": frozenset({"corpus-write"})}
+KIND_ACTS = {"proposition": frozenset({"corpus-write"})}
 
 
 def test_synthetic_tree_loads():
@@ -2442,9 +2722,10 @@ def test_synthetic_tree_loads():
     by_name = {d.name: d for d in decls}
     assert by_name["coord-note"].write_class.kind == "coordination"
     assert by_name["pub-view"].write_class.kind == "publishes"
+    assert by_name["mint-claim"].write_class.routes == {"proposition": "corpus-write"}
 
 
-def test_declaration_time_refusal_for_class_above_permit(tmp_path):
+def test_declaration_time_refusal_for_class_above_permit(certified_work):
     """A publishes-class command against an attended session without the publish
     family refuses before the handler runs (spec §6.1 step 3)."""
     from beliefs.session import open_attended_session
@@ -2455,7 +2736,7 @@ def test_declaration_time_refusal_for_class_above_permit(tmp_path):
     from pathlib import Path
     root = Path(__file__).parent / "fixtures" / "commands"
     decls = load_command_tree(root, kind_acts=KIND_ACTS, contract_kinds=frozenset(KIND_ACTS))
-    cfg = build_fixture_world(tmp_path)
+    cfg = build_fixture_world(certified_work)
     session = open_attended_session(cfg.world, cfg.operations_root)
     d = Dispatcher(decls, {"pub-view": lambda ctx, writer: ()}, ReadContext.open(cfg), session=session)
     with pytest.raises(Refused) as e:
@@ -2474,32 +2755,47 @@ import json
 import socket
 import threading
 
+import pytest
+
 from science.serve import serve
 from tests.helpers.world import build_fixture_world
 
 
-def test_service_round_trip_and_cli_routing(tmp_path):
-    cfg = build_fixture_world(tmp_path)
+def test_service_round_trip_and_cli_routing(certified_work):
+    from tests.helpers.synthetic import synthetic_decls_and_handlers
+    cfg = build_fixture_world(certified_work)
+    decls, handlers = synthetic_decls_and_handlers()
     sock_path = cfg.operations_root / "service.sock"
-    server = serve(cfg, sock_path, declarations="synthetic")  # test hook: fixture tree + handlers
+    server = serve(cfg, sock_path, declarations=decls, handlers=handlers)
     t = threading.Thread(target=server.serve_forever, daemon=True)
     t.start()
     try:
         with socket.socket(socket.AF_UNIX) as s:
             s.connect(str(sock_path))
-            s.sendall(json.dumps({"command": "mint-note", "inputs": {"text": "hi"},
+            s.sendall(json.dumps({"command": "mint-claim", "inputs": {"slug": "hi"},
                                   "invocation_id": None, "cursor": None}).encode() + b"\n")
             reply = json.loads(s.makefile().readline())
-        assert reply["ok"] and "hi" in reply["text"]
+        assert reply["ok"] and "proposition:hi" in reply["text"]
+        assert len(reply["invocation_id"]) == 32
     finally:
         server.shutdown()
 
 
-def test_cli_write_without_service_refuses(tmp_path, capsys, monkeypatch):
+def test_existing_socket_refuses_startup(certified_work):
+    from science.refusal import Refused
+    cfg = build_fixture_world(certified_work)
+    sock_path = cfg.operations_root / "service.sock"
+    sock_path.parent.mkdir(parents=True, exist_ok=True)
+    sock_path.touch()  # a stale socket is the operator's to remove
+    with pytest.raises(Refused):
+        serve(cfg, sock_path)
+
+
+def test_cli_write_without_service_refuses(certified_work, capsys, monkeypatch):
     """_via_service with no socket: exit 3 and a message naming `science serve`."""
     from science.cli import _via_service
     import argparse
-    cfg = build_fixture_world(tmp_path)
+    cfg = build_fixture_world(certified_work)
     ns = argparse.Namespace(config=None, invocation_id=None, cursor=None)
     monkeypatch.setattr("science.cli._service_socket", lambda config: cfg.operations_root / "service.sock")
     code = _via_service(ns, None, {})
@@ -2524,24 +2820,24 @@ from pathlib import Path
 
 from science.config import ReadContext, ScienceConfig
 from science.dispatch import Dispatcher
-from science.refusal import Refused
+from science.refusal import Refusal, Refused
 
 
-def _build_dispatcher(config: ScienceConfig, declarations) -> Dispatcher:
+def serve(config: ScienceConfig, socket_path: Path, declarations=None, handlers=None):
+    """`declarations`/`handlers` default to the production tree; tests inject
+    their synthetic set here — production code never imports test modules."""
     from beliefs.session import open_attended_session
-    if declarations == "synthetic":
-        from tests.helpers.synthetic import synthetic_decls_and_handlers  # test hook
-        decls, handlers = synthetic_decls_and_handlers()
-    else:
+    if declarations is None:
         from science.loader import production_tree, resolve_handlers
-        decls = production_tree()
-        handlers = resolve_handlers(decls)
+        declarations = production_tree()
+        handlers = resolve_handlers(declarations)
     session = open_attended_session(config.world, config.operations_root)
-    return Dispatcher(decls, handlers, ReadContext.open(config), session=session)
-
-
-def serve(config: ScienceConfig, socket_path: Path, declarations="production"):
-    dispatcher = _build_dispatcher(config, declarations)
+    dispatcher = Dispatcher(declarations, handlers, ReadContext.open(config),
+                            session=session)
+    if socket_path.exists():
+        raise Refused(Refusal("invalid-input",
+                              f"socket already exists: {socket_path}; a stale one "
+                              "from a crashed service is the operator's to remove"))
 
     class Handler(socketserver.StreamRequestHandler):
         def handle(self) -> None:
@@ -2564,17 +2860,29 @@ def serve(config: ScienceConfig, socket_path: Path, declarations="production"):
     return socketserver.ThreadingUnixStreamServer(str(socket_path), Handler)
 ```
 
-Move the synthetic declarations/handlers used by Tasks 12–13 tests into `tests/helpers/synthetic.py` so both the write-dispatch tests and this hook share one definition. In `cli.py`: `_service_socket(config) = config.operations_root / "service.sock"`; `_via_service` connects, sends one request line, prints `text` or the refusal (exit 3), and on `ConnectionRefusedError`/missing socket writes `refused [permit-exceeded] no writer service; start one with: science serve` to stderr and returns 3. The `serve` verb loads config, builds the production server, and calls `serve_forever()`.
+Move the synthetic declarations/handlers used by Tasks 12–13 tests into `tests/helpers/synthetic.py` (`synthetic_decls_and_handlers()` loads `tests/fixtures/commands` through `load_command_tree` and returns the declarations with the handler functions Task 12 defined) so both the write-dispatch tests and this task share one definition. In `cli.py`: `_service_socket(config) = config.operations_root / "service.sock"`; `_via_service` connects, sends one request line, prints `text` on stdout and `invocation-id: <id>` on stderr (so callers can retry safely), or the refusal (exit 3); on `ConnectionRefusedError`/missing socket it writes `refused [permit-exceeded] no writer service; start one with: science serve` to stderr and returns 3. The `serve` verb loads config, builds the production server, and calls `serve_forever()`.
 
 - [ ] **Step 5: Run the full suite, then the whole tree build**
 
 Run: `cd python && uv run --group dev pytest -q && uv run science build`
 Expected: PASS; `ok: 1 command(s)`.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 6: Land the status truth with the code**
+
+In the same commit as step 7: update `README.md` — replace the "Nothing is
+built yet; the first sub-project here is #2 …" sentence with a short
+paragraph saying the command framework is implemented (declaration schema,
+budgeted renderer, dispatcher, CLI, MCP server, Claude Code adapter,
+`status`) and pointing at the spec — and change the spec's
+(`docs/specs/2026-08-31-command-framework-design.md`) Status header to
+"implemented" with the date. A doc's status goes stale at the merge, not
+later; then grep the README for any other claim this landing falsifies.
+
+- [ ] **Step 7: Commit**
 
 ```bash
-git add python/src/science/serve.py python/src/science/cli.py python/tests
+git add python/src/science/serve.py python/src/science/cli.py python/tests \
+        README.md docs/specs/2026-08-31-command-framework-design.md
 git commit -m "feat(serve): unix-socket write service and CLI routing with synthetic exemplars"
 ```
 
@@ -2583,5 +2891,5 @@ git commit -m "feat(serve): unix-socket write service and CLI routing with synth
 ## Execution notes
 
 - Tasks 1–5 are pure-Python and parallel-safe after Task 2; Tasks 6–11 chain (each consumes the previous); Tasks 12–13 are blocked on the beliefs repo delivering `beliefs-96a24a` and the writer-session task, and their Consumes blocks are the contract to reconcile against what actually shipped there — reconcile the names once, in Task 12's step 3, before writing any code.
-- The beliefs fixture construction in Task 8 is the one place expected to need live iteration against beliefs' API; its two `status` tests define done.
+- Live-world tests always take the `certified_work` fixture, never `tmp_path`: beliefs' real engine refuses tmpfs roots (no barrier-option table), which is why the fixture defaults under the repo and honors `SCIENCE_TEST_ROOT`.
 - After Task 11 lands, `status` is demonstrable end-to-end: `SCIENCE_CONFIG=… science status`, the MCP server, and the committed Claude Code plugin all render the same bytes.
