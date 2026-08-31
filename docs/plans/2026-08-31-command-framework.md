@@ -212,6 +212,35 @@ def test_tree_refuses_duplicates_and_lists_all(tmp_path):
 
 def test_handler_module_mapping():
     assert handler_module("mint-run") == "science.commands.mint_run"
+
+
+def test_bool_never_passes_an_int_field(tmp_path):
+    for bad in ('schema_version = true', 'output_budget = true'):
+        field = bad.split(" ")[0]
+        toml = GOOD.replace(f"{field} = " + ("1" if field == "schema_version" else "16384"), bad)
+        d = write_command(tmp_path, "status", toml)
+        with pytest.raises(DeclarationError):
+            load_declaration(d, kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)
+        import shutil; shutil.rmtree(d)
+
+
+def test_default_is_type_checked_at_build(tmp_path):
+    bad_type = GOOD + '\n[inputs.n]\ntype = "int"\nrequired = false\ndefault = "three"\ndoc = "x"\n'
+    d = write_command(tmp_path, "status", bad_type)
+    with pytest.raises(DeclarationError):
+        load_declaration(d, kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)
+    bad_enum = GOOD.replace('name = "status"', 'name = "st2"') + \
+        '\n[inputs.m]\ntype = "enum"\nrequired = false\nchoices = ["a"]\ndefault = "z"\ndoc = "x"\n'
+    d2 = write_command(tmp_path, "st2", bad_enum)
+    with pytest.raises(DeclarationError):
+        load_declaration(d2, kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)
+
+
+def test_malformed_toml_is_a_declaration_error(tmp_path):
+    d = write_command(tmp_path, "status", "this = is not [ toml")
+    with pytest.raises(DeclarationError) as e:
+        load_declaration(d, kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)
+    assert "TOML" in str(e.value)
 ```
 
 Budget-floor refusal is added in Task 4 when `MIN_OUTPUT_BUDGET` exists; leave it out here.
@@ -240,6 +269,16 @@ RESERVED_INPUTS = frozenset({"cursor", "invocation_id", "view", "session", "conf
 INPUT_TYPES = frozenset({"string", "int", "bool", "enum", "list-of-string"})
 WRITE_CLASS_KINDS = frozenset({"read-only", "coordination", "mints", "publishes"})
 SCHEMA_VERSION = 1
+
+# Exact-type checks for TOML-supplied values: `bool` is an `int` in Python,
+# so `type(...) is` guards every integer field against `true`.
+_TOML_CHECKS = {
+    "string": lambda v: type(v) is str,
+    "int": lambda v: type(v) is int,
+    "bool": lambda v: type(v) is bool,
+    "enum": lambda v: type(v) is str,
+    "list-of-string": lambda v: type(v) is list and all(type(x) is str for x in v),
+}
 
 
 class DeclarationError(Exception):
@@ -307,6 +346,12 @@ def _parse_inputs(raw: Mapping, path: Path) -> tuple[InputSpec, ...]:
         default = spec.get("default")
         if required:
             _require(default is None, path, f"inputs.{name}.default", "required input forbids default")
+        if default is not None:  # build-time type check; bool is not an int here
+            _require(_TOML_CHECKS[typ](default), path, f"inputs.{name}.default",
+                     f"default is not a {typ}")
+            if typ == "enum":
+                _require(default in choices, path, f"inputs.{name}.default",
+                         "default is not one of choices")
         known = {"type", "required", "doc", "choices", "default"}
         extra = set(spec) - known
         _require(not extra, path, f"inputs.{name}", f"unknown keys {sorted(extra)}")
@@ -347,9 +392,13 @@ def load_declaration(dir_path: Path, *, kind_acts: Mapping[str, frozenset[str]],
     path = dir_path / "command.toml"
     _require(path.is_file(), path, "command.toml", "missing")
     _require((dir_path / "prompt.md").is_file(), dir_path / "prompt.md", "prompt.md", "missing")
-    raw = tomllib.loads(path.read_text())
-    _require(raw.get("schema_version") == SCHEMA_VERSION, path, "schema_version",
-             f"must be {SCHEMA_VERSION}")
+    try:
+        raw = tomllib.loads(path.read_text())
+    except tomllib.TOMLDecodeError as e:
+        raise DeclarationError(path, "command.toml", f"not valid TOML: {e}")
+    version = raw.get("schema_version")
+    _require(type(version) is int and version == SCHEMA_VERSION, path, "schema_version",
+             f"must be the integer {SCHEMA_VERSION}")
     name = raw.get("name")
     _require(isinstance(name, str) and bool(NAME_RE.match(name or "")), path, "name", "bad grammar")
     _require(len(name.encode()) <= MAX_NAME_BYTES, path, "name", "over 32 bytes")
@@ -358,7 +407,8 @@ def load_declaration(dir_path: Path, *, kind_acts: Mapping[str, frozenset[str]],
     purpose = raw.get("purpose")
     _require(isinstance(purpose, str) and purpose, path, "purpose", "must be a non-empty string")
     budget = raw.get("output_budget")
-    _require(isinstance(budget, int) and budget > 0, path, "output_budget", "must be a positive int")
+    _require(type(budget) is int and budget > 0, path, "output_budget",
+             "must be a positive integer (not a bool)")
     write_raw = raw.get("write_class")
     _require(isinstance(write_raw, str), path, "write_class", "missing")
     write_tbl = raw.get("write", {})
@@ -442,6 +492,15 @@ def test_unknown_and_wrong_type_refused():
         canonicalize(d, {"a": "not-int"})
     with pytest.raises(Refused):  # missing required
         canonicalize(d, {})
+    with pytest.raises(Refused):  # bool is not an int
+        canonicalize(d, {"a": True})
+
+
+def test_explicit_null_is_refused_not_absent():
+    d = decl(InputSpec("a", "string", False, "d", default="x"))
+    with pytest.raises(Refused) as e:
+        canonicalize(d, {"a": None})  # must NOT silently become the default
+    assert e.value.refusal.code == "invalid-input"
 
 
 def test_enum_and_list_validation():
@@ -549,7 +608,12 @@ def canonicalize(decl: Declaration, provided: Mapping[str, object]) -> dict[str,
         _refuse(f"unknown inputs {sorted(unknown)}", command=decl.name)
     out: dict[str, object] = {}
     for spec in decl.inputs:
-        value = provided.get(spec.name, spec.default)
+        if spec.name in provided:
+            value = provided[spec.name]
+            if value is None:  # explicit null is a caller error, never "absent"
+                _refuse(f"input {spec.name!r} is null; omit it instead", field=spec.name)
+        else:
+            value = spec.default
         if value is None:
             if spec.required:
                 _refuse(f"missing required input {spec.name!r}", field=spec.name)
@@ -938,7 +1002,7 @@ from science.cursor import MIN_OUTPUT_BUDGET
 from science.render import (
     AuditViolation, audit_write_report, render_page, report_digest,
 )
-from science.report import Finding, Heading, RecordBlock, Text
+from science.report import Finding, Heading, KeyVals, RecordBlock, Text
 
 
 def cursor_for(position, digest):
@@ -958,6 +1022,16 @@ def test_fits_in_one_page_untruncated():
     report = (Heading("a"), Text("b"))
     page = render_page(report, budget=MIN_OUTPUT_BUDGET, position=(0, 0), cursor_for=cursor_for)
     assert page.next_position is None and "truncated" not in page.text
+
+
+def test_near_budget_fit_is_not_truncated():
+    """A report inside the budget but inside the marker reserve too: still whole."""
+    from science.render import render_full
+    report = (Text("x" * (MIN_OUTPUT_BUDGET * 2)),)
+    exact = len(render_full(report).encode())
+    page = render_page(report, budget=exact, position=(0, 0), cursor_for=cursor_for)
+    assert page.next_position is None and "truncated" not in page.text
+    assert len(page.text.encode()) == exact
 
 
 def test_budget_enforced_and_pages_cover_everything():
@@ -997,8 +1071,8 @@ def test_write_audit_rules():
         audit_write_report((RecordBlock("u" * 32, "note:other", "note", "t"),), minted)
     with pytest.raises(AuditViolation):  # right id, wrong uid — both must match
         audit_write_report((RecordBlock("v" * 32, "note:n1", "note", "t"),), minted)
-    for block in (Heading("h"), Finding("f"), Text("t")):
-        with pytest.raises(AuditViolation):  # any non-record block
+    for block in (Heading("h"), KeyVals("k", ()), Finding("f"), Text("t")):
+        with pytest.raises(AuditViolation):  # every non-record block kind
             audit_write_report((block,), minted)
 ```
 
@@ -1064,6 +1138,14 @@ def render_page(report: Report, *, budget: int, position: tuple[int, int] = (0, 
                 cursor_for: Callable[[tuple[int, int], str], str]) -> RenderedPage:
     digest = report_digest(report)
     block_index, offset = position
+    # A report that fits the budget whole is emitted whole: the marker reserve
+    # applies only when truncation is actually needed, so a near-budget fit is
+    # never truncated for space the marker would not use.
+    pieces = [serialize_block(b).encode() for b in report]
+    remaining = ([pieces[block_index][offset:]] + pieces[block_index + 1:]
+                 if block_index < len(pieces) else [])
+    if sum(map(len, remaining)) <= budget:
+        return RenderedPage(b"".join(remaining).decode(), None, digest)
     # Reserve worst-case marker space so the emitted page always fits the budget.
     probe = cursor_for((2**64 - 1, 2**64 - 1), digest)
     reserve = len(MARKER_TEMPLATE.format(budget=budget, cursor=probe).encode())
@@ -1173,6 +1255,11 @@ def test_bad_world_id_wrong_types_and_unknown_keys_refused(tmp_path):
                  'corpus_roots = "not-a-list"\noperations_root = "/x"\n')
     with pytest.raises(Refused):
         load_config(p)
+    malformed = tmp_path / "malformed.toml"
+    malformed.write_text("this = is not [ toml")
+    with pytest.raises(Refused) as e:  # a refusal, never an internal error
+        load_config(malformed)
+    assert e.value.refusal.code == "invalid-input"
 
 
 def test_resolution_order(tmp_path):
@@ -1190,7 +1277,28 @@ Expected: FAIL — no module `science.config`.
 
 - [ ] **Step 3: Implement `config.py`**
 
-Add beliefs as a dependency: in `python/pyproject.toml` set `dependencies = ["verifiably-beliefs"]` and, until it is published, a `[tool.uv.sources]` (or pip `-e`) entry pointing at the beliefs checkout — never a vendored copy.
+Add beliefs as a dependency — its distribution name today is **`beliefs`**
+(beliefs' `python/pyproject.toml`), not the design's future
+`verifiably-beliefs`. One mechanism, exactly this, in `python/pyproject.toml`:
+
+```toml
+[project]
+dependencies = ["beliefs"]
+
+[tool.uv.sources]
+beliefs = { path = "../../beliefs/python", editable = true }
+```
+
+The relative path resolves because the science and beliefs checkouts are
+siblings. When executing inside `.worktrees/<branch>` (where `../..` is the
+science checkout itself), make it resolve once from the science repo root:
+
+```bash
+ln -sfn "$(git rev-parse --path-format=absolute --git-common-dir)/../../beliefs" .worktrees/beliefs
+```
+
+and add `.worktrees/` to `.gitignore` alongside Task 8's `.framework-test/`.
+Never a vendored copy, never a machine path in a committed file.
 
 ```python
 """Launcher configuration: one TOML file, loaded straight into beliefs' WorldConfig."""
@@ -1226,7 +1334,10 @@ _KEYS = ("world_root", "world_id", "corpus_roots", "operations_root")
 def load_config(path: Path) -> ScienceConfig:
     if not path.is_file():
         _refuse(f"config file not found: {path}")
-    raw = tomllib.loads(path.read_text())
+    try:
+        raw = tomllib.loads(path.read_text())
+    except tomllib.TOMLDecodeError as e:
+        _refuse(f"config is not valid TOML: {e}")
     unknown = set(raw) - set(_KEYS)
     if unknown:
         _refuse(f"config has unknown keys {sorted(unknown)}")
@@ -1370,6 +1481,20 @@ def test_bad_invocation_id_refused():
     with pytest.raises(Refused) as e:
         build().invoke("small", {}, invocation_id="has space")
     assert e.value.refusal.code == "invalid-input"
+
+
+def test_forged_mid_character_offset_refused():
+    from science.cursor import ReadCursor, decode, encode
+    d = build()
+    d._handlers["lots"] = lambda ctx, **i: (Text("é" * 4000),)  # 2-byte chars
+    first = d.invoke("lots", {})
+    token = first.text.rsplit("cursor ", 1)[1].strip()
+    cur = decode(token)
+    forged = encode(ReadCursor(cur.command, cur.input_digest, cur.report_digest,
+                               cur.block, cur.offset + 1))  # lands mid-character
+    with pytest.raises(Refused) as e:
+        d.invoke("lots", {}, cursor=forged)
+    assert e.value.refusal.code == "stale-cursor"
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
@@ -1459,10 +1584,15 @@ class Dispatcher:
 
     @staticmethod
     def _check_position(report, block: int, offset: int) -> None:
-        """Semantic position validation: within the report the digest just proved."""
+        """Semantic position validation: within the report the digest just
+        proved, and on a UTF-8 character boundary — a forged mid-character
+        offset must refuse here, not fail inside the renderer's decode."""
         from science.report import serialize_block
-        if block >= len(report) or offset >= len(serialize_block(report[block]).encode()):
+        if block >= len(report):
             raise Refused(Refusal("stale-cursor", "cursor position is outside the report"))
+        data = serialize_block(report[block]).encode()
+        if offset >= len(data) or (data[offset] & 0xC0) == 0x80:
+            raise Refused(Refusal("stale-cursor", "cursor position is not a boundary"))
 ```
 
 - [ ] **Step 4: Run tests to verify they pass**
@@ -1721,11 +1851,10 @@ COMMANDS_ROOT = REPO_ROOT / "commands"
 
 
 def production_kind_acts() -> dict[str, frozenset[str]]:
-    try:
-        from beliefs.permit import KIND_ACTS  # arrives with beliefs-96a24a
-        return dict(KIND_ACTS)
-    except ImportError:
-        return {}  # only read-only commands can ship until then; that is `status`
+    # Explicitly empty until beliefs-96a24a ships `beliefs.permit.KIND_ACTS`:
+    # only read-only commands can ship, which is exactly `status`. Task 12
+    # replaces this body with the exact import — no try/except, no fallback.
+    return {}
 
 
 def production_tree() -> tuple[Declaration, ...]:
@@ -2122,19 +2251,21 @@ git commit -m "feat(adapters): Claude Code plugin generator with committed tree 
 
 **Protocol ruling (resolves the version question before any code):** the
 server pins **MCP `2026-07-28`** — the current revision, which retired the
-`initialize`/`initialized` handshake, requires request `_meta`, and made
-protocol sessions explicit. The design's "one attended session per server
-lifetime" (spec §9.3) is unaffected: the **writer** session binds to the
-server *process* (spawn to exit), not to any MCP protocol session, and if a
-harness runs several protocol sessions over one process they share that one
-attended writer session — same person, full permit, one ledger. This ruling
-is recorded in spec §9.3. **Step 0 of this task:** read the pinned
-revision's tools page and release notes
+`initialize`/`initialized` handshake, requires every request's `_meta` to
+carry the protocol version, client info, and client capabilities, and
+**removed protocol sessions entirely**: requests are independent. The
+design's "one attended session per server lifetime" (spec §9.3) is not an
+MCP concept and is unaffected — the writer session is **launcher-owned
+process state**, bound to the server process from spawn to exit, that
+those independent requests share: same person, full permit, one ledger.
+This ruling is recorded in spec §9.3. **Step 0 of this task:** read the
+pinned revision's tools page and release notes
 (`modelcontextprotocol.io/specification/2026-07-28/server/tools`,
 `blog.modelcontextprotocol.io/posts/2026-07-28/`) and mirror the exact
 request/response envelope — the code below fixes the dispatch logic and our
-side of the contract; field spellings come from the spec page, and the
-tests are written from it, not from memory.
+side of the contract; field spellings for `_meta`'s members and the
+`resultType` marker come from the spec page, and the tests are written
+from it, not from memory.
 
 **Interfaces:**
 - Consumes: `Dispatcher`, `production_tree`, `resolve_handlers`, `ReadContext`, `load_config`, `Refused`.
@@ -2152,9 +2283,16 @@ from science.mcp import handle_request, tool_schema
 from science.loader import production_tree
 
 
+META = {  # every 2026-07-28 request carries these; spellings from the spec page
+    "protocolVersion": "2026-07-28",
+    "clientInfo": {"name": "science-tests", "version": "0"},
+    "capabilities": {},
+}
+
+
 def rpc(method, params=None, id=1):
     body = dict(params or {})
-    body.setdefault("_meta", {})  # required by MCP 2026-07-28
+    body.setdefault("_meta", dict(META))
     return {"jsonrpc": "2.0", "id": id, "method": method, "params": body}
 
 
@@ -2182,10 +2320,20 @@ def test_tools_list_and_call(certified_work):
     assert len(called["result"]["structuredContent"]["invocation_id"]) == 32
 
 
-def test_missing_meta_is_a_protocol_error():
-    req = {"jsonrpc": "2.0", "id": 9, "method": "tools/list", "params": {}}
-    res = handle_request(req, dispatcher=None, decls=())
-    assert res["error"]["code"] == -32600
+def test_missing_or_incomplete_meta_is_a_protocol_error():
+    bare = {"jsonrpc": "2.0", "id": 9, "method": "tools/list", "params": {}}
+    assert handle_request(bare, dispatcher=None, decls=())["error"]["code"] == -32600
+    wrong_version = rpc("tools/list")
+    wrong_version["params"]["_meta"]["protocolVersion"] = "2025-06-18"
+    assert handle_request(wrong_version, dispatcher=None, decls=())["error"]["code"] == -32600
+    no_client = rpc("tools/list")
+    del no_client["params"]["_meta"]["clientInfo"]
+    assert handle_request(no_client, dispatcher=None, decls=())["error"]["code"] == -32600
+
+
+def test_results_carry_complete_result_type():
+    listed = handle_request(rpc("tools/list"), dispatcher=None, decls=())
+    assert listed["result"]["resultType"] == "complete"
 
 
 def test_initialize_is_gone():
@@ -2272,12 +2420,25 @@ def tool_schema(decl: Declaration) -> dict:
 PROTOCOL_VERSION = "2026-07-28"  # the ruling above; no pre-2026 fallbacks
 
 
+def _meta_error(meta: object) -> str | None:
+    if not isinstance(meta, dict):
+        return "request _meta is required"
+    if meta.get("protocolVersion") != PROTOCOL_VERSION:
+        return f"protocolVersion must be {PROTOCOL_VERSION}"
+    if not isinstance(meta.get("clientInfo"), dict):
+        return "clientInfo is required"
+    if not isinstance(meta.get("capabilities"), dict):
+        return "capabilities is required"
+    return None
+
+
 def handle_request(req: dict, dispatcher: Dispatcher, decls) -> dict:
     rid, method = req.get("id"), req.get("method")
     params = req.get("params") or {}
-    if not isinstance(params.get("_meta"), dict):  # required by 2026-07-28
+    problem = _meta_error(params.get("_meta"))
+    if problem is not None:
         return {"jsonrpc": "2.0", "id": rid,
-                "error": {"code": -32600, "message": "request _meta is required"}}
+                "error": {"code": -32600, "message": problem}}
     if method == "tools/list":
         return _result(rid, {"tools": [tool_schema(d) for d in decls]})
     if method == "tools/call":
@@ -2299,6 +2460,7 @@ def handle_request(req: dict, dispatcher: Dispatcher, decls) -> dict:
 
 
 def _result(rid, payload) -> dict:
+    payload = {**payload, "resultType": "complete"}  # required on 2026-07-28 results
     return {"jsonrpc": "2.0", "id": rid, "result": payload}
 
 
@@ -2360,9 +2522,9 @@ git commit -m "feat(mcp): stdio MCP server with CLI transport-equivalence test"
   - `WriterSession.claim_invocation(invocation_id, command, input_digest) -> Claim` where `Claim` is one of `Fresh`, `Done(outcome)`, `Open`, `Mismatch` (ledger-backed, called under the dispatch lock)
   - `WriterSession.close_invocation(invocation_id, outcome)` where outcome is `{"done": [[uid, id], …]}` or `{"refusal": {code, message, data}}` — the persisted envelope of spec §5.2
   - `WriterSession.invocation_acts(invocation_id) -> tuple[ActLine, ...]` with `ActLine.record_ids: tuple[tuple[str, str], ...]` — `(uid, id)` pairs
-  - `beliefs.session.open_ledger_reader(operations_root, session_id) -> LedgerReader` with `LedgerReader.invocation(invocation_id) -> InvocationRecord | None` carrying `.acts` (as above) and `.outcome` — the accessor write continuation resolves cursors through
+  - `beliefs.session.open_ledger_reader(operations_root, session_id) -> LedgerReader` with `LedgerReader.invocation(invocation_id) -> InvocationRecord | None` carrying `.command`, `.acts` (as above) and `.outcome` — the accessor write continuation resolves cursors through, and `.command` is what binds a cursor to its command
   - `ScopedWriter` mirroring the `CorpusWriter` write methods, permit-checked per act
-- Produces: the write branch of `Dispatcher.invoke` (spec §6.1 steps 3–7 for writes, §6.2 dedup under one `threading.Lock`, §7.4 audit via `audit_write_report`); **completion ordering** (spec §6.1/§5.2, ruled here): handler → collect minted `(uid, id)` pairs from the session's acts → `audit_write_report` → `close_invocation` → render → return. The ledger records act truth, never rendering success: an audit violation still closes `done` with the minted pairs (the acts committed) and then raises `AuditViolation` as an internal error — the caller sees exit 1, never the echoed report, and a dedup retry replays canonically from the ledger. A handler refusal closes with the persisted refusal envelope, in that order, before re-raising as `Refused`. Write-cursor continuation resolves the ledger via `open_ledger_reader`, re-renders from the ledger's `(uid, id)` pairs only, and never calls the write handler or canonicalizes inputs. Refusal translation: `PermitExceeded` → `permit-exceeded`, other `WriteRefused` → `kernel-refused` with the subclass name in `data`. Write handler signature: `handle(ctx, writer, **inputs) -> Report`; record blocks come from `record_block(node)` over what the writer returned. Also produced here: `science.mcp.serve` and `science.serve` open the attended session (`open_attended_session`) and pass it to their dispatchers — until this task the MCP server runs with `session=None`.
+- Produces: the write branch of `Dispatcher.invoke` (spec §6.1 steps 3–7 for writes, §6.2 dedup under one `threading.Lock`, §7.4 audit via `audit_write_report`); **completion ordering** (spec §6.1/§5.2, ruled here): handler → collect minted `(uid, id)` pairs from the session's acts → `audit_write_report` → `close_invocation` → render → return. The ledger records act truth, never rendering success: an audit violation still closes `done` with the minted pairs (the acts committed) and then raises `AuditViolation` as an internal error — the caller sees exit 1, never the echoed report, and a dedup retry replays canonically from the ledger. A handler refusal closes with the persisted refusal envelope, in that order, before re-raising as `Refused`. Write-cursor continuation resolves the ledger via `open_ledger_reader`, re-renders from the ledger's `(uid, id)` pairs only, and never calls the write handler or canonicalizes inputs. Refusal translation: `PermitExceeded` → `permit-exceeded`, other `WriteRefused` → `kernel-refused` with the subclass name in `data`. Write handler signature: `handle(ctx, writer, **inputs) -> Report`; the handler's report is audited, but **what renders — on the first response as much as on replay — is the canonical ledger-rebuilt report** (`_minted_report`), so authored kind/title text around a real identity pair has no path to the caller. Also produced here: `science.mcp.serve` opens the attended session (`open_attended_session`) and passes it to its dispatcher — until this task the MCP server runs with `session=None`; the CLI service process is Task 13's, wired there. Finally, `loader.production_kind_acts` is rewritten from its pre-permit `return {}` to `from beliefs.permit import KIND_ACTS; return dict(KIND_ACTS)` — an exact import, no fallback.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -2586,8 +2748,14 @@ Replace the `NotImplementedError` branches:
                 # the acts committed whether or not the report survives audit.
                 self._session.close_invocation(iid, {"done": sorted(minted)})
             # An AuditViolation has propagated past the close above as an
-            # internal error; the echoed report is never rendered. Otherwise:
-            return Outcome(self._render_write(decl.output_budget, report, iid, (0, 0)), iid)
+            # internal error; the echoed report is never rendered. Even on
+            # success the handler's report is only the audited *claim* — what
+            # renders is the canonical ledger-rebuilt report, first response
+            # and replay alike, so authored text around a real identity pair
+            # has no path out (spec §7.4).
+            canonical_report = self._minted_report(sorted(minted))
+            return Outcome(self._render_write(decl.output_budget, canonical_report,
+                                              iid, (0, 0)), iid)
 
     def _close_refused(self, iid, refusal: Refusal):
         envelope = {"code": refusal.code, "message": refusal.message,
@@ -2627,6 +2795,9 @@ handler call, never canonicalization:
 ```python
         if isinstance(cur, WriteCursor):
             from beliefs.session import open_ledger_reader
+            decl = self._decls.get(command)
+            if decl is None:
+                raise Refused(Refusal("unknown-command", f"no command {command!r}"))
             operations_root = self._ctx.config.operations_root
             try:
                 reader = open_ledger_reader(operations_root, cur.session_id)
@@ -2635,6 +2806,9 @@ handler call, never canonicalization:
             record = reader.invocation(cur.invocation_id)
             if record is None:
                 raise Refused(Refusal("unknown-cursor", "no such invocation in that session"))
+            if record.command != command:  # the cursor is bound to its command
+                raise Refused(Refusal("input-mismatch",
+                                      "cursor was issued for a different command"))
             if "refusal" in record.outcome:
                 raise Refused(Refusal("unknown-cursor",
                                       "that invocation refused; nothing to page"))
@@ -2644,23 +2818,21 @@ handler call, never canonicalization:
                 raise Refused(Refusal("stale-cursor", "the records changed; re-run"))
             self._check_position(report, cur.block, cur.offset)
             iid = invocation_id or mint_token()
-            budget = self._decls[command].output_budget if command in self._decls \
-                else max(d.output_budget for d in self._decls.values())
-            page = render_page(report, budget=budget, position=(cur.block, cur.offset),
+            page = render_page(report, budget=decl.output_budget,
+                               position=(cur.block, cur.offset),
                                cursor_for=lambda pos, rd: encode(
                                    WriteCursor(cur.session_id, cur.invocation_id, rd,
                                                pos[0], pos[1])))
             return Outcome(page.text, iid)
 ```
 
-`ReadContext` (Task 6's `config.py`) gains `load_record(uid, record_id)`:
-resolve through the read path the fixture already exercises and refuse
-`unknown-cursor` if the record is absent. `_render_write` uses the actual
-per-invocation `Report` digest exactly as the read path does, so replayed
-pages and first-render pages share cursors. Finally, wire the attended
-session into the servers: `science.mcp.serve` and `science.serve` call
-`open_attended_session(config.world, config.operations_root)` and pass the
-session to their `Dispatcher` (this replaces Task 11's `session=None`).
+`_render_write` uses the canonical report's digest exactly as the read
+path does, so replayed pages and first-render pages share cursors. Wire
+the attended session into the MCP server only: `science.mcp.serve` calls
+`open_attended_session(config.world, config.operations_root)` and passes
+the session to its `Dispatcher` (this replaces Task 11's `session=None`;
+the CLI's service process is created, already session-bearing, in
+Task 13).
 
 - [ ] **Step 4: Run the full suite to verify it passes**
 
@@ -2855,8 +3027,8 @@ def serve(config: ScienceConfig, socket_path: Path, declarations=None, handlers=
                 self.wfile.write(json.dumps(reply).encode() + b"\n")
 
     socket_path.parent.mkdir(parents=True, exist_ok=True)
-    if socket_path.exists():
-        socket_path.unlink()
+    # No unlink anywhere: the existence check above refused already, and if a
+    # socket appears in the race window, bind() fails loudly — never clean up.
     return socketserver.ThreadingUnixStreamServer(str(socket_path), Handler)
 ```
 

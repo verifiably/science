@@ -363,10 +363,18 @@ before the handler runs — for the invocation-scoped writer; (4) for a write-cl
 invocation id and append `invocation-open` (§6.2); (5) invoke the handler
 with the read context and, for writes, the scoped writer — never the
 session — so a body exceeding its declaration is refused at the act;
-(6) render under the budget (§7); (7) for writes, append
-`invocation-close`. A request carrying `cursor` is a continuation (§7.3),
-handled by the dispatcher before this pipeline; it never reaches a write
-handler.
+(6) for a read, render under the budget (§7) and return; for a write,
+collect the minted identities, apply the write audit (§7.4), append
+`invocation-close` **recording act truth** — `done` with the minted
+identities, or the refusal envelope — and only then render. The close
+precedes rendering because the ledger records what was done, never whether
+a report survived rendering: an audit violation still closes `done` (the
+acts committed) and surfaces as an internal error whose recovery is a
+dedup replay from the ledger, and what a successful write renders — first
+response and replay alike — is the canonical report rebuilt from the
+ledger's identities, not the handler's blocks. A request carrying `cursor`
+is a continuation (§7.3), handled by the dispatcher before this pipeline;
+it never reaches a write handler.
 
 ### 6.2 Invocation identity and retry
 
@@ -535,11 +543,12 @@ exercised by the synthetic exemplars in tests.
 `science mcp serve`, stdio transport, one attended session per server
 lifetime; the harness configuration that starts it is the person's launcher.
 The server pins **MCP protocol revision `2026-07-28`** — the revision that
-retired the `initialize` handshake, requires request `_meta`, and made
-protocol sessions explicit — and the attended **writer** session binds to
-the server *process* (spawn to exit), not to any MCP protocol session:
-several protocol sessions over one process share the one writer session and
-its ledger, which is attended use by the same person under one full permit.
+retired the `initialize` handshake, requires every request to carry `_meta`
+(protocol version, client info, client capabilities), and **removed
+protocol sessions entirely**: requests are independent. The attended
+**writer** session is not an MCP concept at all — it is launcher-owned
+process state, bound to the server process from spawn to exit, that those
+independent requests share: one person, one full permit, one ledger.
 The tool list is generated 1:1 from the declarations — name, `purpose` as
 description, input JSON Schema from the canonical inputs **plus the
 optional protocol properties `invocation_id` and `cursor`**, which the
