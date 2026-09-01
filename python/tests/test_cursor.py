@@ -27,7 +27,7 @@ def test_maximal_cursor_fits_published_bound():
 
 
 @pytest.mark.parametrize("junk", ["", "scur1.", "nope", "scur1.!!!!", "scur2.AAAA",
-                                  "scur1." + "A" * 4096, None])
+                                  "scur1." + "A" * 4096, "scur1.\ud800", None])
 def test_garbage_refuses_unknown_cursor(junk):
     with pytest.raises(Refused) as e:
         decode(junk)
@@ -60,6 +60,15 @@ def test_boolean_position_refused():
 def test_variant_keys_must_be_exact(raw):
     with pytest.raises(Refused) as e:
         decode(_hand_encode(raw))
+    assert e.value.refusal.code == "unknown-cursor"
+
+
+def test_duplicate_cursor_key_refused():
+    payload = (b'{"f":"r","c":"status","i":"' + b"a" * 64
+               + b'","r":"' + b"b" * 64 + b'","b":0,"o":0,"o":1}')
+    token = "scur1." + base64.urlsafe_b64encode(payload).decode().rstrip("=")
+    with pytest.raises(Refused) as e:
+        decode(token)
     assert e.value.refusal.code == "unknown-cursor"
 
 

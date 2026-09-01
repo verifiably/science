@@ -45,6 +45,13 @@ def _check_u64(value: object) -> int:
     return value
 
 
+def _unique_object(pairs: list[tuple[object, object]]) -> dict[object, object]:
+    raw = dict(pairs)
+    if len(raw) != len(pairs):
+        raise ValueError("duplicate cursor key")
+    return raw
+
+
 def encode(cursor: ReadCursor | WriteCursor) -> str:
     if isinstance(cursor, ReadCursor):
         raw = {"f": "r", "c": cursor.command, "i": cursor.input_digest,
@@ -59,7 +66,13 @@ def encode(cursor: ReadCursor | WriteCursor) -> str:
 
 
 def decode(token: str) -> ReadCursor | WriteCursor:
-    if type(token) is not str or len(token.encode()) > MAX_CURSOR_BYTES:
+    if type(token) is not str:
+        _refuse()
+    try:
+        token_bytes = token.encode("ascii")
+    except UnicodeEncodeError:
+        _refuse()
+    if len(token_bytes) > MAX_CURSOR_BYTES:
         _refuse()
     if not token.startswith(_PREFIX):
         _refuse()
@@ -68,7 +81,7 @@ def decode(token: str) -> ReadCursor | WriteCursor:
         _refuse()
     try:
         payload = base64.b64decode(body + "=" * (-len(body) % 4), altchars=b"-_", validate=True)
-        raw = json.loads(payload)
+        raw = json.loads(payload, object_pairs_hook=_unique_object)
     except (UnicodeDecodeError, ValueError, json.JSONDecodeError):
         _refuse()
     if type(raw) is not dict:
