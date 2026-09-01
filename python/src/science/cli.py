@@ -97,6 +97,11 @@ def main(argv: list[str] | None = None) -> int:
 
 def _framework_verb(namespace) -> int:
     declarations = production_tree()
+    if namespace.command == "mcp":
+        from science.mcp import serve
+
+        serve(resolve_config_path(namespace.config))
+        return EXIT_OK
     if namespace.command == "build":
         resolve_handlers(declarations)
         sys.stdout.write(f"ok: {len(declarations)} command(s)\n")
