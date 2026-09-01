@@ -53,9 +53,7 @@ class Dispatcher:
             report = self._handlers[decl.name](self._ctx, **canonical)
             return Outcome(self._render(decl, canonical, report, (0, 0)), iid)
         except Refused as error:
-            if error.invocation_id is None:
-                raise Refused(error.refusal, iid) from None
-            raise
+            raise Refused(error.refusal, iid) from None
 
     def _render(
         self,

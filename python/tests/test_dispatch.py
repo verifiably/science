@@ -4,7 +4,7 @@ import pytest
 
 from science.cursor import MIN_OUTPUT_BUDGET, ReadCursor, WriteCursor, decode, encode
 from science.dispatch import Dispatcher
-from science.refusal import Refused
+from science.refusal import Refusal, Refused
 from science.report import Text
 from science.schema import Declaration, InputSpec, WriteClass
 
@@ -37,6 +37,19 @@ def test_unknown_command_refused_with_supplied_invocation_id():
     with pytest.raises(Refused) as caught:
         build().invoke("nope", {}, invocation_id="caller_id")
     assert caught.value.refusal.code == "unknown-command"
+    assert caught.value.invocation_id == "caller_id"
+
+
+def test_handler_refusal_id_is_bound_to_the_calling_invocation():
+    dispatcher = build()
+
+    def refusing_handler(ctx, **inputs):
+        raise Refused(Refusal("kernel-refused", "handler refused"), "foreign_id")
+
+    dispatcher._handlers["small"] = refusing_handler
+    with pytest.raises(Refused) as caught:
+        dispatcher.invoke("small", {}, invocation_id="caller_id")
+    assert caught.value.refusal.code == "kernel-refused"
     assert caught.value.invocation_id == "caller_id"
 
 
