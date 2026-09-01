@@ -1297,6 +1297,8 @@ git commit -m "feat(render): budgeted renderer with guaranteed progress and writ
 
 **Files:**
 - Create: `python/src/science/config.py`
+- Modify: `python/pyproject.toml` (the beliefs dependency and uv source)
+- Create: `.gitignore` (`.worktrees/` and `.framework-test/`)
 - Test: `python/tests/test_config.py`
 
 **Interfaces:**
@@ -1404,7 +1406,14 @@ mkdir -p "$COMMON/../.worktrees"
 ln -sfn "$COMMON/../../beliefs" "$COMMON/../.worktrees/beliefs"
 ```
 
-and add `.worktrees/` to `.gitignore` alongside Task 8's `.framework-test/`.
+and create the repository `.gitignore` in this task, with both lines this
+plan needs:
+
+```text
+.worktrees/
+.framework-test/
+```
+
 Never a vendored copy, never a machine path in a committed file.
 
 ```python
@@ -1495,7 +1504,7 @@ Expected: PASS (these tests never call `ReadContext.open`, so no live world is n
 - [ ] **Step 5: Commit**
 
 ```bash
-git add python/pyproject.toml python/src/science/config.py python/tests/test_config.py
+git add python/pyproject.toml python/src/science/config.py python/tests/test_config.py .gitignore
 git commit -m "feat(config): launcher config loading beliefs WorldConfig directly"
 ```
 
@@ -1788,7 +1797,7 @@ def certified_work():
         shutil.rmtree(work, ignore_errors=True)  # metadata siblings live inside work
 ```
 
-(Add `.framework-test/` to `.gitignore` in the same commit.)
+(`.framework-test/` is already ignored — Task 6 created `.gitignore`.)
 
 `python/tests/helpers/world.py` — the exact recipe of beliefs'
 `world_case` fixture (`acceptance/test_n2_cut6.py:155`), with pins in the
@@ -2110,7 +2119,7 @@ Expected: PASS.
 
 ```bash
 git add commands/ python/src/science/commands/status.py python/src/science/loader.py \
-        python/src/science/config.py python/tests .gitignore
+        python/src/science/config.py python/tests
 git commit -m "feat(status): shipped read exemplar over a beliefs fixture world"
 ```
 
@@ -2472,8 +2481,9 @@ git commit -m "feat(adapters): Claude Code plugin generator with committed tree 
 
 **Protocol ruling (resolves the version question before any code):** the
 server pins **MCP `2026-07-28`** — the current revision, which retired the
-`initialize`/`initialized` handshake, requires every request's `_meta` to
-carry the protocol version, client info, and client capabilities, and
+`initialize`/`initialized` handshake in favor of a mandatory
+`server/discover` method, requires every request's `_meta` to carry the
+protocol version and client capabilities (client info is optional), and
 **removed protocol sessions entirely**: requests are independent. The
 design's "one attended session per server lifetime" (spec §9.3) is not an
 MCP concept and is unaffected — the writer session is **launcher-owned
@@ -2490,7 +2500,7 @@ from it, not from memory.
 
 **Interfaces:**
 - Consumes: `Dispatcher`, `production_tree`, `resolve_handlers`, `ReadContext`, `load_config`, `Refused`.
-- Produces: `PROTOCOL_VERSION = "2026-07-28"`; `tool_schema(decl) -> dict` (JSON Schema: declared inputs + optional `invocation_id` and `cursor` string properties); `handle_request(req, dispatcher, decls) -> dict` — a JSON-RPC 2.0 responder for `tools/list` and `tools/call` that **rejects a request without `params._meta`** (`-32600`); no `initialize` handling exists to keep obsolete clients honest; `serve(config_path, stdin, stdout, session=None) -> None` (the `session` parameter is wired to the attended writer session in Task 12; until then every command it can serve is read-only). Tool results carry the rendered text as content and `structuredContent: {"invocation_id": …}` so callers can reuse minted ids; a refusal result sets `isError`, keeps the human text `refused [<code>] <message>`, and carries the full spec §6.3 envelope (and the invocation id when one was bound) in `structuredContent` — structured `data` is never discarded into parseable text.
+- Produces: `PROTOCOL_VERSION = "2026-07-28"`; `tool_schema(decl) -> dict` (JSON Schema: declared inputs + optional `invocation_id` and `cursor` string properties); `handle_request(req, dispatcher, decls) -> dict` — a JSON-RPC 2.0 responder for the **mandatory `server/discover`**, `tools/list`, and `tools/call`, with layered validation: envelope first (`jsonrpc` marker, non-null string/integer `id`, string `method` → `-32600`), then `_meta` (missing required fields → `-32602`; **only protocol version and client capabilities are required, `clientInfo` is optional**; an unsupported version → `-32022` with `{supported, requested}` data), then per-method params (`-32602`, unknown tool names included — a protocol error, never a framework tool refusal); no `initialize` handling exists to keep obsolete clients honest; `serve(config_path, stdin, stdout, session=None) -> None` whose loop answers malformed JSON with `-32700` and never terminates on bad input (the `session` parameter is wired to the attended writer session in Task 12; until then every command it can serve is read-only). Tool results carry the rendered text as content and `structuredContent: {"invocation_id": …}` so callers can reuse minted ids; a refusal result sets `isError`, keeps the human text `refused [<code>] <message>`, and carries the full spec §6.3 envelope (and the invocation id when one was bound) in `structuredContent` — structured `data` is never discarded into parseable text.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -2541,18 +2551,42 @@ def test_tools_list_and_call(certified_work):
     assert len(called["result"]["structuredContent"]["invocation_id"]) == 32
 
 
-def test_missing_or_incomplete_meta_is_a_protocol_error():
-    bare = {"jsonrpc": "2.0", "id": 9, "method": "tools/list", "params": {}}
-    assert handle_request(bare, dispatcher=None, decls=())["error"]["code"] == -32600
-    wrong_version = rpc("tools/list")
-    wrong_version["params"]["_meta"]["io.modelcontextprotocol/protocolVersion"] = "2025-06-18"
-    assert handle_request(wrong_version, dispatcher=None, decls=())["error"]["code"] == -32600
-    no_client = rpc("tools/list")
-    del no_client["params"]["_meta"]["io.modelcontextprotocol/clientInfo"]
-    assert handle_request(no_client, dispatcher=None, decls=())["error"]["code"] == -32600
+def test_meta_requirements_match_the_revision():
+    no_meta = rpc("tools/list")
+    del no_meta["params"]["_meta"]
+    assert handle_request(no_meta, dispatcher=None, decls=())["error"]["code"] == -32602
     no_caps = rpc("tools/list")
     del no_caps["params"]["_meta"]["io.modelcontextprotocol/clientCapabilities"]
-    assert handle_request(no_caps, dispatcher=None, decls=())["error"]["code"] == -32600
+    assert handle_request(no_caps, dispatcher=None, decls=())["error"]["code"] == -32602
+    without_client_info = rpc("tools/list")  # clientInfo is OPTIONAL
+    del without_client_info["params"]["_meta"]["io.modelcontextprotocol/clientInfo"]
+    assert "result" in handle_request(without_client_info, dispatcher=None, decls=())
+
+
+def test_unsupported_version_is_32022_with_versions():
+    wrong = rpc("tools/list")
+    wrong["params"]["_meta"]["io.modelcontextprotocol/protocolVersion"] = "2025-06-18"
+    err = handle_request(wrong, dispatcher=None, decls=())["error"]
+    assert err["code"] == -32022
+    assert err["data"] == {"supported": ["2026-07-28"], "requested": "2025-06-18"}
+
+
+def test_envelope_validation():
+    assert handle_request("not an object", dispatcher=None, decls=())["error"]["code"] == -32600
+    for broken in (
+        {"id": 1, "method": "tools/list", "params": {}},                       # no jsonrpc
+        {"jsonrpc": "2.0", "method": "tools/list", "params": {}},              # null id
+        {"jsonrpc": "2.0", "id": True, "method": "tools/list", "params": {}},  # bool id
+        {"jsonrpc": "2.0", "id": 1, "method": 7, "params": {}},                # bad method
+    ):
+        assert handle_request(broken, dispatcher=None, decls=())["error"]["code"] == -32600
+
+
+def test_server_discover_is_served():
+    res = handle_request(rpc("server/discover"), dispatcher=None, decls=())["result"]
+    assert res["protocolVersion"] == "2026-07-28"
+    assert res["serverInfo"]["name"] == "science" and "capabilities" in res
+    assert res["resultType"] == "complete"
 
 
 def test_results_carry_complete_result_type():
@@ -2569,11 +2603,32 @@ def test_malformed_wire_shapes_are_protocol_errors():
     assert handle_request(bad_name, dispatcher=None, decls=())["error"]["code"] == -32602
     bad_cursor = rpc("tools/call", {"name": "status", "arguments": {"cursor": 3}})
     assert handle_request(bad_cursor, dispatcher=None, decls=())["error"]["code"] == -32602
+    bad_iid = rpc("tools/call", {"name": "status", "arguments": {"invocation_id": 3}})
+    assert handle_request(bad_iid, dispatcher=None, decls=())["error"]["code"] == -32602
+
+
+def test_unknown_tool_is_a_protocol_error():
+    res = handle_request(rpc("tools/call", {"name": "nope", "arguments": {}}),
+                         dispatcher=None, decls=())
+    assert res["error"]["code"] == -32602  # protocol -32602, never a tool refusal
 
 
 def test_initialize_is_gone():
     res = handle_request(rpc("initialize"), dispatcher=None, decls=())
     assert res["error"]["code"] == -32601  # retired by MCP 2026-07-28; no legacy shim
+
+
+def test_parse_error_does_not_end_the_loop(certified_work):
+    import io
+    from science.mcp import serve
+    from tests.helpers.world import write_cli_config
+    cfg_path = write_cli_config(certified_work)
+    stdin = io.StringIO("{bad json\n" + json.dumps(rpc("tools/list")) + "\n")
+    stdout = io.StringIO()
+    serve(cfg_path, stdin=stdin, stdout=stdout)
+    lines = [json.loads(l) for l in stdout.getvalue().splitlines()]
+    assert lines[0]["error"]["code"] == -32700
+    assert "result" in lines[1]  # the loop survived the parse error
 
 
 def test_transport_equivalence_cli_vs_mcp(certified_work, capsys):
@@ -2659,17 +2714,40 @@ PROTOCOL_VERSION = "2026-07-28"  # the ruling above; no pre-2026 fallbacks
 
 
 _NS = "io.modelcontextprotocol/"  # MCP's namespaced _meta keys
+SERVER_INFO = {"name": "science", "version": "0.1.0"}
+SERVER_CAPABILITIES = {"tools": {}}
 
 
-def _meta_error(meta: object) -> str | None:
+def _meta_error(meta: object) -> tuple[int, str, dict] | None:
+    """Required: protocol version and client capabilities. clientInfo is
+    OPTIONAL and never checked. Missing/malformed required fields are
+    invalid params (-32602); an unsupported version is -32022 carrying the
+    supported and requested versions."""
     if not isinstance(meta, dict):
-        return "request _meta is required"
-    if meta.get(_NS + "protocolVersion") != PROTOCOL_VERSION:
-        return f"{_NS}protocolVersion must be {PROTOCOL_VERSION}"
-    if not isinstance(meta.get(_NS + "clientInfo"), dict):
-        return f"{_NS}clientInfo is required"
+        return (-32602, "request _meta is required", {})
+    version = meta.get(_NS + "protocolVersion")
+    if not isinstance(version, str):
+        return (-32602, f"{_NS}protocolVersion is required", {})
+    if version != PROTOCOL_VERSION:
+        return (-32022, "unsupported protocol version",
+                {"supported": [PROTOCOL_VERSION], "requested": version})
     if not isinstance(meta.get(_NS + "clientCapabilities"), dict):
-        return f"{_NS}clientCapabilities is required"
+        return (-32602, f"{_NS}clientCapabilities is required", {})
+    return None
+
+
+def _envelope_error(req: object) -> str | None:
+    """JSON-RPC envelope validation: jsonrpc marker, non-null string or
+    integer id, string method."""
+    if not isinstance(req, dict):
+        return "request must be an object"
+    if req.get("jsonrpc") != "2.0":
+        return "jsonrpc must be \"2.0\""
+    rid = req.get("id")
+    if rid is None or isinstance(rid, bool) or not isinstance(rid, (str, int)):
+        return "id must be a non-null string or integer"
+    if not isinstance(req.get("method"), str):
+        return "method must be a string"
     return None
 
 
@@ -2678,20 +2756,35 @@ def _rpc_error(rid, code: int, message: str) -> dict:
 
 
 def handle_request(req: dict, dispatcher: Dispatcher, decls) -> dict:
-    if not isinstance(req, dict):
-        return _rpc_error(None, -32600, "request must be an object")
-    rid, method = req.get("id"), req.get("method")
+    envelope_problem = _envelope_error(req)
+    if envelope_problem is not None:
+        rid = req.get("id") if isinstance(req, dict) else None
+        if isinstance(rid, bool) or not isinstance(rid, (str, int)):
+            rid = None
+        return _rpc_error(rid, -32600, envelope_problem)
+    rid, method = req["id"], req["method"]
     params = req.get("params")
-    if not isinstance(params, dict):  # null, list, or absent: all -32600
+    if not isinstance(params, dict):  # null, list, or absent: all invalid
         return _rpc_error(rid, -32600, "params must be an object")
     problem = _meta_error(params.get("_meta"))
     if problem is not None:
-        return _rpc_error(rid, -32600, problem)
+        code, message, data = problem
+        err = _rpc_error(rid, code, message)
+        if data:
+            err["error"]["data"] = data
+        return err
+    if method == "server/discover":  # mandatory on 2026-07-28
+        return _result(rid, {"protocolVersion": PROTOCOL_VERSION,
+                             "serverInfo": SERVER_INFO,
+                             "capabilities": SERVER_CAPABILITIES})
     if method == "tools/list":
         return _result(rid, {"tools": [tool_schema(d) for d in decls]})
     if method == "tools/call":
         if not isinstance(params.get("name"), str):
             return _rpc_error(rid, -32602, "tool name must be a string")
+        if params["name"] not in {d.name for d in decls}:
+            # An unknown tool is a PROTOCOL error, not a framework refusal.
+            return _rpc_error(rid, -32602, f"unknown tool {params['name']!r}")
         raw_args = params.get("arguments", {})
         if not isinstance(raw_args, dict):
             return _rpc_error(rid, -32602, "arguments must be an object")
@@ -2737,10 +2830,14 @@ def serve(config_path: Path, stdin=None, stdout=None, session=None) -> None:
     for line in stdin:
         if not line.strip():
             continue
-        response = handle_request(json.loads(line), dispatcher, decls)
-        if response is not None:
-            stdout.write(json.dumps(response) + "\n")
-            stdout.flush()
+        try:
+            req = json.loads(line)
+        except json.JSONDecodeError as e:
+            response = _rpc_error(None, -32700, f"parse error: {e}")
+        else:
+            response = handle_request(req, dispatcher, decls)
+        stdout.write(json.dumps(response) + "\n")
+        stdout.flush()  # the loop always continues; bad input never ends it
 ```
 
 In `cli.py`'s `_framework_verb`, add before the fallthrough:
@@ -3251,10 +3348,14 @@ def serve(config_path: Path, stdin=None, stdout=None) -> None:
         for line in stdin:
             if not line.strip():
                 continue
-            response = handle_request(json.loads(line), dispatcher, decls)
-            if response is not None:
-                stdout.write(json.dumps(response) + "\n")
-                stdout.flush()
+            try:
+                req = json.loads(line)
+            except json.JSONDecodeError as e:
+                response = _rpc_error(None, -32700, f"parse error: {e}")
+            else:
+                response = handle_request(req, dispatcher, decls)
+            stdout.write(json.dumps(response) + "\n")
+            stdout.flush()  # bad input never ends the loop
     finally:
         session.close()  # the ledger's session-close line, crash or EOF alike
 ```
@@ -3470,16 +3571,10 @@ def test_service_refusal_carries_envelope_and_replays(certified_work):
         server.server_close()
 
 
-def _raw_line(sock_path, raw: bytes):
-    with socket.socket(socket.AF_UNIX) as s:
-        s.connect(str(sock_path))
-        s.sendall(raw + b"\n")
-        return json.loads(s.makefile().readline())
-
-
-def test_malformed_requests_get_structured_refusals(certified_work):
-    """Bad JSON and bad shapes both come back as invalid-input replies — the
-    connection survives and no exception escapes the handler."""
+def test_malformed_requests_get_structured_refusals_on_one_connection(certified_work):
+    """Bad JSON and bad shapes all come back as invalid-input replies over a
+    SINGLE connection — the handler loop survives every malformed line and
+    still serves a valid request afterwards."""
     from tests.helpers.synthetic import synthetic_decls_and_handlers
     cfg = build_fixture_world(certified_work)
     decls, handlers = synthetic_decls_and_handlers()
@@ -3488,18 +3583,45 @@ def test_malformed_requests_get_structured_refusals(certified_work):
     t = threading.Thread(target=server.serve_forever, daemon=True)
     t.start()
     try:
-        for raw in (b"{not json",
-                    b'["not", "an", "object"]',
-                    b'{"command": 7, "inputs": {}}',
-                    b'{"command": "mint-claim", "inputs": ["list"]}',
-                    b'{"command": "mint-claim", "inputs": {}, "cursor": 3}',
-                    b'{"command": "mint-claim", "inputs": {}, "stray": true}'):
-            reply = _raw_line(sock_path, raw)
-            assert reply["ok"] is False
-            assert reply["refusal"]["code"] == "invalid-input"
+        with socket.socket(socket.AF_UNIX) as s:
+            s.connect(str(sock_path))
+            reader = s.makefile()
+            for raw in (b"{not json",
+                        b'["not", "an", "object"]',
+                        b'{"command": 7, "inputs": {}}',
+                        b'{"command": "mint-claim", "inputs": ["list"]}',
+                        b'{"command": "mint-claim", "inputs": {}, "cursor": 3}',
+                        b'{"command": "mint-claim", "inputs": {}, "stray": true}'):
+                s.sendall(raw + b"\n")
+                reply = json.loads(reader.readline())
+                assert reply["ok"] is False
+                assert reply["refusal"]["code"] == "invalid-input"
+            s.sendall(json.dumps({"command": "mint-claim",
+                                  "inputs": {"slug": "after"}}).encode() + b"\n")
+            final = json.loads(reader.readline())
+        assert final["ok"] and "proposition:after" in final["text"]
     finally:
         server.shutdown()
         server.server_close()
+
+
+def test_server_close_failure_still_closes_session(certified_work, monkeypatch):
+    """The finally holds: even when socket teardown raises, the session's
+    ledger ends with session-close."""
+    import socketserver
+    cfg = build_fixture_world(certified_work)
+    server = serve(cfg, cfg.operations_root / "service.sock")
+
+    def boom(self):
+        raise OSError("teardown failed")
+
+    monkeypatch.setattr(socketserver.ThreadingUnixStreamServer, "server_close", boom)
+    with pytest.raises(OSError):
+        server.server_close()
+    ledgers = list((cfg.operations_root / "sessions").glob("*/ledger.v1"))
+    assert len(ledgers) == 1
+    last = json.loads(ledgers[0].read_text().splitlines()[-1])
+    assert last["type"] == "session-close"
 
 
 def test_bind_failure_closes_the_session(certified_work):
