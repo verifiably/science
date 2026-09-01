@@ -2564,6 +2564,9 @@ def test_meta_requirements_match_the_revision():
     bad_client_info = rpc("tools/list")  # …but validated as Implementation when present
     bad_client_info["params"]["_meta"]["io.modelcontextprotocol/clientInfo"] = {"name": 7}
     assert handle_request(bad_client_info, dispatcher=None, decls=())["error"]["code"] == -32602
+    null_client_info = rpc("tools/list")  # explicit null is present-and-malformed
+    null_client_info["params"]["_meta"]["io.modelcontextprotocol/clientInfo"] = None
+    assert handle_request(null_client_info, dispatcher=None, decls=())["error"]["code"] == -32602
 
 
 def test_unsupported_version_is_32022_with_versions():
@@ -2587,10 +2590,15 @@ def test_envelope_validation():
 
 def test_server_discover_matches_the_discovery_contract():
     res = handle_request(rpc("server/discover"), dispatcher=None, decls=())["result"]
-    assert res["supportedVersions"] == ["2026-07-28"]
-    assert "capabilities" in res
-    assert res["_meta"]["io.modelcontextprotocol/serverInfo"]["name"] == "science"
-    assert res["resultType"] == "complete"
+    # Exact equality: a legacy top-level protocolVersion/serverInfo field or
+    # a missing server version would slip past field-by-field assertions.
+    assert res == {
+        "supportedVersions": ["2026-07-28"],
+        "capabilities": {"tools": {}},
+        "_meta": {"io.modelcontextprotocol/serverInfo":
+                  {"name": "science", "version": "0.1.0"}},
+        "resultType": "complete",
+    }
 
 
 def test_results_carry_complete_result_type():
@@ -2745,9 +2753,11 @@ def _meta_error(meta: object) -> tuple[int, str, dict] | None:
                 {"supported": [PROTOCOL_VERSION], "requested": version})
     if not isinstance(meta.get(_NS + "clientCapabilities"), dict):
         return (-32602, f"{_NS}clientCapabilities is required", {})
-    client_info = meta.get(_NS + "clientInfo")
-    if client_info is not None and not _valid_implementation(client_info):
-        return (-32602, f"{_NS}clientInfo, when present, must be an Implementation", {})
+    if _NS + "clientInfo" in meta:
+        # Presence is the test, not truthiness: an explicit null is a
+        # malformed present value, never "absent".
+        if not _valid_implementation(meta[_NS + "clientInfo"]):
+            return (-32602, f"{_NS}clientInfo, when present, must be an Implementation", {})
     return None
 
 

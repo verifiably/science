@@ -5,7 +5,7 @@ status: done
 priority: 1
 size: l
 created: 2026-08-30T20:15:38Z
-updated: 2026-09-01T02:48:12Z
+updated: 2026-09-01T03:11:40Z
 depends: []
 tags: [command-framework]
 spec: docs/specs/2026-08-31-command-framework-design.md
@@ -26,3 +26,4 @@ Spec per the user/autonomy layer design §5 and §8 item 2 (in ~/d/beliefs/docs/
 - 2026-09-01T01:56:10Z (command-framework): plan review round 5 incorporated: fail-closed table/list validation with parametrized mutations (choices/write/reads/inputs), full wire-shape validation at MCP (-32600/-32602) and socket (invalid-input incl. unknown keys, null-vs-list inputs) boundaries, server_close closes session in finally + malformed-request and bind-failure ledger tests, type-is-int u64 with boolean-cursor test, isolated per-shape handler tests + writer-required/stray-writer cases, exact permit-exceeded overreach assertion, Consumes block pinned as the companion contract shared with beliefs-afbbff
 - 2026-09-01T02:27:41Z (command-framework): plan review round 6 incorporated: MCP 2026-07-28 corrected per primary sources (clientInfo optional, -32602 meta, -32022 version with data, mandatory server/discover, envelope validation, -32700 non-terminating parse errors, unknown tool as protocol -32602; spec 9.3 amended), N2 gaps closed (non-object request + non-string invocation_id tests, single-connection malformed-lines test with trailing success, forced server_close failure ledger test), Task 6 owns pyproject + .gitignore in files list and commit
 - 2026-09-01T02:48:12Z (command-framework): plan review round 7 incorporated: server/discover returns supportedVersions/capabilities/_meta serverInfo per the discovery contract, clientInfo validated as Implementation when present (accepted absent), malformed params object is -32602 in code/test/spec 9.3, Step 0 cites base+versioning+discovery+tools pages
+- 2026-09-01T03:11:40Z (command-framework): plan review round 8 incorporated: clientInfo presence checked with 'in' so explicit null refuses as malformed (with null mutation test), discovery test asserts the complete result by equality
