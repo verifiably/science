@@ -7,13 +7,16 @@ name = "verifiably-science"
 version = "0.1.0"
 description = "The daily surface of Science: commands over the beliefs kernel."
 requires-python = ">=3.11"
-dependencies = []
+dependencies = ["beliefs"]
 
 [project.scripts]
 science = "science.cli:main"
 
 [dependency-groups]
 dev = ["pytest>=8"]
+
+[tool.uv.sources]
+beliefs = { path = "../../beliefs/python", editable = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/science"]
