@@ -115,3 +115,10 @@ def test_unexpected_error_exits_1(capsys, monkeypatch):
     monkeypatch.setattr(cli, "production_tree", lambda: (_ for _ in ()).throw(RuntimeError("boom")))
     assert cli.main(["status"]) == 1
     assert capsys.readouterr().err == "internal error: boom\n"
+
+
+def test_build_validates_the_command_tree(capsys):
+    from science.cli import main
+
+    assert main(["build"]) == 0
+    assert capsys.readouterr().out == "ok: 1 command(s)\n"

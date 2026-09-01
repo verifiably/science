@@ -96,6 +96,22 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _framework_verb(namespace) -> int:
+    declarations = production_tree()
+    if namespace.command == "build":
+        resolve_handlers(declarations)
+        sys.stdout.write(f"ok: {len(declarations)} command(s)\n")
+        return EXIT_OK
+    if namespace.command == "adapters":
+        from science.adapters import build_adapter
+        from science.loader import COMMANDS_ROOT, REPO_ROOT
+
+        build_adapter(
+            declarations,
+            COMMANDS_ROOT,
+            REPO_ROOT / "skills",
+            REPO_ROOT / "adapters" / "claude-code",
+        )
+        return EXIT_OK
     raise NotImplementedError(f"{namespace.command} arrives in a later task")
 
 

@@ -2328,7 +2328,7 @@ git commit -m "feat(cli): argparse surface with sessionless reads and exit-code 
 - Consumes: `production_tree` (Task 8).
 - Produces: `build_adapter(decls, commands_root: Path, skills_root: Path, out: Path) -> None` (idempotent, deterministic); the committed `adapters/claude-code/` tree: `.claude-plugin/plugin.json`, `skills/<name>/SKILL.md` per command, `.mcp.json`; CLI verbs `science adapters build` and `science build` (tree validation only).
 
-- [ ] **Step 1: Write the preamble**
+- [x] **Step 1: Write the preamble**
 
 `commands/PREAMBLE.md`:
 
@@ -2343,7 +2343,7 @@ cursor is the only way to see the rest. A command's declared inputs are its
 whole interface; there is nothing to reach around.
 ```
 
-- [ ] **Step 2: Write the failing tests**
+- [x] **Step 2: Write the failing tests**
 
 `python/tests/test_adapters.py`:
 
@@ -2385,12 +2385,12 @@ def test_mcp_json_has_no_machine_paths(tmp_path):
     assert "/home/" not in json.dumps(raw) and "/mnt/" not in json.dumps(raw)
 ```
 
-- [ ] **Step 3: Run tests to verify they fail**
+- [x] **Step 3: Run tests to verify they fail**
 
 Run: `cd python && uv run --group dev pytest tests/test_adapters.py -q`
 Expected: FAIL — no module `science.adapters`.
 
-- [ ] **Step 4: Implement `adapters.py` and wire the verbs**
+- [x] **Step 4: Implement `adapters.py` and wire the verbs**
 
 ```python
 """Generate the Claude Code plugin from the command tree (spec §10)."""
@@ -2460,12 +2460,12 @@ def _framework_verb(ns) -> int:
 
 (`science adapters build` regenerating in place is fine: the tree is committed, so drift shows in `git diff`, and the test compares against a fresh build.)
 
-- [ ] **Step 5: Generate the committed tree, then run tests to verify they pass**
+- [x] **Step 5: Generate the committed tree, then run tests to verify they pass**
 
 Run: `cd python && uv run science adapters build && cd .. && git add adapters/ && cd python && uv run --group dev pytest tests/test_adapters.py -q`
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add commands/PREAMBLE.md skills/.gitkeep python/src/science/adapters.py \
