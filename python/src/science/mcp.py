@@ -386,7 +386,7 @@ def serve(config_path: Path, stdin=None, stdout=None, session=None) -> None:
                     object_pairs_hook=_object_without_duplicates,
                     parse_constant=_reject_nonfinite_number,
                 )
-            except (UnicodeDecodeError, ValueError):
+            except (UnicodeDecodeError, ValueError, RecursionError):
                 response = _rpc_error(None, -32700, "Parse error")
             else:
                 response = handle_request(request, dispatcher, declarations)

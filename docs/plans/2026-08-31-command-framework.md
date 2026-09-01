@@ -61,7 +61,8 @@ the task steps below:
   and refused as unsolicited because science never returns `input_required`;
   response structures are fresh. Stdio uses strict UTF-8 binary framing capped
   by `MAX_REQUEST_BYTES = 1_048_576`, draining an oversized line before serving
-  the next request.
+  the next request; malformed syntax, invalid UTF-8, and decoder recursion are
+  parse failures that likewise leave the following frame serviceable.
 - **Tasks 12–13 stay todo and beliefs-gated.** Task 12 replaces the temporary
   production write gate only when real capabilities land. Task 13 owns
   `science serve` parser registration and must preserve Task 9's stdout/stderr
@@ -178,7 +179,7 @@ def test_newline_terminated_command_name_refuses_for_name_grammar(tmp_path):
                       GOOD.replace('name = "status"', 'name = "status\\n"'))
     with pytest.raises(DeclarationError) as caught:
         load_declaration(d, kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)
-    assert caught.value.field == "name"  # directory already matches `status`
+    assert caught.value.reason == "bad grammar"
 
 
 def test_reserved_input_refused(tmp_path):
@@ -2837,6 +2838,8 @@ unsolicited `inputResponses`/`requestState`, and a binary stream containing
 invalid UTF-8, then a frame of `MAX_REQUEST_BYTES + 1`, then a valid request.
 The first two frames return `-32700` and `-32600`; the valid request is still
 served, proving drain/recovery rather than merely detecting the size.
+Also send a sub-limit, deeply nested JSON frame followed by a valid request;
+decoder `RecursionError` is `-32700` and the following request is served.
 
 - [ ] **Step 2: Run tests to verify they fail**
 
@@ -3061,8 +3064,12 @@ def serve(config_path: Path, stdin=None, stdout=None, session=None) -> None:
             continue
         else:
             try:
-                req = json.loads(frame.decode("utf-8", errors="strict"))
-            except (UnicodeDecodeError, ValueError):
+                req = json.loads(
+                    frame.decode("utf-8", errors="strict"),
+                    object_pairs_hook=_object_without_duplicates,
+                    parse_constant=_reject_nonfinite_number,
+                )
+            except (UnicodeDecodeError, ValueError, RecursionError):
                 response = _rpc_error(None, -32700, "Parse error")
             else:
                 response = handle_request(req, dispatcher, decls)
@@ -3562,35 +3569,55 @@ In the same edit, remove Task 8's temporary `read-only` loop from
 `production_tree()`. That gate is replaced only after this exact import and
 the real write dispatcher exist; until Task 12 begins it remains fail-closed.
 
-In `mcp.py`, replace `serve`'s dispatcher construction so the MCP server
-owns the attended session for its process lifetime and closes it on the
-way out (the CLI's service process is created, already session-bearing,
-in Task 13):
+In `mcp.py`, retain Task 11's `_drain_frame`, `_read_frame`, strict UTF-8
+decoder hooks, bounded binary loop, oversized-frame drain, parse-error
+normalization, and notification `None` suppression unchanged. Change only
+session construction/ownership: the MCP server opens one attended session for
+its process lifetime and closes it in `finally` (the CLI's service process is
+created, already session-bearing, in Task 13). The exact resulting function is:
 
 ```python
 def serve(config_path: Path, stdin=None, stdout=None) -> None:
     from beliefs.session import open_attended_session
     from science.config import ReadContext, load_config
     from science.loader import production_tree, resolve_handlers
-    stdin = stdin or sys.stdin
-    stdout = stdout or sys.stdout
-    decls = production_tree()
+
+    stdin = sys.stdin.buffer if stdin is None else stdin
+    stdout = sys.stdout if stdout is None else stdout
+    declarations = production_tree()
     config = load_config(config_path)
     session = open_attended_session(config.world, config.operations_root)
     try:
-        dispatcher = Dispatcher(decls, resolve_handlers(decls),
-                                ReadContext.open(config), session=session)
-        for line in stdin:
-            if not line.strip():
+        dispatcher = Dispatcher(
+            declarations,
+            resolve_handlers(declarations),
+            ReadContext.open(config),
+            session=session,
+        )
+        while True:
+            frame = _read_frame(stdin)
+            if frame is _END_OF_INPUT:
+                return
+            if frame is _OVERSIZED_FRAME:
+                response = _rpc_error(None, -32600, "Request exceeds maximum size")
+            elif not frame.strip():
                 continue
-            try:
-                req = json.loads(line)
-            except json.JSONDecodeError as e:
-                response = _rpc_error(None, -32700, f"parse error: {e}")
             else:
-                response = handle_request(req, dispatcher, decls)
-            stdout.write(json.dumps(response) + "\n")
-            stdout.flush()  # bad input never ends the loop
+                try:
+                    line = frame.decode("utf-8", errors="strict")
+                    request = json.loads(
+                        line,
+                        object_pairs_hook=_object_without_duplicates,
+                        parse_constant=_reject_nonfinite_number,
+                    )
+                except (UnicodeDecodeError, ValueError, RecursionError):
+                    response = _rpc_error(None, -32700, "Parse error")
+                else:
+                    response = handle_request(request, dispatcher, declarations)
+            if response is None:
+                continue
+            stdout.write(json.dumps(response, separators=(",", ":")) + "\n")
+            stdout.flush()
     finally:
         session.close()  # the ledger's session-close line, crash or EOF alike
 ```

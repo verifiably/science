@@ -576,6 +576,25 @@ def test_oversized_json_integer_is_parse_error_and_loop_continues(certified_work
     assert "result" in lines[1]
 
 
+def test_deeply_nested_json_is_parse_error_and_loop_continues(certified_work):
+    from helpers.world import write_cli_config
+
+    deeply_nested = b"[" * 10_000 + b"]" * 10_000 + b"\n"
+    valid = (json.dumps(rpc("tools/list")) + "\n").encode()
+    assert len(deeply_nested) < MAX_REQUEST_BYTES
+    stdout = io.StringIO()
+
+    serve(
+        write_cli_config(certified_work),
+        stdin=io.BytesIO(deeply_nested + valid),
+        stdout=stdout,
+    )
+
+    lines = [json.loads(line) for line in stdout.getvalue().splitlines()]
+    assert lines[0]["error"]["code"] == -32700
+    assert "result" in lines[1]
+
+
 def test_invalid_utf8_and_oversized_frames_do_not_desynchronize_stdio(certified_work):
     from helpers.world import write_cli_config
 

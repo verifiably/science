@@ -58,7 +58,7 @@ def test_newline_terminated_command_name_refused(tmp_path):
     d = write_command(tmp_path, "status", toml)
     with pytest.raises(DeclarationError) as caught:
         load_declaration(d, kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)
-    assert caught.value.field == "name"
+    assert caught.value.reason == "bad grammar"
 
 
 def test_newline_terminated_input_name_refused(tmp_path):
