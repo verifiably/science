@@ -35,5 +35,17 @@ def build_fixture_world(work: Path) -> ScienceConfig:
     return ScienceConfig(world=config, operations_root=work / "ops")
 
 
+def write_cli_config(work: Path) -> Path:
+    cfg = build_fixture_world(work)
+    path = work / "science.toml"
+    path.write_text(f'''\
+world_root = "{cfg.world.world_root}"
+world_id = "{cfg.world.world_id}"
+corpus_roots = ["{cfg.world.corpus_roots[0]}"]
+operations_root = "{cfg.operations_root}"
+''')
+    return path
+
+
 def add_one_more_record(cfg: ScienceConfig) -> None:
     open_corpus(cfg.world.corpus_roots[0]).add(fixture_proposition_node("p2"))
