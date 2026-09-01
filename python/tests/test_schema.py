@@ -53,6 +53,20 @@ def test_bad_names_refused(tmp_path, bad_name):
         load_declaration(d, kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)
 
 
+def test_newline_terminated_command_name_refused(tmp_path):
+    toml = GOOD.replace('name = "status"', 'name = "status\\n"')
+    d = write_command(tmp_path, "status", toml)
+    with pytest.raises(DeclarationError):
+        load_declaration(d, kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)
+
+
+def test_newline_terminated_input_name_refused(tmp_path):
+    toml = GOOD + '\n[inputs."extra\\n"]\ntype = "string"\nrequired = false\ndoc = "x"\n'
+    d = write_command(tmp_path, "status", toml)
+    with pytest.raises(DeclarationError):
+        load_declaration(d, kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)
+
+
 def test_reserved_input_refused(tmp_path):
     toml = GOOD + '\n[inputs.cursor]\ntype = "string"\nrequired = false\ndoc = "x"\n'
     d = write_command(tmp_path, "status", toml)
@@ -205,5 +219,19 @@ output_budget = 16384
 ])
 def test_malformed_tables_are_declaration_errors(tmp_path, mutation):
     d = write_command(tmp_path, "status", BASE + mutation + "\n")
+    with pytest.raises(DeclarationError):
+        load_declaration(d, kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)
+
+
+def test_list_input_type_is_a_declaration_error(tmp_path):
+    toml = GOOD + '\n[inputs.bad]\ntype = []\nrequired = false\ndoc = "x"\n'
+    d = write_command(tmp_path, "status", toml)
+    with pytest.raises(DeclarationError):
+        load_declaration(d, kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)
+
+
+def test_nested_list_enum_choice_is_a_declaration_error(tmp_path):
+    toml = GOOD.replace('name = "status"', 'name = "st2"') + '\n[inputs.mode]\ntype = "enum"\nrequired = false\nchoices = [["a"]]\ndoc = "x"\n'
+    d = write_command(tmp_path, "st2", toml)
     with pytest.raises(DeclarationError):
         load_declaration(d, kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)

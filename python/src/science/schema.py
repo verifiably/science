@@ -73,10 +73,11 @@ def _parse_inputs(raw: Mapping, path: Path) -> tuple[InputSpec, ...]:
     for name, spec in raw.items():
         _require(isinstance(spec, dict), path, f"inputs.{name}", "must be a table")
         _require(name not in RESERVED_INPUTS, path, f"inputs.{name}", "reserved input name")
-        _require(bool(INPUT_NAME_RE.match(name)) and len(name.encode()) <= MAX_NAME_BYTES,
+        _require(bool(INPUT_NAME_RE.fullmatch(name)) and len(name.encode()) <= MAX_NAME_BYTES,
                  path, f"inputs.{name}", "input names are snake_case, max 32 bytes")
         typ = spec.get("type")
-        _require(typ in INPUT_TYPES, path, f"inputs.{name}.type", f"must be one of {sorted(INPUT_TYPES)}")
+        _require(type(typ) is str and typ in INPUT_TYPES, path, f"inputs.{name}.type",
+                 f"must be one of {sorted(INPUT_TYPES)}")
         required = spec.get("required")
         _require(isinstance(required, bool), path, f"inputs.{name}.required", "must be a bool")
         doc = spec.get("doc")
@@ -86,8 +87,8 @@ def _parse_inputs(raw: Mapping, path: Path) -> tuple[InputSpec, ...]:
                  "must be a list — a string would be read as characters")
         choices = tuple(raw_choices)
         if typ == "enum":
-            _require(len(choices) > 0 and len(set(choices)) == len(choices)
-                     and all(type(c) is str for c in choices),
+            _require(len(choices) > 0 and all(type(c) is str for c in choices)
+                     and len(set(choices)) == len(choices),
                      path, f"inputs.{name}.choices", "enum requires unique string choices")
         else:
             _require(not choices, path, f"inputs.{name}.choices", "only enum takes choices")
@@ -151,7 +152,7 @@ def load_declaration(dir_path: Path, *, kind_acts: Mapping[str, frozenset[str]],
     _require(type(version) is int and version == SCHEMA_VERSION, path, "schema_version",
              f"must be the integer {SCHEMA_VERSION}")
     name = raw.get("name")
-    _require(isinstance(name, str) and bool(NAME_RE.match(name or "")), path, "name", "bad grammar")
+    _require(isinstance(name, str) and bool(NAME_RE.fullmatch(name or "")), path, "name", "bad grammar")
     _require(len(name.encode()) <= MAX_NAME_BYTES, path, "name", "over 32 bytes")
     _require(name not in RESERVED_COMMANDS, path, "name", "reserved name")
     _require(dir_path.name == name, path, "name", f"directory {dir_path.name!r} != name {name!r}")
