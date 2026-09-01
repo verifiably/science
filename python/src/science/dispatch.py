@@ -40,13 +40,16 @@ class Dispatcher:
                 raise Refused(Refusal("invalid-input", "invocation_id outside its grammar"))
             if type(command) is not str:
                 raise Refused(Refusal("invalid-input", "command must be a string"))
+            decl = None
+            if cursor is None:
+                decl = self._decls.get(command)
+                if decl is None:
+                    raise Refused(Refusal("unknown-command", f"no command {command!r}"))
             if not isinstance(inputs, Mapping):
                 raise Refused(Refusal("invalid-input", "inputs must be a mapping"))
             if cursor is not None:
                 return self._continue(command, inputs, decode(cursor), iid)
-            decl = self._decls.get(command)
-            if decl is None:
-                raise Refused(Refusal("unknown-command", f"no command {command!r}"))
+            assert decl is not None
             canonical = canonicalize(decl, inputs)
             if decl.write_class.kind != "read-only":
                 raise NotImplementedError("write dispatch lands with the beliefs session API")

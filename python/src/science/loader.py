@@ -23,11 +23,19 @@ def production_kind_acts() -> dict[str, frozenset[str]]:
 
 def production_tree() -> tuple[Declaration, ...]:
     kind_acts = production_kind_acts()
-    return load_command_tree(
+    declarations = load_command_tree(
         COMMANDS_ROOT,
         kind_acts=kind_acts,
         contract_kinds=frozenset(kind_acts),
     )
+    for declaration in declarations:
+        if declaration.write_class.kind != "read-only":
+            raise DeclarationError(
+                declaration.directory / "command.toml",
+                "write_class",
+                "production write commands require beliefs capabilities",
+            )
+    return declarations
 
 
 def resolve_handlers(declarations) -> dict:

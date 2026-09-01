@@ -28,6 +28,45 @@
 
 **beliefs prerequisites for Tasks 12–13** (implemented in the beliefs repo, exact API in each task's Consumes block): `beliefs.permit` (`RequiredCapabilities`, `PermitExceeded`, `KIND_ACTS`) and `beliefs.session` (`open_attended_session`, `WriterSession.scoped/claim_invocation/close_invocation/invocation_acts`). Do not stub or mock these; the tasks stay blocked until they exist.
 
+## Final-review contract (2026-09-01)
+
+These corrections are authoritative over earlier illustrative code excerpts in
+the task steps below:
+
+- **Tasks 1–2:** source directories and files are real, regular, contained
+  sources (never symlinks or special files); non-enum `choices` is forbidden by
+  key presence; canonical input keys are exact strings before set/sort work.
+  The single-root loader has no duplicate-command guard—a future multi-root
+  loader owns collision validation if one is added.
+- **Task 7:** a direct invocation resolves its command before validating the
+  input mapping, so an unknown command deterministically wins over malformed
+  inputs.
+- **Task 8:** until Task 12 imports beliefs capabilities, `production_tree()`
+  rejects every non-`read-only` declaration. Generic injected trees retain all
+  four write classes.
+- **Task 9:** protocol options are scoped to consumers: commands take config,
+  invocation id, and cursor; `mcp serve` takes config only; build verbs take
+  none. A command writes rendered text only to stdout and exactly one compact,
+  key-sorted JSON stderr line: success has `invocation_id`; refusal has the
+  bound id and full `{code,message,data}` envelope. Internal errors are generic.
+  Task 9 does not register `science serve`.
+- **Task 10:** `science build` and `science adapters build` share one preflight
+  that validates handlers, collisions, source kind/containment, and pre-reads
+  every command TOML, prompt, preamble, and authored-skill byte before adapter
+  output mutation.
+- **Task 11:** the pinned MCP 2026-07-28 primary schema governs. Discovery and
+  tool listing implement `CacheableResult`; notifications receive no response;
+  a supplied list cursor is validated (and refused because this complete list
+  issues none); standard `inputResponses`/`requestState` fields are type-checked
+  and refused as unsolicited because science never returns `input_required`;
+  response structures are fresh. Stdio uses strict UTF-8 binary framing capped
+  by `MAX_REQUEST_BYTES = 1_048_576`, draining an oversized line before serving
+  the next request.
+- **Tasks 12–13 stay todo and beliefs-gated.** Task 12 replaces the temporary
+  production write gate only when real capabilities land. Task 13 owns
+  `science serve` parser registration and must preserve Task 9's stdout/stderr
+  JSON wire when routing writes through the service.
+
 ---
 
 ### Task 1: Package scaffold and declaration schema
@@ -41,7 +80,7 @@
 
 **Interfaces:**
 - Consumes: nothing (kind/route validation data is injected, so this task has no beliefs dependency).
-- Produces: `Declaration(name, purpose, write_class: WriteClass, output_budget: int, inputs: tuple[InputSpec, ...], reads: tuple[str, ...], directory: Path)`; `InputSpec(name, type, required, doc, default, choices)`; `WriteClass(kind: str, kinds: tuple[str, ...], routes: Mapping[str, str])` where `kind` is one of `read-only|coordination|mints|publishes`; `DeclarationError(path, field, reason)`; `load_declaration(dir_path, *, kind_acts, contract_kinds) -> Declaration`; `load_command_tree(root, *, kind_acts, contract_kinds) -> tuple[Declaration, ...]`; `handler_module(name) -> str`; `NAME_RE`, `RESERVED_COMMANDS`, `RESERVED_INPUTS`, `INPUT_TYPES` constants.
+- Produces: `Declaration(name, purpose, write_class: WriteClass, output_budget: int, inputs: tuple[InputSpec, ...], reads: tuple[str, ...], directory: Path)`; `InputSpec(name, type, required, doc, default, choices)`; `WriteClass(kind: str, kinds: tuple[str, ...], routes: Mapping[str, str])` where `kind` is one of `read-only|coordination|mints|publishes`; `DeclarationError(path, field, reason)`; `load_declaration(dir_path, *, kind_acts, contract_kinds) -> Declaration`; `load_command_tree(root, *, kind_acts, contract_kinds) -> tuple[Declaration, ...]`; `handler_module(name) -> str`; `NAME_RE`, `RESERVED_COMMANDS`, `RESERVED_INPUTS`, `INPUT_TYPES` constants. The tree loader rejects command-directory, `command.toml`, `prompt.md`, and preamble symlinks/special files; its tests mutate the first three source forms directly. One root has no possible duplicate command entry, so no duplicate guard is specified.
 
 - [ ] **Step 1: Write the package scaffold**
 
@@ -134,6 +173,14 @@ def test_bad_names_refused(tmp_path, bad_name):
         load_declaration(d, kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)
 
 
+def test_newline_terminated_command_name_refuses_for_name_grammar(tmp_path):
+    d = write_command(tmp_path, "status",
+                      GOOD.replace('name = "status"', 'name = "status\\n"'))
+    with pytest.raises(DeclarationError) as caught:
+        load_declaration(d, kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)
+    assert caught.value.field == "name"  # directory already matches `status`
+
+
 def test_reserved_input_refused(tmp_path):
     toml = GOOD + '\n[inputs.cursor]\ntype = "string"\nrequired = false\ndoc = "x"\n'
     d = write_command(tmp_path, "status", toml)
@@ -157,6 +204,15 @@ def test_enum_requires_choices_and_required_forbids_default(tmp_path):
     d2 = write_command(tmp_path, "status2", bad_default.replace('name = "status"', 'name = "status2"'))
     with pytest.raises(DeclarationError):
         load_declaration(d2, kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)
+
+
+def test_non_enum_refuses_explicit_empty_choices(tmp_path):
+    toml = GOOD.replace('doc = "Restrict to one corpus."',
+                        'doc = "Restrict to one corpus."\nchoices = []')
+    d = write_command(tmp_path, "status", toml)
+    with pytest.raises(DeclarationError) as caught:
+        load_declaration(d, kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)
+    assert caught.value.field == "inputs.corpus.choices"
 
 
 MINTS = """
@@ -205,7 +261,7 @@ def test_unknown_kind_refused(tmp_path):
         load_declaration(d, kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)
 
 
-def test_tree_refuses_duplicates_and_lists_all(tmp_path):
+def test_tree_lists_all_commands_in_name_order(tmp_path):
     write_command(tmp_path, "status", GOOD)
     write_command(tmp_path, "mint-run", MINTS)
     decls = load_command_tree(tmp_path, kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)
@@ -403,7 +459,7 @@ def _parse_inputs(raw: Mapping, path: Path) -> tuple[InputSpec, ...]:
                      and all(type(c) is str for c in choices),
                      path, f"inputs.{name}.choices", "enum requires unique string choices")
         else:
-            _require(not choices, path, f"inputs.{name}.choices", "only enum takes choices")
+            _require("choices" not in spec, path, f"inputs.{name}.choices", "only enum takes choices")
         default = spec.get("default")
         if required:
             _require(default is None, path, f"inputs.{name}.default", "required input forbids default")
@@ -509,9 +565,6 @@ def load_command_tree(root: Path, *, kind_acts, contract_kinds) -> tuple[Declara
     decls = []
     for d in sorted(p for p in root.iterdir() if p.is_dir()):
         decls.append(load_declaration(d, kind_acts=kind_acts, contract_kinds=contract_kinds))
-    names = [d.name for d in decls]
-    if len(set(names)) != len(names):
-        raise DeclarationError(root, "tree", "duplicate command names")
     return tuple(decls)
 ```
 
@@ -574,6 +627,16 @@ def test_unknown_and_wrong_type_refused():
         canonicalize(d, {})
     with pytest.raises(Refused):  # bool is not an int
         canonicalize(d, {"a": True})
+
+
+def test_non_exact_string_input_names_refuse_before_key_operations():
+    class StringSubclass(str):
+        pass
+    d = decl(InputSpec("a", "int", True, "d"))
+    for provided in ({1: "x", "stray": "y"}, {StringSubclass("a"): 1}):
+        with pytest.raises(Refused) as caught:
+            canonicalize(d, provided)
+        assert caught.value.refusal.code == "invalid-input"
 
 
 def test_explicit_null_is_refused_not_absent():
@@ -692,6 +755,8 @@ def _refuse(message: str, **data: object) -> None:
 
 
 def canonicalize(decl: Declaration, provided: Mapping[str, object]) -> dict[str, object]:
+    if any(type(name) is not str for name in provided):
+        _refuse("input names must be strings", command=decl.name)
     known = {i.name: i for i in decl.inputs}
     unknown = set(provided) - set(known)
     if unknown:
@@ -1559,6 +1624,12 @@ def test_unknown_command_refused():
     assert e.value.refusal.code == "unknown-command"
 
 
+def test_unknown_command_resolves_before_invalid_inputs():
+    with pytest.raises(Refused) as e:
+        build().invoke("nope", [])
+    assert e.value.refusal.code == "unknown-command"
+
+
 def test_read_invocation_renders_and_mints_id():
     out = build().invoke("small", {"corpus": "c1"})
     assert "corpus=c1" in out.text
@@ -1651,18 +1722,25 @@ class Dispatcher:
 
     def invoke(self, command: str, inputs: Mapping[str, object], *,
                invocation_id: str | None = None, cursor: str | None = None) -> Outcome:
-        if invocation_id is not None and not INVOCATION_ID_RE.match(invocation_id):
-            raise Refused(Refusal("invalid-input", "invocation_id outside its grammar"))
-        # Minted once, up front: every refusal below — unknown command,
-        # canonicalization, continuation, and later the write path — carries
-        # the id, so no transport loses what a caller needs for a safe retry.
-        iid = invocation_id or mint_token()
+        valid_iid = type(invocation_id) is str and INVOCATION_ID_RE.fullmatch(invocation_id)
+        iid = invocation_id if valid_iid else mint_token()
         try:
+            if invocation_id is not None and not valid_iid:
+                raise Refused(Refusal("invalid-input", "invocation_id outside its grammar"))
+            if type(command) is not str:
+                raise Refused(Refusal("invalid-input", "command must be a string"))
+            # Direct calls resolve before the untrusted input mapping is
+            # inspected, so unknown-command has deterministic precedence.
+            decl = None
+            if cursor is None:
+                decl = self._decls.get(command)
+                if decl is None:
+                    raise Refused(Refusal("unknown-command", f"no command {command!r}"))
+            if not isinstance(inputs, Mapping):
+                raise Refused(Refusal("invalid-input", "inputs must be a mapping"))
             if cursor is not None:
                 return self._continue(command, inputs, decode(cursor), iid)
-            decl = self._decls.get(command)
-            if decl is None:
-                raise Refused(Refusal("unknown-command", f"no command {command!r}"))
+            assert decl is not None
             canonical = canonicalize(decl, inputs)
             if decl.write_class.kind != "read-only":
                 raise NotImplementedError("write dispatch lands with the beliefs session API")
@@ -2066,8 +2144,14 @@ def production_kind_acts() -> dict[str, frozenset[str]]:
 
 def production_tree() -> tuple[Declaration, ...]:
     kind_acts = production_kind_acts()
-    return load_command_tree(COMMANDS_ROOT, kind_acts=kind_acts,
-                             contract_kinds=frozenset(kind_acts))
+    declarations = load_command_tree(COMMANDS_ROOT, kind_acts=kind_acts,
+                                     contract_kinds=frozenset(kind_acts))
+    for declaration in declarations:
+        if declaration.write_class.kind != "read-only":
+            raise DeclarationError(declaration.directory / "command.toml",
+                                   "write_class",
+                                   "production write commands require beliefs capabilities")
+    return declarations
 
 
 def resolve_handlers(decls) -> dict:
@@ -2132,13 +2216,15 @@ git commit -m "feat(status): shipped read exemplar over a beliefs fixture world"
 
 **Interfaces:**
 - Consumes: `production_tree`, `resolve_handlers` (Task 8); `Dispatcher` (Task 7); `load_config`, `resolve_config_path`, `ReadContext` (Task 6); `Refused` (Task 2).
-- Produces: `main(argv: list[str] | None = None) -> int` (the console script); `build_parser(decls) -> argparse.ArgumentParser`; option mapping: input `foo-bar` → `--foo-bar`, `bool` → `--foo/--no-foo` pair via `argparse.BooleanOptionalAction`, `list-of-string` → `action="append"`, `enum` → `choices=`; global `--config`, `--invocation-id`, `--continue` (dest `cursor`).
+- Produces: `main(argv: list[str] | None = None) -> int` (the console script); `build_parser(decls) -> argparse.ArgumentParser`; option mapping: input `foo_bar` → `--foo-bar`, `bool` → `--foo/--no-foo` pair via `argparse.BooleanOptionalAction`, `list-of-string` → `action="append"`, `enum` → `choices=`. Command subparsers alone consume `--config`, `--invocation-id`, and `--continue` (dest `cursor`); `mcp serve` consumes only config; build verbs consume none. Command success/refusal metadata is one compact, key-sorted JSON stderr line and rendered output alone goes to stdout. `science serve` is not registered in this task; Task 13 owns it.
 
 - [ ] **Step 1: Write the failing tests**
 
 `python/tests/test_cli.py`:
 
 ```python
+import json
+
 import pytest
 
 from science.cli import build_parser, main
@@ -2163,16 +2249,21 @@ def test_parser_compiles_inputs():
 def test_status_end_to_end(certified_work, capsys):
     cfg_path = write_cli_config(certified_work)
     code = main(["status", "--config", str(cfg_path)])
-    out = capsys.readouterr().out
+    captured = capsys.readouterr()
     assert code == 0
-    assert "World status" in out
+    assert "World status" in captured.out
+    metadata = json.loads(captured.err)
+    assert len(metadata["invocation_id"]) == 32
 
 
 def test_refusal_exits_3(certified_work, capsys):
     cfg_path = write_cli_config(certified_work)
     code = main(["status", "--config", str(cfg_path), "--continue", "scur1.garbage"])
     assert code == 3
-    assert "unknown-cursor" in capsys.readouterr().err
+    payload = json.loads(capsys.readouterr().err)
+    assert payload["refusal"]["code"] == "unknown-cursor"
+    assert set(payload["refusal"]) == {"code", "message", "data"}
+    assert payload["invocation_id"]
 
 
 def test_missing_config_exits_3(capsys, monkeypatch):
@@ -2208,12 +2299,13 @@ Expected: FAIL — no module `science.cli`.
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 
 from science.config import ReadContext, load_config, resolve_config_path
 from science.dispatch import Dispatcher
 from science.loader import production_tree, resolve_handlers
-from science.refusal import Refused
+from science.refusal import INVOCATION_ID_RE, Refusal, Refused, envelope, mint_token
 from science.schema import Declaration
 
 EXIT_OK, EXIT_INTERNAL, EXIT_USAGE, EXIT_REFUSED = 0, 1, 2, 3
@@ -2239,7 +2331,7 @@ def _add_command(sub: argparse._SubParsersAction, decl: Declaration,
         p.add_argument(flag, **kwargs)
 
 
-def _protocol_options() -> argparse.ArgumentParser:
+def _command_options() -> argparse.ArgumentParser:
     """Shared parent so `science status --config …` parses: argparse only
     accepts an option after the subcommand if the subparser declares it."""
     common = argparse.ArgumentParser(add_help=False)
@@ -2251,26 +2343,43 @@ def _protocol_options() -> argparse.ArgumentParser:
 
 def build_parser(decls) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="science")
-    common = _protocol_options()
+    common = _command_options()
     sub = parser.add_subparsers(dest="command", required=True)
     for decl in decls:
         _add_command(sub, decl, common)
-    for verb in ("serve", "build"):
-        sub.add_parser(verb, parents=[common])
-    mcp = sub.add_parser("mcp", parents=[common])
+    sub.add_parser("build")
+    mcp = sub.add_parser("mcp")
     mcp.add_argument("mode", choices=["serve"])
-    adapters = sub.add_parser("adapters", parents=[common])
+    mcp.add_argument("--config")
+    adapters = sub.add_parser("adapters")
     adapters.add_argument("mode", choices=["build"])
     return parser
 
 
+def _json_line(value: dict[str, object]) -> None:
+    sys.stderr.write(json.dumps(value, sort_keys=True, separators=(",", ":")) + "\n")
+
+
+def _bind_invocation_id(value: object) -> str:
+    if type(value) is str and INVOCATION_ID_RE.fullmatch(value):
+        return value
+    invocation_id = mint_token()
+    if value is not None:
+        raise Refused(Refusal("invalid-input", "invocation_id outside its grammar"),
+                      invocation_id)
+    return invocation_id
+
+
 def main(argv: list[str] | None = None) -> int:
+    invocation_id = None
     try:
         decls = production_tree()
         parser = build_parser(decls)
         ns = parser.parse_args(argv)
-        if ns.command in ("serve", "mcp", "adapters", "build"):
+        if ns.command in ("mcp", "adapters", "build"):
             return _framework_verb(ns)
+        invocation_id = _bind_invocation_id(ns.invocation_id)
+        ns.invocation_id = invocation_id
         decl = next(d for d in decls if d.name == ns.command)
         inputs = {s.name: getattr(ns, s.name) for s in decl.inputs
                   if getattr(ns, s.name, None) is not None}
@@ -2279,14 +2388,21 @@ def main(argv: list[str] | None = None) -> int:
         config = load_config(resolve_config_path(ns.config))
         dispatcher = Dispatcher(decls, resolve_handlers(decls), ReadContext.open(config))
         out = dispatcher.invoke(ns.command, inputs,
-                                invocation_id=ns.invocation_id, cursor=ns.cursor)
+                                invocation_id=invocation_id, cursor=ns.cursor)
         sys.stdout.write(out.text)
+        _json_line({"invocation_id": out.invocation_id})
         return EXIT_OK
     except Refused as e:
-        sys.stderr.write(f"refused [{e.refusal.code}] {e.refusal.message}\n")
+        payload = {"refusal": envelope(e.refusal)}
+        if (bound_id := e.invocation_id or invocation_id) is not None:
+            payload["invocation_id"] = bound_id
+        _json_line(payload)
         return EXIT_REFUSED
-    except Exception as e:  # noqa: BLE001 — the CLI's last resort
-        sys.stderr.write(f"internal error: {e}\n")
+    except Exception:  # noqa: BLE001 — the CLI's last resort
+        payload = {"error": {"code": "internal-error", "message": "Internal error"}}
+        if invocation_id is not None:
+            payload["invocation_id"] = invocation_id
+        _json_line(payload)
         return EXIT_INTERNAL
 
 
@@ -2326,7 +2442,14 @@ git commit -m "feat(cli): argparse surface with sessionless reads and exit-code 
 
 **Interfaces:**
 - Consumes: `production_tree` (Task 8).
-- Produces: `build_adapter(decls, commands_root: Path, skills_root: Path, out: Path) -> None` (idempotent, deterministic); the committed `adapters/claude-code/` tree: `.claude-plugin/plugin.json`, `skills/<name>/SKILL.md` per command, `.mcp.json`; CLI verbs `science adapters build` and `science build` (tree validation only).
+- Produces: `preflight_build(decls, commands_root, skills_root)` — the one
+  handler/collision/source-safety check and immutable content snapshot used by
+  both build verbs; `build_adapter(decls, commands_root: Path, skills_root:
+  Path, out: Path) -> None` (idempotent, deterministic, and mutates `out` only
+  after preflight succeeds); the committed `adapters/claude-code/` tree:
+  `.claude-plugin/plugin.json`, `skills/<name>/SKILL.md` per command,
+  `.mcp.json`; CLI verbs `science adapters build` and `science build` (tree
+  validation only).
 
 - [x] **Step 1: Write the preamble**
 
@@ -2385,6 +2508,13 @@ def test_mcp_json_has_no_machine_paths(tmp_path):
     assert "/home/" not in json.dumps(raw) and "/mnt/" not in json.dumps(raw)
 ```
 
+Also add focused mutations that replace the command directory,
+`command.toml`, `prompt.md`, and `PREAMBLE.md` with symlinks. Every mutation
+must refuse; adapter-facing cases begin with a sentinel in `out` and assert it
+survives. Add a missing-handler case, an out-of-root declaration case, and
+authored/generated collision and authored-source symlink cases with the same
+pre-mutation sentinel assertion.
+
 - [x] **Step 3: Run tests to verify they fail**
 
 Run: `cd python && uv run --group dev pytest tests/test_adapters.py -q`
@@ -2419,24 +2549,31 @@ def _skill_md(decl: Declaration, preamble: str, prompt: str) -> str:
 
 
 def build_adapter(decls, commands_root: Path, skills_root: Path, out: Path) -> None:
+    # `preflight_build` resolves every handler, proves containment, rejects
+    # symlink/special sources and skill collisions, and reads every TOML,
+    # prompt, preamble, and authored-skill byte into `sources`.
+    sources = preflight_build(decls, commands_root, skills_root)
     if out.exists():
         shutil.rmtree(out)
     (out / ".claude-plugin").mkdir(parents=True)
     (out / ".claude-plugin" / "plugin.json").write_text(json.dumps(PLUGIN, indent=2) + "\n")
     (out / ".mcp.json").write_text(json.dumps(MCP, indent=2) + "\n")
-    preamble = (commands_root / "PREAMBLE.md").read_text()
-    generated = set()
-    for decl in decls:
-        prompt = (decl.directory / "prompt.md").read_text()
+    for decl, prompt in zip(sources.declarations, sources.prompts, strict=True):
         skill_dir = out / "skills" / decl.name
         skill_dir.mkdir(parents=True)
-        (skill_dir / "SKILL.md").write_text(_skill_md(decl, preamble, prompt))
-        generated.add(decl.name)
-    if skills_root.is_dir():
-        for authored in sorted(p for p in skills_root.iterdir() if p.is_dir()):
-            if authored.name in generated:
-                raise DeclarationError(authored, "skill", "collides with a generated command skill")
-            shutil.copytree(authored, out / "skills" / authored.name)
+        (skill_dir / "SKILL.md").write_text(
+            _skill_md(decl, sources.preamble, prompt), encoding="utf-8")
+    # Recreate authored directories/files from the pre-read byte snapshot;
+    # never reopen a source after `out` has been removed.
+    for skill in sources.authored:
+        root = out / "skills" / skill.name
+        root.mkdir(parents=True)
+        for directory in skill.directories:
+            (root / directory).mkdir(parents=True)
+        for relative, content in skill.files:
+            destination = root / relative
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes(content)
 ```
 
 In `cli.py`, replace `_framework_verb` so `adapters build` (the spec's verb, `ns.mode` from Task 9's parser) regenerates the committed tree and `build` validates:
@@ -2446,8 +2583,8 @@ def _framework_verb(ns) -> int:
     from science.loader import COMMANDS_ROOT, REPO_ROOT, production_tree
     decls = production_tree()  # build refusals surface here
     if ns.command == "build":
-        from science.loader import resolve_handlers
-        resolve_handlers(decls)
+        from science.adapters import preflight_build
+        preflight_build(decls, COMMANDS_ROOT, REPO_ROOT / "skills")
         sys.stdout.write(f"ok: {len(decls)} command(s)\n")
         return EXIT_OK
     if ns.command == "adapters":  # parser guarantees ns.mode == "build"
@@ -2501,7 +2638,19 @@ and the tests are written from them, not from memory.
 
 **Interfaces:**
 - Consumes: `Dispatcher`, `production_tree`, `resolve_handlers`, `ReadContext`, `load_config`, `Refused`.
-- Produces: `PROTOCOL_VERSION = "2026-07-28"`; `tool_schema(decl) -> dict` (JSON Schema: declared inputs + optional `invocation_id` and `cursor` string properties); `handle_request(req, dispatcher, decls) -> dict` — a JSON-RPC 2.0 responder for the **mandatory `server/discover`**, `tools/list`, and `tools/call`, with layered validation: envelope first (`jsonrpc` marker, non-null string/integer `id`, string `method` → `-32600`), then the params object and `_meta` (`-32602` for a non-object `params` or missing required fields; **only protocol version and client capabilities are required — `clientInfo` is optional when absent but validated as an `Implementation` when present**; an unsupported version → `-32022` with `{supported, requested}` data), then per-method params (`-32602`, unknown tool names included — a protocol error, never a framework tool refusal); `server/discover` returns the discovery contract's shape — `supportedVersions`, `capabilities`, and the server's `Implementation` under `_meta["io.modelcontextprotocol/serverInfo"]`; no `initialize` handling exists to keep obsolete clients honest; `serve(config_path, stdin, stdout, session=None) -> None` whose loop answers malformed JSON with `-32700` and never terminates on bad input (the `session` parameter is wired to the attended writer session in Task 12; until then every command it can serve is read-only). Tool results carry the rendered text as content and `structuredContent: {"invocation_id": …}` so callers can reuse minted ids; a refusal result sets `isError`, keeps the human text `refused [<code>] <message>`, and carries the full spec §6.3 envelope (and the invocation id when one was bound) in `structuredContent` — structured `data` is never discarded into parseable text.
+- Produces: `PROTOCOL_VERSION = "2026-07-28"`; `tool_schema(decl) -> dict` (JSON Schema: declared inputs + optional `invocation_id` and `cursor` string properties); `handle_request(req, dispatcher, decls) -> dict | None` — a JSON-RPC 2.0 responder for the **mandatory `server/discover`**, `tools/list`, and `tools/call`, with layered validation: envelope first (`jsonrpc` marker, non-null string/integer `id` when present, string `method` → `-32600`), then notification silence for a valid omitted id, then the params object and `_meta` (`-32602` for a non-object `params` or missing required fields; **only protocol version and client capabilities are required — `clientInfo` is optional when absent but validated as an `Implementation` when present**; an unsupported version → `-32022` with `{supported, requested}` data), then per-method params (`-32602`, unknown tool names included — a protocol error, never a framework tool refusal); `server/discover` returns the discovery contract's shape — `supportedVersions`, `capabilities`, and the server's `Implementation` under `_meta["io.modelcontextprotocol/serverInfo"]`; no `initialize` handling exists to keep obsolete clients honest; `serve(config_path, stdin, stdout, session=None) -> None` whose loop answers malformed JSON with `-32700` and never terminates on bad input (the `session` parameter is wired to the attended writer session in Task 12; until then every command it can serve is read-only). Tool results carry the rendered text as content and `structuredContent: {"invocation_id": …}` so callers can reuse minted ids; a refusal result sets `isError`, keeps the human text `refused [<code>] <message>`, and carries the full spec §6.3 envelope (and the invocation id when one was bound) in `structuredContent` — structured `data` is never discarded into parseable text.
+
+  Final wire additions: `handle_request(...) -> dict | None` returns `None`
+  for JSON-RPC notifications (which omit `id`); discovery and list include
+  `ttlMs = 300_000` and `cacheScope = "public"`; list refuses every supplied
+  cursor because this complete implementation issues none. `tools/call`
+  recognizes `inputResponses` (object) and `requestState` (string), validates
+  their outer shapes, and refuses them as unsolicited multi-round state because
+  science never emitted `input_required`. Every response is freshly allocated.
+  `MAX_REQUEST_BYTES = 1_048_576`; `serve` takes a binary input stream, decodes
+  strict UTF-8, bounds each `readline`, drains oversized frames through their
+  newline, and continues with the following request. Invalid UTF-8 is `-32700`;
+  an oversized frame is `-32600`.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -2582,7 +2731,6 @@ def test_envelope_validation():
     assert handle_request("not an object", dispatcher=None, decls=())["error"]["code"] == -32600
     for broken in (
         {"id": 1, "method": "tools/list", "params": {}},                       # no jsonrpc
-        {"jsonrpc": "2.0", "method": "tools/list", "params": {}},              # null id
         {"jsonrpc": "2.0", "id": True, "method": "tools/list", "params": {}},  # bool id
         {"jsonrpc": "2.0", "id": 1, "method": 7, "params": {}},                # bad method
     ):
@@ -2596,6 +2744,8 @@ def test_server_discover_matches_the_discovery_contract():
     assert res == {
         "supportedVersions": ["2026-07-28"],
         "capabilities": {"tools": {}},
+        "ttlMs": 300_000,
+        "cacheScope": "public",
         "_meta": {"io.modelcontextprotocol/serverInfo":
                   {"name": "science", "version": "0.1.0"}},
         "resultType": "complete",
@@ -2636,7 +2786,7 @@ def test_parse_error_does_not_end_the_loop(certified_work):
     from science.mcp import serve
     from tests.helpers.world import write_cli_config
     cfg_path = write_cli_config(certified_work)
-    stdin = io.StringIO("{bad json\n" + json.dumps(rpc("tools/list")) + "\n")
+    stdin = io.BytesIO(("{bad json\n" + json.dumps(rpc("tools/list")) + "\n").encode())
     stdout = io.StringIO()
     serve(cfg_path, stdin=stdin, stdout=stdout)
     lines = [json.loads(l) for l in stdout.getvalue().splitlines()]
@@ -2680,6 +2830,14 @@ def test_refusal_becomes_tool_error(certified_work):
     assert isinstance(structured["message"], str) and isinstance(structured["data"], dict)
 ```
 
+Add exact tests for both cache fields on discovery/list, fresh nested response
+objects across calls, notification silence (direct and stdio, followed by a
+valid request), rejection of every supplied list cursor, malformed and
+unsolicited `inputResponses`/`requestState`, and a binary stream containing
+invalid UTF-8, then a frame of `MAX_REQUEST_BYTES + 1`, then a valid request.
+The first two frames return `-32700` and `-32600`; the valid request is still
+served, proving drain/recovery rather than merely detecting the size.
+
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `cd python && uv run --group dev pytest tests/test_mcp.py -q`
@@ -2699,18 +2857,19 @@ from science.dispatch import Dispatcher
 from science.refusal import Refused
 from science.schema import Declaration
 
-_TYPES = {"string": {"type": "string"}, "int": {"type": "integer"},
-          "bool": {"type": "boolean"},
-          "list-of-string": {"type": "array", "items": {"type": "string"}}}
+_JSON_TYPES = {"string": "string", "int": "integer", "bool": "boolean"}
 
 
 def tool_schema(decl: Declaration) -> dict:
     props: dict = {}
     required = []
     for spec in decl.inputs:
-        entry = dict(_TYPES.get(spec.type, {"type": "string"}))
         if spec.type == "enum":
             entry = {"type": "string", "enum": list(spec.choices)}
+        elif spec.type == "list-of-string":
+            entry = {"type": "array", "items": {"type": "string"}}
+        else:
+            entry = {"type": _JSON_TYPES[spec.type]}
         entry["description"] = spec.doc
         props[spec.name] = entry
         if spec.required:
@@ -2724,11 +2883,12 @@ def tool_schema(decl: Declaration) -> dict:
 
 
 PROTOCOL_VERSION = "2026-07-28"  # the ruling above; no pre-2026 fallbacks
+MAX_REQUEST_BYTES = 1_048_576
+CACHE_TTL_MS = 300_000
+CACHE_SCOPE = "public"
 
 
 _NS = "io.modelcontextprotocol/"  # MCP's namespaced _meta keys
-SERVER_INFO = {"name": "science", "version": "0.1.0"}
-SERVER_CAPABILITIES = {"tools": {}}
 
 
 def _valid_implementation(value: object) -> bool:
@@ -2769,8 +2929,7 @@ def _envelope_error(req: object) -> str | None:
         return "request must be an object"
     if req.get("jsonrpc") != "2.0":
         return "jsonrpc must be \"2.0\""
-    rid = req.get("id")
-    if rid is None or isinstance(rid, bool) or not isinstance(rid, (str, int)):
+    if "id" in req and type(req["id"]) not in (str, int):
         return "id must be a non-null string or integer"
     if not isinstance(req.get("method"), str):
         return "method must be a string"
@@ -2781,13 +2940,15 @@ def _rpc_error(rid, code: int, message: str) -> dict:
     return {"jsonrpc": "2.0", "id": rid, "error": {"code": code, "message": message}}
 
 
-def handle_request(req: dict, dispatcher: Dispatcher, decls) -> dict:
+def handle_request(req: dict, dispatcher: Dispatcher, decls) -> dict | None:
     envelope_problem = _envelope_error(req)
     if envelope_problem is not None:
         rid = req.get("id") if isinstance(req, dict) else None
         if isinstance(rid, bool) or not isinstance(rid, (str, int)):
             rid = None
         return _rpc_error(rid, -32600, envelope_problem)
+    if "id" not in req:  # valid JSON-RPC notification: never respond
+        return None
     rid, method = req["id"], req["method"]
     params = req.get("params")
     if not isinstance(params, dict):  # null, list, or absent: invalid params
@@ -2801,11 +2962,26 @@ def handle_request(req: dict, dispatcher: Dispatcher, decls) -> dict:
         return err
     if method == "server/discover":  # mandatory on 2026-07-28
         return _result(rid, {"supportedVersions": [PROTOCOL_VERSION],
-                             "capabilities": SERVER_CAPABILITIES,
-                             "_meta": {_NS + "serverInfo": SERVER_INFO}})
+                             "capabilities": {"tools": {}},
+                             "ttlMs": CACHE_TTL_MS,
+                             "cacheScope": CACHE_SCOPE,
+                             "_meta": {_NS + "serverInfo":
+                                       {"name": "science", "version": "0.1.0"}}})
     if method == "tools/list":
-        return _result(rid, {"tools": [tool_schema(d) for d in decls]})
+        if "cursor" in params:
+            if type(params["cursor"]) is not str:
+                return _rpc_error(rid, -32602, "cursor must be a string")
+            return _rpc_error(rid, -32602, "cursor was not issued by this listing")
+        return _result(rid, {"tools": [tool_schema(d) for d in decls],
+                             "ttlMs": CACHE_TTL_MS,
+                             "cacheScope": CACHE_SCOPE})
     if method == "tools/call":
+        if "inputResponses" in params and type(params["inputResponses"]) is not dict:
+            return _rpc_error(rid, -32602, "inputResponses must be an object")
+        if "requestState" in params and type(params["requestState"]) is not str:
+            return _rpc_error(rid, -32602, "requestState must be a string")
+        if "inputResponses" in params or "requestState" in params:
+            return _rpc_error(rid, -32602, "science did not request multi-round input")
         if not isinstance(params.get("name"), str):
             return _rpc_error(rid, -32602, "tool name must be a string")
         if params["name"] not in {d.name for d in decls}:
@@ -2844,26 +3020,55 @@ def _result(rid, payload) -> dict:
     return {"jsonrpc": "2.0", "id": rid, "result": payload}
 
 
+_END_OF_INPUT = object()
+_OVERSIZED_FRAME = object()
+
+
+def _read_frame(stream):
+    frame = stream.readline(MAX_REQUEST_BYTES + 2)
+    if not isinstance(frame, bytes):
+        raise TypeError("MCP stdin must be a binary stream")
+    if frame == b"":
+        return _END_OF_INPUT
+    if frame.endswith(b"\n"):
+        return (_OVERSIZED_FRAME
+                if len(frame) - 1 > MAX_REQUEST_BYTES else frame[:-1])
+    if len(frame) > MAX_REQUEST_BYTES:
+        while True:  # bounded drain through this frame's newline
+            chunk = stream.readline(65_536)
+            if not chunk or chunk.endswith(b"\n"):
+                break
+        return _OVERSIZED_FRAME
+    return frame
+
+
 def serve(config_path: Path, stdin=None, stdout=None, session=None) -> None:
     from science.config import ReadContext, load_config
     from science.loader import production_tree, resolve_handlers
-    stdin = stdin or sys.stdin
-    stdout = stdout or sys.stdout
+    stdin = sys.stdin.buffer if stdin is None else stdin
+    stdout = sys.stdout if stdout is None else stdout
     decls = production_tree()
     dispatcher = Dispatcher(decls, resolve_handlers(decls),
                             ReadContext.open(load_config(config_path)),
                             session=session)  # Task 12 wires the attended session
-    for line in stdin:
-        if not line.strip():
+    while True:
+        frame = _read_frame(stdin)
+        if frame is _END_OF_INPUT:
+            return
+        if frame is _OVERSIZED_FRAME:
+            response = _rpc_error(None, -32600, "Request exceeds maximum size")
+        elif not frame.strip():
             continue
-        try:
-            req = json.loads(line)
-        except json.JSONDecodeError as e:
-            response = _rpc_error(None, -32700, f"parse error: {e}")
         else:
-            response = handle_request(req, dispatcher, decls)
-        stdout.write(json.dumps(response) + "\n")
-        stdout.flush()  # the loop always continues; bad input never ends it
+            try:
+                req = json.loads(frame.decode("utf-8", errors="strict"))
+            except (UnicodeDecodeError, ValueError):
+                response = _rpc_error(None, -32700, "Parse error")
+            else:
+                response = handle_request(req, dispatcher, decls)
+        if response is not None:  # notifications are silent
+            stdout.write(json.dumps(response, separators=(",", ":")) + "\n")
+            stdout.flush()
 ```
 
 In `cli.py`'s `_framework_verb`, add before the fallthrough:
@@ -3353,6 +3558,10 @@ def production_kind_acts() -> dict[str, frozenset[str]]:
     return dict(KIND_ACTS)
 ```
 
+In the same edit, remove Task 8's temporary `read-only` loop from
+`production_tree()`. That gate is replaced only after this exact import and
+the real write dispatcher exist; until Task 12 begins it remains fail-closed.
+
 In `mcp.py`, replace `serve`'s dispatcher construction so the MCP server
 owns the attended session for its process lifetime and closes it on the
 way out (the CLI's service process is created, already session-bearing,
@@ -3406,14 +3615,15 @@ git commit -m "feat(dispatch): write dispatch with scoped permits, atomic claims
 
 **Files:**
 - Create: `python/src/science/serve.py`
-- Modify: `python/src/science/cli.py` (`serve` verb; `_via_service`)
+- Modify: `python/src/science/cli.py` (register the `serve` verb here, not
+  earlier; implement `_via_service`)
 - Create: `python/tests/fixtures/commands/` (synthetic declarations: `mint-claim/`, `overreach/`, `coord-note/`, `pub-view/` — each a real `command.toml` + one-line `prompt.md`)
 - Modify: `python/tests/helpers/synthetic.py` (add the fixture-tree loader; Task 12 created the module)
 - Test: `python/tests/test_serve.py`, `python/tests/test_synthetic_tree.py`
 
 **Interfaces:**
 - Consumes: `Dispatcher` with write branch (Task 12); `open_attended_session` (beliefs); `Refusal/Refused`, `production_tree`.
-- Produces: `serve(config: ScienceConfig, socket_path: Path, declarations=None, handlers=None) -> Server` — a Unix-socket JSON-lines service holding one attended session for its lifetime; `declarations`/`handlers` default to the production tree and are injection points for tests (production code never imports test modules); a socket path that already exists **refuses at startup** with a message naming the path — never a silent unlink (a stale socket from a crash is the operator's to remove); wire protocol: request `{"command": str, "inputs": {…}, "invocation_id": str | null, "cursor": str | null}`, response `{"ok": true, "text": str, "invocation_id": str}` or `{"ok": false, "refusal": {code, message, data}}`; socket at `<operations_root>/service.sock`; CLI `science serve` runs it, and `_via_service` connects for any write-class command — printing the reply's `invocation-id: <id>` to stderr so callers can retry safely — refusing with a plain message naming `science serve` when the socket is absent. **Landing step:** update this repo's `README.md` ("Nothing is built yet" is false once this task lands) and the spec's Status header to implemented, in the same commit — a doc's status goes stale at the merge, not later.
+- Produces: `serve(config: ScienceConfig, socket_path: Path, declarations=None, handlers=None) -> Server` — a Unix-socket JSON-lines service holding one attended session for its lifetime; `declarations`/`handlers` default to the production tree and are injection points for tests (production code never imports test modules); a socket path that already exists **refuses at startup** with a message naming the path — never a silent unlink (a stale socket from a crash is the operator's to remove); wire protocol: request `{"command": str, "inputs": {…}, "invocation_id": str | null, "cursor": str | null}`, response `{"ok": true, "text": str, "invocation_id": str}` or `{"ok": false, "refusal": {code, message, data}}`; socket at `<operations_root>/service.sock`. This task adds `science serve --config …` to `build_parser`; no earlier task registers it. `_via_service` connects for any write-class command while preserving Task 9's public wire: rendered text only on stdout and exactly one compact, key-sorted JSON stderr line—`{"invocation_id":"…"}` on success or `{"invocation_id":"…","refusal":{"code":"…","data":{},"message":"…"}}` on refusal. Missing service is a full `permit-exceeded` envelope naming `science serve`, never a plain ad-hoc line. **Landing step:** update this repo's README and the spec's Status header to implemented in the same commit; the README already records the Tasks 1–11 read path, so this replaces its beliefs-gated sentence rather than an obsolete “nothing built” sentence.
 
 - [ ] **Step 1: Write the synthetic declarations**
 
@@ -3677,9 +3887,7 @@ def test_existing_socket_refuses_startup(certified_work):
 
 
 def test_cli_write_without_service_refuses(certified_work, capsys):
-    """_via_service with a real config but no socket: exit 3 and a message
-    naming `science serve` — the config must load first, or the refusal
-    would be about configuration, not the missing service."""
+    """No socket: exit 3 with the same JSON refusal wire as every command."""
     import argparse
     from science.cli import _via_service
     from tests.helpers.synthetic import MINT_CLAIM
@@ -3688,7 +3896,10 @@ def test_cli_write_without_service_refuses(certified_work, capsys):
     ns = argparse.Namespace(config=str(cfg_path), invocation_id=None, cursor=None)
     code = _via_service(ns, MINT_CLAIM, {"slug": "x"})
     assert code == 3
-    assert "science serve" in capsys.readouterr().err
+    payload = json.loads(capsys.readouterr().err)
+    assert payload["refusal"]["code"] == "permit-exceeded"
+    assert "science serve" in payload["refusal"]["message"]
+    assert payload["invocation_id"]
 
 
 def test_cli_write_routes_through_service(certified_work, capsys):
@@ -3711,7 +3922,7 @@ def test_cli_write_routes_through_service(certified_work, capsys):
         captured = capsys.readouterr()
         assert code == 0
         assert "proposition:via" in captured.out
-        assert "invocation-id: " in captured.err
+        assert json.loads(captured.err)["invocation_id"]
     finally:
         server.shutdown()
         server.server_close()
@@ -3826,34 +4037,45 @@ def _via_service(ns, decl, inputs) -> int:
     import json as _json
     import socket as _socket
     from science.config import load_config, resolve_config_path
+    from science.refusal import Refusal, envelope, mint_token
+    invocation_id = ns.invocation_id or mint_token()
     try:
         config = load_config(resolve_config_path(ns.config))
         sock_path = _service_socket(config)
         with _socket.socket(_socket.AF_UNIX) as s:
             s.connect(str(sock_path))
             s.sendall(_json.dumps({"command": decl.name, "inputs": inputs,
-                                   "invocation_id": ns.invocation_id,
+                                   "invocation_id": invocation_id,
                                    "cursor": ns.cursor}).encode() + b"\n")
             reply = _json.loads(s.makefile().readline())
     except (FileNotFoundError, ConnectionRefusedError):
-        sys.stderr.write("refused [permit-exceeded] no writer service; "
-                         "start one with: science serve\n")
+        refusal = Refusal("permit-exceeded",
+                          "no writer service; start one with: science serve")
+        _json_line({"invocation_id": invocation_id,
+                    "refusal": envelope(refusal)})
         return EXIT_REFUSED
     except Refused as e:
-        sys.stderr.write(f"refused [{e.refusal.code}] {e.refusal.message}\n")
+        _json_line({"invocation_id": e.invocation_id or invocation_id,
+                    "refusal": envelope(e.refusal)})
         return EXIT_REFUSED
     if reply["ok"]:
         sys.stdout.write(reply["text"])
-        sys.stderr.write(f"invocation-id: {reply['invocation_id']}\n")
+        _json_line({"invocation_id": reply["invocation_id"]})
         return EXIT_OK
     refusal = reply["refusal"]
-    sys.stderr.write(f"refused [{refusal['code']}] {refusal['message']}\n")
-    if "invocation_id" in reply:
-        sys.stderr.write(f"invocation-id: {reply['invocation_id']}\n")
+    _json_line({"invocation_id": reply.get("invocation_id", invocation_id),
+                "refusal": refusal})
     return EXIT_REFUSED
 ```
 
-and the `serve` verb, added to `_framework_verb` before the fallthrough:
+Task 13 first registers the config-consuming parser entry:
+
+```python
+    serve_parser = sub.add_parser("serve")
+    serve_parser.add_argument("--config")
+```
+
+Then add the `serve` branch to `_framework_verb` before the fallthrough:
 
 ```python
     if ns.command == "serve":

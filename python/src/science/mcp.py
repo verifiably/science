@@ -12,21 +12,17 @@ from science.refusal import Refused, envelope
 from science.schema import Declaration
 
 PROTOCOL_VERSION = "2026-07-28"
+MAX_REQUEST_BYTES = 1_048_576
+CACHE_TTL_MS = 300_000
+CACHE_SCOPE = "public"
 
 _NS = "io.modelcontextprotocol/"
-_SERVER_INFO = {"name": "science", "version": "0.1.0"}
-_SERVER_CAPABILITIES = {"tools": {}}
 _EXTENSION_KEY = re.compile(
     r"[A-Za-z](?:[A-Za-z0-9-]*[A-Za-z0-9])?"
     r"(?:\.[A-Za-z](?:[A-Za-z0-9-]*[A-Za-z0-9])?)*"
     r"/(?:[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?)?"
 )
-_TYPES = {
-    "string": {"type": "string"},
-    "int": {"type": "integer"},
-    "bool": {"type": "boolean"},
-    "list-of-string": {"type": "array", "items": {"type": "string"}},
-}
+_JSON_TYPES = {"string": "string", "int": "integer", "bool": "boolean"}
 
 
 def tool_schema(declaration: Declaration) -> dict:
@@ -35,8 +31,10 @@ def tool_schema(declaration: Declaration) -> dict:
     for input_spec in declaration.inputs:
         if input_spec.type == "enum":
             field = {"type": "string", "enum": list(input_spec.choices)}
+        elif input_spec.type == "list-of-string":
+            field = {"type": "array", "items": {"type": "string"}}
         else:
-            field = dict(_TYPES[input_spec.type])
+            field = {"type": _JSON_TYPES[input_spec.type]}
         field["description"] = input_spec.doc
         properties[input_spec.name] = field
         if input_spec.required:
@@ -91,7 +89,7 @@ def _envelope_error(request: object) -> str | None:
         return "Request has unknown fields"
     if request.get("jsonrpc") != "2.0":
         return 'jsonrpc must be "2.0"'
-    if type(request.get("id")) not in (str, int):
+    if "id" in request and type(request["id"]) not in (str, int):
         return "id must be a non-null string or integer"
     if type(request.get("method")) is not str:
         return "method must be a string"
@@ -194,10 +192,12 @@ def _invalid_params(request_id, message: str) -> dict:
     return _rpc_error(request_id, -32602, message)
 
 
-def handle_request(request: object, dispatcher: Dispatcher, decls) -> dict:
+def handle_request(request: object, dispatcher: Dispatcher, decls) -> dict | None:
     problem = _envelope_error(request)
     if problem is not None:
         return _rpc_error(_request_id(request), -32600, problem)
+    if "id" not in request:
+        return None
 
     request_id = request["id"]
     params = request.get("params")
@@ -216,8 +216,12 @@ def handle_request(request: object, dispatcher: Dispatcher, decls) -> dict:
             request_id,
             {
                 "supportedVersions": [PROTOCOL_VERSION],
-                "capabilities": _SERVER_CAPABILITIES,
-                "_meta": {_NS + "serverInfo": _SERVER_INFO},
+                "capabilities": {"tools": {}},
+                "ttlMs": CACHE_TTL_MS,
+                "cacheScope": CACHE_SCOPE,
+                "_meta": {
+                    _NS + "serverInfo": {"name": "science", "version": "0.1.0"}
+                },
             },
         )
 
@@ -226,11 +230,34 @@ def handle_request(request: object, dispatcher: Dispatcher, decls) -> dict:
             return _invalid_params(request_id, "tools/list has unknown fields")
         if "cursor" in params and type(params["cursor"]) is not str:
             return _invalid_params(request_id, "cursor must be a string")
-        return _result(request_id, {"tools": [tool_schema(decl) for decl in decls]})
+        if "cursor" in params:
+            return _invalid_params(request_id, "cursor was not issued by this listing")
+        return _result(
+            request_id,
+            {
+                "tools": [tool_schema(decl) for decl in decls],
+                "ttlMs": CACHE_TTL_MS,
+                "cacheScope": CACHE_SCOPE,
+            },
+        )
 
     if method == "tools/call":
-        if set(params) - {"_meta", "name", "arguments"}:
+        if set(params) - {
+            "_meta",
+            "name",
+            "arguments",
+            "inputResponses",
+            "requestState",
+        }:
             return _invalid_params(request_id, "tools/call has unknown fields")
+        if "inputResponses" in params and type(params["inputResponses"]) is not dict:
+            return _invalid_params(request_id, "inputResponses must be an object")
+        if "requestState" in params and type(params["requestState"]) is not str:
+            return _invalid_params(request_id, "requestState must be a string")
+        if "inputResponses" in params or "requestState" in params:
+            return _invalid_params(
+                request_id, "science did not request multi-round input"
+            )
         name = params.get("name")
         if type(name) is not str:
             return _invalid_params(request_id, "tool name must be a string")
@@ -303,11 +330,38 @@ def _reject_nonfinite_number(value):
     raise _MalformedJSON
 
 
+_END_OF_INPUT = object()
+_OVERSIZED_FRAME = object()
+
+
+def _drain_frame(stream) -> None:
+    while True:
+        chunk = stream.readline(65_536)
+        if not chunk or chunk.endswith(b"\n"):
+            return
+
+
+def _read_frame(stream):
+    frame = stream.readline(MAX_REQUEST_BYTES + 2)
+    if not isinstance(frame, bytes):
+        raise TypeError("MCP stdin must be a binary stream")
+    if frame == b"":
+        return _END_OF_INPUT
+    if frame.endswith(b"\n"):
+        if len(frame) - 1 > MAX_REQUEST_BYTES:
+            return _OVERSIZED_FRAME
+        return frame[:-1]
+    if len(frame) > MAX_REQUEST_BYTES:
+        _drain_frame(stream)
+        return _OVERSIZED_FRAME
+    return frame
+
+
 def serve(config_path: Path, stdin=None, stdout=None, session=None) -> None:
     from science.config import ReadContext, load_config
     from science.loader import production_tree, resolve_handlers
 
-    stdin = sys.stdin if stdin is None else stdin
+    stdin = sys.stdin.buffer if stdin is None else stdin
     stdout = sys.stdout if stdout is None else stdout
     declarations = production_tree()
     dispatcher = Dispatcher(
@@ -316,18 +370,27 @@ def serve(config_path: Path, stdin=None, stdout=None, session=None) -> None:
         ReadContext.open(load_config(config_path)),
         session=session,
     )
-    for line in stdin:
-        if not line.strip():
+    while True:
+        frame = _read_frame(stdin)
+        if frame is _END_OF_INPUT:
+            return
+        if frame is _OVERSIZED_FRAME:
+            response = _rpc_error(None, -32600, "Request exceeds maximum size")
+        elif not frame.strip():
             continue
-        try:
-            request = json.loads(
-                line,
-                object_pairs_hook=_object_without_duplicates,
-                parse_constant=_reject_nonfinite_number,
-            )
-        except ValueError:
-            response = _rpc_error(None, -32700, "Parse error")
         else:
-            response = handle_request(request, dispatcher, declarations)
-        stdout.write(json.dumps(response) + "\n")
+            try:
+                line = frame.decode("utf-8", errors="strict")
+                request = json.loads(
+                    line,
+                    object_pairs_hook=_object_without_duplicates,
+                    parse_constant=_reject_nonfinite_number,
+                )
+            except (UnicodeDecodeError, ValueError):
+                response = _rpc_error(None, -32700, "Parse error")
+            else:
+                response = handle_request(request, dispatcher, declarations)
+        if response is None:
+            continue
+        stdout.write(json.dumps(response, separators=(",", ":")) + "\n")
         stdout.flush()

@@ -58,6 +58,30 @@ def test_production_tree_ships_only_status():
     assert callable(resolve_handlers(decls)["status"])
 
 
+@pytest.mark.parametrize(
+    "write_class",
+    [
+        WriteClass("coordination"),
+        WriteClass("mints", ("note",), {"note": "corpus-write"}),
+        WriteClass("publishes"),
+    ],
+)
+def test_production_tree_rejects_every_write_class_until_capabilities_land(
+    monkeypatch, write_class
+):
+    import science.loader as loader
+
+    declaration = Declaration(
+        "future-write", "p", write_class, MIN_OUTPUT_BUDGET, (), (), Path(".")
+    )
+    monkeypatch.setattr(loader, "load_command_tree", lambda *args, **kwargs: (declaration,))
+
+    with pytest.raises(DeclarationError) as caught:
+        loader.production_tree()
+
+    assert caught.value.field == "write_class"
+
+
 def _star_args(ctx, *args):
     return ()
 

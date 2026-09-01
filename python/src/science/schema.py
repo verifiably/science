@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import re
+import stat
 import tomllib
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -68,6 +69,27 @@ def _require(cond: bool, path: Path, field_name: str, reason: str) -> None:
         raise DeclarationError(path, field_name, reason)
 
 
+def _mode(path: Path, field_name: str, missing: str) -> int:
+    try:
+        return path.lstat().st_mode
+    except FileNotFoundError:
+        raise DeclarationError(path, field_name, missing) from None
+    except OSError as error:
+        raise DeclarationError(path, field_name, f"cannot inspect source: {error}") from error
+
+
+def _require_real_directory(path: Path, field_name: str) -> None:
+    mode = _mode(path, field_name, "missing directory")
+    _require(not stat.S_ISLNK(mode), path, field_name, "symlink directories are not allowed")
+    _require(stat.S_ISDIR(mode), path, field_name, "must be a real directory")
+
+
+def _require_regular_file(path: Path, field_name: str) -> None:
+    mode = _mode(path, field_name, "missing")
+    _require(not stat.S_ISLNK(mode), path, field_name, "symlink files are not allowed")
+    _require(stat.S_ISREG(mode), path, field_name, "must be a regular file")
+
+
 def _parse_inputs(raw: Mapping, path: Path) -> tuple[InputSpec, ...]:
     specs = []
     for name, spec in raw.items():
@@ -91,7 +113,7 @@ def _parse_inputs(raw: Mapping, path: Path) -> tuple[InputSpec, ...]:
                      and len(set(choices)) == len(choices),
                      path, f"inputs.{name}.choices", "enum requires unique string choices")
         else:
-            _require(not choices, path, f"inputs.{name}.choices", "only enum takes choices")
+            _require("choices" not in spec, path, f"inputs.{name}.choices", "only enum takes choices")
         default = spec.get("default")
         if required:
             _require(default is None, path, f"inputs.{name}.default", "required input forbids default")
@@ -138,9 +160,10 @@ def _parse_write_class(raw: str, routes_raw: Mapping[str, str], path: Path,
 
 def load_declaration(dir_path: Path, *, kind_acts: Mapping[str, frozenset[str]],
                      contract_kinds: frozenset[str]) -> Declaration:
+    _require_real_directory(dir_path, "directory")
     path = dir_path / "command.toml"
-    _require(path.is_file(), path, "command.toml", "missing")
-    _require((dir_path / "prompt.md").is_file(), dir_path / "prompt.md", "prompt.md", "missing")
+    _require_regular_file(path, "command.toml")
+    _require_regular_file(dir_path / "prompt.md", "prompt.md")
     entries = {p.name for p in dir_path.iterdir()}
     _require(entries == {"command.toml", "prompt.md"}, path, "directory",
              f"holds exactly command.toml and prompt.md; found {sorted(entries)}")
@@ -197,10 +220,12 @@ def load_declaration(dir_path: Path, *, kind_acts: Mapping[str, frozenset[str]],
 
 
 def load_command_tree(root: Path, *, kind_acts, contract_kinds) -> tuple[Declaration, ...]:
+    _require_real_directory(root, "tree")
     decls = []
-    for d in sorted(p for p in root.iterdir() if p.is_dir()):
+    for d in sorted(root.iterdir()):
+        if d.name == "PREAMBLE.md":
+            _require_regular_file(d, "preamble")
+            continue
+        _require_real_directory(d, "directory")
         decls.append(load_declaration(d, kind_acts=kind_acts, contract_kinds=contract_kinds))
-    names = [d.name for d in decls]
-    if len(set(names)) != len(names):
-        raise DeclarationError(root, "tree", "duplicate command names")
     return tuple(decls)

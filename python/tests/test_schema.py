@@ -56,8 +56,9 @@ def test_bad_names_refused(tmp_path, bad_name):
 def test_newline_terminated_command_name_refused(tmp_path):
     toml = GOOD.replace('name = "status"', 'name = "status\\n"')
     d = write_command(tmp_path, "status", toml)
-    with pytest.raises(DeclarationError):
+    with pytest.raises(DeclarationError) as caught:
         load_declaration(d, kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)
+    assert caught.value.field == "name"
 
 
 def test_newline_terminated_input_name_refused(tmp_path):
@@ -92,6 +93,15 @@ def test_enum_requires_choices_and_required_forbids_default(tmp_path):
         load_declaration(d2, kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)
 
 
+def test_non_enum_refuses_choices_even_when_explicitly_empty(tmp_path):
+    toml = GOOD.replace('doc = "Restrict to one corpus."',
+                        'doc = "Restrict to one corpus."\nchoices = []')
+    d = write_command(tmp_path, "status", toml)
+    with pytest.raises(DeclarationError) as caught:
+        load_declaration(d, kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)
+    assert caught.value.field == "inputs.corpus.choices"
+
+
 MINTS = """
 schema_version = 1
 name = "mint-run"
@@ -109,6 +119,18 @@ def test_mints_routes_resolve(tmp_path):
     decl = load_declaration(d, kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)
     assert decl.write_class.kinds == ("note", "run")
     assert decl.write_class.routes == {"note": "corpus-write", "run": "run"}
+
+
+@pytest.mark.parametrize("write_class", ["coordination", "publishes"])
+def test_generic_tree_accepts_non_read_only_write_classes(tmp_path, write_class):
+    toml = GOOD.replace('write_class = "read-only"', f'write_class = "{write_class}"')
+    d = write_command(tmp_path, "status", toml)
+
+    declaration = load_declaration(
+        d, kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS
+    )
+
+    assert declaration.write_class.kind == write_class
 
 
 def test_ambiguous_kind_without_route_refused(tmp_path):
@@ -137,7 +159,7 @@ def test_unknown_kind_refused(tmp_path):
         load_declaration(d, kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)
 
 
-def test_tree_refuses_duplicates_and_lists_all(tmp_path):
+def test_tree_lists_all_commands_in_name_order(tmp_path):
     write_command(tmp_path, "status", GOOD)
     write_command(tmp_path, "mint-run", MINTS)
     decls = load_command_tree(tmp_path, kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)
@@ -196,6 +218,23 @@ def test_stray_file_in_command_directory_refused(tmp_path):
     with pytest.raises(DeclarationError) as e:
         load_declaration(d, kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)
     assert "notes.txt" in str(e.value)
+
+
+@pytest.mark.parametrize("source", ["directory", "command.toml", "prompt.md"])
+def test_command_tree_rejects_symlinked_sources(tmp_path, source):
+    root = tmp_path / "commands"
+    root.mkdir()
+    if source == "directory":
+        target = write_command(tmp_path / "outside", "status", GOOD)
+        (root / "status").symlink_to(target, target_is_directory=True)
+    else:
+        directory = write_command(root, "status", GOOD)
+        target = tmp_path / f"outside-{source}"
+        (directory / source).replace(target)
+        (directory / source).symlink_to(target)
+
+    with pytest.raises(DeclarationError, match="symlink"):
+        load_command_tree(root, kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)
 
 
 BASE = """

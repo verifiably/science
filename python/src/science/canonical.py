@@ -22,6 +22,8 @@ def _refuse(message: str, **data: object) -> None:
 
 
 def canonicalize(decl: Declaration, provided: Mapping[str, object]) -> dict[str, object]:
+    if any(type(name) is not str for name in provided):
+        _refuse("input names must be strings", command=decl.name)
     known = {i.name: i for i in decl.inputs}
     unknown = set(provided) - set(known)
     if unknown:

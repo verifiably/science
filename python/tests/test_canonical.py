@@ -31,6 +31,20 @@ def test_unknown_and_wrong_type_refused():
         canonicalize(d, {"a": True})
 
 
+def test_non_exact_string_input_names_are_refused_before_key_operations():
+    class StringSubclass(str):
+        pass
+
+    d = decl(InputSpec("a", "int", True, "d"))
+    for provided in (
+        {1: "x", "stray": "y"},
+        {StringSubclass("a"): 1},
+    ):
+        with pytest.raises(Refused) as caught:
+            canonicalize(d, provided)
+        assert caught.value.refusal.code == "invalid-input"
+
+
 def test_subclasses_are_refused_at_closed_input_boundary():
     class StringSubclass(str):
         pass

@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from science.loader import production_tree
-from science.mcp import handle_request, serve, tool_schema
+from science.mcp import MAX_REQUEST_BYTES, handle_request, serve, tool_schema
 from science.refusal import Refusal, Refused
 
 
@@ -110,6 +110,8 @@ def test_tools_list_and_call(certified_work):
     )
 
     assert [tool["name"] for tool in listed["result"]["tools"]] == ["status"]
+    assert listed["result"]["ttlMs"] == 300_000
+    assert listed["result"]["cacheScope"] == "public"
     assert "World status" in called["result"]["content"][0]["text"]
     assert len(called["result"]["structuredContent"]["invocation_id"]) == 32
     assert called["result"]["isError"] is False
@@ -296,7 +298,6 @@ def test_unsupported_version_is_32022_with_versions():
         [],
         {"id": 1, "method": "tools/list", "params": {}},
         {"jsonrpc": "1.0", "id": 1, "method": "tools/list", "params": {}},
-        {"jsonrpc": "2.0", "method": "tools/list", "params": {}},
         {"jsonrpc": "2.0", "id": None, "method": "tools/list", "params": {}},
         {"jsonrpc": "2.0", "id": True, "method": "tools/list", "params": {}},
         {"jsonrpc": "2.0", "id": 1.5, "method": "tools/list", "params": {}},
@@ -320,6 +321,8 @@ def test_server_discover_matches_the_discovery_contract():
     assert result == {
         "supportedVersions": ["2026-07-28"],
         "capabilities": {"tools": {}},
+        "ttlMs": 300_000,
+        "cacheScope": "public",
         "_meta": {
             "io.modelcontextprotocol/serverInfo": {
                 "name": "science",
@@ -341,13 +344,46 @@ def test_server_discover_rejects_non_meta_params():
 
 
 def test_tools_list_validates_its_optional_cursor_and_exact_fields():
-    assert "result" in handle_request(
-        rpc("tools/list", {"cursor": "opaque"}), dispatcher=None, decls=()
-    )
-    for params in ({"cursor": None}, {"cursor": 7}, {"unknown": "field"}):
+    assert "result" in handle_request(rpc("tools/list"), dispatcher=None, decls=())
+    for params in (
+        {"cursor": "opaque"},
+        {"cursor": None},
+        {"cursor": 7},
+        {"unknown": "field"},
+    ):
         assert handle_request(rpc("tools/list", params), dispatcher=None, decls=())[
             "error"
         ]["code"] == -32602
+
+
+def test_notifications_receive_no_response():
+    notification = rpc("notifications/tools/list_changed")
+    notification.pop("id")
+
+    assert handle_request(notification, dispatcher=None, decls=()) is None
+
+
+def test_discovery_and_tool_list_results_are_fresh():
+    first_discovery = handle_request(
+        rpc("server/discover"), dispatcher=None, decls=()
+    )["result"]
+    first_discovery["capabilities"]["tools"]["mutated"] = True
+    first_discovery["_meta"]["io.modelcontextprotocol/serverInfo"]["name"] = "changed"
+    second_discovery = handle_request(
+        rpc("server/discover"), dispatcher=None, decls=()
+    )["result"]
+
+    first_list = handle_request(
+        rpc("tools/list"), dispatcher=None, decls=production_tree()
+    )["result"]
+    first_list["tools"][0]["inputSchema"]["properties"]["cursor"]["type"] = "integer"
+    second_list = handle_request(
+        rpc("tools/list"), dispatcher=None, decls=production_tree()
+    )["result"]
+
+    assert second_discovery["capabilities"] == {"tools": {}}
+    assert second_discovery["_meta"]["io.modelcontextprotocol/serverInfo"]["name"] == "science"
+    assert second_list["tools"][0]["inputSchema"]["properties"]["cursor"]["type"] == "string"
 
 
 def test_tools_call_rejects_unknown_protocol_fields_before_dispatch():
@@ -361,6 +397,47 @@ def test_tools_call_rejects_unknown_protocol_fields_before_dispatch():
     )
 
     assert response["error"]["code"] == -32602
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        ("inputResponses", [], "inputResponses must be an object"),
+        ("requestState", 7, "requestState must be a string"),
+    ],
+)
+def test_tools_call_validates_malformed_multi_round_fields(field, value, message):
+    response = handle_request(
+        rpc(
+            "tools/call",
+            {"name": "status", "arguments": {}, field: value},
+        ),
+        dispatcher=NeverDispatch(),
+        decls=production_tree(),
+    )
+
+    assert response["error"] == {"code": -32602, "message": message}
+
+
+@pytest.mark.parametrize(
+    "state",
+    [
+        {"inputResponses": {}},
+        {"requestState": "state-token"},
+        {"inputResponses": {}, "requestState": "state-token"},
+    ],
+)
+def test_tools_call_rejects_unsolicited_multi_round_state(state):
+    response = handle_request(
+        rpc("tools/call", {"name": "status", "arguments": {}, **state}),
+        dispatcher=NeverDispatch(),
+        decls=production_tree(),
+    )
+
+    assert response["error"] == {
+        "code": -32602,
+        "message": "science did not request multi-round input",
+    }
 
 
 def test_all_success_and_tool_error_results_are_complete(certified_work):
@@ -454,7 +531,7 @@ def test_parse_errors_and_non_objects_do_not_end_the_loop(certified_work):
     duplicate = (
         '{"jsonrpc":"2.0","id":1,"id":2,"method":"tools/list","params":{}}\n'
     )
-    stdin = io.StringIO(
+    stdin = io.BytesIO((
         "{bad json\n"
         + duplicate
         + "NaN\n"
@@ -462,7 +539,7 @@ def test_parse_errors_and_non_objects_do_not_end_the_loop(certified_work):
         + "\n"
         + json.dumps(rpc("tools/list"))
         + "\n"
-    )
+    ).encode())
     stdout = io.StringIO()
 
     serve(config_path, stdin=stdin, stdout=stdout)
@@ -483,13 +560,13 @@ def test_oversized_json_integer_is_parse_error_and_loop_continues(certified_work
 
     config_path = write_cli_config(certified_work)
     oversized_id = "9" * 5000
-    stdin = io.StringIO(
+    stdin = io.BytesIO((
         '{"jsonrpc":"2.0","id":'
         + oversized_id
         + ',"method":"tools/list","params":{}}\n'
         + json.dumps(rpc("tools/list"))
         + "\n"
-    )
+    ).encode())
     stdout = io.StringIO()
 
     serve(config_path, stdin=stdin, stdout=stdout)
@@ -497,6 +574,23 @@ def test_oversized_json_integer_is_parse_error_and_loop_continues(certified_work
     lines = [json.loads(line) for line in stdout.getvalue().splitlines()]
     assert lines[0]["error"]["code"] == -32700
     assert "result" in lines[1]
+
+
+def test_invalid_utf8_and_oversized_frames_do_not_desynchronize_stdio(certified_work):
+    from helpers.world import write_cli_config
+
+    valid = (json.dumps(rpc("tools/list")) + "\n").encode()
+    stdin = io.BytesIO(
+        b"\xff\n" + b"x" * (MAX_REQUEST_BYTES + 1) + b"\n" + valid
+    )
+    stdout = io.StringIO()
+
+    serve(write_cli_config(certified_work), stdin=stdin, stdout=stdout)
+
+    lines = [json.loads(line) for line in stdout.getvalue().splitlines()]
+    assert lines[0]["error"]["code"] == -32700
+    assert lines[1]["error"]["code"] == -32600
+    assert "result" in lines[2]
 
 
 def test_transport_equivalence_cli_vs_mcp(certified_work, capsys):
@@ -598,12 +692,36 @@ def test_serve_passes_session_only_as_dispatcher_injection(
 
     serve(
         write_cli_config(certified_work),
-        stdin=io.StringIO(""),
+        stdin=io.BytesIO(),
         stdout=io.StringIO(),
         session=sentinel,
     )
 
     assert captured == [sentinel]
+
+
+def test_notification_frame_is_silent_and_following_request_is_served(
+    certified_work,
+):
+    from helpers.world import write_cli_config
+
+    notification = rpc("notifications/tools/list_changed")
+    notification.pop("id")
+    stdin = io.BytesIO(
+        (
+            json.dumps(notification)
+            + "\n"
+            + json.dumps(rpc("tools/list"))
+            + "\n"
+        ).encode()
+    )
+    stdout = io.StringIO()
+
+    serve(write_cli_config(certified_work), stdin=stdin, stdout=stdout)
+
+    lines = [json.loads(line) for line in stdout.getvalue().splitlines()]
+    assert len(lines) == 1
+    assert "result" in lines[0]
 
 
 def test_cli_mcp_serve_resolves_config_and_starts_server(monkeypatch):

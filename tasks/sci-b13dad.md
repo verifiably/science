@@ -6,7 +6,7 @@ priority: 1
 size: m
 owner: command-framework
 created: 2026-08-31T21:29:15Z
-updated: 2026-09-01T12:58:44Z
+updated: 2026-09-01T14:31:58Z
 depends: [sci-cd5a04]
 tags: [command-framework]
 spec: docs/specs/2026-08-31-command-framework-design.md
@@ -18,3 +18,4 @@ step: "Task 9: CLI with sessionless reads"
 
 - 2026-09-01T12:54:25Z (command-framework): Subagent-driven Task 9 started; declaration-compiled argparse surface, protocol options, and sessionless read dispatch.
 - 2026-09-01T12:58:44Z (command-framework): Declaration-driven argparse CLI with sessionless read dispatch and refusal exit codes implemented with tests
+- 2026-09-01T14:31:58Z (command-framework): Final review: preserve full invocation/refusal metadata as compact JSON stderr, hide internal exception details, scope options to consuming verbs, and leave serve parser registration to Task 13.

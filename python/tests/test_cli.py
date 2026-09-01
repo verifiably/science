@@ -1,3 +1,5 @@
+import json
+import re
 from pathlib import Path
 
 import pytest
@@ -56,20 +58,57 @@ def test_parser_compiles_inputs():
     assert caught.value.code == 2
 
 
+def test_protocol_options_are_scoped_to_the_verbs_that_consume_them():
+    from science.cli import build_parser
+
+    declaration = Declaration(
+        "small", "p", WriteClass("read-only"), MIN_OUTPUT_BUDGET, (), (), Path(".")
+    )
+    parser = build_parser((declaration,))
+    assert vars(parser.parse_args(["mcp", "serve", "--config", "science.toml"])) == {
+        "command": "mcp",
+        "mode": "serve",
+        "config": "science.toml",
+    }
+    for argv in (
+        ["serve"],
+        ["build", "--config", "science.toml"],
+        ["build", "--invocation-id", "caller_id"],
+        ["adapters", "build", "--continue", "cursor"],
+        ["mcp", "serve", "--invocation-id", "caller_id"],
+        ["mcp", "serve", "--continue", "cursor"],
+    ):
+        with pytest.raises(SystemExit) as caught:
+            parser.parse_args(argv)
+        assert caught.value.code == 2
+
+
 def test_status_end_to_end(certified_work, capsys):
     from science.cli import main
 
     cfg_path = write_cli_config(certified_work)
     assert main(["status", "--config", str(cfg_path)]) == 0
-    assert "World status" in capsys.readouterr().out
+    captured = capsys.readouterr()
+    assert "World status" in captured.out
+    metadata = json.loads(captured.err)
+    assert re.fullmatch(r"[0-9a-f]{32}", metadata["invocation_id"])
+    assert captured.err == json.dumps(metadata, sort_keys=True, separators=(",", ":")) + "\n"
 
 
 def test_refusal_exits_3(certified_work, capsys):
     from science.cli import main
 
     cfg_path = write_cli_config(certified_work)
-    assert main(["status", "--config", str(cfg_path), "--continue", "scur1.garbage"]) == 3
-    assert "refused [unknown-cursor]" in capsys.readouterr().err
+    assert main([
+        "status", "--config", str(cfg_path), "--invocation-id", "caller_id",
+        "--continue", "scur1.garbage",
+    ]) == 3
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err == (
+        '{"invocation_id":"caller_id","refusal":{"code":"unknown-cursor",'
+        '"data":{},"message":"cursor does not parse"}}\n'
+    )
 
 
 def test_missing_config_exits_3(capsys, monkeypatch):
@@ -77,7 +116,15 @@ def test_missing_config_exits_3(capsys, monkeypatch):
 
     monkeypatch.delenv("SCIENCE_CONFIG", raising=False)
     assert main(["status"]) == 3
-    assert capsys.readouterr().err == "refused [invalid-input] no --config and no SCIENCE_CONFIG\n"
+    captured = capsys.readouterr()
+    refusal = json.loads(captured.err)
+    assert re.fullmatch(r"[0-9a-f]{32}", refusal["invocation_id"])
+    assert refusal["refusal"] == {
+        "code": "invalid-input",
+        "message": "no --config and no SCIENCE_CONFIG",
+        "data": {},
+    }
+    assert captured.err == json.dumps(refusal, sort_keys=True, separators=(",", ":")) + "\n"
 
 
 def test_usage_error_exits_2():
@@ -101,12 +148,14 @@ def test_read_dispatch_is_sessionless_and_writes_exact_text(certified_work, caps
         def invoke(self, command, inputs, *, invocation_id=None, cursor=None):
             assert command == "status"
             assert inputs == {}
-            assert invocation_id is None and cursor is None
-            return Outcome("dispatcher output", "id")
+            assert re.fullmatch(r"[0-9a-f]{32}", invocation_id) and cursor is None
+            return Outcome("dispatcher output", invocation_id)
 
     monkeypatch.setattr(cli, "Dispatcher", SessionlessDispatcher)
     assert cli.main(["status", "--config", str(cfg_path)]) == 0
-    assert capsys.readouterr().out == "dispatcher output"
+    captured = capsys.readouterr()
+    assert captured.out == "dispatcher output"
+    assert re.fullmatch(r'\{"invocation_id":"[0-9a-f]{32}"\}\n', captured.err)
 
 
 def test_unexpected_error_exits_1(capsys, monkeypatch):
@@ -114,7 +163,10 @@ def test_unexpected_error_exits_1(capsys, monkeypatch):
 
     monkeypatch.setattr(cli, "production_tree", lambda: (_ for _ in ()).throw(RuntimeError("boom")))
     assert cli.main(["status"]) == 1
-    assert capsys.readouterr().err == "internal error: boom\n"
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err == '{"error":{"code":"internal-error","message":"Internal error"}}\n'
+    assert "boom" not in captured.err
 
 
 def test_build_validates_the_command_tree(capsys):

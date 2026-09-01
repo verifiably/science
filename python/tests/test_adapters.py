@@ -1,4 +1,5 @@
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -82,5 +83,84 @@ def test_authored_skill_symlink_refusal_preserves_existing_output(tmp_path):
 
     with pytest.raises(DeclarationError, match="symlink"):
         build_adapter(production_tree(), COMMANDS_ROOT, skills, out)
+
+    assert sentinel.read_text() == "keep"
+
+
+def _existing_output(tmp_path):
+    out = tmp_path / "out"
+    out.mkdir()
+    sentinel = out / "sentinel"
+    sentinel.write_text("keep")
+    return out, sentinel
+
+
+def test_preamble_symlink_refusal_preserves_existing_output(tmp_path):
+    import shutil
+
+    from science.adapters import build_adapter
+
+    commands = tmp_path / "commands"
+    shutil.copytree(COMMANDS_ROOT, commands)
+    preamble = commands / "PREAMBLE.md"
+    target = tmp_path / "outside-preamble"
+    preamble.replace(target)
+    preamble.symlink_to(target)
+    declarations = tuple(
+        replace(declaration, directory=commands / declaration.name)
+        for declaration in production_tree()
+    )
+    out, sentinel = _existing_output(tmp_path)
+
+    with pytest.raises(DeclarationError, match="symlink"):
+        build_adapter(declarations, commands, REPO_ROOT / "skills", out)
+
+    assert sentinel.read_text() == "keep"
+
+
+def test_handler_validation_precedes_output_mutation(tmp_path):
+    from science.adapters import build_adapter
+
+    declaration = replace(production_tree()[0], name="missing-handler-module")
+    out, sentinel = _existing_output(tmp_path)
+
+    with pytest.raises(DeclarationError, match="cannot import"):
+        build_adapter((declaration,), COMMANDS_ROOT, REPO_ROOT / "skills", out)
+
+    assert sentinel.read_text() == "keep"
+
+
+def test_command_source_must_be_contained_by_commands_root(tmp_path):
+    import shutil
+
+    from science.adapters import build_adapter
+
+    outside = tmp_path / "outside" / "status"
+    shutil.copytree(COMMANDS_ROOT / "status", outside)
+    declaration = replace(production_tree()[0], directory=outside)
+    out, sentinel = _existing_output(tmp_path)
+
+    with pytest.raises(DeclarationError, match="contained"):
+        build_adapter((declaration,), COMMANDS_ROOT, REPO_ROOT / "skills", out)
+
+    assert sentinel.read_text() == "keep"
+
+
+def test_missing_prompt_refusal_preserves_existing_output(tmp_path):
+    import shutil
+
+    from science.adapters import build_adapter
+
+    commands = tmp_path / "commands"
+    shutil.copytree(COMMANDS_ROOT, commands)
+    declarations = tuple(
+        replace(declaration, directory=commands / declaration.name)
+        for declaration in production_tree()
+    )
+    (commands / "status" / "prompt.md").unlink()
+    out, sentinel = _existing_output(tmp_path)
+
+    with pytest.raises(DeclarationError, match="prompt"):
+        build_adapter(declarations, commands, REPO_ROOT / "skills", out)
 
     assert sentinel.read_text() == "keep"

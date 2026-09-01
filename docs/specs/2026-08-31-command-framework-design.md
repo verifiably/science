@@ -1,8 +1,8 @@
 # Command framework — design
 
 **Date:** 2026-08-31
-**Status:** approved in session 2026-08-31, after two review rounds
-(interface/security revisions and the end-to-end trace fixes)
+**Status:** approved; read-path Tasks 1–11 implemented, with write-path
+Tasks 12–13 gated on the beliefs permit/session deliverables
 **Scope:** sub-project 2 of the user/autonomy layer design (`beliefs`
 `docs/superpowers/specs/2026-08-29-user-and-autonomy-layer-design.md`, §5 and
 §8 item 2): the command declaration schema, write classes, the budgeted
@@ -80,6 +80,10 @@ name with every `-` replaced by `_` — injective under this grammar, since `_`
 cannot appear in a name — so `science.commands.<module>:handle` is
 unambiguous. **Reserved names**, refused at build: `continue`, `serve`,
 `mcp`, `adapters`, `build`, and any future dispatcher operation.
+The command root, each command directory, both files, and `PREAMBLE.md`
+must be real filesystem directories or regular files as appropriate:
+symlinks and special files are build refusals. Build validation proves each
+command source is contained by the command root before reading it.
 
 ### 3.2 The declaration
 
@@ -104,7 +108,9 @@ families = ["registry", "epoch", "corpus-stored"]
 - `schema_version` is required; the framework refuses a version it does not
   implement.
 - **Inputs.** The type set is closed. `required = true` forbids `default`.
-  An `enum` requires `choices`. An optional input without a `default` is,
+  An `enum` requires `choices`; every non-enum forbids the `choices` key even
+  when its value is an empty list. Runtime input keys must be exact strings
+  before any set operation or sorting. An optional input without a `default` is,
   when absent, absent: it does not appear in the canonical inputs mapping,
   and the handler's keyword parameter receives `None`. Canonicalization —
   the form every digest and every schema is computed over — is: apply
@@ -176,8 +182,17 @@ the test suite) validates every declaration against the schema and refuses
 the tree — not the command — on: schema violation, name grammar or reserved
 name violation, directory/name mismatch, handler missing or its keyword
 signature disagreeing with the declared inputs, unknown kind in a write
-class, duplicate command or skill name. A command that does not fit the
-schema does not ship, as a refusal with the file and field named.
+class, unsafe or uncontained source nodes, or a generated/authored skill-name
+collision. The shared production preflight reads every TOML, prompt, preamble,
+and authored-skill file before adapter output is removed or rewritten. A
+command that does not fit the schema does not ship, as a refusal with the file
+and field named. A single filesystem root cannot contain duplicate directory
+names, so this loader claims no duplicate-command check; a future multi-root
+loader must add collision validation when it introduces that second source.
+
+Until Task 12 imports the beliefs capability contract, the production loader
+also refuses every declaration whose write class is not `read-only`. Generic
+injected trees continue to accept all four write classes for schema tests.
 
 ## 4. Write permits in `beliefs`
 
@@ -533,21 +548,34 @@ session open.
 ### 9.2 CLI
 
 `science`, stdlib `argparse`, zero dependencies. One subcommand per shipped
-command, options compiled from the declaration, plus the global protocol
-options `--config`, `--invocation-id` and `--continue <cursor>` (the wire
-form of §6's protocol fields — continuation is the same subcommand re-run
-with its inputs and the cursor), plus the
-framework verbs `serve`, `mcp`, `adapters`, `build`. Exit
+command, options compiled from the declaration. Command subcommands consume
+`--config`, `--invocation-id` and `--continue <cursor>` (the wire form of §6's
+protocol fields — continuation is the same subcommand re-run with its inputs
+and the cursor). `science mcp serve` consumes only `--config`; `science build`
+and `science adapters build` consume none of those protocol options. The
+`science serve` parser entry is deliberately absent until Task 13 implements
+the service process. Exit
 codes: `0` success, `1` internal error, `2` invalid invocation (argparse's
-own convention), `3` refused. **Read-only commands run in-process with
+own convention), `3` refused.
+
+For every command invocation, stdout contains rendered output only. Stderr
+contains exactly one compact, key-sorted JSON line. Success emits
+`{"invocation_id":"<id>"}`. Refusal emits
+`{"invocation_id":"<id>","refusal":{"code":"…","data":{},"message":"…"}}`,
+preserving the complete §6.3 envelope; a missing caller id is minted before
+configuration loading so even an early refusal is bound. Unexpected failures
+emit only the generic `internal-error` shape (and the id when already bound),
+never exception text.
+
+**Read-only commands run in-process with
 only the read context** — no `WriterSession` is opened and no ledger is
 touched (§4.2, §5.2); read cursors are stateless (§7.3), so paging needs
-nothing a process could leave behind. **Write-class commands go through the service process** —
-`science serve`, the CLI's service of §5.2 of the layer design, same
+nothing a process could leave behind. Once Task 13 lands, **write-class
+commands go through the service process** — `science serve`, the CLI's
+service of §5.2 of the layer design, same
 endpoint core as the MCP server over a local socket — never an in-process
-writer opened per invocation around the endpoint architecture. In this
-sub-project no shipped command writes, so the service path is built and
-exercised by the synthetic exemplars in tests.
+writer opened per invocation around the endpoint architecture. Until then the
+production write gate makes this path unreachable; no shipped command writes.
 
 ### 9.3 MCP server
 
@@ -557,7 +585,8 @@ The server pins **MCP protocol revision `2026-07-28`** — the revision that
 retired the `initialize` handshake in favor of a **mandatory
 `server/discover`** method — whose result carries `supportedVersions`,
 `capabilities`, and the server's `Implementation` under
-`_meta["io.modelcontextprotocol/serverInfo"]` — requires every request to
+`_meta["io.modelcontextprotocol/serverInfo"]`, plus the required
+`CacheableResult` fields `ttlMs` and `cacheScope` — requires every request to
 carry `_meta` with the namespaced `io.modelcontextprotocol/` keys
 (protocol version and client capabilities required; client info optional
 when absent, validated as an `Implementation` when present), and
@@ -572,6 +601,22 @@ versions. The attended
 **writer** session is not an MCP concept at all — it is launcher-owned
 process state, bound to the server process from spawn to exit, that those
 independent requests share: one person, one full permit, one ledger.
+JSON-RPC notifications omit `id` and receive no response. `tools/list` is a
+cacheable paginated result; this implementation returns its complete list
+without `nextCursor`, and therefore refuses every supplied cursor as invalid
+or expired instead of ignoring it. `tools/call` recognizes the standard
+optional `inputResponses` object and `requestState` string. Because science
+never returns `input_required`, either field is unsolicited state and is
+refused `-32602` after its outer type is validated. Every result tree is newly
+allocated, so one caller cannot mutate later discovery, list, or schema
+responses.
+
+Stdio is newline-delimited strict UTF-8 over a binary reader, bounded by the
+published `MAX_REQUEST_BYTES = 1_048_576`. The reader allocates only a bounded
+prefix, drains an oversized frame through its newline, emits a protocol error,
+and then serves the next frame; invalid UTF-8 is a parse error and likewise
+does not terminate or desynchronize the loop.
+
 The tool list is generated 1:1 from the declarations — name, `purpose` as
 description, input JSON Schema from the canonical inputs **plus the
 optional protocol properties `invocation_id` and `cursor`**, which the
@@ -605,6 +650,12 @@ never-edited tree, diffed against a fresh build by a test:
 
 Other harnesses are further targets of the same generator, added when a
 second harness is actually used.
+
+`science build` and `science adapters build` call the same preflight. Before
+any adapter output mutation it validates handler signatures and skill-name
+collisions; rejects symlink, special-file, or uncontained command directories,
+TOMLs, prompts, preamble, and authored-skill sources; and snapshots every
+source's text or bytes. Generation reads only that snapshot.
 
 ## 11. Shipped surface and testing
 
@@ -644,8 +695,10 @@ falsifies it, the test that catches the mutation:
   continuation's never-calls-the-handler; retry dedup, the concurrent
   same-id race resolving to one execution under the dispatch lock,
   id-reuse `input-mismatch`, and `outcome-unknown`; the `status` reader
-  test on a fixture world; the adapter tree diff; the CLI/MCP
-  byte-equivalence test.
+  test on a fixture world; source-safety mutations for command-directory,
+  TOML, prompt, and preamble symlinks; the adapter tree diff; bounded MCP
+  framing recovery; notification silence; and the CLI/MCP byte-equivalence
+  test.
 
 ## 12. The knowledge-model pressure points, carried in
 

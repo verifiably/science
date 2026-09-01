@@ -40,6 +40,13 @@ def test_unknown_command_refused_with_supplied_invocation_id():
     assert caught.value.invocation_id == "caller_id"
 
 
+def test_unknown_command_is_resolved_before_inputs_are_validated():
+    with pytest.raises(Refused) as caught:
+        build().invoke("nope", [], invocation_id="caller_id")
+    assert caught.value.refusal.code == "unknown-command"
+    assert caught.value.invocation_id == "caller_id"
+
+
 def test_handler_refusal_id_is_bound_to_the_calling_invocation():
     dispatcher = build()
 
