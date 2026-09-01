@@ -9,9 +9,14 @@ from science.refusal import Refused
 WORLD_ID = "deadbeef" * 4
 
 
-def write_config(tmp_path: Path, world_id: str = WORLD_ID, extra: str = "") -> Path:
+def write_config(
+    tmp_path: Path,
+    world_id: str = WORLD_ID,
+    extra: str = "",
+    operations_root: str | Path | None = None,
+) -> Path:
     world_root = tmp_path / "world"
-    ops = tmp_path / "ops"
+    ops = tmp_path / "ops" if operations_root is None else operations_root
     corpus = tmp_path / "corpora" / "one"
     cfg = tmp_path / "science.toml"
     cfg.write_text(f'''\
@@ -35,6 +40,12 @@ def test_load_config_builds_beliefs_worldconfig(tmp_path):
     assert cfg.world.world_root == (tmp_path / "world").resolve()
     assert cfg.operations_root == tmp_path / "ops"
     assert cfg.world.corpus_roots == ((tmp_path / "corpora" / "one").resolve(),)
+
+
+def test_load_config_resolves_relative_operations_root(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    cfg = load_config(write_config(tmp_path, operations_root="operations"))
+    assert cfg.operations_root == tmp_path / "operations"
 
 
 def test_missing_or_unknown_fields_are_refused(tmp_path):

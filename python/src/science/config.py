@@ -53,7 +53,7 @@ def load_config(path: Path) -> ScienceConfig:
             world_id=raw["world_id"],
             corpus_roots=tuple(Path(value) for value in raw["corpus_roots"]),
         ),
-        operations_root=Path(raw["operations_root"]),
+        operations_root=Path(raw["operations_root"]).resolve(),
     )
 
 
