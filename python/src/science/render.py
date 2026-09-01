@@ -31,7 +31,7 @@ def report_digest(report: Report) -> str:
 
 def audit_write_report(report: Report, minted: frozenset[tuple[str, str]]) -> None:
     for block in report:
-        if not isinstance(block, RecordBlock):
+        if type(block) is not RecordBlock:
             raise AuditViolation(f"write reports carry record blocks only, got {type(block).__name__}")
         if (block.uid, block.record_id) not in minted:
             raise AuditViolation(

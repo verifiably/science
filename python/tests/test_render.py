@@ -97,6 +97,11 @@ def test_digest_stable():
 def test_write_audit_rules():
     minted = frozenset({("u" * 32, "note:n1")})
     audit_write_report((RecordBlock("u" * 32, "note:n1", "note", "t"),), minted)
+    class SubclassedRecord(RecordBlock):
+        pass
+
+    with pytest.raises(AuditViolation):  # closed reports reject record subclasses
+        audit_write_report((SubclassedRecord("u" * 32, "note:n1", "note", "t"),), minted)
     with pytest.raises(AuditViolation):  # foreign record id
         audit_write_report((RecordBlock("u" * 32, "note:other", "note", "t"),), minted)
     with pytest.raises(AuditViolation):  # right id, wrong uid — both must match
