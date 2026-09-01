@@ -1,0 +1,39 @@
+import secrets
+from pathlib import Path
+
+from beliefs import stored
+from beliefs.consulted import CorpusPins
+from beliefs.root import init_corpus_root, init_world_root, open_corpus, open_world
+from beliefs.world import Fresh, WorldConfig
+
+from science.config import ScienceConfig
+
+PINS = CorpusPins(
+    science_contract="science:" + "a" * 64,
+    domains={"biology": "biology:" + "b" * 64},
+)
+
+
+def fixture_proposition_node(slug: str):
+    return stored.proposition_node(slug, title=slug, claim={"operator": "affects"})
+
+
+def fixture_source_node(slug: str):
+    return stored.source_node(slug, title=slug, identifiers={"doi": "10.1/" + slug})
+
+
+def build_fixture_world(work: Path) -> ScienceConfig:
+    corpus_root = work / "corpus"
+    config = WorldConfig(work / "world", secrets.token_hex(16), (corpus_root,))
+    init_world_root(config)
+    init_corpus_root(corpus_root)
+    writer = open_corpus(corpus_root)
+    writer.adopt_manifest(profile=PINS)
+    world = open_world(config)
+    world.admit(corpus_root, provenance=Fresh(), actor="fixture")
+    writer.add(fixture_proposition_node("p1"))
+    return ScienceConfig(world=config, operations_root=work / "ops")
+
+
+def add_one_more_record(cfg: ScienceConfig) -> None:
+    open_corpus(cfg.world.corpus_roots[0]).add(fixture_proposition_node("p2"))

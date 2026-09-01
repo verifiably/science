@@ -8,8 +8,10 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
+from beliefs.corpus import ReadView
 from beliefs.root import open_world
 from beliefs.world import WorldConfig
+from beliefs.world.registry import load_manifest
 
 from science.refusal import Refusal, Refused
 
@@ -75,3 +77,17 @@ class ReadContext:
     @classmethod
     def open(cls, config: ScienceConfig) -> ReadContext:
         return cls(world=open_world(config.world), config=config)
+
+    def read_views(self) -> tuple[tuple[str, ReadView], ...]:
+        pairs = []
+        for root in self.config.world.corpus_roots:
+            pairs.append((load_manifest(root).corpus_id, ReadView.opened_at(root)))
+        return tuple(sorted(pairs))
+
+    def load_record(self, uid: str, record_id: str):
+        for _, read_view in self.read_views():
+            if read_view.holds(record_id):
+                node = read_view.get(record_id)
+                if node.uid == uid:
+                    return node
+        raise Refused(Refusal("unknown-cursor", f"record {record_id!r} not found"))

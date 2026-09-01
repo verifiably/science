@@ -1,0 +1,8 @@
+schema_version = 1
+name = "status"
+purpose = "Show the world: corpora and their lifecycle status, the current epoch, record counts by kind."
+write_class = "read-only"
+output_budget = 16384
+
+[reads]
+families = ["registry", "epoch", "corpus-stored"]

@@ -1737,6 +1737,7 @@ git commit -m "feat(dispatch): read dispatch with stateless cursor continuation"
 - Create: `python/src/science/commands/status.py`
 - Create: `python/src/science/loader.py`
 - Modify: `python/src/science/config.py` (the `read_view` helper)
+- Create: `python/tests/conftest.py`
 - Create: `python/tests/helpers/__init__.py`
 - Create: `python/tests/helpers/world.py`
 - Test: `python/tests/test_status.py`
