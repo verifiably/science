@@ -2,8 +2,10 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from science.dispatch import Dispatcher
 from science.refusal import Refused, envelope
@@ -14,6 +16,11 @@ PROTOCOL_VERSION = "2026-07-28"
 _NS = "io.modelcontextprotocol/"
 _SERVER_INFO = {"name": "science", "version": "0.1.0"}
 _SERVER_CAPABILITIES = {"tools": {}}
+_EXTENSION_KEY = re.compile(
+    r"[A-Za-z](?:[A-Za-z0-9-]*[A-Za-z0-9])?"
+    r"(?:\.[A-Za-z](?:[A-Za-z0-9-]*[A-Za-z0-9])?)*"
+    r"/(?:[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?)?"
+)
 _TYPES = {
     "string": {"type": "string"},
     "int": {"type": "integer"},
@@ -42,7 +49,11 @@ def tool_schema(declaration: Declaration) -> dict:
         "type": "string",
         "description": "Continuation cursor from a truncated result.",
     }
-    input_schema = {"type": "object", "properties": properties}
+    input_schema = {
+        "type": "object",
+        "properties": properties,
+        "additionalProperties": False,
+    }
     if required:
         input_schema["required"] = required
     return {
@@ -87,11 +98,74 @@ def _envelope_error(request: object) -> str | None:
     return None
 
 
+def _valid_uri(value: object) -> bool:
+    if type(value) is not str or any(character.isspace() for character in value):
+        return False
+    try:
+        return bool(urlsplit(value).scheme)
+    except ValueError:
+        return False
+
+
+def _valid_icon(value: object) -> bool:
+    if type(value) is not dict or not _valid_uri(value.get("src")):
+        return False
+    if "mimeType" in value and type(value["mimeType"]) is not str:
+        return False
+    if "sizes" in value and (
+        type(value["sizes"]) is not list
+        or any(type(size) is not str for size in value["sizes"])
+    ):
+        return False
+    return "theme" not in value or value["theme"] in ("dark", "light")
+
+
 def _valid_implementation(value: object) -> bool:
-    return (
-        type(value) is dict
-        and type(value.get("name")) is str
-        and type(value.get("version")) is str
+    if type(value) is not dict:
+        return False
+    if any(type(value.get(field)) is not str for field in ("name", "version")):
+        return False
+    if any(
+        field in value and type(value[field]) is not str
+        for field in ("title", "description")
+    ):
+        return False
+    if "websiteUrl" in value and not _valid_uri(value["websiteUrl"]):
+        return False
+    return "icons" not in value or (
+        type(value["icons"]) is list
+        and all(_valid_icon(icon) for icon in value["icons"])
+    )
+
+
+def _valid_object_fields(value: object, fields: tuple[str, ...]) -> bool:
+    return type(value) is dict and all(
+        field not in value or type(value[field]) is dict for field in fields
+    )
+
+
+def _valid_client_capabilities(value: object) -> bool:
+    if type(value) is not dict:
+        return False
+    if "roots" in value and type(value["roots"]) is not dict:
+        return False
+    if "sampling" in value and not _valid_object_fields(
+        value["sampling"], ("context", "tools")
+    ):
+        return False
+    if "elicitation" in value and not _valid_object_fields(
+        value["elicitation"], ("form", "url")
+    ):
+        return False
+    for field in ("experimental", "extensions"):
+        if field in value and (
+            type(value[field]) is not dict
+            or any(type(setting) is not dict for setting in value[field].values())
+        ):
+            return False
+    return "extensions" not in value or all(
+        type(key) is str and _EXTENSION_KEY.fullmatch(key)
+        for key in value["extensions"]
     )
 
 
@@ -107,7 +181,7 @@ def _meta_error(meta: object):
             "Unsupported protocol version",
             {"supported": [PROTOCOL_VERSION], "requested": version},
         )
-    if type(meta.get(_NS + "clientCapabilities")) is not dict:
+    if not _valid_client_capabilities(meta.get(_NS + "clientCapabilities")):
         return -32602, f"{_NS}clientCapabilities is required", None
     if _NS + "clientInfo" in meta and not _valid_implementation(
         meta[_NS + "clientInfo"]
@@ -251,7 +325,7 @@ def serve(config_path: Path, stdin=None, stdout=None, session=None) -> None:
                 object_pairs_hook=_object_without_duplicates,
                 parse_constant=_reject_nonfinite_number,
             )
-        except (json.JSONDecodeError, _MalformedJSON):
+        except ValueError:
             response = _rpc_error(None, -32700, "Parse error")
         else:
             response = handle_request(request, dispatcher, declarations)

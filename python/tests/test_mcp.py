@@ -45,6 +45,7 @@ def test_tool_schema_carries_inputs_and_protocol_fields():
     assert schema["name"] == "status"
     assert schema["description"] == declaration.purpose
     assert schema["inputSchema"]["type"] == "object"
+    assert schema["inputSchema"]["additionalProperties"] is False
     assert schema["inputSchema"]["properties"] == {
         "invocation_id": {
             "type": "string",
@@ -159,6 +160,118 @@ def test_optional_client_info_is_validated_when_present():
         request = rpc("tools/list")
         request["params"]["_meta"]["io.modelcontextprotocol/clientInfo"] = malformed
         assert handle_request(request, dispatcher=None, decls=())["error"]["code"] == -32602
+
+
+def test_complete_client_info_shape_accepts_schema_extensions():
+    request = rpc("tools/list")
+    request["params"]["_meta"]["io.modelcontextprotocol/clientInfo"] = {
+        "name": "science-tests",
+        "version": "1",
+        "title": "Science Tests",
+        "description": "MCP boundary fixture",
+        "websiteUrl": "https://science.example/client",
+        "icons": [
+            {
+                "src": "data:image/png;base64,AA==",
+                "mimeType": "image/png",
+                "sizes": ["48x48", "any"],
+                "theme": "dark",
+                "vendorIconField": True,
+            }
+        ],
+        "vendorImplementationField": {"enabled": True},
+    }
+
+    assert "result" in handle_request(request, dispatcher=None, decls=())
+
+
+@pytest.mark.parametrize(
+    "malformed",
+    [
+        {"name": "client", "version": "1", "title": 7},
+        {"name": "client", "version": "1", "description": []},
+        {"name": "client", "version": "1", "websiteUrl": False},
+        {"name": "client", "version": "1", "websiteUrl": "not a URI"},
+        {"name": "client", "version": "1", "icons": 7},
+        {"name": "client", "version": "1", "icons": [None]},
+        {"name": "client", "version": "1", "icons": [{}]},
+        {"name": "client", "version": "1", "icons": [{"src": 7}]},
+        {"name": "client", "version": "1", "icons": [{"src": "icon.png"}]},
+        {
+            "name": "client",
+            "version": "1",
+            "icons": [{"src": "https://science.example/icon", "mimeType": 7}],
+        },
+        {
+            "name": "client",
+            "version": "1",
+            "icons": [{"src": "https://science.example/icon", "sizes": "any"}],
+        },
+        {
+            "name": "client",
+            "version": "1",
+            "icons": [
+                {"src": "https://science.example/icon", "sizes": ["48x48", 48]}
+            ],
+        },
+        {
+            "name": "client",
+            "version": "1",
+            "icons": [{"src": "https://science.example/icon", "theme": "system"}],
+        },
+    ],
+)
+def test_client_info_rejects_malformed_present_known_fields(malformed):
+    request = rpc("tools/list")
+    request["params"]["_meta"]["io.modelcontextprotocol/clientInfo"] = malformed
+
+    assert handle_request(request, dispatcher=None, decls=())["error"]["code"] == -32602
+
+
+def test_complete_client_capabilities_shape_accepts_schema_extensions():
+    request = rpc("tools/list")
+    request["params"]["_meta"]["io.modelcontextprotocol/clientCapabilities"] = {
+        "roots": {"futureRootsField": True},
+        "sampling": {
+            "context": {"supported": True},
+            "tools": {},
+            "futureSamplingField": [],
+        },
+        "elicitation": {
+            "form": {},
+            "url": {"modes": ["https"]},
+            "futureElicitationField": 7,
+        },
+        "experimental": {"vendor-feature": {"enabled": True}},
+        "extensions": {"com.example/client-feature": {}},
+        "vendorCapability": 7,
+    }
+
+    assert "result" in handle_request(request, dispatcher=None, decls=())
+
+
+@pytest.mark.parametrize(
+    "malformed",
+    [
+        {"roots": []},
+        {"sampling": []},
+        {"sampling": {"context": True}},
+        {"sampling": {"tools": []}},
+        {"elicitation": False},
+        {"elicitation": {"form": []}},
+        {"elicitation": {"url": None}},
+        {"experimental": []},
+        {"experimental": {"vendor-feature": True}},
+        {"extensions": []},
+        {"extensions": {"com.example/client-feature": "enabled"}},
+        {"extensions": {"unprefixed": {}}},
+    ],
+)
+def test_client_capabilities_reject_malformed_present_known_fields(malformed):
+    request = rpc("tools/list")
+    request["params"]["_meta"]["io.modelcontextprotocol/clientCapabilities"] = malformed
+
+    assert handle_request(request, dispatcher=None, decls=())["error"]["code"] == -32602
 
 
 def test_unsupported_version_is_32022_with_versions():
@@ -363,6 +476,27 @@ def test_parse_errors_and_non_objects_do_not_end_the_loop(certified_work):
         -32600,
     ]
     assert "result" in lines[4]
+
+
+def test_oversized_json_integer_is_parse_error_and_loop_continues(certified_work):
+    from helpers.world import write_cli_config
+
+    config_path = write_cli_config(certified_work)
+    oversized_id = "9" * 5000
+    stdin = io.StringIO(
+        '{"jsonrpc":"2.0","id":'
+        + oversized_id
+        + ',"method":"tools/list","params":{}}\n'
+        + json.dumps(rpc("tools/list"))
+        + "\n"
+    )
+    stdout = io.StringIO()
+
+    serve(config_path, stdin=stdin, stdout=stdout)
+
+    lines = [json.loads(line) for line in stdout.getvalue().splitlines()]
+    assert lines[0]["error"]["code"] == -32700
+    assert "result" in lines[1]
 
 
 def test_transport_equivalence_cli_vs_mcp(certified_work, capsys):
