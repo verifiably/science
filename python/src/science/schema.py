@@ -162,6 +162,9 @@ def load_declaration(dir_path: Path, *, kind_acts: Mapping[str, frozenset[str]],
     budget = raw.get("output_budget")
     _require(type(budget) is int and budget > 0, path, "output_budget",
              "must be a positive integer (not a bool)")
+    from science.cursor import MIN_OUTPUT_BUDGET
+    _require(budget >= MIN_OUTPUT_BUDGET, path, "output_budget",
+             f"below MIN_OUTPUT_BUDGET ({MIN_OUTPUT_BUDGET})")
     write_raw = raw.get("write_class")
     _require(type(write_raw) is str, path, "write_class", "missing or not a string")
     write_tbl = raw.get("write", {})
