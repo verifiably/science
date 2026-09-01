@@ -555,16 +555,20 @@ exercised by the synthetic exemplars in tests.
 lifetime; the harness configuration that starts it is the person's launcher.
 The server pins **MCP protocol revision `2026-07-28`** — the revision that
 retired the `initialize` handshake in favor of a **mandatory
-`server/discover`** method, requires every request to carry `_meta` with
-the namespaced `io.modelcontextprotocol/` keys (protocol version and
-client capabilities required; client info optional), and **removed
-protocol sessions entirely**: requests are independent. Protocol errors
-stay in the protocol's vocabulary, distinct from framework refusals:
-malformed JSON is `-32700` and never ends the stdio loop, an invalid
-envelope (`jsonrpc`, non-null string/integer `id`, string `method`) or
-params shape is `-32600`, missing required `_meta` fields and unknown
-tool names are `-32602`, and an unsupported protocol version is `-32022`
-carrying the supported and requested versions. The attended
+`server/discover`** method — whose result carries `supportedVersions`,
+`capabilities`, and the server's `Implementation` under
+`_meta["io.modelcontextprotocol/serverInfo"]` — requires every request to
+carry `_meta` with the namespaced `io.modelcontextprotocol/` keys
+(protocol version and client capabilities required; client info optional
+when absent, validated as an `Implementation` when present), and
+**removed protocol sessions entirely**: requests are independent.
+Protocol errors stay in the protocol's vocabulary, distinct from
+framework refusals: malformed JSON is `-32700` and never ends the stdio
+loop, an invalid envelope (`jsonrpc`, non-null string/integer `id`,
+string `method`) is `-32600`, a malformed params object, missing required
+`_meta` fields, and unknown tool names are `-32602`, and an unsupported
+protocol version is `-32022` carrying the supported and requested
+versions. The attended
 **writer** session is not an MCP concept at all — it is launcher-owned
 process state, bound to the server process from spawn to exit, that those
 independent requests share: one person, one full permit, one ledger.

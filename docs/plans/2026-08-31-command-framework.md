@@ -2490,17 +2490,17 @@ MCP concept and is unaffected — the writer session is **launcher-owned
 process state**, bound to the server process from spawn to exit, that
 those independent requests share: same person, full permit, one ledger.
 This ruling is recorded in spec §9.3. **Step 0 of this task:** read the
-pinned revision's tools page and release notes
-(`modelcontextprotocol.io/specification/2026-07-28/server/tools`,
-`blog.modelcontextprotocol.io/posts/2026-07-28/`) and mirror the exact
-request/response envelope — the code below fixes the dispatch logic and our
-side of the contract; field spellings for `_meta`'s members and the
-`resultType` marker come from the spec page, and the tests are written
-from it, not from memory.
+pinned revision's base protocol, versioning, discovery, and tools pages
+(`modelcontextprotocol.io/specification/2026-07-28/basic`,
+`…/basic/versioning`, `…/server/discover`, `…/server/tools`) and mirror
+the exact request/response shapes — the code below fixes the dispatch
+logic and our side of the contract; field spellings for `_meta`'s members,
+the discovery result, and the `resultType` marker come from those pages,
+and the tests are written from them, not from memory.
 
 **Interfaces:**
 - Consumes: `Dispatcher`, `production_tree`, `resolve_handlers`, `ReadContext`, `load_config`, `Refused`.
-- Produces: `PROTOCOL_VERSION = "2026-07-28"`; `tool_schema(decl) -> dict` (JSON Schema: declared inputs + optional `invocation_id` and `cursor` string properties); `handle_request(req, dispatcher, decls) -> dict` — a JSON-RPC 2.0 responder for the **mandatory `server/discover`**, `tools/list`, and `tools/call`, with layered validation: envelope first (`jsonrpc` marker, non-null string/integer `id`, string `method` → `-32600`), then `_meta` (missing required fields → `-32602`; **only protocol version and client capabilities are required, `clientInfo` is optional**; an unsupported version → `-32022` with `{supported, requested}` data), then per-method params (`-32602`, unknown tool names included — a protocol error, never a framework tool refusal); no `initialize` handling exists to keep obsolete clients honest; `serve(config_path, stdin, stdout, session=None) -> None` whose loop answers malformed JSON with `-32700` and never terminates on bad input (the `session` parameter is wired to the attended writer session in Task 12; until then every command it can serve is read-only). Tool results carry the rendered text as content and `structuredContent: {"invocation_id": …}` so callers can reuse minted ids; a refusal result sets `isError`, keeps the human text `refused [<code>] <message>`, and carries the full spec §6.3 envelope (and the invocation id when one was bound) in `structuredContent` — structured `data` is never discarded into parseable text.
+- Produces: `PROTOCOL_VERSION = "2026-07-28"`; `tool_schema(decl) -> dict` (JSON Schema: declared inputs + optional `invocation_id` and `cursor` string properties); `handle_request(req, dispatcher, decls) -> dict` — a JSON-RPC 2.0 responder for the **mandatory `server/discover`**, `tools/list`, and `tools/call`, with layered validation: envelope first (`jsonrpc` marker, non-null string/integer `id`, string `method` → `-32600`), then the params object and `_meta` (`-32602` for a non-object `params` or missing required fields; **only protocol version and client capabilities are required — `clientInfo` is optional when absent but validated as an `Implementation` when present**; an unsupported version → `-32022` with `{supported, requested}` data), then per-method params (`-32602`, unknown tool names included — a protocol error, never a framework tool refusal); `server/discover` returns the discovery contract's shape — `supportedVersions`, `capabilities`, and the server's `Implementation` under `_meta["io.modelcontextprotocol/serverInfo"]`; no `initialize` handling exists to keep obsolete clients honest; `serve(config_path, stdin, stdout, session=None) -> None` whose loop answers malformed JSON with `-32700` and never terminates on bad input (the `session` parameter is wired to the attended writer session in Task 12; until then every command it can serve is read-only). Tool results carry the rendered text as content and `structuredContent: {"invocation_id": …}` so callers can reuse minted ids; a refusal result sets `isError`, keeps the human text `refused [<code>] <message>`, and carries the full spec §6.3 envelope (and the invocation id when one was bound) in `structuredContent` — structured `data` is never discarded into parseable text.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -2558,9 +2558,12 @@ def test_meta_requirements_match_the_revision():
     no_caps = rpc("tools/list")
     del no_caps["params"]["_meta"]["io.modelcontextprotocol/clientCapabilities"]
     assert handle_request(no_caps, dispatcher=None, decls=())["error"]["code"] == -32602
-    without_client_info = rpc("tools/list")  # clientInfo is OPTIONAL
+    without_client_info = rpc("tools/list")  # clientInfo is OPTIONAL when absent
     del without_client_info["params"]["_meta"]["io.modelcontextprotocol/clientInfo"]
     assert "result" in handle_request(without_client_info, dispatcher=None, decls=())
+    bad_client_info = rpc("tools/list")  # …but validated as Implementation when present
+    bad_client_info["params"]["_meta"]["io.modelcontextprotocol/clientInfo"] = {"name": 7}
+    assert handle_request(bad_client_info, dispatcher=None, decls=())["error"]["code"] == -32602
 
 
 def test_unsupported_version_is_32022_with_versions():
@@ -2582,10 +2585,11 @@ def test_envelope_validation():
         assert handle_request(broken, dispatcher=None, decls=())["error"]["code"] == -32600
 
 
-def test_server_discover_is_served():
+def test_server_discover_matches_the_discovery_contract():
     res = handle_request(rpc("server/discover"), dispatcher=None, decls=())["result"]
-    assert res["protocolVersion"] == "2026-07-28"
-    assert res["serverInfo"]["name"] == "science" and "capabilities" in res
+    assert res["supportedVersions"] == ["2026-07-28"]
+    assert "capabilities" in res
+    assert res["_meta"]["io.modelcontextprotocol/serverInfo"]["name"] == "science"
     assert res["resultType"] == "complete"
 
 
@@ -2596,7 +2600,7 @@ def test_results_carry_complete_result_type():
 
 def test_malformed_wire_shapes_are_protocol_errors():
     bad_params = {"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": []}
-    assert handle_request(bad_params, dispatcher=None, decls=())["error"]["code"] == -32600
+    assert handle_request(bad_params, dispatcher=None, decls=())["error"]["code"] == -32602
     bad_args = rpc("tools/call", {"name": "status", "arguments": ["not", "a", "dict"]})
     assert handle_request(bad_args, dispatcher=None, decls=())["error"]["code"] == -32602
     bad_name = rpc("tools/call", {"name": 7, "arguments": {}})
@@ -2718,11 +2722,19 @@ SERVER_INFO = {"name": "science", "version": "0.1.0"}
 SERVER_CAPABILITIES = {"tools": {}}
 
 
+def _valid_implementation(value: object) -> bool:
+    """The spec's Implementation shape: string name and version."""
+    return (isinstance(value, dict)
+            and isinstance(value.get("name"), str)
+            and isinstance(value.get("version"), str))
+
+
 def _meta_error(meta: object) -> tuple[int, str, dict] | None:
     """Required: protocol version and client capabilities. clientInfo is
-    OPTIONAL and never checked. Missing/malformed required fields are
-    invalid params (-32602); an unsupported version is -32022 carrying the
-    supported and requested versions."""
+    OPTIONAL — accepted when absent, but validated as an Implementation
+    when present. Missing/malformed required fields are invalid params
+    (-32602); an unsupported version is -32022 carrying the supported and
+    requested versions."""
     if not isinstance(meta, dict):
         return (-32602, "request _meta is required", {})
     version = meta.get(_NS + "protocolVersion")
@@ -2733,6 +2745,9 @@ def _meta_error(meta: object) -> tuple[int, str, dict] | None:
                 {"supported": [PROTOCOL_VERSION], "requested": version})
     if not isinstance(meta.get(_NS + "clientCapabilities"), dict):
         return (-32602, f"{_NS}clientCapabilities is required", {})
+    client_info = meta.get(_NS + "clientInfo")
+    if client_info is not None and not _valid_implementation(client_info):
+        return (-32602, f"{_NS}clientInfo, when present, must be an Implementation", {})
     return None
 
 
@@ -2764,8 +2779,8 @@ def handle_request(req: dict, dispatcher: Dispatcher, decls) -> dict:
         return _rpc_error(rid, -32600, envelope_problem)
     rid, method = req["id"], req["method"]
     params = req.get("params")
-    if not isinstance(params, dict):  # null, list, or absent: all invalid
-        return _rpc_error(rid, -32600, "params must be an object")
+    if not isinstance(params, dict):  # null, list, or absent: invalid params
+        return _rpc_error(rid, -32602, "params must be an object")
     problem = _meta_error(params.get("_meta"))
     if problem is not None:
         code, message, data = problem
@@ -2774,9 +2789,9 @@ def handle_request(req: dict, dispatcher: Dispatcher, decls) -> dict:
             err["error"]["data"] = data
         return err
     if method == "server/discover":  # mandatory on 2026-07-28
-        return _result(rid, {"protocolVersion": PROTOCOL_VERSION,
-                             "serverInfo": SERVER_INFO,
-                             "capabilities": SERVER_CAPABILITIES})
+        return _result(rid, {"supportedVersions": [PROTOCOL_VERSION],
+                             "capabilities": SERVER_CAPABILITIES,
+                             "_meta": {_NS + "serverInfo": SERVER_INFO}})
     if method == "tools/list":
         return _result(rid, {"tools": [tool_schema(d) for d in decls]})
     if method == "tools/call":
