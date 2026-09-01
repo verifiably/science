@@ -1584,18 +1584,25 @@ class Dispatcher:
                invocation_id: str | None = None, cursor: str | None = None) -> Outcome:
         if invocation_id is not None and not INVOCATION_ID_RE.match(invocation_id):
             raise Refused(Refusal("invalid-input", "invocation_id outside its grammar"))
-        if cursor is not None:
-            return self._continue(command, inputs, decode(cursor), invocation_id)
-        decl = self._decls.get(command)
-        if decl is None:
-            raise Refused(Refusal("unknown-command", f"no command {command!r}"))
-        canonical = canonicalize(decl, inputs)
-        if decl.write_class.kind != "read-only":
-            raise NotImplementedError("write dispatch lands with the beliefs session API")
-        report = self._handlers[decl.name](self._ctx, **canonical)
+        # Minted once, up front: every refusal below — unknown command,
+        # canonicalization, continuation, and later the write path — carries
+        # the id, so no transport loses what a caller needs for a safe retry.
         iid = invocation_id or mint_token()
-        page = self._render(decl, canonical, report, (0, 0))
-        return Outcome(page, iid)
+        try:
+            if cursor is not None:
+                return self._continue(command, inputs, decode(cursor), iid)
+            decl = self._decls.get(command)
+            if decl is None:
+                raise Refused(Refusal("unknown-command", f"no command {command!r}"))
+            canonical = canonicalize(decl, inputs)
+            if decl.write_class.kind != "read-only":
+                raise NotImplementedError("write dispatch lands with the beliefs session API")
+            report = self._handlers[decl.name](self._ctx, **canonical)
+            return Outcome(self._render(decl, canonical, report, (0, 0)), iid)
+        except Refused as e:
+            if e.invocation_id is None:
+                raise Refused(e.refusal, iid) from None
+            raise
 
     def _render(self, decl: Declaration, canonical: Mapping, report: Report,
                 position: tuple[int, int]) -> str:
@@ -1607,7 +1614,7 @@ class Dispatcher:
         return render_page(report, budget=decl.output_budget, position=position,
                            cursor_for=cursor_for).text
 
-    def _continue(self, command: str, inputs: Mapping, cur, invocation_id) -> Outcome:
+    def _continue(self, command: str, inputs: Mapping, cur, iid: str) -> Outcome:
         if isinstance(cur, WriteCursor):
             raise NotImplementedError("write continuation lands with the beliefs session API")
         assert isinstance(cur, ReadCursor)
@@ -1625,7 +1632,6 @@ class Dispatcher:
         if fresh_digest(report) != cur.report_digest:
             raise Refused(Refusal("stale-cursor", "the world moved; re-run the command"))
         self._check_position(report, cur.block, cur.offset)
-        iid = invocation_id or mint_token()
         page = self._render(decl, canonical, report, (cur.block, cur.offset))
         return Outcome(page, iid)
 
@@ -1815,6 +1821,40 @@ def test_production_tree_ships_only_status():
     assert callable(handlers["status"])
 
 
+def test_handler_signature_shape_is_validated(monkeypatch):
+    """Each bad shape passes a name-only comparison and must still refuse."""
+    import sys
+    import types
+    from pathlib import Path
+    from science.cursor import MIN_OUTPUT_BUDGET
+    from science.loader import resolve_handlers
+    from science.schema import Declaration, DeclarationError, InputSpec, WriteClass
+
+    def var_args(ctx, *args, **kwargs): return ()
+    def wrong_lead(world): return ()
+    def positional_input(ctx, corpus=None): return ()  # not keyword-only
+    def good(ctx, *, corpus=None): return ()
+
+    cases = {"var_args": var_args, "wrong_lead": wrong_lead,
+             "positional_input": positional_input}
+    inputs = (InputSpec("corpus", "string", False, "d"),)
+    for name, handle in cases.items():
+        mod = types.ModuleType(f"science.commands.{name}")
+        mod.handle = handle
+        monkeypatch.setitem(sys.modules, f"science.commands.{name}", mod)
+        decl = Declaration(name.replace("_", "-"), "p", WriteClass("read-only"),
+                           MIN_OUTPUT_BUDGET,
+                           inputs if name != "wrong_lead" else (), (), Path("."))
+        with pytest.raises(DeclarationError):
+            resolve_handlers((decl,))
+    ok = types.ModuleType("science.commands.goodcmd")
+    ok.handle = good
+    monkeypatch.setitem(sys.modules, "science.commands.goodcmd", ok)
+    decl = Declaration("goodcmd", "p", WriteClass("read-only"),
+                       MIN_OUTPUT_BUDGET, inputs, (), Path("."))
+    assert callable(resolve_handlers((decl,))["goodcmd"])
+
+
 def test_status_performs_exactly_its_declared_read_families(monkeypatch):
     """N2: the declared `reads` families are a contract — record which read
     surfaces the handler touches through a spying context and compare to the
@@ -1842,6 +1882,7 @@ def test_status_performs_exactly_its_declared_read_families(monkeypatch):
     status_mod.handle(spy_ctx)
     declared = set(next(d for d in production_tree() if d.name == "status").reads)
     assert used == declared
+```
 
 - [ ] **Step 4: Run tests to verify they fail**
 
@@ -1945,22 +1986,36 @@ def resolve_handlers(decls) -> dict:
         handle = getattr(module, "handle", None)
         if handle is None:
             raise DeclarationError(decl.directory, "handler", f"{handler_module(decl.name)} has no handle()")
-        params = inspect.signature(handle).parameters
+        params = list(inspect.signature(handle).parameters.values())
+        POK, KW = inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY
+
+        def _shape_error(reason: str):
+            raise DeclarationError(decl.directory, "handler", reason)
+
+        if any(p.kind in (inspect.Parameter.VAR_POSITIONAL,
+                          inspect.Parameter.VAR_KEYWORD,
+                          inspect.Parameter.POSITIONAL_ONLY) for p in params):
+            _shape_error("no *args, **kwargs, or positional-only parameters")
+        lead = ["ctx", "writer"] if decl.write_class.kind != "read-only" else ["ctx"]
+        if [p.name for p in params[:len(lead)]] != lead \
+                or any(p.kind is not POK for p in params[:len(lead)]):
+            _shape_error(f"handler must lead with exactly {lead}")
+        rest = params[len(lead):]
+        if any(p.kind is not KW for p in rest):
+            _shape_error("declared inputs must be keyword-only (after a bare *)")
         declared = {i.name: i for i in decl.inputs}
-        accepted = {n for n in params if n not in ("ctx", "writer")}
+        accepted = {p.name for p in rest}
         if set(declared) != accepted:
-            raise DeclarationError(decl.directory, "handler",
-                                   f"handler accepts {sorted(accepted)}, declaration says {sorted(declared)}")
+            _shape_error(f"handler accepts {sorted(accepted)}, declaration says {sorted(declared)}")
+        by_name = {p.name: p for p in rest}
         for name, spec in declared.items():
-            default = params[name].default
+            default = by_name[name].default
             if spec.required and default is not inspect.Parameter.empty:
-                raise DeclarationError(decl.directory, "handler",
-                                       f"required input {name!r} must have no handler default")
+                _shape_error(f"required input {name!r} must have no handler default")
             if not spec.required and default is not None:
                 # An absent optional is absent from **canonical, so the
                 # parameter's own default is what the handler sees: None.
-                raise DeclarationError(decl.directory, "handler",
-                                       f"optional input {name!r} must default to None")
+                _shape_error(f"optional input {name!r} must default to None")
         handlers[decl.name] = handle
     return handlers
 ```
@@ -2414,6 +2469,9 @@ def test_missing_or_incomplete_meta_is_a_protocol_error():
     no_client = rpc("tools/list")
     del no_client["params"]["_meta"]["io.modelcontextprotocol/clientInfo"]
     assert handle_request(no_client, dispatcher=None, decls=())["error"]["code"] == -32600
+    no_caps = rpc("tools/list")
+    del no_caps["params"]["_meta"]["io.modelcontextprotocol/clientCapabilities"]
+    assert handle_request(no_caps, dispatcher=None, decls=())["error"]["code"] == -32600
 
 
 def test_results_carry_complete_result_type():
@@ -2818,6 +2876,15 @@ def test_forged_kind_and_title_never_render(rig):
     assert "[proposition] proposition:forge" in out.text
 
 
+def test_unknown_claim_type_fails_closed(rig, monkeypatch):
+    """A claim outside the closed union must never execute as fresh."""
+    d, session = rig
+    monkeypatch.setattr(session, "claim_invocation", lambda *a, **k: object())
+    with pytest.raises(TypeError):
+        d.invoke("mint-claim", {"slug": "never"}, invocation_id="M" * 8)
+    assert len(session.invocation_acts("M" * 8)) == 0  # nothing was written
+
+
 def test_write_cursor_bound_to_its_command(rig):
     d, _ = rig
     small = Declaration("mint-claim", "fixture", MINT_CLAIM.write_class,
@@ -2866,10 +2933,9 @@ Expected: FAIL — `NotImplementedError` from the read-only dispatcher (or `Impo
 
 - [ ] **Step 3: Implement the write branch in `dispatch.py`**
 
-Replace the `NotImplementedError` branches:
-
-```python
-Replace `Dispatcher.__init__` in full (the lock is the only addition):
+Three exact replacements, then the new methods. First, `Dispatcher.__init__`
+in full (the lock is the only addition; add `import threading` at the top
+of `dispatch.py`):
 
 ```python
     def __init__(self, declarations, handlers: Mapping[str, Callable],
@@ -2881,8 +2947,16 @@ Replace `Dispatcher.__init__` in full (the lock is the only addition):
         self._lock = threading.Lock()  # serializes write-class steps 4-7
 ```
 
-(add `import threading` at the top of `dispatch.py`), then add the write
-branch:
+Second, in `invoke`, replace the `NotImplementedError` write line — this is
+what actually routes writes, and `iid` is already minted above it:
+
+```python
+            if decl.write_class.kind != "read-only":
+                return self._invoke_write(decl, canonical, iid)
+```
+
+Third, the write arm of `_continue` (below). Then add the write-branch
+methods:
 
 ```python
     def _required(self, decl: Declaration):
@@ -2913,20 +2987,21 @@ branch:
                            {"kind": type(value).__name__, "reason": str(value.reason)})
         return Refusal("kernel-refused", str(e), {"kind": type(e).__name__})
 
-    def _invoke_write(self, decl, canonical, invocation_id):
+    def _invoke_write(self, decl, canonical, iid: str):
         from beliefs.permit import PermitExceeded
         from beliefs.errors import WriteRefused
         from beliefs.session import (
             ClaimDone, ClaimFresh, ClaimMismatch, ClaimOpen, KernelRefusalValue,
         )
         from science.render import audit_write_report
+        # iid was minted at the top of `invoke`; every refusal here names it.
         if self._session is None:
-            raise Refused(Refusal("permit-exceeded", "no writer session on this surface"))
+            raise Refused(Refusal("permit-exceeded",
+                                  "no writer session on this surface"), iid)
         try:
             writer = self._session.scoped(self._required(decl))
         except PermitExceeded as e:
-            raise Refused(self._kernel_refusal(e))
-        iid = invocation_id or mint_token()
+            raise Refused(self._kernel_refusal(e), iid)
         with self._lock:
             claim = self._session.claim_invocation(iid, decl.name, input_digest(canonical))
             if isinstance(claim, ClaimDone):
@@ -3021,7 +3096,6 @@ handler call, never canonicalization:
             if fresh_digest(report) != cur.report_digest:
                 raise Refused(Refusal("stale-cursor", "the records changed; re-run"))
             self._check_position(report, cur.block, cur.offset)
-            iid = invocation_id or mint_token()
             page = render_page(report, budget=decl.output_budget,
                                position=(cur.block, cur.offset),
                                cursor_for=lambda pos, rd: encode(
@@ -3290,18 +3364,49 @@ def test_existing_socket_refuses_startup(certified_work):
     sock_path.touch()  # a stale socket is the operator's to remove
     with pytest.raises(Refused):
         serve(cfg, sock_path)
+    # The refusal precedes session opening, so nothing leaked into the ledger.
+    assert not (cfg.operations_root / "sessions").exists()
 
 
-def test_cli_write_without_service_refuses(certified_work, capsys, monkeypatch):
-    """_via_service with no socket: exit 3 and a message naming `science serve`."""
-    from science.cli import _via_service
+def test_cli_write_without_service_refuses(certified_work, capsys):
+    """_via_service with a real config but no socket: exit 3 and a message
+    naming `science serve` — the config must load first, or the refusal
+    would be about configuration, not the missing service."""
     import argparse
-    cfg = build_fixture_world(certified_work)
-    ns = argparse.Namespace(config=None, invocation_id=None, cursor=None)
-    monkeypatch.setattr("science.cli._service_socket", lambda config: cfg.operations_root / "service.sock")
-    code = _via_service(ns, None, {})
+    from science.cli import _via_service
+    from tests.helpers.synthetic import MINT_CLAIM
+    from tests.helpers.world import write_cli_config
+    cfg_path = write_cli_config(certified_work)
+    ns = argparse.Namespace(config=str(cfg_path), invocation_id=None, cursor=None)
+    code = _via_service(ns, MINT_CLAIM, {"slug": "x"})
     assert code == 3
     assert "science serve" in capsys.readouterr().err
+
+
+def test_cli_write_routes_through_service(certified_work, capsys):
+    """The success path end to end: CLI -> socket -> dispatcher -> reply."""
+    import argparse
+    from science.cli import _via_service
+    from science.config import load_config
+    from tests.helpers.synthetic import MINT_CLAIM, synthetic_decls_and_handlers
+    from tests.helpers.world import write_cli_config
+    cfg_path = write_cli_config(certified_work)
+    cfg = load_config(cfg_path)
+    decls, handlers = synthetic_decls_and_handlers()
+    server = serve(cfg, cfg.operations_root / "service.sock",
+                   declarations=decls, handlers=handlers)
+    t = threading.Thread(target=server.serve_forever, daemon=True)
+    t.start()
+    try:
+        ns = argparse.Namespace(config=str(cfg_path), invocation_id=None, cursor=None)
+        code = _via_service(ns, MINT_CLAIM, {"slug": "via"})
+        captured = capsys.readouterr()
+        assert code == 0
+        assert "proposition:via" in captured.out
+        assert "invocation-id: " in captured.err
+    finally:
+        server.shutdown()
+        server.server_close()
 ```
 
 - [ ] **Step 3: Run tests to verify they fail**
@@ -3328,62 +3433,59 @@ def serve(config: ScienceConfig, socket_path: Path, declarations=None, handlers=
     """`declarations`/`handlers` default to the production tree; tests inject
     their synthetic set here — production code never imports test modules."""
     from beliefs.session import open_attended_session
+    from science.refusal import envelope
     if declarations is None:
         from science.loader import production_tree, resolve_handlers
         declarations = production_tree()
         handlers = resolve_handlers(declarations)
-    session = open_attended_session(config.world, config.operations_root)
-    dispatcher = Dispatcher(declarations, handlers, ReadContext.open(config),
-                            session=session)
+    # Every pre-session refusal happens before the session exists; after it
+    # is opened, any constructor failure closes it before propagating.
     if socket_path.exists():
         raise Refused(Refusal("invalid-input",
                               f"socket already exists: {socket_path}; a stale one "
                               "from a crashed service is the operator's to remove"))
+    session = open_attended_session(config.world, config.operations_root)
+    try:
+        dispatcher = Dispatcher(declarations, handlers, ReadContext.open(config),
+                                session=session)
 
-    class Handler(socketserver.StreamRequestHandler):
-        def handle(self) -> None:
-            for line in self.rfile:
-                req = json.loads(line)
-                try:
-                    out = dispatcher.invoke(req["command"], req.get("inputs") or {},
-                                            invocation_id=req.get("invocation_id"),
-                                            cursor=req.get("cursor"))
-                    reply = {"ok": True, "text": out.text, "invocation_id": out.invocation_id}
-                except Refused as e:
-                    reply = {"ok": False, "refusal": {"code": e.refusal.code,
-                                                      "message": e.refusal.message,
-                                                      "data": dict(e.refusal.data)}}
-                self.wfile.write(json.dumps(reply).encode() + b"\n")
+        class Handler(socketserver.StreamRequestHandler):
+            def handle(self) -> None:
+                for line in self.rfile:
+                    try:
+                        req = json.loads(line)
+                        if not isinstance(req, dict):
+                            raise Refused(Refusal("invalid-input", "request must be an object"))
+                        out = dispatcher.invoke(req.get("command", ""),
+                                                req.get("inputs") or {},
+                                                invocation_id=req.get("invocation_id"),
+                                                cursor=req.get("cursor"))
+                        reply = {"ok": True, "text": out.text,
+                                 "invocation_id": out.invocation_id}
+                    except json.JSONDecodeError as e:
+                        reply = {"ok": False, "refusal": envelope(
+                            Refusal("invalid-input", f"request is not JSON: {e}"))}
+                    except Refused as e:
+                        reply = {"ok": False, "refusal": envelope(e.refusal)}
+                        if e.invocation_id is not None:
+                            reply["invocation_id"] = e.invocation_id
+                    self.wfile.write(json.dumps(reply).encode() + b"\n")
 
-    socket_path.parent.mkdir(parents=True, exist_ok=True)
-    # No unlink anywhere: the existence check above refused already, and if a
-    # socket appears in the race window, bind() fails loudly — never clean up.
-    return socketserver.ThreadingUnixStreamServer(str(socket_path), Handler)
+        class Server(socketserver.ThreadingUnixStreamServer):
+            def server_close(self) -> None:
+                super().server_close()
+                session.close()
+
+        socket_path.parent.mkdir(parents=True, exist_ok=True)
+        # No unlink anywhere: the existence check above refused already, and
+        # if a socket appears in the race window, bind() fails loudly — never
+        # clean up. A bind failure lands in the except below, which closes
+        # the session before re-raising.
+        return Server(str(socket_path), Handler)
+    except BaseException:
+        session.close()
+        raise
 ```
-
-The service's `Handler` also carries the refusal's invocation id when the
-dispatcher attached one: build the error reply as
-
-```python
-                except Refused as e:
-                    from science.refusal import envelope
-                    reply = {"ok": False, "refusal": envelope(e.refusal)}
-                    if e.invocation_id is not None:
-                        reply["invocation_id"] = e.invocation_id
-```
-
-and give the server a `server_close` override so shutdown writes the
-ledger's `session-close` line:
-
-```python
-    class Server(socketserver.ThreadingUnixStreamServer):
-        def server_close(self) -> None:
-            super().server_close()
-            session.close()
-```
-
-(return `Server(str(socket_path), Handler)`; the test's `finally:
-server.shutdown()` gains `server.server_close()`.)
 
 In `cli.py`, the exact routing code:
 

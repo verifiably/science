@@ -280,7 +280,10 @@ where `actor` stops being a caller-supplied string. The returned
 `WriterSession` is the **trusted server-side object**: it lives in the
 endpoint process, wraps the permit-bound entry points and the ledger, and
 is touched only by the dispatcher — handlers receive at most the
-invocation-scoped writer of §4.2. It
+invocation-scoped writer of §4.2. Closing the session
+(`WriterSession.close()`, idempotent) appends the ledger's `session-close`
+line; every endpoint closes its session in a `finally`, on the error path
+as much as on clean shutdown. It
 is distinct from the **session handle** — the transport address and
 per-session token an actor process will hold — which does not exist until
 sub-project 6 builds the sandbox; naming the distinction now is what lets 6
@@ -417,7 +420,15 @@ and the exceeded capability as fields. `kernel-refused` carries the kernel's
 own prefix-stable reason verbatim in `message` and its structured refusal
 kind (the `WriteRefused` subclass name or value-refusal type) in `data`;
 the renderer presents it verbatim, and nothing upstream repairs, retries
-with altered inputs, or writes around it.
+with altered inputs, or writes around it. The kernel's two refusal
+conventions reach the endpoint through **one normalization path**:
+exception-style refusals (`WriteRefused` and its subclasses) propagate as
+raised, and value-style refusals (`RunRefused`, `AdmissionRefused`, …)
+are raised by the invocation-scoped writer wrapped in
+**`KernelRefusalValue`** — a scoped writer never *returns* a refusal
+value, so the dispatcher has exactly one place to translate either shape
+into this envelope, and a write-path refusal always carries the
+invocation id it was bound to.
 
 ### 6.4 The threat boundary
 
