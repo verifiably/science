@@ -265,6 +265,35 @@ def test_stray_file_in_command_directory_refused(tmp_path):
     with pytest.raises(DeclarationError) as e:
         load_declaration(d, kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)
     assert "notes.txt" in str(e.value)
+
+
+BASE = """
+schema_version = 1
+name = "status"
+purpose = "Show the world."
+write_class = "read-only"
+output_budget = 16384
+"""
+
+
+@pytest.mark.parametrize("mutation", [
+    'inputs = "nope"',                        # inputs not a table
+    '[write]\nextra = 1',                     # unknown write key
+    'write = "x"',                            # write not a table
+    '[write]\nroutes = "run"',                # routes not a table
+    'reads = "families"',                     # reads not a table
+    '[reads]\nfamilies = "registry"',         # families a string, not a list
+    '[reads]\nextra = []',                    # unknown reads key
+    '[inputs.m]\ntype = "enum"\nrequired = false\nchoices = "ab"\ndoc = "x"',  # choices a string
+])
+def test_malformed_tables_are_declaration_errors(tmp_path, mutation):
+    """Every malformed table refuses as a DeclarationError — never silently
+    normalized, never an uncaught TypeError/AttributeError. BASE has no
+    inputs table, so each mutation exercises its own check rather than a
+    TOML duplicate-key error."""
+    d = write_command(tmp_path, "status", BASE + mutation + "\n")
+    with pytest.raises(DeclarationError):
+        load_declaration(d, kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)
 ```
 
 Budget-floor refusal is added in Task 4 when `MIN_OUTPUT_BUDGET` exists; leave it out here.
@@ -364,11 +393,14 @@ def _parse_inputs(raw: Mapping, path: Path) -> tuple[InputSpec, ...]:
         required = spec.get("required")
         _require(isinstance(required, bool), path, f"inputs.{name}.required", "must be a bool")
         doc = spec.get("doc")
-        _require(isinstance(doc, str) and doc, path, f"inputs.{name}.doc", "must be a non-empty string")
-        choices = tuple(spec.get("choices", ()))
+        _require(type(doc) is str and doc, path, f"inputs.{name}.doc", "must be a non-empty string")
+        raw_choices = spec.get("choices", [])
+        _require(type(raw_choices) is list, path, f"inputs.{name}.choices",
+                 "must be a list — a string would be read as characters")
+        choices = tuple(raw_choices)
         if typ == "enum":
             _require(len(choices) > 0 and len(set(choices)) == len(choices)
-                     and all(isinstance(c, str) for c in choices),
+                     and all(type(c) is str for c in choices),
                      path, f"inputs.{name}.choices", "enum requires unique string choices")
         else:
             _require(not choices, path, f"inputs.{name}.choices", "only enum takes choices")
@@ -443,14 +475,29 @@ def load_declaration(dir_path: Path, *, kind_acts: Mapping[str, frozenset[str]],
     _require(type(budget) is int and budget > 0, path, "output_budget",
              "must be a positive integer (not a bool)")
     write_raw = raw.get("write_class")
-    _require(isinstance(write_raw, str), path, "write_class", "missing")
+    _require(type(write_raw) is str, path, "write_class", "missing or not a string")
     write_tbl = raw.get("write", {})
-    routes_raw = write_tbl.get("routes", {}) if isinstance(write_tbl, dict) else {}
+    _require(type(write_tbl) is dict, path, "write", "must be a table")
+    _require(set(write_tbl) <= {"routes"}, path, "write",
+             f"unknown keys {sorted(set(write_tbl) - {'routes'})}")
+    routes_raw = write_tbl.get("routes", {})
+    _require(type(routes_raw) is dict
+             and all(type(k) is str and type(v) is str for k, v in routes_raw.items()),
+             path, "write.routes", "must be a table of kind = \"route\" strings")
     write_class = _parse_write_class(write_raw, routes_raw, path, kind_acts, contract_kinds)
     reads_tbl = raw.get("reads", {})
-    reads = tuple(reads_tbl.get("families", ())) if isinstance(reads_tbl, dict) else ()
-    _require(all(isinstance(r, str) and r for r in reads), path, "reads.families", "strings only")
-    inputs = _parse_inputs(raw.get("inputs", {}), path)
+    _require(type(reads_tbl) is dict, path, "reads", "must be a table")
+    _require(set(reads_tbl) <= {"families"}, path, "reads",
+             f"unknown keys {sorted(set(reads_tbl) - {'families'})}")
+    families_raw = reads_tbl.get("families", [])
+    _require(type(families_raw) is list, path, "reads.families",
+             "must be a list — a string would be read as characters")
+    reads = tuple(families_raw)
+    _require(all(type(r) is str and r for r in reads), path, "reads.families",
+             "non-empty strings only")
+    inputs_tbl = raw.get("inputs", {})
+    _require(type(inputs_tbl) is dict, path, "inputs", "must be a table")
+    inputs = _parse_inputs(inputs_tbl, path)
     known_top = {"schema_version", "name", "purpose", "write_class", "write",
                  "output_budget", "inputs", "reads"}
     extra = set(raw) - known_top
@@ -861,14 +908,25 @@ def test_garbage_refuses_unknown_cursor(junk):
     assert e.value.refusal.code == "unknown-cursor"
 
 
-def test_field_bounds_enforced_on_decode():
-    # Construct an over-long command by hand-encoding:
+def _hand_encode(raw: dict) -> str:
     import base64, json
-    raw = {"f": "r", "c": "s" * 33, "i": "a" * 64, "r": "b" * 64, "b": 1, "o": 1}
-    token = "scur1." + base64.urlsafe_b64encode(
+    return "scur1." + base64.urlsafe_b64encode(
         json.dumps(raw, sort_keys=True, separators=(",", ":")).encode()).decode().rstrip("=")
+
+
+def test_field_bounds_enforced_on_decode():
+    # An over-long command:
+    over_long = {"f": "r", "c": "s" * 33, "i": "a" * 64, "r": "b" * 64, "b": 1, "o": 1}
     with pytest.raises(Refused):
-        decode(token)
+        decode(_hand_encode(over_long))
+
+
+def test_boolean_position_refused():
+    # JSON true is a Python bool — an int subclass that must not pass as u64.
+    forged = {"f": "r", "c": "status", "i": "a" * 64, "r": "b" * 64, "b": True, "o": 0}
+    with pytest.raises(Refused) as e:
+        decode(_hand_encode(forged))
+    assert e.value.refusal.code == "unknown-cursor"
 
 
 def test_budget_floor_refused_in_schema(tmp_path):
@@ -939,7 +997,9 @@ def _refuse(detail: str) -> None:
 
 
 def _check_u64(value: object, name: str) -> int:
-    if not isinstance(value, int) or not (0 <= value <= _U64_MAX):
+    # `type(...) is int`: a JSON boolean is a Python bool, which is an int
+    # subclass and must not pass as a position.
+    if type(value) is not int or not (0 <= value <= _U64_MAX):
         _refuse(f"{name} out of range")
     return value
 
@@ -1821,38 +1881,59 @@ def test_production_tree_ships_only_status():
     assert callable(handlers["status"])
 
 
-def test_handler_signature_shape_is_validated(monkeypatch):
-    """Each bad shape passes a name-only comparison and must still refuse."""
+def _star_args(ctx, *args): return ()
+def _star_kwargs(ctx, **kwargs): return ()
+def _positional_only(ctx, corpus, /): return ()
+def _wrong_lead(world): return ()
+def _positional_input(ctx, corpus=None): return ()  # not keyword-only
+def _missing_writer(ctx, *, corpus=None): return ()  # write class needs writer
+def _stray_writer(ctx, writer, *, corpus=None): return ()  # read-only takes none
+def _good(ctx, *, corpus=None): return ()
+
+
+def _bind_and_resolve(monkeypatch, name, handle, write_class, inputs):
     import sys
     import types
     from pathlib import Path
     from science.cursor import MIN_OUTPUT_BUDGET
     from science.loader import resolve_handlers
-    from science.schema import Declaration, DeclarationError, InputSpec, WriteClass
+    from science.schema import Declaration
+    mod = types.ModuleType(f"science.commands.{name}")
+    mod.handle = handle
+    monkeypatch.setitem(sys.modules, f"science.commands.{name}", mod)
+    decl = Declaration(name, "p", write_class, MIN_OUTPUT_BUDGET, inputs, (), Path("."))
+    return resolve_handlers((decl,))
 
-    def var_args(ctx, *args, **kwargs): return ()
-    def wrong_lead(world): return ()
-    def positional_input(ctx, corpus=None): return ()  # not keyword-only
-    def good(ctx, *, corpus=None): return ()
 
-    cases = {"var_args": var_args, "wrong_lead": wrong_lead,
-             "positional_input": positional_input}
+@pytest.mark.parametrize("handle", [
+    _star_args,          # *args alone
+    _star_kwargs,        # **kwargs alone
+    _positional_only,    # positional-only input
+    _wrong_lead,         # first parameter is not ctx
+    _positional_input,   # input not keyword-only
+    _stray_writer,       # writer on a read-only handler
+])
+def test_each_bad_read_handler_shape_refused_in_isolation(monkeypatch, handle):
+    from science.schema import DeclarationError, InputSpec, WriteClass
+    inputs = () if handle is _wrong_lead else (InputSpec("corpus", "string", False, "d"),)
+    with pytest.raises(DeclarationError):
+        _bind_and_resolve(monkeypatch, "shapecase", handle, WriteClass("read-only"), inputs)
+
+
+def test_write_handler_must_take_writer(monkeypatch):
+    from science.schema import DeclarationError, InputSpec, WriteClass
+    wc = WriteClass("mints", ("proposition",), {"proposition": "corpus-write"})
     inputs = (InputSpec("corpus", "string", False, "d"),)
-    for name, handle in cases.items():
-        mod = types.ModuleType(f"science.commands.{name}")
-        mod.handle = handle
-        monkeypatch.setitem(sys.modules, f"science.commands.{name}", mod)
-        decl = Declaration(name.replace("_", "-"), "p", WriteClass("read-only"),
-                           MIN_OUTPUT_BUDGET,
-                           inputs if name != "wrong_lead" else (), (), Path("."))
-        with pytest.raises(DeclarationError):
-            resolve_handlers((decl,))
-    ok = types.ModuleType("science.commands.goodcmd")
-    ok.handle = good
-    monkeypatch.setitem(sys.modules, "science.commands.goodcmd", ok)
-    decl = Declaration("goodcmd", "p", WriteClass("read-only"),
-                       MIN_OUTPUT_BUDGET, inputs, (), Path("."))
-    assert callable(resolve_handlers((decl,))["goodcmd"])
+    with pytest.raises(DeclarationError):
+        _bind_and_resolve(monkeypatch, "shapecase", _missing_writer, wc, inputs)
+
+
+def test_good_handler_shape_resolves(monkeypatch):
+    from science.schema import InputSpec, WriteClass
+    inputs = (InputSpec("corpus", "string", False, "d"),)
+    handlers = _bind_and_resolve(monkeypatch, "shapecase", _good,
+                                 WriteClass("read-only"), inputs)
+    assert callable(handlers["shapecase"])
 
 
 def test_status_performs_exactly_its_declared_read_families(monkeypatch):
@@ -2479,6 +2560,17 @@ def test_results_carry_complete_result_type():
     assert listed["result"]["resultType"] == "complete"
 
 
+def test_malformed_wire_shapes_are_protocol_errors():
+    bad_params = {"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": []}
+    assert handle_request(bad_params, dispatcher=None, decls=())["error"]["code"] == -32600
+    bad_args = rpc("tools/call", {"name": "status", "arguments": ["not", "a", "dict"]})
+    assert handle_request(bad_args, dispatcher=None, decls=())["error"]["code"] == -32602
+    bad_name = rpc("tools/call", {"name": 7, "arguments": {}})
+    assert handle_request(bad_name, dispatcher=None, decls=())["error"]["code"] == -32602
+    bad_cursor = rpc("tools/call", {"name": "status", "arguments": {"cursor": 3}})
+    assert handle_request(bad_cursor, dispatcher=None, decls=())["error"]["code"] == -32602
+
+
 def test_initialize_is_gone():
     res = handle_request(rpc("initialize"), dispatcher=None, decls=())
     assert res["error"]["code"] == -32601  # retired by MCP 2026-07-28; no legacy shim
@@ -2581,21 +2673,36 @@ def _meta_error(meta: object) -> str | None:
     return None
 
 
+def _rpc_error(rid, code: int, message: str) -> dict:
+    return {"jsonrpc": "2.0", "id": rid, "error": {"code": code, "message": message}}
+
+
 def handle_request(req: dict, dispatcher: Dispatcher, decls) -> dict:
+    if not isinstance(req, dict):
+        return _rpc_error(None, -32600, "request must be an object")
     rid, method = req.get("id"), req.get("method")
-    params = req.get("params") or {}
+    params = req.get("params")
+    if not isinstance(params, dict):  # null, list, or absent: all -32600
+        return _rpc_error(rid, -32600, "params must be an object")
     problem = _meta_error(params.get("_meta"))
     if problem is not None:
-        return {"jsonrpc": "2.0", "id": rid,
-                "error": {"code": -32600, "message": problem}}
+        return _rpc_error(rid, -32600, problem)
     if method == "tools/list":
         return _result(rid, {"tools": [tool_schema(d) for d in decls]})
     if method == "tools/call":
-        arguments = dict(params.get("arguments", {}))
+        if not isinstance(params.get("name"), str):
+            return _rpc_error(rid, -32602, "tool name must be a string")
+        raw_args = params.get("arguments", {})
+        if not isinstance(raw_args, dict):
+            return _rpc_error(rid, -32602, "arguments must be an object")
+        arguments = dict(raw_args)
         cursor = arguments.pop("cursor", None)
         invocation_id = arguments.pop("invocation_id", None)
+        for label, value in (("cursor", cursor), ("invocation_id", invocation_id)):
+            if value is not None and not isinstance(value, str):
+                return _rpc_error(rid, -32602, f"{label} must be a string")
         try:
-            out = dispatcher.invoke(params.get("name", ""), arguments,
+            out = dispatcher.invoke(params["name"], arguments,
                                     invocation_id=invocation_id, cursor=cursor)
             return _result(rid, {"content": [{"type": "text", "text": out.text}],
                                  "structuredContent": {"invocation_id": out.invocation_id},
@@ -2670,7 +2777,12 @@ git commit -m "feat(mcp): stdio MCP server with CLI transport-equivalence test"
 - Test: `python/tests/test_write_dispatch.py`
 
 **Interfaces:**
-- Consumes (the beliefs contract; verify names against what beliefs actually shipped and adjust once, here):
+- Consumes — **the pinned companion contract.** These names are shared with
+  the beliefs writer-session task (`beliefs-afbbff`, which cites this
+  block) and beliefs implements exactly them. They are not a sketch to
+  reconcile: if implementation there forces a change, that is a change
+  request against both documents, made before either side codes on, never
+  a local adjustment here:
   - `beliefs.permit.RequiredCapabilities` with `.none()`, `.coordination()`, `.for_kinds(kinds: Iterable[str], routes: Mapping[str, str])`, `.publishes()`
   - `beliefs.permit.PermitExceeded(WriteRefused)` with `.requirement` and `.capability` attributes
   - `beliefs.session.open_attended_session(world_config, operations_root) -> WriterSession`
@@ -2781,7 +2893,9 @@ def test_act_time_refusal_when_body_exceeds_declaration(rig):
     d, _ = rig
     with pytest.raises(Refused) as e:
         d.invoke("overreach", {})
-    assert e.value.refusal.code in ("permit-exceeded", "kernel-refused")
+    # The contract is exact: exceeding the invocation-scoped permit is
+    # permit-exceeded, never a generic kernel refusal.
+    assert e.value.refusal.code == "permit-exceeded"
 
 
 def test_dedup_replays_without_reexecution(rig):
@@ -3356,6 +3470,52 @@ def test_service_refusal_carries_envelope_and_replays(certified_work):
         server.server_close()
 
 
+def _raw_line(sock_path, raw: bytes):
+    with socket.socket(socket.AF_UNIX) as s:
+        s.connect(str(sock_path))
+        s.sendall(raw + b"\n")
+        return json.loads(s.makefile().readline())
+
+
+def test_malformed_requests_get_structured_refusals(certified_work):
+    """Bad JSON and bad shapes both come back as invalid-input replies — the
+    connection survives and no exception escapes the handler."""
+    from tests.helpers.synthetic import synthetic_decls_and_handlers
+    cfg = build_fixture_world(certified_work)
+    decls, handlers = synthetic_decls_and_handlers()
+    sock_path = cfg.operations_root / "service.sock"
+    server = serve(cfg, sock_path, declarations=decls, handlers=handlers)
+    t = threading.Thread(target=server.serve_forever, daemon=True)
+    t.start()
+    try:
+        for raw in (b"{not json",
+                    b'["not", "an", "object"]',
+                    b'{"command": 7, "inputs": {}}',
+                    b'{"command": "mint-claim", "inputs": ["list"]}',
+                    b'{"command": "mint-claim", "inputs": {}, "cursor": 3}',
+                    b'{"command": "mint-claim", "inputs": {}, "stray": true}'):
+            reply = _raw_line(sock_path, raw)
+            assert reply["ok"] is False
+            assert reply["refusal"]["code"] == "invalid-input"
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
+def test_bind_failure_closes_the_session(certified_work):
+    """A socket path over the AF_UNIX length limit fails at bind, after the
+    session opened — the constructor must close it on the way out, which the
+    ledger's session-close line proves."""
+    cfg = build_fixture_world(certified_work)
+    long_sock = cfg.operations_root / ("s" * 200 + ".sock")
+    with pytest.raises(OSError):
+        serve(cfg, long_sock)  # production tree loads; bind raises
+    ledgers = list((cfg.operations_root / "sessions").glob("*/ledger.v1"))
+    assert len(ledgers) == 1
+    last = json.loads(ledgers[0].read_text().splitlines()[-1])
+    assert last["type"] == "session-close"
+
+
 def test_existing_socket_refuses_startup(certified_work):
     from science.refusal import Refused
     cfg = build_fixture_world(certified_work)
@@ -3449,17 +3609,35 @@ def serve(config: ScienceConfig, socket_path: Path, declarations=None, handlers=
         dispatcher = Dispatcher(declarations, handlers, ReadContext.open(config),
                                 session=session)
 
+        def _validated(req) -> tuple[str, dict, str | None, str | None]:
+            def refuse(message: str):
+                raise Refused(Refusal("invalid-input", message))
+            if not isinstance(req, dict):
+                refuse("request must be an object")
+            unknown = set(req) - {"command", "inputs", "invocation_id", "cursor"}
+            if unknown:
+                refuse(f"unknown request keys {sorted(unknown)}")
+            command = req.get("command")
+            if not isinstance(command, str):
+                refuse("command must be a string")
+            inputs = req.get("inputs")
+            if inputs is None:
+                inputs = {}
+            if not isinstance(inputs, dict):  # a list or scalar never becomes {}
+                refuse("inputs must be an object or null")
+            invocation_id, cursor = req.get("invocation_id"), req.get("cursor")
+            for label, value in (("invocation_id", invocation_id), ("cursor", cursor)):
+                if value is not None and not isinstance(value, str):
+                    refuse(f"{label} must be a string or null")
+            return command, inputs, invocation_id, cursor
+
         class Handler(socketserver.StreamRequestHandler):
             def handle(self) -> None:
                 for line in self.rfile:
                     try:
-                        req = json.loads(line)
-                        if not isinstance(req, dict):
-                            raise Refused(Refusal("invalid-input", "request must be an object"))
-                        out = dispatcher.invoke(req.get("command", ""),
-                                                req.get("inputs") or {},
-                                                invocation_id=req.get("invocation_id"),
-                                                cursor=req.get("cursor"))
+                        command, inputs, invocation_id, cursor = _validated(json.loads(line))
+                        out = dispatcher.invoke(command, inputs,
+                                                invocation_id=invocation_id, cursor=cursor)
                         reply = {"ok": True, "text": out.text,
                                  "invocation_id": out.invocation_id}
                     except json.JSONDecodeError as e:
@@ -3473,8 +3651,10 @@ def serve(config: ScienceConfig, socket_path: Path, declarations=None, handlers=
 
         class Server(socketserver.ThreadingUnixStreamServer):
             def server_close(self) -> None:
-                super().server_close()
-                session.close()
+                try:
+                    super().server_close()
+                finally:
+                    session.close()  # even when the socket teardown raises
 
         socket_path.parent.mkdir(parents=True, exist_ok=True)
         # No unlink anywhere: the existence check above refused already, and
@@ -3568,6 +3748,6 @@ git commit -m "feat(serve): unix-socket write service and CLI routing with synth
 
 ## Execution notes
 
-- Tasks 1–5 are pure-Python and parallel-safe after Task 2; Tasks 6–11 chain (each consumes the previous); Tasks 12–13 are blocked on the beliefs repo delivering `beliefs-96a24a` and the writer-session task, and their Consumes blocks are the contract to reconcile against what actually shipped there — reconcile the names once, in Task 12's step 3, before writing any code.
+- Tasks 1–5 are pure-Python and parallel-safe after Task 2; Tasks 6–11 chain (each consumes the previous); Tasks 12–13 are blocked on the beliefs repo delivering `beliefs-96a24a` and the writer-session task (`beliefs-afbbff`). Task 12's Consumes block is the **pinned companion contract** both repositories implement verbatim; a divergence discovered on either side is a change request against both documents before any further code, never a local adjustment.
 - Live-world tests always take the `certified_work` fixture, never `tmp_path`: beliefs' real engine refuses tmpfs roots (no barrier-option table), which is why the fixture defaults under the repo and honors `SCIENCE_TEST_ROOT`.
 - After Task 11 lands, `status` is demonstrable end-to-end: `SCIENCE_CONFIG=… science status`, the MCP server, and the committed Claude Code plugin all render the same bytes.
