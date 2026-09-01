@@ -31,6 +31,26 @@ def test_unknown_and_wrong_type_refused():
         canonicalize(d, {"a": True})
 
 
+def test_subclasses_are_refused_at_closed_input_boundary():
+    class StringSubclass(str):
+        pass
+
+    class IntSubclass(int):
+        pass
+
+    class ListSubclass(list):
+        pass
+
+    for spec, value in (
+        (InputSpec("a", "string", True, "d"), StringSubclass("x")),
+        (InputSpec("a", "int", True, "d"), IntSubclass(1)),
+        (InputSpec("a", "list-of-string", True, "d"), ListSubclass(["x"])),
+        (InputSpec("a", "list-of-string", True, "d"), [StringSubclass("x")]),
+    ):
+        with pytest.raises(Refused):
+            canonicalize(decl(spec), {"a": value})
+
+
 def test_explicit_null_is_refused_not_absent():
     d = decl(InputSpec("a", "string", False, "d", default="x"))
     with pytest.raises(Refused) as e:

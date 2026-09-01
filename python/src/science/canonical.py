@@ -9,11 +9,11 @@ from science.refusal import Refusal, Refused
 from science.schema import Declaration
 
 _CHECKS = {
-    "string": lambda v: isinstance(v, str),
-    "int": lambda v: isinstance(v, int) and not isinstance(v, bool),
-    "bool": lambda v: isinstance(v, bool),
-    "enum": lambda v: isinstance(v, str),
-    "list-of-string": lambda v: isinstance(v, list) and all(isinstance(x, str) for x in v),
+    "string": lambda v: type(v) is str,
+    "int": lambda v: type(v) is int,
+    "bool": lambda v: type(v) is bool,
+    "enum": lambda v: type(v) is str,
+    "list-of-string": lambda v: type(v) is list and all(type(x) is str for x in v),
 }
 
 
