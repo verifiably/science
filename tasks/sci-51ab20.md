@@ -6,7 +6,7 @@ priority: 1
 size: m
 owner: command-framework
 created: 2026-08-31T21:29:15Z
-updated: 2026-09-01T13:05:29Z
+updated: 2026-09-01T13:10:50Z
 depends: [sci-cd5a04]
 tags: [command-framework]
 spec: docs/specs/2026-08-31-command-framework-design.md
@@ -18,3 +18,5 @@ step: "Task 10: Preamble and the Claude Code adapter generator"
 
 - 2026-09-01T13:01:48Z (command-framework): Subagent-driven Task 10 started; compact shared preamble and deterministic committed Claude Code adapter tree.
 - 2026-09-01T13:05:29Z (command-framework): Shared command preamble and deterministic Claude Code adapter generator with committed-tree diff implemented
+- 2026-09-01T13:08:35Z (command-framework): Review round 1: preflight collisions and authored-skill filesystem shapes before mutating generated output; reject symlinks/special entries.
+- 2026-09-01T13:10:50Z (command-framework): Fix round 1: preflight authored-skill collisions and reject symlink/special entries before output mutation; sentinel preservation and symlink tests added

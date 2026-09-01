@@ -48,3 +48,39 @@ def test_authored_skill_collision_refuses(tmp_path):
     (skills / "status").mkdir(parents=True)
     with pytest.raises(DeclarationError, match="collides with a generated command skill"):
         build_adapter(production_tree(), COMMANDS_ROOT, skills, tmp_path / "out")
+
+
+def test_collision_refusal_preserves_existing_output(tmp_path):
+    from science.adapters import build_adapter
+
+    skills = tmp_path / "authored"
+    (skills / "status").mkdir(parents=True)
+    out = tmp_path / "out"
+    out.mkdir()
+    sentinel = out / "sentinel"
+    sentinel.write_text("keep")
+
+    with pytest.raises(DeclarationError, match="collides with a generated command skill"):
+        build_adapter(production_tree(), COMMANDS_ROOT, skills, out)
+
+    assert sentinel.read_text() == "keep"
+
+
+def test_authored_skill_symlink_refusal_preserves_existing_output(tmp_path):
+    from science.adapters import build_adapter
+
+    skills = tmp_path / "authored"
+    skill = skills / "extra"
+    skill.mkdir(parents=True)
+    target = tmp_path / "outside"
+    target.write_text("outside")
+    (skill / "linked").symlink_to(target)
+    out = tmp_path / "out"
+    out.mkdir()
+    sentinel = out / "sentinel"
+    sentinel.write_text("keep")
+
+    with pytest.raises(DeclarationError, match="symlink"):
+        build_adapter(production_tree(), COMMANDS_ROOT, skills, out)
+
+    assert sentinel.read_text() == "keep"
