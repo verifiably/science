@@ -3119,6 +3119,7 @@ git commit -m "feat(mcp): stdio MCP server with CLI transport-equivalence test"
   request against both documents, made before either side codes on, never
   a local adjustment here:
   - `beliefs.permit.RequiredCapabilities` with `.none()`, `.coordination()`, `.for_kinds(kinds: Iterable[str], routes: Mapping[str, str])`, `.publishes()`
+  - `beliefs.permit.WritePermit` carries a third dimension, `ungoverned` (spec §4.1 amendment of 2026-09-04); `RequiredCapabilities` never sets it and `science` never reads it
   - `beliefs.permit.PermitExceeded(WriteRefused)` with `.requirement` and `.capability` attributes
   - `beliefs.session.open_attended_session(world_config, operations_root) -> WriterSession`
   - `WriterSession.session_id: str` (32 hex), `WriterSession.actor: str`

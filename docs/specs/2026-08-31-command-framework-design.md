@@ -220,6 +220,16 @@ selection against — and what lets a single-route kind's declaration omit
 the selection. Its full contents are settled with `beliefs-96a24a`'s plan;
 the mapping is exported read-only.
 
+**Amended 2026-09-04 (`beliefs` write-permits design §13.7).** The kernel
+mints kinds outside `KIND_ACTS` — ungoverned records carrying no
+semantic-identity facet — through `CorpusWriter.add` alone. `WritePermit`
+therefore carries a third, boolean dimension, `ungoverned`, admitting such
+kinds through `corpus-write` only. `KIND_ACTS` is complete over the
+**governed** kinds. Nothing here changes for `science`: no
+`RequiredCapabilities` constructor sets the flag, a `mints` class naming an
+unknown kind remains a build refusal (§3.3), and the names the plan's Task
+12 consumes are unchanged.
+
 ### 4.2 Requirements, not permits, cross the layer boundary
 
 §5.2 of the layer design is literal: `science` never sees, threads, or
