@@ -251,6 +251,14 @@ command receives no writer at all (§6.1). `WritePermit.full()` exists in
 `beliefs` for its own launcher constructors (§5.1) and is not importable
 policy for `science` code.
 
+**Amended 2026-09-05 (`beliefs` write-permits design §16).** Every `beliefs`
+construction seam binds an authority, `open_world` included, so the read
+context of §9.2 — which holds no permit and may not construct one — opens its
+world through `beliefs.root.open_world_read(config)`, a door `beliefs` binds to
+its own `permit.READ_ONLY`: the empty permit, under which every act refuses on
+its family before any effect. `science` still sees no permit; it sees a `World`
+that can only be read.
+
 ### 4.3 Enforcement at every entry point
 
 Every write entry point takes the permit — bound once at the construction

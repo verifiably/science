@@ -6,7 +6,7 @@ priority: 2
 size: m
 owner: test-ci-audit
 created: 2026-09-04T21:44:54Z
-updated: 2026-09-05T08:22:47Z
+updated: 2026-09-05T09:02:27Z
 depends: [ops-31f038]
 tags: [testing]
 ---
@@ -18,3 +18,4 @@ Piece of ops-65837b (the cross-project audit in the ops hub). 1. Measure: full-s
 - 2026-09-05T02:38:40Z (main): design: ops docs/specs/2026-09-04-test-ci-audit-design.md; follow §5: (1) justfile + vendored tools/tt, route existing hooks, CI, and documented test commands through it, verify a line lands under each agent; (2) after a week of runs, add a note reading 'baseline <date>: <tt-report --project numbers>'; (3) gates to §4.6, AGENTS.md line, hygiene; (4) close with before/after numbers
 - 2026-09-05T08:22:08Z (test-ci-audit): step 1 baseline before wiring: 226 tests, 15 fail (all one TypeError from beliefs a1f7408 requiring authority on open_world; filed as an idea), pytest 1.0s, first uv run in a fresh worktree 19s to build .venv, then about 1s wall
 - 2026-09-05T08:22:47Z (test-ci-audit): step 1 wired 2026-09-05: justfile + vendored tools/tt (version 2), .githooks installed with core.hooksPath, AGENTS.md created pointing at just test; verified three test-fast lines in the shared log with agent claude, null (by hand) and codex (env simulated, no Codex session available), none in a fallback log; testmon selects 15 of 226 on a repeat run
+- 2026-09-05T09:02:27Z (read-authority): baseline suite green again at sci-5fca8b: 226 passed in about 11s of pytest time (the fixtures now build real worlds, which the earlier 1s runs never reached)

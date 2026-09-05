@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from beliefs.corpus import ReadView
-from beliefs.root import open_world
+from beliefs.root import open_world_read
 from beliefs.world import WorldConfig
 from beliefs.world.registry import load_manifest
 
@@ -76,7 +76,7 @@ class ReadContext:
 
     @classmethod
     def open(cls, config: ScienceConfig) -> ReadContext:
-        return cls(world=open_world(config.world), config=config)
+        return cls(world=open_world_read(config.world), config=config)
 
     def read_views(self) -> tuple[tuple[str, ReadView], ...]:
         pairs = []
