@@ -3121,9 +3121,11 @@ git commit -m "feat(mcp): stdio MCP server with CLI transport-equivalence test"
   - `beliefs.permit.RequiredCapabilities` with `.none()`, `.coordination()`, `.for_kinds(kinds: Iterable[str], routes: Mapping[str, str])`, `.publishes()`
   - `beliefs.permit.WritePermit` carries a third dimension, `ungoverned` (spec §4.1 amendment of 2026-09-04); `RequiredCapabilities` never sets it and `science` never reads it
   - `beliefs.permit.PermitExceeded(WriteRefused)` with `.requirement` and `.capability` attributes
-  - `beliefs.session.open_attended_session(world_config, operations_root) -> WriterSession`
+  - `beliefs.session.open_attended_session(world_config, operations_root, *, coordination: ProfileSpec | None = None) -> WriterSession` — **changed 2026-09-05 by the beliefs writer-session design §3.1, decision 12**: the launcher supplies the compiled coordination profile for coordination-class commands; without it those commands refuse `CoordinationUnavailable` at the act
+  - `WriterSession.scoped(required, invocation_id) -> ScopedWriter` — **changed 2026-09-05 by the beliefs writer-session design §5, decision 12**: the writer is bound to the invocation id the dispatcher has already minted, and acts only while that invocation is the current one (raises `PermitExceeded` when the requirement exceeds the session permit — the declaration-time refusal)
+  - **Note (2026-09-05):** `tests/helpers/world.py` calls `open_corpus(corpus_root)` and `world.admit(..., actor="fixture")` without an `Authority`; beliefs cut 17 removed both forms. Fix before Step 2 can run.
+  - **Note (2026-09-05):** a `delete`-class command, if ever declared, renders an empty canonical report — its `act` line carries no minted identities (beliefs writer-session design §8 item 8).
   - `WriterSession.session_id: str` (32 hex), `WriterSession.actor: str`
-  - `WriterSession.scoped(required) -> ScopedWriter` (raises `PermitExceeded` when the requirement exceeds the session permit — the declaration-time refusal)
   - `WriterSession.close() -> None` — appends the ledger's `session-close` line (spec §5.2); idempotent, and every endpoint calls it in a `finally`
   - `WriterSession.claim_invocation(invocation_id, command, input_digest) -> Claim` where `Claim` is the closed union `ClaimFresh | ClaimDone(outcome) | ClaimOpen | ClaimMismatch` — importable types, matched exhaustively, anything else a hard error (fail closed, never fall through to execution)
   - `beliefs.session.KernelRefusalValue(value)` — the exception a `ScopedWriter` raises to carry a **value-style** kernel refusal (`RunRefused`, `AdmissionRefused`, …): a scoped writer never returns a refusal value, so the dispatcher has exactly one normalization path; the wrapped value exposes `.reason`
@@ -3449,7 +3451,7 @@ methods:
             raise Refused(Refusal("permit-exceeded",
                                   "no writer session on this surface"), iid)
         try:
-            writer = self._session.scoped(self._required(decl))
+            writer = self._session.scoped(self._required(decl), iid)
         except PermitExceeded as e:
             raise Refused(self._kernel_refusal(e), iid)
         with self._lock:

@@ -237,8 +237,16 @@ constructs a permit. `beliefs` exports a **`RequiredCapabilities`** value
 with constructors — `RequiredCapabilities.none()`, `.coordination()`,
 `.for_kinds(kinds, routes)`, `.publishes()` — and the session exposes
 **`WriterSession.scoped(required)`**, which either returns an
-**invocation-scoped writer** or a structured refusal (§6.3). The scoped
-writer is a facade whose **effective permit is exactly the requirement**:
+**invocation-scoped writer** or a structured refusal (§6.3).
+
+**Amended 2026-09-05 (`beliefs` writer-session design §5).** `scoped` takes
+the invocation id as its second argument — `scoped(required, invocation_id)`
+— and the writer it returns acts only while that invocation is the session's
+current one. A writer scoped before the claim and outside the dispatcher's
+lock cannot otherwise be told from another invocation's, and a writer
+retained across invocations would carry its own permit into a later one.
+
+The scoped writer is a facade whose **effective permit is exactly the requirement**:
 `scoped` checks the requirement against the session's permit (the
 declaration-time refusal) and binds the invocation's kernel entry points to
 the requirement, not to the session's ceiling — so a handler that exceeds
@@ -302,6 +310,11 @@ an act that could not appear in a chain.
   service process open one; a CLI read invocation opens none (§9.2) — a
   session exists to bind writes, and a `read-only` requirement needs no
   session to be judged.
+  **Amended 2026-09-05 (`beliefs` writer-session design §3.1).** The
+  constructor takes an optional keyword `coordination`, the compiled
+  `ProfileSpec` for the corpus; without it coordination-class commands refuse
+  `CoordinationUnavailable` at the act. The launcher's configuration therefore
+  names the contract documents the profile compiles from.
 - A run-session constructor with a tier parameter arrives with sub-project 6
   and is out of scope here beyond the seam existing.
 
