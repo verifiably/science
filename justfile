@@ -14,7 +14,7 @@ fast_cmd := "cd python && uv run pytest --testmon"
 test_cmd := "cd python && uv run pytest"
 # No formatter, linter, or typechecker is configured for this repository yet, so the
 # seconds-long gate is the task-record check alone.
-check_cmd := "tasks check"
+check_cmd := "python3 tools/ops-check && tasks check"
 
 # Affected-only: the inner loop. An empty selection is a result, not a failure.
 test-fast:

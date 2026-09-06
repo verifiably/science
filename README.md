@@ -10,7 +10,7 @@ no storage: every durable thing is a governed record in a `beliefs` corpus, and
 every write is a kernel act through the permit-bound writer endpoint.
 
 The governing design is the kernel repository's
-[`docs/superpowers/specs/2026-08-29-user-and-autonomy-layer-design.md`](../beliefs/docs/superpowers/specs/2026-08-29-user-and-autonomy-layer-design.md)
+[user and autonomy layer design](../beliefs/docs/superpowers/specs/2026-08-29-user-and-autonomy-layer-design.md)
 (§5 is this layer; §8 orders the sub-projects). The read path of sub-project
 **#2, the command framework**, is implemented: declaration schema, budgeted
 renderer, preamble, adapter generator, CLI/MCP over `beliefs` reads, and the
