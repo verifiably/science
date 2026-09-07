@@ -1,11 +1,12 @@
 ---
 id: sci-7ffb18
 title: Create the public verifiably/science repo and push
-status: todo
+status: done
 priority: 2
 size: s
+owner: main
 created: 2026-09-07T15:29:34Z
-updated: 2026-09-07T15:29:34Z
+updated: 2026-09-07T15:41:13Z
 depends: []
 tags: [hygiene]
 ---
@@ -17,3 +18,7 @@ One wrinkle to handle deliberately. verifiably/science is not free: it is the ol
 Same precondition as the other publications: audit the whole history for secrets, credentials and home-directory paths before the first push, since the initial push publishes every commit at once. gitleaks found nothing in atoms or autonomy; science has not been scanned.
 
 Public also means GitHub Actions on standard runners is free here, as recorded in beliefs AGENTS.md. Related but separate: sci-052b71 is about PyPI, not the git remote.
+
+## Notes
+
+- 2026-09-07T15:41:13Z (main): verifiably/science created public and main pushed. gitleaks clean over 51 commits, no sensitive filenames ever added, no host paths in history. The name was taken back from the redirect left by the beliefs rename, approved on the grounds that nothing is released or advertised yet; verifiably/beliefs still resolves under its own name, so only links written against the old verifiably/science spelling are affected.
