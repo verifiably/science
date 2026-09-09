@@ -29,6 +29,42 @@ def test_status_renders_registry_epoch_and_counts(certified_work):
     assert "live=True" in text
 
 
+def test_status_renders_corpus_findings(certified_work, tmp_path):
+    """`CorpusStatus.findings` reaches the report. The registry reduction emits
+    exactly one finding today, `duplicate-carrier`, when two configured roots
+    carry the same corpus id — a copied root is that state."""
+    import shutil
+
+    from beliefs.world import WorldConfig
+
+    from science.config import ScienceConfig
+    from science.report import Finding
+
+    cfg = build_fixture_world(certified_work)
+    (root,) = cfg.world.corpus_roots
+    twin = tmp_path / "twin"
+    shutil.copytree(root, twin)
+    doubled = ScienceConfig(
+        world=WorldConfig(cfg.world.world_root, cfg.world.world_id, (root, twin)),
+        operations_root=cfg.operations_root,
+        profile=cfg.profile,
+    )
+
+    report = handle(ReadContext.open(doubled))
+
+    findings = [block for block in report if isinstance(block, Finding)]
+    assert len(findings) == 1
+    assert findings[0].text.startswith("error duplicate-carrier ")
+    assert "multiple configured roots carry this corpus id" in findings[0].text
+    assert str(twin) in findings[0].text  # the detail names the carriers
+    corpora = next(block for block in report if isinstance(block, KeyVals))
+    assert "present=False" in corpora.pairs[0][1]
+    # The finding follows the corpora block it is about, before the epoch.
+    assert report.index(findings[0]) == report.index(corpora) + 1
+    # A clean world renders no finding block at all.
+    assert not any(isinstance(block, Finding) for block in handle(ReadContext.open(cfg)))
+
+
 def test_status_mutation_is_caught(certified_work):
     cfg = build_fixture_world(certified_work)
     before = handle(ReadContext.open(cfg))

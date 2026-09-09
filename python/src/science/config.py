@@ -94,10 +94,15 @@ class ReadContext:
         return cls(world=open_world_read(config.world), config=config)
 
     def read_views(self) -> tuple[tuple[str, ReadView], ...]:
-        pairs = []
+        """One view per configured root, ordered by corpus id then root. Two
+        roots carrying the same corpus id both appear: that state is the
+        registry's `duplicate-carrier` finding, which `status` reports, and a
+        read context that refused or deduplicated would hide it."""
+        keyed = []
         for root in self.config.world.corpus_roots:
-            pairs.append((load_manifest(root).corpus_id, ReadView.opened_at(root)))
-        return tuple(sorted(pairs))
+            keyed.append((load_manifest(root).corpus_id, str(root), ReadView.opened_at(root)))
+        keyed.sort(key=lambda entry: entry[:2])
+        return tuple((corpus_id, view) for corpus_id, _, view in keyed)
 
     def load_record(self, uid: str, record_id: str):
         for _, read_view in self.read_views():

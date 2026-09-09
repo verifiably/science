@@ -6,7 +6,14 @@ from collections import Counter
 from beliefs.errors import EpochUnknown
 from beliefs.world.read import current_epoch
 
-from science.report import Heading, KeyVals, Report, Text
+from science.report import Finding, Heading, KeyVals, Report, Text
+
+
+def _finding_text(finding) -> str:
+    """The kernel finding's fields in one line: severity, code and ref lead,
+    the human message follows, and a non-empty detail closes in parentheses."""
+    text = f"{finding.severity} {finding.code} {finding.ref}: {finding.message}"
+    return f"{text} ({finding.detail})" if finding.detail else text
 
 
 def handle(ctx) -> Report:
@@ -15,6 +22,7 @@ def handle(ctx) -> Report:
     registry = world.registry()
     corpus_ids = sorted(record.corpus_id for record in registry.admissions)
     rows = []
+    findings: list = []
     for corpus_id in corpus_ids:
         status = world.status(corpus_id)
         rows.append(
@@ -23,9 +31,12 @@ def handle(ctx) -> Report:
                 f"known={status.known} live={status.live} present={status.present}",
             )
         )
+        findings.extend(Finding(_finding_text(finding)) for finding in status.findings)
     blocks.append(
         KeyVals("corpora", tuple(rows) or (("none", "no corpora admitted"),))
     )
+    # One block per finding, in corpus order, right after the rows they qualify.
+    blocks.extend(findings)
     try:
         epoch = current_epoch(world)
         blocks.append(KeyVals("epoch", (("packaging", epoch.packaging_identity),)))

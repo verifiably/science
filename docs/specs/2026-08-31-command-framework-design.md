@@ -762,7 +762,11 @@ source's text or bytes. Generation reads only that snapshot.
 
 **`status`** — write class `read-only`; reads: registry, epoch, corpus
 stored records; budget 16384 bytes. Renders: the world's corpora with
-lifecycle status; the current epoch's packaging identity or its stated
+lifecycle status, followed by one `Finding` block per finding the registry's
+status reduction carries for a corpus (**added 2026-09-09**: `sci-097534`;
+`duplicate-carrier` is the one such finding today, and a read context over
+two roots carrying one corpus id opens both rather than refusing, so the
+finding can be shown); the current epoch's packaging identity or its stated
 absence; per-corpus record counts by kind. Nothing else — `status` is the
 framework's proof, not a dashboard.
 
