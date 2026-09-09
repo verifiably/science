@@ -5,7 +5,6 @@ import argparse
 import json
 import socket
 import sys
-from pathlib import Path
 
 from science.config import ReadContext, load_config, resolve_config_path
 from science.dispatch import Dispatcher
@@ -145,7 +144,7 @@ def _framework_verb(namespace) -> int:
         from science.serve import serve as build_server
 
         config = load_config(resolve_config_path(namespace.config))
-        server = build_server(config, _service_socket(config))
+        server = build_server(config, config.service_socket)
         try:
             server.serve_forever()
         finally:
@@ -165,10 +164,6 @@ def _framework_verb(namespace) -> int:
     raise NotImplementedError(f"{namespace.command} arrives in a later task")
 
 
-def _service_socket(config) -> Path:
-    return config.operations_root / "service.sock"
-
-
 def _via_service(namespace, declaration: Declaration, inputs: dict[str, object]) -> int:
     """Any write-class command goes over the service socket, preserving the
     read path's public wire: text on stdout, one JSON line on stderr."""
@@ -176,7 +171,7 @@ def _via_service(namespace, declaration: Declaration, inputs: dict[str, object])
     try:
         config = load_config(resolve_config_path(namespace.config))
         with socket.socket(socket.AF_UNIX) as connection:
-            connection.connect(str(_service_socket(config)))
+            connection.connect(str(config.service_socket))
             connection.sendall(json.dumps({
                 "command": declaration.name,
                 "inputs": inputs,

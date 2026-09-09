@@ -19,6 +19,7 @@ from science.refusal import Refusal, Refused
 
 _WORLD_ID_RE = re.compile(r"[0-9a-f]{32}")
 _KEYS = ("world_root", "world_id", "corpus_roots", "operations_root", "domains")
+_OPTIONAL_KEYS = ("service_socket",)
 
 
 @dataclass(frozen=True)
@@ -26,6 +27,7 @@ class ScienceConfig:
     world: WorldConfig
     operations_root: Path
     profile: ProfileSpec
+    service_socket: Path
 
 
 def _refuse(message: str) -> None:
@@ -42,10 +44,12 @@ def load_config(path: Path) -> ScienceConfig:
         _refuse("config is not valid TOML")
     if type(raw) is not dict:
         _refuse("config must be a table")
-    if set(raw) != set(_KEYS):
+    if set(raw) - set(_OPTIONAL_KEYS) != set(_KEYS):
         _refuse("config must contain exactly the required keys")
     if any(type(raw[key]) is not str for key in ("world_root", "world_id", "operations_root")):
         _refuse("config paths and world_id must be strings")
+    if "service_socket" in raw and type(raw["service_socket"]) is not str:
+        _refuse("config service_socket must be a string")
     if type(raw["corpus_roots"]) is not list or any(
         type(value) is not str for value in raw["corpus_roots"]
     ):
@@ -63,14 +67,25 @@ def load_config(path: Path) -> ScienceConfig:
         )
     except ProfileError as caught:
         _refuse(f"config domains do not compile: {caught}")
+    operations_root = Path(raw["operations_root"]).resolve()
+    # The socket defaults beside the operations root. AF_UNIX caps the path at
+    # 107 bytes and a worktree checkout's operations root already exceeds it,
+    # so the key exists to name a short path; both `science serve` and the
+    # CLI's write routing read it here, which is what keeps them agreeing.
+    service_socket = (
+        Path(raw["service_socket"]).resolve()
+        if "service_socket" in raw
+        else operations_root / "service.sock"
+    )
     return ScienceConfig(
         world=WorldConfig(
             world_root=Path(raw["world_root"]),
             world_id=raw["world_id"],
             corpus_roots=tuple(Path(value) for value in raw["corpus_roots"]),
         ),
-        operations_root=Path(raw["operations_root"]).resolve(),
+        operations_root=operations_root,
         profile=profile,
+        service_socket=service_socket,
     )
 
 

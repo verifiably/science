@@ -242,3 +242,53 @@ def test_cli_write_routes_through_service(certified_work, tmp_path, capsys):
     finally:
         server.shutdown()
         server.server_close()
+
+
+def test_cli_write_routes_to_the_configured_socket(certified_work, tmp_path, capsys):
+    """Both ends read `service_socket` from the same config, so a service bound
+    at the named path is the one the CLI reaches."""
+    import argparse
+    from science.cli import _via_service
+    from science.config import load_config
+    from helpers.synthetic import MINT_CLAIM, synthetic_decls_and_handlers
+    from helpers.world import write_cli_config
+    named = tmp_path / "named.sock"
+    cfg_path = write_cli_config(certified_work, operations_root=tmp_path / "ops",
+                                service_socket=named)
+    cfg = load_config(cfg_path)
+    assert cfg.service_socket == named
+    decls, handlers = synthetic_decls_and_handlers()
+    server = _running(cfg, cfg.service_socket, declarations=decls, handlers=handlers)
+    try:
+        ns = argparse.Namespace(config=str(cfg_path), invocation_id=None, cursor=None)
+        assert _via_service(ns, MINT_CLAIM, {"slug": "named"}) == 0
+        assert "proposition:named" in capsys.readouterr().out
+    finally:
+        server.server_close()
+    assert not (tmp_path / "ops" / "service.sock").exists()
+
+
+def test_serve_verb_binds_the_configured_socket(certified_work, tmp_path, monkeypatch):
+    """`science serve` builds its server at `config.service_socket`, the same
+    path `_via_service` connects to."""
+    import science.serve as serve_module
+    from science.cli import main
+    from helpers.world import write_cli_config
+    named = tmp_path / "named.sock"
+    cfg_path = write_cli_config(certified_work, service_socket=named)
+    bound = []
+
+    class FakeServer:
+        def serve_forever(self):
+            bound.append("served")
+
+        def server_close(self):
+            bound.append("closed")
+
+    def fake_build(config, socket_path, declarations=None, handlers=None, stderr=None):
+        bound.append(socket_path)
+        return FakeServer()
+
+    monkeypatch.setattr(serve_module, "serve", fake_build)
+    assert main(["serve", "--config", str(cfg_path)]) == 0
+    assert bound == [named, "served", "closed"]

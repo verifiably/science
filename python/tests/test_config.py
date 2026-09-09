@@ -50,6 +50,24 @@ def test_load_config_resolves_relative_operations_root(tmp_path, monkeypatch):
     assert cfg.operations_root == tmp_path / "operations"
 
 
+def test_service_socket_defaults_beside_the_operations_root(tmp_path):
+    cfg = load_config(write_config(tmp_path))
+    assert cfg.service_socket == tmp_path / "ops" / "service.sock"
+
+
+def test_service_socket_is_configurable_and_resolved(tmp_path, monkeypatch):
+    """The AF_UNIX path limit is 107 bytes and a worktree's operations root
+    already exceeds it, so the operator can name a short path; relative paths
+    resolve against the working directory like operations_root does."""
+    monkeypatch.chdir(tmp_path)
+    cfg = load_config(write_config(tmp_path, extra='service_socket = "run/s.sock"\n'))
+    assert cfg.service_socket == tmp_path / "run" / "s.sock"
+
+
+def test_service_socket_must_be_a_string(tmp_path):
+    assert_invalid_config(write_config(tmp_path, extra="service_socket = 3\n"))
+
+
 def test_domains_compile_the_profile_the_session_binds(tmp_path):
     from beliefs.profile import shipped_base_contract
 

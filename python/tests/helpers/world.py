@@ -48,15 +48,24 @@ def build_fixture_world(work: Path) -> ScienceConfig:
     world = open_world(config, authority=FIXTURE_AUTHORITY)
     world.admit(corpus_root, provenance=Fresh())
     writer.add(fixture_proposition_node("p1"))
-    return ScienceConfig(world=config, operations_root=work / "ops", profile=PROFILE)
+    return ScienceConfig(
+        world=config,
+        operations_root=work / "ops",
+        profile=PROFILE,
+        service_socket=work / "ops" / "service.sock",
+    )
 
 
-def write_cli_config(work: Path, operations_root: Path | None = None) -> Path:
-    """`operations_root` overrides where the session ledger and service socket
-    live. Tests that bind a socket need a short one: the AF_UNIX path limit is
-    107 bytes and the certified work root eats most of that."""
+def write_cli_config(
+    work: Path, operations_root: Path | None = None, service_socket: Path | None = None
+) -> Path:
+    """`operations_root` overrides where the session ledger lives and, absent
+    `service_socket`, the socket beside it. Tests that bind a socket need a
+    short path: the AF_UNIX limit is 107 bytes and the certified work root
+    eats most of that."""
     cfg = build_fixture_world(work)
     ops = cfg.operations_root if operations_root is None else operations_root
+    socket_line = "" if service_socket is None else f'service_socket = "{service_socket}"\n'
     path = work / "science.toml"
     path.write_text(f'''\
 world_root = "{cfg.world.world_root}"
@@ -64,7 +73,7 @@ world_id = "{cfg.world.world_id}"
 corpus_roots = ["{cfg.world.corpus_roots[0]}"]
 operations_root = "{ops}"
 domains = {list(DOMAINS)!r}
-''')
+{socket_line}''')
     return path
 
 

@@ -48,6 +48,7 @@ def test_status_renders_corpus_findings(certified_work, tmp_path):
         world=WorldConfig(cfg.world.world_root, cfg.world.world_id, (root, twin)),
         operations_root=cfg.operations_root,
         profile=cfg.profile,
+        service_socket=cfg.service_socket,
     )
 
     report = handle(ReadContext.open(doubled))

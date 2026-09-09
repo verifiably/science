@@ -622,6 +622,14 @@ declared key set, so a configuration written before this amendment refuses
 rather than silently compiling a base-only profile against a corpus that pins
 domains.
 
+`service_socket` (**added 2026-09-09**: `sci-fd792c`) is the one optional key:
+the path of the service socket `science serve` binds and write-class CLI
+invocations connect to, resolved like `operations_root`. Absent, it is
+`service.sock` beside the operations root. It exists because AF_UNIX caps a
+socket path at 107 bytes and a worktree checkout's operations root already
+exceeds that; the loader is the single place both ends read the path, which
+is what keeps them agreeing.
+
 ### 9.2 CLI
 
 `science`, stdlib `argparse`, zero dependencies. One subcommand per shipped
