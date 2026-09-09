@@ -30,7 +30,7 @@ Tasks 4, 6, 7, 8 and 9 call interfaces `beliefs` does not have yet. These are th
 - **`beliefs-e5ab34` (reference rules):** `beliefs.rules.REFERENCE_RULES: Mapping[str, RuleImplementation | EquivalenceImplementation]` keyed by rule identity, holding `"outcome-file/v1"` (interpretation: maps the digest of `outputs/outcome.txt` — one of `supported\n`, `refuted\n`, `inconclusive\n` — to `{"outcome": …}`) and `"content-identity-equality/v1"` (equivalence: `passed` iff the two result manifests are equal). `beliefs.rules.OUTCOME_FILE = "outputs/outcome.txt"`.
 - **`beliefs-5fe2e3` (scoped routes):** `open_attended_session(world_config, operations_root, *, profile, coordination=None, store_root: Path | None = None)`; `ScopedWriter.operation_port() -> OperationPort` bound to the invocation's scoped authority, whose commits are recorded as `act` lines; `ScopedWriter.holdings_context(*, instrument: str) -> ActContext` over the session's store root, observer = the session actor, whose published observations are recorded as `act` lines; `ScopedWriter.store_id -> str`; and `beliefs.replay.replay(original: RunMinted | RunClosure, …)` reading only the closure.
 
-Until those land, Tasks 4, 7 and 9 cannot pass end to end; Tasks 6 and 8 need only the rules. Do Tasks 1–3 and 5 first, then whatever the seams have unblocked.
+Until those land, Tasks 4, 7 and 9 cannot pass end to end; Tasks 6 and 8 need only the rules. Do Tasks 1–3, 5, 10 and 11 first, then whatever the seams have unblocked.
 
 ## File structure
 
@@ -238,7 +238,7 @@ contract:
   lineage: genesis
   sorts:
     concept:
-      vocabulary: {dataset: "%s"}
+      vocabulary: "dataset:%s"
   dimensions: {}
   operators:
     affects-concept-concept:
@@ -247,12 +247,19 @@ contract:
       sign_apt: true
       layers: [causal]
       dimensions: []
+    binds-concept-concept:
+      arity: 2
+      arg_sorts: [concept, concept]
+      sign_apt: false
+      layers: [causal]
+      dimensions: []
 plan:
   sorts: {concept: concept}
   layers: {causal: causal}
-  polarities: {positive: positive, negative: negative}
+  polarities: {positive: positive, negative: negative, not_applicable: null}
   operators:
     - {predicate: affects, subject: concept, object: concept, operator: affects-concept-concept}
+    - {predicate: binds, subject: concept, object: concept, operator: binds-concept-concept}
 '''
 
 
@@ -279,6 +286,17 @@ def test_plan_refuses_a_shape_with_no_row(tmp_path):
         plan.operator_for("affects", "concept", "protein")
     assert caught.value.refusal.code == "invalid-input"
     assert "affects concept->protein" in caught.value.refusal.message
+
+
+def test_plan_preserves_a_null_polarity_for_sign_inapt_operators(tmp_path):
+    """mm30's plan carries `not_applicable: null`; `build_claim` takes
+    polarity=None for a sign-inapt operator, and the plan must say None, not
+    the string "None"."""
+    from beliefs.profile import shipped_base_contract
+    _, plan = load_contract_document(write_document(tmp_path), shipped_base_contract())
+    assert "not_applicable" in plan.polarities
+    assert plan.polarities["not_applicable"] is None
+    assert plan.operator_for("binds", "concept", "concept") == "testing/binds-concept-concept"
 
 
 def test_document_without_a_plan_yields_none(tmp_path):
@@ -401,7 +419,10 @@ class OperatorPlan:
     operators: Mapping[tuple[str, str | None, str | None], str]
     sorts: Mapping[str, str]
     layers: Mapping[str, str]
-    polarities: Mapping[str, str]
+    polarities: Mapping[str, str | None]
+    """A null value is a value: `not_applicable: null` names the polarity a
+    sign-inapt operator takes (`build_claim(polarity=None)`). Missing is
+    different from null; callers test membership, never truthiness."""
 
     def operator_for(self, predicate: str, subject_kind: str, object_kind: str) -> str:
         row = self.operators.get((predicate, subject_kind, object_kind))
@@ -440,7 +461,7 @@ def _plan(raw: object, domain: DomainContract) -> OperatorPlan:
         operators=rows,
         sorts={str(k): _term(domain, str(v)) for k, v in (raw.get("sorts") or {}).items()},
         layers={str(k): str(v) for k, v in (raw.get("layers") or {}).items()},
-        polarities={str(k): str(v) for k, v in (raw.get("polarities") or {}).items()},
+        polarities={str(k): (None if v is None else str(v)) for k, v in (raw.get("polarities") or {}).items()},
     )
 
 
@@ -550,7 +571,7 @@ git commit -m "feat(config): corpus-local contract documents and the holdings st
 **Interfaces:**
 - Consumes: `beliefs.resolution.build_snapshot(readable=…)`, `VocabularyBinding`, `ProfileSpec.sorts` (`CompiledSort.vocabulary`), `stored.dataset_declaration`, `stored.holdings_observation_value`, `beliefs.dataset.{dataset_address, admission_state, ByteObservation, Held}`, `beliefs.evaluation.{evaluate_over, gather}`, `beliefs.belief.{Availability, SuppliedContext}`, `beliefs.closure.RetractionEnumeration`, `beliefs.corpus.lineage_snapshot`, `beliefs.policy.{BELIEF_V1, BELIEF_V1_RULE, BELIEF_V1_FIXTURES, PolicyBinding}`, `beliefs.world.read.current_epoch`, `beliefs.errors.EpochUnknown`, `beliefs.world.registry.load_manifest`.
 - Produces on `ReadContext`: `single_view() -> tuple[str, ReadView]`; `snapshot() -> ResolutionSnapshot`; `observations() -> dict[str, tuple[ByteObservation, ...]]` keyed by dataset address; `held_path(address) -> Path`; `is_held(node) -> bool`; `evaluate(proposition) -> Belief | NoBelief | Refused`; `gather_inputs(proposition) -> EvaluationInputs`; `pins() -> CorpusPins`; `epoch_identity() -> str`.
-- Produces in helpers: `fixture_contract_document(work) -> Path` (a `testing` contract with `concept` bound by dataset identity and `protein` bound by namespace/release, and a plan), `hold_fixture_dataset(cfg, name, content, title) -> str` (returns the dataset ref), `fixture_bundle(work, outcome="supported") -> tuple[Path, str, tuple[str, ...]]` (code dir, entrypoint, targets), `mint_fixture_run(cfg, spec_ref, dataset_ref, bundle) -> str` (a run under `MINIMAL_POLICY`, returns the run ref), `build_belief_world(work) -> ScienceConfig` (fixture world compiled with the test contract, concept list held, one proposition minted).
+- Produces in helpers: `fixture_contract_document(work) -> Path` (a `testing` contract with `concept` bound by dataset identity and `protein` bound by namespace/release, and a plan), `hold_fixture_dataset(cfg, name, content, title) -> str` (returns the dataset ref), `unhold_fixture_dataset(cfg, ref) -> None` (a later `Absent` observation superseding the `Found`), `fixture_bundle(work, outcome="supported") -> tuple[Path, str, tuple[str, ...]]` (code dir, entrypoint, targets), `mint_fixture_run(cfg, spec_ref, dataset_ref, bundle) -> str` (a run under `MINIMAL_POLICY`, returns the run ref), `build_belief_world(work) -> ScienceConfig` (fixture world compiled with the test contract, the holdings reducer installed, concept list held, one proposition minted), `open_rig(cfg, names)` (a dispatcher over the named production commands with an attended session; yields `(dispatcher, ctx)`), and `SPEC_FIELDS` (the draft fields every spec test reuses).
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -586,6 +607,24 @@ def test_snapshot_omits_a_vocabulary_that_is_not_held(certified_work):
     snapshot = ReadContext.open(cfg).snapshot()
     (binding,) = [s.vocabulary for s in cfg.profile.sorts.values() if s.vocabulary.dataset_identity]
     assert snapshot.resolve(binding, "concept:disease-stage") is TermOutcome.NOT_AVAILABLE
+
+
+def test_a_later_absent_observation_removes_heldness(certified_work):
+    """The reduction, not the history: once an Absent supersedes the Found at
+    a location, the dataset is not held, whatever the older observation says."""
+    from helpers.world import unhold_fixture_dataset
+    cfg = build_belief_world(certified_work)
+    ref = hold_fixture_dataset(cfg, "data.txt", b"gone\n", "expression")
+    ctx = ReadContext.open(cfg)
+    _, view = ctx.single_view()
+    assert ctx.is_held(view.get(ref))
+    unhold_fixture_dataset(cfg, ref)
+    ctx = ReadContext.open(cfg)
+    _, view = ctx.single_view()
+    assert not ctx.is_held(view.get(ref))
+    from beliefs import stored
+    from beliefs.dataset import dataset_address
+    assert dataset_address(stored.dataset_declaration(view.get(ref))) not in ctx.observations()
 
 
 def test_observations_and_held_path_follow_the_store(certified_work):
@@ -633,7 +672,7 @@ contract:
   lineage: genesis
   sorts:
     concept:
-      vocabulary: {dataset: "%(concepts)s"}
+      vocabulary: "dataset:%(concepts)s"
     protein:
       vocabulary: {namespace: HGNC, release: "2026-07-01"}
   dimensions: {}
@@ -653,7 +692,7 @@ contract:
 plan:
   sorts: {concept: concept, protein: protein}
   layers: {causal: causal}
-  polarities: {positive: positive, negative: negative}
+  polarities: {positive: positive, negative: negative, not_applicable: null}
   operators:
     - {predicate: affects, subject: concept, object: protein, operator: affects-concept-protein}
     - {predicate: affects, subject: concept, object: concept, operator: affects-concept-concept}
@@ -694,7 +733,13 @@ def build_fixture_world_with_contract(work: Path, *, hold_concepts: bool = True)
     STORE_IDS[work] = store_id
     writer = open_corpus(corpus_root, authority=FIXTURE_AUTHORITY, profile=profile)
     writer.adopt_manifest(profile=pins)
-    open_world(config, authority=FIXTURE_AUTHORITY).admit(corpus_root, provenance=Fresh())
+    world = open_world(config, authority=FIXTURE_AUTHORITY)
+    world.admit(corpus_root, provenance=Fresh())
+    # The holdings reducer is a rule the world holds (an epoch-family act, so
+    # operator-time): reads derive active and blocked heads through it.
+    from beliefs.holdings.reduce import holdings_rule_bundle
+    from beliefs.world.rules import install_rule_binding
+    install_rule_binding(world, holdings_rule_bundle())
     cfg = ScienceConfig(world=config, operations_root=work / "ops", profile=profile,
                         service_socket=work / "ops" / "service.sock", store_root=work / "store",
                         plans=(plan,))
@@ -723,6 +768,49 @@ def hold_fixture_dataset(cfg: ScienceConfig, name: str, content: bytes, title: s
     node = stored.dataset_node(address.removeprefix("dataset:"), title=title,
                                resources=[{"name": name, "digest": digest}], **facets)
     return open_corpus(root, authority=FIXTURE_AUTHORITY, profile=cfg.profile).add(node).id
+
+
+def unhold_fixture_dataset(cfg: ScienceConfig, ref: str) -> None:
+    """Delete the held bytes and publish the Absent observation that supersedes
+    the Found: the state a later re-check would leave."""
+    from beliefs import stored
+    from beliefs.holdings.boundary import ActContext, delete
+    from beliefs.root import holdings_seam
+    from science.config import ReadContext
+    (root,) = cfg.world.corpus_roots
+    _, view = ReadContext.open(cfg).single_view()
+    (resource,) = stored.dataset_declaration(view.get(ref)).resources
+    relative = f"{resource.digest.removeprefix('sha256:')}/{resource.name}"
+    standing = tuple(stored.holdings_observation_value(n) for n in view.iter_stored()
+                     if n.kind == "holdings-observation"
+                     and stored.holdings_observation_value(n).location.relative_path == relative)
+    ctx = ActContext(root, cfg.store_root, "fixture", "fixture/hold.v1", FIXTURE_AUTHORITY,
+                     holdings_seam(), profile=cfg.profile)
+    delete(ctx, standing[0].location, standing=standing)
+
+
+SPEC_FIELDS = {"estimand": "difference in PHF19 expression", "method": "rank comparison",
+               "assumptions": "independent samples", "falsification": "no difference at alpha",
+               "applicability": "samples with a stage token",
+               "interpretation_rule": "outcome-file/v1", "equivalence_rule": "content-identity-equality/v1"}
+
+
+@contextmanager
+def open_rig(cfg: ScienceConfig, names: tuple[str, ...]):
+    """A dispatcher over the production declarations named, with an attended
+    session over `cfg`; yields (dispatcher, read context). Task 4 adds
+    `store_root=cfg.store_root` to the session call once the seam lands."""
+    from beliefs.session import open_attended_session
+    from science.config import ReadContext
+    from science.dispatch import Dispatcher
+    from science.loader import production_tree, resolve_handlers
+    decls = tuple(d for d in production_tree() if d.name in names)
+    session = open_attended_session(cfg.world, cfg.operations_root, profile=cfg.profile)
+    ctx = ReadContext.open(cfg)
+    try:
+        yield Dispatcher(decls, resolve_handlers(decls), ctx, session=session), ctx
+    finally:
+        session.close()
 
 
 def build_belief_world(work: Path) -> ScienceConfig:
@@ -793,7 +881,7 @@ def mint_fixture_run(cfg: ScienceConfig, spec_ref: str, dataset_ref: str, bundle
     return run_ref(outcome.run.address())
 ```
 
-`STORE_IDS: dict[Path, str] = {}` at module level, keyed by the work directory. `build_fixture_world` (the plain one) also initializes a store and records its id, so Task 2's tests hold.
+`STORE_IDS: dict[Path, str] = {}` at module level, keyed by the work directory, and `from contextlib import contextmanager` at the top. `build_fixture_world` (the plain one) also initializes a store, records its id, and installs the holdings reducer the same way, so Task 2's tests hold and `status` over a plain world can read holdings.
 
 - [ ] **Step 3: Run to verify they fail**
 
@@ -815,7 +903,7 @@ from beliefs.dataset import dataset_address
 from beliefs.profile import ProfileSpec
 from beliefs.resolution import ResolutionSnapshot, build_snapshot
 
-from science.holdings import found_observations, held_path_for
+from science.holdings import held_path_for
 
 
 def dataset_bound_sorts(profile: ProfileSpec) -> dict[str, VocabularyBinding]:
@@ -827,11 +915,12 @@ def dataset_bound_sorts(profile: ProfileSpec) -> dict[str, VocabularyBinding]:
     }
 
 
-def snapshot(profile: ProfileSpec, view: ReadView, store_root) -> ResolutionSnapshot:
+def snapshot(profile: ProfileSpec, view: ReadView, store_root, observations) -> ResolutionSnapshot:
     """Read each dataset-bound vocabulary from the store by the address the
-    contract names. A binding whose dataset is not in the corpus or not held
-    is listed unreadable, so a referent under it resolves not-available."""
-    observations = found_observations(view)
+    contract names. `observations` is the read context's reduced mapping
+    (address -> Found observations). A binding whose dataset is not in the
+    corpus or not held is listed unreadable, so a referent under it resolves
+    not-available."""
     readable: dict[VocabularyBinding, list[str]] = {}
     unreadable: list[VocabularyBinding] = []
     for binding in dataset_bound_sorts(profile).values():
@@ -859,9 +948,17 @@ def _dataset_at(view: ReadView, address: str):
 
 - [ ] **Step 5: Write `science/holdings.py`**
 
+The kernel's holdings reduction — supersession walks, contested heads,
+unsettled intents — is a rule the world holds; `derive_holdings` captures a
+corpus and reduces it to `active` and `blocked` head projections, and
+`dataset_observations` joins those to one declaration. The surface never
+reads observation records directly for heldness: a later `Absent` must
+remove it, and only the reduction knows that.
+
 ```python
-"""Store reads for the belief path (design §5.4): observations by address,
-the held path for an address, and the admission check."""
+"""Store reads for the belief path (design §5.4), through the kernel's
+holdings reduction: the reduced answer per dataset address, the held path
+for an address, and the admission check."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -869,63 +966,80 @@ from pathlib import Path
 from beliefs import stored
 from beliefs.corpus import ReadView
 from beliefs.dataset import ByteObservation, Held, admission_state, dataset_address
-from beliefs.holdings.records import Found
+from beliefs.holdings.adapter import DatasetAnswer, DatasetBlocked, dataset_observations
+from beliefs.holdings.receipt import derive_holdings
+from beliefs.holdings.reduce import holdings_rule_bundle
+from beliefs.root import log_seam
+from beliefs.world.rules import binding_for
 
 from science.refusal import Refusal, Refused
 
 
-def found_observations(view: ReadView) -> dict[str, tuple[ByteObservation, ...]]:
-    """Every stored Found observation, keyed by the dataset address whose
-    declared resource digest it satisfies. A location is content-derived, so
-    one address maps to the observations at its own location."""
-    by_digest: dict[str, list[tuple[ByteObservation, str]]] = {}
-    for node in view.iter_stored():
-        if node.kind != "holdings-observation":
-            continue
-        value = stored.holdings_observation_value(node)
-        if isinstance(value.outcome, Found):
-            by_digest.setdefault(value.outcome.digest, []).append(
-                (ByteObservation(digest=value.outcome.digest, location=value.location.canonical()),
-                 value.location.relative_path)
-            )
-    result: dict[str, tuple[ByteObservation, ...]] = {}
+def reduced_heads(world, corpus_id: str):
+    """(active, blocked) from the world's held reducer over this corpus."""
+    seam = log_seam()
+    active, blocked, _ = derive_holdings(
+        world, frozenset({corpus_id}), binding_for(holdings_rule_bundle()),
+        chain_view=seam.inspect_registered, state_facts=seam.state_facts,
+    )
+    return active, blocked
+
+
+def reduced_observations(view: ReadView, world, corpus_id: str) -> dict[str, DatasetAnswer | DatasetBlocked]:
+    """The reduction's answer for every dataset record that has an address."""
+    active, blocked = reduced_heads(world, corpus_id)
+    answers: dict[str, DatasetAnswer | DatasetBlocked] = {}
     for node in view.iter_stored():
         if node.kind != "dataset":
             continue
         declaration = stored.dataset_declaration(node)
         address = dataset_address(declaration)
-        if address is None:
-            continue
-        observations = tuple(o for r in declaration.resources for o, _ in by_digest.get(r.digest, ()))
-        if observations:
-            result[address] = observations
-    return result
+        if address is not None:
+            answers[address] = dataset_observations(declaration, active, blocked)
+    return answers
+
+
+def found_observations(view: ReadView, world, corpus_id: str) -> dict[str, tuple[ByteObservation, ...]]:
+    """Address -> the reduced Found observations; blocked and empty answers
+    are absent from the mapping, which is what `Availability` wants."""
+    return {
+        address: answer.observations
+        for address, answer in reduced_observations(view, world, corpus_id).items()
+        if isinstance(answer, DatasetAnswer) and answer.observations
+    }
 
 
 def held_path_for(store_root: Path, observations: tuple[ByteObservation, ...]) -> Path:
-    """The store path of the first observation's location. `canonical()`
-    renders `store:<id>/<relative>`; the bytes live under the store root."""
-    location = observations[0].location
-    relative = location.split("/", 1)[1]
+    """The reducer renders a location as `store:<store id>:<relative path>`;
+    the bytes live at that relative path under the store root."""
+    kind, _, relative = observations[0].location.split(":", 2)
+    if kind != "store" or not relative:
+        raise Refused(Refusal("invalid-input", f"unrecognized store location {observations[0].location!r}"))
     return Path(store_root) / relative
 
 
-def held_path(view: ReadView, store_root: Path, address: str) -> Path:
-    observations = found_observations(view).get(address)
-    if not observations:
+def held_path(view: ReadView, world, corpus_id: str, store_root: Path, address: str) -> Path:
+    answer = reduced_observations(view, world, corpus_id).get(address)
+    if isinstance(answer, DatasetBlocked):
+        raise Refused(Refusal("invalid-input",
+                              f"{address} is blocked at {answer.locations}: {answer.reasons}"))
+    if not isinstance(answer, DatasetAnswer) or not answer.observations:
         raise Refused(Refusal("invalid-input", f"{address} is not held in this store"))
-    return held_path_for(store_root, observations)
+    return held_path_for(store_root, answer.observations)
 
 
-def is_held(view: ReadView, node) -> bool:
+def is_held(view: ReadView, world, corpus_id: str, node) -> bool:
     declaration = stored.dataset_declaration(node)
     address = dataset_address(declaration)
     if address is None:
         return False
-    return isinstance(admission_state(declaration, found_observations(view).get(address, ())), Held)
+    answer = reduced_observations(view, world, corpus_id).get(address)
+    if not isinstance(answer, DatasetAnswer):
+        return False
+    return isinstance(admission_state(declaration, answer.observations), Held)
 ```
 
-Verify `StoreLocator.canonical()`'s exact format with `grep -n "def canonical" -A 3 ~/d/beliefs/python/src/beliefs/holdings/records.py` and adjust `held_path_for`'s split accordingly.
+Two names to pin at implementation: `beliefs.root.log_seam` (the session module imports it as `log_seam`; confirm with `grep -n "^def log_seam\|^def _log_seam" ~/d/beliefs/python/src/beliefs/root.py`), and whether `derive_holdings` runs under the read-only world the read context opens (it captures and resolves the held rule; it should require no act family — if it does, that is a finding for `beliefs-5fe2e3`).
 
 - [ ] **Step 6: Write `science/closure.py`**
 
@@ -984,22 +1098,22 @@ def evaluate(view, proposition, *, observations, context, profile, resolution):
     def snapshot(self):
         from science.vocabulary import snapshot
         _, view = self.single_view()
-        return snapshot(self.config.profile, view, self.config.store_root)
+        return snapshot(self.config.profile, view, self.config.store_root, self.observations())
 
     def observations(self):
         from science.holdings import found_observations
-        _, view = self.single_view()
-        return found_observations(view)
+        corpus_id, view = self.single_view()
+        return found_observations(view, self.world, corpus_id)
 
     def held_path(self, address: str) -> Path:
         from science.holdings import held_path
-        _, view = self.single_view()
-        return held_path(view, self.config.store_root, address)
+        corpus_id, view = self.single_view()
+        return held_path(view, self.world, corpus_id, self.config.store_root, address)
 
     def is_held(self, node) -> bool:
         from science.holdings import is_held
-        _, view = self.single_view()
-        return is_held(view, node)
+        corpus_id, view = self.single_view()
+        return is_held(view, self.world, corpus_id, node)
 
     def pins(self):
         (root,) = self.config.world.corpus_roots
@@ -1174,6 +1288,27 @@ def test_two_files_with_one_title_and_basename_land_apart(rig, tmp_path):
     assert len(ctx.observations()) >= 3  # concepts + two held files
 
 
+def test_malformed_metadata_leaves_no_acts(rig, tmp_path):
+    """`oops` is not a facet the profile declares: the refusal comes before
+    the holdings write, so neither bytes nor an observation exist afterward."""
+    d, ctx = rig
+    data = tmp_path / "m.txt"
+    data.write_bytes(b"M\n")
+    with pytest.raises(Refused) as caught:
+        d.invoke("dataset", {"path": str(data), "title": "m", "facets": ["oops=k:v"]}, invocation_id="M" * 8)
+    assert caught.value.refusal.code == "invalid-input"
+    assert "oops" in caught.value.refusal.message
+    from hashlib import sha256
+    from beliefs import stored
+    digest = sha256(b"M\n").hexdigest()
+    assert not (ctx.config.store_root / digest).exists()  # no bytes were written
+    _, view = ctx.single_view()
+    assert not any(n.kind == "dataset" and n.title == "m" for n in view.iter_stored())
+    assert not any(n.kind == "holdings-observation"
+                   and stored.holdings_observation_value(n).location.relative_path.startswith(digest)
+                   for n in view.iter_stored())
+
+
 def test_attested_by_is_the_session_actor(rig, tmp_path):
     d, ctx = rig
     data = tmp_path / "e.txt"
@@ -1185,29 +1320,8 @@ def test_attested_by_is_the_session_actor(rig, tmp_path):
     assert facet["attested_by"].startswith("session:")
 ```
 
-Add to `helpers/world.py`:
-
-```python
-from contextlib import contextmanager
-
-
-@contextmanager
-def open_rig(cfg: ScienceConfig, names: tuple[str, ...]):
-    """A dispatcher over the production declarations named, with an attended
-    session over `cfg`; yields (dispatcher, read context)."""
-    from beliefs.session import open_attended_session
-    from science.config import ReadContext
-    from science.dispatch import Dispatcher
-    from science.loader import production_tree, resolve_handlers
-    decls = tuple(d for d in production_tree() if d.name in names)
-    session = open_attended_session(cfg.world, cfg.operations_root, profile=cfg.profile,
-                                    store_root=cfg.store_root)
-    ctx = ReadContext.open(cfg)
-    try:
-        yield Dispatcher(decls, resolve_handlers(decls), ctx, session=session), ctx
-    finally:
-        session.close()
-```
+In `helpers/world.py`'s `open_rig` (Task 3), the session call becomes
+`open_attended_session(cfg.world, cfg.operations_root, profile=cfg.profile, store_root=cfg.store_root)`.
 
 Check the exact accessor for a node's facets (`node.facets[...]` or `stored._facet(node, name)`) with `grep -n "def is_empirical_observation" -B2 -A3 ~/d/beliefs/python/src/beliefs/stored.py` and use the public one.
 
@@ -1228,6 +1342,8 @@ from pathlib import Path
 
 from beliefs import stored
 from beliefs.dataset import DatasetDeclaration, Held, ResourceDeclaration, admission_state, dataset_address
+from beliefs.errors import FacetError, MalformedRecord, UnknownKindError
+from beliefs.facets import validate_payload
 from beliefs.holdings.boundary import write
 from beliefs.holdings.records import Found, StoreLocator
 
@@ -1277,18 +1393,38 @@ def handle(ctx, writer, *, path, title, locator=None, facets=None) -> Report:
         if node.kind == "holdings-observation"
         and stored.holdings_observation_value(node).location.relative_path == relative
     )
+    # The record is built and validated BEFORE the first act: a facet the
+    # profile does not know, or a payload it refuses, must leave no bytes in
+    # the store and no observation behind (design §6.3, validate before act).
+    empirical = None
+    if locator is not None:
+        empirical = {"locator": locator, "attested_by": writer.actor}
+    try:
+        proposed = stored.dataset_node(
+            address.removeprefix("dataset:"), title=title,
+            resources=[{"name": source.name, "digest": digest}],
+            empirical_observation=empirical, domain_facets=domain_facets or None,
+        )
+    except MalformedRecord as caught:
+        _refuse(f"dataset record refused: {caught}")
+    profile = ctx.config.profile
+    for name, payload in domain_facets.items():
+        facet = profile.facets.get(name)
+        if facet is None:
+            _refuse(f"facet {name!r} is not declared by this profile")
+        try:
+            validate_payload(facet, payload, where=proposed.id)
+        except FacetError as caught:
+            _refuse(f"facet {name!r} refused: {caught}")
+    try:
+        profile.validate_document(proposed)
+    except (UnknownKindError, FacetError) as caught:
+        _refuse(f"dataset record refused: {caught}")
     # --- first act: the holdings write ---------------------------------------
     holdings = writer.holdings_context(instrument=INSTRUMENT)
     published = write(holdings, StoreLocator(writer.store_id, relative), content, expected=digest,
                       standing=standing)
-    empirical = None
-    if locator is not None:
-        empirical = {"locator": locator, "attested_by": holdings.actor}
-    node = writer.add(stored.dataset_node(
-        address.removeprefix("dataset:"), title=title,
-        resources=[{"name": source.name, "digest": digest}],
-        empirical_observation=empirical, domain_facets=domain_facets or None,
-    ))
+    node = writer.add(proposed)
     from beliefs.dataset import ByteObservation
     outcome = published.record.outcome
     assert isinstance(outcome, Found)
@@ -1299,7 +1435,7 @@ def handle(ctx, writer, *, path, title, locator=None, facets=None) -> Report:
     return (record_block(node),)
 ```
 
-Then in `serve.py` and `mcp.py`, pass `store_root=config.store_root` to `open_attended_session`.
+Pin the two exception names at implementation (`grep -n "^class FacetError\|^class UnknownKindError" ~/d/beliefs/python/src/beliefs/errors.py`; the writer's own `_refuse_facets` catches exactly these). Then in `serve.py`, `mcp.py`, and the helpers' `open_rig`, pass `store_root=config.store_root` (resp. `cfg.store_root`) to `open_attended_session`.
 
 - [ ] **Step 5: Run to verify they pass; regenerate the adapter tree**
 
@@ -1451,8 +1587,12 @@ def handle(ctx, writer, *, subject, predicate, object, layer, polarity, slug=Non
     (plan,) = plans[:1]
     subject_kind, object_kind = _kind(subject), _kind(object)
     operator = plan.operator_for(predicate, subject_kind, object_kind)
-    layer_term = plan.layers.get(layer) or _refuse(f"layer {layer!r} is not in the plan")
-    polarity_term = plan.polarities.get(polarity) or _refuse(f"polarity {polarity!r} is not in the plan")
+    if layer not in plan.layers:
+        _refuse(f"layer {layer!r} is not in the plan")
+    if polarity not in plan.polarities:
+        _refuse(f"polarity {polarity!r} is not in the plan")
+    layer_term = plan.layers[layer]
+    polarity_term = plan.polarities[polarity]  # None for a sign-inapt operator's not_applicable
     try:
         claim = build_claim(ctx.config.profile, operator=operator,
                             args=(Referent(sort=plan.sort_for(subject_kind), term=subject),
@@ -1527,12 +1667,7 @@ from decimal import Decimal
 import pytest
 
 from science.refusal import Refused
-from helpers.world import build_belief_world, hold_fixture_dataset, open_rig
-
-FIELDS = {"estimand": "difference in PHF19 expression", "method": "rank comparison",
-          "assumptions": "independent samples", "falsification": "no difference at alpha",
-          "applicability": "samples with a stage token",
-          "interpretation_rule": "outcome-file/v1", "equivalence_rule": "content-identity-equality/v1"}
+from helpers.world import SPEC_FIELDS as FIELDS, build_belief_world, hold_fixture_dataset, open_rig
 
 
 @pytest.fixture
@@ -1695,10 +1830,7 @@ refusal names the kernel's reason and nothing was written.
 import pytest
 
 from science.refusal import Refused
-from helpers.world import build_belief_world, fixture_bundle, hold_fixture_dataset, open_rig
-
-SPEC_FIELDS = {"estimand": "e", "method": "m", "assumptions": "a", "falsification": "f", "applicability": "p",
-               "interpretation_rule": "outcome-file/v1", "equivalence_rule": "content-identity-equality/v1"}
+from helpers.world import SPEC_FIELDS, build_belief_world, fixture_bundle, hold_fixture_dataset, open_rig
 
 
 @pytest.fixture
@@ -1756,7 +1888,24 @@ def test_kernel_run_refusal_is_the_refusal_envelope(rig, certified_work):
     with pytest.raises(Refused) as caught:
         d.invoke("run", {"spec": spec_ref, "dataset": ref, "code": str(code),
                          "entrypoint": "analysis/workflow/Missing", "targets": list(targets)})
-    assert caught.value.refusal.code in {"invalid-input", "run-refused"}
+    assert caught.value.refusal.code == "invalid-input"  # prepare() refuses before the boundary
+
+
+def test_boundary_refusal_is_kernel_refused_and_closes_the_invocation(rig, certified_work):
+    """A definition the entrypoint does not embody reaches the boundary, which
+    refuses; the dispatcher's kernel path renders it and closes the ledger."""
+    d, _, spec_ref, ref = rig
+    code, entrypoint, targets = fixture_bundle(certified_work)
+    (code / "workflow" / "Snakefile").write_text("rule nothing:\n    output: 'outputs/other.txt'\n    shell: 'touch {output}'\n")
+    with pytest.raises(Refused) as caught:
+        d.invoke("run", {"spec": spec_ref, "dataset": ref, "code": str(code),
+                         "entrypoint": entrypoint, "targets": list(targets)}, invocation_id="K" * 8)
+    assert caught.value.refusal.code == "kernel-refused"
+    assert caught.value.refusal.data["kind"] == "RunRefused"
+    with pytest.raises(Refused) as again:  # the refusal replays from the ledger
+        d.invoke("run", {"spec": spec_ref, "dataset": ref, "code": str(code),
+                         "entrypoint": entrypoint, "targets": list(targets)}, invocation_id="K" * 8)
+    assert again.value.refusal.code == "kernel-refused"
 ```
 
 - [ ] **Step 3: Run to verify they fail** — `just test-fast`.
@@ -1829,11 +1978,6 @@ def prepare(ctx, spec_ref: str, dataset_ref: str, code: str, entrypoint: str, ta
     }
 
 
-def refusal_of(refused: RunRefused) -> Refusal:
-    return Refusal("run-refused", f"{refused.reason}: {refused.detail}".rstrip(": "),
-                   {"reason": refused.reason})
-
-
 def handle(ctx, writer, *, spec, dataset, code, entrypoint, targets, cores=None) -> Report:
     reason = host_prerequisites()
     if reason is not None:
@@ -1845,13 +1989,17 @@ def handle(ctx, writer, *, spec, dataset, code, entrypoint, targets, cores=None)
         cores=cores or 1, **prepared,
     )
     if isinstance(outcome, RunRefused):
-        raise Refused(refusal_of(outcome))
+        # A kernel refusal, through the kernel path: the boundary may already
+        # have written its act-report through the port, so this is never a
+        # surface `Refused` (Task 1 would call that a handler defect). The
+        # dispatcher normalizes it to `kernel-refused` carrying the reason.
+        raise KernelRefusalValue(outcome)
     assert isinstance(outcome, RunMinted)
     _, view = ctx.single_view()
     return (record_block(view.get(run_ref(outcome.run.address()))),)
 ```
 
-`run-refused` is a new refusal code; add it to the refusal code set if `science.refusal` closes one (`grep -n "CODES\|frozenset" python/src/science/refusal.py`), and document it in the framework design's §6.3 list as an amendment in this task. `writer.actor` is the session actor exposed on the scoped writer; if the seam names it differently, adjust. A `RunRefused` after the boundary has written its act-report is a kernel act: raising `Refused` here is legitimate only because the boundary's act-report is its own record and the dispatcher's §6.3 rule closes `done` with it — confirm in the test that the act-report's identity appears in the closed outcome, and if the seam records the refusal differently, close via the kernel-refusal path instead.
+with `from beliefs.session import KernelRefusalValue` among the imports. `RunRefused` carries `reason` and `detail`; the dispatcher's `_kernel_refusal` renders `Refusal("kernel-refused", str(value.reason), {"kind": "RunRefused", "reason": …})`. `writer.actor` is the session actor exposed on the scoped writer (assumed seam).
 
 - [ ] **Step 5: Run, regenerate, run** — `just test-fast`; `cd python && uv run science adapters build`; `just test`.
 
@@ -1859,7 +2007,7 @@ def handle(ctx, writer, *, spec, dataset, code, entrypoint, targets, cores=None)
 
 ```bash
 tasks done sci-fe0065 "run command: one confined execution through the scoped operation port"
-git add commands/run python/src/science/commands/run.py python/src/science/refusal.py python/tests/test_cmd_run.py adapters/claude-code docs/specs tasks/
+git add commands/run python/src/science/commands/run.py python/tests/test_cmd_run.py adapters/claude-code tasks/
 git commit -m "feat(commands): run executes a frozen spec under confinement"
 ```
 
@@ -1894,8 +2042,7 @@ enables and `belief` reports.
 import pytest
 
 from science.refusal import Refused
-from helpers.world import build_belief_world, fixture_bundle, hold_fixture_dataset, mint_fixture_run, open_rig
-from tests.test_cmd_run import SPEC_FIELDS
+from helpers.world import SPEC_FIELDS, build_belief_world, fixture_bundle, hold_fixture_dataset, mint_fixture_run, open_rig
 
 
 @pytest.fixture
@@ -2005,7 +2152,7 @@ git commit -m "feat(commands): assess derives and mints the assessment"
 - Regenerate: `adapters/claude-code/`
 
 **Interfaces:**
-- Consumes: `science.commands.run.{prepare, refusal_of, now, POLICY}`; `beliefs.replay.{replay, derive_scope}`; `beliefs.verify.{build_verification, AssessmentVerification, publication_node}`; `beliefs.rules.REFERENCE_RULES`; `ctx.pins()`, `ctx.epoch_identity()`.
+- Consumes: `science.commands.run.{prepare, now, POLICY}`; `beliefs.session.KernelRefusalValue`; `beliefs.replay.{replay, derive_scope}`; `beliefs.verify.{build_verification, AssessmentVerification, publication_node}`; `beliefs.rules.REFERENCE_RULES`; `ctx.pins()`, `ctx.epoch_identity()`.
 - Produces: `verification:<identity>` records naming the assessment; `handle(ctx, writer, *, assessment, code, entrypoint, cores=None)`.
 
 - [ ] **Step 1: Declaration and prompt** — spec §4.6; prompt:
@@ -2025,8 +2172,7 @@ the assessment to belief; ask `belief` to see whether it did.
 import pytest
 
 from science.refusal import Refused
-from helpers.world import build_belief_world, fixture_bundle, hold_fixture_dataset, mint_fixture_run, open_rig
-from tests.test_cmd_run import SPEC_FIELDS
+from helpers.world import SPEC_FIELDS, build_belief_world, fixture_bundle, hold_fixture_dataset, mint_fixture_run, open_rig
 
 
 @pytest.fixture
@@ -2076,7 +2222,8 @@ def test_a_disagreeing_replay_yields_failed_and_still_mints(rig, certified_work)
         d.invoke("verify", {"assessment": assessment_ref, "code": str(code), "entrypoint": entrypoint})
     # A changed bundle changes the recipe identity: the boundary refuses the
     # replay as a different recipe, never a silently different result.
-    assert caught.value.refusal.code == "run-refused"
+    assert caught.value.refusal.code == "kernel-refused"
+    assert caught.value.refusal.data["kind"] == "RunRefused"
 ```
 
 The third test encodes what the boundary does today (`expected_recipe_identity` mismatch refuses). If the kernel instead executes and the rule answers `failed`, change the assertion to look for `"verdict"] == "failed"`; either way the test pins one behavior and the docstring says which.
@@ -2098,7 +2245,9 @@ from beliefs.rules import REFERENCE_RULES
 from beliefs.runrecord import decode_run_closure
 from beliefs.verify import AssessmentVerification, build_verification, publication_node
 
-from science.commands.run import POLICY, now, prepare, refusal_of
+from beliefs.session import KernelRefusalValue
+
+from science.commands.run import POLICY, now, prepare
 from science.refusal import Refusal, Refused
 from science.report import Report, record_block
 
@@ -2135,7 +2284,7 @@ def handle(ctx, writer, *, assessment, code, entrypoint, cores=None) -> Report:
                      started_at=now(), scratch_base=ctx.config.operations_root / "scratch" / writer.invocation_id,
                      cores=cores or 1, **prepared)
     if isinstance(outcome, RunRefused):
-        raise Refused(refusal_of(outcome))
+        raise KernelRefusalValue(outcome)  # the kernel path, as in run
     assert isinstance(outcome, RunMinted)
     replayed = outcome.run
     derive_scope(original, replayed, certification=None)
@@ -2293,8 +2442,7 @@ that is a later sub-project's.
 from science.commands.next import classify, handle
 from science.config import ReadContext
 from science.report import KeyVals
-from helpers.world import build_belief_world, hold_fixture_dataset, open_rig
-from tests.test_cmd_run import SPEC_FIELDS
+from helpers.world import SPEC_FIELDS, build_belief_world, hold_fixture_dataset, open_rig
 
 
 def test_a_proposition_no_spec_targets_is_not_ready_however_much_is_held(certified_work):
@@ -2309,6 +2457,17 @@ def test_a_spec_whose_inputs_are_held_makes_it_ready(certified_work):
     with open_rig(cfg, ("spec",)) as (d, ctx):
         d.invoke("spec", dict(SPEC_FIELDS, target="proposition:p1", dataset=ref))
         assert classify(ctx, "proposition:p1") == "ready"
+
+
+def test_a_later_absent_observation_moves_it_back_to_not_ready(certified_work):
+    from helpers.world import unhold_fixture_dataset
+    cfg = build_belief_world(certified_work)
+    ref = hold_fixture_dataset(cfg, "data.txt", b"x\n", "expression")
+    with open_rig(cfg, ("spec",)) as (d, _):
+        d.invoke("spec", dict(SPEC_FIELDS, target="proposition:p1", dataset=ref))
+    assert classify(ReadContext.open(cfg), "proposition:p1") == "ready"
+    unhold_fixture_dataset(cfg, ref)
+    assert classify(ReadContext.open(cfg), "proposition:p1") == "not-ready"
 
 
 def test_next_renders_rows_in_class_order(certified_work):
@@ -2403,32 +2562,35 @@ git commit -m "feat(commands): next ranks propositions by a fixed derived order"
 ### Task 12: The full path through both surfaces
 
 **Files:**
-- Test: `python/tests/test_belief_path.py`
-- Modify: `python/tests/test_mcp.py` (one equivalence test), `python/tests/test_cli.py` (one)
+- Test: `python/tests/test_belief_path.py`, `python/tests/test_belief_path_transports.py`
+- Modify: `python/tests/helpers/world.py` (`write_config_for`)
 
 **Interfaces:**
-- Consumes: everything above; `helpers.world.write_cli_config` (grown to write `contracts` and `store_root`); the MCP `rpc()` helper and `serve()` from `test_mcp.py`; `science.cli.main`.
+- Consumes: everything above; the MCP `rpc()` helper and `serve()` from `test_mcp.py`; `science.cli.main`; `science.serve.serve` and the `_running`/`_ask` helpers pattern from `test_serve.py`.
+- Produces: `helpers.world.write_config_for(cfg) -> Path` (the TOML for an existing config, including `contracts` and `store_root`).
 
-- [ ] **Step 1: Write the full-path test**
+- [ ] **Step 1: The full path, portable and confined**
 
 ```python
 # python/tests/test_belief_path.py
 """The success criterion over the fixture world: claim -> dataset -> spec ->
 run -> assess -> verify -> belief, every step a record, through one
-dispatcher; then the same reads through the MCP server and the CLI."""
+dispatcher. Two hosts, two answers: under the minimal boundary policy a
+replay cannot qualify as clean-environment, so the verification does not
+admit and the belief stays NoBelief; under confinement it admits."""
 import pytest
 
+from beliefs.confinement import host_prerequisites
 from science.report import KeyVals
-from helpers.world import build_fixture_world_with_contract, fixture_bundle, open_rig
-from tests.test_cmd_run import SPEC_FIELDS
+from helpers.world import SPEC_FIELDS, build_fixture_world_with_contract, fixture_bundle, open_rig
+
+CONFINED = host_prerequisites() is None
 
 
-@pytest.fixture
-def walked(certified_work, monkeypatch):
+def walk(certified_work, monkeypatch, *, confined: bool):
     import science.commands.run as run_module
-    from beliefs.confinement import host_prerequisites
     from beliefs.recipe import MINIMAL_POLICY
-    if host_prerequisites() is not None:
+    if not confined:
         monkeypatch.setattr(run_module, "POLICY", MINIMAL_POLICY)
         monkeypatch.setattr(run_module, "host_prerequisites", lambda: None)
     cfg = build_fixture_world_with_contract(certified_work)
@@ -2436,33 +2598,50 @@ def walked(certified_work, monkeypatch):
     data = certified_work / "data.txt"
     data.write_bytes(b"x\n")
     names = ("claim", "dataset", "spec", "run", "assess", "verify", "belief", "next")
-    with open_rig(cfg, names) as (d, ctx):
-        def ref(text, prefix):
-            return next(t for t in text.split() if t.startswith(prefix))
-        prop = ref(d.invoke("claim", {"subject": "concept:disease-stage", "predicate": "affects",
-                                      "object": "protein:PHF19", "layer": "causal", "polarity": "positive"}).text,
-                   "proposition:")
-        dataset = ref(d.invoke("dataset", {"path": str(data), "title": "expression"}).text, "dataset:")
-        spec = ref(d.invoke("spec", dict(SPEC_FIELDS, target=prop, dataset=dataset)).text, "analysis-spec:")
-        run = ref(d.invoke("run", {"spec": spec, "dataset": dataset, "code": str(code),
-                                   "entrypoint": entrypoint, "targets": list(targets)}).text, "run:")
-        assessment = ref(d.invoke("assess", {"run": run}).text, "assessment:")
-        d.invoke("verify", {"assessment": assessment, "code": str(code), "entrypoint": entrypoint})
+    rig = open_rig(cfg, names)
+    d, ctx = rig.__enter__()
+
+    def ref(text, prefix):
+        return next(t for t in text.split() if t.startswith(prefix))
+    prop = ref(d.invoke("claim", {"subject": "concept:disease-stage", "predicate": "affects",
+                                  "object": "protein:PHF19", "layer": "causal", "polarity": "positive"}).text,
+               "proposition:")
+    dataset = ref(d.invoke("dataset", {"path": str(data), "title": "expression"}).text, "dataset:")
+    spec = ref(d.invoke("spec", dict(SPEC_FIELDS, target=prop, dataset=dataset)).text, "analysis-spec:")
+    run = ref(d.invoke("run", {"spec": spec, "dataset": dataset, "code": str(code),
+                               "entrypoint": entrypoint, "targets": list(targets)}).text, "run:")
+    assessment = ref(d.invoke("assess", {"run": run}).text, "assessment:")
+    d.invoke("verify", {"assessment": assessment, "code": str(code), "entrypoint": entrypoint})
+    return rig, d, ctx, prop, cfg
+
+
+@pytest.fixture
+def walked_portable(certified_work, monkeypatch):
+    rig, d, ctx, prop, cfg = walk(certified_work, monkeypatch, confined=False)
+    try:
         yield d, ctx, prop, cfg
+    finally:
+        rig.__exit__(None, None, None)
 
 
-def test_the_path_ends_in_an_admitted_belief(walked):
-    d, ctx, prop, _ = walked
+@pytest.fixture
+def walked_confined(certified_work, monkeypatch):
+    if not CONFINED:
+        pytest.skip(f"confinement unavailable: {host_prerequisites()}")
+    rig, d, ctx, prop, cfg = walk(certified_work, monkeypatch, confined=True)
+    try:
+        yield d, ctx, prop, cfg
+    finally:
+        rig.__exit__(None, None, None)
+
+
+def _answer(ctx, prop):
     from science.commands.belief import handle as belief
-    from science.commands.next import classify
-    pairs = dict(next(b for b in belief(ctx, proposition=prop) if isinstance(b, KeyVals)).pairs)
-    assert pairs["kind"] == "Belief", pairs
-    assert pairs["value"] and pairs["belief_input_digest"] and pairs["policy_binding"]
-    assert classify(ctx, prop) == "admitted"
+    return dict(next(b for b in belief(ctx, proposition=prop) if isinstance(b, KeyVals)).pairs)
 
 
-def test_every_step_left_exactly_its_record(walked):
-    _, ctx, _, _ = walked
+def test_every_step_left_exactly_its_record(walked_portable):
+    _, ctx, _, _ = walked_portable
     _, view = ctx.single_view()
     kinds = sorted(n.kind for n in view.iter_stored())
     assert kinds.count("proposition") == 1 and kinds.count("dataset") == 2
@@ -2470,33 +2649,143 @@ def test_every_step_left_exactly_its_record(walked):
     assert kinds.count("assessment") == 1 and kinds.count("verification") == 1
 
 
-def test_belief_and_next_render_identically_through_mcp_and_cli(walked, capsys):
-    import io
-    import json
-    from science.cli import main
-    from science.mcp import serve
-    from helpers.world import write_config_for
-    from tests.test_mcp import rpc
-    _, ctx, prop, cfg = walked
-    cfg_path = write_config_for(cfg)
-    call = rpc("tools/call", {"name": "belief", "arguments": {"proposition": prop}})
-    stdin, stdout = io.BytesIO((json.dumps(call) + "\n").encode()), io.StringIO()
-    serve(cfg_path, stdin=stdin, stdout=stdout, stderr=io.StringIO())
-    mcp_text = json.loads(stdout.getvalue())["result"]["content"][0]["text"]
-    assert main(["belief", "--config", str(cfg_path), "--proposition", prop]) == 0
-    assert capsys.readouterr().out == mcp_text
+def test_without_confinement_the_verification_does_not_admit(walked_portable):
+    """same-environment, passed — a real verification, not an admitting one."""
+    from science.commands.next import classify
+    _, ctx, prop, _ = walked_portable
+    _, view = ctx.single_view()
+    facet = next(n for n in view.iter_stored() if n.kind == "verification").facets["verification"]
+    assert facet["verdict"] == "passed" and facet["scope"] == "same-environment"
+    pairs = _answer(ctx, prop)
+    assert pairs["kind"] == "NoBelief" and pairs["reason"] == "no-eligible-assessment"
+    assert classify(ctx, prop) == "assessed-not-admitted"
+
+
+def test_under_confinement_the_path_ends_in_an_admitted_belief(walked_confined):
+    from science.commands.next import classify
+    _, ctx, prop, _ = walked_confined
+    _, view = ctx.single_view()
+    facet = next(n for n in view.iter_stored() if n.kind == "verification").facets["verification"]
+    assert facet["scope"] == "clean-environment" and facet["verdict"] == "passed"
+    pairs = _answer(ctx, prop)
+    assert pairs["kind"] == "Belief", pairs
+    assert pairs["value"] and pairs["belief_input_digest"] and pairs["policy_binding"]
+    assert classify(ctx, prop) == "admitted"
 ```
 
-Add `write_config_for(cfg: ScienceConfig) -> Path` to the helpers: writes the TOML for an existing config including `contracts = ["<the document path>"]` and `store_root`. Check `rpc()`'s signature and the MCP result shape in `test_mcp.py` and match them.
+- [ ] **Step 2: The transports, per command**
 
-- [ ] **Step 2: Run to verify** — `just test`. The first two tests must pass on any host (MINIMAL_POLICY fallback); the third proves §9.4 for the new reads.
+Framework §9.4 wants byte-identical rendering through the CLI and the MCP
+server, and the belief-path design §7 wants every command through its real
+transport: CLI argument parsing, service routing for writes, MCP argument
+handling, invocation replay and the refusal envelope on each.
 
-- [ ] **Step 3: Commit**
+```python
+# python/tests/test_belief_path_transports.py
+import io
+import json
+import socket
+import threading
+
+import pytest
+
+from helpers.world import SPEC_FIELDS, build_fixture_world_with_contract, write_config_for
+from tests.test_mcp import rpc
+
+
+@pytest.fixture
+def world(certified_work):
+    cfg = build_fixture_world_with_contract(certified_work)
+    return cfg, write_config_for(cfg)
+
+
+def mcp_call(cfg_path, name, arguments, invocation_id=None):
+    from science.mcp import serve
+    params = {"name": name, "arguments": dict(arguments)}
+    if invocation_id is not None:
+        params["arguments"]["invocation_id"] = invocation_id
+    stdin = io.BytesIO((json.dumps(rpc("tools/call", params)) + "\n").encode())
+    stdout = io.StringIO()
+    serve(cfg_path, stdin=stdin, stdout=stdout, stderr=io.StringIO())
+    return json.loads(stdout.getvalue())["result"]
+
+
+CLAIM = {"subject": "concept:disease-stage", "predicate": "affects", "object": "protein:PHF19",
+         "layer": "causal", "polarity": "positive"}
+
+
+def test_mcp_write_replays_under_one_invocation_id(world):
+    cfg, cfg_path = world
+    first = mcp_call(cfg_path, "claim", CLAIM, invocation_id="A" * 8)
+    again = mcp_call(cfg_path, "claim", CLAIM, invocation_id="A" * 8)
+    assert first["isError"] is False
+    assert first["content"][0]["text"] == again["content"][0]["text"]
+    assert first["structuredContent"]["invocation_id"] == "A" * 8
+    from science.config import ReadContext
+    _, view = ReadContext.open(cfg).single_view()
+    assert sum(1 for n in view.iter_stored() if n.kind == "proposition") == 1
+
+
+def test_mcp_refusal_carries_the_envelope(world):
+    _, cfg_path = world
+    result = mcp_call(cfg_path, "claim", dict(CLAIM, subject="protein:PHF19", object="concept:disease-stage"))
+    assert result["isError"] is True
+    assert result["structuredContent"]["refusal"]["code"] == "invalid-input"
+    assert "no plan row" in result["structuredContent"]["refusal"]["message"]
+
+
+def test_cli_write_routes_through_the_service_and_refuses_with_the_json_line(world, tmp_path, capsys):
+    from science.cli import main
+    from science.serve import serve
+    from science.config import load_config
+    cfg, _ = world
+    named = tmp_path / "svc.sock"
+    cfg_path = write_config_for(cfg, service_socket=named)
+    server = serve(load_config(cfg_path), named)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    try:
+        data = tmp_path / "m.txt"
+        data.write_bytes(b"x\n")
+        assert main(["dataset", "--config", str(cfg_path), "--path", str(data), "--title", "m",
+                     "--facets", "biology/gene-axis=axis:rows,namespace:HGNC"]) == 0
+        out = capsys.readouterr()
+        assert "[dataset] dataset:sha256:" in out.out
+        assert json.loads(out.err)["invocation_id"]
+        assert main(["dataset", "--config", str(cfg_path), "--path", str(tmp_path), "--title", "dir"]) == 3
+        err = json.loads(capsys.readouterr().err)
+        assert err["refusal"]["code"] == "invalid-input"
+        assert main(["dataset", "--config", str(cfg_path), "--path", str(data), "--title", "m",
+                     "--invocation-id", "R" * 8]) == 3  # same bytes: refuses naming the record
+        assert main(["dataset", "--config", str(cfg_path), "--path", str(data), "--title", "m",
+                     "--invocation-id", "R" * 8]) == 3  # and replays that refusal
+    finally:
+        server.server_close()
+
+
+def test_reads_render_identically_through_mcp_and_cli(world, capsys):
+    from science.cli import main
+    cfg, cfg_path = world
+    mcp_call(cfg_path, "claim", CLAIM)
+    for name, arguments, argv in (
+        ("belief", {"proposition": "proposition:concept-disease-stage-affects-protein-phf19"},
+         ["--proposition", "proposition:concept-disease-stage-affects-protein-phf19"]),
+        ("next", {}, []),
+    ):
+        text = mcp_call(cfg_path, name, arguments)["content"][0]["text"]
+        assert main([name, "--config", str(cfg_path), *argv]) == 0
+        assert capsys.readouterr().out == text
+```
+
+Add `write_config_for(cfg, service_socket=None) -> Path` to the helpers: it writes every key the loader requires from an existing `ScienceConfig`, with `contracts = ["<the fixture document path>"]`, `store_root`, and `service_socket` when given. The MCP result shape and the `rpc()` signature are those in `test_mcp.py`; the JSON stderr line is the CLI's §9.2 wire. Each transport test proves one thing the dispatcher tests cannot: argparse compiled the declared inputs (including `--facets` as a repeated option), the service routed the write and its refusal, the MCP tool accepted `invocation_id` and replayed, and the refusal envelope survived each wire.
+
+- [ ] **Step 3: Run to verify** — `just test`. The portable path and all transport tests pass on any host; the confined test skips with the reason where bubblewrap is absent and passes where it is present.
+
+- [ ] **Step 4: Commit**
 
 ```bash
-tasks done sci-445f89 "the full belief path over the fixture world, equivalent through MCP and CLI"
+tasks done sci-445f89 "the full belief path over the fixture world: admitted under confinement, honestly not without; every command through its transport"
 git add python/tests/ tasks/
-git commit -m "test(belief-path): the full path ends in an admitted belief on both surfaces"
+git commit -m "test(belief-path): the full path on both surfaces, confined and portable"
 ```
 
 ---
@@ -2546,7 +2835,11 @@ config = WorldConfig(WORK / "world", secrets.token_hex(16), (WORK / "corpus",))
 init_world_root(config, authority=AUTH); init_corpus_root(WORK / "corpus", authority=AUTH)
 init_store_root(WORK / "store", authority=AUTH)
 open_corpus(WORK / "corpus", authority=AUTH, profile=profile).adopt_manifest(profile=pins)
-open_world(config, authority=AUTH).admit(WORK / "corpus", provenance=Fresh())
+world = open_world(config, authority=AUTH)
+world.admit(WORK / "corpus", provenance=Fresh())
+from beliefs.holdings.reduce import holdings_rule_bundle
+from beliefs.world.rules import install_rule_binding
+install_rule_binding(world, holdings_rule_bundle())   # the holdings reducer the reads derive through
 print(config.world_id)
 ```
 
@@ -2574,10 +2867,10 @@ Then `tasks done sci-66b26d` only if the coordination-set half is also done or s
 
 ## Self-review
 
-**Spec coverage.** §2 rulings 1–9: 1, 2 → Task 13; 3 → Task 6; 4 → the assumed seam + Tasks 6, 8, 9; 5 → Task 2; 6 → Tasks 8–10 ordering; 7 → Task 11; 8 → Task 13 step 2; 9 → seams stated up front. §4.1–4.8 → Tasks 5, 4, 6, 7, 8, 9, 10, 11. §5.1–5.5 → Tasks 2–3. §6.1–6.2 → assumed seams; §6.3 → Task 1. §7 → each task's tests plus Task 12; the transport equivalence test covers the two reads (writes render the same canonical ledger-rebuilt report on both surfaces by construction, framework §7.4). §8 → Task 13.
+**Spec coverage.** §5.4's holdings reads go through the kernel's held reducer (Task 3), which the fixture worlds and the operator recipe install. §2 rulings 1–9: 1, 2 → Task 13; 3 → Task 6; 4 → the assumed seam + Tasks 6, 8, 9; 5 → Task 2; 6 → Tasks 8–10 ordering; 7 → Task 11; 8 → Task 13 step 2; 9 → seams stated up front. §4.1–4.8 → Tasks 5, 4, 6, 7, 8, 9, 10, 11. §5.1–5.5 → Tasks 2–3. §6.1–6.2 → assumed seams; §6.3 → Task 1. §7 → each task's tests plus Task 12; the transport equivalence test covers the two reads (writes render the same canonical ledger-rebuilt report on both surfaces by construction, framework §7.4). §8 → Task 13.
 
 **Placeholders.** None: every step carries its code or its exact command. The four `grep` checkpoints (Tasks 3, 5, 9, 11) are for pinning a kernel name at implementation time, with the fallback spelled out.
 
-**Type consistency.** `open_rig(cfg, names) -> (Dispatcher, ReadContext)` is used the same way in Tasks 4–12. `prepare()` returns the keyword set `execute_assessment_run` and `replay` share, and `verify` pops `spec` because `replay` takes it by name. `ctx.held_path(address)` takes a dataset address string everywhere. `REFERENCE_RULES` is a mapping in Tasks 6, 8, 9. `refusal_of` and `now` are imported from `run` by `verify`.
+**Type consistency.** `open_rig(cfg, names) -> (Dispatcher, ReadContext)` is defined in Task 3 and used the same way in Tasks 4–12; `SPEC_FIELDS` likewise. `prepare()` returns the keyword set `execute_assessment_run` and `replay` share, and `verify` pops `spec` because `replay` takes it by name. `ctx.held_path(address)` takes a dataset address string everywhere; `ctx.observations()` is the reduced mapping everywhere. `REFERENCE_RULES` is a mapping in Tasks 6, 8, 9. Kernel refusals (`RunRefused`) go through `KernelRefusalValue` in Tasks 7 and 9; only pre-act validation raises the surface `Refused`.
 
-**Task order.** 1 → 2 → 3 → 5 (claim needs only the read context) → 4 (blocked on the routes seam) → 6, 8 (rules seam) → 7, 9 (routes seam) → 10, 11 → 12 → 13. Tasks 10 and 11 can run before 7 and 9 since their unit tests need only fixtures.
+**Task order.** 1 → 2 → 3 → 5, 10, 11 (they need only the read context and the Task 3 helpers) → 4 (routes seam) → 6, 8 (rules seam) → 7, 9 (routes seam) → 12 → 13. Every helper a task imports is defined in Task 3 or earlier; nothing imports forward.
