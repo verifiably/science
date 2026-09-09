@@ -218,9 +218,9 @@ git commit -m "feat(dispatch): close a surface refusal raised by a write handler
 
 **Interfaces:**
 - Consumes: `beliefs.contract.domain.parse_domain_contract(document, *, source, base, predecessor)`, `beliefs.profile.compile_profile`, `shipped_base_contract`, `shipped_domain_contract`.
-- Produces: `ScienceConfig.store_root: Path`, `ScienceConfig.plans: tuple[OperatorPlan, ...]`; `science.contracts.OperatorPlan` with `.operator_for(predicate, subject_kind, object_kind) -> str`, `.sort_for(kind) -> str`, `.layers: Mapping[str, str]`, `.polarities: Mapping[str, str]`; `science.contracts.load_contract_document(path, base) -> tuple[DomainContract, OperatorPlan | None]`.
+- Produces: `ScienceConfig.store_root: Path`, `ScienceConfig.plans: tuple[OperatorPlan, ...]`; `science.contracts.OperatorPlan` with `.operator_for(predicate, subject_kind, object_kind) -> str`, `.sort_for(kind) -> str`, `.layers: Mapping[str, str]`, `.polarities: Mapping[str, str | None]`; `science.contracts.load_contract_document(path, base) -> tuple[DomainContract, OperatorPlan | None]`.
 
-- [ ] **Step 1: Write the failing contract-document tests**
+- [x] **Step 1: Write the failing contract-document tests**
 
 ```python
 # python/tests/test_contracts.py
@@ -313,7 +313,7 @@ def test_malformed_document_refuses(tmp_path):
     assert caught.value.refusal.code == "invalid-input"
 ```
 
-- [ ] **Step 2: Write the failing config tests** (append to `python/tests/test_config.py`)
+- [x] **Step 2: Write the failing config tests** (append to `python/tests/test_config.py`)
 
 ```python
 def test_contracts_and_store_root_are_required_keys(tmp_path):
@@ -323,7 +323,7 @@ def test_contracts_and_store_root_are_required_keys(tmp_path):
 
 
 def test_contracts_compile_into_the_profile(tmp_path):
-    from tests.test_contracts import DOCUMENT  # the same fixture document
+    from test_contracts import DOCUMENT  # the same fixture document
     doc = tmp_path / "testing.yaml"
     doc.write_text(DOCUMENT % ("0" * 64))
     cfg = load_config(write_config(tmp_path, contracts=f'["{doc}"]'))
@@ -379,12 +379,12 @@ def write_config(
 
 Also update the parametrized malformed-TOML cases (`_TAIL`) to carry the two new keys: `_TAIL = 'domains = []\ncontracts = []\nstore_root = "/x"\n'`, and the two cases that end with an explicit `domains = …` line gain `contracts = []\nstore_root = "/x"\n` after it.
 
-- [ ] **Step 3: Run to verify they fail**
+- [x] **Step 3: Run to verify they fail**
 
 Run: `just test-fast`
 Expected: `ImportError` for `science.contracts`; the config tests fail on `must contain exactly the required keys`.
 
-- [ ] **Step 4: Write `science/contracts.py`**
+- [x] **Step 4: Write `science/contracts.py`**
 
 ```python
 """Corpus-local contract documents (belief-path design §5.2).
@@ -444,24 +444,44 @@ def _term(domain: DomainContract, name: str) -> str:
     return name if "/" in name else domain.term(name)
 
 
+def _string_table(raw: dict, name: str, *, nullable: bool = False) -> dict[str, str | None]:
+    value = raw.get(name, {})
+    if not isinstance(value, dict):
+        _refuse(f"plan.{name} must be a table")
+    allowed = (str, type(None)) if nullable else (str,)
+    if any(type(key) is not str or type(item) not in allowed for key, item in value.items()):
+        _refuse(f"plan.{name} keys and values must be strings" + (" or null" if nullable else ""))
+    return value
+
+
 def _plan(raw: object, domain: DomainContract) -> OperatorPlan:
     if not isinstance(raw, dict):
         _refuse("a contract document's plan must be a table")
-    rows_raw = raw.get("operators") or []
+    rows_raw = raw.get("operators", [])
     if not isinstance(rows_raw, list):
         _refuse("plan.operators must be a list of rows")
     rows: dict[tuple[str, str | None, str | None], str] = {}
     for row in rows_raw:
-        if not isinstance(row, dict) or "predicate" not in row or "operator" not in row:
-            _refuse("each plan row names predicate and operator")
-        key = (str(row["predicate"]), row.get("subject"), row.get("object"))
-        rows[key] = _term(domain, str(row["operator"]))
+        if not isinstance(row, dict):
+            _refuse("each plan row must be a table")
+        predicate, operator = row.get("predicate"), row.get("operator")
+        subject, object_ = row.get("subject"), row.get("object")
+        if type(predicate) is not str or type(operator) is not str:
+            _refuse("each plan row names predicate and operator as strings")
+        if subject is not None and type(subject) is not str:
+            _refuse("a plan row subject must be a string when present")
+        if object_ is not None and type(object_) is not str:
+            _refuse("a plan row object must be a string when present")
+        rows[(predicate, subject, object_)] = _term(domain, operator)
+    sorts = _string_table(raw, "sorts")
+    layers = _string_table(raw, "layers")
+    polarities = _string_table(raw, "polarities", nullable=True)
     return OperatorPlan(
         namespace=domain.namespace,
         operators=rows,
-        sorts={str(k): _term(domain, str(v)) for k, v in (raw.get("sorts") or {}).items()},
-        layers={str(k): str(v) for k, v in (raw.get("layers") or {}).items()},
-        polarities={str(k): (None if v is None else str(v)) for k, v in (raw.get("polarities") or {}).items()},
+        sorts={key: _term(domain, value) for key, value in sorts.items()},
+        layers=layers,
+        polarities=polarities,
     )
 
 
@@ -486,7 +506,7 @@ def load_contract_document(path: Path, base) -> tuple[DomainContract, OperatorPl
 
 Check the exception name: `grep -n "^class MalformedContract" ~/d/beliefs/python/src/beliefs/errors.py`; if it lives elsewhere, import from there. `DomainContract.namespace` and `.term(name)` are what the driver's `vocabulary.py` used.
 
-- [ ] **Step 5: Extend `science/config.py`**
+- [x] **Step 5: Extend `science/config.py`**
 
 ```python
 _KEYS = ("world_root", "world_id", "corpus_roots", "operations_root", "domains", "contracts", "store_root")
@@ -526,16 +546,16 @@ Replace the profile compilation:
 
 and pass `store_root=Path(raw["store_root"]).resolve(), plans=plans` to the `ScienceConfig(...)` call. Import `OperatorPlan, load_contract_document` from `science.contracts`.
 
-- [ ] **Step 6: Grow the fixture helpers** (`python/tests/helpers/world.py`)
+- [x] **Step 6: Grow the fixture helpers** (`python/tests/helpers/world.py`)
 
 `build_fixture_world` gains a store root and returns `store_root=work / "store"` on the config (initialize it: `store_id = init_store_root(work / "store", authority=FIXTURE_AUTHORITY)` and keep the id on a module-level dict `STORE_IDS[work] = store_id` for later helpers). `write_cli_config` writes `contracts = []` and `store_root = "{cfg.store_root}"`.
 
-- [ ] **Step 7: Run to verify they pass**
+- [x] **Step 7: Run to verify they pass**
 
 Run: `just test` (the config change touches every fixture).
 Expected: all PASS, including `test_status.py` (its hand-built `ScienceConfig` gains `store_root=cfg.store_root`).
 
-- [ ] **Step 8: Amend framework design §9.1**
+- [x] **Step 8: Amend framework design §9.1**
 
 Append after the `service_socket` paragraph:
 
@@ -550,7 +570,7 @@ holdings store the session and the `dataset` command bind, resolved like
 contracts a home (belief-path ruling 5).
 ```
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 tasks done sci-05c56c "contracts and store_root config keys; corpus-local contract documents and operator plans"

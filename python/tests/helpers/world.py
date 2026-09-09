@@ -5,7 +5,7 @@ from beliefs import stored
 from beliefs.consulted import CorpusPins
 from beliefs.permit import Authority, WritePermit
 from beliefs.profile import compile_profile, shipped_base_contract, shipped_domain_contract
-from beliefs.root import init_corpus_root, init_world_root, open_corpus, open_world
+from beliefs.root import init_corpus_root, init_store_root, init_world_root, open_corpus, open_world
 from beliefs.world import Fresh, WorldConfig
 
 from science.config import ScienceConfig
@@ -28,6 +28,7 @@ PINS = CorpusPins(
         for namespace, identity in PROFILE.activated_contracts.items()
     },
 )
+STORE_IDS: dict[Path, str] = {}
 
 
 def fixture_proposition_node(slug: str):
@@ -50,11 +51,14 @@ def build_fixture_world(work: Path) -> ScienceConfig:
     world = open_world(config, authority=FIXTURE_AUTHORITY)
     world.admit(corpus_root, provenance=Fresh())
     writer.add(fixture_proposition_node("p1"))
+    store_root = work / "store"
+    STORE_IDS[work] = init_store_root(store_root, authority=FIXTURE_AUTHORITY)
     return ScienceConfig(
         world=config,
         operations_root=work / "ops",
         profile=PROFILE,
         service_socket=work / "ops" / "service.sock",
+        store_root=store_root,
     )
 
 
@@ -75,6 +79,8 @@ world_id = "{cfg.world.world_id}"
 corpus_roots = ["{cfg.world.corpus_roots[0]}"]
 operations_root = "{ops}"
 domains = {list(DOMAINS)!r}
+contracts = []
+store_root = "{cfg.store_root}"
 {socket_line}''')
     return path
 

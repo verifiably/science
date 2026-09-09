@@ -15,18 +15,26 @@ def write_config(
     extra: str = "",
     operations_root: str | Path | None = None,
     domains: str = "[]",
+    contracts: str | None = "[]",
+    store_root: str | Path | None = "",
 ) -> Path:
     world_root = tmp_path / "world"
     ops = tmp_path / "ops" if operations_root is None else operations_root
     corpus = tmp_path / "corpora" / "one"
     cfg = tmp_path / "science.toml"
-    cfg.write_text(f'''\
-world_root = "{world_root}"
-world_id = "{world_id}"
-corpus_roots = ["{corpus}"]
-operations_root = "{ops}"
-domains = {domains}
-{extra}''')
+    store = tmp_path / "store" if store_root == "" else store_root
+    lines = [
+        f'world_root = "{world_root}"',
+        f'world_id = "{world_id}"',
+        f'corpus_roots = ["{corpus}"]',
+        f'operations_root = "{ops}"',
+        f"domains = {domains}",
+    ]
+    if contracts is not None:
+        lines.append(f"contracts = {contracts}")
+    if store is not None:
+        lines.append(f'store_root = "{store}"')
+    cfg.write_text("\n".join(lines) + "\n" + extra)
     return cfg
 
 
@@ -96,7 +104,7 @@ def test_missing_or_unknown_fields_are_refused(tmp_path):
     assert_invalid_config(write_config(tmp_path, extra="[untrusted]\nvalue = 1\n"))
 
 
-_TAIL = 'domains = []\n'
+_TAIL = 'domains = []\ncontracts = []\nstore_root = "/x"\n'
 
 
 @pytest.mark.parametrize("contents", [
@@ -104,8 +112,8 @@ _TAIL = 'domains = []\n'
     f'world_root = "/x"\nworld_id = "{WORLD_ID}"\ncorpus_roots = "not-a-list"\noperations_root = "/x"\n' + _TAIL,
     f'world_root = "/x"\nworld_id = "{WORLD_ID}"\ncorpus_roots = ["/x", 3]\noperations_root = "/x"\n' + _TAIL,
     f'world_root = "/x"\nworld_id = "{WORLD_ID}"\ncorpus_roots = ["/x"]\noperations_root = false\n' + _TAIL,
-    f'world_root = "/x"\nworld_id = "{WORLD_ID}"\ncorpus_roots = ["/x"]\noperations_root = "/x"\ndomains = "biology"\n',
-    f'world_root = "/x"\nworld_id = "{WORLD_ID}"\ncorpus_roots = ["/x"]\noperations_root = "/x"\ndomains = ["biology", 3]\n',
+    f'world_root = "/x"\nworld_id = "{WORLD_ID}"\ncorpus_roots = ["/x"]\noperations_root = "/x"\ndomains = "biology"\ncontracts = []\nstore_root = "/x"\n',
+    f'world_root = "/x"\nworld_id = "{WORLD_ID}"\ncorpus_roots = ["/x"]\noperations_root = "/x"\ndomains = ["biology", 3]\ncontracts = []\nstore_root = "/x"\n',
     'this = is not [ toml',
 ])
 def test_noncanonical_or_malformed_toml_is_refused(tmp_path, contents):
@@ -121,6 +129,34 @@ def test_noncanonical_world_id_is_refused(tmp_path, world_id):
 
 def test_missing_config_file_is_refused(tmp_path):
     assert_invalid_config(tmp_path / "missing.toml")
+
+
+def test_contracts_and_store_root_are_required_keys(tmp_path):
+    assert_invalid_config(write_config(tmp_path, contracts=None, store_root=None))
+
+
+def test_contracts_compile_into_the_profile(tmp_path):
+    from test_contracts import DOCUMENT
+
+    doc = tmp_path / "testing.yaml"
+    doc.write_text(DOCUMENT % ("0" * 64))
+    cfg = load_config(write_config(tmp_path, contracts=f'["{doc}"]'))
+    assert "testing" in cfg.profile.activated_contracts
+    assert cfg.store_root == tmp_path / "store"
+    (plan,) = cfg.plans
+    assert plan.operator_for("affects", "concept", "concept") == "testing/affects-concept-concept"
+
+
+def test_store_root_resolves_like_operations_root(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    cfg = load_config(write_config(tmp_path, store_root="held"))
+    assert cfg.store_root == tmp_path / "held"
+
+
+def test_unparseable_contract_document_refuses_at_load(tmp_path):
+    doc = tmp_path / "bad.yaml"
+    doc.write_text("contract: 3\n")
+    assert_invalid_config(write_config(tmp_path, contracts=f'["{doc}"]'))
 
 
 def test_resolution_order(tmp_path):

@@ -620,7 +620,8 @@ there is nothing to reach around.
 
 One launcher-owned TOML file, located by `--config PATH` or
 `SCIENCE_CONFIG`: the fields of `beliefs.WorldConfig` (world root, world id,
-corpus roots) plus `operations_root` and `domains`. The loader constructs
+corpus roots) plus `operations_root`, `domains`, `contracts`, and `store_root`.
+The loader constructs
 `beliefs.WorldConfig` directly — no parallel world model, no drift.
 Configuration is untrusted input (§6.4): paths are resolved and validated at
 session open.
@@ -645,6 +646,15 @@ invocations connect to, resolved like `operations_root`. Absent, it is
 socket path at 107 bytes and a worktree checkout's operations root already
 exceeds that; the loader is the single place both ends read the path, which
 is what keeps them agreeing.
+
+`contracts` and `store_root` (**added 2026-09-09**: belief-path design §5.1).
+`contracts` lists corpus-local domain-contract documents by path, parsed
+against the shipped base and compiled into the profile with the shipped
+domains; a document may carry an operator `plan` the `claim` command reads.
+It is required and may be empty, for `domains`'s reason. `store_root` is the
+holdings store the session and the `dataset` command bind, resolved like
+`operations_root`; required. Both are superseded whenever the kernel gives
+contracts a home (belief-path ruling 5).
 
 ### 9.2 CLI
 

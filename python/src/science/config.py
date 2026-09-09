@@ -16,9 +16,13 @@ from beliefs.world import WorldConfig
 from beliefs.world.registry import load_manifest
 
 from science.refusal import Refusal, Refused
+from science.contracts import OperatorPlan, load_contract_document
 
 _WORLD_ID_RE = re.compile(r"[0-9a-f]{32}")
-_KEYS = ("world_root", "world_id", "corpus_roots", "operations_root", "domains")
+_KEYS = (
+    "world_root", "world_id", "corpus_roots", "operations_root", "domains", "contracts",
+    "store_root",
+)
 _OPTIONAL_KEYS = ("service_socket",)
 
 
@@ -28,6 +32,8 @@ class ScienceConfig:
     operations_root: Path
     profile: ProfileSpec
     service_socket: Path
+    store_root: Path
+    plans: tuple[OperatorPlan, ...] = ()
 
 
 def _refuse(message: str) -> None:
@@ -58,15 +64,23 @@ def load_config(path: Path) -> ScienceConfig:
         type(value) is not str for value in raw["domains"]
     ):
         _refuse("config domains must be a list of strings")
+    if type(raw["contracts"]) is not list or any(type(value) is not str for value in raw["contracts"]):
+        _refuse("config contracts must be a list of strings")
+    if type(raw["store_root"]) is not str:
+        _refuse("config store_root must be a string")
     if not _WORLD_ID_RE.fullmatch(raw["world_id"]):
         _refuse("config world_id must be 32 lowercase hex characters")
     try:
-        profile = compile_profile(
-            shipped_base_contract(),
-            [shipped_domain_contract(namespace) for namespace in raw["domains"]],
-        )
+        domains = [shipped_domain_contract(namespace) for namespace in raw["domains"]]
     except ProfileError as caught:
         _refuse(f"config domains do not compile: {caught}")
+    base = shipped_base_contract()
+    local = [load_contract_document(Path(value).resolve(), base) for value in raw["contracts"]]
+    try:
+        profile = compile_profile(base, domains + [contract for contract, _ in local])
+    except ProfileError as caught:
+        _refuse(f"config contracts do not compile: {caught}")
+    plans = tuple(plan for _, plan in local if plan is not None)
     operations_root = Path(raw["operations_root"]).resolve()
     # The socket defaults beside the operations root. AF_UNIX caps the path at
     # 107 bytes and a worktree checkout's operations root already exceeds it,
@@ -86,6 +100,8 @@ def load_config(path: Path) -> ScienceConfig:
         operations_root=operations_root,
         profile=profile,
         service_socket=service_socket,
+        store_root=Path(raw["store_root"]).resolve(),
+        plans=plans,
     )
 
 
