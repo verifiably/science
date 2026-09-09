@@ -186,19 +186,26 @@ message.
 
 **The validation path, stated because `build_claim` consults no vocabulary.**
 `build_claim` types; membership is judged at decode. So the handler, before
-any act, calls `decode_claim(project_claim(claim), profile=profile,
-snapshot=<§5.3 snapshot>)`. The kernel refuses `not-member` there and
-permits the other four outcomes; the receipt records what was consulted.
-On top of that the surface applies **one stricter policy**: for a sort the
-contract binds to a vocabulary, a referent whose outcome is `not-consulted`
-or `not-available` — the snapshot lacks that vocabulary because its dataset
-is not in the corpus or not held — refuses `invalid-input` naming the
-dataset address to hold first. A person authoring under a bound sort gets a
-membership answer or a refusal, never a claim that silently skipped the
-check; the kernel's permissiveness exists for readers over corpora written
-elsewhere, not for the author's own write. A sort with no binding (the
-biology pack's `molecular-entity`) resolves `not-consulted` and is accepted,
-as the record measured for slot 1. This is why the vocabulary `dataset`
+any act, calls `decode_claim(WireClaim(**project_claim(claim)),
+profile=profile, snapshot=<§5.3 snapshot>)` — the projection is a plain
+mapping whose five keys are the wire claim's fields, and the decoder
+refuses anything but a `WireClaim`. The kernel refuses `not-member` there
+and permits the other four outcomes; the receipt records what was
+consulted. On top of that the surface applies **one stricter policy, scoped
+to dataset-identity bindings**: a `VocabularyBinding` is either a held
+dataset by content identity or a namespace with a release, never both. For
+a sort bound **by dataset identity** — the corpus-local `concept` sort —
+a referent whose outcome is `not-consulted` or `not-available` means the
+snapshot lacks a vocabulary this corpus was written to hold, and the
+surface refuses `invalid-input` naming the dataset address to hold first.
+A person authoring under such a sort gets a membership answer or a
+refusal, never a claim that silently skipped the check. For a sort bound
+**by namespace and release** — the biology pack's `molecular-entity`, HGNC
+at `2026-07-01` — the kernel's permissive reading is retained unchanged:
+no ontology release is held here, the referent resolves `not-consulted`,
+and the claim is accepted, exactly as the record measured for slot 1 on
+2026-09-08. The reproduction's target has one slot of each kind, which is
+why the policy is drawn where it is. This is why the vocabulary `dataset`
 precedes `claim` in §3.
 
 The record is `stored.proposition_node(slug, title, claim=
@@ -698,8 +705,9 @@ surfaces `internal-error`.
 Framework §11's harness shape, per command: the assertion, the source
 mutation that falsifies it, the test that catches the mutation. Fixture
 worlds are the existing helpers grown as needed: a corpus-local test
-contract with one vocabulary-bound sort and a two-row plan, a held
-one-line dataset, a fixture bundle whose Snakefile writes a fixed outcome.
+contract with one dataset-bound sort, one namespace-and-release-bound
+sort and a two-row plan, a held one-line dataset, a fixture bundle whose
+Snakefile writes a fixed outcome.
 
 - **The dispatcher amendment of §6.3**, first: the two tests it names,
   against the synthetic exemplars, before any command handler exists to
@@ -711,10 +719,12 @@ one-line dataset, a fixture bundle whose Snakefile writes a fixed outcome.
   mint a kind it does not declare is refused `permit-exceeded` under the
   full attended permit (framework §4.2).
 - **`claim`** types the fixture's one plan row and refuses a shape with no
-  row; the refusal names the shape. Under the bound sort a member resolves,
-  a non-member refuses with the kernel's message, and an unheld vocabulary
-  refuses naming the dataset address; the unbound sort resolves
-  `not-consulted` and is accepted.
+  row; the refusal names the shape. The fixture contract binds one sort by
+  dataset identity and one by namespace and release. Under the
+  dataset-bound sort a member resolves, a non-member refuses with the
+  kernel's message, and an unheld vocabulary refuses naming the dataset
+  address; under the namespace-bound sort the referent resolves
+  `not-consulted` and the claim is accepted.
 - **`dataset`** holds bytes whose digest the record declares and reads
   `Held`; a non-regular path refuses before any act; the locator's
   `attested_by` is the session actor and no input can set it. Two files
