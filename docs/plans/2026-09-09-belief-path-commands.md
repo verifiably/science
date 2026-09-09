@@ -28,9 +28,9 @@
 Tasks 4, 6, 7, 8 and 9 call interfaces `beliefs` does not have yet. These are the names the two `beliefs` tasks deliver; if a name lands differently, change the call site, not the design.
 
 - **`beliefs-e5ab34` (reference rules):** `beliefs.rules.REFERENCE_RULES: Mapping[str, RuleImplementation | EquivalenceImplementation]` keyed by rule identity, holding `"outcome-file/v1"` (interpretation: maps the digest of `outputs/outcome.txt` — one of `supported\n`, `refuted\n`, `inconclusive\n` — to `{"outcome": …}`) and `"content-identity-equality/v1"` (equivalence: `passed` iff the two result manifests are equal). `beliefs.rules.OUTCOME_FILE = "outputs/outcome.txt"`.
-- **`beliefs-5fe2e3` (scoped routes):** `open_attended_session(world_config, operations_root, *, profile, coordination=None, store_root: Path | None = None)`; `ScopedWriter.operation_port() -> OperationPort` bound to the invocation's scoped authority, whose commits are recorded as `act` lines; `ScopedWriter.holdings_context(*, instrument: str) -> ActContext` over the session's store root, observer = the session actor, whose published observations are recorded as `act` lines; `ScopedWriter.store_id -> str`; and `beliefs.replay.replay(original: RunMinted | RunClosure, …)` reading only the closure.
+- **`beliefs-5fe2e3` (scoped routes):** `beliefs.root.store_identity(store_root: Path) -> str | None` (the public form of the existing private genesis read, by detached inspection); `open_attended_session(world_config, operations_root, *, profile, coordination=None, store_root: Path | None = None)`; `ScopedWriter.operation_port() -> OperationPort` bound to the invocation's scoped authority, whose commits are recorded as `act` lines; `ScopedWriter.holdings_context(*, instrument: str) -> ActContext` over the session's store root, observer = the session actor, whose published observations are recorded as `act` lines; `ScopedWriter.store_id -> str`; and `beliefs.replay.replay(original: RunMinted | RunClosure, …)` reading only the closure.
 
-Until those land, Tasks 4, 7 and 9 cannot pass end to end; Tasks 6 and 8 need only the rules. Do Tasks 1–3, 5, 10 and 11 first, then whatever the seams have unblocked.
+Until those land, Tasks 4, 7 and 9 cannot pass end to end; Tasks 6, 8 and 11 need only the rules. Do Tasks 1–3, 5 and 10 first, then whatever the seams have unblocked.
 
 ## File structure
 
@@ -570,7 +570,7 @@ git commit -m "feat(config): corpus-local contract documents and the holdings st
 
 **Interfaces:**
 - Consumes: `beliefs.resolution.build_snapshot(readable=…)`, `VocabularyBinding`, `ProfileSpec.sorts` (`CompiledSort.vocabulary`), `stored.dataset_declaration`, `stored.holdings_observation_value`, `beliefs.dataset.{dataset_address, admission_state, ByteObservation, Held}`, `beliefs.evaluation.{evaluate_over, gather}`, `beliefs.belief.{Availability, SuppliedContext}`, `beliefs.closure.RetractionEnumeration`, `beliefs.corpus.lineage_snapshot`, `beliefs.policy.{BELIEF_V1, BELIEF_V1_RULE, BELIEF_V1_FIXTURES, PolicyBinding}`, `beliefs.world.read.current_epoch`, `beliefs.errors.EpochUnknown`, `beliefs.world.registry.load_manifest`.
-- Produces on `ReadContext`: `single_view() -> tuple[str, ReadView]`; `snapshot() -> ResolutionSnapshot`; `observations() -> dict[str, tuple[ByteObservation, ...]]` keyed by dataset address; `held_path(address) -> Path`; `is_held(node) -> bool`; `evaluate(proposition) -> Belief | NoBelief | Refused`; `gather_inputs(proposition) -> EvaluationInputs`; `pins() -> CorpusPins`; `epoch_identity() -> str`.
+- Produces on `ReadContext`: `single_view() -> tuple[str, ReadView]`; `store_id() -> str`; `snapshot() -> ResolutionSnapshot`; `observations() -> dict[str, tuple[ByteObservation, ...]]` keyed by dataset address; `held_path(address) -> Path`; `is_held(node) -> bool`; `evaluate(proposition) -> Belief | NoBelief | Refused`; `gather_inputs(proposition) -> EvaluationInputs`; `pins() -> CorpusPins`; `epoch_identity() -> str`.
 - Produces in helpers: `fixture_contract_document(work) -> Path` (a `testing` contract with `concept` bound by dataset identity and `protein` bound by namespace/release, and a plan), `hold_fixture_dataset(cfg, name, content, title) -> str` (returns the dataset ref), `unhold_fixture_dataset(cfg, ref) -> None` (a later `Absent` observation superseding the `Found`), `fixture_bundle(work, outcome="supported") -> tuple[Path, str, tuple[str, ...]]` (code dir, entrypoint, targets), `mint_fixture_run(cfg, spec_ref, dataset_ref, bundle) -> str` (a run under `MINIMAL_POLICY`, returns the run ref), `build_belief_world(work) -> ScienceConfig` (fixture world compiled with the test contract, the holdings reducer installed, concept list held, one proposition minted), `open_rig(cfg, names)` (a dispatcher over the named production commands with an attended session; yields `(dispatcher, ctx)`), and `SPEC_FIELDS` (the draft fields every spec test reuses).
 
 - [ ] **Step 1: Write the failing tests**
@@ -627,6 +627,39 @@ def test_a_later_absent_observation_removes_heldness(certified_work):
     assert dataset_address(stored.dataset_declaration(view.get(ref))) not in ctx.observations()
 
 
+def _tree_digest(root):
+    from hashlib import sha256
+    digest = sha256()
+    for path in sorted(p for p in root.rglob("*") if p.is_file()):
+        digest.update(str(path.relative_to(root)).encode()); digest.update(path.read_bytes())
+    return digest.hexdigest()
+
+
+def test_holdings_reads_inspect_detached_and_write_nothing(certified_work, monkeypatch):
+    """A read must not recover: the reducer is fed the detached chain view,
+    and the corpus tree, its metadata and the store are byte-identical after."""
+    import science.holdings as holdings_module
+    from beliefs.root import log_seam, metadata_root_for
+    cfg = build_belief_world(certified_work)
+    hold_fixture_dataset(cfg, "data.txt", b"x\n", "expression")
+    (root,) = cfg.world.corpus_roots
+    before = tuple(_tree_digest(d) for d in (root, metadata_root_for(root), cfg.store_root))
+    seam = log_seam()
+
+    class RefusingSeam:
+        inspect_detached = staticmethod(seam.inspect_detached)
+        state_facts = staticmethod(seam.state_facts)
+
+        @staticmethod
+        def inspect_registered(root):
+            raise AssertionError("a holdings read must never use the registered (recovering) inspection")
+
+    monkeypatch.setattr(holdings_module, "log_seam", lambda: RefusingSeam)
+    ctx = ReadContext.open(cfg)
+    assert ctx.observations()
+    assert tuple(_tree_digest(d) for d in (root, metadata_root_for(root), cfg.store_root)) == before
+
+
 def test_observations_and_held_path_follow_the_store(certified_work):
     cfg = build_belief_world(certified_work)
     ref = hold_fixture_dataset(cfg, "data.txt", b"hello\n", "expression")
@@ -639,6 +672,25 @@ def test_observations_and_held_path_follow_the_store(certified_work):
     address = dataset_address(stored.dataset_declaration(node))
     assert address in ctx.observations()
     assert ctx.held_path(address).read_bytes() == b"hello\n"
+
+
+def test_held_path_resolves_only_the_configured_store(certified_work):
+    """An observation recorded for another store id never selects a file here,
+    even when its relative path exists under this store root."""
+    from beliefs.dataset import ByteObservation
+    from science.holdings import held_path_for
+    from science.refusal import Refused
+    cfg = build_belief_world(certified_work)
+    ctx = ReadContext.open(cfg)
+    mine = ctx.store_id()
+    other = ("0" * 32) if mine != "0" * 32 else ("1" * 32)
+    (cfg.store_root / "aa").mkdir(exist_ok=True)
+    (cfg.store_root / "aa" / "f.txt").write_bytes(b"here\n")
+    foreign = ByteObservation(digest="sha256:" + "a" * 64, location=f"store:{other}:aa/f.txt")
+    local = ByteObservation(digest="sha256:" + "a" * 64, location=f"store:{mine}:aa/f.txt")
+    with pytest.raises(Refused):
+        held_path_for(cfg.store_root, mine, (foreign,))
+    assert held_path_for(cfg.store_root, mine, (foreign, local)) == cfg.store_root / "aa" / "f.txt"
 
 
 def test_held_path_refuses_an_unknown_address(certified_work):
@@ -915,7 +967,7 @@ def dataset_bound_sorts(profile: ProfileSpec) -> dict[str, VocabularyBinding]:
     }
 
 
-def snapshot(profile: ProfileSpec, view: ReadView, store_root, observations) -> ResolutionSnapshot:
+def snapshot(profile: ProfileSpec, view: ReadView, store_root, store_id: str, observations) -> ResolutionSnapshot:
     """Read each dataset-bound vocabulary from the store by the address the
     contract names. `observations` is the read context's reduced mapping
     (address -> Found observations). A binding whose dataset is not in the
@@ -929,7 +981,7 @@ def snapshot(profile: ProfileSpec, view: ReadView, store_root, observations) -> 
         if node is None or address not in observations:
             unreadable.append(binding)
             continue
-        path = held_path_for(store_root, observations[address])
+        path = held_path_for(store_root, store_id, observations[address])
         content = path.read_bytes()
         (resource,) = stored.dataset_declaration(node).resources
         if "sha256:" + sha256(content).hexdigest() != resource.digest:
@@ -976,11 +1028,17 @@ from science.refusal import Refusal, Refused
 
 
 def reduced_heads(world, corpus_id: str):
-    """(active, blocked) from the world's held reducer over this corpus."""
+    """(active, blocked) from the world's held reducer over this corpus.
+
+    Detached inspection, deliberately: the registered inspection reaches the
+    engine's recovering `inspect_chain`, which may reclaim debris and append
+    registrations or settlements. A read context holds no authority to write,
+    and a read that repaired the chain on the way past would be a write the
+    ledger never saw. Pending evidence is read as pending."""
     seam = log_seam()
     active, blocked, _ = derive_holdings(
         world, frozenset({corpus_id}), binding_for(holdings_rule_bundle()),
-        chain_view=seam.inspect_registered, state_facts=seam.state_facts,
+        chain_view=seam.inspect_detached, state_facts=seam.state_facts,
     )
     return active, blocked
 
@@ -1009,23 +1067,28 @@ def found_observations(view: ReadView, world, corpus_id: str) -> dict[str, tuple
     }
 
 
-def held_path_for(store_root: Path, observations: tuple[ByteObservation, ...]) -> Path:
-    """The reducer renders a location as `store:<store id>:<relative path>`;
-    the bytes live at that relative path under the store root."""
-    kind, _, relative = observations[0].location.split(":", 2)
-    if kind != "store" or not relative:
-        raise Refused(Refusal("invalid-input", f"unrecognized store location {observations[0].location!r}"))
-    return Path(store_root) / relative
+def held_path_for(store_root: Path, store_id: str, observations: tuple[ByteObservation, ...]) -> Path:
+    """The reducer renders a location as `store:<store id>:<relative path>`.
+    Only an observation recorded for the configured store's own identity
+    resolves here: evidence for another store names bytes this root never
+    held, however the relative paths happen to coincide."""
+    for observation in observations:
+        parts = observation.location.split(":", 2)
+        if len(parts) == 3 and parts[0] == "store" and parts[1] == store_id and parts[2]:
+            return Path(store_root) / parts[2]
+    raise Refused(Refusal("invalid-input",
+                          f"no observation resolves in store {store_id}: "
+                          f"{sorted(o.location for o in observations)}"))
 
 
-def held_path(view: ReadView, world, corpus_id: str, store_root: Path, address: str) -> Path:
+def held_path(view: ReadView, world, corpus_id: str, store_root: Path, store_id: str, address: str) -> Path:
     answer = reduced_observations(view, world, corpus_id).get(address)
     if isinstance(answer, DatasetBlocked):
         raise Refused(Refusal("invalid-input",
                               f"{address} is blocked at {answer.locations}: {answer.reasons}"))
     if not isinstance(answer, DatasetAnswer) or not answer.observations:
         raise Refused(Refusal("invalid-input", f"{address} is not held in this store"))
-    return held_path_for(store_root, answer.observations)
+    return held_path_for(store_root, store_id, answer.observations)
 
 
 def is_held(view: ReadView, world, corpus_id: str, node) -> bool:
@@ -1098,17 +1161,28 @@ def evaluate(view, proposition, *, observations, context, profile, resolution):
     def snapshot(self):
         from science.vocabulary import snapshot
         _, view = self.single_view()
-        return snapshot(self.config.profile, view, self.config.store_root, self.observations())
+        return snapshot(self.config.profile, view, self.config.store_root, self.store_id(), self.observations())
 
     def observations(self):
         from science.holdings import found_observations
         corpus_id, view = self.single_view()
         return found_observations(view, self.world, corpus_id)
 
+    def store_id(self) -> str:
+        """The configured store's verified identity, read from its genesis by
+        detached inspection. `store_identity` is the public reader the routes
+        seam (`beliefs-5fe2e3`) adds; until it lands the private
+        `_read_existing_store_genesis` is the same read."""
+        from beliefs.root import store_identity
+        identity = store_identity(self.config.store_root)
+        if identity is None:
+            raise Refused(Refusal("invalid-input", f"{self.config.store_root} is not an initialized store"))
+        return identity
+
     def held_path(self, address: str) -> Path:
         from science.holdings import held_path
         corpus_id, view = self.single_view()
-        return held_path(view, self.world, corpus_id, self.config.store_root, address)
+        return held_path(view, self.world, corpus_id, self.config.store_root, self.store_id(), address)
 
     def is_held(self, node) -> bool:
         from science.holdings import is_held
@@ -1309,6 +1383,21 @@ def test_malformed_metadata_leaves_no_acts(rig, tmp_path):
                    for n in view.iter_stored())
 
 
+def test_malformed_locator_leaves_no_acts(rig, tmp_path):
+    """The empirical-observation payload is validated before the holdings
+    write, not by the writer after it."""
+    d, ctx = rig
+    data = tmp_path / "l.txt"
+    data.write_bytes(b"L\n")
+    with pytest.raises(Refused) as caught:
+        d.invoke("dataset", {"path": str(data), "title": "l", "locator": "not-a-locator"})
+    assert caught.value.refusal.code == "invalid-input"
+    from hashlib import sha256
+    assert not (ctx.config.store_root / sha256(b"L\n").hexdigest()).exists()
+    _, view = ctx.single_view()
+    assert not any(n.kind == "dataset" and n.title == "l" for n in view.iter_stored())
+
+
 def test_attested_by_is_the_session_actor(rig, tmp_path):
     d, ctx = rig
     data = tmp_path / "e.txt"
@@ -1341,8 +1430,9 @@ from hashlib import sha256
 from pathlib import Path
 
 from beliefs import stored
+from beliefs.acquisition import bearer_refusal, validity_refusal
 from beliefs.dataset import DatasetDeclaration, Held, ResourceDeclaration, admission_state, dataset_address
-from beliefs.errors import FacetError, MalformedRecord, UnknownKindError
+from beliefs.errors import FacetError, FacetPayloadRefused, MalformedRecord, UnknownKindError
 from beliefs.facets import validate_payload
 from beliefs.holdings.boundary import write
 from beliefs.holdings.records import Found, StoreLocator
@@ -1408,18 +1498,31 @@ def handle(ctx, writer, *, path, title, locator=None, facets=None) -> Report:
     except MalformedRecord as caught:
         _refuse(f"dataset record refused: {caught}")
     profile = ctx.config.profile
-    for name, payload in domain_facets.items():
-        facet = profile.facets.get(name)
-        if facet is None:
-            _refuse(f"facet {name!r} is not declared by this profile")
-        try:
-            validate_payload(facet, payload, where=proposed.id)
-        except FacetError as caught:
-            _refuse(f"facet {name!r} refused: {caught}")
     try:
-        profile.validate_document(proposed)
+        profile.validate_document(proposed)  # kind registered, facet keys declared
     except (UnknownKindError, FacetError) as caught:
         _refuse(f"dataset record refused: {caught}")
+    # Every facet payload the profile compiles a shape for — the domain facets
+    # AND the empirical-observation facet — exactly as the writer's own
+    # `_refuse_facets` will check them, so the writer can refuse nothing here
+    # that this did not refuse first.
+    for key, payload in proposed.facets.items():
+        facet = profile.facets.get(key)
+        if facet is not None:
+            try:
+                validate_payload(facet, payload, where=proposed.id)
+            except FacetPayloadRefused as caught:
+                _refuse(f"facet {key!r} refused: {caught}")
+    for name in domain_facets:
+        if name not in profile.facets:
+            _refuse(f"facet {name!r} is not declared by this profile")
+    reason = bearer_refusal(view, proposed)
+    if reason is not None:
+        _refuse(f"dataset record refused: {reason}")
+    if empirical is not None:
+        reason = validity_refusal(view, proposed, profile)
+        if reason is not None:
+            _refuse(f"locator refused: {reason}")
     # --- first act: the holdings write ---------------------------------------
     holdings = writer.holdings_context(instrument=INSTRUMENT)
     published = write(holdings, StoreLocator(writer.store_id, relative), content, expected=digest,
@@ -1435,7 +1538,7 @@ def handle(ctx, writer, *, path, title, locator=None, facets=None) -> Report:
     return (record_block(node),)
 ```
 
-Pin the two exception names at implementation (`grep -n "^class FacetError\|^class UnknownKindError" ~/d/beliefs/python/src/beliefs/errors.py`; the writer's own `_refuse_facets` catches exactly these). Then in `serve.py`, `mcp.py`, and the helpers' `open_rig`, pass `store_root=config.store_root` (resp. `cfg.store_root`) to `open_attended_session`.
+`FacetPayloadRefused` is what `validate_payload` raises (a `ValidationRefused` subclass); `UnknownKindError` and `FacetError` are what `validate_document` raises — pin all three against `beliefs/errors.py` at implementation. `bearer_refusal` and `validity_refusal` are the pure reads the writer's `_refuse_facets` performs over its view; calling them over the read view first is what makes "validate before act" true for the locator. Then in `serve.py`, `mcp.py`, and the helpers' `open_rig`, pass `store_root=config.store_root` (resp. `cfg.store_root`) to `open_attended_session`.
 
 - [ ] **Step 5: Run to verify they pass; regenerate the adapter tree**
 
@@ -2566,7 +2669,7 @@ git commit -m "feat(commands): next ranks propositions by a fixed derived order"
 - Modify: `python/tests/helpers/world.py` (`write_config_for`)
 
 **Interfaces:**
-- Consumes: everything above; the MCP `rpc()` helper and `serve()` from `test_mcp.py`; `science.cli.main`; `science.serve.serve` and the `_running`/`_ask` helpers pattern from `test_serve.py`.
+- Consumes: everything above; the MCP `rpc()` helper and `serve()` from `test_mcp.py`; `science.cli.main`; `science.serve.serve`; `science.report.{record_block, serialize_block}` for the canonical block a write renders. The run and verify legs skip to the minimal policy where bubblewrap is absent, exactly as `test_belief_path.py` does.
 - Produces: `helpers.world.write_config_for(cfg) -> Path` (the TOML for an existing config, including `contracts` and `store_root`).
 
 - [ ] **Step 1: The full path, portable and confined**
@@ -2699,15 +2802,25 @@ def world(certified_work):
     return cfg, write_config_for(cfg)
 
 
-def mcp_call(cfg_path, name, arguments, invocation_id=None):
+def mcp_calls(cfg_path, calls):
+    """Every call in one `serve()` lifetime — one attended session — so that
+    invocation replay, which is session-scoped, is what gets tested."""
     from science.mcp import serve
-    params = {"name": name, "arguments": dict(arguments)}
-    if invocation_id is not None:
-        params["arguments"]["invocation_id"] = invocation_id
-    stdin = io.BytesIO((json.dumps(rpc("tools/call", params)) + "\n").encode())
+    frames = []
+    for index, (name, arguments, invocation_id) in enumerate(calls, 1):
+        params = {"name": name, "arguments": dict(arguments)}
+        if invocation_id is not None:
+            params["arguments"]["invocation_id"] = invocation_id
+        frames.append(json.dumps(rpc("tools/call", params, id=index)))
+    stdin = io.BytesIO(("\n".join(frames) + "\n").encode())
     stdout = io.StringIO()
     serve(cfg_path, stdin=stdin, stdout=stdout, stderr=io.StringIO())
-    return json.loads(stdout.getvalue())["result"]
+    return [json.loads(line)["result"] for line in stdout.getvalue().splitlines()]
+
+
+def mcp_call(cfg_path, name, arguments, invocation_id=None):
+    (result,) = mcp_calls(cfg_path, [(name, arguments, invocation_id)])
+    return result
 
 
 CLAIM = {"subject": "concept:disease-stage", "predicate": "affects", "object": "protein:PHF19",
@@ -2716,14 +2829,17 @@ CLAIM = {"subject": "concept:disease-stage", "predicate": "affects", "object": "
 
 def test_mcp_write_replays_under_one_invocation_id(world):
     cfg, cfg_path = world
-    first = mcp_call(cfg_path, "claim", CLAIM, invocation_id="A" * 8)
-    again = mcp_call(cfg_path, "claim", CLAIM, invocation_id="A" * 8)
+    first, again = mcp_calls(cfg_path, [("claim", CLAIM, "A" * 8), ("claim", CLAIM, "A" * 8)])
     assert first["isError"] is False
     assert first["content"][0]["text"] == again["content"][0]["text"]
     assert first["structuredContent"]["invocation_id"] == "A" * 8
     from science.config import ReadContext
     _, view = ReadContext.open(cfg).single_view()
     assert sum(1 for n in view.iter_stored() if n.kind == "proposition") == 1
+    # One act in the session's ledger, not two: the second call replayed.
+    from beliefs.session import ledger_path
+    (ledger,) = (cfg.operations_root / "sessions").glob("*/ledger.v1")
+    assert sum(1 for line in ledger.read_text().splitlines() if '"act"' in line) == 1
 
 
 def test_mcp_refusal_carries_the_envelope(world):
@@ -2760,6 +2876,73 @@ def test_cli_write_routes_through_the_service_and_refuses_with_the_json_line(wor
                      "--invocation-id", "R" * 8]) == 3  # and replays that refusal
     finally:
         server.server_close()
+
+
+def test_every_write_reaches_its_transport_and_renders_the_canonical_block(world, tmp_path, capsys, monkeypatch):
+    """spec and assess through MCP, run and verify through the CLI service:
+    each write's text is the ledger-rebuilt record block for the record the
+    corpus now holds. The uid is minted per world, so writes are compared to
+    the corpus, not byte-for-byte across transports (design §7)."""
+    import science.commands.run as run_module
+    from beliefs.confinement import host_prerequisites
+    from beliefs.recipe import MINIMAL_POLICY
+    from science.cli import main
+    from science.config import ReadContext, load_config
+    from science.report import record_block, serialize_block
+    from science.serve import serve
+    from helpers.world import fixture_bundle
+    if host_prerequisites() is not None:
+        monkeypatch.setattr(run_module, "POLICY", MINIMAL_POLICY)
+        monkeypatch.setattr(run_module, "host_prerequisites", lambda: None)
+    cfg, _ = world
+    named = tmp_path / "svc.sock"
+    cfg_path = write_config_for(cfg, service_socket=named)
+    code, entrypoint, targets = fixture_bundle(tmp_path, "supported")
+    data = tmp_path / "data.txt"
+    data.write_bytes(b"x\n")
+
+    def canonical(ref):
+        _, view = ReadContext.open(cfg).single_view()
+        return serialize_block(record_block(view.get(ref)))
+
+    def ref_in(text, prefix):
+        return next(t for t in text.split() if t.startswith(prefix))
+
+    prop_text = mcp_call(cfg_path, "claim", CLAIM)["content"][0]["text"]
+    prop = ref_in(prop_text, "proposition:")
+    assert prop_text == canonical(prop)
+    server = serve(load_config(cfg_path), named)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    try:
+        assert main(["dataset", "--config", str(cfg_path), "--path", str(data), "--title", "expression"]) == 0
+        dataset = ref_in(capsys.readouterr().out, "dataset:")
+        spec_text = mcp_call(cfg_path, "spec", dict(SPEC_FIELDS, target=prop, dataset=dataset))["content"][0]["text"]
+        spec = ref_in(spec_text, "analysis-spec:")
+        assert spec_text == canonical(spec)
+        assert main(["run", "--config", str(cfg_path), "--spec", spec, "--dataset", dataset,
+                     "--code", str(code), "--entrypoint", entrypoint, *sum((["--targets", t] for t in targets), [])]) == 0
+        run_text = capsys.readouterr().out
+        run = ref_in(run_text, "run:")
+        assert run_text == canonical(run)
+        assess_text = mcp_call(cfg_path, "assess", {"run": run})["content"][0]["text"]
+        assessment = ref_in(assess_text, "assessment:")
+        assert assess_text == canonical(assessment)
+        assert main(["verify", "--config", str(cfg_path), "--assessment", assessment,
+                     "--code", str(code), "--entrypoint", entrypoint]) == 0
+        verify_text = capsys.readouterr().out
+        assert verify_text == canonical(ref_in(verify_text, "verification:"))
+        # A kernel refusal through the service: the same bundle edited between
+        # run and replay is a different recipe, refused by the boundary.
+        (code / "workflow" / "Snakefile").write_text((code / "workflow" / "Snakefile").read_text().replace("supported", "refuted"))
+        assert main(["verify", "--config", str(cfg_path), "--assessment", assessment,
+                     "--code", str(code), "--entrypoint", entrypoint]) == 3
+        assert json.loads(capsys.readouterr().err)["refusal"]["code"] == "kernel-refused"
+    finally:
+        server.server_close()
+    # And the two commands not yet seen on the other transport: assess's
+    # refusal through the service, spec's refusal through MCP.
+    result = mcp_call(cfg_path, "spec", dict(SPEC_FIELDS, target=prop, dataset=dataset, interpretation_rule="nope/v9"))
+    assert result["isError"] is True and result["structuredContent"]["refusal"]["code"] == "invalid-input"
 
 
 def test_reads_render_identically_through_mcp_and_cli(world, capsys):
@@ -2873,4 +3056,4 @@ Then `tasks done sci-66b26d` only if the coordination-set half is also done or s
 
 **Type consistency.** `open_rig(cfg, names) -> (Dispatcher, ReadContext)` is defined in Task 3 and used the same way in Tasks 4–12; `SPEC_FIELDS` likewise. `prepare()` returns the keyword set `execute_assessment_run` and `replay` share, and `verify` pops `spec` because `replay` takes it by name. `ctx.held_path(address)` takes a dataset address string everywhere; `ctx.observations()` is the reduced mapping everywhere. `REFERENCE_RULES` is a mapping in Tasks 6, 8, 9. Kernel refusals (`RunRefused`) go through `KernelRefusalValue` in Tasks 7 and 9; only pre-act validation raises the surface `Refused`.
 
-**Task order.** 1 → 2 → 3 → 5, 10, 11 (they need only the read context and the Task 3 helpers) → 4 (routes seam) → 6, 8 (rules seam) → 7, 9 (routes seam) → 12 → 13. Every helper a task imports is defined in Task 3 or earlier; nothing imports forward.
+**Task order.** 1 → 2 → 3 → 5, 10 (they need only the read context and the Task 3 helpers) → 4 (routes seam) → 6, 8 (rules seam) → 11 (its readiness test freezes a spec through the production `spec` command, so it follows Task 6) → 7, 9 (routes seam) → 12 → 13. Every helper a task imports is defined in Task 3 or earlier; nothing imports forward.

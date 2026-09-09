@@ -5,7 +5,7 @@ status: todo
 priority: 1
 size: xl
 created: 2026-09-09T12:12:00Z
-updated: 2026-09-09T13:46:33Z
+updated: 2026-09-09T14:08:33Z
 depends: [beliefs-e5ab34, beliefs-5fe2e3]
 tags: [dogfood, command-framework]
 spec: docs/specs/2026-09-09-belief-path-commands-design.md
@@ -24,3 +24,4 @@ Item 4 of the user/autonomy layer design §8 and the stack's one success criteri
 - 2026-09-09T12:54:17Z (dogfood-commands): Spec review round 1 (six findings, all verified): claim validates membership through decode_claim with a stricter surface policy for bound sorts, so the vocabulary dataset precedes claim; dataset locations are content-derived with standing supersession; a dispatcher amendment (§6.3) closes surface refusals from write handlers; next joins inputs through targeting specs and class 4 is admit; spec is deterministic-only; the claim-identity oracle is the 2026-09-08 value 780ace59.
 - 2026-09-09T13:08:43Z (dogfood-commands): Spec review round 2: the mandatory-consultation policy is restricted to dataset-identity bindings; namespace/release bindings (the pack's HGNC molecular-entity) keep the kernel's permissive not-consulted; decode call is decode_claim(WireClaim(**project_claim(claim)), ...).
 - 2026-09-09T13:46:33Z (dogfood-commands): Plan review round 1 (eight findings, all verified): holdings reads go through the kernel's held reducer (derive_holdings + dataset_observations; fixtures and the operator recipe install the binding); run/verify raise KernelRefusalValue for RunRefused; dataset validates the record and facets before its first act; the full-path test admits only under confinement and asserts non-admission under the minimal policy; contract fixtures use the authored dataset:<id> syntax; null polarities preserved; helpers moved to Task 3; every command tested through its transport.
+- 2026-09-09T14:08:33Z (dogfood-commands): Plan review round 2 (six findings, all verified): holdings reads use detached inspection and a test proves a read writes nothing; dataset validates every facet payload plus bearer/validity before the first act; held paths match the configured store's identity; MCP replay tested within one serve lifetime; Task 11 depends on Task 6; spec, run, assess and verify each driven through a real transport, with the spec's §7 bullet corrected.

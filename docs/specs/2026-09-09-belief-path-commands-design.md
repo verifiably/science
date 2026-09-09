@@ -750,8 +750,13 @@ Snakefile writes a fixed outcome.
   the mutation that drops a held dataset moves a row from class 1 to 2, and
   an admitted row to class 3; a proposition no spec targets is class 2
   however many datasets are held.
-- **Transport equivalence** (framework §9.4): each command renders
-  byte-identical through the CLI and the MCP server.
+- **Every command through its transport** (framework §9.4). The reads
+  render byte-identical through the CLI and the MCP server. A write's
+  report is the ledger-rebuilt record block, and its uid is minted per
+  world, so writes are compared to the corpus each transport wrote to, not
+  byte-for-byte across transports; each write is driven through at least
+  one real transport, with invocation replay and the refusal envelope
+  exercised on both.
 - **The reproduction** (§8) is the integration measurement and is run by
   hand on a bubblewrap host; it is not a test in the suite.
 
