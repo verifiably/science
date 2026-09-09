@@ -1248,6 +1248,7 @@ git commit -m "feat(context): snapshot, holdings reads and belief evaluation on 
 **Files:**
 - Create: `commands/dataset/command.toml`, `commands/dataset/prompt.md`, `python/src/science/commands/dataset.py`
 - Modify: `python/src/science/serve.py`, `python/src/science/mcp.py` (pass `store_root=config.store_root` to `open_attended_session`)
+- Modify: `python/tests/helpers/world.py` (`open_rig` passes the fixture store root when opening the attended session)
 - Test: `python/tests/test_cmd_dataset.py`
 - Regenerate: `adapters/claude-code/`
 
@@ -2248,7 +2249,9 @@ git commit -m "feat(commands): assess derives and mints the assessment"
 
 ### Task 9: `verify` — replay, derive scope and verdict, mint the verification
 
-**Blocked on `beliefs-5fe2e3`** (`writer.operation_port()`, `replay` over a closure).
+**Blocked on `beliefs-5fe2e3` and Task 7 (`sci-fe0065`)** (`writer.operation_port()`,
+`replay` over a closure, and the run preparation interface). Task 9 follows
+Task 7 because it imports `science.commands.run.{prepare, now, POLICY}` directly.
 
 **Files:**
 - Create: `commands/verify/command.toml`, `commands/verify/prompt.md`, `python/src/science/commands/verify.py`

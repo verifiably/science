@@ -458,6 +458,14 @@ ledger's identities, not the handler's blocks. A request carrying `cursor`
 is a continuation (§7.3), handled by the dispatcher before this pipeline;
 it never reaches a write handler.
 
+**Amended 2026-09-09 (belief-path design §6.3).** A surface `Refused` raised by
+a write handler is caught at step 5. With no act recorded for the invocation,
+the dispatcher closes it with the refusal envelope exactly as a kernel refusal
+closes, and a retry replays that refusal from the ledger. With an act
+recorded, the handler broke the validate-before-act rule: the dispatcher closes
+`done` with the minted identities and raises `HandlerContractViolation`, an
+internal error, because a half-acted write is a defect and not a refusal.
+
 ### 6.2 Invocation identity and retry
 
 The caller may supply an **`invocation_id`** (protocol field, exposed on

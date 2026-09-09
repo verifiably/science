@@ -13,6 +13,15 @@ from science.report import Report, serialize_block
 from science.schema import Declaration
 
 
+class HandlerContractViolation(RuntimeError):
+    """A write handler raised a surface refusal after it had already acted.
+
+    Validation precedes the first act (belief-path design §6.3). The acts
+    committed are truth, so the invocation closes `done` with them; the
+    refusal is not a refusal any more but a defect in the handler.
+    """
+
+
 @dataclass(frozen=True)
 class Outcome:
     text: str
@@ -189,6 +198,18 @@ class Dispatcher:
                 report = self._handlers[decl.name](self._ctx, writer, **canonical)
             except (PermitExceeded, KernelRefusalValue, WriteRefused) as caught:
                 return self._close_refused(iid, self._kernel_refusal(caught))
+            except Refused as caught:
+                acted = self._session.invocation_acts(iid)
+                if not acted:
+                    return self._close_refused(iid, caught.refusal)
+                minted = frozenset(tuple(pair) for act in acted for pair in act.record_ids)
+                self._session.close_invocation(
+                    iid, {"done": [list(pair) for pair in sorted(minted)]}
+                )
+                raise HandlerContractViolation(
+                    f"{decl.name} refused {caught.refusal.code!r} after {len(acted)} act(s); "
+                    "a write handler validates before its first act"
+                ) from caught
             minted = frozenset(
                 tuple(pair)
                 for act in self._session.invocation_acts(iid)
