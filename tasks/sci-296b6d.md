@@ -1,14 +1,15 @@
 ---
 id: sci-296b6d
 title: Surface session reconciliation findings at endpoint startup
-status: todo
+status: doing
 priority: 1
 size: s
+owner: session-findings
 created: 2026-09-09T10:22:18Z
-updated: 2026-09-09T10:22:18Z
+updated: 2026-09-09T10:49:15Z
 depends: []
 tags: [command-framework]
-spec: docs/specs/2026-08-31-command-framework-design.md
+spec: docs/specs/2026-09-09-session-findings-at-startup-design.md
 ---
 
 Spec §5.3 rules that a crashed session's uncovered chain entry is classified outcome-unknown and 'surfaced as an audit finding naming the invocation and the entry ... interactively it is a finding for the person'. §6.2 calls that finding 'what tells them to look' at the crashed session's durable ledger.
@@ -18,3 +19,7 @@ beliefs already does the work: open_attended_session sets session.findings = rec
 Tasks 12 and 13 did not skip this; the plan never had a step for it.
 
 Open questions for the work: where findings surface (a stderr line at startup, a Finding block on the first response, or a refusal to start when any are present), and whether the MCP server and the socket service answer the same way. Note that findings are per-endpoint-open, so a long-lived service reports once at startup.
+
+## Notes
+
+- 2026-09-09T10:49:15Z (session-findings): Design spec written and attached; status-findings gap filed as sci-097534. Implementation waits on spec review.
