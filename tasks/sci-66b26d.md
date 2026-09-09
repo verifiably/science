@@ -5,7 +5,7 @@ status: todo
 priority: 1
 size: xl
 created: 2026-09-09T12:12:00Z
-updated: 2026-09-09T12:43:20Z
+updated: 2026-09-09T12:54:17Z
 depends: [beliefs-e5ab34, beliefs-5fe2e3]
 tags: [dogfood, command-framework]
 spec: docs/specs/2026-09-09-belief-path-commands-design.md
@@ -20,3 +20,4 @@ Item 4 of the user/autonomy layer design §8 and the stack's one success criteri
 - 2026-09-09T12:26:01Z (dogfood-commands): Brainstorm ruling: a separate spec command (mints:analysis-spec) freezes the analysis spec from the draft fields and a workflow definition; run takes a spec ref and a dataset ref and only executes under confinement. The list is on the order of a dozen, not closed.
 - 2026-09-09T12:31:05Z (dogfood-commands): Brainstorm ruling: rule implementations live in the kernel. beliefs ships reference implementations of the outcome-file interpretation rule and content-identity equality keyed by rule identity, beside science.belief.v1/reference; the surface looks rules up by identity and defines none. Command order on the path is run, assess, verify (verification publication needs the assessment ref); belief is computed at read time.
 - 2026-09-09T12:35:07Z (dogfood-commands): Brainstorm ruling: corpus-local contract documents are named by a contracts config key beside domains, parsed against the shipped base and compiled into the profile; the manifest pin check at session open keeps them honest. Stated in the spec as superseded whenever the kernel gives contracts a home.
+- 2026-09-09T12:54:17Z (dogfood-commands): Spec review round 1 (six findings, all verified): claim validates membership through decode_claim with a stricter surface policy for bound sorts, so the vocabulary dataset precedes claim; dataset locations are content-derived with standing supersession; a dispatcher amendment (§6.3) closes surface refusals from write handlers; next joins inputs through targeting specs and class 4 is admit; spec is deterministic-only; the claim-identity oracle is the 2026-09-08 value 780ace59.

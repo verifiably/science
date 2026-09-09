@@ -103,7 +103,8 @@ Rulings from the 2026-09-09 brainstorm, recorded so they are not re-derived.
 9. **Two kernel seams this spec depends on**, filed in `beliefs` before the
    plan is written: the reference rules of ruling 4, and the scoped writer's
    `run` and `holdings` routes (§6). Neither is designed here beyond the
-   requirement stated; each is its own `beliefs` task.
+   requirement stated; each is its own `beliefs` task. One framework seam,
+   §6.3, is this repository's and is the plan's first task.
 
 ## 3. The path, and the record it leaves
 
@@ -112,21 +113,22 @@ record or a refusal; nothing writes around a refusal (layer §5.2).
 
 | # | command | write class | act | leaves |
 |---|---|---|---|---|
-| 1 | `claim` | `mints:proposition` | `build_claim` under the profile; `add` | one `proposition` record carrying the claim projection and a display statement |
-| 2 | `dataset` | `mints:dataset,holdings-observation` | store write and observation under the holdings boundary; `add` of the dataset record under its content address | the bytes in the store, one `holdings-observation` (`Found`), one `dataset` record |
-| 3 | `spec` | `mints:analysis-spec` | `freeze` against the kernel's reference rules; `add` | one `analysis-spec` record; the spec identity is fixed from here |
-| 4 | `run` | `mints:run,act-report` routed `run` | `execute_assessment_run` under `CONFINED_POLICY` through the scoped writer's run route | one `run` record, its two launch attestations, the settled intent on the registration chain |
-| 5 | `assess` | `mints:assessment` | `build_assessment` through the spec's interpretation rule; `add` | one `assessment` record |
-| 6 | `verify` | `mints:run,act-report,verification` routed `run`, `run`, `corpus-write` | `replay` through the run route; `derive_scope`; `build_verification` against the reference equivalence rule; `add` of `publication_node(…, assessment_ref)` | the replayed `run` record, one `verification` record naming the assessment and both runs |
-| 7 | `belief` | `read-only` | `evaluate_over` under `science.belief.v1` | nothing; the answer is rendered |
+| 1 | `dataset` (the concept vocabulary) | `mints:dataset,holdings-observation` | store write and observation under the holdings boundary; `add` of the dataset record under its content address | the bytes in the store, one `holdings-observation` (`Found`), one `dataset` record — the list the contract's `concept` sort binds, so §5.3's snapshot resolves from here |
+| 2 | `claim` | `mints:proposition` | `build_claim` under the profile, then `decode_claim` against the snapshot; `add` | one `proposition` record carrying the claim projection and a display statement |
+| 3 | `dataset` (the expression matrix) | `mints:dataset,holdings-observation` | as step 1 | as step 1 |
+| 4 | `spec` | `mints:analysis-spec` | `freeze` against the kernel's reference rules; `add` | one `analysis-spec` record; the spec identity is fixed from here |
+| 5 | `run` | `mints:run,act-report` routed `run` | `execute_assessment_run` under `CONFINED_POLICY` through the scoped writer's run route | one `run` record, its two launch attestations, the settled intent on the registration chain |
+| 6 | `assess` | `mints:assessment` | `build_assessment` through the spec's interpretation rule; `add` | one `assessment` record |
+| 7 | `verify` | `mints:run,act-report,verification` routed `run`, `run`, `corpus-write` | `replay` through the run route; `derive_scope`; `build_verification` against the reference equivalence rule; `add` of `publication_node(…, assessment_ref)` | the replayed `run` record, one `verification` record naming the assessment and both runs |
+| 8 | `belief` | `read-only` | `evaluate_over` under `science.belief.v1` | nothing; the answer is rendered |
 | — | `next` | `read-only` | the derived queue | nothing; the ranking is rendered |
 
-The concept vocabulary is a `dataset` too — step 2 runs twice in the
-measurement, once for the 285-line concept list the contract's `concept` sort
-binds and once for the expression matrix — and the contract document must
-name the concept list's content address before adoption (§5.3), so the
-operator computes that address from the file before the corpus exists. The
-record's step 1b did the same.
+The concept vocabulary is held **before** the claim is typed: `claim`
+resolves its referents against the snapshot §5.3 builds from the held list,
+and refuses when the list is not held (§4.1). The contract document names
+the list's content address before adoption, so the operator computes that
+address from the file before the corpus exists. The record's step 1b did the
+same, and its 2026-09-08 re-run is where slot 0 first resolved `member`.
 
 ## 4. The commands
 
@@ -180,7 +182,26 @@ corpus-local contract document (§5.2). A shape with no plan row refuses
 `invalid-input` naming the shape; a plan row is never nearest-typed, exactly
 as the driver's `operator_for` refuses. `build_claim` refusals (`ClaimError`,
 `ArgumentSortMismatch`) surface as `invalid-input` carrying the kernel's
-message. The record is `stored.proposition_node(slug, title, claim=
+message.
+
+**The validation path, stated because `build_claim` consults no vocabulary.**
+`build_claim` types; membership is judged at decode. So the handler, before
+any act, calls `decode_claim(project_claim(claim), profile=profile,
+snapshot=<§5.3 snapshot>)`. The kernel refuses `not-member` there and
+permits the other four outcomes; the receipt records what was consulted.
+On top of that the surface applies **one stricter policy**: for a sort the
+contract binds to a vocabulary, a referent whose outcome is `not-consulted`
+or `not-available` — the snapshot lacks that vocabulary because its dataset
+is not in the corpus or not held — refuses `invalid-input` naming the
+dataset address to hold first. A person authoring under a bound sort gets a
+membership answer or a refusal, never a claim that silently skipped the
+check; the kernel's permissiveness exists for readers over corpora written
+elsewhere, not for the author's own write. A sort with no binding (the
+biology pack's `molecular-entity`) resolves `not-consulted` and is accepted,
+as the record measured for slot 1. This is why the vocabulary `dataset`
+precedes `claim` in §3.
+
+The record is `stored.proposition_node(slug, title, claim=
 project_claim(claim), display_statement="<subject> <predicate> <object>")`.
 The report is the record block.
 
@@ -218,13 +239,28 @@ families = ["corpus-stored"]
 
 The handler reads the file, digests it, computes the dataset address from
 the declaration (`dataset_address(DatasetDeclaration(resources=(…,)))`),
-writes the bytes to the store under `<title-slug>/<basename>` and publishes
-the observation through the scoped writer's holdings route (§6.2), then
-mints `stored.dataset_node(address, title, resources, empirical_observation,
-domain_facets)` and checks `admission_state` over the stored declaration and
-the observation reads `Held`; anything else is an internal error, since held
-bytes with a matching digest that do not read `Held` is a kernel defect, not
-input. A non-regular path refuses `invalid-input` before any act. A
+writes the bytes to the store under a **content-derived location**,
+`<sha256 hex>/<basename>`, and publishes the observation through the scoped
+writer's holdings route (§6.2), then mints `stored.dataset_node(address,
+title, resources, empirical_observation, domain_facets)` and checks
+`admission_state` over the stored declaration and the observation reads
+`Held`; anything else is an internal error, since held bytes with a matching
+digest that do not read `Held` is a kernel defect, not input. A non-regular
+path refuses `invalid-input` before any act.
+
+**Collisions.** Two different files can share a title and a basename; a
+title-derived directory would put them at one location, and the holdings
+boundary writes a location without looking, so differing digests would
+become contested heads. The content-derived directory makes a location
+name one byte sequence, so a collision is always the same bytes. Two cases
+remain, both checked before any act: a `dataset` record already exists
+under the computed address — refuse `invalid-input` naming it, since the
+dataset is held and the record is the person's answer; or observations
+exist at the location with no record (a prior invocation held the bytes and
+died before the mint) — the handler passes every existing observation at
+that location as `standing`, so the new `Found` supersedes them and the
+holdings reduction sees one head. A location is never reused for other
+bytes, so no other supersession arises here. A
 `locator` carries `attested_by` as the session actor — the endpoint sets it,
 never the caller (framework §5.1). The report is the dataset record block;
 the observation is not a record block the audit knows, and the write-audit
@@ -275,11 +311,6 @@ required = true
 type = "list-of-string"
 required = false
 doc = "name=value pairs; values parse as decimals."
-[inputs.nondeterminism]
-type = "enum"
-required = false
-default = "deterministic"
-choices = ["deterministic", "seeded", "stochastic-unseeded"]
 [inputs.supersedes]
 type = "string"
 required = false
@@ -290,11 +321,21 @@ families = ["corpus-stored"]
 ```
 
 The handler resolves the dataset ref to its address, builds the `SpecDraft`
-with one `SpecInput(role="observes", dataset=<address>)`, looks the two rule
-identities up in the kernel's reference rules (§6.1) — an unknown identity
-refuses `invalid-input` with the kernel's message — and calls
-`freeze(draft, held_rules=…, supersedes=…)`. `MalformedSpec` and
-`UnfreezableSpec` are `invalid-input`. The record is
+with one `SpecInput(role="observes", dataset=<address>)` and
+`nondeterminism=Deterministic()`, looks the two rule identities up in the
+kernel's reference rules (§6.1) — an unknown identity refuses
+`invalid-input` with the kernel's message — and calls `freeze(draft,
+held_rules=…, supersedes=…)`. `MalformedSpec` and `UnfreezableSpec` are
+`invalid-input`.
+
+**Deterministic only.** The kernel's other two contracts need authoring
+this surface does not yet take: `Seeded` carries a `SeedPlan` (a derivation
+rule and logical stream identities) and `StochasticUnseeded` a non-empty
+rationale, and a seeded workflow's family streams enter the definition
+snapshot `run` builds (§4.4). The reproduction is deterministic, so the
+declaration exposes no nondeterminism input and `run` fixes family streams
+empty; the first non-deterministic analysis authored through the surface
+is a spec amendment adding those inputs together, not a default. The record is
 `stored.analysis_spec_node(spec)`, whose id is the spec identity. The
 report is the record block.
 
@@ -352,7 +393,7 @@ adding one is a spec amendment this document does not make). The handler
 restores the `FrozenSpec` from the record (`stored.analysis_spec_value`),
 resolves the dataset ref to the held file in the store (§5.4), reads the
 Snakefile at the entrypoint into a `WorkflowDefinition` with no family
-streams, and calls `execute_assessment_run(spec, port=<run route>,
+streams (deterministic only, §4.3), and calls `execute_assessment_run(spec, port=<run route>,
 boundary_policy=CONFINED_POLICY, definition, code_roots=(code,),
 held_inputs={address: path}, entrypoint, targets, declared_outputs=targets,
 observer=<session actor>, started_at=now, host_realization=hostname,
@@ -489,16 +530,27 @@ families = ["corpus-stored", "holdings", "epoch", "registry"]
 
 The derived queue of layer §4.4, computed at read time and stored nowhere.
 For every stored proposition the handler classifies, in this order, and
-renders the first `limit` in class order then record id:
+renders the first `limit` in class order then record id. Inputs are joined
+through the specs that target the proposition: a proposition's inputs are
+the `observes`-role dataset addresses of every `analysis-spec` whose
+`target` is its ref, and an input is held when `admission_state` over the
+stored declaration and the corpus's observations reads `Held`.
 
-1. **unassessed with inputs held** — no assessment names it, and at least
-   one dataset record in the corpus reads `Held`;
-2. **unassessed, nothing held** — no assessment and no held dataset;
-3. **assessed, not admitted** — an assessment exists and no verification in
-   `ADMITTED` lifecycle state names it;
-4. **admitted** — `admit` accepts.
+1. **ready** — no assessment names it, and at least one spec targets it
+   whose inputs are all held;
+2. **not ready** — no assessment names it, and no such spec: either no
+   spec targets it or every targeting spec has an input not held;
+3. **assessed, not admitted** — an assessment names it and class 4 does
+   not apply: no verification in `ADMITTED` state names the assessment, or
+   one does and `admit` still refuses (an input no longer held, a run
+   mismatch);
+4. **admitted** — for some assessment naming it, `admit(assessment, run,
+   observations, verifications)` returns `Admitted`.
 
-Each row renders the proposition's display statement and its class. This
+Class 4 is the criterion's "admitted", computed by the same gate `belief`
+runs; class 3 is its complement over assessed propositions, so the four
+classes partition every stored proposition. Each row renders the
+proposition's display statement and its class. This
 is a fixed rule so that `next` ranks a proposition today; the scoring
 function of layer §7.3 replaces the ordering, not the classification, and
 until then `next` names no priority identity. "Stale verifications" and
@@ -549,8 +601,8 @@ binding by looking the dataset record up in the corpus, reading its held
 bytes from the store by the address the record declares, checking the
 digest, and building `build_snapshot(readable={binding: lines})`. A binding
 whose dataset is not in the corpus, or not held, yields a snapshot without
-it, and `claim` then refuses membership for that sort with the kernel's
-`not-consulted` reason. This is the driver's `snapshot_over`, with its two
+it; `claim` then refuses a referent under that sort (§4.1's surface policy),
+naming the address to hold. This is the driver's `snapshot_over`, with its two
 `RuntimeError`s as `invalid-input`.
 
 Bootstrapping order, stated because it is circular at first sight: the
@@ -579,11 +631,12 @@ retraction search exists to run, and the enumeration states its scope;
 `node_corpus` mapping the gathered assessment identities to this corpus;
 `pins` from the manifest. Each is a read the declaration lists.
 
-## 6. Kernel seams this spec depends on
+## 6. Seams this spec depends on
 
-Both are `beliefs` tasks, filed 2026-09-09 and depended on by `sci-66b26d`:
+Two are `beliefs` tasks, filed 2026-09-09 and depended on by `sci-66b26d`:
 `beliefs-e5ab34` (§6.1) and `beliefs-5fe2e3` (§6.2). This document states
-the requirement; their designs are theirs.
+the requirement; their designs are theirs. The third (§6.3) is a framework
+amendment in this repository and the plan's first task.
 
 ### 6.1 Reference rule implementations
 
@@ -617,6 +670,29 @@ commits as `act` lines the same way `add` does, so the ledger-versus-chain
 comparison meets them. `open_attended_session` therefore takes the store
 root, which is why §5.1 makes it configuration.
 
+### 6.3 Surface refusals from a write handler
+
+Every write command above validates before its first act and refuses
+`invalid-input` from inside the handler — a shape with no plan row, a
+non-regular path, an unknown rule identity, a host without bubblewrap. The
+dispatcher today claims the invocation, then closes it only for the kernel
+refusals it catches (`PermitExceeded`, `KernelRefusalValue`,
+`WriteRefused`); a surface `Refused` raised by the handler propagates with
+the invocation still open, and a retry under the same id refuses
+`outcome-unknown` for a write that never acted. Framework §6.1 is amended:
+a `Refused` raised by a write handler is caught by the dispatcher, which
+reads the invocation's acts from the session; **with no act recorded** it
+closes the invocation with the refusal envelope, exactly as a kernel
+refusal closes, and a retry replays that refusal from the ledger through
+the existing `ClaimDone` path; **with an act recorded** the handler broke
+the validate-before-act rule, and the dispatcher closes `done` with the
+minted identities — the ledger records act truth — and raises an internal
+error, since a half-acted write is a defect and not a refusal. The
+amendment lands in §7's first task with two tests: a handler that refuses
+before acting leaves a closed invocation whose retry replays
+`invalid-input`; a handler that acts and then refuses closes `done` and
+surfaces `internal-error`.
+
 ## 7. Testing
 
 Framework §11's harness shape, per command: the assertion, the source
@@ -625,6 +701,9 @@ worlds are the existing helpers grown as needed: a corpus-local test
 contract with one vocabulary-bound sort and a two-row plan, a held
 one-line dataset, a fixture bundle whose Snakefile writes a fixed outcome.
 
+- **The dispatcher amendment of §6.3**, first: the two tests it names,
+  against the synthetic exemplars, before any command handler exists to
+  need it.
 - **Each write command mints exactly its declared kinds.** A run of the
   handler over the fixture world leaves the declared records and no others;
   the audit rejects a report carrying anything else. One refusal per
@@ -632,10 +711,16 @@ one-line dataset, a fixture bundle whose Snakefile writes a fixed outcome.
   mint a kind it does not declare is refused `permit-exceeded` under the
   full attended permit (framework §4.2).
 - **`claim`** types the fixture's one plan row and refuses a shape with no
-  row; the refusal names the shape.
+  row; the refusal names the shape. Under the bound sort a member resolves,
+  a non-member refuses with the kernel's message, and an unheld vocabulary
+  refuses naming the dataset address; the unbound sort resolves
+  `not-consulted` and is accepted.
 - **`dataset`** holds bytes whose digest the record declares and reads
   `Held`; a non-regular path refuses before any act; the locator's
-  `attested_by` is the session actor and no input can set it.
+  `attested_by` is the session actor and no input can set it. Two files
+  with one title and basename land at two locations; the same bytes twice
+  refuse naming the record; bytes held with no record are re-held with the
+  earlier observation superseded.
 - **`spec`** freezes against the reference rules and the record's id is
   the spec identity; an unknown rule identity refuses; a stochastic-unseeded
   draft under a bitwise equivalence rule refuses at freeze.
@@ -652,7 +737,9 @@ one-line dataset, a fixture bundle whose Snakefile writes a fixed outcome.
   is admitted and `NoBelief` with the reason before; the three-part answer
   renders.
 - **`next`** classifies the fixture's propositions into the four classes and
-  the mutation that drops a held dataset moves a row from class 1 to 2.
+  the mutation that drops a held dataset moves a row from class 1 to 2, and
+  an admitted row to class 3; a proposition no spec targets is class 2
+  however many datasets are held.
 - **Transport equivalence** (framework §9.4): each command renders
   byte-identical through the CLI and the MCP server.
 - **The reproduction** (§8) is the integration measurement and is run by
@@ -685,7 +772,7 @@ are operator-time library operations is restated there.
 | record value | oracle | expected |
 |---|---|---|
 | proposition id | `proposition:concept-disease-stage-affects-protein-phf19` | equal |
-| claim identity | `5e702bc43fdf51d3…` | equal — same operator, same terms, same layer and polarity |
+| claim identity | `780ace5964c8ab83…` (the record's 2026-09-08 measurement, which replaced `5e702bc43fdf51d3…`) | equal — the claim names the sorted operator `mm30/affects-concept-molecular-entity` under the biology pack, as the re-run did; the 2026-09-05 identity named `mm30-reproduction/affects` under the unsorted vocabulary and is not the target |
 | expression dataset address | `dataset:sha256:a6bf229e…` | equal — same bytes |
 | concept list digest | `sha256:c7e45f81…` | equal |
 | spec draft fields | the record's step 4 draft | equal field by field |
@@ -739,8 +826,9 @@ half and re-ranks nothing itself; a re-rank is the roadmap's.
 
 `sci-66b26d` is the goal; it depends on `beliefs-e5ab34` (§6.1) and
 `beliefs-5fe2e3` (§6.2), so it leaves `ready` until both close. The plan
-attaches to it and adds one child per task, in dependency order:
-configuration and the read context (§5); `claim`; `dataset`; `spec`;
+attaches to it and adds one child per task, in dependency order: the
+dispatcher amendment (§6.3); configuration and the read context (§5);
+`claim`; `dataset`; `spec`;
 `run`; `assess`; `verify`; `belief`; `next`; transport equivalence; the
 measurement and its record (§8), which closes the first half. The
 coordination set's spec follows the record, informed by it.
