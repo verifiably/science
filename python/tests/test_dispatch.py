@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from science.cursor import MIN_OUTPUT_BUDGET, ReadCursor, WriteCursor, decode, encode
+from science.cursor import MIN_OUTPUT_BUDGET, ReadCursor, decode, encode
 from science.dispatch import Dispatcher
 from science.refusal import Refusal, Refused
 from science.report import Text
@@ -147,11 +147,20 @@ def test_malformed_cursor_refusal_carries_invocation_id():
     assert caught.value.invocation_id == "caller_id"
 
 
-def test_write_paths_are_explicitly_deferred():
+def test_write_on_a_sessionless_surface_refuses_before_the_handler():
+    """A CLI read invocation opens no session (spec §9.2); a write there is
+    refused, not executed against a missing one."""
+    executed = []
     write = make_decl("write", write_class="coordination")
-    dispatcher = Dispatcher((write,), {"write": lambda ctx: ()}, read_context=object())
-    with pytest.raises(NotImplementedError, match="write dispatch lands with the beliefs session API"):
-        dispatcher.invoke("write", {})
-    cursor = encode(WriteCursor("f" * 32, "caller_id", "f" * 64, 0, 0))
-    with pytest.raises(NotImplementedError, match="write continuation lands with the beliefs session API"):
-        dispatcher.invoke("write", {}, cursor=cursor)
+    dispatcher = Dispatcher(
+        (write,),
+        {"write": lambda ctx, writer: executed.append(True) or ()},
+        read_context=object(),
+    )
+
+    with pytest.raises(Refused) as caught:
+        dispatcher.invoke("write", {}, invocation_id="caller_id")
+
+    assert caught.value.refusal.code == "permit-exceeded"
+    assert caught.value.invocation_id == "caller_id"
+    assert not executed

@@ -58,6 +58,16 @@ def test_production_tree_ships_only_status():
     assert callable(resolve_handlers(decls)["status"])
 
 
+def test_production_kind_acts_is_the_kernel_table_exactly():
+    """No fallback and no local copy: the routes come from beliefs or nowhere."""
+    from beliefs.permit import KIND_ACTS
+
+    from science.loader import production_kind_acts
+
+    assert production_kind_acts() == dict(KIND_ACTS)
+    assert production_kind_acts()["proposition"] == frozenset({"corpus-write"})
+
+
 @pytest.mark.parametrize(
     "write_class",
     [
@@ -66,7 +76,7 @@ def test_production_tree_ships_only_status():
         WriteClass("publishes"),
     ],
 )
-def test_production_tree_rejects_every_write_class_until_capabilities_land(
+def test_production_tree_admits_write_classes_now_that_capabilities_landed(
     monkeypatch, write_class
 ):
     import science.loader as loader
@@ -76,10 +86,7 @@ def test_production_tree_rejects_every_write_class_until_capabilities_land(
     )
     monkeypatch.setattr(loader, "load_command_tree", lambda *args, **kwargs: (declaration,))
 
-    with pytest.raises(DeclarationError) as caught:
-        loader.production_tree()
-
-    assert caught.value.field == "write_class"
+    assert loader.production_tree() == (declaration,)
 
 
 def _star_args(ctx, *args):

@@ -1,4 +1,5 @@
 import io
+import re
 import json
 from pathlib import Path
 
@@ -694,13 +695,10 @@ def test_internal_dispatch_error_is_generic_and_does_not_leak():
     assert "private implementation detail" not in json.dumps(response)
 
 
-def test_serve_passes_session_only_as_dispatcher_injection(
-    certified_work, monkeypatch
-):
+def test_serve_holds_one_attended_session_and_closes_it(certified_work, monkeypatch):
     import science.mcp as mcp
     from helpers.world import write_cli_config
 
-    sentinel = object()
     captured = []
 
     class CapturingDispatcher:
@@ -709,14 +707,19 @@ def test_serve_passes_session_only_as_dispatcher_injection(
 
     monkeypatch.setattr(mcp, "Dispatcher", CapturingDispatcher)
 
-    serve(
-        write_cli_config(certified_work),
-        stdin=io.BytesIO(),
-        stdout=io.StringIO(),
-        session=sentinel,
-    )
+    config_path = write_cli_config(certified_work)
+    serve(config_path, stdin=io.BytesIO(), stdout=io.StringIO())
 
-    assert captured == [sentinel]
+    (session,) = captured
+    assert re.fullmatch(r"[0-9a-f]{32}", session.session_id)
+    assert session.actor == f"session:{session.session_id}"
+    # EOF ended the loop, so the `finally` wrote the session-close line.
+    from beliefs.session import ledger_path
+
+    from science.config import load_config
+
+    operations_root = load_config(config_path).operations_root
+    assert '"session-close"' in ledger_path(operations_root, session.session_id).read_text()
 
 
 def test_notification_frame_is_silent_and_following_request_is_served(

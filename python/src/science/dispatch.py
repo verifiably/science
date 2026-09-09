@@ -1,6 +1,7 @@
 """The dispatcher: the one path every invocation takes (spec §6.1, §7.3)."""
 from __future__ import annotations
 
+import threading
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 
@@ -24,6 +25,7 @@ class Dispatcher:
         self._handlers = dict(handlers)
         self._ctx = read_context
         self._session = session
+        self._lock = threading.Lock()  # serializes write-class steps 4-7
 
     def invoke(
         self,
@@ -52,7 +54,7 @@ class Dispatcher:
             assert decl is not None
             canonical = canonicalize(decl, inputs)
             if decl.write_class.kind != "read-only":
-                raise NotImplementedError("write dispatch lands with the beliefs session API")
+                return self._invoke_write(decl, canonical, iid)
             report = self._handlers[decl.name](self._ctx, **canonical)
             return Outcome(self._render(decl, canonical, report, (0, 0)), iid)
         except Refused as error:
@@ -85,7 +87,7 @@ class Dispatcher:
         iid: str,
     ) -> Outcome:
         if isinstance(cursor, WriteCursor):
-            raise NotImplementedError("write continuation lands with the beliefs session API")
+            return self._continue_write(command, cursor, iid)
         decl = self._decls.get(cursor.command)
         if decl is None:
             raise Refused(Refusal("unknown-cursor", f"cursor names unknown command {cursor.command!r}"))
@@ -99,6 +101,183 @@ class Dispatcher:
             raise Refused(Refusal("stale-cursor", "the world moved; re-run the command"))
         self._check_position(report, cursor.block, cursor.offset)
         return Outcome(self._render(decl, canonical, report, (cursor.block, cursor.offset)), iid)
+
+    def _required(self, decl: Declaration):
+        from beliefs.permit import RequiredCapabilities
+
+        write_class = decl.write_class
+        match write_class.kind:
+            case "read-only":
+                return RequiredCapabilities.none()
+            case "coordination":
+                return RequiredCapabilities.coordination()
+            case "mints":
+                return RequiredCapabilities.for_kinds(write_class.kinds, write_class.routes)
+            case "publishes":
+                return RequiredCapabilities.publishes()
+        raise AssertionError(write_class.kind)
+
+    @staticmethod
+    def _kernel_refusal(error) -> Refusal:
+        """The one normalization path for every kernel refusal shape."""
+        from beliefs.permit import PermitExceeded
+        from beliefs.session import KernelRefusalValue
+
+        if isinstance(error, PermitExceeded):
+            return Refusal(
+                "permit-exceeded",
+                str(error),
+                {"requirement": str(error.requirement), "capability": str(error.capability)},
+            )
+        if isinstance(error, KernelRefusalValue):
+            value = error.value
+            return Refusal(
+                "kernel-refused",
+                str(value.reason),
+                {"kind": type(value).__name__, "reason": str(value.reason)},
+            )
+        return Refusal("kernel-refused", str(error), {"kind": type(error).__name__})
+
+    def _invoke_write(self, decl: Declaration, canonical: Mapping[str, object], iid: str) -> Outcome:
+        from beliefs.errors import WriteRefused
+        from beliefs.permit import PermitExceeded
+        from beliefs.session import (
+            ClaimDone,
+            ClaimFresh,
+            ClaimMismatch,
+            ClaimOpen,
+            KernelRefusalValue,
+        )
+
+        from science.render import audit_write_report
+
+        # iid was minted at the top of `invoke`; every refusal here names it.
+        if self._session is None:
+            raise Refused(Refusal("permit-exceeded", "no writer session on this surface"), iid)
+        try:
+            writer = self._session.scoped(self._required(decl), iid)
+        except PermitExceeded as caught:
+            raise Refused(self._kernel_refusal(caught), iid) from None
+        with self._lock:
+            claim = self._session.claim_invocation(iid, decl.name, input_digest(canonical))
+            if isinstance(claim, ClaimDone):
+                return Outcome(self._replay_outcome(decl, claim.outcome, iid, (0, 0)), iid)
+            if isinstance(claim, ClaimOpen):
+                raise Refused(
+                    Refusal("outcome-unknown", "a prior attempt is open; its outcome is unknown"),
+                    iid,
+                )
+            if isinstance(claim, ClaimMismatch):
+                raise Refused(
+                    Refusal("input-mismatch", "invocation_id was used with a different payload"),
+                    iid,
+                )
+            if not isinstance(claim, ClaimFresh):  # fail closed, never execute
+                raise TypeError(f"unknown claim type from the session: {claim!r}")
+            try:
+                report = self._handlers[decl.name](self._ctx, writer, **canonical)
+            except (PermitExceeded, KernelRefusalValue, WriteRefused) as caught:
+                return self._close_refused(iid, self._kernel_refusal(caught))
+            minted = frozenset(
+                tuple(pair)
+                for act in self._session.invocation_acts(iid)
+                for pair in act.record_ids
+            )
+            try:
+                audit_write_report(report, minted)
+            finally:
+                # Close FIRST in every case: the ledger records act truth, and
+                # the acts committed whether or not the report survives audit.
+                # The ledger's outcome shape is `[uid, id]` lists, not tuples.
+                self._session.close_invocation(
+                    iid, {"done": [list(pair) for pair in sorted(minted)]}
+                )
+            # An AuditViolation has propagated past the close above as an
+            # internal error; the echoed report is never rendered. Even on
+            # success the handler's report is only the audited *claim* — what
+            # renders is the canonical ledger-rebuilt report, first response
+            # and replay alike, so authored text around a real identity pair
+            # has no path out (spec §7.4).
+            canonical_report = self._minted_report(sorted(minted))
+            return Outcome(
+                self._render_write(decl.output_budget, canonical_report, iid, (0, 0)), iid
+            )
+
+    def _close_refused(self, iid: str, refusal: Refusal) -> Outcome:
+        from science.refusal import envelope
+
+        self._session.close_invocation(iid, {"refusal": envelope(refusal)})
+        raise Refused(refusal, iid)
+
+    def _render_write(
+        self, budget: int, report: Report, iid: str, position: tuple[int, int]
+    ) -> str:
+        def cursor_for(next_position: tuple[int, int], report_hash: str) -> str:
+            return encode(
+                WriteCursor(self._session.session_id, iid, report_hash, *next_position)
+            )
+
+        return render_page(
+            report, budget=budget, position=position, cursor_for=cursor_for
+        ).text
+
+    def _minted_report(self, pairs) -> Report:
+        """The canonical write report: record blocks rebuilt from ledger pairs."""
+        from science.report import record_block
+
+        return tuple(
+            record_block(self._ctx.load_record(uid, record_id)) for uid, record_id in pairs
+        )
+
+    def _replay_outcome(
+        self, decl: Declaration, outcome: Mapping[str, object], iid: str, position: tuple[int, int]
+    ) -> str:
+        if "refusal" in outcome:
+            refusal = outcome["refusal"]
+            raise Refused(
+                Refusal(refusal["code"], refusal["message"], refusal.get("data", {})), iid
+            )
+        report = self._minted_report(outcome["done"])
+        return self._render_write(decl.output_budget, report, iid, position)
+
+    def _continue_write(self, command: str, cursor: WriteCursor, iid: str) -> Outcome:
+        """Re-render from the ledger: never a handler call, never canonicalization."""
+        from beliefs.session import open_ledger_reader
+
+        decl = self._decls.get(command)
+        if decl is None:
+            raise Refused(Refusal("unknown-command", f"no command {command!r}"))
+        operations_root = self._ctx.config.operations_root
+        try:
+            reader = open_ledger_reader(operations_root, cursor.session_id)
+        except FileNotFoundError:
+            raise Refused(Refusal("unknown-cursor", "no such session ledger")) from None
+        record = reader.invocation(cursor.invocation_id)
+        if record is None:
+            raise Refused(Refusal("unknown-cursor", "no such invocation in that session"))
+        if record.command != command:  # the cursor is bound to its command
+            raise Refused(
+                Refusal("input-mismatch", "cursor was issued for a different command")
+            )
+        if "refusal" in record.outcome:
+            raise Refused(
+                Refusal("unknown-cursor", "that invocation refused; nothing to page")
+            )
+        report = self._minted_report(record.outcome["done"])
+        if report_digest(report) != cursor.report_digest:
+            raise Refused(Refusal("stale-cursor", "the records changed; re-run"))
+        self._check_position(report, cursor.block, cursor.offset)
+        page = render_page(
+            report,
+            budget=decl.output_budget,
+            position=(cursor.block, cursor.offset),
+            cursor_for=lambda next_position, report_hash: encode(
+                WriteCursor(
+                    cursor.session_id, cursor.invocation_id, report_hash, *next_position
+                )
+            ),
+        )
+        return Outcome(page.text, iid)
 
     @staticmethod
     def _check_position(report: Report, block: int, offset: int) -> None:

@@ -3141,6 +3141,30 @@ exercising the real permit path.
   - `ScopedWriter` mirroring the `CorpusWriter` write methods, permit-checked per act
 - Produces: the write branch of `Dispatcher.invoke` (spec §6.1 steps 3–7 for writes, §6.2 dedup under one `threading.Lock`, §7.4 audit via `audit_write_report`); **completion ordering** (spec §6.1/§5.2, ruled here): handler → collect minted `(uid, id)` pairs from the session's acts → `audit_write_report` → `close_invocation` → render → return. The ledger records act truth, never rendering success: an audit violation still closes `done` with the minted pairs (the acts committed) and then raises `AuditViolation` as an internal error — the caller sees exit 1, never the echoed report, and a dedup retry replays canonically from the ledger. A handler refusal closes with the persisted refusal envelope, in that order, before re-raising as `Refused`. Write-cursor continuation resolves the ledger via `open_ledger_reader`, re-renders from the ledger's `(uid, id)` pairs only, and never calls the write handler or canonicalizes inputs. Refusal translation is one function, `_kernel_refusal`: `PermitExceeded` → `permit-exceeded` with requirement/capability data, `KernelRefusalValue` → `kernel-refused` with the value's type name and `.reason` in `data`, other `WriteRefused` → `kernel-refused` with the subclass name in `data`; every write-path `Refused` carries the invocation id. Write handler signature: `handle(ctx, writer, **inputs) -> Report`; the handler's report is audited, but **what renders — on the first response as much as on replay — is the canonical ledger-rebuilt report** (`_minted_report`), so authored kind/title text around a real identity pair has no path to the caller.
 
+**Deviations the implementation took from the code blocks below** (recorded
+2026-09-09; the Consumes block above is the pinned contract, these blocks are
+not):
+
+- Test imports are `from helpers.…`, not `from tests.helpers.…`. There is no
+  `tests/__init__.py`; every existing module in this suite imports the helper
+  package the first way.
+- `close_invocation` takes `{"done": [[uid, id], …]}` — the ledger's
+  `validated_outcome` requires *lists*, and refuses a list of tuples with
+  `a done outcome must be a list of [uid, id] string pairs`.
+- `mcp.serve` loses its `session=` injection parameter rather than keeping it
+  alongside the real session. Task 11's
+  `test_serve_passes_session_only_as_dispatcher_injection` was the placeholder
+  for this task and is replaced by
+  `test_serve_holds_one_attended_session_and_closes_it`, which asserts the
+  32-hex session id, the derived actor, and the `session-close` ledger line.
+- Removing `production_tree`'s fail-closed gate invalidates Task 8's
+  `test_production_tree_rejects_every_write_class_until_capabilities_land` and
+  Task 11's `test_write_paths_are_explicitly_deferred`. Both assert the
+  temporary behavior this task retires, so both are replaced by tests of the
+  behavior that succeeds it: the tree now admits every write class,
+  `production_kind_acts()` equals `beliefs.permit.KIND_ACTS` exactly, and a
+  write on a sessionless surface refuses `permit-exceeded` before its handler.
+
 - [x] **Step 0: Repair the fixture world and add the `domains` key**
 
 Fifteen tests are red on `main` because beliefs cut 22 made `profile` required
@@ -3164,7 +3188,7 @@ Run: `cd python && uv run --group dev pytest -q`
 Expected: PASS — the fifteen `TypeError: open_corpus() missing 1 required
 keyword-only argument: 'profile'` failures are gone and nothing else moved.
 
-- [ ] **Step 1: Write the shared synthetic module, then the failing tests**
+- [x] **Step 1: Write the shared synthetic module, then the failing tests**
 
 `python/tests/helpers/synthetic.py` — the one definition of the synthetic
 declarations and handlers; Task 13 extends this module with the
@@ -3407,12 +3431,12 @@ def test_write_cursor_rerenders_without_handler(rig):
 slugs must fit beliefs' slug rules, so keep them short lowercase-hyphen
 strings.)
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `cd python && uv run --group dev pytest tests/test_write_dispatch.py -q`
 Expected: FAIL — `NotImplementedError` from the read-only dispatcher (or `ImportError` if beliefs has not landed; in that case this task is not startable yet).
 
-- [ ] **Step 3: Implement the write branch in `dispatch.py`**
+- [x] **Step 3: Implement the write branch in `dispatch.py`**
 
 Three exact replacements, then the new methods. First, `Dispatcher.__init__`
 in full (the lock is the only addition; add `import threading` at the top
@@ -3654,7 +3678,7 @@ def serve(config_path: Path, stdin=None, stdout=None) -> None:
         session.close()  # the ledger's session-close line, crash or EOF alike
 ```
 
-- [ ] **Step 4: Run the full suite to verify it passes**
+- [x] **Step 4: Run the full suite to verify it passes**
 
 Run: `cd python && uv run --group dev pytest -q`
 Expected: PASS, including every earlier task's tests.

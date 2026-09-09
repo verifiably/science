@@ -357,40 +357,52 @@ def _read_frame(stream):
     return frame
 
 
-def serve(config_path: Path, stdin=None, stdout=None, session=None) -> None:
+def serve(config_path: Path, stdin=None, stdout=None) -> None:
+    from beliefs.session import open_attended_session
+
     from science.config import ReadContext, load_config
     from science.loader import production_tree, resolve_handlers
 
     stdin = sys.stdin.buffer if stdin is None else stdin
     stdout = sys.stdout if stdout is None else stdout
     declarations = production_tree()
-    dispatcher = Dispatcher(
-        declarations,
-        resolve_handlers(declarations),
-        ReadContext.open(load_config(config_path)),
-        session=session,
+    config = load_config(config_path)
+    # One attended session for the process lifetime. A world config naming
+    # other than exactly one corpus root raises SessionRefused here; that is a
+    # launcher misconfiguration and propagates, never a command refusal.
+    session = open_attended_session(
+        config.world, config.operations_root, profile=config.profile
     )
-    while True:
-        frame = _read_frame(stdin)
-        if frame is _END_OF_INPUT:
-            return
-        if frame is _OVERSIZED_FRAME:
-            response = _rpc_error(None, -32600, "Request exceeds maximum size")
-        elif not frame.strip():
-            continue
-        else:
-            try:
-                line = frame.decode("utf-8", errors="strict")
-                request = json.loads(
-                    line,
-                    object_pairs_hook=_object_without_duplicates,
-                    parse_constant=_reject_nonfinite_number,
-                )
-            except (UnicodeDecodeError, ValueError, RecursionError):
-                response = _rpc_error(None, -32700, "Parse error")
+    try:
+        dispatcher = Dispatcher(
+            declarations,
+            resolve_handlers(declarations),
+            ReadContext.open(config),
+            session=session,
+        )
+        while True:
+            frame = _read_frame(stdin)
+            if frame is _END_OF_INPUT:
+                return
+            if frame is _OVERSIZED_FRAME:
+                response = _rpc_error(None, -32600, "Request exceeds maximum size")
+            elif not frame.strip():
+                continue
             else:
-                response = handle_request(request, dispatcher, declarations)
-        if response is None:
-            continue
-        stdout.write(json.dumps(response, separators=(",", ":")) + "\n")
-        stdout.flush()
+                try:
+                    line = frame.decode("utf-8", errors="strict")
+                    request = json.loads(
+                        line,
+                        object_pairs_hook=_object_without_duplicates,
+                        parse_constant=_reject_nonfinite_number,
+                    )
+                except (UnicodeDecodeError, ValueError, RecursionError):
+                    response = _rpc_error(None, -32700, "Parse error")
+                else:
+                    response = handle_request(request, dispatcher, declarations)
+            if response is None:
+                continue
+            stdout.write(json.dumps(response, separators=(",", ":")) + "\n")
+            stdout.flush()
+    finally:
+        session.close()  # the ledger's session-close line, crash or EOF alike
