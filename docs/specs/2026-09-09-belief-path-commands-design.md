@@ -407,9 +407,11 @@ observer=<session actor>, started_at=now, host_realization=hostname,
 scratch_base=<operations root>/scratch/<invocation>, cores)`. A
 `RunRefused` renders as the refusal envelope with the kernel's reason
 (`no-frozen-spec`, the preflight reasons, `execution-failed`,
-`permit-exceeded`); a `RunMinted` reports the run record block. The scratch
-directory is the operations root's, never a corpus's, and is left for the
-operator as the driver left its.
+`permit-exceeded`); for a `RunMinted`, the handler reports the run record
+block. The dispatcher rebuilds the wire report from every identity minted
+by the invocation, including the run route's act reports, in `(uid, record_id)`
+order. The scratch directory is the operations root's, never a corpus's,
+and is left for the operator as the driver left its.
 
 The code directory is read from the host and its identity enters the
 record; the surface stores no copy of it. Layer §5.2's "owns no files" is
@@ -484,9 +486,11 @@ held_rules={equivalence}, contract_identity=<manifest pins' science
 contract>, epoch=<current epoch's packaging identity or "none-published">)`
 follow; the record is `publication_node(verification,
 assessment_ref=<assessment ref>)`. A replay `RunRefused` is the refusal
-envelope. The report is the verification record block, whose title carries
-scope and verdict; the replayed run is a second minted identity the audit
-admits because the declaration names `run`.
+envelope. The handler reports the verification record block, whose title
+carries scope and verdict. The dispatcher rebuilds the wire report from
+every identity minted by the invocation, including the replayed run and
+the run route's act reports, in `(uid, record_id)` order; the audit admits
+the replayed run because the declaration names `run`.
 
 `verify` does not say whether the belief is admitted. That is `belief`'s.
 
@@ -752,8 +756,9 @@ Snakefile writes a fixed outcome.
   however many datasets are held.
 - **Every command through its transport** (framework §9.4). The reads
   render byte-identical through the CLI and the MCP server. A write's
-  report is the ledger-rebuilt record block, and its uid is minted per
-  world, so writes are compared to the corpus each transport wrote to, not
+  report contains every identity minted by the invocation, rebuilt from the
+  corpus in `(uid, record_id)` order. Uids are minted per world, so writes
+  are compared to the corpus each transport wrote to, not
   byte-for-byte across transports; each write is driven through at least
   one real transport, with invocation replay and the refusal envelope
   exercised on both.

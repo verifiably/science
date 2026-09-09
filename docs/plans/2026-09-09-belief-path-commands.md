@@ -25,12 +25,12 @@
 
 ## Assumed kernel seams
 
-Tasks 4, 6, 7, 8 and 9 call interfaces `beliefs` does not have yet. These are the names the two `beliefs` tasks deliver; if a name lands differently, change the call site, not the design.
+Tasks 3, 4, 6, 7, 8 and 9 call interfaces `beliefs` does not have yet. These are the names the two `beliefs` tasks deliver; if a name lands differently, change the call site, not the design.
 
 - **`beliefs-e5ab34` (reference rules):** `beliefs.rules.REFERENCE_RULES: Mapping[str, RuleImplementation | EquivalenceImplementation]` keyed by rule identity, holding `"outcome-file/v1"` (interpretation: maps the digest of `outputs/outcome.txt` — one of `supported\n`, `refuted\n`, `inconclusive\n` — to `{"outcome": …}`) and `"content-identity-equality/v1"` (equivalence: `passed` iff the two result manifests are equal). `beliefs.rules.OUTCOME_FILE = "outputs/outcome.txt"`.
 - **`beliefs-5fe2e3` (scoped routes):** `beliefs.root.store_identity(store_root: Path) -> str | None` (the public form of the existing private genesis read, by detached inspection); `open_attended_session(world_config, operations_root, *, profile, coordination=None, store_root: Path | None = None)`; `ScopedWriter.operation_port() -> OperationPort` bound to the invocation's scoped authority, whose commits are recorded as `act` lines; `ScopedWriter.holdings_context(*, instrument: str) -> ActContext` over the session's store root, observer = the session actor, whose published observations are recorded as `act` lines; `ScopedWriter.store_id -> str`; and `beliefs.replay.replay(original: RunMinted | RunClosure, …)` reading only the closure.
 
-Until those land, Tasks 4, 7 and 9 cannot pass end to end; Tasks 6, 8 and 11 need only the rules. Do Tasks 1–3, 5 and 10 first, then whatever the seams have unblocked.
+Do Tasks 1–2 first. Task 3 waits on `beliefs-5fe2e3` for the public store identity reader, so Tasks 4–11 also wait on that seam through the read context. Tasks 6 and 8 additionally need the reference rules; Task 11 follows Task 6 because its readiness test freezes a spec through the production command.
 
 ## File structure
 
@@ -561,6 +561,8 @@ git commit -m "feat(config): corpus-local contract documents and the holdings st
 ---
 
 ### Task 3: The read context — snapshot, holdings reads, supplied context, fixture path
+
+**Blocked on `beliefs-5fe2e3`** (`beliefs.root.store_identity`).
 
 **Files:**
 - Create: `python/src/science/vocabulary.py`, `python/src/science/holdings.py`, `python/src/science/closure.py`
@@ -1171,8 +1173,7 @@ def evaluate(view, proposition, *, observations, context, profile, resolution):
     def store_id(self) -> str:
         """The configured store's verified identity, read from its genesis by
         detached inspection. `store_identity` is the public reader the routes
-        seam (`beliefs-5fe2e3`) adds; until it lands the private
-        `_read_existing_store_genesis` is the same read."""
+        seam (`beliefs-5fe2e3`) adds, a prerequisite for this task."""
         from beliefs.root import store_identity
         identity = store_identity(self.config.store_root)
         if identity is None:
@@ -2669,7 +2670,7 @@ git commit -m "feat(commands): next ranks propositions by a fixed derived order"
 - Modify: `python/tests/helpers/world.py` (`write_config_for`)
 
 **Interfaces:**
-- Consumes: everything above; the MCP `rpc()` helper and `serve()` from `test_mcp.py`; `science.cli.main`; `science.serve.serve`; `science.report.{record_block, serialize_block}` for the canonical block a write renders. The run and verify legs skip to the minimal policy where bubblewrap is absent, exactly as `test_belief_path.py` does.
+- Consumes: everything above; the MCP `rpc()` helper and `serve()` from `test_mcp.py`; `science.cli.main`; `science.serve.serve`; `beliefs.session.open_ledger_reader`; `science.report.{record_block, serialize_block}` for the complete canonical report a write renders. The run and verify legs skip to the minimal policy where bubblewrap is absent, exactly as `test_belief_path.py` does.
 - Produces: `helpers.world.write_config_for(cfg) -> Path` (the TOML for an existing config, including `contracts` and `store_root`).
 
 - [ ] **Step 1: The full path, portable and confined**
@@ -2878,14 +2879,16 @@ def test_cli_write_routes_through_the_service_and_refuses_with_the_json_line(wor
         server.server_close()
 
 
-def test_every_write_reaches_its_transport_and_renders_the_canonical_block(world, tmp_path, capsys, monkeypatch):
+def test_every_write_reaches_its_transport_and_renders_the_canonical_report(world, tmp_path, capsys, monkeypatch):
     """spec and assess through MCP, run and verify through the CLI service:
-    each write's text is the ledger-rebuilt record block for the record the
-    corpus now holds. The uid is minted per world, so writes are compared to
-    the corpus, not byte-for-byte across transports (design §7)."""
+    each write's text contains every record minted by its invocation, rebuilt
+    from the corpus in (uid, record_id) order. Uids are minted per world, so
+    writes are compared to the corpus, not byte-for-byte across transports
+    (design §7)."""
     import science.commands.run as run_module
     from beliefs.confinement import host_prerequisites
     from beliefs.recipe import MINIMAL_POLICY
+    from beliefs.session import open_ledger_reader
     from science.cli import main
     from science.config import ReadContext, load_config
     from science.report import record_block, serialize_block
@@ -2901,36 +2904,52 @@ def test_every_write_reaches_its_transport_and_renders_the_canonical_block(world
     data = tmp_path / "data.txt"
     data.write_bytes(b"x\n")
 
-    def canonical(ref):
-        _, view = ReadContext.open(cfg).single_view()
-        return serialize_block(record_block(view.get(ref)))
+    def canonical(invocation_id):
+        (invocation,) = [
+            entry
+            for path in (cfg.operations_root / "sessions").glob("*/ledger.v1")
+            if (entry := open_ledger_reader(cfg.operations_root, path.parent.name).invocation(invocation_id)) is not None
+        ]
+        pairs = sorted({pair for act in invocation.acts for pair in act.record_ids})
+        assert pairs
+        assert invocation.outcome == {"done": [list(pair) for pair in pairs]}
+        ctx = ReadContext.open(cfg)
+        return "".join(serialize_block(record_block(ctx.load_record(uid, record_id)))
+                       for uid, record_id in pairs)
 
     def ref_in(text, prefix):
         return next(t for t in text.split() if t.startswith(prefix))
 
-    prop_text = mcp_call(cfg_path, "claim", CLAIM)["content"][0]["text"]
+    result = mcp_call(cfg_path, "claim", CLAIM)
+    prop_text = result["content"][0]["text"]
     prop = ref_in(prop_text, "proposition:")
-    assert prop_text == canonical(prop)
+    assert prop_text == canonical(result["structuredContent"]["invocation_id"])
     server = serve(load_config(cfg_path), named)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     try:
         assert main(["dataset", "--config", str(cfg_path), "--path", str(data), "--title", "expression"]) == 0
-        dataset = ref_in(capsys.readouterr().out, "dataset:")
-        spec_text = mcp_call(cfg_path, "spec", dict(SPEC_FIELDS, target=prop, dataset=dataset))["content"][0]["text"]
+        output = capsys.readouterr()
+        dataset = ref_in(output.out, "dataset:")
+        assert output.out == canonical(json.loads(output.err)["invocation_id"])
+        result = mcp_call(cfg_path, "spec", dict(SPEC_FIELDS, target=prop, dataset=dataset))
+        spec_text = result["content"][0]["text"]
         spec = ref_in(spec_text, "analysis-spec:")
-        assert spec_text == canonical(spec)
+        assert spec_text == canonical(result["structuredContent"]["invocation_id"])
         assert main(["run", "--config", str(cfg_path), "--spec", spec, "--dataset", dataset,
                      "--code", str(code), "--entrypoint", entrypoint, *sum((["--targets", t] for t in targets), [])]) == 0
-        run_text = capsys.readouterr().out
+        output = capsys.readouterr()
+        run_text = output.out
         run = ref_in(run_text, "run:")
-        assert run_text == canonical(run)
-        assess_text = mcp_call(cfg_path, "assess", {"run": run})["content"][0]["text"]
+        assert run_text == canonical(json.loads(output.err)["invocation_id"])
+        result = mcp_call(cfg_path, "assess", {"run": run})
+        assess_text = result["content"][0]["text"]
         assessment = ref_in(assess_text, "assessment:")
-        assert assess_text == canonical(assessment)
+        assert assess_text == canonical(result["structuredContent"]["invocation_id"])
         assert main(["verify", "--config", str(cfg_path), "--assessment", assessment,
                      "--code", str(code), "--entrypoint", entrypoint]) == 0
-        verify_text = capsys.readouterr().out
-        assert verify_text == canonical(ref_in(verify_text, "verification:"))
+        output = capsys.readouterr()
+        assert ref_in(output.out, "verification:")
+        assert output.out == canonical(json.loads(output.err)["invocation_id"])
         # A kernel refusal through the service: the same bundle edited between
         # run and replay is a different recipe, refused by the boundary.
         (code / "workflow" / "Snakefile").write_text((code / "workflow" / "Snakefile").read_text().replace("supported", "refuted"))
@@ -3056,4 +3075,4 @@ Then `tasks done sci-66b26d` only if the coordination-set half is also done or s
 
 **Type consistency.** `open_rig(cfg, names) -> (Dispatcher, ReadContext)` is defined in Task 3 and used the same way in Tasks 4–12; `SPEC_FIELDS` likewise. `prepare()` returns the keyword set `execute_assessment_run` and `replay` share, and `verify` pops `spec` because `replay` takes it by name. `ctx.held_path(address)` takes a dataset address string everywhere; `ctx.observations()` is the reduced mapping everywhere. `REFERENCE_RULES` is a mapping in Tasks 6, 8, 9. Kernel refusals (`RunRefused`) go through `KernelRefusalValue` in Tasks 7 and 9; only pre-act validation raises the surface `Refused`.
 
-**Task order.** 1 → 2 → 3 → 5, 10 (they need only the read context and the Task 3 helpers) → 4 (routes seam) → 6, 8 (rules seam) → 11 (its readiness test freezes a spec through the production `spec` command, so it follows Task 6) → 7, 9 (routes seam) → 12 → 13. Every helper a task imports is defined in Task 3 or earlier; nothing imports forward.
+**Task order.** 1 → 2 → 3 (public store identity reader from the routes seam) → 5, 10 (read context and Task 3 helpers) → 4 → 6, 8 (rules seam) → 11 (its readiness test freezes a spec through the production `spec` command, so it follows Task 6) → 7, 9 → 12 → 13. Tasks 1–2 can proceed before the kernel seams land. Every helper a task imports is defined in Task 3 or earlier; nothing imports forward.
