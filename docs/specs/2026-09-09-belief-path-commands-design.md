@@ -644,9 +644,11 @@ retraction search exists to run, and the enumeration states its scope;
 
 ## 6. Seams this spec depends on
 
-Two are `beliefs` tasks, filed 2026-09-09 and depended on by `sci-66b26d`:
-`beliefs-e5ab34` (§6.1) and `beliefs-5fe2e3` (§6.2). This document states
-the requirement; their designs are theirs. The third (§6.3) is a framework
+Three are `beliefs` tasks, filed 2026-09-09 and depended on by `sci-66b26d`:
+`beliefs-e5ab34` (§6.1), `beliefs-5fe2e3` (§6.2), and `beliefs-2d9a55`, the
+public store identity reader §6.2 names, split out of the routes seam so the
+read-only commands can land before it. This document states the
+requirement; their designs are theirs. The fourth (§6.3) is a framework
 amendment in this repository and the plan's first task.
 
 ### 6.1 Reference rule implementations
@@ -679,7 +681,10 @@ operation port for `execute_assessment_run` and `replay`, and a holdings act
 context over a store root the session is opened with — and records their
 commits as `act` lines the same way `add` does, so the ledger-versus-chain
 comparison meets them. `open_attended_session` therefore takes the store
-root, which is why §5.1 makes it configuration.
+root, which is why §5.1 makes it configuration. The read context also needs
+the store root's identity without a session (§5): `beliefs.root.store_identity`,
+the public form of the kernel's private genesis read by detached inspection,
+is its own task, `beliefs-2d9a55`.
 
 ### 6.3 Surface refusals from a write handler
 
@@ -844,8 +849,9 @@ half and re-ranks nothing itself; a re-rank is the roadmap's.
 
 ## 10. Task mapping
 
-`sci-66b26d` is the goal; it depends on `beliefs-e5ab34` (§6.1) and
-`beliefs-5fe2e3` (§6.2), so it leaves `ready` until both close. The plan
+`sci-66b26d` is the goal; it depends on `beliefs-e5ab34` (§6.1),
+`beliefs-2d9a55` and `beliefs-5fe2e3` (§6.2), so it leaves `ready` until all
+three close. The plan
 attaches to it and adds one child per task, in dependency order: the
 dispatcher amendment (§6.3); configuration and the read context (§5);
 `claim`; `dataset`; `spec`;

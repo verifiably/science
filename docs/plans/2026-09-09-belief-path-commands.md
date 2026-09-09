@@ -4,7 +4,7 @@
 
 **Goal:** Ship the eight commands that carry one proposition from a typed claim to a computed belief over a real `beliefs` world — `claim`, `dataset`, `spec`, `run`, `assess`, `verify`, `belief`, `next` — and measure them by reproducing mm30's one proposition afresh.
 
-**Architecture:** Each command is a declaration (`commands/<name>/command.toml` + `prompt.md`) and a handler module (`python/src/science/commands/<name>.py`) that the existing loader binds by name. Handlers read the world through `ReadContext` and act only through the invocation-scoped writer the dispatcher hands them; every write is a kernel act, every refusal is the framework's envelope. The read context grows three derivations the commands share: the resolution snapshot from held vocabularies, holdings reads from the store, and the supplied context the belief evaluator needs. Two kernel seams (`beliefs-e5ab34`, `beliefs-5fe2e3`) and one framework amendment (Task 1) sit under the commands.
+**Architecture:** Each command is a declaration (`commands/<name>/command.toml` + `prompt.md`) and a handler module (`python/src/science/commands/<name>.py`) that the existing loader binds by name. Handlers read the world through `ReadContext` and act only through the invocation-scoped writer the dispatcher hands them; every write is a kernel act, every refusal is the framework's envelope. The read context grows three derivations the commands share: the resolution snapshot from held vocabularies, holdings reads from the store, and the supplied context the belief evaluator needs. Three kernel seams (`beliefs-e5ab34`, `beliefs-2d9a55`, `beliefs-5fe2e3`) and one framework amendment (Task 1) sit under the commands.
 
 **Tech Stack:** Python 3.11+, `beliefs` (editable path dependency; brings `snakemake`), stdlib `tomllib`/`argparse`/`socketserver`, pytest via `just`. No new dependencies.
 
@@ -25,12 +25,13 @@
 
 ## Assumed kernel seams
 
-Tasks 3, 4, 6, 7, 8 and 9 call interfaces `beliefs` does not have yet. These are the names the two `beliefs` tasks deliver; if a name lands differently, change the call site, not the design.
+Tasks 3, 4, 6, 7, 8 and 9 call interfaces `beliefs` does not have yet. These are the names the three `beliefs` tasks deliver; if a name lands differently, change the call site, not the design.
 
 - **`beliefs-e5ab34` (reference rules):** `beliefs.rules.REFERENCE_RULES: Mapping[str, RuleImplementation | EquivalenceImplementation]` keyed by rule identity, holding `"outcome-file/v1"` (interpretation: maps the digest of `outputs/outcome.txt` — one of `supported\n`, `refuted\n`, `inconclusive\n` — to `{"outcome": …}`) and `"content-identity-equality/v1"` (equivalence: `passed` iff the two result manifests are equal). `beliefs.rules.OUTCOME_FILE = "outputs/outcome.txt"`.
-- **`beliefs-5fe2e3` (scoped routes):** `beliefs.root.store_identity(store_root: Path) -> str | None` (the public form of the existing private genesis read, by detached inspection); `open_attended_session(world_config, operations_root, *, profile, coordination=None, store_root: Path | None = None)`; `ScopedWriter.operation_port() -> OperationPort` bound to the invocation's scoped authority, whose commits are recorded as `act` lines; `ScopedWriter.holdings_context(*, instrument: str) -> ActContext` over the session's store root, observer = the session actor, whose published observations are recorded as `act` lines; `ScopedWriter.store_id -> str`; and `beliefs.replay.replay(original: RunMinted | RunClosure, …)` reading only the closure.
+- **`beliefs-2d9a55` (store identity):** `beliefs.root.store_identity(store_root: Path) -> str | None`, the public form of the existing private genesis read, by detached inspection (no recovery, no writes); `None` when the root carries no store genesis. Split out of the routes seam so the read context and the read-only commands can land before it.
+- **`beliefs-5fe2e3` (scoped routes):** `open_attended_session(world_config, operations_root, *, profile, coordination=None, store_root: Path | None = None)`; `ScopedWriter.operation_port() -> OperationPort` bound to the invocation's scoped authority, whose commits are recorded as `act` lines; `ScopedWriter.holdings_context(*, instrument: str) -> ActContext` over the session's store root, observer = the session actor, whose published observations are recorded as `act` lines; `ScopedWriter.store_id -> str`; and `beliefs.replay.replay(original: RunMinted | RunClosure, …)` reading only the closure.
 
-Do Tasks 1–2 first. Task 3 waits on `beliefs-5fe2e3` for the public store identity reader, so Tasks 4–11 also wait on that seam through the read context. Tasks 6 and 8 additionally need the reference rules; Task 11 follows Task 6 because its readiness test freezes a spec through the production command.
+Do Tasks 1–2 first. Task 3 waits on `beliefs-2d9a55` for the public store identity reader, so every later task waits on that seam through the read context. Tasks 4, 7 and 9 additionally need the scoped routes (`beliefs-5fe2e3`); Tasks 6 and 8 the reference rules (`beliefs-e5ab34`); Task 11 follows Task 6 because its readiness test freezes a spec through the production command. Tasks 5 and 10 need only the read context.
 
 ## File structure
 
@@ -582,7 +583,7 @@ git commit -m "feat(config): corpus-local contract documents and the holdings st
 
 ### Task 3: The read context — snapshot, holdings reads, supplied context, fixture path
 
-**Blocked on `beliefs-5fe2e3`** (`beliefs.root.store_identity`).
+**Blocked on `beliefs-2d9a55`** (`beliefs.root.store_identity`).
 
 **Files:**
 - Create: `python/src/science/vocabulary.py`, `python/src/science/holdings.py`, `python/src/science/closure.py`
@@ -1192,8 +1193,8 @@ def evaluate(view, proposition, *, observations, context, profile, resolution):
 
     def store_id(self) -> str:
         """The configured store's verified identity, read from its genesis by
-        detached inspection. `store_identity` is the public reader the routes
-        seam (`beliefs-5fe2e3`) adds, a prerequisite for this task."""
+        detached inspection. `store_identity` is the public reader the store
+        identity seam (`beliefs-2d9a55`) adds, a prerequisite for this task."""
         from beliefs.root import store_identity
         identity = store_identity(self.config.store_root)
         if identity is None:
