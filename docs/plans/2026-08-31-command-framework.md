@@ -3683,7 +3683,7 @@ def serve(config_path: Path, stdin=None, stdout=None) -> None:
 Run: `cd python && uv run --group dev pytest -q`
 Expected: PASS, including every earlier task's tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add python/src/science/dispatch.py python/src/science/loader.py \
