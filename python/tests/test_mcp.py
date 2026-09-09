@@ -17,6 +17,52 @@ META = {
 }
 
 
+@pytest.mark.parametrize("state", ["clean", "unclosed", "failing-stream"])
+def test_startup_findings(certified_work, state):
+    """An open peer produces session-unclosed, even while alive; classification
+    of uncovered commits as session-outcome-unknown belongs to beliefs."""
+    from beliefs.session import open_attended_session
+    from science.config import load_config
+    from helpers.world import write_cli_config
+
+    config_path = write_cli_config(certified_work)
+    cfg = load_config(config_path)
+    peer = None
+    if state != "clean":
+        peer = open_attended_session(cfg.world, cfg.operations_root, profile=cfg.profile)
+        peer.claim_invocation("unfinished", "test-command", "a" * 64)
+
+    class FailingStream:
+        def write(self, text):
+            raise OSError("stderr unavailable")
+
+    stderr = FailingStream() if state == "failing-stream" else io.StringIO()
+    stdout = io.StringIO()
+    try:
+        if state == "failing-stream":
+            with pytest.raises(OSError, match="stderr unavailable"):
+                serve(config_path, stdin=io.BytesIO(), stdout=stdout, stderr=stderr)
+        else:
+            serve(config_path, stdin=io.BytesIO(), stdout=stdout, stderr=stderr)
+            if peer is None:
+                assert stderr.getvalue() == ""
+            else:
+                (line,) = stderr.getvalue().splitlines()
+                finding = json.loads(line)
+                assert finding["code"] == "session-unclosed"
+                assert finding["ref"] == peer.session_id
+                assert "unfinished" in finding["detail"]
+                assert re.fullmatch(r"[0-9a-f]{32}", finding["reported_by"])
+                assert finding["reported_by"] != peer.session_id
+        assert stdout.getvalue() == ""
+        (ledger,) = [path for path in (cfg.operations_root / "sessions").glob("*/ledger.v1")
+                     if peer is None or path.parent.name != peer.session_id]
+        assert json.loads(ledger.read_text().splitlines()[-1])["line"] == "session-close"
+    finally:
+        if peer is not None:
+            peer.close()
+
+
 def rpc(method, params=None, id=1):
     body = dict(params or {})
     body.setdefault("_meta", dict(META))

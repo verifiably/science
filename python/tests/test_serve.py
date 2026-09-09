@@ -1,4 +1,6 @@
 import json
+import io
+import re
 import socket
 import threading
 
@@ -6,6 +8,52 @@ import pytest
 
 from science.serve import serve
 from helpers.world import build_fixture_world
+
+
+@pytest.mark.parametrize("state", ["clean", "unclosed", "failing-stream"])
+def test_startup_findings(certified_work, tmp_path, state):
+    """An open peer produces session-unclosed, even while alive; classification
+    of uncovered commits as session-outcome-unknown belongs to beliefs."""
+    from beliefs.session import open_attended_session
+
+    cfg = build_fixture_world(certified_work)
+    peer = None
+    if state != "clean":
+        peer = open_attended_session(cfg.world, cfg.operations_root, profile=cfg.profile)
+        peer.claim_invocation("unfinished", "test-command", "a" * 64)
+
+    class FailingStream:
+        def write(self, text):
+            raise OSError("stderr unavailable")
+
+    stderr = FailingStream() if state == "failing-stream" else io.StringIO()
+    socket_path = tmp_path / "service.sock"
+    try:
+        if state == "failing-stream":
+            with pytest.raises(OSError, match="stderr unavailable"):
+                serve(cfg, socket_path, stderr=stderr)
+            assert not socket_path.exists()
+        else:
+            server = serve(cfg, socket_path, stderr=stderr)
+            try:
+                if peer is None:
+                    assert stderr.getvalue() == ""
+                else:
+                    (line,) = stderr.getvalue().splitlines()
+                    finding = json.loads(line)
+                    assert finding["code"] == "session-unclosed"
+                    assert finding["ref"] == peer.session_id
+                    assert "unfinished" in finding["detail"]
+                    assert re.fullmatch(r"[0-9a-f]{32}", finding["reported_by"])
+                    assert finding["reported_by"] != peer.session_id
+            finally:
+                server.server_close()
+        (ledger,) = [path for path in (cfg.operations_root / "sessions").glob("*/ledger.v1")
+                     if peer is None or path.parent.name != peer.session_id]
+        assert json.loads(ledger.read_text().splitlines()[-1])["line"] == "session-close"
+    finally:
+        if peer is not None:
+            peer.close()
 
 
 # The certified work root is long and AF_UNIX caps the socket path at 107

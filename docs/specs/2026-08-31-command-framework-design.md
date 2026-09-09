@@ -644,6 +644,21 @@ configuration loading so even an early refusal is bound. Unexpected failures
 emit only the generic `internal-error` shape (and the id when already bound),
 never exception text.
 
+**2026-09-09 amendment — startup findings.** `science serve` writes one
+compact, key-sorted JSON line per session-reconciliation finding to stderr
+at startup, and nothing when there are none. Reporting runs once, without
+polling or blocking startup on findings. `session-unclosed` means the
+referenced session's ledger has no close line; a healthy live peer over the
+same operations root also produces it, so it is not proof of a crash.
+Findings may be followed by a CLI refusal or internal-error line if startup
+fails. Existing top-level keys distinguish the lines:
+
+| key present | line shape |
+|---|---|
+| `severity` | session-reconciliation finding |
+| `refusal` | CLI refusal envelope |
+| `error` | CLI internal error |
+
 **Read-only commands run in-process with
 only the read context** — no `WriterSession` is opened and no ledger is
 touched (§4.2, §5.2); read cursors are stateless (§7.3), so paging needs
@@ -655,6 +670,15 @@ writer opened per invocation around the endpoint architecture. Until then the
 production write gate makes this path unreachable; no shipped command writes.
 
 ### 9.3 MCP server
+
+**2026-09-09 amendment — startup findings.** `science mcp serve` writes one
+compact, key-sorted JSON line per session-reconciliation finding to stderr
+at startup, and nothing when there are none; stdout remains JSON-RPC only.
+The §9.2 discrimination table applies: top-level `severity` marks a finding,
+`refusal` or `error` marks a CLI failure, which may follow the findings.
+Reporting runs once, without polling or blocking startup on findings.
+`session-unclosed` means the referenced session's ledger has no close line;
+a healthy live peer over the same operations root also produces it.
 
 `science mcp serve`, stdio transport, one attended session per server
 lifetime; the harness configuration that starts it is the person's launcher.

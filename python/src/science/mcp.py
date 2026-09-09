@@ -8,6 +8,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from science.dispatch import Dispatcher
+from science.findings import report_findings
 from science.refusal import Refused, envelope
 from science.schema import Declaration
 
@@ -357,7 +358,7 @@ def _read_frame(stream):
     return frame
 
 
-def serve(config_path: Path, stdin=None, stdout=None) -> None:
+def serve(config_path: Path, stdin=None, stdout=None, stderr=None) -> None:
     from beliefs.session import open_attended_session
 
     from science.config import ReadContext, load_config
@@ -374,6 +375,8 @@ def serve(config_path: Path, stdin=None, stdout=None) -> None:
         config.world, config.operations_root, profile=config.profile
     )
     try:
+        report_findings(session.findings, reported_by=session.session_id,
+                        stream=sys.stderr if stderr is None else stderr)
         dispatcher = Dispatcher(
             declarations,
             resolve_handlers(declarations),

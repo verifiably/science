@@ -1,7 +1,7 @@
 # Session findings at endpoint startup — design
 
 **Date:** 2026-09-09
-**Status:** designed; not yet implemented. Task `sci-296b6d`.
+**Status:** implemented. Task `sci-296b6d`.
 **Scope:** the one missing piece of the command framework's crash story:
 making the reconciliation findings that `beliefs` computes on every session
 open reach the person who started the endpoint. It covers both endpoints,
@@ -34,9 +34,9 @@ holds every finding the writer-session design's §6 defines: `session-unclosed`,
 `session-outcome-unknown`, `session-entry-foreign`, `ledger-torn-tail`, the
 ledger-shape findings, and the chain-shape findings.
 
-`science` does not do its half. Nothing in the package reads
-`session.findings`. Both endpoints open the session and discard the tuple.
-The mechanism the spec relies on to tell an operator to look does not exist.
+Before this change, `science` did not do its half. Nothing in the package read
+`session.findings`. Both endpoints opened the session and discarded the tuple.
+The mechanism the spec relies on to tell an operator to look did not exist.
 Tasks 12 and 13 of the implementation plan did not skip it; the plan never
 had a step for it.
 
@@ -52,9 +52,9 @@ re-derived.
 2. **Stderr, at startup, both endpoints, one shape.** Stdout is spoken for
    on the MCP server (JSON-RPC) and unused on the socket service; stderr is
    where MCP servers conventionally log and where the CLI already puts its
-   one machine-readable line per invocation (§9.2). The endpoint modules
-   write nothing to stderr themselves, but the process does: `cli.main`'s
-   last-resort handlers emit a `{"refusal":…}` or `{"error":…}` line there
+   one machine-readable line per invocation (§9.2). Before this change, the
+   endpoint modules wrote nothing to stderr themselves, but the process did:
+   `cli.main`'s last-resort handlers emit a `{"refusal":…}` or `{"error":…}` line there
    when `science serve` or `science mcp serve` fails, including a failure
    after the session has opened. Findings therefore share the stream with
    those lines and must be distinguishable from them (§4).
@@ -288,7 +288,7 @@ source, different surface, same smell. It is its own task
 ## 9. Task mapping
 
 One task, `sci-296b6d`, size `s`, one commit: the module, two call-site
-edits with their `stderr` parameters, the tests of §6, the two-sentence
+edits with their `stderr` parameters, the tests of §6, the documentation
 amendment of §7, and `tasks done`. No implementation plan document; the
 change is bounded and this spec is its whole design. Implementation follows
 test-driven development directly from §6.

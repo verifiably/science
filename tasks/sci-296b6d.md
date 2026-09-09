@@ -1,12 +1,12 @@
 ---
 id: sci-296b6d
 title: Surface session reconciliation findings at endpoint startup
-status: doing
+status: done
 priority: 1
 size: s
 owner: session-findings
 created: 2026-09-09T10:22:18Z
-updated: 2026-09-09T10:56:03Z
+updated: 2026-09-09T11:14:44Z
 depends: []
 tags: [command-framework]
 spec: docs/specs/2026-09-09-session-findings-at-startup-design.md
@@ -24,3 +24,5 @@ Open questions for the work: where findings surface (a stderr line at startup, a
 
 - 2026-09-09T10:49:15Z (session-findings): Design spec written and attached; status-findings gap filed as sci-097534. Implementation waits on spec review.
 - 2026-09-09T10:56:03Z (session-findings): Spec review round 1: documented stderr discrimination by existing top-level keys (severity/refusal/error), the unclosed-is-not-crashed liveness limitation, and byte-exact + flush + failing-stream tests.
+- 2026-09-09T11:13:24Z (session-findings): Implemented §6 test-first: seven cases failed on the missing API, then passed with shared JSON emission and both endpoint call sites. Global claim state is read-only in this sandbox; task commands use writable temporary XDG state.
+- 2026-09-09T11:14:44Z (session-findings): Both endpoints report reconciliation findings as compact JSON on stderr at startup. Implemented test-first; all 264 tests and repository checks pass, and code review found no substantive issues.

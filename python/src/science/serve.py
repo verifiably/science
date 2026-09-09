@@ -3,10 +3,12 @@ from __future__ import annotations
 
 import json
 import socketserver
+import sys
 from pathlib import Path
 
 from science.config import ReadContext, ScienceConfig
 from science.dispatch import Dispatcher
+from science.findings import report_findings
 from science.refusal import Refusal, Refused, envelope
 
 _REQUEST_KEYS = frozenset({"command", "inputs", "invocation_id", "cursor"})
@@ -40,7 +42,7 @@ def _validated(request) -> tuple[str, dict, str | None, str | None]:
     return command, inputs, invocation_id, cursor
 
 
-def serve(config: ScienceConfig, socket_path: Path, declarations=None, handlers=None):
+def serve(config: ScienceConfig, socket_path: Path, declarations=None, handlers=None, stderr=None):
     """`declarations`/`handlers` default to the production tree; tests inject
     their synthetic set here — production code never imports test modules."""
     from beliefs.session import open_attended_session
@@ -69,6 +71,8 @@ def serve(config: ScienceConfig, socket_path: Path, declarations=None, handlers=
         config.world, config.operations_root, profile=config.profile
     )
     try:
+        report_findings(session.findings, reported_by=session.session_id,
+                        stream=sys.stderr if stderr is None else stderr)
         dispatcher = Dispatcher(declarations, handlers, ReadContext.open(config),
                                 session=session)
 
