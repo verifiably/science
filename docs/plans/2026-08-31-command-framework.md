@@ -4266,7 +4266,7 @@ sub-project here is #2 …" sentence. The README stopped saying that when the
 read path landed, and Task 12 replaced its successor with the beliefs-gated
 sentence this step now names.)
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add python/src/science/serve.py python/src/science/cli.py python/tests \
