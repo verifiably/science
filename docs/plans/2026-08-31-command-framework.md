@@ -3102,12 +3102,17 @@ git commit -m "feat(mcp): stdio MCP server with CLI transport-equivalence test"
 
 ### Task 12: Write dispatch — requirements, claims, dedup (beliefs-gated)
 
-**BLOCKED until the beliefs repo delivers `beliefs-96a24a` (permits) and the writer-session task.** Do not stub or mock the session; the whole point is exercising the real permit path.
+**Unblocked 2026-09-09:** `beliefs-96a24a` (permits) and `beliefs-afbbff` (the
+writer session) both landed; `beliefs.session` exports every name the pinned
+contract below cites. Do not stub or mock the session; the whole point is
+exercising the real permit path.
 
 **Files:**
+- Modify: `python/src/science/config.py` (the `domains` key and the compiled `ScienceConfig.profile`; added 2026-09-09 with the required `profile` keyword)
 - Modify: `python/src/science/dispatch.py`
 - Modify: `python/src/science/loader.py` (`production_kind_acts` exact import)
 - Modify: `python/src/science/mcp.py` (open the attended session)
+- Modify: `python/tests/helpers/world.py` (Step 0's fixture-world repair)
 - Create: `python/tests/helpers/synthetic.py` (synthetic declarations + handlers, shared with Task 13)
 - Test: `python/tests/test_write_dispatch.py`
 
@@ -3121,9 +3126,10 @@ git commit -m "feat(mcp): stdio MCP server with CLI transport-equivalence test"
   - `beliefs.permit.RequiredCapabilities` with `.none()`, `.coordination()`, `.for_kinds(kinds: Iterable[str], routes: Mapping[str, str])`, `.publishes()`
   - `beliefs.permit.WritePermit` carries a third dimension, `ungoverned` (spec §4.1 amendment of 2026-09-04); `RequiredCapabilities` never sets it and `science` never reads it
   - `beliefs.permit.PermitExceeded(WriteRefused)` with `.requirement` and `.capability` attributes
-  - `beliefs.session.open_attended_session(world_config, operations_root, *, coordination: ProfileSpec | None = None) -> WriterSession` — **changed 2026-09-05 by the beliefs writer-session design §3.1, decision 12**: the launcher supplies the compiled coordination profile for coordination-class commands; without it those commands refuse `CoordinationUnavailable` at the act
+  - `beliefs.session.open_attended_session(world_config, operations_root, *, profile: ProfileSpec, coordination: ProfileSpec | None = None) -> WriterSession` — **changed 2026-09-05 by the beliefs writer-session design §3.1, decision 12**: the launcher supplies the compiled coordination profile for coordination-class commands; without it those commands refuse `CoordinationUnavailable` at the act. **Changed again 2026-09-09 by that design's integration amendment of 2026-09-07**: `profile`, the compiled `ProfileSpec` the session's writer and durable operation port bind, is **required**, and `beliefs.root.open_corpus` requires it alike. No profile is inferred from a manifest or from `coordination`. Spec §9.1's launcher configuration answers with a `domains` key, compiled at config load into `ScienceConfig.profile`; this task passes `coordination=None`, since the shipped base declares no coordination kinds and no coordination-class command exists in `commands/`. A world config naming other than exactly one corpus root raises `SessionRefused` at open — a launcher misconfiguration, left to propagate, never folded into a `Refusal`
   - `WriterSession.scoped(required, invocation_id) -> ScopedWriter` — **changed 2026-09-05 by the beliefs writer-session design §5, decision 12**: the writer is bound to the invocation id the dispatcher has already minted, and acts only while that invocation is the current one (raises `PermitExceeded` when the requirement exceeds the session permit — the declaration-time refusal)
-  - **Note (2026-09-05):** `tests/helpers/world.py` calls `open_corpus(corpus_root)` and `world.admit(..., actor="fixture")` without an `Authority`; beliefs cut 17 removed both forms. Fix before Step 2 can run.
+  - **Note (2026-09-05, discharged):** `tests/helpers/world.py` called `open_corpus(corpus_root)` and `world.admit(..., actor="fixture")` without an `Authority`; beliefs cut 17 removed both forms. The `Authority` half landed before this task began.
+  - **Note (2026-09-09):** the same helper still fails against beliefs cut 22 — `open_corpus` now requires `profile`, and the helper adopts fabricated pins (`"science:" + "a" * 64`) that `require_pins_agree` rejects. Fifteen tests are red on `main` for this reason. **Step 0** repairs it before any write test is written; that is what makes Step 2's red result meaningful.
   - **Note (2026-09-05):** a `delete`-class command, if ever declared, renders an empty canonical report — its `act` line carries no minted identities (beliefs writer-session design §8 item 8).
   - `WriterSession.session_id: str` (32 hex), `WriterSession.actor: str`
   - `WriterSession.close() -> None` — appends the ledger's `session-close` line (spec §5.2); idempotent, and every endpoint calls it in a `finally`
@@ -3134,6 +3140,29 @@ git commit -m "feat(mcp): stdio MCP server with CLI transport-equivalence test"
   - `beliefs.session.open_ledger_reader(operations_root, session_id) -> LedgerReader` with `LedgerReader.invocation(invocation_id) -> InvocationRecord | None` carrying `.command`, `.acts` (as above) and `.outcome` — the accessor write continuation resolves cursors through, and `.command` is what binds a cursor to its command
   - `ScopedWriter` mirroring the `CorpusWriter` write methods, permit-checked per act
 - Produces: the write branch of `Dispatcher.invoke` (spec §6.1 steps 3–7 for writes, §6.2 dedup under one `threading.Lock`, §7.4 audit via `audit_write_report`); **completion ordering** (spec §6.1/§5.2, ruled here): handler → collect minted `(uid, id)` pairs from the session's acts → `audit_write_report` → `close_invocation` → render → return. The ledger records act truth, never rendering success: an audit violation still closes `done` with the minted pairs (the acts committed) and then raises `AuditViolation` as an internal error — the caller sees exit 1, never the echoed report, and a dedup retry replays canonically from the ledger. A handler refusal closes with the persisted refusal envelope, in that order, before re-raising as `Refused`. Write-cursor continuation resolves the ledger via `open_ledger_reader`, re-renders from the ledger's `(uid, id)` pairs only, and never calls the write handler or canonicalizes inputs. Refusal translation is one function, `_kernel_refusal`: `PermitExceeded` → `permit-exceeded` with requirement/capability data, `KernelRefusalValue` → `kernel-refused` with the value's type name and `.reason` in `data`, other `WriteRefused` → `kernel-refused` with the subclass name in `data`; every write-path `Refused` carries the invocation id. Write handler signature: `handle(ctx, writer, **inputs) -> Report`; the handler's report is audited, but **what renders — on the first response as much as on replay — is the canonical ledger-rebuilt report** (`_minted_report`), so authored kind/title text around a real identity pair has no path to the caller.
+
+- [ ] **Step 0: Repair the fixture world and add the `domains` key**
+
+Fifteen tests are red on `main` because beliefs cut 22 made `profile` required
+on `open_corpus`. Nothing below can produce a meaningful red result until they
+are green, so this step lands first and its verification is those fifteen
+tests, not a new one.
+
+In `python/src/science/config.py`: add `domains` to `_KEYS`, validate it as a
+list of strings, and compile the profile at load —
+`compile_profile(shipped_base_contract(), [shipped_domain_contract(ns) for ns
+in raw["domains"]])` — reporting `ProfileError` as `invalid-input`. Carry the
+result on `ScienceConfig.profile`.
+
+In `python/tests/helpers/world.py`: compile the same profile over the shipped
+`biology` pack, derive `PINS` from it (`science:<base_contract_identity>` and
+`biology:<activated identity>`) in place of the fabricated constants, pass
+`profile=` to both `open_corpus` calls, return `ScienceConfig(…,
+profile=PROFILE)`, and emit `domains = ["biology"]` from `write_cli_config`.
+
+Run: `cd python && uv run --group dev pytest -q`
+Expected: PASS — the fifteen `TypeError: open_corpus() missing 1 required
+keyword-only argument: 'profile'` failures are gone and nothing else moved.
 
 - [ ] **Step 1: Write the shared synthetic module, then the failing tests**
 
@@ -3212,7 +3241,7 @@ def rig(certified_work):
     from beliefs.session import open_attended_session
     from science.config import ReadContext
     cfg = build_fixture_world(certified_work)
-    session = open_attended_session(cfg.world, cfg.operations_root)
+    session = open_attended_session(cfg.world, cfg.operations_root, profile=cfg.profile)
     dispatcher = Dispatcher((MINT_CLAIM, OVERREACH), dict(HANDLERS),
                             ReadContext.open(cfg), session=session)
     try:
@@ -3589,7 +3618,7 @@ def serve(config_path: Path, stdin=None, stdout=None) -> None:
     stdout = sys.stdout if stdout is None else stdout
     declarations = production_tree()
     config = load_config(config_path)
-    session = open_attended_session(config.world, config.operations_root)
+    session = open_attended_session(config.world, config.operations_root, profile=config.profile)
     try:
         dispatcher = Dispatcher(
             declarations,
@@ -3757,7 +3786,7 @@ def test_declaration_time_refusal_for_class_above_permit(certified_work):
     root = Path(__file__).parent / "fixtures" / "commands"
     decls = load_command_tree(root, kind_acts=KIND_ACTS, contract_kinds=frozenset(KIND_ACTS))
     cfg = build_fixture_world(certified_work)
-    session = open_attended_session(cfg.world, cfg.operations_root)
+    session = open_attended_session(cfg.world, cfg.operations_root, profile=cfg.profile)
     d = Dispatcher(decls, {"pub-view": lambda ctx, writer: ()}, ReadContext.open(cfg), session=session)
     try:
         with pytest.raises(Refused) as e:
@@ -3993,7 +4022,7 @@ def serve(config: ScienceConfig, socket_path: Path, declarations=None, handlers=
         raise Refused(Refusal("invalid-input",
                               f"socket already exists: {socket_path}; a stale one "
                               "from a crashed service is the operator's to remove"))
-    session = open_attended_session(config.world, config.operations_root)
+    session = open_attended_session(config.world, config.operations_root, profile=config.profile)
     try:
         dispatcher = Dispatcher(declarations, handlers, ReadContext.open(config),
                                 session=session)

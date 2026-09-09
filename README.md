@@ -14,6 +14,7 @@ The governing design is the kernel repository's
 (§5 is this layer; §8 orders the sub-projects). The read path of sub-project
 **#2, the command framework**, is implemented: declaration schema, budgeted
 renderer, preamble, adapter generator, CLI/MCP over `beliefs` reads, and the
-`status` command. Write dispatch and the local writer service remain gated on
-the beliefs permit/session deliverables. See the
+`status` command. The beliefs permit and writer-session deliverables that gated
+write dispatch and the local writer service have landed; both are unblocked and
+not yet implemented. See the
 [command-framework design](docs/specs/2026-08-31-command-framework-design.md).

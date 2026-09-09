@@ -1,8 +1,10 @@
 # Command framework — design
 
 **Date:** 2026-08-31
-**Status:** approved; read-path Tasks 1–11 implemented, with write-path
-Tasks 12–13 gated on the beliefs permit/session deliverables
+**Status:** approved; read-path Tasks 1–11 implemented. The beliefs
+permit and writer-session deliverables that gated the write path landed
+(`beliefs-96a24a`, `beliefs-afbbff`); write-path Tasks 12–13 are unblocked and
+not yet implemented.
 **Scope:** sub-project 2 of the user/autonomy layer design (`beliefs`
 `docs/superpowers/specs/2026-08-29-user-and-autonomy-layer-design.md`, §5 and
 §8 item 2): the command declaration schema, write classes, the budgeted
@@ -305,7 +307,8 @@ an act that could not appear in a chain.
 
 `beliefs` exports launcher constructors, not a raw session:
 
-- `open_attended_session(world_config, operations_root)` — full permit by
+- `open_attended_session(world_config, operations_root, *, profile, coordination=None)`
+  — full permit by
   construction; the interactive constructor. The MCP server and the CLI's
   service process open one; a CLI read invocation opens none (§9.2) — a
   session exists to bind writes, and a `read-only` requirement needs no
@@ -315,6 +318,22 @@ an act that could not appear in a chain.
   `ProfileSpec` for the corpus; without it coordination-class commands refuse
   `CoordinationUnavailable` at the act. The launcher's configuration therefore
   names the contract documents the profile compiles from.
+  **Amended 2026-09-09 (`beliefs` writer-session design, integration amendment
+  of 2026-09-07).** `profile` — the compiled `ProfileSpec` the session's writer
+  and durable operation port bind — is a **required** keyword, and
+  `open_corpus` requires it alike. No profile is inferred from a manifest or
+  from `coordination`: the launcher states it, and `require_pins_agree` then
+  refuses a corpus whose manifest pins disagree. `require_profile_compatible`
+  additionally refuses a `coordination` profile that differs from `profile` in
+  base identity, activated contracts, or compiled identity.
+
+  §9.1's launcher configuration therefore carries `domains`, the list of
+  namespaces the profile activates; `science` compiles
+  `compile_profile(shipped_base_contract(), [shipped_domain_contract(ns) …])`
+  at config load, so an unrecognized namespace refuses at startup rather than
+  at the first write. `coordination` stays unset until a coordination-class
+  command exists: the shipped base declares no coordination kinds, so passing
+  a resolver would arm nothing.
 - A run-session constructor with a tier parameter arrives with sub-project 6
   and is out of scope here beyond the seam existing.
 
@@ -571,10 +590,23 @@ there is nothing to reach around.
 
 One launcher-owned TOML file, located by `--config PATH` or
 `SCIENCE_CONFIG`: the fields of `beliefs.WorldConfig` (world root, world id,
-corpus roots) plus `operations_root`. The loader constructs
+corpus roots) plus `operations_root` and `domains`. The loader constructs
 `beliefs.WorldConfig` directly — no parallel world model, no drift.
 Configuration is untrusted input (§6.4): paths are resolved and validated at
 session open.
+
+`domains` (**added 2026-09-09** with §5.1's required `profile`) is the list of
+domain-contract namespaces the world's profile activates — `["biology"]` for a
+corpus pinning the shipped biology pack, `[]` for the shipped base alone. The
+loader compiles the `ProfileSpec` at load time from
+`beliefs.profile.shipped_base_contract()` and one
+`shipped_domain_contract(namespace)` per entry, and carries it on
+`ScienceConfig`; a namespace the package does not ship raises `ProfileError`,
+which the loader reports as `invalid-input` like every other configuration
+fault. The key is **required and may be empty**: the loader accepts exactly the
+declared key set, so a configuration written before this amendment refuses
+rather than silently compiling a base-only profile against a corpus that pins
+domains.
 
 ### 9.2 CLI
 
