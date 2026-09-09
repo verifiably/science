@@ -45,3 +45,26 @@ def forging_handler(ctx, writer, *, slug):
 
 
 HANDLERS = {"mint-claim": mint_claim_handler, "overreach": overreach_handler}
+
+
+def synthetic_decls_and_handlers():
+    """The fixture tree as a real declaration set, with handlers bound by hand.
+
+    `coord-note` and `pub-view` exist to prove schema and dispatch shape: no
+    coordination contract and no publish act family exist yet, so neither can
+    reach its handler.
+    """
+    from science.schema import load_command_tree
+
+    root = Path(__file__).parents[1] / "fixtures" / "commands"
+    kind_acts = {"proposition": frozenset({"corpus-write"})}
+    decls = load_command_tree(root, kind_acts=kind_acts,
+                              contract_kinds=frozenset(kind_acts))
+
+    def unreachable(ctx, writer, **inputs):
+        raise AssertionError("dispatch must refuse before this handler runs")
+
+    handlers = dict(HANDLERS)
+    handlers["coord-note"] = unreachable  # no coordination contract yet
+    handlers["pub-view"] = unreachable    # no publish act family yet
+    return decls, handlers

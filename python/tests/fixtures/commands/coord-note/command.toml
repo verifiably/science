@@ -1,0 +1,9 @@
+schema_version = 1
+name = "coord-note"
+purpose = "Synthetic coordination exemplar; schema and dispatch shape only."
+write_class = "coordination"
+output_budget = 4096
+[inputs.text]
+type = "string"
+required = true
+doc = "Note text."

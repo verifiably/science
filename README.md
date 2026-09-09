@@ -11,10 +11,11 @@ every write is a kernel act through the permit-bound writer endpoint.
 
 The governing design is the kernel repository's
 [user and autonomy layer design](../beliefs/docs/superpowers/specs/2026-08-29-user-and-autonomy-layer-design.md)
-(§5 is this layer; §8 orders the sub-projects). The read path of sub-project
-**#2, the command framework**, is implemented: declaration schema, budgeted
-renderer, preamble, adapter generator, CLI/MCP over `beliefs` reads, and the
-`status` command. The beliefs permit and writer-session deliverables that gated
-write dispatch and the local writer service have landed; both are unblocked and
-not yet implemented. See the
+(§5 is this layer; §8 orders the sub-projects). Sub-project **#2, the command
+framework**, is implemented: the declaration schema and write classes, the
+budgeted renderer, the shared preamble, the dispatcher over both the read and
+write paths, the CLI and MCP surfaces, the Unix-socket writer service, the
+Claude Code adapter generator, and the one shipped command, `status`. Writes
+run as kernel acts through an attended `beliefs` session, permit-checked per
+act and deduplicated through its ledger. See the
 [command-framework design](docs/specs/2026-08-31-command-framework-design.md).

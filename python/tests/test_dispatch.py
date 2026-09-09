@@ -164,3 +164,25 @@ def test_write_on_a_sessionless_surface_refuses_before_the_handler():
     assert caught.value.refusal.code == "permit-exceeded"
     assert caught.value.invocation_id == "caller_id"
     assert not executed
+
+
+def test_publishes_class_refuses_until_the_publish_family_exists():
+    """`RequiredCapabilities.publishes()` raises rather than returning an
+    uncoverable requirement, so the dispatcher states the refusal itself —
+    exit 3 with an envelope, never exit 1 with an internal error."""
+    executed = []
+    publish = make_decl("pub", write_class="publishes")
+    dispatcher = Dispatcher(
+        (publish,),
+        {"pub": lambda ctx, writer: executed.append(True) or ()},
+        read_context=object(),
+        session=object(),  # a session exists; the class is what refuses
+    )
+
+    with pytest.raises(Refused) as caught:
+        dispatcher.invoke("pub", {}, invocation_id="caller_id")
+
+    assert caught.value.refusal.code == "permit-exceeded"
+    assert "sub-project 5" in caught.value.refusal.message
+    assert caught.value.invocation_id == "caller_id"
+    assert not executed

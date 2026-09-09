@@ -1,10 +1,13 @@
 # Command framework — design
 
 **Date:** 2026-08-31
-**Status:** approved; read-path Tasks 1–11 implemented. The beliefs
-permit and writer-session deliverables that gated the write path landed
-(`beliefs-96a24a`, `beliefs-afbbff`); write-path Tasks 12–13 are unblocked and
-not yet implemented.
+**Status:** implemented 2026-09-09 (Tasks 1–13). The beliefs permit and
+writer-session deliverables this design is the companion contract for landed
+first (`beliefs-96a24a`, `beliefs-afbbff`). Two amendments were taken during
+implementation and are marked in place: §5.1 and §9.1 for the required session
+`profile` and the `domains` configuration key, and §4.4's consequence that a
+`publishes` command refuses at declaration time until sub-project 5 supplies
+the publish act family.
 **Scope:** sub-project 2 of the user/autonomy layer design (`beliefs`
 `docs/superpowers/specs/2026-08-29-user-and-autonomy-layer-design.md`, §5 and
 §8 item 2): the command declaration schema, write classes, the budgeted
@@ -292,7 +295,18 @@ commit through the world registry, not a corpus log), and `epoch`
 (`build_epoch`, `delete_epoch`, `install_rule_binding` likewise). All
 three remain permit-gated, but **no write class maps to any of them**: the
 command-reachable act families are exactly `corpus-write`, `run`,
-`holdings`, and — with sub-project 5 — `publish`. Lifecycle, registry and
+`holdings`, and — with sub-project 5 — `publish`.
+
+**Amended 2026-09-09.** Until sub-project 5 lands, `publish` is not merely
+uncovered by any permit — it is not an act family at all, and
+`beliefs.permit.RequiredCapabilities.publishes()` refuses to construct a
+requirement naming it. A `publishes`-class command is therefore declarable and
+loadable, but the dispatcher refuses it `permit-exceeded` at declaration time,
+before the session is consulted and before its handler runs. The refusal names
+sub-project 5 as what it waits on. `coordination` is not in this position: its
+requirement constructs and an attended session's permit covers it, so a
+coordination command reaches its act and refuses there —
+`CoordinationUnavailable` — when the launcher supplied no coordination profile. Lifecycle, registry and
 epoch acts are launcher- and operator-time library operations. A future
 command that wants one is a spec amendment whose first obligation is to
 define the ledger evidence for that family — what the session can claim

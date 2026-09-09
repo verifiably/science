@@ -1,0 +1,9 @@
+schema_version = 1
+name = "mint-claim"
+purpose = "Synthetic write exemplar."
+write_class = "mints:proposition"
+output_budget = 4096
+[inputs.slug]
+type = "string"
+required = true
+doc = "Slug of the proposition."

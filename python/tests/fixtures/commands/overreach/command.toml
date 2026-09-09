@@ -1,0 +1,5 @@
+schema_version = 1
+name = "overreach"
+purpose = "Synthetic exemplar whose body exceeds its declaration."
+write_class = "mints:proposition"
+output_budget = 4096

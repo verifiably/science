@@ -114,7 +114,15 @@ class Dispatcher:
             case "mints":
                 return RequiredCapabilities.for_kinds(write_class.kinds, write_class.routes)
             case "publishes":
-                return RequiredCapabilities.publishes()
+                # The publish act family arrives with sub-project 5 (spec
+                # §4.1, §4.4); until then `RequiredCapabilities.publishes()`
+                # raises rather than returning an uncoverable requirement, so
+                # the class refuses here. `invoke` binds the invocation id.
+                raise Refused(Refusal(
+                    "permit-exceeded",
+                    "publishes commands need the publish act family, "
+                    "which arrives with sub-project 5",
+                ))
         raise AssertionError(write_class.kind)
 
     @staticmethod
@@ -154,8 +162,11 @@ class Dispatcher:
         # iid was minted at the top of `invoke`; every refusal here names it.
         if self._session is None:
             raise Refused(Refusal("permit-exceeded", "no writer session on this surface"), iid)
+        # The requirement is computed before the session is touched: a write
+        # class the framework cannot express refuses ahead of any session work.
+        required = self._required(decl)
         try:
-            writer = self._session.scoped(self._required(decl), iid)
+            writer = self._session.scoped(required, iid)
         except PermitExceeded as caught:
             raise Refused(self._kernel_refusal(caught), iid) from None
         with self._lock:

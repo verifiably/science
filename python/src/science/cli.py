@@ -3,7 +3,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import socket
 import sys
+from pathlib import Path
 
 from science.config import ReadContext, load_config, resolve_config_path
 from science.dispatch import Dispatcher
@@ -53,6 +55,8 @@ def build_parser(decls) -> argparse.ArgumentParser:
     for decl in decls:
         _add_command(subparsers, decl, common)
     subparsers.add_parser("build")
+    serve_parser = subparsers.add_parser("serve")
+    serve_parser.add_argument("--config")
     mcp = subparsers.add_parser("mcp")
     mcp.add_argument("mode", choices=["serve"])
     mcp.add_argument("--config")
@@ -82,7 +86,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         declarations = production_tree()
         namespace = build_parser(declarations).parse_args(argv)
-        if namespace.command in {"mcp", "adapters", "build"}:
+        if namespace.command in {"mcp", "adapters", "build", "serve"}:
             return _framework_verb(namespace)
         invocation_id = _bind_invocation_id(namespace.invocation_id)
         namespace.invocation_id = invocation_id
@@ -137,6 +141,16 @@ def _framework_verb(namespace) -> int:
         preflight_build(declarations, COMMANDS_ROOT, REPO_ROOT / "skills")
         sys.stdout.write(f"ok: {len(declarations)} command(s)\n")
         return EXIT_OK
+    if namespace.command == "serve":
+        from science.serve import serve as build_server
+
+        config = load_config(resolve_config_path(namespace.config))
+        server = build_server(config, _service_socket(config))
+        try:
+            server.serve_forever()
+        finally:
+            server.server_close()
+        return EXIT_OK
     if namespace.command == "adapters":
         from science.adapters import build_adapter
         from science.loader import COMMANDS_ROOT, REPO_ROOT
@@ -151,8 +165,41 @@ def _framework_verb(namespace) -> int:
     raise NotImplementedError(f"{namespace.command} arrives in a later task")
 
 
+def _service_socket(config) -> Path:
+    return config.operations_root / "service.sock"
+
+
 def _via_service(namespace, declaration: Declaration, inputs: dict[str, object]) -> int:
-    raise NotImplementedError("write routing arrives with the service process (Task 13)")
+    """Any write-class command goes over the service socket, preserving the
+    read path's public wire: text on stdout, one JSON line on stderr."""
+    invocation_id = namespace.invocation_id or mint_token()
+    try:
+        config = load_config(resolve_config_path(namespace.config))
+        with socket.socket(socket.AF_UNIX) as connection:
+            connection.connect(str(_service_socket(config)))
+            connection.sendall(json.dumps({
+                "command": declaration.name,
+                "inputs": inputs,
+                "invocation_id": invocation_id,
+                "cursor": namespace.cursor,
+            }).encode() + b"\n")
+            reply = json.loads(connection.makefile().readline())
+    except (FileNotFoundError, ConnectionRefusedError):
+        refusal = Refusal("permit-exceeded",
+                          "no writer service; start one with: science serve")
+        _json_line({"invocation_id": invocation_id, "refusal": envelope(refusal)})
+        return EXIT_REFUSED
+    except Refused as error:
+        _json_line({"invocation_id": error.invocation_id or invocation_id,
+                    "refusal": envelope(error.refusal)})
+        return EXIT_REFUSED
+    if reply["ok"]:
+        sys.stdout.write(reply["text"])
+        _json_line({"invocation_id": reply["invocation_id"]})
+        return EXIT_OK
+    _json_line({"invocation_id": reply.get("invocation_id", invocation_id),
+                "refusal": reply["refusal"]})
+    return EXIT_REFUSED
 
 
 if __name__ == "__main__":

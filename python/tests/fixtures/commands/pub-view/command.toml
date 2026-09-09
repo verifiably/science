@@ -1,0 +1,5 @@
+schema_version = 1
+name = "pub-view"
+purpose = "Synthetic publish exemplar; schema and dispatch shape only."
+write_class = "publishes"
+output_budget = 4096

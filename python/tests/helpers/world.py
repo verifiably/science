@@ -51,14 +51,18 @@ def build_fixture_world(work: Path) -> ScienceConfig:
     return ScienceConfig(world=config, operations_root=work / "ops", profile=PROFILE)
 
 
-def write_cli_config(work: Path) -> Path:
+def write_cli_config(work: Path, operations_root: Path | None = None) -> Path:
+    """`operations_root` overrides where the session ledger and service socket
+    live. Tests that bind a socket need a short one: the AF_UNIX path limit is
+    107 bytes and the certified work root eats most of that."""
     cfg = build_fixture_world(work)
+    ops = cfg.operations_root if operations_root is None else operations_root
     path = work / "science.toml"
     path.write_text(f'''\
 world_root = "{cfg.world.world_root}"
 world_id = "{cfg.world.world_id}"
 corpus_roots = ["{cfg.world.corpus_roots[0]}"]
-operations_root = "{cfg.operations_root}"
+operations_root = "{ops}"
 domains = {list(DOMAINS)!r}
 ''')
     return path

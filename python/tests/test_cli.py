@@ -70,13 +70,19 @@ def test_protocol_options_are_scoped_to_the_verbs_that_consume_them():
         "mode": "serve",
         "config": "science.toml",
     }
+    # `serve` consumes --config and nothing else (registered by Task 13).
+    assert vars(parser.parse_args(["serve", "--config", "science.toml"])) == {
+        "command": "serve",
+        "config": "science.toml",
+    }
     for argv in (
-        ["serve"],
         ["build", "--config", "science.toml"],
         ["build", "--invocation-id", "caller_id"],
         ["adapters", "build", "--continue", "cursor"],
         ["mcp", "serve", "--invocation-id", "caller_id"],
         ["mcp", "serve", "--continue", "cursor"],
+        ["serve", "--invocation-id", "caller_id"],
+        ["serve", "--continue", "cursor"],
     ):
         with pytest.raises(SystemExit) as caught:
             parser.parse_args(argv)

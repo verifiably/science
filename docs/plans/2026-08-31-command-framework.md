@@ -3740,7 +3740,7 @@ requirement, and a full permit covers all three.
 - Consumes: `Dispatcher` with write branch (Task 12); `open_attended_session` (beliefs); `Refusal/Refused`, `production_tree`.
 - Produces: `serve(config: ScienceConfig, socket_path: Path, declarations=None, handlers=None) -> Server` — a Unix-socket JSON-lines service holding one attended session for its lifetime; `declarations`/`handlers` default to the production tree and are injection points for tests (production code never imports test modules); a socket path that already exists **refuses at startup** with a message naming the path — never a silent unlink (a stale socket from a crash is the operator's to remove); wire protocol: request `{"command": str, "inputs": {…}, "invocation_id": str | null, "cursor": str | null}`, response `{"ok": true, "text": str, "invocation_id": str}` or `{"ok": false, "refusal": {code, message, data}}`; socket at `<operations_root>/service.sock`. This task adds `science serve --config …` to `build_parser`; no earlier task registers it. `_via_service` connects for any write-class command while preserving Task 9's public wire: rendered text only on stdout and exactly one compact, key-sorted JSON stderr line—`{"invocation_id":"…"}` on success or `{"invocation_id":"…","refusal":{"code":"…","data":{},"message":"…"}}` on refusal. Missing service is a full `permit-exceeded` envelope naming `science serve`, never a plain ad-hoc line. **Landing step:** update this repo's README and the spec's Status header to implemented in the same commit; the README already records the Tasks 1–11 read path, so this replaces its beliefs-gated sentence rather than an obsolete “nothing built” sentence.
 
-- [ ] **Step 1: Write the synthetic declarations**
+- [x] **Step 1: Write the synthetic declarations**
 
 All four, in full. Each directory also gets a one-line `prompt.md`:
 `Test fixture; never shipped.`
@@ -3861,7 +3861,33 @@ refuses to *construct* the requirement rather than returning one no permit
 covers, so the dispatcher must state the refusal itself. See the correction
 under this task's file list.)
 
-- [ ] **Step 2: Write the failing service tests**
+**Deviations the implementation took (2026-09-09).**
+
+- `serve()` refuses an over-long socket path before opening the session.
+  `<operations_root>/service.sock` is 117 bytes from a worktree checkout and
+  the AF_UNIX limit is 107, so `bind` dies with a bare
+  `OSError: AF_UNIX path too long` naming neither the path nor the limit — a
+  reachable misconfiguration, not just a test artifact. Step 2's
+  `test_bind_failure_closes_the_session` used that OSError to force a
+  post-session failure; it is replaced by two tests, one for the new refusal
+  (before the session, nothing in the ledger) and
+  `test_setup_failure_after_the_session_opens_closes_it`, which makes the
+  socket's parent a regular file so the parent `mkdir` raises after the
+  session opened. Tests bind under `tmp_path` for the same reason.
+- The `Server` sets `daemon_threads = True`. Without it `server_close` joins
+  every handler thread, and a handler blocks in its read loop for as long as
+  its client holds the connection — so one idle client wedges shutdown, and
+  `_framework_verb`'s `finally: server.server_close()` would hang on Ctrl-C.
+  Killing an in-flight write at shutdown is already a designed-for state: the
+  invocation stays claimed and unclosed and a retry replays `outcome-unknown`.
+- The ledger's line-kind field is `line`, not `type`, so the session-close
+  assertions read `last["line"]`.
+- Task 11's `test_protocol_options_are_scoped_to_the_verbs_that_consume_them`
+  asserted bare `serve` exits 2 as an unknown verb. This task registers it, so
+  that case is replaced by the same test's real intent for the new verb:
+  `serve --config` parses, and `serve` rejects `--invocation-id`/`--continue`.
+
+- [x] **Step 2: Write the failing service tests**
 
 `python/tests/test_serve.py`:
 
@@ -4047,12 +4073,12 @@ def test_cli_write_routes_through_service(certified_work, capsys):
         server.server_close()
 ```
 
-- [ ] **Step 3: Run tests to verify they fail**
+- [x] **Step 3: Run tests to verify they fail**
 
 Run: `cd python && uv run --group dev pytest tests/test_serve.py tests/test_synthetic_tree.py -q`
 Expected: FAIL — no module `science.serve`; synthetic fixtures load test fails until the fixture directories exist.
 
-- [ ] **Step 4: Implement `serve.py` and the CLI routing**
+- [x] **Step 4: Implement `serve.py` and the CLI routing**
 
 ```python
 """The CLI's service process: one attended session behind a Unix socket (spec §9.2)."""
@@ -4219,12 +4245,12 @@ Then add the `serve` branch to `_framework_verb` before the fallthrough:
         return EXIT_OK
 ```
 
-- [ ] **Step 5: Run the full suite, then the whole tree build**
+- [x] **Step 5: Run the full suite, then the whole tree build**
 
 Run: `cd python && uv run --group dev pytest -q && uv run science build`
 Expected: PASS; `ok: 1 command(s)`.
 
-- [ ] **Step 6: Land the status truth with the code**
+- [x] **Step 6: Land the status truth with the code**
 
 In the same commit as step 7: update `README.md` — replace the sentence
 recording that the write path is unblocked and not yet implemented with a
