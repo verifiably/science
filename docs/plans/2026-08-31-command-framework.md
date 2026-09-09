@@ -3694,15 +3694,47 @@ git commit -m "feat(dispatch): write dispatch with scoped permits, atomic claims
 
 ### Task 13: Service process, CLI write routing, synthetic exemplars end-to-end (beliefs-gated)
 
-**BLOCKED with Task 12 (same beliefs prerequisites).**
+**Unblocked 2026-09-09 with Task 12**, which landed the write branch this
+task routes to.
 
 **Files:**
 - Create: `python/src/science/serve.py`
 - Modify: `python/src/science/cli.py` (register the `serve` verb here, not
   earlier; implement `_via_service`)
+- Modify: `python/src/science/dispatch.py` (the `publishes` refusal; added 2026-09-09, see below)
 - Create: `python/tests/fixtures/commands/` (synthetic declarations: `mint-claim/`, `overreach/`, `coord-note/`, `pub-view/` — each a real `command.toml` + one-line `prompt.md`)
 - Modify: `python/tests/helpers/synthetic.py` (add the fixture-tree loader; Task 12 created the module)
 - Test: `python/tests/test_serve.py`, `python/tests/test_synthetic_tree.py`
+
+**Correction to Task 12, carried here (2026-09-09).** Step 1's
+`test_declaration_time_refusal_for_class_above_permit` reaches a path Task 12
+shipped untested. `beliefs.permit.RequiredCapabilities.publishes()` does not
+return an uncoverable requirement — it raises
+`ValueError("publish is not an act family")`, because `ACT_FAMILIES` holds no
+`publish` and will not until sub-project 5 (spec §4.1, §4.4). The note below —
+that a `publishes` requirement always exceeds an attended session's permit —
+reaches the right verdict by the wrong route: the requirement cannot be
+constructed at all, so `Dispatcher._required` raises a bare `ValueError` and
+the CLI reports exit 1 and `Internal error` instead of exit 3 and a
+`permit-exceeded` envelope.
+
+`_required`'s `publishes` arm therefore states the condition rather than
+discovering it from an exception:
+
+```python
+            case "publishes":
+                # The publish act family arrives with sub-project 5 (spec
+                # §4.1, §4.4); until then the requirement is unconstructable,
+                # so the class refuses at declaration time. `invoke`'s outer
+                # handler binds the invocation id.
+                raise Refused(Refusal(
+                    "permit-exceeded",
+                    "publishes commands need the publish act family, "
+                    "which arrives with sub-project 5"))
+```
+
+`none()`, `coordination()` and `for_kinds()` are unaffected: each returns a
+requirement, and a full permit covers all three.
 
 **Interfaces:**
 - Consumes: `Dispatcher` with write branch (Task 12); `open_attended_session` (beliefs); `Refusal/Refused`, `production_tree`.
@@ -3823,7 +3855,11 @@ def test_declaration_time_refusal_for_class_above_permit(certified_work):
 (This refusal is deterministic, not conditional: the act-family enumeration
 gains `publish` only when sub-project 5 lands — spec §4.1 — so today's
 `WritePermit.full()` cannot contain it, and a `publishes` requirement
-always exceeds an attended session's permit at declaration time.)
+always exceeds an attended session's permit at declaration time.
+**Corrected 2026-09-09:** the verdict holds but the route does not — beliefs
+refuses to *construct* the requirement rather than returning one no permit
+covers, so the dispatcher must state the refusal itself. See the correction
+under this task's file list.)
 
 - [ ] **Step 2: Write the failing service tests**
 
@@ -4151,11 +4187,21 @@ def _via_service(ns, decl, inputs) -> int:
     return EXIT_REFUSED
 ```
 
-Task 13 first registers the config-consuming parser entry:
+Task 13 first registers the config-consuming parser entry (the local name in
+`build_parser` is `subparsers`, not `sub`):
 
 ```python
-    serve_parser = sub.add_parser("serve")
+    serve_parser = subparsers.add_parser("serve")
     serve_parser.add_argument("--config")
+```
+
+**Added 2026-09-09:** `main` routes only a fixed set of verbs to
+`_framework_verb`, so `serve` must join it or the branch below is
+unreachable and `serve` falls through to the command path, which looks for a
+declaration named `serve` and fails:
+
+```python
+        if namespace.command in {"mcp", "adapters", "build", "serve"}:
 ```
 
 Then add the `serve` branch to `_framework_verb` before the fallthrough:
@@ -4180,14 +4226,19 @@ Expected: PASS; `ok: 1 command(s)`.
 
 - [ ] **Step 6: Land the status truth with the code**
 
-In the same commit as step 7: update `README.md` — replace the "Nothing is
-built yet; the first sub-project here is #2 …" sentence with a short
-paragraph saying the command framework is implemented (declaration schema,
-budgeted renderer, dispatcher, CLI, MCP server, Claude Code adapter,
-`status`) and pointing at the spec — and change the spec's
-(`docs/specs/2026-08-31-command-framework-design.md`) Status header to
+In the same commit as step 7: update `README.md` — replace the sentence
+recording that the write path is unblocked and not yet implemented with a
+short paragraph saying the command framework is implemented (declaration
+schema, budgeted renderer, dispatcher, CLI, MCP server, writer service,
+Claude Code adapter, `status`) and pointing at the spec — and change the
+spec's (`docs/specs/2026-08-31-command-framework-design.md`) Status header to
 "implemented" with the date. A doc's status goes stale at the merge, not
 later; then grep the README for any other claim this landing falsifies.
+
+(**Corrected 2026-09-09:** this step named a "Nothing is built yet; the first
+sub-project here is #2 …" sentence. The README stopped saying that when the
+read path landed, and Task 12 replaced its successor with the beliefs-gated
+sentence this step now names.)
 
 - [ ] **Step 7: Commit**
 
@@ -4202,5 +4253,9 @@ git commit -m "feat(serve): unix-socket write service and CLI routing with synth
 ## Execution notes
 
 - Tasks 1–5 are pure-Python and parallel-safe after Task 2; Tasks 6–11 chain (each consumes the previous); Tasks 12–13 are blocked on the beliefs repo delivering `beliefs-96a24a` and the writer-session task (`beliefs-afbbff`). Task 12's Consumes block is the **pinned companion contract** both repositories implement verbatim; a divergence discovered on either side is a change request against both documents before any further code, never a local adjustment.
+- **Test imports (noted 2026-09-09, applies to every task's code blocks):** the
+  blocks write `from tests.helpers.…`, but the suite has no `tests/__init__.py`
+  and every landed module imports the helper package as `from helpers.…`. Read
+  the blocks accordingly; the landed code is the convention.
 - Live-world tests always take the `certified_work` fixture, never `tmp_path`: beliefs' real engine refuses tmpfs roots (no barrier-option table), which is why the fixture defaults under the repo and honors `SCIENCE_TEST_ROOT`.
 - After Task 11 lands, `status` is demonstrable end-to-end: `SCIENCE_CONFIG=… science status`, the MCP server, and the committed Claude Code plugin all render the same bytes.
