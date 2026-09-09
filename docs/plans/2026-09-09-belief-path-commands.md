@@ -65,7 +65,7 @@ Do Tasks 1–2 first. Task 3 waits on `beliefs-5fe2e3` for the public store iden
 - Consumes: `WriterSession.invocation_acts(iid)`, `close_invocation(iid, outcome)`; `science.refusal.Refused`.
 - Produces: the guarantee every later handler relies on — a `Refused` raised before the first act closes the invocation with the refusal envelope, and a retry replays it.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 # python/tests/test_dispatch_refusals.py
@@ -138,12 +138,12 @@ def test_refusal_after_an_act_closes_done_and_is_an_internal_error(rig):
     assert "proposition:acted" in out.text
 ```
 
-- [ ] **Step 2: Run to verify they fail**
+- [x] **Step 2: Run to verify they fail**
 
 Run: `just test-fast`
 Expected: the first test fails with `outcome-unknown` on the retry; the second fails with `ImportError: HandlerContractViolation`.
 
-- [ ] **Step 3: Implement the dispatcher change**
+- [x] **Step 3: Implement the dispatcher change**
 
 In `python/src/science/dispatch.py`, add the exception class near the top (after imports):
 
@@ -178,12 +178,12 @@ Replace the handler call block in `_invoke_write`:
                 ) from caught
 ```
 
-- [ ] **Step 4: Run to verify they pass**
+- [x] **Step 4: Run to verify they pass**
 
 Run: `just test-fast`
 Expected: both PASS. Then `just test` — the whole suite still passes.
 
-- [ ] **Step 5: Amend the framework design §6.1**
+- [x] **Step 5: Amend the framework design §6.1**
 
 Append after the dispatch-order paragraph in `docs/specs/2026-08-31-command-framework-design.md` §6.1:
 
@@ -197,7 +197,7 @@ recorded, the handler broke the validate-before-act rule: the dispatcher closes
 internal error, because a half-acted write is a defect and not a refusal.
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 tasks done sci-614bdd "dispatcher closes surface refusals from write handlers; spec §6.1 amended"
