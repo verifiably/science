@@ -6,7 +6,7 @@ priority: 1
 size: s
 owner: session-findings
 created: 2026-09-09T10:22:18Z
-updated: 2026-09-09T10:49:15Z
+updated: 2026-09-09T10:56:03Z
 depends: []
 tags: [command-framework]
 spec: docs/specs/2026-09-09-session-findings-at-startup-design.md
@@ -23,3 +23,4 @@ Open questions for the work: where findings surface (a stderr line at startup, a
 ## Notes
 
 - 2026-09-09T10:49:15Z (session-findings): Design spec written and attached; status-findings gap filed as sci-097534. Implementation waits on spec review.
+- 2026-09-09T10:56:03Z (session-findings): Spec review round 1: documented stderr discrimination by existing top-level keys (severity/refusal/error), the unclosed-is-not-crashed liveness limitation, and byte-exact + flush + failing-stream tests.

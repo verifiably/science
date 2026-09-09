@@ -52,9 +52,12 @@ re-derived.
 2. **Stderr, at startup, both endpoints, one shape.** Stdout is spoken for
    on the MCP server (JSON-RPC) and unused on the socket service; stderr is
    where MCP servers conventionally log and where the CLI already puts its
-   one machine-readable line per invocation (§9.2). Neither endpoint writes
-   anything to stderr today. This is the first thing either one says there,
-   so it sets the convention rather than joining one.
+   one machine-readable line per invocation (§9.2). The endpoint modules
+   write nothing to stderr themselves, but the process does: `cli.main`'s
+   last-resort handlers emit a `{"refusal":…}` or `{"error":…}` line there
+   when `science serve` or `science mcp serve` fails, including a failure
+   after the session has opened. Findings therefore share the stream with
+   those lines and must be distinguishable from them (§4).
 3. **One compact, key-sorted JSON object per finding**, newline-terminated,
    encoded exactly as the CLI's §9.2 line is (`sort_keys=True`,
    `separators=(",", ":")`). Silent when there are no findings: zero bytes,
@@ -75,6 +78,16 @@ re-derived.
    that way — reconciliation runs "when a later endpoint opens over the same
    operations root, and by the audit surface" — so this layer neither polls
    nor pretends to.
+8. **An unclosed session is not a crashed one, and the line never says it
+   is.** Reconciliation classifies ledger evidence. `session-unclosed` means
+   a ledger with no session-close line; it checks nothing about whether the
+   process that owns the ledger is alive. Starting `science mcp serve` while
+   a healthy `science serve` holds the same operations root reports that
+   service as `session-unclosed`, and the reverse. The finding is a pointer
+   to a ledger worth reading, not proof of a crash. This document, the
+   module docstring and the §7 amendment all use "the referenced session",
+   never "the crashed session", and the amendment states the limitation so
+   an operator does not read a live peer as a casualty.
 
 ## 3. The module
 
@@ -87,10 +100,11 @@ def report_findings(findings, *, reported_by: str, stream) -> None
   `beliefs.corpus.Finding` values. This is *not* `science.report.Finding`,
   the renderer's one-field text block; the two share a name and nothing
   else, and the module's docstring says so.
-- `reported_by` is the opening session's 32-hex id. It is the session that
-  is alive; the crashed session's id arrives inside the finding as its
+- `reported_by` is the opening session's 32-hex id: the session doing the
+  reporting. The referenced session's id arrives inside the finding as its
   `ref` (for ledger-level findings) or in its `detail` (for chain-level
-  ones). The key name exists so a reader never confuses the two.
+  ones). The key name exists so a reader never confuses the two. Nothing
+  about the referenced session's liveness is known or implied (§2 item 8).
 - `stream` is a text stream with `write`. The function writes one line per
   finding, in the order `reconcile_sessions` returned them (that order is
   already deterministic: corpus id, then position, then code, then ref),
@@ -107,7 +121,7 @@ def report_findings(findings, *, reported_by: str, stream) -> None
 ## 4. The line
 
 ```json
-{"code":"session-unclosed","detail":"open_invocations=['a1b2…']","message":"a ledger with no session-close","ref":"<crashed session id>","reported_by":"<opening session id>","severity":"warning"}
+{"code":"session-unclosed","detail":"open_invocations=['a1b2…']","message":"a ledger with no session-close","ref":"<referenced session id>","reported_by":"<opening session id>","severity":"warning"}
 ```
 
 Six keys, always all six, in sorted order:
@@ -121,11 +135,23 @@ Six keys, always all six, in sorted order:
 | `message` | the finding's `message`, verbatim; human-facing, normative for nothing |
 | `reported_by` | the opening session's id, 32 lowercase hex |
 
-No wrapper key, no line-kind discriminator, no timestamp. The finding codes
-are a closed namespace and nothing else writes to these streams today; when
-a second kind of line appears on an endpoint's stderr, that change decides
-how the two are told apart. Adding a discriminator now would be deciding it
-blind.
+No wrapper key, no added discriminator, no timestamp. The stream already
+carries two other shapes, both from `cli.main` (§9.2 of the governing
+design): `{"refusal":{…}}` and `{"error":{…}}`, each optionally with
+`invocation_id`. The existing top-level keys tell the three apart, and that
+rule is the documented discrimination:
+
+| top-level key present | the line is |
+|---|---|
+| `severity` | a reconciliation finding (this document) |
+| `refusal` | a §6.3 refusal envelope from the CLI |
+| `error` | the CLI's generic internal-error shape |
+
+Exactly one of the three is present on any line. The refusal envelope also
+carries a `code`, but nested under `refusal`, so a reader keys on `severity`,
+not `code`. A sequence such as two finding lines followed by an `error` line
+is a legal stream: the endpoint opened its session, reported, and then
+failed before serving. The §7 amendment records this table.
 
 ## 5. The two call sites
 
@@ -157,27 +183,49 @@ One new test file, `python/tests/test_findings.py`, plus one test in each
 endpoint's existing file. All use the fixture world helpers that already
 exist.
 
-**Unit, the line shape.** Build one `beliefs.corpus.Finding` by hand, call
-`report_findings` with a `StringIO`, parse the single line, and assert the
-six keys and their values. Assert an empty tuple writes nothing. This pins
-the wire independent of `beliefs` producing a finding.
+Parsed JSON proves the keys and values and nothing else. Compactness, key
+order, the trailing newline, line order and flushing are all invisible to
+`json.loads`, so the wire tests compare bytes.
 
-**Socket service, a crashed peer.** Open an attended session over the
+**Unit, the exact wire.** Build two `beliefs.corpus.Finding` values by hand
+with distinct codes, one with an empty `detail`, and pass them in a chosen
+order to `report_findings` with a recording stream: a `StringIO` subclass
+that appends to a log on every `write` and `flush`. Assert the stream's
+value equals the exact expected string, two lines, each compact with sorted
+keys and terminated by `\n`, in the order given. Assert the log shows both
+writes before a single `flush`, and that `flush` was called exactly once.
+Assert an empty tuple writes nothing and flushes nothing. Assert a stream
+without a `flush` attribute is accepted. This pins the wire independent of
+`beliefs` producing a finding.
+
+**Socket service, an unclosed peer.** Open an attended session over the
 fixture world's config and operations root the way the endpoints do, claim
 an invocation on it with a non-empty command and a 64-hex input digest, and
-do not close it: that is a crashed session as the ledger sees it. Then call
-`serve` over the same config with a `StringIO` for `stderr`. Assert exactly
-one line; that its `code` is `session-unclosed`, its `ref` is the
-fabricated session's id, its `detail` names the claimed invocation id, and
-its `reported_by` is a 32-hex id that is not the fabricated one. Close the
-returned server so the test's own session-close line lands.
+do not close it: that is an unclosed session as the ledger sees it, and it
+is exactly what a live peer looks like (§2 item 8). Then call `serve` over
+the same config with a `StringIO` for `stderr`. Assert exactly one line; that
+it parses with `code` equal to `session-unclosed`, `ref` equal to the
+fabricated session's id, a `detail` naming the claimed invocation id, and a
+`reported_by` that is a 32-hex id other than the fabricated one. The byte
+shape is the unit test's job. Close the returned server so the test's own
+session-close line lands.
 
 **Socket service, a clean root.** Same call over a fresh operations root.
-Assert `stderr` is empty.
+Assert `stderr` holds zero bytes.
 
-**MCP server, both cases.** The same two tests through `science.mcp.serve`
-with `stdin=io.BytesIO()` (immediate EOF), `stdout=io.StringIO()` and
-`stderr=io.StringIO()`.
+**Socket service, a failing stream.** Over the unclosed-peer state, pass a
+stream whose `write` raises `OSError`. Assert the error propagates out of
+`serve`, that no socket was bound at the given path, and that the ledger of
+the session `serve` opened — the one session directory under the operations
+root that is not the fabricated peer's — ends with a session-close line.
+This is the delivery guarantee of §3: a dead stderr is reported, not
+swallowed, and it leaves no open ledger.
+
+**MCP server, all three cases.** The same three tests through
+`science.mcp.serve` with `stdin=io.BytesIO()` (immediate EOF),
+`stdout=io.StringIO()` and the respective `stderr`. In the failing-stream
+case assert additionally that `stdout` holds zero bytes: nothing reached the
+JSON-RPC channel.
 
 **What these prove, stated in the test docstrings.** The fabricated state
 yields `session-unclosed`, not the spec's headline `session-outcome-unknown`,
@@ -190,10 +238,14 @@ entry would be re-testing the kernel through the wrong door.
 ## 7. Documentation and follow-ups
 
 **The governing design.** §9.2 and §9.3 of the command framework design
-each gain one sentence, marked as a 2026-09-09 amendment in the same style
-as the §5.1 and §9.1 amendments: the endpoint writes one compact, key-sorted
-JSON line per session-reconciliation finding to stderr at startup and
-nothing when there are none. This document's status line changes to
+each gain a short paragraph, marked as a 2026-09-09 amendment in the same
+style as the §5.1 and §9.1 amendments: the endpoint writes one compact,
+key-sorted JSON line per session-reconciliation finding to stderr at startup
+and nothing when there are none; a line with a top-level `severity` key is a
+finding, one with `refusal` or `error` is the CLI's (the §4 table); and
+`session-unclosed` names a ledger without a close line, which a live peer
+over the same operations root also produces (§2 item 8). This document's
+status line changes to
 "implemented" in the implementing commit, per the repository's rule that
 the merge is the moment a status goes stale.
 
@@ -213,8 +265,9 @@ source, different surface, same smell. It is its own task
   whichever caller happens to arrive first.
 - **Refusing to start when findings are present.** That is quarantine, and
   §5.3 assigns it to sub-project 6's closing check. Interactively the person
-  is in the loop; blocking them from the corpus because a previous session
-  crashed is the wrong side of the line the spec drew.
+  is in the loop; blocking them from the corpus because another session's
+  ledger has no close line — which a live peer also produces (§2 item 8) —
+  is the wrong side of the line the spec drew.
 - **Python's `logging`.** An unconfigured logger is silent below `WARNING`
   and formats as prose; configuring one adds a second convention next to
   the CLI's JSON line for no reader that exists. Error-severity findings
