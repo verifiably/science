@@ -4,6 +4,7 @@ from pathlib import Path
 from beliefs import stored
 from beliefs.consulted import CorpusPins
 from beliefs.permit import Authority, WritePermit
+from beliefs.profile import compile_profile, shipped_base_contract, shipped_domain_contract
 from beliefs.root import init_corpus_root, init_world_root, open_corpus, open_world
 from beliefs.world import Fresh, WorldConfig
 
@@ -13,9 +14,19 @@ from science.config import ScienceConfig
 # test helper does; science code itself never constructs one (design §4.2).
 FIXTURE_AUTHORITY = Authority(WritePermit.full(), "fixture")
 
+DOMAINS = ("biology",)
+PROFILE = compile_profile(
+    shipped_base_contract(),
+    [shipped_domain_contract(namespace) for namespace in DOMAINS],
+)
+# Derived, never authored: `require_pins_agree` refuses a manifest whose pins do
+# not name exactly the identities this profile compiled from.
 PINS = CorpusPins(
-    science_contract="science:" + "a" * 64,
-    domains={"biology": "biology:" + "b" * 64},
+    science_contract="science:" + PROFILE.base_contract_identity,
+    domains={
+        namespace: f"{namespace}:{identity}"
+        for namespace, identity in PROFILE.activated_contracts.items()
+    },
 )
 
 
@@ -32,12 +43,12 @@ def build_fixture_world(work: Path) -> ScienceConfig:
     config = WorldConfig(work / "world", secrets.token_hex(16), (corpus_root,))
     init_world_root(config, authority=FIXTURE_AUTHORITY)
     init_corpus_root(corpus_root, authority=FIXTURE_AUTHORITY)
-    writer = open_corpus(corpus_root, authority=FIXTURE_AUTHORITY)
+    writer = open_corpus(corpus_root, authority=FIXTURE_AUTHORITY, profile=PROFILE)
     writer.adopt_manifest(profile=PINS)
     world = open_world(config, authority=FIXTURE_AUTHORITY)
     world.admit(corpus_root, provenance=Fresh())
     writer.add(fixture_proposition_node("p1"))
-    return ScienceConfig(world=config, operations_root=work / "ops")
+    return ScienceConfig(world=config, operations_root=work / "ops", profile=PROFILE)
 
 
 def write_cli_config(work: Path) -> Path:
@@ -48,9 +59,12 @@ world_root = "{cfg.world.world_root}"
 world_id = "{cfg.world.world_id}"
 corpus_roots = ["{cfg.world.corpus_roots[0]}"]
 operations_root = "{cfg.operations_root}"
+domains = {list(DOMAINS)!r}
 ''')
     return path
 
 
 def add_one_more_record(cfg: ScienceConfig) -> None:
-    open_corpus(cfg.world.corpus_roots[0], authority=FIXTURE_AUTHORITY).add(fixture_proposition_node("p2"))
+    open_corpus(
+        cfg.world.corpus_roots[0], authority=FIXTURE_AUTHORITY, profile=PROFILE
+    ).add(fixture_proposition_node("p2"))

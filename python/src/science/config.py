@@ -9,6 +9,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from beliefs.corpus import ReadView
+from beliefs.errors import ProfileError
+from beliefs.profile import ProfileSpec, compile_profile, shipped_base_contract, shipped_domain_contract
 from beliefs.root import open_world_read
 from beliefs.world import WorldConfig
 from beliefs.world.registry import load_manifest
@@ -16,13 +18,14 @@ from beliefs.world.registry import load_manifest
 from science.refusal import Refusal, Refused
 
 _WORLD_ID_RE = re.compile(r"[0-9a-f]{32}")
-_KEYS = ("world_root", "world_id", "corpus_roots", "operations_root")
+_KEYS = ("world_root", "world_id", "corpus_roots", "operations_root", "domains")
 
 
 @dataclass(frozen=True)
 class ScienceConfig:
     world: WorldConfig
     operations_root: Path
+    profile: ProfileSpec
 
 
 def _refuse(message: str) -> None:
@@ -47,8 +50,19 @@ def load_config(path: Path) -> ScienceConfig:
         type(value) is not str for value in raw["corpus_roots"]
     ):
         _refuse("config corpus_roots must be a list of strings")
+    if type(raw["domains"]) is not list or any(
+        type(value) is not str for value in raw["domains"]
+    ):
+        _refuse("config domains must be a list of strings")
     if not _WORLD_ID_RE.fullmatch(raw["world_id"]):
         _refuse("config world_id must be 32 lowercase hex characters")
+    try:
+        profile = compile_profile(
+            shipped_base_contract(),
+            [shipped_domain_contract(namespace) for namespace in raw["domains"]],
+        )
+    except ProfileError as caught:
+        _refuse(f"config domains do not compile: {caught}")
     return ScienceConfig(
         world=WorldConfig(
             world_root=Path(raw["world_root"]),
@@ -56,6 +70,7 @@ def load_config(path: Path) -> ScienceConfig:
             corpus_roots=tuple(Path(value) for value in raw["corpus_roots"]),
         ),
         operations_root=Path(raw["operations_root"]).resolve(),
+        profile=profile,
     )
 
 
