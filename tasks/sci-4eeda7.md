@@ -4,9 +4,10 @@ title: Test + CI iteration cost audit
 status: doing
 priority: 2
 size: m
+complexity: mid
 owner: test-ci-audit
 created: 2026-09-04T21:44:54Z
-updated: 2026-09-05T09:02:27Z
+updated: 2026-09-12T16:34:06Z
 depends: [ops-31f038]
 tags: [testing]
 ---
@@ -19,3 +20,4 @@ Piece of ops-65837b (the cross-project audit in the ops hub). 1. Measure: full-s
 - 2026-09-05T08:22:08Z (test-ci-audit): step 1 baseline before wiring: 226 tests, 15 fail (all one TypeError from beliefs a1f7408 requiring authority on open_world; filed as an idea), pytest 1.0s, first uv run in a fresh worktree 19s to build .venv, then about 1s wall
 - 2026-09-05T08:22:47Z (test-ci-audit): step 1 wired 2026-09-05: justfile + vendored tools/tt (version 2), .githooks installed with core.hooksPath, AGENTS.md created pointing at just test; verified three test-fast lines in the shared log with agent claude, null (by hand) and codex (env simulated, no Codex session available), none in a fallback log; testmon selects 15 of 226 on a repeat run
 - 2026-09-05T09:02:27Z (read-authority): baseline suite green again at sci-5fca8b: 226 passed in about 11s of pytest time (the fixtures now build real worlds, which the earlier 1s runs never reached)
+- 2026-09-12T16:34:06Z (main): Complexity mid: read the linked ops test/CI audit design and existing notes; the tree already has tools/tt, test-fast via pytest-testmon, and commit/push gates. Remaining work is bounded baseline and before/after measurement, evidence-led suite hygiene, and the prescribed guidance update; the approach is established but the report still determines which fixes are needed.
