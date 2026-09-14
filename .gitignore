@@ -1,4 +1,5 @@
-.worktrees/
+.worktrees
+.venv
 .framework-test/
 # Fallback test-timing log, written by tools/tt when the shared log is unwritable and
 # emptied by ops `tt-report`; never committed.
