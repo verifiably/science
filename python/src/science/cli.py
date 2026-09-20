@@ -5,6 +5,7 @@ import argparse
 import json
 import socket
 import sys
+from pathlib import Path
 
 from science.config import ReadContext, load_config, resolve_config_path
 from science.dispatch import Dispatcher
@@ -41,7 +42,7 @@ def _add_command(
 
 def _command_options() -> argparse.ArgumentParser:
     common = argparse.ArgumentParser(add_help=False)
-    common.add_argument("--config")
+    common.add_argument("--config", type=Path)
     common.add_argument("--invocation-id", dest="invocation_id")
     common.add_argument("--continue", dest="cursor")
     return common
@@ -49,18 +50,27 @@ def _command_options() -> argparse.ArgumentParser:
 
 def build_parser(decls) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="science")
+    parser.add_argument("-V", "--version", action="version", version="science 0.1.0")
     common = _command_options()
     subparsers = parser.add_subparsers(dest="command", required=True)
     for decl in decls:
         _add_command(subparsers, decl, common)
-    subparsers.add_parser("build")
-    serve_parser = subparsers.add_parser("serve")
-    serve_parser.add_argument("--config")
-    mcp = subparsers.add_parser("mcp")
+    subparsers.add_parser("build", help="Build the world from its corpora")
+    serve_parser = subparsers.add_parser("serve", help="Serve the world over HTTP")
+    serve_parser.add_argument("--config", type=Path)
+    mcp = subparsers.add_parser("mcp", help="Serve the world over MCP on stdio")
     mcp.add_argument("mode", choices=["serve"])
-    mcp.add_argument("--config")
-    adapters = subparsers.add_parser("adapters")
+    mcp.add_argument("--config", type=Path)
+    adapters = subparsers.add_parser("adapters", help="Build the corpus adapters")
     adapters.add_argument("mode", choices=["build"])
+    adapters.add_argument(
+        "--out",
+        type=Path,
+        help="directory to build into (default: the repository's adapters/claude-code)",
+    )
+    subparsers.add_parser("help", help="Print a command's help").add_argument(
+        "words", nargs="*"
+    )
     return parser
 
 
@@ -85,6 +95,9 @@ def main(argv: list[str] | None = None) -> int:
     try:
         declarations = production_tree()
         namespace = build_parser(declarations).parse_args(argv)
+        if namespace.command == "help":
+            build_parser(declarations).parse_args([*namespace.words, "--help"])
+            return EXIT_OK
         if namespace.command in {"mcp", "adapters", "build", "serve"}:
             return _framework_verb(namespace)
         invocation_id = _bind_invocation_id(namespace.invocation_id)
@@ -158,7 +171,7 @@ def _framework_verb(namespace) -> int:
             declarations,
             COMMANDS_ROOT,
             REPO_ROOT / "skills",
-            REPO_ROOT / "adapters" / "claude-code",
+            namespace.out or REPO_ROOT / "adapters" / "claude-code",
         )
         return EXIT_OK
     raise NotImplementedError(f"{namespace.command} arrives in a later task")

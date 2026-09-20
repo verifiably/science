@@ -49,7 +49,7 @@ def test_parser_compiles_inputs():
         "mode": "a",
         "tag": ["x", "y"],
         "dry_run": False,
-        "config": "science.toml",
+        "config": Path("science.toml"),
         "invocation_id": "caller_id",
         "cursor": "scur1.cursor",
     }
@@ -68,12 +68,12 @@ def test_protocol_options_are_scoped_to_the_verbs_that_consume_them():
     assert vars(parser.parse_args(["mcp", "serve", "--config", "science.toml"])) == {
         "command": "mcp",
         "mode": "serve",
-        "config": "science.toml",
+        "config": Path("science.toml"),
     }
     # `serve` consumes --config and nothing else (registered by Task 13).
     assert vars(parser.parse_args(["serve", "--config", "science.toml"])) == {
         "command": "serve",
-        "config": "science.toml",
+        "config": Path("science.toml"),
     }
     for argv in (
         ["build", "--config", "science.toml"],
