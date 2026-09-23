@@ -1,0 +1,13 @@
+schema_version = 1
+name = "belief"
+purpose = "Evaluate the shipped belief policy over one proposition and render the answer."
+write_class = "read-only"
+output_budget = 8192
+
+[inputs.proposition]
+type = "string"
+required = true
+doc = "The proposition's record id, e.g. proposition:p1."
+
+[reads]
+families = ["corpus-stored", "holdings", "epoch", "registry"]

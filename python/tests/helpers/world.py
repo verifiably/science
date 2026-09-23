@@ -231,14 +231,14 @@ SPEC_FIELDS = {"estimand": "difference in PHF19 expression", "method": "rank com
 @contextmanager
 def open_rig(cfg: ScienceConfig, names: tuple[str, ...]):
     """A dispatcher over the production declarations named, with an attended
-    session over `cfg`; yields (dispatcher, read context). Task 4 adds
-    `store_root=cfg.store_root` to the session call once the seam lands."""
+    session over `cfg` bound to its store; yields (dispatcher, read context)."""
     from beliefs.session import open_attended_session
     from science.config import ReadContext
     from science.dispatch import Dispatcher
     from science.loader import production_tree, resolve_handlers
     decls = tuple(d for d in production_tree() if d.name in names)
-    session = open_attended_session(cfg.world, cfg.operations_root, profile=cfg.profile)
+    session = open_attended_session(cfg.world, cfg.operations_root, profile=cfg.profile,
+                                    store_root=cfg.store_root)
     ctx = ReadContext.open(cfg)
     try:
         yield Dispatcher(decls, resolve_handlers(decls), ctx, session=session), ctx

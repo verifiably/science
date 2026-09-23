@@ -1282,7 +1282,7 @@ git commit -m "feat(context): snapshot, holdings reads and belief evaluation on 
 - Consumes: `ScopedWriter.holdings_context(instrument=…)`, `ScopedWriter.store_id`, `ScopedWriter.add`; `beliefs.holdings.boundary.write(ctx, location, content, expected=, standing=)`; `ctx.single_view()`, `ctx.observations()`, `ctx.is_held()`.
 - Produces: `dataset` records under `dataset:sha256:<hex>`; handler `handle(ctx, writer, *, path, title, locator=None, facets=None)`.
 
-- [ ] **Step 1: The declaration and prompt**
+- [x] **Step 1: The declaration and prompt**
 
 `commands/dataset/command.toml`:
 
@@ -1330,7 +1330,7 @@ and a title; add `locator` for an accession the record should cite and
 record only; if it refuses, report the refusal and change nothing.
 ```
 
-- [ ] **Step 2: Write the failing tests**
+- [x] **Step 2: Write the failing tests**
 
 ```python
 # python/tests/test_cmd_dataset.py
@@ -1442,12 +1442,12 @@ In `helpers/world.py`'s `open_rig` (Task 3), the session call becomes
 
 Check the exact accessor for a node's facets (`node.facets[...]` or `stored._facet(node, name)`) with `grep -n "def is_empirical_observation" -B2 -A3 ~/d/beliefs/python/src/beliefs/stored.py` and use the public one.
 
-- [ ] **Step 3: Run to verify they fail**
+- [x] **Step 3: Run to verify they fail**
 
 Run: `just test-fast`
 Expected: `DeclarationError: cannot import science.commands.dataset`.
 
-- [ ] **Step 4: Write the handler**
+- [x] **Step 4: Write the handler**
 
 ```python
 # python/src/science/commands/dataset.py
@@ -1460,7 +1460,7 @@ from pathlib import Path
 from beliefs import stored
 from beliefs.acquisition import bearer_refusal, validity_refusal
 from beliefs.dataset import DatasetDeclaration, Held, ResourceDeclaration, admission_state, dataset_address
-from beliefs.errors import FacetError, FacetPayloadRefused, MalformedRecord, UnknownKindError
+from beliefs.errors import FacetPayloadRefused, MalformedRecord
 from beliefs.facets import validate_payload
 from beliefs.holdings.boundary import write
 from beliefs.holdings.records import Found, StoreLocator
@@ -1519,17 +1519,18 @@ def handle(ctx, writer, *, path, title, locator=None, facets=None) -> Report:
         empirical = {"locator": locator, "attested_by": writer.actor}
     try:
         proposed = stored.dataset_node(
-            address.removeprefix("dataset:"), title=title,
+            title=title,
             resources=[{"name": source.name, "digest": digest}],
             empirical_observation=empirical, domain_facets=domain_facets or None,
         )
     except MalformedRecord as caught:
         _refuse(f"dataset record refused: {caught}")
     profile = ctx.config.profile
-    try:
-        profile.validate_document(proposed)  # kind registered, facet keys declared
-    except (UnknownKindError, FacetError) as caught:
-        _refuse(f"dataset record refused: {caught}")
+    # Kind registered, facet keys declared: the findings form of the check the
+    # writer raises on, so nothing of `nodes`' own exception types reaches here.
+    violations = profile.document_violations(proposed)
+    if violations:
+        _refuse("dataset record refused: " + "; ".join(v.message for v in violations))
     # Every facet payload the profile compiles a shape for — the domain facets
     # AND the empirical-observation facet — exactly as the writer's own
     # `_refuse_facets` will check them, so the writer can refuse nothing here
@@ -1566,14 +1567,14 @@ def handle(ctx, writer, *, path, title, locator=None, facets=None) -> Report:
     return (record_block(node),)
 ```
 
-`FacetPayloadRefused` is what `validate_payload` raises (a `ValidationRefused` subclass); `UnknownKindError` and `FacetError` are what `validate_document` raises — pin all three against `beliefs/errors.py` at implementation. `bearer_refusal` and `validity_refusal` are the pure reads the writer's `_refuse_facets` performs over its view; calling them over the read view first is what makes "validate before act" true for the locator. Then in `serve.py`, `mcp.py`, and the helpers' `open_rig`, pass `store_root=config.store_root` (resp. `cfg.store_root`) to `open_attended_session`.
+`FacetPayloadRefused` is what `validate_payload` raises (a `ValidationRefused` subclass). Pinned 2026-09-23: `validate_document` raises `nodes`' own `UnknownKindError`/`FacetError`, so the handler reads `document_violations` instead. Landing this command also required the production-tree tests (`test_mcp` tools list, `test_status`, `test_cli` build count) to derive from `production_tree()`, the root subparsers to carry `metavar="<command>"` so usage stays one line, and the command's rows in ops' `cli.toml`, re-vendored. `bearer_refusal` and `validity_refusal` are the pure reads the writer's `_refuse_facets` performs over its view; calling them over the read view first is what makes "validate before act" true for the locator. Then in `serve.py`, `mcp.py`, and the helpers' `open_rig`, pass `store_root=config.store_root` (resp. `cfg.store_root`) to `open_attended_session`.
 
-- [ ] **Step 5: Run to verify they pass; regenerate the adapter tree**
+- [x] **Step 5: Run to verify they pass; regenerate the adapter tree**
 
 Run: `just test-fast`, then `cd python && uv run science adapters build` and `just test`.
 Expected: all PASS, including `test_generated_tree_matches_committed` after regeneration.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 tasks done sci-413d97 "dataset command: content-derived hold, standing supersession, record under the content address"
@@ -1594,7 +1595,7 @@ git commit -m "feat(commands): dataset holds a local file and mints its record"
 - Consumes: `ctx.config.plans`, `ctx.snapshot()`, `beliefs.claim.{build_claim, Referent}`, `beliefs.decode.{decode_claim, WireClaim}`, `beliefs.projection.project_claim`, `beliefs.errors.ClaimError`, `stored.proposition_node`.
 - Produces: `proposition:<slug>` records; `handle(ctx, writer, *, subject, predicate, object, layer, polarity, slug=None)`.
 
-- [ ] **Step 1: Declaration and prompt**
+- [x] **Step 1: Declaration and prompt**
 
 `commands/claim/command.toml` — exactly the spec's §4.1 declaration (six inputs, `families = ["corpus-stored", "holdings"]`, budget 4096). Note `object` shadows a builtin only as a keyword name; the handler signature must still spell it `object` because the loader matches parameter names to inputs.
 
@@ -1609,7 +1610,7 @@ refusal names the shape rather than guessing. Under a vocabulary-bound sort
 the term must be a member of the held vocabulary. Report the minted record.
 ```
 
-- [ ] **Step 2: Write the failing tests**
+- [x] **Step 2: Write the failing tests**
 
 ```python
 # python/tests/test_cmd_claim.py
@@ -1671,11 +1672,11 @@ def test_claim_performs_exactly_its_declared_reads(certified_work):
     assert set(decl.reads) == {"corpus-stored", "holdings"}
 ```
 
-- [ ] **Step 3: Run to verify they fail**
+- [x] **Step 3: Run to verify they fail**
 
 Run: `just test-fast` — `cannot import science.commands.claim`.
 
-- [ ] **Step 4: Write the handler**
+- [x] **Step 4: Write the handler**
 
 ```python
 # python/src/science/commands/claim.py
@@ -1687,7 +1688,7 @@ import re
 from beliefs import stored
 from beliefs.claim import Referent, build_claim
 from beliefs.decode import WireClaim, decode_claim
-from beliefs.errors import ClaimError
+from beliefs.errors import ClaimError, DecodeError, UnboundReferent
 from beliefs.projection import project_claim
 from beliefs.resolution import TermOutcome
 
@@ -1735,11 +1736,16 @@ def handle(ctx, writer, *, subject, predicate, object, layer, polarity, slug=Non
     snapshot = ctx.snapshot()
     try:
         _, receipt = decode_claim(WireClaim(**projection), profile=ctx.config.profile, snapshot=snapshot)
-    except ClaimError as caught:  # not-member refuses at decode
-        _refuse(f"membership refused: {caught}")
+    except UnboundReferent as caught:  # the one resolution outcome that refuses
+        _refuse(f"membership refused (not-member): {caught}")
+    except (ClaimError, DecodeError) as caught:
+        _refuse(f"claim refused at decode: {caught}")
     bound = dataset_bound_sorts(ctx.config.profile)
-    for position, outcome in receipt.outcomes.items():
-        sort = claim.args[position.index].sort if hasattr(position, "index") else None
+    for label, outcome in receipt.outcomes.items():
+        # Labels are `argument:<slot>` or `restriction:<dimension>`; only
+        # argument slots carry a sort from the plan.
+        role, _, where = label.partition(":")
+        sort = claim.args[int(where)].sort if role == "argument" else None
         if sort in bound and outcome in (TermOutcome.NOT_CONSULTED, TermOutcome.NOT_AVAILABLE):
             _refuse(f"sort {sort} binds vocabulary dataset:{bound[sort].dataset_identity}, which is not "
                     "held here; hold it with `dataset` before typing a claim under it")
@@ -1749,13 +1755,13 @@ def handle(ctx, writer, *, subject, predicate, object, layer, polarity, slug=Non
     return (record_block(node),)
 ```
 
-Two things to pin against the kernel while implementing: the exception `decode_claim` raises on `not-member` (`grep -n "NOT_MEMBER\|raise " ~/d/beliefs/python/src/beliefs/decode.py | head`) — catch exactly that class; and `BindingCheckReceipt.outcomes`' key type (`grep -n "class ReferentPosition\|class BindingCheckReceipt" -A 8 ~/d/beliefs/python/src/beliefs/resolution.py`) — map each key to its argument's sort by the real field name, replacing the `hasattr` guess.
+Pinned 2026-09-23: `decode_claim` refuses through `DecodeError` subclasses, `UnboundReferent` for not-member; `receipt.outcomes` is keyed by labels `argument:<slot>` / `restriction:<dimension>`.
 
-- [ ] **Step 5: Run, regenerate, run**
+- [x] **Step 5: Run, regenerate, run**
 
 `just test-fast`; `cd python && uv run science adapters build`; `just test`. All PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 tasks done sci-b9ac07 "claim command: plan-typed, membership judged at decode, stricter policy under dataset-bound sorts"
@@ -2461,7 +2467,7 @@ git commit -m "feat(commands): verify replays and mints the verification"
 - Consumes: `ctx.evaluate(proposition)`; `beliefs.belief.{Belief, NoBelief, Refused as KernelRefused}`.
 - Produces: `handle(ctx, *, proposition) -> Report` of `Heading` + `KeyVals`.
 
-- [ ] **Step 1: Declaration and prompt** — spec §4.7 (budget 8192; `families = ["corpus-stored", "holdings", "epoch", "registry"]`). Prompt:
+- [x] **Step 1: Declaration and prompt** — spec §4.7 (budget 8192; `families = ["corpus-stored", "holdings", "epoch", "registry"]`), plus `schema_version = 1` and the `doc` every input requires. Prompt:
 
 ```markdown
 Run `belief` to see what the shipped policy believes about one proposition
@@ -2470,7 +2476,7 @@ with the reason (no eligible assessment, no directional outcome); or
 `Refused` with the kernel's reason. Nothing is written.
 ```
 
-- [ ] **Step 2: Failing tests**
+- [x] **Step 2: Failing tests**
 
 ```python
 # python/tests/test_cmd_belief.py
@@ -2504,9 +2510,9 @@ def test_belief_performs_exactly_its_declared_reads():
 
 The full-path `Belief` case is asserted in Task 12's transport test once assess and verify exist (`test_belief_after_the_full_path`); it asserts `pairs["kind"] == "Belief"` and that `value`, `belief_input_digest` and `policy_binding` are present.
 
-- [ ] **Step 3: Run to verify they fail** — `just test-fast`.
+- [x] **Step 3: Run to verify they fail** — `just test-fast`.
 
-- [ ] **Step 4: Handler**
+- [x] **Step 4: Handler**
 
 ```python
 # python/src/science/commands/belief.py
@@ -2535,9 +2541,9 @@ def handle(ctx, *, proposition) -> Report:
     return (Heading(f"Belief: {proposition}"), KeyVals("answer", pairs))
 ```
 
-- [ ] **Step 5: Run, regenerate, run** — `just test-fast`; `cd python && uv run science adapters build`; `just test`.
+- [x] **Step 5: Run, regenerate, run** — `just test-fast`; `cd python && uv run science adapters build`; `just test`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 tasks done sci-3bfa6d "belief read: the evaluator's answer with its reason"

@@ -89,11 +89,12 @@ def test_read_context_opens_views_and_loads_the_named_record(certified_work):
     assert caught.value.refusal.code == "unknown-cursor"
 
 
-def test_production_tree_ships_only_status():
+def test_production_tree_ships_status_with_a_bound_handler():
     decls = production_tree()
 
-    assert [declaration.name for declaration in decls] == ["status"]
-    assert callable(resolve_handlers(decls)["status"])
+    assert "status" in [declaration.name for declaration in decls]
+    handlers = resolve_handlers(decls)
+    assert all(callable(handlers[declaration.name]) for declaration in decls)
 
 
 def test_production_kind_acts_is_the_kernel_table_exactly():

@@ -156,7 +156,7 @@ def test_tools_list_and_call(certified_work):
         declarations,
     )
 
-    assert [tool["name"] for tool in listed["result"]["tools"]] == ["status"]
+    assert [tool["name"] for tool in listed["result"]["tools"]] == [d.name for d in declarations]
     assert listed["result"]["ttlMs"] == 300_000
     assert listed["result"]["cacheScope"] == "public"
     assert "World status" in called["result"]["content"][0]["text"]

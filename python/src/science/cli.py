@@ -52,7 +52,7 @@ def build_parser(decls) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="science")
     parser.add_argument("-V", "--version", action="version", version="science 0.1.0")
     common = _command_options()
-    subparsers = parser.add_subparsers(dest="command", required=True)
+    subparsers = parser.add_subparsers(dest="command", required=True, metavar="<command>")
     for decl in decls:
         _add_command(subparsers, decl, common)
     subparsers.add_parser("build", help="Build the world from its corpora")

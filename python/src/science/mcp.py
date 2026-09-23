@@ -372,7 +372,8 @@ def serve(config_path: Path, stdin=None, stdout=None, stderr=None) -> None:
     # other than exactly one corpus root raises SessionRefused here; that is a
     # launcher misconfiguration and propagates, never a command refusal.
     session = open_attended_session(
-        config.world, config.operations_root, profile=config.profile
+        config.world, config.operations_root, profile=config.profile,
+        store_root=config.store_root,
     )
     try:
         report_findings(session.findings, reported_by=session.session_id,

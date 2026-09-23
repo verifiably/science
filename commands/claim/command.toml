@@ -1,0 +1,33 @@
+schema_version = 1
+name = "claim"
+purpose = "Type a proposition under the profile and mint its record."
+write_class = "mints:proposition"
+output_budget = 4096
+
+[inputs.subject]
+type = "string"
+required = true
+doc = "Kind-prefixed term, e.g. concept:disease-stage."
+[inputs.predicate]
+type = "string"
+required = true
+doc = "The predicate as the operator plan names it, e.g. affects."
+[inputs.object]
+type = "string"
+required = true
+doc = "Kind-prefixed term, e.g. protein:PHF19."
+[inputs.layer]
+type = "string"
+required = true
+doc = "A claim layer the plan names, e.g. causal."
+[inputs.polarity]
+type = "string"
+required = true
+doc = "A polarity the plan names, e.g. positive."
+[inputs.slug]
+type = "string"
+required = false
+doc = "Record id; absent, derived from the three terms as the driver derives it."
+
+[reads]
+families = ["corpus-stored", "holdings"]   # holdings: the resolution snapshot (§5.3)

@@ -1,0 +1,31 @@
+schema_version = 1
+name = "dataset"
+purpose = "Hold a local file in the store and mint the dataset record under its content address."
+write_class = "mints:dataset,holdings-observation"
+output_budget = 4096
+
+[write.routes]
+holdings-observation = "holdings"
+
+[inputs.path]
+type = "string"
+required = true
+doc = "A regular file on this host; its bytes are held, never a directory."
+
+[inputs.title]
+type = "string"
+required = true
+doc = "The dataset's title."
+
+[inputs.locator]
+type = "string"
+required = false
+doc = "An empirical-observation locator, e.g. accession:GSE179929; absent, the record carries no such facet."
+
+[inputs.facets]
+type = "list-of-string"
+required = false
+doc = "Domain facets as name=key:value,key:value, e.g. biology/gene-axis=axis:rows,namespace:HGNC."
+
+[reads]
+families = ["corpus-stored", "holdings"]

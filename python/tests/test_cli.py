@@ -176,7 +176,7 @@ def test_unexpected_error_exits_1(capsys, monkeypatch):
 
 
 def test_build_validates_the_command_tree(capsys):
-    from science.cli import main
+    from science.cli import main, production_tree
 
     assert main(["build"]) == 0
-    assert capsys.readouterr().out == "ok: 1 command(s)\n"
+    assert capsys.readouterr().out == f"ok: {len(production_tree())} command(s)\n"

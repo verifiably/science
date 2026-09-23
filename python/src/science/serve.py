@@ -68,7 +68,8 @@ def serve(config: ScienceConfig, socket_path: Path, declarations=None, handlers=
             "service is the operator's to remove",
         ))
     session = open_attended_session(
-        config.world, config.operations_root, profile=config.profile
+        config.world, config.operations_root, profile=config.profile,
+        store_root=config.store_root,
     )
     try:
         report_findings(session.findings, reported_by=session.session_id,
