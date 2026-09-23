@@ -43,6 +43,11 @@ Inputs the design implies that no task here tests, most likely to bite first. Ea
 - Consumes: `science.adapters.build_adapter(tree, commands_root, skills_root, out_dir)` and `science.loader.production_tree()`, both existing.
 - Produces: nothing code-level; the preamble text below is what later specs quote.
 
+- [ ] **Step 0: Start the task**
+
+Run: `tasks start sci-fde62a`
+Expected: `{"id":"sci-fde62a", ...}` with no `claimed` error.
+
 - [ ] **Step 1: Write the failing test**
 
 Append to `python/tests/test_adapters.py`, after `test_skill_carries_preamble_and_prompt`:
@@ -56,10 +61,14 @@ def test_preamble_states_the_selected_project_rule(tmp_path):
 
     build_adapter(production_tree(), COMMANDS_ROOT, REPO_ROOT / "skills", tmp_path)
     skill = (tmp_path / "skills" / "status" / "SKILL.md").read_text()
-    assert "Until the coordination layer lands there is no current view" not in skill
-    assert "read through the selected project's query when one is selected" in skill
-    assert "no project can be selected yet" in skill
-    assert "A question or task needs a selected project; a fact does not." in skill
+    # The adapter preserves the preamble's line breaks; the prose assertions
+    # are about sentences, so compare with whitespace normalized. The
+    # byte-for-byte check stays in test_generated_tree_matches_committed.
+    prose = " ".join(skill.split())
+    assert "Until the coordination layer lands there is no current view" not in prose
+    assert "read through the selected project's query when one is selected" in prose
+    assert "no project can be selected yet" in prose
+    assert "A question or task needs a selected project; a fact does not." in prose
 ```
 
 - [ ] **Step 2: Run it and confirm it fails**
@@ -117,10 +126,18 @@ and append to §12 item 2 (after "no command in this sub-project takes a project
    set (`sci-c5528e`).
 ```
 
-- [ ] **Step 7: Check and commit**
+- [ ] **Step 7: Close the task, check, and commit together**
 
-Run: `tasks check && git add commands/PREAMBLE.md adapters/claude-code docs/specs/2026-08-31-command-framework-design.md python/tests/test_adapters.py && git commit -m "docs(preamble): state the selected-project rule now that views exist"`
-Expected: `tasks check` prints only the pre-existing `sci-4eeda7` process warning; the commit succeeds through the pre-commit hook.
+Run:
+
+```bash
+tasks done sci-fde62a "Preamble states the selected-project rule; framework spec §8 and §12.2 amended; adapter tree regenerated" \
+  && tasks check \
+  && git add commands/PREAMBLE.md adapters/claude-code docs/specs/2026-08-31-command-framework-design.md python/tests/test_adapters.py tasks/sci-fde62a.md \
+  && git commit -m "docs(preamble): state the selected-project rule now that views exist"
+```
+
+Expected: `tasks check` prints only the pre-existing `sci-4eeda7` process warning; the commit contains the task record beside the change and succeeds through the pre-commit hook.
 
 ### Task 2: Configuration is never discovered from the working directory (P1)
 
@@ -132,6 +149,11 @@ Expected: `tasks check` prints only the pre-existing `sci-4eeda7` process warnin
 - Produces: the guarantee P1 as a test other tasks (the coordination command set) extend to session open.
 
 This is a pinning test: the behaviour already holds, because `resolve_config_path` reads only its argument and `SCIENCE_CONFIG`, and `load_config` reads only the file it is given. The test exists so that a future convenience (a `science.toml` found upward from `cwd`) fails a named test rather than landing quietly.
+
+- [ ] **Step 0: Start the task**
+
+Run: `tasks start sci-a3d191`
+Expected: `{"id":"sci-a3d191", ...}` with no `claimed` error.
 
 - [ ] **Step 1: Write the test**
 
@@ -204,10 +226,18 @@ Temporarily add, at the top of `resolve_config_path` in `python/src/science/conf
 Run: `just test`
 Expected: `test_nothing_is_discovered_from_the_working_directory` fails on the `--config` arm (the decoy `science.toml` is loaded; `corpus_roots` names `decoy-corpus`). Then remove the two lines and run `just test` again: all pass.
 
-- [ ] **Step 4: Check and commit**
+- [ ] **Step 4: Close the task, check, and commit together**
 
-Run: `tasks check && git add python/tests/test_config.py && git commit -m "test(config): pin that nothing is discovered from the working directory"`
-Expected: the commit succeeds.
+Run:
+
+```bash
+tasks done sci-a3d191 "P1 pinned: nothing is discovered from the working directory; relative SCIENCE_CONFIG named as path resolution" \
+  && tasks check \
+  && git add python/tests/test_config.py tasks/sci-a3d191.md \
+  && git commit -m "test(config): pin that nothing is discovered from the working directory"
+```
+
+Expected: the commit contains the task record beside the test and succeeds.
 
 ---
 
