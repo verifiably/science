@@ -16,6 +16,12 @@ from science.schema import Declaration
 EXIT_OK, EXIT_INTERNAL, EXIT_USAGE, EXIT_REFUSED = 0, 1, 2, 3
 
 
+# A declared input named for a shared CLI vocabulary option takes the
+# vocabulary's short names too, so the generated surface is the shared option
+# (ops docs/specs/2026-09-20-cli-conventions-design.md; tools/cli.toml).
+_VOCABULARY_ALIASES = {"limit": ("-n",)}
+
+
 def _add_command(
     subparsers: argparse._SubParsersAction,
     decl: Declaration,
@@ -37,7 +43,7 @@ def _add_command(
                 kwargs["choices"] = spec.choices
             case "list-of-string":
                 kwargs["action"] = "append"
-        parser.add_argument("--" + spec.name.replace("_", "-"), **kwargs)
+        parser.add_argument("--" + spec.name.replace("_", "-"), *_VOCABULARY_ALIASES.get(spec.name, ()), **kwargs)
 
 
 def _command_options() -> argparse.ArgumentParser:
