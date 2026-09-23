@@ -2848,7 +2848,7 @@ git commit -m "feat(commands): belief renders the evaluator's answer"
 - Consumes: `ctx.single_view()`, `ctx.observations()`, `ctx.gather_inputs(proposition)`, `beliefs.admission.{admit, Admitted}`, `stored.{analysis_spec_value, assessment_value, dataset_declaration}`, `beliefs.dataset.{admission_state, Held}`.
 - Produces: `handle(ctx, *, limit=None) -> Report`; `science.commands.next.classify(ctx, proposition_id) -> str` in `{"ready", "not-ready", "assessed-not-admitted", "admitted"}`.
 
-- [ ] **Step 1: Declaration and prompt** — spec §4.8 (budget 16384). Prompt:
+- [x] **Step 1: Declaration and prompt** — spec §4.8 (budget 16384), plus `schema_version = 1` and a `doc` on `limit`. Prompt:
 
 ```markdown
 Run `next` when the user asks what to work on. It lists propositions in a
@@ -2858,7 +2858,7 @@ stored; the ranking is recomputed every time. It names no priority function;
 that is a later sub-project's.
 ```
 
-- [ ] **Step 2: Failing tests**
+- [x] **Step 2: Failing tests**
 
 ```python
 # python/tests/test_cmd_next.py
@@ -2903,9 +2903,9 @@ def test_next_renders_rows_in_class_order(certified_work):
 
 The assessed and admitted classes are asserted in Task 12's full-path test, where a run, an assessment and a verification exist.
 
-- [ ] **Step 3: Run to verify they fail** — `just test-fast`.
+- [x] **Step 3: Run to verify they fail** — `just test-fast`.
 
-- [ ] **Step 4: Handler**
+- [x] **Step 4: Handler**
 
 ```python
 # python/src/science/commands/next.py
@@ -2971,9 +2971,9 @@ def handle(ctx, *, limit=None) -> Report:
 
 Pinned 2026-09-23: `stored.display_statement(node) -> str | None` exists; it is called directly.
 
-- [ ] **Step 5: Run, regenerate, run** — `just test-fast`; `cd python && uv run science adapters build`; `just test`.
+- [x] **Step 5: Run, regenerate, run** — `just test-fast`; `cd python && uv run science adapters build`; `just test`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 tasks done sci-258ac6 "next: four fixed classes over the derived queue, inputs joined through targeting specs"

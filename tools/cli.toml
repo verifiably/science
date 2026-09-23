@@ -996,6 +996,16 @@ options = [
 ]
 
 [[cli.science.commands]]
+path = ["next"]
+summary = "Rank the propositions this world can act on, from the current view"
+options = [
+  { shared = "config", value = "path" },
+  { names = ["--invocation-id"], value = "string" },
+  { names = ["--continue"], value = "string" },
+  { names = ["--limit"], value = "int" },
+]
+
+[[cli.science.commands]]
 path = ["build"]
 summary = "Build the world from its corpora"
 

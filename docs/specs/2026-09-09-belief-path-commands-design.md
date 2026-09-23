@@ -1,7 +1,7 @@
 # The belief path — design
 
 **Date:** 2026-09-09
-**Status:** planned; implementation in progress (Tasks 1–10 complete). Amended 2026-09-23 for the kernel's typed estimand (§3, §4.3, §4.5, §5.2, §7, §8); the amendment was reviewed 2026-09-23. Goal task `sci-66b26d`.
+**Status:** planned; implementation in progress (Tasks 1–11 complete). Amended 2026-09-23 for the kernel's typed estimand (§3, §4.3, §4.5, §5.2, §7, §8); the amendment was reviewed 2026-09-23. Goal task `sci-66b26d`.
 **Scope:** the first half of sub-project 4 of the user/autonomy layer design
 (`beliefs` `docs/superpowers/specs/2026-08-29-user-and-autonomy-layer-design.md`,
 §5.1 and §8 item 4): the commands that carry one proposition from a typed
