@@ -3326,11 +3326,11 @@ git commit -m "test(belief-path): the full path on both surfaces, confined and p
 **Interfaces:**
 - Consumes: a bubblewrap host; the predecessor mm30 checkout the 2026-09-05 record used; `beliefs` library for the operator recipe (§8.2); `science mcp serve` and the CLI.
 
-- [ ] **Step 1: Write the predictions section first**
+- [x] **Step 1: Write the predictions section first**
 
 Create the record with §1 preflight and §5 predictions before running anything, in the 2026-09-05 record's shape. Predictions to state (design §8.3 as amended 2026-09-23): the proposition id and claim identity `780ace5964c8ab83…`; the concept-list digest `sha256:c7e45f81…` and the expression dataset address `dataset:sha256:a6bf229e…`; the stage-level, measure and identification lists held as datasets whose addresses the contract document names; the spec identity differs from `86aaa1a8…` by the rule identity and by the typed estimand; assessment `inconclusive`; scope `clean-environment`, verdict `passed`; belief `NoBelief(no-directional-outcome)`.
 
-- [ ] **Step 2: The operator recipe**
+- [x] **Step 2: The operator recipe**
 
 Run as a Python script beside the checkout (not committed under `python/src`), recording it verbatim in the record's §8.2:
 
@@ -3380,15 +3380,17 @@ print(config.world_id)
 
 Then write `science.toml` with the world root, id, corpus root, `operations_root`, `domains = ["biology"]`, `contracts = ["<WORK>/mm30.yaml"]`, `store_root`.
 
-- [ ] **Step 3: Walk the path**
+- [x] **Step 3: Walk the path**
 
 The contract document is the kernel driver's `tools/reproduction/mm30.yaml` with its `lineage` changed to `genesis` (the loader takes no predecessor, design §5.2); its sorts, `estimands:` row for `affects-concept-molecular-entity` and bindings are otherwise unchanged. Start `science mcp serve --config science.toml` from a coding-agent session and drive: `dataset` (the concept list), `claim`, `dataset` (the expression matrix from the predecessor's GSE179929 file), `dataset` three times (the stage-level, measure and identification lists, design §3 steps 3a–3c), `spec` (the record's step 4 prose for `method`, `assumptions` and `falsification`; the typed estimand the kernel driver's `spec.py` builds — `contrast=levels`, `slot=0`, `baseline=level:ndmm`, `comparison=level:<positive level>`, `measure=measure:rna-seq-tpm`, `scale=additive`, `reference=0`, `identification=identification:observational`, no conditioning, no applicability; `beliefs/outcome-file/v1`, `beliefs/content-identity-equality/v1`, `alpha=0.05`), `run` (the record's analysis bundle rendered as its `spec.py` rendered it, with the four parameters the finding `beliefs-efc32d` names supplied by the person), `assess`, `verify`, `belief`, `next`. Use the CLI for `belief` and `next` at least once. Record each command's minted id and any refusal in the record's §3 table, classified `design-gap` / `corpus-work` / `defect` / `closed`.
 
-- [ ] **Step 4: Compare to the oracle and write the record**
+- [x] **Step 4: Compare to the oracle and write the record**
 
 Fill §8.3's table with observed values against the predictions. File each finding as a task through its owning lane (`tasks add … --project beliefs` or here), and note each id in the record. Update the spec's status line to `implemented <date>; measured <date>, record docs/records/…`.
 
-- [ ] **Step 5: Commit and close**
+Landed 2026-09-23: the predecessor checkout is gone from this host, so the matrix came from the kernel store's held copy (its address is the oracle's; record §1); the contract document is the kernel driver's `mm30.yaml` re-authored `lineage: genesis`; the work directory is `.work/mm30-commands/` beside the main checkout (gitignored); the walk drove `science mcp serve` over JSON-RPC on stdin/stdout from this coding-agent session. Every prediction was confirmed.
+
+- [x] **Step 5: Commit and close**
 
 ```bash
 tasks done sci-030658 "mm30 reproduced through the commands; record written; findings filed"
