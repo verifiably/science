@@ -1,7 +1,7 @@
 # The belief path — design
 
 **Date:** 2026-09-09
-**Status:** planned; implementation in progress (Tasks 1–5 and 10 complete). Goal task `sci-66b26d`.
+**Status:** planned; implementation in progress (Tasks 1–5 and 10 complete). Amended 2026-09-23 for the kernel's typed estimand (§4.3, §4.5, §5.2, §8); the amendment awaits review. Goal task `sci-66b26d`.
 **Scope:** the first half of sub-project 4 of the user/autonomy layer design
 (`beliefs` `docs/superpowers/specs/2026-08-29-user-and-autonomy-layer-design.md`,
 §5.1 and §8 item 4): the commands that carry one proposition from a typed
@@ -292,9 +292,52 @@ doc = "The proposition ref this spec assesses."
 type = "string"
 required = true
 doc = "The dataset ref the analysis observes (role observes)."
-[inputs.estimand]
+[inputs.contrast]
+type = "enum"
+choices = ["levels", "continuous"]
+required = true
+doc = "What the estimand contrasts: two levels of an argument, or an increment along a quantity."
+[inputs.slot]
+type = "int"
+required = true
+doc = "The claim argument position the contrast varies (0-based)."
+[inputs.baseline]
+type = "string"
+required = false
+doc = "levels only: the baseline level, a kind-prefixed term, e.g. level:ndmm."
+[inputs.comparison]
+type = "string"
+required = false
+doc = "levels only: the comparison level, a kind-prefixed term."
+[inputs.quantity]
+type = "string"
+required = false
+doc = "continuous only: the quantity the increment is taken along, a kind-prefixed term."
+[inputs.increment]
+type = "string"
+required = false
+doc = "continuous only: the increment, a decimal."
+[inputs.measure]
 type = "string"
 required = true
+doc = "The measured quantity, a kind-prefixed term, e.g. measure:rna-seq-tpm."
+[inputs.scale]
+type = "enum"
+choices = ["additive", "multiplicative"]
+required = true
+doc = "The scale the effect is expressed on."
+[inputs.reference]
+type = "string"
+required = true
+doc = "The null value on that scale, a decimal (0 additive, 1 multiplicative is typical, never assumed)."
+[inputs.identification]
+type = "string"
+required = true
+doc = "The identification strategy, a kind-prefixed term, e.g. identification:observational."
+[inputs.conditioning]
+type = "list-of-string"
+required = false
+doc = "Kind-prefixed terms the estimate conditions on; absent, none."
 [inputs.method]
 type = "string"
 required = true
@@ -305,8 +348,9 @@ required = true
 type = "string"
 required = true
 [inputs.applicability]
-type = "string"
-required = true
+type = "list-of-string"
+required = false
+doc = "Scope qualifiers as dimension=quantifier:term; absent, the spec applies wherever the claim does."
 [inputs.interpretation_rule]
 type = "string"
 required = true
@@ -326,6 +370,37 @@ doc = "The analysis-spec ref this one supersedes."
 [reads]
 families = ["corpus-stored"]
 ```
+
+**The typed estimand (amended 2026-09-23).** The kernel types a spec's
+estimand against the claim it answers (`beliefs.estimand.build_estimand`):
+the target's operator fixes every sort through its contract's `estimands:`
+declaration, and the claim's identity enters the estimand, so the write
+boundary refuses a spec whose estimand names another claim. The spec's
+`applicability` is likewise a typed qualifier mapping
+(`build_applicability`), not prose. The surface therefore takes the
+estimand as its parts, and takes terms and numbers only — never a sort,
+exactly as `claim` takes sorts from the plan. The handler restores the
+target's `Claim` with `decode.claim_from_stored(node, profile=,
+snapshot=<§5.3>)`; reads `profile.estimand(claim.operator)`, whose absence
+refuses `invalid-input` naming the operator (a contract that declares no
+estimand for an operator admits no spec against claims under it); builds
+each `Referent` with the declaration's sort for its role —
+`level_sorts[slot]` for `baseline` and `comparison`, `measure_sort`,
+`identification_sort`, `conditioning_sort`; and calls `build_estimand(…,
+contrast=LevelsContrast(slot, baseline, comparison) |
+ContinuousContrast(slot, quantity, increment), measure=Measure(measure,
+scale), reference=Decimal(reference), control=Control(identification,
+conditioning), snapshot=)` and `build_applicability(profile, claim,
+qualifiers, snapshot=)`, where each `applicability` entry
+`dimension=quantifier:term` becomes `Qualifier(quantifier, Referent(<the
+dimension's restriction_sort>, term))` and the kernel checks the quantifier
+against the claim grammar. A contrast input given for the other contrast
+kind, or one missing for its own, refuses: nothing is defaulted. A
+decimal that does not parse refuses. The kernel's `ESTIMAND_ERRORS` and
+`ProfileError` are `invalid-input` with its message; `not-member` under a
+dataset-bound sort refuses as `claim`'s does, and `not-consulted` under a
+namespace binding stands (§4.1's policy). `method`, `assumptions` and
+`falsification` stay prose; the kernel does not type them.
 
 The handler resolves the dataset ref to its address, builds the `SpecDraft`
 with one `SpecInput(role="observes", dataset=<address>)` and
@@ -441,8 +516,11 @@ calls `build_assessment(run, specs={identity: spec},
 implementations={impl.identity: impl})`. An `AssessmentFinding` refuses
 `invalid-input` with its reason. The record is `stored.assessment_node(
 derived.identity()[:16], title, spec, run=run_ref(address), proposition,
-outcome, interpretation_rule, **optional)` — exactly the driver's call, now
-with the run member in one spelling (`beliefs-ae9b18`). The report is the
+outcome, interpretation_rule, estimand, applicability, **optional)` — the
+driver's call, now with the run member in one spelling (`beliefs-ae9b18`).
+The estimand and applicability are the derived assessment's own, carried
+from the frozen spec; the kernel requires both (amended 2026-09-23), and
+only `estimate` and `uncertainty` stay optional. The report is the
 record block.
 
 ### 4.6 `verify`
@@ -603,6 +681,16 @@ object kind) → operator`, `sorts` of kind prefix → sort, `layers` and
 `polarities` — which `claim` reads (§4.1). The plan is launcher input, not
 contract content; the contract's identity does not cover it, and the
 manifest pins check only the contract.
+
+A contract whose operators a spec will target declares an `estimands:` row
+for each such operator — `level_sorts` by argument slot, `measure_sort`,
+`identification_sort`, `conditioning_sort` — and declares those sorts
+(amended 2026-09-23; §4.3). A sort bound by namespace and release resolves
+`not-consulted` and stands, so an estimand vocabulary need not be held for
+the surface to type against it; one bound by dataset identity must be held,
+as for `claim`. The loader parses every document as `lineage: genesis`
+(`predecessor=None`): a successor lineage refuses at load, and a
+successor-aware home for contracts is the kernel's to give (ruling 5).
 
 ### 5.3 The resolution snapshot
 
@@ -787,7 +875,12 @@ every refusal is classified `design-gap`, `corpus-work`, `defect` or
 
 The driver's step 1, as a library: `init_world_root`, `init_corpus_root`,
 `init_store_root`; the concept list's content address computed and written
-into `mm30.yaml`; `adopt_manifest(profile=pins)` and `World.admit(root,
+into `mm30.yaml`, with the stage-level, measure and identification lists
+beside it (amended 2026-09-23: the kernel's own successor document binds
+four lists and declares the `estimands:` row for
+`affects-concept-molecular-entity`; the surface's document is authored
+`lineage: genesis` with the same sorts, row and bindings, since the loader
+takes no predecessor, §5.2); `adopt_manifest(profile=pins)` and `World.admit(root,
 provenance=Fresh())` under an authority the operator constructs. The recipe
 is recorded verbatim in the record, and the layer design's ruling that these
 are operator-time library operations is restated there.
@@ -800,8 +893,8 @@ are operator-time library operations is restated there.
 | claim identity | `780ace5964c8ab83…` (the record's 2026-09-08 measurement, which replaced `5e702bc43fdf51d3…`) | equal — the claim names the sorted operator `mm30/affects-concept-molecular-entity` under the biology pack, as the re-run did; the 2026-09-05 identity named `mm30-reproduction/affects` under the unsorted vocabulary and is not the target |
 | expression dataset address | `dataset:sha256:a6bf229e…` | equal — same bytes |
 | concept list digest | `sha256:c7e45f81…` | equal |
-| spec draft fields | the record's step 4 draft | equal field by field |
-| spec identity | `86aaa1a8…` | **differs**, by the interpretation rule's kernel identity (§6.1); stated, not papered over |
+| spec draft fields | the record's step 4 draft | equal for `method`, `assumptions`, `falsification`, inputs, rules and parameters; the prose estimand and applicability are replaced by the typed estimand the kernel's current driver builds (levels `ndmm`→positive level on slot 0, `rna-seq-tpm` additive, reference 0, observational, unconditioned; empty applicability) |
+| spec identity | `86aaa1a8…` | **differs**, by the interpretation rule's kernel identity (§6.1) and by the typed estimand; stated, not papered over |
 | assessment outcome | `inconclusive` | equal on the same host and data |
 | verification scope and verdict | `clean-environment`, `passed` | equal on a bubblewrap host |
 | belief | `NoBelief(no-eligible-assessment)` | **`NoBelief(no-directional-outcome)`**: the identity gap closed (`beliefs-ae9b18`), so admission succeeds and the frozen rule's `inconclusive` gives the scientific answer the record said it never reached |

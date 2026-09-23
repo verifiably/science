@@ -6,7 +6,7 @@ priority: 1
 size: xl
 process: planned
 created: 2026-09-09T12:12:00Z
-updated: 2026-09-23T12:41:18Z
+updated: 2026-09-23T13:16:13Z
 depends: [beliefs-e5ab34, beliefs-5fe2e3, beliefs-2d9a55]
 tags: [dogfood, command-framework]
 spec: docs/specs/2026-09-09-belief-path-commands-design.md
@@ -28,3 +28,4 @@ Item 4 of the user/autonomy layer design §8 and the stack's one success criteri
 - 2026-09-09T14:08:33Z (dogfood-commands): Plan review round 2 (six findings, all verified): holdings reads use detached inspection and a test proves a read writes nothing; dataset validates every facet payload plus bearer/validity before the first act; held paths match the configured store's identity; MCP replay tested within one serve lifetime; Task 11 depends on Task 6; spec, run, assess and verify each driven through a real transport, with the spec's §7 bullet corrected.
 - 2026-09-09T15:44:53Z (dogfood-commands): Tasks 1–2 (sci-614bdd, sci-05c56c) landed on branch dogfood-commands (7d738d9, 6ddd6eb, 4cc7ddd). Everything from Task 3 waits on the beliefs kernel: beliefs-2d9a55 (store_identity, xs) unblocks Task 3 and then Tasks 5 and 10; beliefs-5fe2e3 (scoped run/holdings routes) unblocks Tasks 4, 7, 9; beliefs-e5ab34 (reference rules) unblocks Tasks 6, 8. Pick up again with 'tasks ready' once beliefs-2d9a55 closes; the branch is rebased on main after quick-wins merged.
 - 2026-09-23T12:41:18Z (dogfood-commands): 2026-09-23: all three kernel seams (beliefs-2d9a55, -5fe2e3, -e5ab34) closed 2026-09-10; names verified against today's kernel: store_identity, open_attended_session(store_root=), ScopedWriter.actor/store_id/operation_port()/holdings_context(), replay over RunClosure all present. Drift: REFERENCE_RULES keys are beliefs/outcome-file/v1 and beliefs/content-identity-equality/v1 (plan uses bare); UnknownKindError/FacetError live in nodes.core.errors. Branch rebased onto main (2d6da16), 311 passed.
+- 2026-09-23T13:16:13Z (dogfood-commands): 2026-09-23: design amended for the kernel's typed estimand (§4.3 spec inputs, §4.5 assessment carries estimand/applicability, §5.2 estimands rows and genesis-only documents, §8.2–8.3 mm30 contract and oracle rows); awaiting review before Tasks 6, 8, 9, 11, 12, 13 are re-planned.
