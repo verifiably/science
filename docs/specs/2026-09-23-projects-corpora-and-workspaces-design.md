@@ -306,28 +306,41 @@ CLI invocation, not a configuration edit, not a workspace file.
 The framework's CLI is "sessionless reads, service-routed writes"
 (framework §9.2; `cli.py`): a write goes over the service socket to the one
 persistent session, while a read constructs its own `ReadContext` from the
-configuration and consults no ledger. Left as is, a `project select` made
-through the service would not be seen by the next CLI `next`, and the
-selection would be a fact about one process rather than about the session.
+configuration and consults no ledger. And there are two launchers:
+`science serve` and `science mcp serve` each call `open_attended_session`
+for their own process (`serve.py`, `mcp.py`), and the MCP one binds no
+socket. Left as is, a `project select` made through either would not be
+seen by the next CLI `next`, and a selection made in the MCP session would
+be invisible to the CLI service entirely.
 
-The rule is therefore that **a read resolves its selection against the
-live session**, in this order:
+**There is one live session per world at a time.** Two launchers on one
+write root are two writer sessions on one corpus root, which is the
+single-writer deployment obligation's violation (layer §6.1 step 0, §7.1:
+"a second launcher on the same source root is that obligation's
+violation"). So the question is never how two sessions share a selection;
+it is how a read finds *the* session, whichever launcher opened it. The
+rule is therefore that **a read resolves its selection against the live
+session**, in this order:
 
 1. an explicit `--project <address>` on that read invocation, which binds
    that one invocation only and does not change the session's selection;
-2. otherwise the live service session's current selection, obtained by
-   asking the service over its socket — a read-only query answered from
-   the session's own state, not a write and not a ledger scan;
-3. otherwise, when no service is running, the configuration's
+2. otherwise the live session's current selection, obtained by asking it
+   over the configuration's `service_socket` — a read-only query answered
+   from the session's own state, not a write and not a ledger scan. **Both
+   launchers bind that socket**: `science serve` already does for writes;
+   `science mcp serve` binds it for this query, so that a selection made
+   through an agent's MCP session is what a person's CLI `next` sees;
+3. otherwise, when no session is live, the configuration's
    `default_project`;
 4. otherwise none.
 
-Step 2 is what makes the selection a session fact across processes: a CLI
-read and an MCP read after the same `project select` see the same project.
-The MCP surface is inside the session and needs no step 2. A read under an
+Step 2 is what makes the selection a session fact across processes and
+across transports: a CLI read after an MCP `project select` sees the same
+project as the MCP session does, because there is only one session to ask.
+Requests arriving inside the MCP session need no step 2. A read under an
 explicit `--project` that names no live project refuses `unknown-project`
 before it reads anything. P8 (§10) tests the switch-then-read sequence
-across CLI invocations.
+from both launchers.
 
 A project is named by its address, which is its opaque identity, and the
 surface resolves a **name** to an address through the coordination resolver
@@ -393,36 +406,49 @@ that the domain does not already define, and making one would recreate the
 
 `health`, `cancer` and `multiple-myeloma` are three `project` records over
 the same world. Their queries differ in what they select, within what
-`science.view-query.v1` can say (coordination §2). Two constraints of the
-language shape every query below: a `closure` anchor and every `addresses`
-entry must be a **world-tier address** (`view_query.py` refuses anything
-else, including a `coord:` address or a referent), and `references-term`
-selects **propositions only** (`selection.py`), so it must stand in its own
-clause — intersecting it with `kinds: [assessment]` selects nothing. The
-relation names below are the kernel's stored derivation relations
-(`stored.py`: `observes`, `targets`, `executes`, `assesses`, `verifies`,
-`composes`); the milestone record pins the set it used.
+`science.view-query.v1` can say (coordination §2). Three facts about the
+language and the stored records shape every query below:
+
+- A `closure` anchor and every `addresses` entry must be a **world-tier
+  address** (`view_query.py` refuses anything else, including a `coord:`
+  address or a referent), and a dataset's address is **content-derived**
+  (`dataset_node`: `dataset:sha256:…`), never a handle like an accession.
+- `references-term` selects **propositions only** (`selection.py`), so it
+  stands in its own clause; intersecting it with `kinds: [assessment]`
+  selects nothing.
+- `closure` walks **stored `Node.relations` only**, and the records carry
+  fewer edges than the kernel's §4.1 diagram declares. What is stored
+  (`stored.py`): a `run` has `observes`, `reads`, `transforms` and
+  `produces` edges to datasets and holds its spec in a **facet**; an
+  `assessment` has `assesses` to its proposition and `produced_by` to its
+  run; a `verification` has `verifies` to its assessment; a `composite`
+  has `composes` to its members. An `analysis-spec` emits **no relations**:
+  its target and inputs live in its projection. So a closure from a dataset
+  reaches runs, their assessments, the propositions those assess, and the
+  verifications of those assessments — and can never reach a spec, nor a
+  proposition that only a spec targets and no run has yet executed. Those
+  are selected by `addresses`, explicitly, until the kernel stores the
+  `executes` and `targets` signatures it declares as edges (§11 names that
+  request; nothing here depends on it).
 
 `multiple-myeloma`, in its coarse form — one closure clause per held
-myeloma dataset, walking the derivation graph in both directions so that
-specs observing the dataset, runs of those specs, assessments of those runs
-and the propositions they target are all reached; and one term clause per
-concept the mm30 contract binds, which adds the propositions typed over
-that concept whether or not a dataset yet observes them:
+myeloma dataset over the edges that exist, walking in both directions; one
+`addresses` clause naming the spec records, which no edge reaches; and one
+term clause per concept the mm30 contract binds, which adds the
+propositions typed over that concept whether or not a run yet observes
+their data. The anchor is the reproduced corpus's recorded content address
+(reproduction record step 3), shown truncated:
 
 ```yaml
 version: science.view-query.v1
 clauses:
   - all:
       - closure:
-          anchor: "dataset:gse179929"
-          predicates: [observes, targets, executes, assesses, verifies]
+          anchor: "dataset:sha256:a6bf229e…"      # GSE179929, as recorded
+          predicates: [observes, produced_by, assesses, verifies]
           direction: both
   - all:
-      - closure:
-          anchor: "dataset:<the next held myeloma dataset>"
-          predicates: [observes, targets, executes, assesses, verifies]
-          direction: both
+      - addresses: ["analysis-spec:86aaa1a8…"]    # the frozen spec, projection-held
   - all:
       - references-term: "<mm30 concept identifier, as claim referents resolve it>"
 ```
@@ -434,25 +460,35 @@ added, and when a disease vocabulary is bound, one clause per neoplasm term:
 ```yaml
 version: science.view-query.v1
 clauses:
-  - all: [{closure: {anchor: "dataset:gse179929", predicates: [observes, targets, executes, assesses, verifies], direction: both}}]
+  - all: [{closure: {anchor: "dataset:sha256:a6bf229e…", predicates: [observes, produced_by, assesses, verifies], direction: both}}]
+  - all: [{addresses: ["analysis-spec:86aaa1a8…"]}]
   # … the remaining multiple-myeloma clauses, verbatim …
   # later, when MONDO or EFO is bound:
   - all: [{references-term: "MONDO:0004992"}]   # cancer
 ```
 
 `health`, today: the closure clauses of every dataset a health-level
-question anchors on, which for the first question (§9) are the myeloma
-datasets again, plus the dataset the question itself introduces; later,
-one clause per disease and process term. Written as `kinds` over every
-world kind it would select the whole world, which is legitimate for the
-widest project but says nothing, so the coarse form anchors on datasets:
+question anchors on — for the first question (§9) the myeloma dataset
+again — plus `addresses` naming what the question introduces and no edge
+reaches yet: its new proposition, its spec, and its declared-but-unheld
+dataset. Written as `kinds` over every world kind it would select the whole
+world, which is legitimate for the widest project but says nothing, so the
+coarse form anchors and enumerates:
 
 ```yaml
 version: science.view-query.v1
 clauses:
-  - all: [{closure: {anchor: "dataset:gse179929", predicates: [observes, targets, executes, assesses, verifies], direction: both}}]
-  - all: [{closure: {anchor: "dataset:<the health question's own dataset>", predicates: [observes, targets, executes, assesses, verifies], direction: both}}]
+  - all: [{closure: {anchor: "dataset:sha256:a6bf229e…", predicates: [observes, produced_by, assesses, verifies], direction: both}}]
+  - all: [{addresses: ["analysis-spec:86aaa1a8…"]}]
+  - all: [{addresses: ["proposition:<the health question's proposition>",
+                       "analysis-spec:<its spec>",
+                       "dataset:sha256:<its declared dataset>"]}]
 ```
+
+Once that dataset is held and a run observes it, the closure clause from
+its address replaces the `addresses` entry for the proposition; the spec
+stays enumerated. Every address above is read from the record at minting
+time; none is authored by hand, and the milestone record pins the values.
 
 Containment is then a fact about the queries: `multiple-myeloma`'s
 selection is inside `cancer`'s because `cancer`'s clauses include it
@@ -531,10 +567,17 @@ whose closure names an unselected one makes the act
 user widens the view or drops the record" (layer §6.1). So a level is not
 "the interesting records, and the act fetches the rest"; it is a selection
 that is already closed under derivation, and the person writes it that way.
-In v1 that means anchoring: an admitted assessment's closure is reached by
-a `closure` clause from that assessment outward over the derivation
-relations, one clause per assessment, or by enumerating the closure's
-addresses. The dry run is the tool for getting there: it reports the
+
+**Publication closure and graph traversal are different operations.** The
+publish act computes an assessment's closure from the records' projections
+— the run's spec is a facet, the spec's inputs and target are its
+projection — while a view's `closure` predicate walks stored edges only
+(§6.2). In v1 a closure-complete findings view is therefore two things per
+admitted assessment: a `closure` clause from the assessment outward over
+`assesses` and `produced_by`, then `observes`, `reads`, `transforms` and
+`produces` from the run, which reaches the proposition, the run and the
+datasets; and an `addresses` entry naming the `analysis-spec`, which no
+edge reaches. The dry run is the tool for getting there: it reports the
 selection and the missing identities, and the person widens the view by a
 revision until the dry run is clean. This design proposes no automatic
 expansion; if the milestone shows that enumerating anchors is the real
@@ -547,7 +590,7 @@ destination (§8.2):
 
 | level | selection, closure-complete by construction | for |
 |---|---|---|
-| findings | one `closure` clause per admitted `assessment`, direction `out`, over the derivation relations: reaches its `run`, `analysis-spec`, `dataset` records and the `proposition` it names; plus the `composite`s whose members are all selected | a collaborator, a GitHub repository |
+| findings | per admitted `assessment`: one `closure` clause, direction `out`, over `assesses`, `produced_by`, `observes`, `reads`, `transforms`, `produces` — reaching its `proposition`, its `run` and the `dataset` records — plus an `addresses` entry for its `analysis-spec`, which is projection-held; plus the `composite`s whose members are all selected | a collaborator, a GitHub repository |
 | reproducible | findings, plus what an assessment's outward closure does not reach: the `verification`s that name it (inward), the replay `run`s their closures name, and the `source` records the selected propositions cite | a repository someone will build on |
 
 The record-level difference between the two is therefore exactly the
@@ -658,8 +701,9 @@ Its criteria, all observable:
    to the record when the act exists.
 6. A session opened from inside the mm30 workspace directory and from an
    unrelated directory reading identically.
-7. A `project select` made through the service, followed by a CLI `next`
-   in a new process, observing the selection (§5.1a).
+7. A `project select` made through the MCP session by the agent, followed
+   by a CLI `next` in a new process, observing the selection (§5.1a); the
+   CLI-service arm is P8's unit test and is not repeated here.
 
 The milestone leaves a record in `docs/plans/`, in the reproduction record's
 discipline: predictions before, findings classified after, and every
@@ -685,7 +729,7 @@ Each can fail, and each names its check.
 | P1 | No configuration is discovered from the working directory | a launcher test opens a session from a directory containing a predecessor `science.yaml`, a workspace `science.toml` and a stray `corpus.yaml`, and asserts the world, corpus roots and selection equal the explicit configuration's |
 | P2 | Minting a subordinate view or coordination kind without a current project refuses `no-current-project`; minting a `project` and minting a world kind do not | dispatcher tests, three arms, under a session with no selection; the `project` arm is the fresh-world genesis path |
 | P3 | The current project is in the session ledger at open and at every change, and an act's ledger entry is attributable to the selection standing when it ran | a ledger test that switches project mid-session and reads the trajectory back |
-| P8 | A read in a new process resolves the live session's selection; an explicit `--project` on a read binds that invocation only | a CLI test: `project select` over the service, then `next` in a fresh process observes it; then `next --project <other>` observes the other and the session's selection is unchanged afterwards |
+| P8 | A read in a new process resolves the live session's selection whichever launcher opened it; an explicit `--project` on a read binds that invocation only | two arms: under `science serve`, `project select` over the socket then CLI `next` in a fresh process observes it; under `science mcp serve`, `project select` through the MCP session then CLI `next` in a fresh process observes it. In each, `next --project <other>` observes the other and the session's selection is unchanged afterwards |
 | P4 | A same-query mint produces a record under the current project with the source's query, and the source is unchanged | coordination command test; the source's tip is asserted unchanged |
 | P5 | The unselected session reads the whole world | `next` and `belief` under no selection equal their results under a project whose query is the union of every kind |
 | P6 | A workspace file is never read as a record | a run whose spec exists only as a workspace preregistration file refuses at `run` because no `analysis-spec` record resolves, under whatever refusal the belief path's `run` already gives an unresolvable spec; nothing in `science` opens `freezes/` |
@@ -730,6 +774,20 @@ measurement.
   records §8.1's deferral: the coordination trail is not selectable by a
   view, and carrying it needs a publish-contract amendment that is not
   requested here.
+- **Stored derivation edges** (`beliefs`, an idea, not a prerequisite):
+  kernel §4.1 declares `Run ──executes──▶ AnalysisSpec` and
+  `AnalysisSpec ──targets──▶ Proposition` as closed relation signatures,
+  but `run_node` holds its spec in a facet and `analysis_spec_node` emits
+  no relations, so a view's `closure` cannot walk either (§6.2). Storing
+  the declared signatures as edges would let a findings view be one
+  closure clause per assessment with no enumerated spec, and a
+  dataset-anchored project reach a proposition through its spec before any
+  run. Filed as an idea; the milestone's count of `addresses` entries per
+  view is the measurement that scopes it.
+- **`science mcp serve`** binds the configuration's `service_socket` for
+  the read-side selection query (§5.1a), so that one live session serves
+  both transports. This repository's change, with the coordination command
+  set.
 - **The predecessor tree** is unchanged. Its retirement design already says
   each project is recreated "when its turn comes"; §9 says how the turn is
   taken.
