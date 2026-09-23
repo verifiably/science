@@ -1,7 +1,8 @@
 # Projects, corpora and workspaces — design
 
 **Date:** 2026-09-23
-**Status:** draft for review. Task `sci-388c18`.
+**Status:** reviewed and approved 2026-09-23 after three review rounds;
+implementation plan to follow. Task `sci-388c18`.
 **Scope:** how a research project is manifested at the `science` surface,
 given that the kernel has already ruled that a user has one world and a
 project is a view. This document settles what the kernel left to the surface:
@@ -485,10 +486,15 @@ clauses:
                        "dataset:sha256:<its declared dataset>"]}]
 ```
 
-Once that dataset is held and a run observes it, the closure clause from
-its address replaces the `addresses` entry for the proposition; the spec
-stays enumerated. Every address above is read from the record at minting
-time; none is authored by hand, and the milestone record pins the values.
+Holding that dataset and executing a run is not enough to drop the
+explicit proposition: the closure reaches a proposition only through an
+assessment's `produced_by` and `assesses` edges, so until `assess` has run
+the proposition is connected to nothing the closure walks. The `addresses`
+entry is replaced by a closure clause from the dataset's address only
+after the assessment exists **and** evaluating the proposed query confirms
+it selects the proposition; the spec stays enumerated regardless. Every
+address above is read from the record at minting time; none is authored by
+hand, and the milestone record pins the values.
 
 Containment is then a fact about the queries: `multiple-myeloma`'s
 selection is inside `cancer`'s because `cancer`'s clauses include it
@@ -780,10 +786,14 @@ measurement.
   but `run_node` holds its spec in a facet and `analysis_spec_node` emits
   no relations, so a view's `closure` cannot walk either (§6.2). Storing
   the declared signatures as edges would let a findings view be one
-  closure clause per assessment with no enumerated spec, and a
-  dataset-anchored project reach a proposition through its spec before any
-  run. Filed as an idea; the milestone's count of `addresses` entries per
-  view is the measurement that scopes it.
+  closure clause per assessment with no enumerated spec. Reaching a
+  proposition from a dataset **before any run** needs one more edge those
+  two do not supply: the spec's own edge to each input dataset it declares
+  (its `observes`-role inputs), since without it nothing connects a dataset
+  to a spec until a run observes the dataset. The idea's scope is all
+  three, or the pre-run benefit is not claimed. Filed as an idea; the
+  milestone's count of `addresses` entries per view is the measurement
+  that scopes it.
 - **`science mcp serve`** binds the configuration's `service_socket` for
   the read-side selection query (§5.1a), so that one live session serves
   both transports. This repository's change, with the coordination command
