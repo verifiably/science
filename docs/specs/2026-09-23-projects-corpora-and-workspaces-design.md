@@ -107,10 +107,13 @@ Rulings from the 2026-09-23 session, recorded so they are not re-derived.
    Another project that wants it mints its own view with the same query, in
    one command. Whether this fence bites is measured in dogfood before any
    re-homing family is requested from `beliefs`. §7.
-7. **Export levels are views; payload transport is a destination
-   property.** "Findings only" and "everything needed to reproduce" are two
-   views over one project's world facts. Whether dataset payloads travel is
-   decided by the destination kind, never by the selection. §8.
+7. **Export levels are closure-complete views; payload transport is a
+   destination property.** "Findings only" and "everything needed to
+   reproduce" are two views over one project's world facts, each written
+   closed under derivation because publish refuses an incomplete closure
+   rather than expanding it. Whether dataset payloads travel is decided by
+   the destination kind, never by the selection. The coordination trail is
+   not selectable by a view and its publication is deferred. §8.
 8. **Recreate, never migrate, and choose the second project to exercise
    overlap.** The second project is `health`, viewing the reproduced mm30
    corpus and minting one health-level question over myeloma facts. §9.
@@ -161,6 +164,32 @@ research world is not under a repository. The reproduced mm30 corpus
 currently under the `beliefs` checkout's working tree relocates to the
 user's world root before the second-project milestone (§9), by
 `replicate_root` and `restore_root`, not by copying.
+
+**One write destination, N mounted corpora.** A session writes into
+exactly one corpus, the working corpus, and reads every corpus the
+configuration names. Today's kernel does not offer that shape:
+`open_attended_session` refuses unless `corpus_roots` names exactly one
+root, and its coordination resolver mounts only that root (`beliefs`
+`session/__init__.py`), while the read side already opens one view per
+configured root (`ReadContext.views`). The session this design needs is:
+
+- a **write root**, named separately from the read roots — a
+  `write_root` key in `SCIENCE_CONFIG` beside `corpus_roots`, which must be
+  one of them — carrying the permit and the writer;
+- **mounted read corpora**, every root in `corpus_roots`, each read under
+  the profile its own manifest pins (the mm30 corpus pins the `mm30`
+  corpus-local contract; the working corpus pins base, `biology` and the
+  coordination contract), so that a record is decoded under the contract it
+  was typed under and not under the writer's;
+- **coordination resolution over every mounted corpus**, which is what the
+  coordination design already states — "tip resolution is world-wide"
+  (§6.3) — and the current single-root resolver falls short of.
+
+This is a `beliefs` change and a prerequisite of the milestone (§9.2, §11):
+the session opener takes a write root and a read set, mounts the read set in
+the coordination resolver, and compiles a profile per mounted corpus from
+its manifest. It is named here, not designed; the kernel owns how a
+mounted corpus's profile is compiled and cached.
 
 ### 3.2 A view is where attention lives
 
@@ -224,9 +253,11 @@ something to be true of:
    world; that is a legitimate state, not a refusal, and it is how a person
    asks "what do I know about PHF19" before deciding which project cares.
 3. They ask a question. It is minted under the selected project. If no
-   project is selected, minting a view kind refuses `no-current-project`,
-   because a question needs an address, and the refusal names the
-   selection command.
+   project is selected, minting a subordinate view or coordination kind
+   refuses `no-current-project`, because a question needs an address, and
+   the refusal names the selection command. Minting a `project` itself needs
+   no selection: it is the root of its own address space, which is how a
+   fresh world gets its first project to select.
 4. They hold a dataset, freeze a spec against code in a workspace, run,
    assess, verify. None of those acts mentions the project; the records
    are world facts and the project's query selects them or does not.
@@ -247,21 +278,56 @@ The current project is a property of the session, held by the launcher and
 recorded in the session ledger beside the actor and permit at `session-open`
 (framework §5.2), and again on every change. It is never stored in a corpus
 — a selection is not a record, and the surface owns no store (layer §2
-decision 4, §5.2) — and never read back from anything but the ledger. The exact ledger
-entry shape is `beliefs`' and is filed with the coordination command set;
+decision 4, §5.2) — and is read back only from the session: its ledger
+after the fact, or the live service's answer while it runs (§5.1a). The
+exact ledger entry shape is `beliefs`' and is filed with the coordination
+command set;
 this design requires only that the selection is written where the session's
 evidence is, so that a trajectory shows which view each act was taken
 under.
 
-The launcher accepts the selection three ways, in this order of precedence:
+**Initial selection**, fixed when the launcher opens the session, is the
+first of these that is present:
 
-1. an explicit input at session open (`--project <address>` on the CLI, the
-   equivalent MCP session parameter);
-2. a `project` command during the session, which rewrites the selection and
-   appends the ledger entry;
-3. the launcher configuration's `default_project`, an optional key beside
+1. an explicit input at session open (`--project <address>` to `science
+   serve` and `science mcp serve`, the equivalent MCP session parameter);
+2. the launcher configuration's `default_project`, an optional key beside
    `domains` in `SCIENCE_CONFIG`, for a person who works in one project for
-   weeks.
+   weeks;
+3. none, which is §5.3's whole-world state.
+
+**Subsequent changes** are made by exactly one thing: the `project`
+command's `select` form during the session, which rewrites the session's
+selection and appends the ledger entry. Nothing else moves it: not a later
+CLI invocation, not a configuration edit, not a workspace file.
+
+### 5.1a Reads bind to the session's selection
+
+The framework's CLI is "sessionless reads, service-routed writes"
+(framework §9.2; `cli.py`): a write goes over the service socket to the one
+persistent session, while a read constructs its own `ReadContext` from the
+configuration and consults no ledger. Left as is, a `project select` made
+through the service would not be seen by the next CLI `next`, and the
+selection would be a fact about one process rather than about the session.
+
+The rule is therefore that **a read resolves its selection against the
+live session**, in this order:
+
+1. an explicit `--project <address>` on that read invocation, which binds
+   that one invocation only and does not change the session's selection;
+2. otherwise the live service session's current selection, obtained by
+   asking the service over its socket — a read-only query answered from
+   the session's own state, not a write and not a ledger scan;
+3. otherwise, when no service is running, the configuration's
+   `default_project`;
+4. otherwise none.
+
+Step 2 is what makes the selection a session fact across processes: a CLI
+read and an MCP read after the same `project select` see the same project.
+The MCP surface is inside the session and needs no step 2. A read under an
+explicit `--project` that names no live project refuses `unknown-project`
+before it reads anything. P8 (§10) tests the switch-then-read sequence
+across CLI invocations.
 
 A project is named by its address, which is its opaque identity, and the
 surface resolves a **name** to an address through the coordination resolver
@@ -297,7 +363,17 @@ with the whole world as the degenerate view; a refusal here would send a
 person back to choosing a folder before they may look, which is the habit
 this design exists to end. Write acts on world kinds (`claim`, `dataset`,
 `spec`, `run`, `assess`, `verify`) need no project and are not refused.
-Minting a view or coordination kind is.
+Minting a subordinate view or coordination kind (`question`, `hypothesis`,
+`topic`, `theme`, `task`, `decision`, `note`) is refused
+`no-current-project`, because its address is `(project identity, local id)`
+and there is no project identity to bind (coordination §4.5).
+
+**`project` genesis is exempt.** A `project` record is the root of its own
+address space and its address is its own opaque identity (layer §4.1); it
+has no parent project and the kernel asks for none. So a fresh world's first
+act after opening a session is `project`, then selection, then the first
+question; nothing is circular. A `project` revision (rename, re-query) also
+needs no selection, since it names its own address.
 
 ## 6. Biology, health, cancer, myeloma
 
@@ -316,24 +392,72 @@ that the domain does not already define, and making one would recreate the
 ### 6.2 Health, cancer and myeloma are views
 
 `health`, `cancer` and `multiple-myeloma` are three `project` records over
-the same world. Their queries differ in what they select, in
-`science.view-query.v1`'s four predicates:
+the same world. Their queries differ in what they select, within what
+`science.view-query.v1` can say (coordination §2). Two constraints of the
+language shape every query below: a `closure` anchor and every `addresses`
+entry must be a **world-tier address** (`view_query.py` refuses anything
+else, including a `coord:` address or a referent), and `references-term`
+selects **propositions only** (`selection.py`), so it must stand in its own
+clause — intersecting it with `kinds: [assessment]` selects nothing. The
+relation names below are the kernel's stored derivation relations
+(`stored.py`: `observes`, `targets`, `executes`, `assesses`, `verifies`,
+`composes`); the milestone record pins the set it used.
 
-- `multiple-myeloma`: `closure` from the myeloma datasets and the
-  corpus-local `concept` referents the mm30 contract binds, outward through
-  the spec, run and assessment relations, plus `references-term` over the
-  myeloma concept list.
-- `cancer`: the union of every cancer-type project's clauses, plus
-  `references-term` over neoplasm terms when a disease vocabulary is
-  bound.
-- `health`: `kinds` over propositions and assessments, narrowed by
-  `references-term` over disease and process terms when bound, and
-  otherwise by `closure` from the datasets the health-level questions
-  anchor on.
+`multiple-myeloma`, in its coarse form — one closure clause per held
+myeloma dataset, walking the derivation graph in both directions so that
+specs observing the dataset, runs of those specs, assessments of those runs
+and the propositions they target are all reached; and one term clause per
+concept the mm30 contract binds, which adds the propositions typed over
+that concept whether or not a dataset yet observes them:
+
+```yaml
+version: science.view-query.v1
+clauses:
+  - all:
+      - closure:
+          anchor: "dataset:gse179929"
+          predicates: [observes, targets, executes, assesses, verifies]
+          direction: both
+  - all:
+      - closure:
+          anchor: "dataset:<the next held myeloma dataset>"
+          predicates: [observes, targets, executes, assesses, verifies]
+          direction: both
+  - all:
+      - references-term: "<mm30 concept identifier, as claim referents resolve it>"
+```
+
+`cancer`, today: the `multiple-myeloma` clauses copied, since it is the only
+cancer-type project; as other cancer types are recreated, their clauses are
+added, and when a disease vocabulary is bound, one clause per neoplasm term:
+
+```yaml
+version: science.view-query.v1
+clauses:
+  - all: [{closure: {anchor: "dataset:gse179929", predicates: [observes, targets, executes, assesses, verifies], direction: both}}]
+  # … the remaining multiple-myeloma clauses, verbatim …
+  # later, when MONDO or EFO is bound:
+  - all: [{references-term: "MONDO:0004992"}]   # cancer
+```
+
+`health`, today: the closure clauses of every dataset a health-level
+question anchors on, which for the first question (§9) are the myeloma
+datasets again, plus the dataset the question itself introduces; later,
+one clause per disease and process term. Written as `kinds` over every
+world kind it would select the whole world, which is legitimate for the
+widest project but says nothing, so the coarse form anchors on datasets:
+
+```yaml
+version: science.view-query.v1
+clauses:
+  - all: [{closure: {anchor: "dataset:gse179929", predicates: [observes, targets, executes, assesses, verifies], direction: both}}]
+  - all: [{closure: {anchor: "dataset:<the health question's own dataset>", predicates: [observes, targets, executes, assesses, verifies], direction: both}}]
+```
 
 Containment is then a fact about the queries: `multiple-myeloma`'s
-selection is inside `cancer`'s because `cancer`'s clauses include it, and
-both are inside `health`'s when `health`'s predicates are wider. Nothing
+selection is inside `cancer`'s because `cancer`'s clauses include it
+verbatim, and both are inside `health`'s when `health`'s clauses are a
+superset. Nothing
 declares a parent, no record carries a level, and a project whose query
 happens to sit inside another's is not subordinate to it in any way the
 kernel knows. A `theme` view may name the containment for people —
@@ -394,25 +518,57 @@ anticipation is the one nobody can remove.
 
 ## 8. Export levels
 
-### 8.1 A level is a view
+### 8.1 A level is a closure-complete view
 
 Sharing a project is `publish(view, destination)` (layer §6.1). The
 different "levels" a person wants — a findings summary for a collaborator,
-a reproducible package for a repository, an archival deposit — are three
-views over the same project's world facts, and a project keeps as many as it
-needs. Three are named here as the conventional set; a project may define
-others.
+a package someone can rebuild on — are views over the same project's world
+facts, and a project keeps as many as it needs.
 
-| level | selects | closure pulls in | for |
-|---|---|---|---|
-| findings | `assessment`, `verification`, `composite`, and the `proposition`s they name | `analysis-spec`, `run`, `dataset` records, by the closure rule | a collaborator, a GitHub repository |
-| reproducible | findings plus every `run`, `analysis-spec`, `source` and `dataset` a selected proposition's closure reaches | nothing further | a repository someone will build on |
-| archival | reproducible plus the coordination trail: `question`s, `hypothesis`es, `decision`s addressed to the project | nothing further | a Zenodo deposit, a commons world |
+**Publish does not expand a selection; it refuses one.** A selected record
+whose closure names an unselected one makes the act
+`Refused(closure-incomplete)` with the missing identities listed, and "the
+user widens the view or drops the record" (layer §6.1). So a level is not
+"the interesting records, and the act fetches the rest"; it is a selection
+that is already closed under derivation, and the person writes it that way.
+In v1 that means anchoring: an admitted assessment's closure is reached by
+a `closure` clause from that assessment outward over the derivation
+relations, one clause per assessment, or by enumerating the closure's
+addresses. The dry run is the tool for getting there: it reports the
+selection and the missing identities, and the person widens the view by a
+revision until the dry run is clean. This design proposes no automatic
+expansion; if the milestone shows that enumerating anchors is the real
+cost of publishing, the evidence goes to `beliefs` as a request for a
+closure-of-selection predicate, which is a query-language change and
+outside this document's scope.
 
-The closure rule (`Refused(closure-incomplete)`) is what makes "findings
-only" honest: a person cannot publish an assessment without the dataset
-record it was computed over, so the findings level always names its data.
-What it does not do is carry the data's bytes, which is the next point.
+Two levels are named, differing in records; a third differs only in
+destination (§8.2):
+
+| level | selection, closure-complete by construction | for |
+|---|---|---|
+| findings | one `closure` clause per admitted `assessment`, direction `out`, over the derivation relations: reaches its `run`, `analysis-spec`, `dataset` records and the `proposition` it names; plus the `composite`s whose members are all selected | a collaborator, a GitHub repository |
+| reproducible | findings, plus what an assessment's outward closure does not reach: the `verification`s that name it (inward), the replay `run`s their closures name, and the `source` records the selected propositions cite | a repository someone will build on |
+
+The record-level difference between the two is therefore exactly the
+verifications, the replay runs and the sources. Everything else that a
+person might think of as "the data" is already in findings, because the
+closure rule puts it there; what findings omits is the evidence that the
+assessment was independently reproduced and the literature it rests on.
+
+**The coordination trail is not publishable by a view, and is deferred.**
+A view selects world records only: the query language's `kinds` are world
+kinds, an address must be world-tier, and coordination records never enter
+the world index (coordination §6.2; `view_query.py`). So a project's
+`question`s, `hypothesis`es and `decision`s cannot be selected into a
+publication by any query, and no "archival" view can carry them. Publishing
+the trail needs a publish-contract amendment — a `publication` that carries
+the coordination records addressed to the published project alongside the
+selection — which is sub-project 5's or a successor's design work. This
+document names it and does not request it; the first publications carry
+world facts, and the trail stays in the source world.
+
+What no level does is carry the data's bytes, which is the next point.
 
 ### 8.2 Payload transport is the destination's
 
@@ -427,7 +583,8 @@ destination kind:
   records' locators are how a recipient acquires the bytes;
 - a **Zenodo deposit** carries records and the holdings of every selected
   dataset, because a deposit that named data it did not contain would not
-  be an archive;
+  be an archive — this is the "archival" level: the reproducible selection
+  at a destination that carries payload;
 - a **commons inbox** carries records, and the commons world's own holdings
   policy decides what it fetches.
 
@@ -463,24 +620,46 @@ commit, which the recipient fetches as they fetch a dataset's locator.
 ### 9.2 The second-project milestone
 
 After the belief path measurement (belief path §8) and beside the
-coordination command set's implementation, one milestone with these
-criteria, all observable:
+coordination command set's implementation, one milestone. It depends on:
+
+- the multi-corpus session of §3.1 (a `beliefs` change: one write root, N
+  mounted read corpora, coordination resolution over all of them);
+- the coordination command set's `project`, `question` and same-query mint;
+- the mm30 corpus relocated to the user's world root;
+- for criterion 5 only, the publish act (sub-project 5, `beliefs-1a5157`).
+
+Its criteria, all observable:
 
 1. One world root at the user's data location holding the reproduced mm30
-   corpus (relocated per §3.1) and one fresh working corpus.
+   corpus (relocated per §3.1) and one fresh working corpus, opened as one
+   session that writes to the working corpus and reads both.
 2. Three `project` records — `health`, `cancer`, `multiple-myeloma` — minted
-   in the working corpus, with at least one mm30 proposition selected by two
-   of them at the same epoch.
+   in the working corpus with the queries of §6.2, with at least one mm30
+   proposition selected by all three at the same epoch.
 3. One `question` minted under `health` whose evidence path reaches mm30
    facts, and a same-query view of it minted under `cancer` through the
-   command of §7.
-4. `next` rendering a different ranking under each of the three projects
-   and under no project.
-5. A `publish` dry run of `multiple-myeloma` at the findings level reporting
-   its selection and closure without refusal, or refusing
-   `closure-incomplete` with the missing identities listed.
+   command of §7. The question introduces one new `proposition` and one
+   `analysis-spec` targeting it whose dataset is declared and not yet held,
+   so that the world holds a fact `health` selects and `multiple-myeloma`
+   does not.
+4. `next` under each of the three projects and under no project renders
+   exactly the propositions its selection contains, in the fixed rule's
+   class order. Equal rankings are legitimate where selections coincide:
+   `cancer` and `multiple-myeloma` are expected to rank identically today,
+   since `cancer`'s clauses are `multiple-myeloma`'s verbatim; `health` and
+   the whole world are expected to add the new proposition in class **not
+   ready**; and the record states each expected set before the run.
+5. When sub-project 5 has landed: a `publish` dry run of `multiple-myeloma`
+   at the findings level reporting its selection and closure without
+   refusal, or refusing `closure-incomplete` with the missing identities
+   listed. Until then the criterion is the findings view's selection
+   evaluated by the read side and compared against the closure computed
+   from the assessment's stored projection, and the dry run is an addendum
+   to the record when the act exists.
 6. A session opened from inside the mm30 workspace directory and from an
    unrelated directory reading identically.
+7. A `project select` made through the service, followed by a CLI `next`
+   in a new process, observing the selection (§5.1a).
 
 The milestone leaves a record in `docs/plans/`, in the reproduction record's
 discipline: predictions before, findings classified after, and every
@@ -504,16 +683,18 @@ Each can fail, and each names its check.
 | # | guarantee | check |
 |---|---|---|
 | P1 | No configuration is discovered from the working directory | a launcher test opens a session from a directory containing a predecessor `science.yaml`, a workspace `science.toml` and a stray `corpus.yaml`, and asserts the world, corpus roots and selection equal the explicit configuration's |
-| P2 | Minting a view or coordination kind without a current project refuses `no-current-project`; minting a world kind does not | dispatcher tests, both arms, under a session with no selection |
+| P2 | Minting a subordinate view or coordination kind without a current project refuses `no-current-project`; minting a `project` and minting a world kind do not | dispatcher tests, three arms, under a session with no selection; the `project` arm is the fresh-world genesis path |
 | P3 | The current project is in the session ledger at open and at every change, and an act's ledger entry is attributable to the selection standing when it ran | a ledger test that switches project mid-session and reads the trajectory back |
+| P8 | A read in a new process resolves the live session's selection; an explicit `--project` on a read binds that invocation only | a CLI test: `project select` over the service, then `next` in a fresh process observes it; then `next --project <other>` observes the other and the session's selection is unchanged afterwards |
 | P4 | A same-query mint produces a record under the current project with the source's query, and the source is unchanged | coordination command test; the source's tip is asserted unchanged |
 | P5 | The unselected session reads the whole world | `next` and `belief` under no selection equal their results under a project whose query is the union of every kind |
 | P6 | A workspace file is never read as a record | a run whose spec exists only as a workspace preregistration file refuses at `run` because no `analysis-spec` record resolves, under whatever refusal the belief path's `run` already gives an unresolvable spec; nothing in `science` opens `freezes/` |
 | P7 | The second-project milestone's six criteria (§9.2) | the milestone record |
 
-P1, P2, P4 and P5 are the coordination command set's tests to carry. P3's
-ledger shape is `beliefs`'. P6 is the belief path's existing behaviour,
-restated here because it is what decision 4 rests on. P7 is a measurement.
+P1, P2, P4, P5 and P8 are the coordination command set's tests to carry.
+P3's ledger shape is `beliefs`'. P6 is the belief path's existing
+behaviour, restated here because it is what decision 4 rests on. P7 is a
+measurement.
 
 ## 11. What this changes elsewhere
 
@@ -539,8 +720,16 @@ restated here because it is what decision 4 rests on. P7 is a measurement.
 - **The mm30 corpus** relocates from the `beliefs` working tree to the
   user's world root (§3.1), a `beliefs` operator task, before the
   milestone.
+- **The attended session** (`beliefs` `session/__init__.py`) gains a write
+  root distinct from its read set, mounts every read root in the
+  coordination resolver, and reads each mounted corpus under its own
+  manifest's pins (§3.1). A `beliefs` task, prerequisite to the milestone.
+  `SCIENCE_CONFIG` gains `write_root` beside `corpus_roots` when it lands.
 - **The publish design** (`beliefs-1a5157`) takes §8.2 as a requirement on
-  destination kinds: each states whether it carries holdings.
+  destination kinds: each states whether it carries holdings. It also
+  records §8.1's deferral: the coordination trail is not selectable by a
+  view, and carrying it needs a publish-contract amendment that is not
+  requested here.
 - **The predecessor tree** is unchanged. Its retirement design already says
   each project is recreated "when its turn comes"; §9 says how the turn is
   taken.
