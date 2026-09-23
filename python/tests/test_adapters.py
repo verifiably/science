@@ -164,3 +164,21 @@ def test_missing_prompt_refusal_preserves_existing_output(tmp_path):
         build_adapter(declarations, commands, REPO_ROOT / "skills", out)
 
     assert sentinel.read_text() == "keep"
+
+
+def test_preamble_states_the_selected_project_rule(tmp_path):
+    """Design 2026-09-23 §11: sub-project 1 landed, so the preamble no longer
+    says no view exists. It states §5's rule and that selection is not yet
+    possible."""
+    from science.adapters import build_adapter
+
+    build_adapter(production_tree(), COMMANDS_ROOT, REPO_ROOT / "skills", tmp_path)
+    skill = (tmp_path / "skills" / "status" / "SKILL.md").read_text()
+    # The adapter preserves the preamble's line breaks; the prose assertions
+    # are about sentences, so compare with whitespace normalized. The
+    # byte-for-byte check stays in test_generated_tree_matches_committed.
+    prose = " ".join(skill.split())
+    assert "Until the coordination layer lands there is no current view" not in prose
+    assert "read through the selected project's query when one is selected" in prose
+    assert "no project can be selected yet" in prose
+    assert "A question or task needs a selected project; a fact does not." in prose

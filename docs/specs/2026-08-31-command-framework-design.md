@@ -598,6 +598,14 @@ refusals verbatim and never write around them; results are budgeted, and the
 cursor is how you continue; a command's inputs are the whole interface —
 there is nothing to reach around.
 
+> **Amended 2026-09-23** (`docs/specs/2026-09-23-projects-corpora-and-workspaces-design.md`
+> §5, §11). Sub-project 1 landed at cut 14, so the exception above is
+> retired. The preamble now states the rule: the world is read through the
+> selected project's query when one is selected and whole when none is; a
+> question or task needs a selected project, a fact does not. Selection
+> itself arrives with the coordination command set (`sci-c5528e`), and until
+> then the preamble says no project can be selected yet.
+
 ## 9. Surfaces
 
 ### 9.1 Configuration
@@ -823,6 +831,10 @@ falsifies it, the test that catches the mutation:
    dispatcher's context carries the world and a not-yet-populated current
    view; the view query language and selection are sub-project 1's, and no
    command in this sub-project takes a project or view input.
+   *Amended 2026-09-23:* the selection rule is the projects design's §5 —
+   a session fact, never derived from the working directory, whole-world
+   when unselected — and the slot is populated by the coordination command
+   set (`sci-c5528e`).
 3. **No suppression surface (§4.3).** The schema has no deny-list, ignore
    or severity field; a finding a command surfaces is rendered, and the
    renderer has no channel for hiding one.
