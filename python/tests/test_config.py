@@ -130,3 +130,52 @@ def test_resolution_order(tmp_path):
     with pytest.raises(Refused) as caught:
         resolve_config_path(None, {})
     assert caught.value.refusal.code == "invalid-input"
+
+
+def test_nothing_is_discovered_from_the_working_directory(tmp_path, monkeypatch):
+    """Design 2026-09-23 §5.2, guarantee P1: the launcher takes the world from
+    --config or SCIENCE_CONFIG only. A predecessor manifest, a workspace
+    config and a stray corpus manifest in cwd change nothing."""
+    explicit_dir = tmp_path / "explicit"
+    explicit_dir.mkdir()
+    cfg = write_config(explicit_dir)
+
+    workdir = tmp_path / "workdir"
+    workdir.mkdir()
+    decoy_corpus = tmp_path / "decoy-corpus"
+    decoy_corpus.mkdir()
+    (workdir / "science.yaml").write_text(
+        f"name: decoy\nid: decoy\nlayout_version: 3\npeers:\n- id: other\n  path: {decoy_corpus}\n"
+    )
+    (workdir / "science.toml").write_text(
+        f'world_root = "{tmp_path / "decoy-world"}"\nworld_id = "{"cafebabe" * 4}"\n'
+        f'corpus_roots = ["{decoy_corpus}"]\noperations_root = "{tmp_path / "decoy-ops"}"\ndomains = []\n'
+    )
+    (workdir / "corpus.yaml").write_text("manifest_version: 2\ncorpus_id: " + "0" * 32 + "\n")
+    monkeypatch.chdir(workdir)
+
+    # --config wins and names exactly the explicit world.
+    loaded = load_config(resolve_config_path(str(cfg), {}))
+    assert loaded.world.world_root == explicit_dir / "world"
+    assert loaded.world.corpus_roots == (explicit_dir / "corpora" / "one",)
+    assert decoy_corpus not in loaded.world.corpus_roots
+
+    # SCIENCE_CONFIG wins the same way.
+    loaded = load_config(resolve_config_path(None, {"SCIENCE_CONFIG": str(cfg)}))
+    assert loaded.world.corpus_roots == (explicit_dir / "corpora" / "one",)
+
+    # With neither, cwd's files do not rescue the launcher: it refuses.
+    with pytest.raises(Refused) as caught:
+        resolve_config_path(None, {})
+    assert caught.value.refusal.code == "invalid-input"
+
+
+def test_relative_science_config_resolves_against_cwd_and_is_not_discovery(tmp_path, monkeypatch):
+    """A relative SCIENCE_CONFIG is a path the person gave, resolved where the
+    process runs; that is ordinary path resolution, not discovery, and it is
+    named here so a wrong-world refusal is not read as one."""
+    cfg = write_config(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    assert resolve_config_path(None, {"SCIENCE_CONFIG": "science.toml"}) == Path("science.toml")
+    loaded = load_config(resolve_config_path(None, {"SCIENCE_CONFIG": "science.toml"}))
+    assert loaded.world.corpus_roots == (tmp_path / "corpora" / "one",)
