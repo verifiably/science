@@ -116,6 +116,7 @@ record or a refusal; nothing writes around a refusal (layer §5.2).
 | 1 | `dataset` (the concept vocabulary) | `mints:dataset,holdings-observation` | store write and observation under the holdings boundary; `add` of the dataset record under its content address | the bytes in the store, one `holdings-observation` (`Found`), one `dataset` record — the list the contract's `concept` sort binds, so §5.3's snapshot resolves from here |
 | 2 | `claim` | `mints:proposition` | `build_claim` under the profile, then `decode_claim` against the snapshot; `add` | one `proposition` record carrying the claim projection and a display statement |
 | 3 | `dataset` (the expression matrix) | `mints:dataset,holdings-observation` | as step 1 | as step 1 |
+| 3a–3c | `dataset` (the stage-level, measure and identification lists) | `mints:dataset,holdings-observation` | as step 1, once per list | as step 1, once per list — the vocabularies the contract's estimand sorts bind by dataset identity, so §4.3's typed estimand resolves from here |
 | 4 | `spec` | `mints:analysis-spec` | `freeze` against the kernel's reference rules; `add` | one `analysis-spec` record; the spec identity is fixed from here |
 | 5 | `run` | `mints:run,act-report` routed `run` | `execute_assessment_run` under `CONFINED_POLICY` through the scoped writer's run route | one `run` record, its two launch attestations, the settled intent on the registration chain |
 | 6 | `assess` | `mints:assessment` | `build_assessment` through the spec's interpretation rule; `add` | one `assessment` record |
@@ -128,7 +129,12 @@ resolves its referents against the snapshot §5.3 builds from the held list,
 and refuses when the list is not held (§4.1). The contract document names
 the list's content address before adoption, so the operator computes that
 address from the file before the corpus exists. The record's step 1b did the
-same, and its 2026-09-08 re-run is where slot 0 first resolved `member`.
+same, and its 2026-09-08 re-run is where slot 0 first resolved `member`. The estimand vocabularies follow
+the same rule (amended 2026-09-23): each list the contract binds by dataset
+identity is held by its own `dataset` invocation before `spec`, because a
+file prepared on disk is not held until `dataset` writes it to the store
+and records the observation, and `spec` refuses an unheld dataset-bound
+vocabulary (§4.3).
 
 ## 4. The commands
 
@@ -396,11 +402,30 @@ qualifiers, snapshot=)`, where each `applicability` entry
 dimension's restriction_sort>, term))` and the kernel checks the quantifier
 against the claim grammar. A contrast input given for the other contrast
 kind, or one missing for its own, refuses: nothing is defaulted. A
-decimal that does not parse refuses. The kernel's `ESTIMAND_ERRORS` and
-`ProfileError` are `invalid-input` with its message; `not-member` under a
-dataset-bound sort refuses as `claim`'s does, and `not-consulted` under a
-namespace binding stands (§4.1's policy). `method`, `assumptions` and
-`falsification` stay prose; the kernel does not type them.
+decimal that does not parse refuses.
+
+Every authoring error the kernel raises on this path is `invalid-input`
+with its message, and is caught before the first act: `ESTIMAND_ERRORS`
+(`EstimandError`, `UnboundReferent`) from `build_estimand`; `ClaimError`
+from `build_applicability`, which runs the claim grammar's qualifier checks
+and raises its subclasses (`UnknownQuantifier`, `UndeclaredDimension` and
+the rest); `DecodeError` and `ClaimError` from `claim_from_stored`; and
+`ProfileError` from `profile.estimand`. The dispatcher closes a `Refused`
+raised before any act (§6.3) but not a kernel authoring exception, which
+would escape it and leave the invocation open, so a retry under the same
+`invocation_id` would read `outcome-unknown`; mapping the full set is what
+keeps a malformed spec a replayable refusal.
+
+The kernel refuses only `not-member`; it accepts `not-consulted` and
+`not-available`, so the surface enforces §5.2's rule itself, as `claim`
+does (§4.1). Before the first act the handler reads both receipts — the
+estimand's and the applicability's — and, for every referent whose sort is
+bound by dataset identity, refuses `invalid-input` when its outcome is
+`not-consulted` or `not-available`, naming the sort and the unheld
+vocabulary's `dataset:<address>` and saying to hold it with `dataset`. A
+referent under a namespace binding resolving `not-consulted` stands
+(§4.1's policy). `method`, `assumptions` and `falsification` stay prose;
+the kernel does not type them.
 
 The handler resolves the dataset ref to its address, builds the `SpecDraft`
 with one `SpecInput(role="observes", dataset=<address>)` and
@@ -803,8 +828,11 @@ Framework §11's harness shape, per command: the assertion, the source
 mutation that falsifies it, the test that catches the mutation. Fixture
 worlds are the existing helpers grown as needed: a corpus-local test
 contract with one dataset-bound sort, one namespace-and-release-bound
-sort and a two-row plan, a held one-line dataset, a fixture bundle whose
-Snakefile writes a fixed outcome.
+sort and a two-row plan, and an `estimands:` row for the plan's first
+operator whose level sort is bound by dataset identity and whose measure,
+identification and conditioning sorts are bound by namespace (amended
+2026-09-23), a held one-line dataset, a fixture bundle whose Snakefile
+writes a fixed outcome.
 
 - **The dispatcher amendment of §6.3**, first: the two tests it names,
   against the synthetic exemplars, before any command handler exists to
@@ -830,7 +858,17 @@ Snakefile writes a fixed outcome.
   earlier observation superseded.
 - **`spec`** freezes against the reference rules and the record's id is
   the spec identity; an unknown rule identity refuses; a stochastic-unseeded
-  draft under a bitwise equivalence rule refuses at freeze.
+  draft under a bitwise equivalence rule refuses at freeze. The typed
+  estimand (amended 2026-09-23): with the level vocabulary not held, `spec`
+  refuses `invalid-input` naming the level sort's `dataset:<address>` and
+  mints nothing (the mutation that drops the receipt check makes the spec
+  mint); the namespace-bound measure resolves `not-consulted` and the spec
+  mints. A contrast input given for the other kind, or missing for its
+  own, refuses. An applicability entry with an unknown quantifier and one
+  naming an undeclared dimension each refuse `invalid-input`, and the
+  same `invocation_id` replayed returns the identical refusal, not
+  `outcome-unknown` (the mutation that narrows the catch to
+  `ESTIMAND_ERRORS` fails the replay).
 - **`run`** refuses on a host without bubblewrap before any act (mocked
   `host_prerequisites`); on a capable host it mints one run under
   `CONFINED_POLICY`. The confined case is marked to run only where the
