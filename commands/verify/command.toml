@@ -1,0 +1,31 @@
+schema_version = 1
+name = "verify"
+purpose = "Replay an assessment's run, derive scope and verdict, and mint the verification."
+write_class = "mints:run,act-report,verification"
+output_budget = 4096
+
+[write.routes]
+run = "run"
+act-report = "run"
+# verification's one route is derived
+
+[inputs.assessment]
+type = "string"
+required = true
+doc = "The assessment ref."
+[inputs.code]
+type = "string"
+required = true
+doc = "The bundle root, as given to run; its identity must match the original's."
+[inputs.entrypoint]
+type = "string"
+required = true
+doc = "The workflow entrypoint, as given to run."
+[inputs.cores]
+type = "int"
+required = false
+default = 1
+doc = "Cores the replay may use."
+
+[reads]
+families = ["corpus-stored", "holdings"]

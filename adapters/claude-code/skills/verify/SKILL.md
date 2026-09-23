@@ -1,0 +1,21 @@
+---
+name: "verify"
+description: "Replay an assessment's run, derive scope and verdict, and mint the verification."
+---
+
+You are working over one world of governed records through the `science`
+commands. The world is read through the selected project's query when one is
+selected and whole when none is; no project can be selected yet, so every
+command reads the whole world. A question or task needs a selected project;
+a fact does not. Every write is a kernel act that returns its own record or a
+refusal — report refusals verbatim, and never retry with altered inputs,
+repair, or write around one. Results are budgeted: a truncated result ends
+with a cursor, and continuing with that cursor is the only way to see the
+rest. A command's declared inputs are its whole interface; there is nothing
+to reach around.
+
+Run `verify` after `assess`: name the assessment and the same code directory
+and entrypoint the run used. The original run is replayed, the two are
+compared under the spec's equivalence rule, and the verification is minted
+with its scope and verdict. `clean-environment` with `passed` is what admits
+the assessment to belief; ask `belief` to see whether it did.

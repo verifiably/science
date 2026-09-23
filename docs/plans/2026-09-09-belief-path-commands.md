@@ -2572,7 +2572,7 @@ Task 7 because it imports `science.commands.run.{prepare, now, POLICY}` directly
 - Consumes: `science.commands.run.{prepare, now, POLICY}`; `beliefs.session.KernelRefusalValue`; `beliefs.replay.{replay, derive_scope}`; `beliefs.verify.{build_verification, AssessmentVerification, publication_node}`; `beliefs.rules.REFERENCE_RULES`; `ctx.pins()`, `ctx.epoch_identity()`.
 - Produces: `verification:<identity>` records naming the assessment; `handle(ctx, writer, *, assessment, code, entrypoint, cores=None)`.
 
-- [ ] **Step 1: Declaration and prompt** — spec §4.6; prompt:
+- [x] **Step 1: Declaration and prompt** — spec §4.6; prompt:
 
 ```markdown
 Run `verify` after `assess`: name the assessment and the same code directory
@@ -2582,14 +2582,14 @@ with its scope and verdict. `clean-environment` with `passed` is what admits
 the assessment to belief; ask `belief` to see whether it did.
 ```
 
-- [ ] **Step 2: Failing tests**
+- [x] **Step 2: Failing tests**
 
 ```python
 # python/tests/test_cmd_verify.py
 import pytest
 
 from science.refusal import Refused
-from helpers.world import SPEC_FIELDS, build_belief_world, fixture_bundle, hold_fixture_dataset, mint_fixture_run, open_rig
+from helpers.world import OBSERVED, SPEC_FIELDS, build_belief_world, fixture_bundle, hold_fixture_dataset, mint_fixture_run, open_rig
 
 
 @pytest.fixture
@@ -2600,7 +2600,7 @@ def rig(certified_work, monkeypatch):
     if host_prerequisites() is not None:
         monkeypatch.setattr(run_module, "POLICY", MINIMAL_POLICY)
     cfg = build_belief_world(certified_work)
-    ref = hold_fixture_dataset(cfg, "data.txt", b"x\n", "expression")
+    ref = hold_fixture_dataset(cfg, "data.txt", b"x\n", "expression", **OBSERVED)
     bundle = fixture_bundle(certified_work, "supported")
     with open_rig(cfg, ("spec", "assess", "verify")) as (d, ctx):
         spec_ref = next(t for t in d.invoke("spec", dict(SPEC_FIELDS, target="proposition:p1", dataset=ref)).text.split()
@@ -2645,9 +2645,9 @@ def test_a_disagreeing_replay_yields_failed_and_still_mints(rig, certified_work)
 
 The third test encodes what the boundary does today (`expected_recipe_identity` mismatch refuses). If the kernel instead executes and the rule answers `failed`, change the assertion to look for `"verdict"] == "failed"`; either way the test pins one behavior and the docstring says which.
 
-- [ ] **Step 3: Run to verify they fail** — `just test-fast`.
+- [x] **Step 3: Run to verify they fail** — `just test-fast`.
 
-- [ ] **Step 4: Handler**
+- [x] **Step 4: Handler**
 
 ```python
 # python/src/science/commands/verify.py
@@ -2660,11 +2660,13 @@ from beliefs.errors import MalformedRecord
 from beliefs.replay import derive_scope, replay
 from beliefs.rules import REFERENCE_RULES
 from beliefs.runrecord import decode_run_closure
+from beliefs.runrecord import run_ref as run_ref_of
 from beliefs.verify import AssessmentVerification, build_verification, publication_node
 
 from beliefs.session import KernelRefusalValue
 
-from science.commands.run import POLICY, now, prepare
+from science.closure import NO_EPOCH_VERIFICATION
+from science.commands.run import now, prepare
 from science.refusal import Refusal, Refused
 from science.report import Report, record_block
 
@@ -2703,12 +2705,16 @@ def handle(ctx, writer, *, assessment, code, entrypoint, cores=None) -> Report:
     if isinstance(outcome, RunRefused):
         raise KernelRefusalValue(outcome)  # the kernel path, as in run
     assert isinstance(outcome, RunMinted)
-    replayed = outcome.run
+    # Both runs in their stored form, as the audit re-derives the verdict: an
+    # in-memory result keeps the workflow's target order while the stored one is
+    # sorted, and the equivalence rule compares them as tuples (beliefs-97075f).
+    _, view = ctx.single_view()
+    replayed = decode_run_closure(view.get(run_ref_of(outcome.run.address())))
     derive_scope(original, replayed, certification=None)
     verification = build_verification(original, replayed, specs={spec.identity: spec},
                                       held_rules={equivalence.identity: equivalence},
                                       contract_identity=ctx.pins().science_contract,
-                                      epoch=ctx.epoch_identity())
+                                      epoch=ctx.epoch_identity(absent=NO_EPOCH_VERIFICATION))
     if not isinstance(verification, AssessmentVerification):
         raise RuntimeError(f"build_verification over an assessment run returned {type(verification).__name__}")
     node = writer.add(publication_node(verification, assessment_ref=assessment))
@@ -2720,11 +2726,11 @@ def _address(node) -> str | None:
     return dataset_address(stored.dataset_declaration(node))
 ```
 
-The replay is the first act, and `prepare` validates everything before it. `epoch` for `build_verification` takes `"none-published"` in the driver; `ctx.epoch_identity()` returns `"no-epoch-published"` — check which literal the kernel expects (`grep -n "none-published\|no-epoch-published" ~/d/beliefs/python/src/beliefs/*.py`) and use one constant for both call sites, defined in `science/closure.py`.
+The replay is the first act, and `prepare` validates everything before it. Pinned 2026-09-23: the kernel defines no epoch literal; its driver spells a verification's absent epoch `none-published` and the evaluator's producer snapshot `no-epoch-published`, and admission compares neither with the other, so `science/closure.py` holds both (`NO_EPOCH_VERIFICATION`, `NO_EPOCH_SNAPSHOT`) and `ReadContext.epoch_identity(absent=…)` lets each caller name its field. `replay` takes no boundary policy (it replays under the original's), so `POLICY` is not imported. The declaration adds `schema_version = 1` and a `doc` on `entrypoint` and `cores`.
 
-- [ ] **Step 5: Run, regenerate, run** — `just test-fast`; `cd python && uv run science adapters build`; `just test`.
+- [x] **Step 5: Run, regenerate, run** — `just test-fast`; `cd python && uv run science adapters build`; `just test`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 tasks done sci-5fe8fc "verify command: replay through the operation port, verification against the assessment"

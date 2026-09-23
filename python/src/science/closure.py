@@ -10,6 +10,13 @@ from beliefs.policy import BELIEF_V1, BELIEF_V1_FIXTURES, BELIEF_V1_RULE, Policy
 from beliefs.profile import ProfileSpec
 from beliefs.resolution import ResolutionSnapshot
 
+# What stands for an epoch when none is published. Two fields, two literals,
+# as the kernel's reproduction driver spells them: the evaluator's producer
+# snapshot identity, and a verification record's epoch. Admission compares
+# neither with the other.
+NO_EPOCH_SNAPSHOT = "no-epoch-published"
+NO_EPOCH_VERIFICATION = "none-published"
+
 BINDING = PolicyBinding(rule=BELIEF_V1_RULE, implementation=BELIEF_V1.identity)
 
 

@@ -184,13 +184,18 @@ class ReadContext:
         (root,) = self.config.world.corpus_roots
         return load_manifest(root).profile
 
-    def epoch_identity(self) -> str:
+    def epoch_identity(self, *, absent: str | None = None) -> str:
+        """The current epoch's packaging identity, or `absent` when none is
+        published — the evaluator's snapshot literal unless a caller names the
+        field it fills (a verification's epoch is spelled differently)."""
         from beliefs.errors import EpochUnknown
         from beliefs.world.read import current_epoch
+
+        from science.closure import NO_EPOCH_SNAPSHOT
         try:
             return current_epoch(self.world).packaging_identity
         except EpochUnknown:
-            return "no-epoch-published"
+            return NO_EPOCH_SNAPSHOT if absent is None else absent
 
     def _context(self, view, corpus_id, observations):
         from science.closure import supplied_context
