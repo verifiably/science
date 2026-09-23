@@ -16,7 +16,7 @@ def test_snapshot_resolves_the_held_concept_vocabulary(certified_work):
     cfg = build_belief_world(certified_work)
     ctx = ReadContext.open(cfg)
     snapshot = ctx.snapshot()
-    (binding,) = [s.vocabulary for s in cfg.profile.sorts.values() if s.vocabulary.dataset_identity]
+    binding = cfg.profile.sorts["testing/concept"].vocabulary
     assert snapshot.resolve(binding, "concept:disease-stage") is TermOutcome.MEMBER
     assert snapshot.resolve(binding, "concept:absent") is TermOutcome.NOT_MEMBER
 
@@ -26,7 +26,7 @@ def test_snapshot_omits_a_vocabulary_that_is_not_held(certified_work):
     from helpers.world import build_fixture_world_with_contract
     cfg = build_fixture_world_with_contract(certified_work, hold_concepts=False)
     snapshot = ReadContext.open(cfg).snapshot()
-    (binding,) = [s.vocabulary for s in cfg.profile.sorts.values() if s.vocabulary.dataset_identity]
+    binding = cfg.profile.sorts["testing/concept"].vocabulary
     assert snapshot.resolve(binding, "concept:disease-stage") is TermOutcome.NOT_AVAILABLE
 
 

@@ -1786,7 +1786,7 @@ git commit -m "feat(commands): claim types a proposition under the contract plan
 - Consumes: `beliefs.rules.REFERENCE_RULES`; `beliefs.spec.{SpecDraft, SpecInput, Deterministic, freeze, MalformedSpec, UnfreezableSpec}`; `beliefs.decode.claim_from_stored`; `beliefs.estimand.{ESTIMAND_ERRORS, LevelsContrast, ContinuousContrast, Measure, Control, build_estimand, build_applicability}`; `beliefs.claim.{Qualifier, Referent}`; `beliefs.resolution.{ReferentPosition, TermOutcome}`; `beliefs.errors.{ClaimError, DecodeError, ProfileError, MalformedRecord}`; `ProfileSpec.estimand(operator)`, `ProfileSpec.dimensions`; `ctx.snapshot()`; `science.vocabulary.dataset_bound_sorts`.
 - Produces: `analysis-spec:<identity>` records; `handle(ctx, writer, *, target, dataset, contrast, slot, measure, scale, reference, identification, method, assumptions, falsification, interpretation_rule, equivalence_rule, baseline=None, comparison=None, quantity=None, increment=None, conditioning=None, applicability=None, parameters=None, supersedes=None)`; helper `science.commands.spec.parse_parameters(list[str]) -> dict[str, Decimal]`; in helpers, `LEVELS`, `level_list_address()`, `build_fixture_world_with_contract(work, *, hold_concepts=True, hold_levels=True)`, and the typed `SPEC_FIELDS` every later spec invocation reuses.
 
-- [ ] **Step 1: Declaration and prompt** — `commands/spec/command.toml` is the design's §4.3 declaration as amended (typed estimand inputs: `contrast` enum, `slot` int, `baseline`/`comparison`/`quantity`/`increment` optional, `measure`, `scale` enum, `reference`, `identification`, `conditioning` list, `applicability` list; prose `method`/`assumptions`/`falsification`; the two rule identities; `parameters`; `supersedes`), with `schema_version = 1` and a `doc` on every input; budget 4096; `families = ["corpus-stored", "holdings"]` — `holdings` because the typed estimand resolves against the §5.3 snapshot, as `claim`'s does. Prompt:
+- [x] **Step 1: Declaration and prompt** — `commands/spec/command.toml` is the design's §4.3 declaration as amended (typed estimand inputs: `contrast` enum, `slot` int, `baseline`/`comparison`/`quantity`/`increment` optional, `measure`, `scale` enum, `reference`, `identification`, `conditioning` list, `applicability` list; prose `method`/`assumptions`/`falsification`; the two rule identities; `parameters`; `supersedes`), with `schema_version = 1` and a `doc` on every input; budget 4096; `families = ["corpus-stored", "holdings"]` — `holdings` because the typed estimand resolves against the §5.3 snapshot, as `claim`'s does. Prompt:
 
 ```markdown
 Run `spec` to freeze the analysis that will assess a proposition. Give the
@@ -1804,7 +1804,7 @@ a scale. The frozen spec's identity is what `run` executes and `verify`
 compares under; it cannot be edited, only superseded.
 ```
 
-- [ ] **Step 2: Grow the helpers** (`python/tests/helpers/world.py`)
+- [x] **Step 2: Grow the helpers** (`python/tests/helpers/world.py`)
 
 The test contract gains a dataset-bound `level` sort, namespace-bound `measure`, `identification` and `cohort` sorts, one dimension `scope` on the first operator, and the `estimands:` row for that operator (design §7 as amended):
 
@@ -1820,6 +1820,8 @@ The test contract gains a dataset-bound `level` sort, namespace-bound `measure`,
   dimensions:
     scope:
       restriction_sort: cohort
+    setting:
+      restriction_sort: cohort   # declared, permitted on no operator: the kernel's UndeclaredDimension
   operators:
     affects-concept-protein:
       ...
@@ -1856,9 +1858,9 @@ SPEC_FIELDS = {"contrast": "levels", "slot": 0, "baseline": "level:early", "comp
                "equivalence_rule": "beliefs/content-identity-equality/v1"}
 ```
 
-Run `just test` after this step alone: the claim, context and dataset tests must stay green under the grown contract (the added dimension and estimand row change no claim identity the tests assert).
+Run `just test` after this step alone, with the new declaration and test file set aside (a declaration without its handler breaks the production tree): the claim, context and dataset tests must stay green under the grown contract (the added dimension and estimand row change no claim identity the tests assert). The two context tests that unpacked "the one dataset-bound sort" select `testing/concept` by name, since the level sort is dataset-bound too.
 
-- [ ] **Step 3: Failing tests**
+- [x] **Step 3: Failing tests**
 
 ```python
 # python/tests/test_cmd_spec.py
@@ -1965,7 +1967,8 @@ def test_applicability_qualifier_is_typed_and_accepted(rig):
 
 @pytest.mark.parametrize("entry", [
     "testing/scope=most:cohort:adults",               # UnknownQuantifier (a ClaimError)
-    "testing/nope=generic:cohort:adults",             # UndeclaredDimension (a ClaimError)
+    "testing/setting=generic:cohort:adults",          # UndeclaredDimension: declared, not on this operator
+    "testing/nope=generic:cohort:adults",             # no such dimension in the profile (surface refusal)
 ])
 def test_applicability_authoring_errors_refuse_and_replay_exactly(rig, entry):
     """Not ESTIMAND_ERRORS: build_applicability raises the claim grammar's
@@ -2019,11 +2022,11 @@ def test_malformed_parameter_refuses(rig):
     assert "name=value" in caught.value.refusal.message
 ```
 
-Two of these are the §7 mutation checks: dropping the receipt check makes `test_unheld_level_vocabulary_refuses_naming_its_address_and_mints_nothing` mint; narrowing the catch to `ESTIMAND_ERRORS` makes the replay test read `outcome-unknown`. The `Refused.refusal` equality in the replay test compares code, message and data.
+Two of these are the §7 mutation checks: dropping the receipt check makes `test_unheld_level_vocabulary_refuses_naming_its_address_and_mints_nothing` mint; narrowing the catch to `ESTIMAND_ERRORS` makes the replay test read `outcome-unknown` for the two kernel cases (the unknown quantifier and the declared-but-unpermitted `testing/setting`); `testing/nope` is refused by the surface before the kernel, since no restriction sort exists to build its referent. Both mutations were run 2026-09-23 and caught. The `Refused.refusal` equality in the replay test compares code, message and data.
 
-- [ ] **Step 4: Run to verify they fail** — `just test-fast`. Expected: `cannot import science.commands.spec` for every spec test; the helper-dependent context, claim and dataset tests still pass.
+- [x] **Step 4: Run to verify they fail** — `just test-fast`. Expected: `cannot import science.commands.spec` for every spec test; the helper-dependent context, claim and dataset tests still pass.
 
-- [ ] **Step 5: Handler**
+- [x] **Step 5: Handler**
 
 ```python
 # python/src/science/commands/spec.py
@@ -2197,9 +2200,9 @@ def handle(ctx, writer, *, target, dataset, contrast, slot, measure, scale, refe
 
 Pinned 2026-09-23: `ReferentPosition.estimand(part).label()` is `estimand:<part>`, the label `build_estimand` gives each receipt entry, with the part names of `beliefs.estimand._referent_positions` (`contrast.baseline`, `contrast.comparison`, `contrast.quantity`, `measure.quantity`, `control.identification`, `control.conditioning[i]`). The `scale` enum and the kernel's `SUPPORTED_SCALES` must agree; `test_scale_choices_are_the_kernel_scales` keeps them together.
 
-- [ ] **Step 6: Run, regenerate, run** — `just test-fast`; `cd python && uv run science adapters build`; `just test` (with batch 2's vendored `cli.toml`, or with only `test_surface_equals_table` failing until it lands).
+- [x] **Step 6: Run, regenerate, run** — `just test-fast`; `cd python && uv run science adapters build`; `just test` (with batch 2's vendored `cli.toml`, or with only `test_surface_equals_table` failing until it lands).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 tasks done sci-57c3d3 "spec command: typed estimand and applicability against the target claim, heldness enforced from the receipts, deterministic draft frozen against the kernel's reference rules"

@@ -1,18 +1,20 @@
 ---
 id: sci-57c3d3
 title: "Task 6: `spec` — freeze an analysis spec"
-status: doing
+status: done
 priority: 1
 size: s
 complexity: high
 process: planned
 owner: dogfood-commands
 created: 2026-09-09T13:23:36Z
-updated: 2026-09-23T16:42:42Z
+updated: 2026-09-23T17:10:38Z
 started: 2026-09-23T16:42:42Z
+completed: 2026-09-23T17:10:38Z
 depends: [sci-98282e, beliefs-e5ab34]
 parent: sci-66b26d
 tags: [dogfood]
+model: "claude-opus-5-5[1m]"
 plan: docs/plans/2026-09-09-belief-path-commands.md
 step: "Task 6: `spec` — freeze an analysis spec"
 ---
@@ -26,4 +28,12 @@ step: "Task 6: `spec` — freeze an analysis spec"
 - 2026-09-23T16:33:04Z (dogfood-commands): parked (waiting on user, review): Review the revised typed-estimand amendment (f41834b + 8b17272); on approval, revise plan Tasks 6, 8, 13 (SPEC_FIELDS, TEST_CONTRACT estimands row, three vocabulary holds), get the plan revision reviewed, then continue at Task 6; CLI rows batch 2 after.
   provenance: {"harness_session":"claude-code:a03ed4ed-95bd-4e3d-b3c4-4d49a2c843f9","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-09-23T16:42:42Z (dogfood-commands): started
+  provenance: {"harness_session":"claude-code:a03ed4ed-95bd-4e3d-b3c4-4d49a2c843f9","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-09-23T16:48:01Z (dogfood-commands): parked (waiting on user, review): Review the plan revision (commit 5a7652f: Task 6 rewritten; Tasks 7, 8, 9, 11, 13 revised); on approval implement Task 6, then 7–9, 11, 12 with CLI batch 2, then Task 13.
+  provenance: {"harness_session":"claude-code:a03ed4ed-95bd-4e3d-b3c4-4d49a2c843f9","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-09-23T16:50:02Z (dogfood-commands): resumed
+  provenance: {"harness_session":"claude-code:a03ed4ed-95bd-4e3d-b3c4-4d49a2c843f9","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-09-23T17:10:38Z (dogfood-commands): done
+  provenance: {"harness_session":"claude-code:a03ed4ed-95bd-4e3d-b3c4-4d49a2c843f9","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-09-23T17:10:38Z (dogfood-commands): spec command: typed estimand and applicability against the target claim, heldness enforced from the receipts, every authoring error a replayable invalid-input, deterministic draft frozen against the kernel's reference rules
   provenance: {"harness_session":"claude-code:a03ed4ed-95bd-4e3d-b3c4-4d49a2c843f9","harness_session_source":"CLAUDE_CODE_SESSION_ID"}

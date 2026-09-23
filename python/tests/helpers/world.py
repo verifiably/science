@@ -111,20 +111,38 @@ contract:
       vocabulary: "dataset:%(concepts)s"
     protein:
       vocabulary: {namespace: HGNC, release: "2026-07-01"}
-  dimensions: {}
+    level:
+      vocabulary: "dataset:%(levels)s"
+    measure:
+      vocabulary: {namespace: testing-measures, release: "1"}
+    identification:
+      vocabulary: {namespace: testing-identification, release: "1"}
+    cohort:
+      vocabulary: {namespace: testing-cohorts, release: "1"}
+  dimensions:
+    scope:
+      restriction_sort: cohort
+    setting:
+      restriction_sort: cohort
   operators:
     affects-concept-protein:
       arity: 2
       arg_sorts: [concept, protein]
       sign_apt: true
       layers: [causal]
-      dimensions: []
+      dimensions: [scope]
     affects-concept-concept:
       arity: 2
       arg_sorts: [concept, concept]
       sign_apt: true
       layers: [causal]
       dimensions: []
+  estimands:
+    affects-concept-protein:
+      level_sorts: {"0": level}
+      measure_sort: measure
+      identification_sort: identification
+      conditioning_sort: concept
 plan:
   sorts: {concept: concept, protein: protein}
   layers: {causal: causal}
@@ -134,24 +152,35 @@ plan:
     - {predicate: affects, subject: concept, object: concept, operator: affects-concept-concept}
 '''
 CONCEPTS = b"concept:disease-stage\nconcept:remission\n"
+LEVELS = b"level:early\nlevel:late\n"
+
+
+def _list_address(content: bytes, name: str) -> str:
+    from hashlib import sha256
+    from beliefs.dataset import DatasetDeclaration, ResourceDeclaration, dataset_address
+    digest = "sha256:" + sha256(content).hexdigest()
+    return dataset_address(DatasetDeclaration(resources=(ResourceDeclaration(name=name, digest=digest),)))
 
 
 def concept_list_address() -> str:
-    from hashlib import sha256
-    from beliefs.dataset import DatasetDeclaration, ResourceDeclaration, dataset_address
-    digest = "sha256:" + sha256(CONCEPTS).hexdigest()
-    return dataset_address(DatasetDeclaration(resources=(ResourceDeclaration(name="concepts.txt", digest=digest),)))
+    return _list_address(CONCEPTS, "concepts.txt")
+
+
+def level_list_address() -> str:
+    return _list_address(LEVELS, "levels.txt")
 
 
 def fixture_contract_document(work: Path) -> Path:
     path = work / "testing.yaml"
-    path.write_text(TEST_CONTRACT % {"concepts": concept_list_address().removeprefix("dataset:")})
+    path.write_text(TEST_CONTRACT % {"concepts": concept_list_address().removeprefix("dataset:"),
+                                     "levels": level_list_address().removeprefix("dataset:")})
     return path
 
 
-def build_fixture_world_with_contract(work: Path, *, hold_concepts: bool = True) -> ScienceConfig:
-    """A world whose profile compiles the test contract; the concept list held
-    (or not), one proposition minted under the plan's first row."""
+def build_fixture_world_with_contract(work: Path, *, hold_concepts: bool = True,
+                                      hold_levels: bool = True) -> ScienceConfig:
+    """A world whose profile compiles the test contract, with the concept and
+    level lists held (or not)."""
     from beliefs.profile import shipped_base_contract
     from science.contracts import load_contract_document
     base = shipped_base_contract()
@@ -177,6 +206,8 @@ def build_fixture_world_with_contract(work: Path, *, hold_concepts: bool = True)
                         plans=(plan,))
     if hold_concepts:
         hold_fixture_dataset(cfg, "concepts.txt", CONCEPTS, "concept vocabulary")
+    if hold_levels:
+        hold_fixture_dataset(cfg, "levels.txt", LEVELS, "level vocabulary")
     return cfg
 
 
@@ -221,9 +252,11 @@ def unhold_fixture_dataset(cfg: ScienceConfig, ref: str) -> None:
     delete(ctx, standing[0].location, standing=standing)
 
 
-SPEC_FIELDS = {"estimand": "difference in PHF19 expression", "method": "rank comparison",
-               "assumptions": "independent samples", "falsification": "no difference at alpha",
-               "applicability": "samples with a stage token",
+SPEC_FIELDS = {"contrast": "levels", "slot": 0, "baseline": "level:early", "comparison": "level:late",
+               "measure": "measure:tpm", "scale": "additive", "reference": "0",
+               "identification": "identification:observational",
+               "method": "rank comparison", "assumptions": "independent samples",
+               "falsification": "no difference at alpha",
                "interpretation_rule": "beliefs/outcome-file/v1",
                "equivalence_rule": "beliefs/content-identity-equality/v1"}
 

@@ -1,0 +1,95 @@
+schema_version = 1
+name = "spec"
+purpose = "Freeze an analysis spec against the kernel's reference rules and mint its record."
+write_class = "mints:analysis-spec"
+output_budget = 4096
+
+[inputs.target]
+type = "string"
+required = true
+doc = "The proposition ref this spec assesses."
+[inputs.dataset]
+type = "string"
+required = true
+doc = "The dataset ref the analysis observes (role observes)."
+[inputs.contrast]
+type = "enum"
+choices = ["levels", "continuous"]
+required = true
+doc = "What the estimand contrasts: two levels of an argument, or an increment along a quantity."
+[inputs.slot]
+type = "int"
+required = true
+doc = "The claim argument position the contrast varies (0-based)."
+[inputs.baseline]
+type = "string"
+required = false
+doc = "levels only: the baseline level, a kind-prefixed term, e.g. level:ndmm."
+[inputs.comparison]
+type = "string"
+required = false
+doc = "levels only: the comparison level, a kind-prefixed term."
+[inputs.quantity]
+type = "string"
+required = false
+doc = "continuous only: the quantity the increment is taken along, a kind-prefixed term."
+[inputs.increment]
+type = "string"
+required = false
+doc = "continuous only: the increment, a decimal."
+[inputs.measure]
+type = "string"
+required = true
+doc = "The measured quantity, a kind-prefixed term, e.g. measure:rna-seq-tpm."
+[inputs.scale]
+type = "enum"
+choices = ["additive", "multiplicative"]
+required = true
+doc = "The scale the effect is expressed on."
+[inputs.reference]
+type = "string"
+required = true
+doc = "The null value on that scale, a decimal (0 additive, 1 multiplicative is typical, never assumed)."
+[inputs.identification]
+type = "string"
+required = true
+doc = "The identification strategy, a kind-prefixed term, e.g. identification:observational."
+[inputs.conditioning]
+type = "list-of-string"
+required = false
+doc = "Kind-prefixed terms the estimate conditions on; absent, none."
+[inputs.method]
+type = "string"
+required = true
+doc = "The analysis method, in the user's words."
+[inputs.assumptions]
+type = "string"
+required = true
+doc = "The assumptions the method rests on."
+[inputs.falsification]
+type = "string"
+required = true
+doc = "The condition under which the proposition is not supported."
+[inputs.applicability]
+type = "list-of-string"
+required = false
+doc = "Scope qualifiers as dimension=quantifier:term; absent, the spec applies wherever the claim does."
+[inputs.interpretation_rule]
+type = "string"
+required = true
+doc = "A rule identity the kernel ships a reference implementation for."
+[inputs.equivalence_rule]
+type = "string"
+required = true
+doc = "A rule identity the kernel ships a reference implementation for, comparing a replay to its original."
+[inputs.parameters]
+type = "list-of-string"
+required = false
+doc = "name=value pairs; values parse as decimals."
+[inputs.supersedes]
+type = "string"
+required = false
+doc = "The analysis-spec ref this one supersedes."
+
+[reads]
+families = ["corpus-stored", "holdings"]   # holdings: the typed estimand resolves against the §5.3 snapshot
