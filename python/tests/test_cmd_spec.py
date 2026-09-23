@@ -154,3 +154,67 @@ def test_malformed_parameter_refuses(rig):
     with pytest.raises(Refused) as caught:
         d.invoke("spec", dict(FIELDS, target="proposition:p1", dataset=ref, parameters=["alpha"]))
     assert "name=value" in caught.value.refusal.message
+
+
+def test_supersedes_a_bare_identity_refuses_and_replays(rig):
+    """A bare identity, the form `next` and the record display, is no ref: it
+    refuses before any act, and the refusal replays (review finding 1)."""
+    d, ctx, ref = rig
+    inputs = dict(FIELDS, target="proposition:p1", dataset=ref, supersedes="86aaa1a8a8edda82")
+    with pytest.raises(Refused) as first:
+        d.invoke("spec", inputs, invocation_id="S" * 8)
+    with pytest.raises(Refused) as again:
+        d.invoke("spec", inputs, invocation_id="S" * 8)
+    assert first.value.refusal.code == "invalid-input"
+    assert again.value.refusal == first.value.refusal
+    assert _specs(ctx) == []
+
+
+def test_supersedes_a_spec_the_corpus_does_not_hold_refuses(rig):
+    d, ctx, ref = rig
+    with pytest.raises(Refused) as caught:
+        d.invoke("spec", dict(FIELDS, target="proposition:p1", dataset=ref, supersedes="analysis-spec:" + "0" * 64))
+    assert caught.value.refusal.code == "invalid-input"
+    assert _specs(ctx) == []
+
+
+def test_supersedes_a_held_spec_mints_the_successor(rig):
+    d, ctx, ref = rig
+    first = next(t for t in d.invoke("spec", dict(FIELDS, target="proposition:p1", dataset=ref)).text.split()
+                 if t.startswith("analysis-spec:"))
+    d.invoke("spec", dict(FIELDS, target="proposition:p1", dataset=ref, method="a revised method", supersedes=first))
+    assert len(_specs(ctx)) == 2
+
+
+def test_an_unheld_vocabulary_under_an_applicability_restriction_refuses(certified_work):
+    """testing/stage restricts on the dataset-bound level sort; with the level
+    list unheld, the applicability receipt reads not-available and the spec
+    refuses naming the list (review finding 3). A continuous contrast keeps the
+    estimand itself free of level terms, so only the applicability check can
+    refuse."""
+    cfg = build_belief_world(certified_work, hold_levels=False)
+    ref = hold_fixture_dataset(cfg, "data.txt", b"x\n", "expression")
+    inputs = {k: v for k, v in FIELDS.items() if k not in ("baseline", "comparison")}
+    inputs.update(contrast="continuous", quantity="measure:tpm", increment="1", target="proposition:p1",
+                  dataset=ref, applicability=["testing/stage=generic:level:early"])
+    with open_rig(cfg, ("spec",)) as (d, ctx):
+        with pytest.raises(Refused) as caught:
+            d.invoke("spec", inputs)
+        assert caught.value.refusal.code == "invalid-input"
+        assert level_list_address() in caught.value.refusal.message
+        assert _specs(ctx) == []
+
+
+def test_an_unheld_vocabulary_under_a_conditioning_term_refuses(certified_work):
+    """conditioning_sort is the dataset-bound concept sort; with the concept
+    list unheld, the conditioning referent reads not-available and the spec
+    refuses naming the list (review finding 3)."""
+    from helpers.world import concept_list_address
+    cfg = build_belief_world(certified_work, hold_concepts=False)
+    ref = hold_fixture_dataset(cfg, "data.txt", b"x\n", "expression")
+    with open_rig(cfg, ("spec",)) as (d, ctx):
+        with pytest.raises(Refused) as caught:
+            d.invoke("spec", dict(FIELDS, target="proposition:p1", dataset=ref, conditioning=["concept:remission"]))
+        assert caught.value.refusal.code == "invalid-input"
+        assert concept_list_address() in caught.value.refusal.message
+        assert _specs(ctx) == []

@@ -44,6 +44,12 @@ def handle(ctx, writer, *, assessment, code, entrypoint, cores=None) -> Report:
     equivalence = REFERENCE_RULES.get(spec.equivalence_rule)
     if equivalence is None:
         _refuse(f"the spec's equivalence rule {spec.equivalence_rule!r} is not a reference rule")
+    bound = dict(original.recipe.rule_bindings).get(spec.equivalence_rule)
+    if bound != equivalence.identity:
+        # The verification resolves the rule to the implementation the original
+        # run bound; refused before the replay, never after it (RuleUnbound).
+        _refuse(f"the original run bound {spec.equivalence_rule!r} to {bound!r}; "
+                f"the kernel now ships {equivalence.identity!r}")
     # --- first act: the replay -----------------------------------------------
     outcome = replay(original, port=writer.operation_port(), spec=spec, observer=writer.actor,
                      started_at=now(), scratch_base=ctx.config.operations_root / "scratch" / writer.invocation_id,

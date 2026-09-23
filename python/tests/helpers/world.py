@@ -145,13 +145,15 @@ contract:
       restriction_sort: cohort
     setting:
       restriction_sort: cohort
+    stage:
+      restriction_sort: level
   operators:
     affects-concept-protein:
       arity: 2
       arg_sorts: [concept, protein]
       sign_apt: true
       layers: [causal]
-      dimensions: [scope]
+      dimensions: [scope, stage]
     affects-concept-concept:
       arity: 2
       arg_sorts: [concept, concept]
@@ -307,13 +309,13 @@ def open_rig(cfg: ScienceConfig, names: tuple[str, ...]):
         session.close()
 
 
-def build_belief_world(work: Path) -> ScienceConfig:
+def build_belief_world(work: Path, **holds: bool) -> ScienceConfig:
     """The contract world plus one proposition typed under the plan: the
     starting state for claim/spec/run/assess/verify/belief/next tests."""
     from beliefs import stored
     from beliefs.claim import Referent, build_claim
     from beliefs.projection import project_claim
-    cfg = build_fixture_world_with_contract(work)
+    cfg = build_fixture_world_with_contract(work, **holds)
     (plan,) = cfg.plans
     claim = build_claim(cfg.profile, operator=plan.operator_for("affects", "concept", "protein"),
                         args=(Referent(sort=plan.sort_for("concept"), term="concept:disease-stage"),
@@ -330,17 +332,20 @@ rule outcome:
     input: "inputs/data.txt"
     output: "outputs/stats.tsv", "outputs/outcome.txt"
     run:
-        import pathlib
+        import os, pathlib
         pathlib.Path(input[0]).read_text()
-        pathlib.Path(output[0]).write_text("n\\t1\\n")
+        pathlib.Path(output[0]).write_text(%(stats)s)
         pathlib.Path(output[1]).write_text("%(outcome)s\\n")
 '''
 
 
-def fixture_bundle(work: Path, outcome: str = "supported") -> tuple[Path, str, tuple[str, ...]]:
+def fixture_bundle(work: Path, outcome: str = "supported", *, varying: bool = False) -> tuple[Path, str, tuple[str, ...]]:
+    """`varying` makes stats.tsv differ on every execution under one recipe, so a
+    replay disagrees with its original: the equivalence rule's `failed` case."""
     code = work / "analysis"
     (code / "workflow").mkdir(parents=True, exist_ok=True)
-    (code / "workflow" / "Snakefile").write_text(FIXTURE_SNAKEFILE % {"outcome": outcome})
+    stats = '"n\\t" + os.urandom(8).hex() + "\\n"' if varying else '"n\\t1\\n"'
+    (code / "workflow" / "Snakefile").write_text(FIXTURE_SNAKEFILE % {"outcome": outcome, "stats": stats})
     return code, "analysis/workflow/Snakefile", ("outputs/stats.tsv", "outputs/outcome.txt")
 
 

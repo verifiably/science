@@ -127,6 +127,16 @@ def handle(ctx, writer, *, target, dataset, contrast, slot, measure, scale, refe
         _refuse(f"{dataset}: {caught}")
     if address is None:
         _refuse(f"{dataset} declares no content identity")
+    superseded = None
+    if supersedes is not None:
+        # A record ref the corpus holds, resolved before any act: a bare identity
+        # or an unheld spec refuses here rather than escaping as MalformedRecord.
+        try:
+            superseded = stored.local_id("analysis-spec", supersedes)
+        except MalformedRecord as caught:
+            _refuse(f"supersedes {supersedes!r} is not an analysis-spec ref: {caught}")
+        if not view.holds(supersedes):
+            _refuse(f"supersedes {supersedes!r} is not in the corpus")
     held_rules = {interpretation_rule: _rule(interpretation_rule), equivalence_rule: _rule(equivalence_rule)}
     snapshot = ctx.snapshot()
     try:
@@ -157,7 +167,6 @@ def handle(ctx, writer, *, target, dataset, contrast, slot, measure, scale, refe
                       applicability=scoped, interpretation_rule=interpretation_rule,
                       equivalence_rule=equivalence_rule, parameters=parse_parameters(parameters),
                       nondeterminism=Deterministic())
-    superseded = None if supersedes is None else stored.local_id("analysis-spec", supersedes)
     try:
         spec = freeze(draft, held_rules=held_rules, supersedes=superseded)
     except (MalformedSpec, UnfreezableSpec) as caught:
