@@ -142,3 +142,79 @@ class ReadContext:
                 if node.uid == uid:
                     return node
         raise Refused(Refusal("unknown-cursor", f"record {record_id!r} not found"))
+
+    def single_view(self) -> tuple[str, ReadView]:
+        views = self.read_views()
+        if len(views) != 1:
+            raise Refused(Refusal("invalid-input",
+                                  f"the belief path reads exactly one corpus; the config names {len(views)}"))
+        return views[0]
+
+    def snapshot(self):
+        from science.vocabulary import snapshot
+        _, view = self.single_view()
+        return snapshot(self.config.profile, view, self.config.store_root, self.store_id(), self.observations())
+
+    def observations(self):
+        from science.holdings import found_observations
+        corpus_id, view = self.single_view()
+        return found_observations(view, self.world, corpus_id)
+
+    def store_id(self) -> str:
+        """The configured store's verified identity, read from its genesis by
+        detached inspection. `store_identity` is the public reader the store
+        identity seam (`beliefs-2d9a55`) adds, a prerequisite for this task."""
+        from beliefs.root import store_identity
+        identity = store_identity(self.config.store_root)
+        if identity is None:
+            raise Refused(Refusal("invalid-input", f"{self.config.store_root} is not an initialized store"))
+        return identity
+
+    def held_path(self, address: str) -> Path:
+        from science.holdings import held_path
+        corpus_id, view = self.single_view()
+        return held_path(view, self.world, corpus_id, self.config.store_root, self.store_id(), address)
+
+    def is_held(self, node) -> bool:
+        from science.holdings import is_held
+        corpus_id, view = self.single_view()
+        return is_held(view, self.world, corpus_id, node)
+
+    def pins(self):
+        (root,) = self.config.world.corpus_roots
+        return load_manifest(root).profile
+
+    def epoch_identity(self) -> str:
+        from beliefs.errors import EpochUnknown
+        from beliefs.world.read import current_epoch
+        try:
+            return current_epoch(self.world).packaging_identity
+        except EpochUnknown:
+            return "no-epoch-published"
+
+    def _context(self, view, corpus_id, observations):
+        from science.closure import supplied_context
+        from beliefs import stored
+        # Keyed as `gather` reads it: the stored assessment's identity, attributed
+        # to the one corpus that holds it.
+        node_corpus = {
+            stored.assessment_value(node, profile=self.config.profile).identity(): (corpus_id,)
+            for node in view.iter_stored() if node.kind == "assessment"
+        }
+        return supplied_context(view, corpus_id=corpus_id, pins=self.pins(), epoch_identity=self.epoch_identity(),
+                                observations=observations, node_corpus=node_corpus)
+
+    def gather_inputs(self, proposition: str):
+        from science.closure import gather_inputs
+        corpus_id, view = self.single_view()
+        observations = self.observations()
+        return gather_inputs(view, proposition, context=self._context(view, corpus_id, observations),
+                             profile=self.config.profile, resolution=self.snapshot())
+
+    def evaluate(self, proposition: str):
+        from science.closure import evaluate
+        corpus_id, view = self.single_view()
+        observations = self.observations()
+        return evaluate(view, proposition, observations=observations,
+                        context=self._context(view, corpus_id, observations),
+                        profile=self.config.profile, resolution=self.snapshot())

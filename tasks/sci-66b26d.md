@@ -1,11 +1,12 @@
 ---
 id: sci-66b26d
 title: "Sub-project 4: the dogfood command set over a reproduced mm30 corpus"
-status: blocked
+status: todo
 priority: 1
 size: xl
+process: planned
 created: 2026-09-09T12:12:00Z
-updated: 2026-09-09T15:44:53Z
+updated: 2026-09-23T12:41:18Z
 depends: [beliefs-e5ab34, beliefs-5fe2e3, beliefs-2d9a55]
 tags: [dogfood, command-framework]
 spec: docs/specs/2026-09-09-belief-path-commands-design.md
@@ -26,3 +27,4 @@ Item 4 of the user/autonomy layer design §8 and the stack's one success criteri
 - 2026-09-09T13:46:33Z (dogfood-commands): Plan review round 1 (eight findings, all verified): holdings reads go through the kernel's held reducer (derive_holdings + dataset_observations; fixtures and the operator recipe install the binding); run/verify raise KernelRefusalValue for RunRefused; dataset validates the record and facets before its first act; the full-path test admits only under confinement and asserts non-admission under the minimal policy; contract fixtures use the authored dataset:<id> syntax; null polarities preserved; helpers moved to Task 3; every command tested through its transport.
 - 2026-09-09T14:08:33Z (dogfood-commands): Plan review round 2 (six findings, all verified): holdings reads use detached inspection and a test proves a read writes nothing; dataset validates every facet payload plus bearer/validity before the first act; held paths match the configured store's identity; MCP replay tested within one serve lifetime; Task 11 depends on Task 6; spec, run, assess and verify each driven through a real transport, with the spec's §7 bullet corrected.
 - 2026-09-09T15:44:53Z (dogfood-commands): Tasks 1–2 (sci-614bdd, sci-05c56c) landed on branch dogfood-commands (7d738d9, 6ddd6eb, 4cc7ddd). Everything from Task 3 waits on the beliefs kernel: beliefs-2d9a55 (store_identity, xs) unblocks Task 3 and then Tasks 5 and 10; beliefs-5fe2e3 (scoped run/holdings routes) unblocks Tasks 4, 7, 9; beliefs-e5ab34 (reference rules) unblocks Tasks 6, 8. Pick up again with 'tasks ready' once beliefs-2d9a55 closes; the branch is rebased on main after quick-wins merged.
+- 2026-09-23T12:41:18Z (dogfood-commands): 2026-09-23: all three kernel seams (beliefs-2d9a55, -5fe2e3, -e5ab34) closed 2026-09-10; names verified against today's kernel: store_identity, open_attended_session(store_root=), ScopedWriter.actor/store_id/operation_port()/holdings_context(), replay over RunClosure all present. Drift: REFERENCE_RULES keys are beliefs/outcome-file/v1 and beliefs/content-identity-equality/v1 (plan uses bare); UnknownKindError/FacetError live in nodes.core.errors. Branch rebased onto main (2d6da16), 311 passed.

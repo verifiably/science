@@ -27,7 +27,7 @@
 
 Tasks 3, 4, 6, 7, 8 and 9 call interfaces `beliefs` does not have yet. These are the names the three `beliefs` tasks deliver; if a name lands differently, change the call site, not the design.
 
-- **`beliefs-e5ab34` (reference rules):** `beliefs.rules.REFERENCE_RULES: Mapping[str, RuleImplementation | EquivalenceImplementation]` keyed by rule identity, holding `"outcome-file/v1"` (interpretation: maps the digest of `outputs/outcome.txt` — one of `supported\n`, `refuted\n`, `inconclusive\n` — to `{"outcome": …}`) and `"content-identity-equality/v1"` (equivalence: `passed` iff the two result manifests are equal). `beliefs.rules.OUTCOME_FILE = "outputs/outcome.txt"`.
+- **`beliefs-e5ab34` (reference rules):** `beliefs.rules.REFERENCE_RULES: Mapping[str, RuleImplementation | EquivalenceImplementation]` keyed by rule identity, holding `"beliefs/outcome-file/v1"` (interpretation: maps the digest of `outputs/outcome.txt` — one of `supported\n`, `refuted\n`, `inconclusive\n` — to `{"outcome": …}`) and `"beliefs/content-identity-equality/v1"` (equivalence: `passed` iff the two result manifests are equal). `beliefs.rules.OUTCOME_FILE = "outputs/outcome.txt"`.
 - **`beliefs-2d9a55` (store identity):** `beliefs.root.store_identity(store_root: Path) -> str | None`, the public form of the existing private genesis read, by detached inspection (no recovery, no writes); `None` when the root carries no store genesis. Split out of the routes seam so the read context and the read-only commands can land before it.
 - **`beliefs-5fe2e3` (scoped routes):** `open_attended_session(world_config, operations_root, *, profile, coordination=None, store_root: Path | None = None)`; `ScopedWriter.operation_port() -> OperationPort` bound to the invocation's scoped authority, whose commits are recorded as `act` lines; `ScopedWriter.holdings_context(*, instrument: str) -> ActContext` over the session's store root, observer = the session actor, whose published observations are recorded as `act` lines; `ScopedWriter.store_id -> str`; and `beliefs.replay.replay(original: RunMinted | RunClosure, …)` reading only the closure.
 
@@ -592,11 +592,11 @@ git commit -m "feat(config): corpus-local contract documents and the holdings st
 - Test: `python/tests/test_context.py`
 
 **Interfaces:**
-- Consumes: `beliefs.resolution.build_snapshot(readable=…)`, `VocabularyBinding`, `ProfileSpec.sorts` (`CompiledSort.vocabulary`), `stored.dataset_declaration`, `stored.holdings_observation_value`, `beliefs.dataset.{dataset_address, admission_state, ByteObservation, Held}`, `beliefs.evaluation.{evaluate_over, gather}`, `beliefs.belief.{Availability, SuppliedContext}`, `beliefs.closure.RetractionEnumeration`, `beliefs.corpus.lineage_snapshot`, `beliefs.policy.{BELIEF_V1, BELIEF_V1_RULE, BELIEF_V1_FIXTURES, PolicyBinding}`, `beliefs.world.read.current_epoch`, `beliefs.errors.EpochUnknown`, `beliefs.world.registry.load_manifest`.
+- Consumes: `beliefs.resolution.build_snapshot(readable=…)`, `VocabularyBinding`, `ProfileSpec.sorts` (`CompiledSort.vocabulary`), `stored.dataset_declaration`, `stored.holdings_observation_value`, `beliefs.dataset.{dataset_address, admission_state, ByteObservation, Held}`, `beliefs.evaluation.{evaluate_over, gather}`, `beliefs.belief.{Availability, SuppliedContext}`, `beliefs.corpus.lineage_snapshot`, `beliefs.policy.{BELIEF_V1, BELIEF_V1_RULE, BELIEF_V1_FIXTURES, PolicyBinding}`, `beliefs.world.read.current_epoch`, `beliefs.errors.EpochUnknown`, `beliefs.world.registry.load_manifest`.
 - Produces on `ReadContext`: `single_view() -> tuple[str, ReadView]`; `store_id() -> str`; `snapshot() -> ResolutionSnapshot`; `observations() -> dict[str, tuple[ByteObservation, ...]]` keyed by dataset address; `held_path(address) -> Path`; `is_held(node) -> bool`; `evaluate(proposition) -> Belief | NoBelief | Refused`; `gather_inputs(proposition) -> EvaluationInputs`; `pins() -> CorpusPins`; `epoch_identity() -> str`.
 - Produces in helpers: `fixture_contract_document(work) -> Path` (a `testing` contract with `concept` bound by dataset identity and `protein` bound by namespace/release, and a plan), `hold_fixture_dataset(cfg, name, content, title) -> str` (returns the dataset ref), `unhold_fixture_dataset(cfg, ref) -> None` (a later `Absent` observation superseding the `Found`), `fixture_bundle(work, outcome="supported") -> tuple[Path, str, tuple[str, ...]]` (code dir, entrypoint, targets), `mint_fixture_run(cfg, spec_ref, dataset_ref, bundle) -> str` (a run under `MINIMAL_POLICY`, returns the run ref), `build_belief_world(work) -> ScienceConfig` (fixture world compiled with the test contract, the holdings reducer installed, concept list held, one proposition minted), `open_rig(cfg, names)` (a dispatcher over the named production commands with an attended session; yields `(dispatcher, ctx)`), and `SPEC_FIELDS` (the draft fields every spec test reuses).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 # python/tests/test_context.py
@@ -737,7 +737,7 @@ def test_epoch_identity_is_the_no_epoch_value_without_one(certified_work):
 
 Check `ResolutionSnapshot.resolve`'s name and return with `grep -n "def resolve\|class TermOutcome" -A 3 ~/d/beliefs/python/src/beliefs/resolution.py`; adjust the two assertions to the real method (it may be `outcome(binding, term)`).
 
-- [ ] **Step 2: Grow the helpers** (`python/tests/helpers/world.py`)
+- [x] **Step 2: Grow the helpers** (`python/tests/helpers/world.py`)
 
 ```python
 TEST_CONTRACT = '''\
@@ -840,8 +840,8 @@ def hold_fixture_dataset(cfg: ScienceConfig, name: str, content: bytes, title: s
     write(ctx, StoreLocator(STORE_IDS[root.parent], f"{digest.removeprefix('sha256:')}/{name}"),
           content, expected=digest)
     address = dataset_address(DatasetDeclaration(resources=(ResourceDeclaration(name=name, digest=digest),)))
-    node = stored.dataset_node(address.removeprefix("dataset:"), title=title,
-                               resources=[{"name": name, "digest": digest}], **facets)
+    node = stored.dataset_node(title=title, resources=[{"name": name, "digest": digest}], **facets)
+    assert dataset_address(stored.dataset_declaration(node)) == address
     return open_corpus(root, authority=FIXTURE_AUTHORITY, profile=cfg.profile).add(node).id
 
 
@@ -867,7 +867,8 @@ def unhold_fixture_dataset(cfg: ScienceConfig, ref: str) -> None:
 SPEC_FIELDS = {"estimand": "difference in PHF19 expression", "method": "rank comparison",
                "assumptions": "independent samples", "falsification": "no difference at alpha",
                "applicability": "samples with a stage token",
-               "interpretation_rule": "outcome-file/v1", "equivalence_rule": "content-identity-equality/v1"}
+               "interpretation_rule": "beliefs/outcome-file/v1",
+               "equivalence_rule": "beliefs/content-identity-equality/v1"}
 
 
 @contextmanager
@@ -941,7 +942,7 @@ def mint_fixture_run(cfg: ScienceConfig, spec_ref: str, dataset_ref: str, bundle
     code, entrypoint, targets = bundle
     ctx = ReadContext.open(cfg)
     _, view = ctx.single_view()
-    spec = stored.analysis_spec_value(view.get(spec_ref))
+    spec = stored.analysis_spec_value(view.get(spec_ref), profile=cfg.profile)
     address = dataset_address(stored.dataset_declaration(view.get(dataset_ref)))
     (root,) = cfg.world.corpus_roots
     outcome = execute_assessment_run(
@@ -958,12 +959,12 @@ def mint_fixture_run(cfg: ScienceConfig, spec_ref: str, dataset_ref: str, bundle
 
 `STORE_IDS: dict[Path, str] = {}` at module level, keyed by the work directory, and `from contextlib import contextmanager` at the top. `build_fixture_world` (the plain one) also initializes a store, records its id, and installs the holdings reducer the same way, so Task 2's tests hold and `status` over a plain world can read holdings.
 
-- [ ] **Step 3: Run to verify they fail**
+- [x] **Step 3: Run to verify they fail**
 
 Run: `just test-fast`
 Expected: `AttributeError: 'ReadContext' object has no attribute 'single_view'` and friends.
 
-- [ ] **Step 4: Write `science/vocabulary.py`**
+- [x] **Step 4: Write `science/vocabulary.py`**
 
 ```python
 """The resolution snapshot over held vocabularies (belief-path design §5.3)."""
@@ -1021,7 +1022,7 @@ def _dataset_at(view: ReadView, address: str):
     return None
 ```
 
-- [ ] **Step 5: Write `science/holdings.py`**
+- [x] **Step 5: Write `science/holdings.py`**
 
 The kernel's holdings reduction — supersession walks, contested heads,
 unsettled intents — is a rule the world holds; `derive_holdings` captures a
@@ -1127,7 +1128,7 @@ def is_held(view: ReadView, world, corpus_id: str, node) -> bool:
 
 Two names to pin at implementation: `beliefs.root.log_seam` (the session module imports it as `log_seam`; confirm with `grep -n "^def log_seam\|^def _log_seam" ~/d/beliefs/python/src/beliefs/root.py`), and whether `derive_holdings` runs under the read-only world the read context opens (it captures and resolves the held rule; it should require no act family — if it does, that is a finding for `beliefs-5fe2e3`).
 
-- [ ] **Step 6: Write `science/closure.py`**
+- [x] **Step 6: Write `science/closure.py`**
 
 ```python
 """Belief evaluation in one call (design §4.7, §5.5): the availability and
@@ -1136,7 +1137,6 @@ world, then `evaluate_over` under the shipped policy."""
 from __future__ import annotations
 
 from beliefs.belief import Availability, SuppliedContext
-from beliefs.closure import RetractionEnumeration
 from beliefs.corpus import ReadView, lineage_snapshot
 from beliefs.evaluation import EvaluationInputs, evaluate_over, gather
 from beliefs.policy import BELIEF_V1, BELIEF_V1_FIXTURES, BELIEF_V1_RULE, PolicyBinding
@@ -1156,7 +1156,6 @@ def supplied_context(view: ReadView, *, corpus_id: str, pins, epoch_identity: st
     return SuppliedContext(
         snapshot=lineage_snapshot(view, sorted(observations)),
         producer_snapshot_identity=epoch_identity,
-        retractions=RetractionEnumeration(found=(), coverage=(corpus_id,)),
         node_corpus=node_corpus,
         pins={corpus_id: pins},
     )
@@ -1171,7 +1170,7 @@ def evaluate(view, proposition, *, observations, context, profile, resolution):
                          profile=profile, resolution=resolution, binding=BINDING)
 ```
 
-- [ ] **Step 7: Grow `ReadContext`** (`science/config.py`)
+- [x] **Step 7: Grow `ReadContext`** (`science/config.py`)
 
 ```python
     def single_view(self) -> tuple[str, ReadView]:
@@ -1225,7 +1224,13 @@ def evaluate(view, proposition, *, observations, context, profile, resolution):
 
     def _context(self, view, corpus_id, observations):
         from science.closure import supplied_context
-        node_corpus = {node.id: corpus_id for node in view.iter_stored() if node.kind == "assessment"}
+        from beliefs import stored
+        # Keyed as `gather` reads it: the stored assessment's identity, attributed
+        # to the one corpus that holds it.
+        node_corpus = {
+            stored.assessment_value(node, profile=self.config.profile).identity(): (corpus_id,)
+            for node in view.iter_stored() if node.kind == "assessment"
+        }
         return supplied_context(view, corpus_id=corpus_id, pins=self.pins(), epoch_identity=self.epoch_identity(),
                                 observations=observations, node_corpus=node_corpus)
 
@@ -1245,14 +1250,14 @@ def evaluate(view, proposition, *, observations, context, profile, resolution):
                         profile=self.config.profile, resolution=self.snapshot())
 ```
 
-`node_corpus` is keyed by what `gather` needs: check with `grep -n "node_corpus" ~/d/beliefs/python/src/beliefs/evaluation.py ~/d/beliefs/python/src/beliefs/consulted.py | head` whether the key is the assessment's identity or its record id, and key accordingly (the driver keyed by the stored identity; use `stored.assessment_value(node).identity()` if so).
+Pinned at implementation (2026-09-23): `gather` derives retractions from the view, so `SuppliedContext` carries no `retractions`; `node_corpus` maps the stored assessment identity to a sorted tuple of corpus ids, as the reproduction driver does.
 
-- [ ] **Step 8: Run to verify they pass**
+- [x] **Step 8: Run to verify they pass**
 
 Run: `just test`
 Expected: all PASS. `test_evaluate_answers_no_belief_before_any_assessment` proves the full evaluator path runs over the fixture world.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 tasks done sci-98282e "read context: resolution snapshot, holdings reads, supplied context; belief-path fixtures"
