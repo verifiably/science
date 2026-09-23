@@ -2993,7 +2993,7 @@ git commit -m "feat(commands): next ranks propositions by a fixed derived order"
 - Consumes: everything above; the MCP `rpc()` helper and `serve()` from `test_mcp.py`; `science.cli.main`; `science.serve.serve`; `beliefs.session.open_ledger_reader`; `science.report.{record_block, serialize_block}` for the complete canonical report a write renders. The run and verify legs skip to the minimal policy where bubblewrap is absent, exactly as `test_belief_path.py` does.
 - Produces: `helpers.world.write_config_for(cfg) -> Path` (the TOML for an existing config, including `contracts` and `store_root`).
 
-- [ ] **Step 1: The full path, portable and confined**
+- [x] **Step 1: The full path, portable and confined**
 
 ```python
 # python/tests/test_belief_path.py
@@ -3030,7 +3030,8 @@ def walk(certified_work, monkeypatch, *, confined: bool):
     prop = ref(d.invoke("claim", {"subject": "concept:disease-stage", "predicate": "affects",
                                   "object": "protein:PHF19", "layer": "causal", "polarity": "positive"}).text,
                "proposition:")
-    dataset = ref(d.invoke("dataset", {"path": str(data), "title": "expression"}).text, "dataset:")
+    dataset = ref(d.invoke("dataset", {"path": str(data), "title": "expression",
+                                       "locator": "accession:GSE-FIXTURE"}).text, "dataset:")
     spec = ref(d.invoke("spec", dict(SPEC_FIELDS, target=prop, dataset=dataset)).text, "analysis-spec:")
     run = ref(d.invoke("run", {"spec": spec, "dataset": dataset, "code": str(code),
                                "entrypoint": entrypoint, "targets": list(targets)}).text, "run:")
@@ -3068,7 +3069,8 @@ def test_every_step_left_exactly_its_record(walked_portable):
     _, ctx, _, _ = walked_portable
     _, view = ctx.single_view()
     kinds = sorted(n.kind for n in view.iter_stored())
-    assert kinds.count("proposition") == 1 and kinds.count("dataset") == 2
+    # The contract world holds the concept and level lists; the walk holds the data.
+    assert kinds.count("proposition") == 1 and kinds.count("dataset") == 3
     assert kinds.count("analysis-spec") == 1 and kinds.count("run") == 2
     assert kinds.count("assessment") == 1 and kinds.count("verification") == 1
 
@@ -3097,7 +3099,7 @@ def test_under_confinement_the_path_ends_in_an_admitted_belief(walked_confined):
     assert classify(ctx, prop) == "admitted"
 ```
 
-- [ ] **Step 2: The transports, per command**
+- [x] **Step 2: The transports, per command**
 
 Framework §9.4 wants byte-identical rendering through the CLI and the MCP
 server, and the belief-path design §7 wants every command through its real
@@ -3114,7 +3116,7 @@ import threading
 import pytest
 
 from helpers.world import SPEC_FIELDS, build_fixture_world_with_contract, write_config_for
-from tests.test_mcp import rpc
+from test_mcp import rpc
 
 
 @pytest.fixture
@@ -3247,7 +3249,8 @@ def test_every_write_reaches_its_transport_and_renders_the_canonical_report(worl
     server = serve(load_config(cfg_path), named)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     try:
-        assert main(["dataset", "--config", str(cfg_path), "--path", str(data), "--title", "expression"]) == 0
+        assert main(["dataset", "--config", str(cfg_path), "--path", str(data), "--title", "expression",
+                     "--locator", "accession:GSE-FIXTURE"]) == 0
         output = capsys.readouterr()
         dataset = ref_in(output.out, "dataset:")
         assert output.out == canonical(json.loads(output.err)["invocation_id"])
@@ -3300,9 +3303,11 @@ def test_reads_render_identically_through_mcp_and_cli(world, capsys):
 
 Add `write_config_for(cfg, service_socket=None) -> Path` to the helpers: it writes every key the loader requires from an existing `ScienceConfig`, with `contracts = ["<the fixture document path>"]`, `store_root`, and `service_socket` when given. The MCP result shape and the `rpc()` signature are those in `test_mcp.py`; the JSON stderr line is the CLI's §9.2 wire. Each transport test proves one thing the dispatcher tests cannot: argparse compiled the declared inputs (including `--facets` as a repeated option), the service routed the write and its refusal, the MCP tool accepted `invocation_id` and replayed, and the refusal envelope survived each wire.
 
-- [ ] **Step 3: Run to verify** — `just test`. The portable path and all transport tests pass on any host; the confined test skips with the reason where bubblewrap is absent and passes where it is present.
+Landed 2026-09-23 with three adjustments: the data each walk runs over is held with a `locator` (the kernel admits an assessment only over data carrying an empirical-observation facet); the contract world holds three datasets (concepts, levels, data); and the MCP helper is imported as `test_mcp`, the tests directory being on the path. On this bubblewrap host the confined walk ends in an admitted `Belief`, classified `admitted` by `next`.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 3: Run to verify** — `just test`. The portable path and all transport tests pass on any host; the confined test skips with the reason where bubblewrap is absent and passes where it is present.
+
+- [x] **Step 4: Commit**
 
 ```bash
 tasks done sci-445f89 "the full belief path over the fixture world: admitted under confinement, honestly not without; every command through its transport"

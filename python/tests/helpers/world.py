@@ -95,6 +95,27 @@ store_root = "{cfg.store_root}"
     return path
 
 
+def write_config_for(cfg: ScienceConfig, service_socket: Path | None = None) -> Path:
+    """The launcher TOML for a world `build_fixture_world_with_contract` built:
+    every key the loader requires, the test contract document it compiled, and
+    `service_socket` when given (the AF_UNIX limit wants a short path)."""
+    work = cfg.world.world_root.parent
+    contract = work / "testing.yaml"
+    assert contract.is_file(), "write_config_for needs the contract world's document"
+    socket_line = "" if service_socket is None else f'service_socket = "{service_socket}"\n'
+    path = work / "science.toml"
+    path.write_text(f'''\
+world_root = "{cfg.world.world_root}"
+world_id = "{cfg.world.world_id}"
+corpus_roots = ["{cfg.world.corpus_roots[0]}"]
+operations_root = "{cfg.operations_root}"
+domains = {list(DOMAINS)!r}
+contracts = ["{contract}"]
+store_root = "{cfg.store_root}"
+{socket_line}''')
+    return path
+
+
 def add_one_more_record(cfg: ScienceConfig) -> None:
     open_corpus(
         cfg.world.corpus_roots[0], authority=FIXTURE_AUTHORITY, profile=PROFILE
