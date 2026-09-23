@@ -739,7 +739,7 @@ Each can fail, and each names its check.
 | P4 | A same-query mint produces a record under the current project with the source's query, and the source is unchanged | coordination command test; the source's tip is asserted unchanged |
 | P5 | The unselected session reads the whole world | `next` and `belief` under no selection equal their results under a project whose query is the union of every kind |
 | P6 | A workspace file is never read as a record | a run whose spec exists only as a workspace preregistration file refuses at `run` because no `analysis-spec` record resolves, under whatever refusal the belief path's `run` already gives an unresolvable spec; nothing in `science` opens `freezes/` |
-| P7 | The second-project milestone's six criteria (§9.2) | the milestone record |
+| P7 | The second-project milestone's seven criteria (§9.2) | the milestone record |
 
 P1, P2, P4, P5 and P8 are the coordination command set's tests to carry.
 P3's ledger shape is `beliefs`'. P6 is the belief path's existing
@@ -761,8 +761,13 @@ measurement.
   is no longer an idea gated on sub-project 1; it is a prerequisite of the
   coordination command set and is scoped with it.
 - **The coordination command set spec** (the second half of sub-project 4)
-  inherits §5 and §7 and carries P1–P5. It is written after the belief path
-  measurement, per that design's ruling 1.
+  inherits §5 and §7 and carries P1, P2, P4, P5 and P8 (P3's ledger shape
+  is `beliefs`'). It is written after the belief path measurement, per that
+  design's ruling 1. It also closes a P1 gap this design leaves open:
+  relative paths *inside* `SCIENCE_CONFIG` resolve against the process's
+  working directory today, so one file can name different worlds from
+  different directories; the command set resolves them against the
+  configuration file's directory or refuses them.
 - **`natural-systems`** gets a task in its own project: attach to the
   user's world — a `project` view, its pilot's questions as `question`
   records, and its frozen manifests as the specs they describe — before its

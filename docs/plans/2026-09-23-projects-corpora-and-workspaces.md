@@ -249,7 +249,7 @@ Nothing below is a task in this plan; each is a filed task whose own spec or pla
 |---|---|---|---|
 | §3.1 | attended session with one write root and N mounted read corpora; coordination resolution over all | `beliefs-fe7149` | nothing |
 | §3.1 | relocate the reproduced mm30 corpus to the user's world root | `beliefs-c08725` | nothing |
-| §5, §7, P1–P5, P8 | coordination command set spec: `project` (genesis, `select`), `question`, `hypothesis`, `task`, `decide`, the same-query mint, `no-current-project`, the read-side selection query on `service_socket` bound by both launchers, `default_project` and `write_root` config keys, sci-17851d folded in | `sci-c5528e` | the belief path measurement (`dogfood-commands` branch) |
+| §5, §7, P1, P2, P4, P5, P8 | coordination command set spec: `project` (genesis, `select`), `question`, `hypothesis`, `task`, `decide`, the same-query mint, `no-current-project`, the read-side selection query on `service_socket` bound by both launchers, `default_project` and `write_root` config keys, sci-17851d folded in | `sci-c5528e` | the belief path measurement (`dogfood-commands` branch) |
 | §9.2 | second-project milestone: measurement plan and record | `sci-0d00d2` | `beliefs-fe7149`, `beliefs-c08725`, `sci-c5528e`; criterion 5 additionally on `beliefs-1a5157` |
 | §3.3, decision 4 | attach natural-systems to the world | `ns-ed9c53` | `sci-c5528e` |
 | §8.2, §8.1 | publish: holdings transport is the destination's; coordination trail deferred | note on `beliefs-1a5157` | — |
