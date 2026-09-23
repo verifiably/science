@@ -252,6 +252,13 @@ def unhold_fixture_dataset(cfg: ScienceConfig, ref: str) -> None:
     delete(ctx, standing[0].location, standing=standing)
 
 
+# An assessment is admissible only over a run whose observed dataset carries a
+# valid empirical-observation facet (beliefs' eligibility rule, S7): data a run
+# observes is held with a locator, as the `dataset` command's `locator` input
+# holds it; a vocabulary list is not.
+OBSERVED = {"empirical_observation": {"locator": "accession:GSE-FIXTURE", "attested_by": "fixture"}}
+
+
 SPEC_FIELDS = {"contrast": "levels", "slot": 0, "baseline": "level:early", "comparison": "level:late",
                "measure": "measure:tpm", "scale": "additive", "reference": "0",
                "identification": "identification:observational",

@@ -2438,7 +2438,7 @@ git commit -m "feat(commands): run executes a frozen spec under confinement"
 - Consumes: `beliefs.runrecord.decode_run_closure`, `beliefs.assess.{build_assessment, AssessmentFinding}`, `beliefs.rules.REFERENCE_RULES`, `stored.{analysis_spec_value, assessment_node, assessment_value}`.
 - Produces: `assessment:<16 hex>` records; `handle(ctx, writer, *, run)`.
 
-- [ ] **Step 1: Declaration and prompt** — spec §4.5; prompt:
+- [x] **Step 1: Declaration and prompt** — spec §4.5; prompt:
 
 ```markdown
 Run `assess` after `run`: name the run record, and the assessment the run's
@@ -2447,20 +2447,20 @@ Nothing is judged here beyond the rule; admission to belief is what `verify`
 enables and `belief` reports.
 ```
 
-- [ ] **Step 2: Failing tests**
+- [x] **Step 2: Failing tests**
 
 ```python
 # python/tests/test_cmd_assess.py
 import pytest
 
 from science.refusal import Refused
-from helpers.world import SPEC_FIELDS, build_belief_world, fixture_bundle, hold_fixture_dataset, mint_fixture_run, open_rig
+from helpers.world import OBSERVED, SPEC_FIELDS, build_belief_world, fixture_bundle, hold_fixture_dataset, mint_fixture_run, open_rig
 
 
 @pytest.fixture
 def rig(certified_work):
     cfg = build_belief_world(certified_work)
-    ref = hold_fixture_dataset(cfg, "data.txt", b"x\n", "expression")
+    ref = hold_fixture_dataset(cfg, "data.txt", b"x\n", "expression", **OBSERVED)
     with open_rig(cfg, ("spec", "assess")) as (d, ctx):
         spec_ref = next(t for t in d.invoke("spec", dict(SPEC_FIELDS, target="proposition:p1", dataset=ref)).text.split()
                         if t.startswith("analysis-spec:"))
@@ -2488,9 +2488,9 @@ def test_assess_refuses_an_unknown_run(rig):
     assert caught.value.refusal.code == "invalid-input"
 ```
 
-- [ ] **Step 3: Run to verify they fail** — `just test-fast`.
+- [x] **Step 3: Run to verify they fail** — `just test-fast`.
 
-- [ ] **Step 4: Handler**
+- [x] **Step 4: Handler**
 
 ```python
 # python/src/science/commands/assess.py
@@ -2543,9 +2543,11 @@ def handle(ctx, writer, *, run) -> Report:
     return (record_block(node),)
 ```
 
-- [ ] **Step 5: Run, regenerate, run** — `just test-fast`; `cd python && uv run science adapters build`; `just test`.
+Landed 2026-09-23. The declaration adds `schema_version = 1`. Two findings on the way: the first `assess` after a run in one process was refused "the run … resolves to no node in this corpus" — the root's shared writer index never saw a commit made through the operation port — fixed in the kernel under `beliefs-40e593` (beliefs `70ff54e`: the port marks the root state unresolved, so the next write hold rebuilds); and an assessment is admissible only over a run whose observed dataset carries a valid empirical-observation facet (the kernel's eligibility rule), so the data a fixture run observes is held with the helpers' `OBSERVED` facet — Tasks 9, 11 and 12 hold assessed data the same way.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 5: Run, regenerate, run** — `just test-fast`; `cd python && uv run science adapters build`; `just test`.
+
+- [x] **Step 6: Commit**
 
 ```bash
 tasks done sci-881719 "assess command: build_assessment through the reference rule, one stored identity"

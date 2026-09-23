@@ -973,6 +973,16 @@ options = [
 ]
 
 [[cli.science.commands]]
+path = ["assess"]
+summary = "Derive the assessment a run's outputs support under its spec's rule, and mint it"
+options = [
+  { shared = "config", value = "path" },
+  { names = ["--invocation-id"], value = "string" },
+  { names = ["--continue"], value = "string" },
+  { names = ["--run"], value = "string", required = true },
+]
+
+[[cli.science.commands]]
 path = ["build"]
 summary = "Build the world from its corpora"
 

@@ -1,0 +1,13 @@
+schema_version = 1
+name = "assess"
+purpose = "Derive the assessment a run's outputs support under its spec's rule, and mint it."
+write_class = "mints:assessment"
+output_budget = 4096
+
+[inputs.run]
+type = "string"
+required = true
+doc = "The run ref."
+
+[reads]
+families = ["corpus-stored"]
