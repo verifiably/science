@@ -1,0 +1,38 @@
+schema_version = 1
+name = "run"
+purpose = "Execute the analysis for a spec once, under confinement, and mint the run record."
+write_class = "mints:run,act-report"
+output_budget = 4096
+
+[write.routes]
+run = "run"
+act-report = "run"
+
+[inputs.spec]
+type = "string"
+required = true
+doc = "The analysis-spec ref."
+[inputs.dataset]
+type = "string"
+required = true
+doc = "The dataset ref the spec's observes role names; its held bytes are the run's input."
+[inputs.code]
+type = "string"
+required = true
+doc = "A directory on this host: the bundle root, e.g. analysis/ holding workflow/Snakefile."
+[inputs.entrypoint]
+type = "string"
+required = true
+doc = "The workflow entrypoint relative to the bundle's parent, e.g. analysis/workflow/Snakefile."
+[inputs.targets]
+type = "list-of-string"
+required = true
+doc = "The workflow targets; also the declared outputs."
+[inputs.cores]
+type = "int"
+required = false
+default = 1
+doc = "Cores the workflow may use."
+
+[reads]
+families = ["corpus-stored", "holdings"]

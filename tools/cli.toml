@@ -958,6 +958,21 @@ options = [
 ]
 
 [[cli.science.commands]]
+path = ["run"]
+summary = "Execute the analysis for a spec once, under confinement, and mint the run record"
+options = [
+  { shared = "config", value = "path" },
+  { names = ["--invocation-id"], value = "string" },
+  { names = ["--continue"], value = "string" },
+  { names = ["--code"], value = "string", required = true },
+  { names = ["--cores"], value = "int" },
+  { names = ["--dataset"], value = "string", required = true },
+  { names = ["--entrypoint"], value = "string", required = true },
+  { names = ["--spec"], value = "string", required = true },
+  { names = ["--targets"], value = "string", repeatable = true, required = true },
+]
+
+[[cli.science.commands]]
 path = ["build"]
 summary = "Build the world from its corpora"
 

@@ -2225,7 +2225,7 @@ git commit -m "feat(commands): spec freezes an analysis spec with a typed estima
 - Consumes: `beliefs.confinement.host_prerequisites`, `beliefs.recipe.CONFINED_POLICY`, `beliefs.boundary.{execute_assessment_run, RunMinted, RunRefused}`, `beliefs.adapter.WorkflowDefinition`, `beliefs.runrecord.run_ref`, `stored.analysis_spec_value`, `ctx.held_path`, `writer.operation_port()`.
 - Produces: `run:<address>` records; `handle(ctx, writer, *, spec, dataset, code, entrypoint, targets, cores=None)`; module constant `POLICY = CONFINED_POLICY` (tests monkeypatch it to `MINIMAL_POLICY` where bubblewrap is absent); helper `science.commands.run.prepare(ctx, spec, dataset, code, entrypoint, targets) -> dict` shared with `verify`.
 
-- [ ] **Step 1: Declaration and prompt** — the spec's §4.4 declaration; `families = ["corpus-stored", "holdings"]`. Prompt:
+- [x] **Step 1: Declaration and prompt** — the spec's §4.4 declaration; `families = ["corpus-stored", "holdings"]`. Prompt:
 
 ```markdown
 Run `run` to execute a frozen spec's analysis once under confinement: name
@@ -2235,7 +2235,7 @@ otherwise before touching anything. The minted run record is the output; a
 refusal names the kernel's reason and nothing was written.
 ```
 
-- [ ] **Step 2: Failing tests**
+- [x] **Step 2: Failing tests**
 
 ```python
 # python/tests/test_cmd_run.py
@@ -2320,9 +2320,9 @@ def test_boundary_refusal_is_kernel_refused_and_closes_the_invocation(rig, certi
     assert again.value.refusal.code == "kernel-refused"
 ```
 
-- [ ] **Step 3: Run to verify they fail** — `just test-fast`.
+- [x] **Step 3: Run to verify they fail** — `just test-fast`.
 
-- [ ] **Step 4: Handler**
+- [x] **Step 4: Handler**
 
 ```python
 # python/src/science/commands/run.py
@@ -2411,11 +2411,11 @@ def handle(ctx, writer, *, spec, dataset, code, entrypoint, targets, cores=None)
     return (record_block(view.get(run_ref(outcome.run.address()))),)
 ```
 
-with `from beliefs.session import KernelRefusalValue` among the imports. `RunRefused` carries `reason` and `detail`; the dispatcher's `_kernel_refusal` renders `Refusal("kernel-refused", str(value.reason), {"kind": "RunRefused", "reason": …})`. `writer.actor` is the session actor exposed on the scoped writer (assumed seam).
+with `from beliefs.session import KernelRefusalValue` among the imports. Landed 2026-09-23: the declaration is §4.4's with `schema_version = 1` and a `doc` on `cores`. The first confined run from science's dev environment refused `closure-unsupported` — coverage's `a1_coverage.pth` (via pytest-testmon) imports `sys`, which the kernel's closure refused — fixed in the kernel under `beliefs-76fe0e` (beliefs `ff45ecb`), after which every test here runs under `CONFINED_POLICY` on a bubblewrap host. `RunRefused` carries `reason` and `detail`; the dispatcher's `_kernel_refusal` renders `Refusal("kernel-refused", str(value.reason), {"kind": "RunRefused", "reason": …})`. `writer.actor` is the session actor exposed on the scoped writer (assumed seam).
 
-- [ ] **Step 5: Run, regenerate, run** — `just test-fast`; `cd python && uv run science adapters build`; `just test`.
+- [x] **Step 5: Run, regenerate, run** — `just test-fast`; `cd python && uv run science adapters build`; `just test`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 tasks done sci-fe0065 "run command: one confined execution through the scoped operation port"
