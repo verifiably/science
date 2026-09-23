@@ -34,8 +34,10 @@ def fixture_proposition_node(slug: str):
     return stored.proposition_node(slug, title=slug, claim={"operator": "affects"})
 
 
+# A source has no slug: beliefs derives its address from the identifiers, so the slug
+# reaches the id only through the DOI it names.
 def fixture_source_node(slug: str):
-    return stored.source_node(slug, title=slug, identifiers={"doi": "10.1/" + slug})
+    return stored.source_node(title=slug, identifiers={"doi": "10.1234/" + slug})
 
 
 def build_fixture_world(work: Path) -> ScienceConfig:
