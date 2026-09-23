@@ -25,7 +25,7 @@
 
 ## Assumed kernel seams
 
-Tasks 3, 4, 6, 7, 8 and 9 call interfaces `beliefs` does not have yet. These are the names the three `beliefs` tasks deliver; if a name lands differently, change the call site, not the design.
+All three seams landed 2026-09-10 and were verified against the kernel 2026-09-23; the names below are as landed. Tasks 3–5 and 10 pinned further drift at implementation, and Tasks 6–13 were revised 2026-09-23 for the kernel's typed estimand and its profile-typed value readers (`stored.analysis_spec_value(node, *, profile)`, `stored.assessment_value(node, *, profile)`).
 
 - **`beliefs-e5ab34` (reference rules):** `beliefs.rules.REFERENCE_RULES: Mapping[str, RuleImplementation | EquivalenceImplementation]` keyed by rule identity, holding `"beliefs/outcome-file/v1"` (interpretation: maps the digest of `outputs/outcome.txt` — one of `supported\n`, `refuted\n`, `inconclusive\n` — to `{"outcome": …}`) and `"beliefs/content-identity-equality/v1"` (equivalence: `passed` iff the two result manifests are equal). `beliefs.rules.OUTCOME_FILE = "outputs/outcome.txt"`.
 - **`beliefs-2d9a55` (store identity):** `beliefs.root.store_identity(store_root: Path) -> str | None`, the public form of the existing private genesis read, by detached inspection (no recovery, no writes); `None` when the root carries no store genesis. Split out of the routes seam so the read context and the read-only commands can land before it.
@@ -1773,29 +1773,92 @@ git commit -m "feat(commands): claim types a proposition under the contract plan
 
 ### Task 6: `spec` — freeze an analysis spec
 
-**Blocked on `beliefs-e5ab34`** (`beliefs.rules.REFERENCE_RULES`).
+**Revised 2026-09-23** for the kernel's typed estimand (design §4.3 as amended and reviewed 2026-09-23; beliefs 9ad72e2, 71b2741). Probed against the kernel before writing: the typed contract compiles, `claim_from_stored` restores the target, the receipts read `not-available` for an unheld dataset-bound level list and `not-consulted` for namespace-bound sorts, `UnknownQuantifier` and `UndeclaredDimension` are `ClaimError`s, and the frozen spec's record is accepted by the writer.
 
 **Files:**
 - Create: `commands/spec/command.toml`, `commands/spec/prompt.md`, `python/src/science/commands/spec.py`
+- Modify: `python/tests/helpers/world.py` (typed test contract, level list, `SPEC_FIELDS`)
 - Test: `python/tests/test_cmd_spec.py`
 - Regenerate: `adapters/claude-code/`
+- CLI table: batch 2 (the user's decision of 2026-09-23) — `spec`'s rows land in ops `cli.toml` with `run`, `assess`, `verify` and `next`, so this task's commit waits for that batch or lands with it.
 
 **Interfaces:**
-- Consumes: `beliefs.rules.REFERENCE_RULES`; `beliefs.spec.{SpecDraft, SpecInput, Deterministic, freeze, MalformedSpec, UnfreezableSpec}`; `stored.{analysis_spec_node, dataset_declaration}`; `beliefs.dataset.dataset_address`.
-- Produces: `analysis-spec:<identity>` records; `handle(ctx, writer, *, target, dataset, estimand, method, assumptions, falsification, applicability, interpretation_rule, equivalence_rule, parameters=None, supersedes=None)`; helper `science.commands.spec.parse_parameters(list[str]) -> dict[str, Decimal]`.
+- Consumes: `beliefs.rules.REFERENCE_RULES`; `beliefs.spec.{SpecDraft, SpecInput, Deterministic, freeze, MalformedSpec, UnfreezableSpec}`; `beliefs.decode.claim_from_stored`; `beliefs.estimand.{ESTIMAND_ERRORS, LevelsContrast, ContinuousContrast, Measure, Control, build_estimand, build_applicability}`; `beliefs.claim.{Qualifier, Referent}`; `beliefs.resolution.{ReferentPosition, TermOutcome}`; `beliefs.errors.{ClaimError, DecodeError, ProfileError, MalformedRecord}`; `ProfileSpec.estimand(operator)`, `ProfileSpec.dimensions`; `ctx.snapshot()`; `science.vocabulary.dataset_bound_sorts`.
+- Produces: `analysis-spec:<identity>` records; `handle(ctx, writer, *, target, dataset, contrast, slot, measure, scale, reference, identification, method, assumptions, falsification, interpretation_rule, equivalence_rule, baseline=None, comparison=None, quantity=None, increment=None, conditioning=None, applicability=None, parameters=None, supersedes=None)`; helper `science.commands.spec.parse_parameters(list[str]) -> dict[str, Decimal]`; in helpers, `LEVELS`, `level_list_address()`, `build_fixture_world_with_contract(work, *, hold_concepts=True, hold_levels=True)`, and the typed `SPEC_FIELDS` every later spec invocation reuses.
 
-- [ ] **Step 1: Declaration and prompt** — the spec's §4.3 declaration minus the removed `nondeterminism` input; budget 4096; `families = ["corpus-stored"]`. Prompt:
+- [ ] **Step 1: Declaration and prompt** — `commands/spec/command.toml` is the design's §4.3 declaration as amended (typed estimand inputs: `contrast` enum, `slot` int, `baseline`/`comparison`/`quantity`/`increment` optional, `measure`, `scale` enum, `reference`, `identification`, `conditioning` list, `applicability` list; prose `method`/`assumptions`/`falsification`; the two rule identities; `parameters`; `supersedes`), with `schema_version = 1` and a `doc` on every input; budget 4096; `families = ["corpus-stored", "holdings"]` — `holdings` because the typed estimand resolves against the §5.3 snapshot, as `claim`'s does. Prompt:
 
 ```markdown
-Run `spec` to freeze the analysis that will assess a proposition: the target
-proposition, the dataset it observes, the estimand, method, assumptions,
-falsification condition and applicability in the user's words, and the
-interpretation and equivalence rule identities the kernel ships. Parameters
-are name=value pairs. The frozen spec's identity is what `run` executes and
-`verify` compares under; it cannot be edited, only superseded.
+Run `spec` to freeze the analysis that will assess a proposition. Give the
+target proposition and the dataset it observes; the estimand as its parts —
+a `levels` contrast (slot, baseline and comparison levels) or a
+`continuous` one (slot, quantity and increment), the measure and its scale,
+the reference value on that scale, the identification strategy, and any
+conditioning terms, each term kind-prefixed as the contract's vocabularies
+spell it; applicability as dimension=quantifier:term entries, if the
+analysis is narrower than the claim; the method, assumptions and
+falsification condition in the user's words; and the interpretation and
+equivalence rule identities the kernel ships. Parameters are name=value
+pairs. Nothing is defaulted: ask the user rather than guess a reference or
+a scale. The frozen spec's identity is what `run` executes and `verify`
+compares under; it cannot be edited, only superseded.
 ```
 
-- [ ] **Step 2: Failing tests**
+- [ ] **Step 2: Grow the helpers** (`python/tests/helpers/world.py`)
+
+The test contract gains a dataset-bound `level` sort, namespace-bound `measure`, `identification` and `cohort` sorts, one dimension `scope` on the first operator, and the `estimands:` row for that operator (design §7 as amended):
+
+```python
+    level:
+      vocabulary: "dataset:%(levels)s"
+    measure:
+      vocabulary: {namespace: testing-measures, release: "1"}
+    identification:
+      vocabulary: {namespace: testing-identification, release: "1"}
+    cohort:
+      vocabulary: {namespace: testing-cohorts, release: "1"}
+  dimensions:
+    scope:
+      restriction_sort: cohort
+  operators:
+    affects-concept-protein:
+      ...
+      dimensions: [scope]
+    ...
+  estimands:
+    affects-concept-protein:
+      level_sorts: {"0": level}
+      measure_sort: measure
+      identification_sort: identification
+      conditioning_sort: concept
+```
+
+```python
+LEVELS = b"level:early\nlevel:late\n"
+
+
+def level_list_address() -> str:
+    from hashlib import sha256
+    from beliefs.dataset import DatasetDeclaration, ResourceDeclaration, dataset_address
+    digest = "sha256:" + sha256(LEVELS).hexdigest()
+    return dataset_address(DatasetDeclaration(resources=(ResourceDeclaration(name="levels.txt", digest=digest),)))
+```
+
+`fixture_contract_document` fills `%(levels)s` with `level_list_address()` beside the concept address; `build_fixture_world_with_contract(work, *, hold_concepts=True, hold_levels=True)` holds `levels.txt` after the concept list when `hold_levels`. `SPEC_FIELDS` becomes the typed set:
+
+```python
+SPEC_FIELDS = {"contrast": "levels", "slot": 0, "baseline": "level:early", "comparison": "level:late",
+               "measure": "measure:tpm", "scale": "additive", "reference": "0",
+               "identification": "identification:observational",
+               "method": "rank comparison", "assumptions": "independent samples",
+               "falsification": "no difference at alpha",
+               "interpretation_rule": "beliefs/outcome-file/v1",
+               "equivalence_rule": "beliefs/content-identity-equality/v1"}
+```
+
+Run `just test` after this step alone: the claim, context and dataset tests must stay green under the grown contract (the added dimension and estimand row change no claim identity the tests assert).
+
+- [ ] **Step 3: Failing tests**
 
 ```python
 # python/tests/test_cmd_spec.py
@@ -1804,7 +1867,8 @@ from decimal import Decimal
 import pytest
 
 from science.refusal import Refused
-from helpers.world import SPEC_FIELDS as FIELDS, build_belief_world, hold_fixture_dataset, open_rig
+from helpers.world import (SPEC_FIELDS as FIELDS, build_belief_world, build_fixture_world_with_contract,
+                           hold_fixture_dataset, level_list_address, open_rig)
 
 
 @pytest.fixture
@@ -1815,17 +1879,122 @@ def rig(certified_work):
         yield d, ctx, ref
 
 
-def test_spec_freezes_and_the_record_id_is_the_identity(rig):
+def _specs(ctx):
+    _, view = ctx.single_view()
+    return [n for n in view.iter_stored() if n.kind == "analysis-spec"]
+
+
+def test_spec_freezes_a_typed_estimand_and_the_record_id_is_the_identity(rig):
     d, ctx, ref = rig
     out = d.invoke("spec", dict(FIELDS, target="proposition:p1", dataset=ref, parameters=["alpha=0.05"]))
     assert "[analysis-spec] analysis-spec:" in out.text
-    _, view = ctx.single_view()
     from beliefs import stored
-    node = next(n for n in view.iter_stored() if n.kind == "analysis-spec")
-    spec = stored.analysis_spec_value(node)
+    (node,) = _specs(ctx)
+    spec = stored.analysis_spec_value(node, profile=ctx.config.profile)
     assert node.id == f"analysis-spec:{spec.identity}"
     assert spec.parameters["alpha"] == Decimal("0.05")
     assert spec.nondeterminism.projection() == {"variant": "deterministic"}
+    assert spec.estimand.measure.scale == "additive"
+    assert spec.estimand.contrast.baseline.term == "level:early"
+    assert dict(spec.applicability) == {}
+
+
+def test_namespace_bound_estimand_sorts_resolve_not_consulted_and_stand(rig):
+    """measure and identification are namespace-bound and not held: the
+    kernel's permissive reading stands, as for claim's protein slot."""
+    d, ctx, ref = rig
+    d.invoke("spec", dict(FIELDS, target="proposition:p1", dataset=ref, measure="measure:anything"))
+    assert len(_specs(ctx)) == 1
+
+
+def test_unheld_level_vocabulary_refuses_naming_its_address_and_mints_nothing(certified_work):
+    cfg = build_fixture_world_with_contract(certified_work, hold_levels=False)
+    ref = hold_fixture_dataset(cfg, "data.txt", b"x\n", "expression")
+    with open_rig(cfg, ("claim", "spec")) as (d, ctx):
+        prop = next(t for t in d.invoke("claim", {"subject": "concept:disease-stage", "predicate": "affects",
+                                                  "object": "protein:PHF19", "layer": "causal",
+                                                  "polarity": "positive"}).text.split()
+                    if t.startswith("proposition:"))
+        with pytest.raises(Refused) as caught:
+            d.invoke("spec", dict(FIELDS, target=prop, dataset=ref))
+        assert caught.value.refusal.code == "invalid-input"
+        assert level_list_address() in caught.value.refusal.message
+        assert "hold it with `dataset`" in caught.value.refusal.message
+        assert _specs(ctx) == []
+
+
+def test_non_member_level_refuses(rig):
+    d, ctx, ref = rig
+    with pytest.raises(Refused) as caught:
+        d.invoke("spec", dict(FIELDS, target="proposition:p1", dataset=ref, comparison="level:never"))
+    assert caught.value.refusal.code == "invalid-input"
+    assert _specs(ctx) == []
+
+
+@pytest.mark.parametrize("change", [
+    {"quantity": "measure:tpm"},                      # a continuous input on a levels contrast
+    {"comparison": None},                             # a levels input missing
+    {"contrast": "continuous"},                       # continuous with levels inputs and no quantity
+])
+def test_contrast_inputs_must_match_the_contrast_kind(rig, change):
+    d, ctx, ref = rig
+    inputs = {k: v for k, v in dict(FIELDS, target="proposition:p1", dataset=ref, **change).items() if v is not None}
+    with pytest.raises(Refused) as caught:
+        d.invoke("spec", inputs)
+    assert caught.value.refusal.code == "invalid-input"
+    assert _specs(ctx) == []
+
+
+def test_reference_must_be_a_finite_decimal(rig):
+    d, _, ref = rig
+    for bad in ("zero", "NaN", "Infinity"):
+        with pytest.raises(Refused) as caught:
+            d.invoke("spec", dict(FIELDS, target="proposition:p1", dataset=ref, reference=bad))
+        assert caught.value.refusal.code == "invalid-input"
+
+
+def test_applicability_qualifier_is_typed_and_accepted(rig):
+    d, ctx, ref = rig
+    d.invoke("spec", dict(FIELDS, target="proposition:p1", dataset=ref,
+                          applicability=["testing/scope=generic:cohort:adults"]))
+    from beliefs import stored
+    (node,) = _specs(ctx)
+    spec = stored.analysis_spec_value(node, profile=ctx.config.profile)
+    assert spec.applicability["testing/scope"].quantifier == "generic"
+
+
+@pytest.mark.parametrize("entry", [
+    "testing/scope=most:cohort:adults",               # UnknownQuantifier (a ClaimError)
+    "testing/nope=generic:cohort:adults",             # UndeclaredDimension (a ClaimError)
+])
+def test_applicability_authoring_errors_refuse_and_replay_exactly(rig, entry):
+    """Not ESTIMAND_ERRORS: build_applicability raises the claim grammar's
+    ClaimError subclasses. Escaping the handler would leave the invocation
+    open and a retry would read outcome-unknown (design §4.3)."""
+    d, ctx, ref = rig
+    inputs = dict(FIELDS, target="proposition:p1", dataset=ref, applicability=[entry])
+    with pytest.raises(Refused) as first:
+        d.invoke("spec", inputs, invocation_id="Q" * 8)
+    with pytest.raises(Refused) as again:
+        d.invoke("spec", inputs, invocation_id="Q" * 8)
+    assert first.value.refusal.code == "invalid-input"
+    assert again.value.refusal == first.value.refusal
+    assert _specs(ctx) == []
+
+
+def test_malformed_applicability_entry_refuses(rig):
+    d, _, ref = rig
+    with pytest.raises(Refused) as caught:
+        d.invoke("spec", dict(FIELDS, target="proposition:p1", dataset=ref, applicability=["scope"]))
+    assert "dimension=quantifier:term" in caught.value.refusal.message
+
+
+def test_scale_choices_are_the_kernel_scales():
+    from beliefs.estimand import SUPPORTED_SCALES
+    from science.loader import production_tree
+    decl = next(d for d in production_tree() if d.name == "spec")
+    (scale,) = [i for i in decl.inputs if i.name == "scale"]
+    assert tuple(scale.choices) == tuple(SUPPORTED_SCALES)
 
 
 def test_unknown_rule_identity_refuses(rig):
@@ -1850,29 +2019,57 @@ def test_malformed_parameter_refuses(rig):
     assert "name=value" in caught.value.refusal.message
 ```
 
-- [ ] **Step 3: Run to verify they fail** — `just test-fast`.
+Two of these are the §7 mutation checks: dropping the receipt check makes `test_unheld_level_vocabulary_refuses_naming_its_address_and_mints_nothing` mint; narrowing the catch to `ESTIMAND_ERRORS` makes the replay test read `outcome-unknown`. The `Refused.refusal` equality in the replay test compares code, message and data.
 
-- [ ] **Step 4: Handler**
+- [ ] **Step 4: Run to verify they fail** — `just test-fast`. Expected: `cannot import science.commands.spec` for every spec test; the helper-dependent context, claim and dataset tests still pass.
+
+- [ ] **Step 5: Handler**
 
 ```python
 # python/src/science/commands/spec.py
-"""spec: freeze an analysis spec against the kernel's reference rules (§4.3)."""
+"""spec: freeze an analysis spec against the kernel's reference rules (§4.3).
+
+The estimand is typed against the claim it answers: the target's operator
+fixes every sort through its contract's `estimands:` declaration, so the
+surface takes terms and numbers only, never a sort (design §4.3, amended
+2026-09-23)."""
 from __future__ import annotations
 
 from decimal import Decimal, InvalidOperation
 
 from beliefs import stored
+from beliefs.claim import Qualifier, Referent
 from beliefs.dataset import dataset_address
-from beliefs.errors import MalformedRecord
+from beliefs.decode import claim_from_stored
+from beliefs.errors import ClaimError, DecodeError, MalformedRecord, ProfileError
+from beliefs.estimand import (ESTIMAND_ERRORS, ContinuousContrast, Control, LevelsContrast, Measure,
+                              build_applicability, build_estimand)
+from beliefs.resolution import ReferentPosition, TermOutcome
 from beliefs.rules import REFERENCE_RULES
 from beliefs.spec import Deterministic, MalformedSpec, SpecDraft, SpecInput, UnfreezableSpec, freeze
 
 from science.refusal import Refusal, Refused
 from science.report import Report, record_block
+from science.vocabulary import dataset_bound_sorts
+
+# Every authoring error the kernel raises on this path: kept whole so none
+# escapes the handler and leaves the invocation open (design §4.3).
+AUTHORING_ERRORS = (*ESTIMAND_ERRORS, ClaimError, DecodeError, ProfileError)
+UNRESOLVED = (TermOutcome.NOT_CONSULTED, TermOutcome.NOT_AVAILABLE)
 
 
 def _refuse(message: str):
     raise Refused(Refusal("invalid-input", message))
+
+
+def _decimal(name: str, value: str) -> Decimal:
+    try:
+        number = Decimal(value)
+    except InvalidOperation:
+        _refuse(f"{name} {value!r} is not a decimal")
+    if not number.is_finite():
+        _refuse(f"{name} {value!r} is not finite")
+    return number
 
 
 def parse_parameters(entries) -> dict[str, Decimal]:
@@ -1881,10 +2078,7 @@ def parse_parameters(entries) -> dict[str, Decimal]:
         name, sep, value = entry.partition("=")
         if not sep or not name:
             _refuse(f"parameter {entry!r} is not name=value")
-        try:
-            parameters[name] = Decimal(value)
-        except InvalidOperation:
-            _refuse(f"parameter {entry!r}: {value!r} is not a decimal")
+        parameters[name] = _decimal(f"parameter {name}", value)
     return parameters
 
 
@@ -1895,13 +2089,67 @@ def _rule(identity: str):
     return implementation
 
 
-def handle(ctx, writer, *, target, dataset, estimand, method, assumptions, falsification,
-           applicability, interpretation_rule, equivalence_rule, parameters=None, supersedes=None) -> Report:
+def _contrast(decl, contrast, slot, baseline, comparison, quantity, increment):
+    """(contrast value, {receipt label: referent}) — or refuse. Nothing is
+    defaulted: an input of the other kind, or a missing one of this kind,
+    refuses."""
+    kinds = {"levels": {"baseline": baseline, "comparison": comparison},
+             "continuous": {"quantity": quantity, "increment": increment}}
+    stray = sorted(k for kind, given in kinds.items() if kind != contrast for k, v in given.items() if v is not None)
+    if stray:
+        _refuse(f"{', '.join(stray)} belong to the other contrast kind, not {contrast}")
+    missing = sorted(k for k, v in kinds[contrast].items() if v is None)
+    if missing:
+        _refuse(f"a {contrast} contrast needs {', '.join(missing)}")
+    if contrast == "levels":
+        sort = decl.level_sorts.get(str(slot))
+        if sort is None:
+            _refuse(f"{decl.operator} declares no level sort for slot {slot}; "
+                    f"its levels are declared for slots {sorted(decl.level_sorts, key=int)}")
+        low, high = Referent(sort, baseline), Referent(sort, comparison)
+        return (LevelsContrast(slot=slot, baseline=low, comparison=high),
+                {"contrast.baseline": low, "contrast.comparison": high})
+    along = Referent(decl.measure_sort, quantity)
+    return (ContinuousContrast(slot=slot, quantity=along, increment=_decimal("increment", increment)),
+            {"contrast.quantity": along})
+
+
+def _qualifiers(profile, entries) -> dict[str, Qualifier]:
+    qualifiers: dict[str, Qualifier] = {}
+    for entry in entries or ():
+        dimension, sep, rest = entry.partition("=")
+        quantifier, colon, term = rest.partition(":")
+        if not sep or not dimension or not colon or not quantifier or not term:
+            _refuse(f"applicability {entry!r} is not dimension=quantifier:term")
+        declared = profile.dimensions.get(dimension)
+        if declared is None:
+            _refuse(f"applicability {entry!r}: no dimension {dimension!r} in this profile; "
+                    f"it declares {sorted(profile.dimensions)}")
+        qualifiers[dimension] = Qualifier(quantifier, Referent(declared.restriction_sort, term))
+    return qualifiers
+
+
+def _require_held(profile, receipt, referents: dict[str, Referent]) -> None:
+    """The kernel refuses only not-member; §5.2 requires a dataset-bound
+    vocabulary to be held, so an unresolved outcome under one refuses here."""
+    bound = dataset_bound_sorts(profile)
+    for label, referent in referents.items():
+        outcome = receipt.outcomes[label]
+        if referent.sort in bound and outcome in UNRESOLVED:
+            _refuse(f"{referent.term} ({label}): sort {referent.sort} binds vocabulary "
+                    f"dataset:{bound[referent.sort].dataset_identity}, which is not held here ({outcome.value}); "
+                    "hold it with `dataset` before freezing a spec under it")
+
+
+def handle(ctx, writer, *, target, dataset, contrast, slot, measure, scale, reference, identification,
+           method, assumptions, falsification, interpretation_rule, equivalence_rule,
+           baseline=None, comparison=None, quantity=None, increment=None, conditioning=None,
+           applicability=None, parameters=None, supersedes=None) -> Report:
+    profile = ctx.config.profile
     _, view = ctx.single_view()
-    if not view.holds(target):
-        _refuse(f"target {target!r} is not in the corpus")
-    if not view.holds(dataset):
-        _refuse(f"dataset {dataset!r} is not in the corpus")
+    for ref in (target, dataset):
+        if not view.holds(ref):
+            _refuse(f"{ref!r} is not in the corpus")
     try:
         address = dataset_address(stored.dataset_declaration(view.get(dataset)))
     except MalformedRecord as caught:
@@ -1909,37 +2157,61 @@ def handle(ctx, writer, *, target, dataset, estimand, method, assumptions, falsi
     if address is None:
         _refuse(f"{dataset} declares no content identity")
     held_rules = {interpretation_rule: _rule(interpretation_rule), equivalence_rule: _rule(equivalence_rule)}
+    snapshot = ctx.snapshot()
+    try:
+        claim, _ = claim_from_stored(view.get(target), profile=profile, snapshot=snapshot)
+        decl = profile.estimand(claim.operator)
+        contrast_value, referents = _contrast(decl, contrast, slot, baseline, comparison, quantity, increment)
+        referents["measure.quantity"] = Referent(decl.measure_sort, measure)
+        referents["control.identification"] = Referent(decl.identification_sort, identification)
+        conditioned = tuple(Referent(decl.conditioning_sort, term) for term in conditioning or ())
+        for index, member in enumerate(conditioned):
+            referents[f"control.conditioning[{index}]"] = member
+        estimand, estimand_receipt = build_estimand(
+            profile, claim, snapshot=snapshot, contrast=contrast_value,
+            measure=Measure(quantity=referents["measure.quantity"], scale=scale),
+            reference=_decimal("reference", reference),
+            control=Control(identification=referents["control.identification"], conditioning=conditioned))
+        qualifiers = _qualifiers(profile, applicability)
+        scoped, applicability_receipt = build_applicability(profile, claim, qualifiers, snapshot=snapshot)
+    except AUTHORING_ERRORS as caught:
+        _refuse(f"estimand refused: {caught}")
+    _require_held(profile, estimand_receipt,
+                  {ReferentPosition.estimand(part).label(): r for part, r in referents.items()})
+    _require_held(profile, applicability_receipt,
+                  {ReferentPosition.restriction(d).label(): q.restriction for d, q in qualifiers.items()})
     draft = SpecDraft(target=target, estimand=estimand, method=method, assumptions=assumptions,
                       falsification=falsification,
                       input_roles=(SpecInput(role="observes", dataset=address),),
-                      applicability=applicability, interpretation_rule=interpretation_rule,
+                      applicability=scoped, interpretation_rule=interpretation_rule,
                       equivalence_rule=equivalence_rule, parameters=parse_parameters(parameters),
                       nondeterminism=Deterministic())
+    superseded = None if supersedes is None else stored.local_id("analysis-spec", supersedes)
     try:
-        spec = freeze(draft, held_rules=held_rules, supersedes=supersedes)
+        spec = freeze(draft, held_rules=held_rules, supersedes=superseded)
     except (MalformedSpec, UnfreezableSpec) as caught:
         _refuse(f"freeze refused: {caught}")
     node = writer.add(stored.analysis_spec_node(spec))
     return (record_block(node),)
 ```
 
-`supersedes`, when given, is a record ref; `freeze` expects the superseded spec's identity — strip `analysis-spec:` with `stored.local_id("analysis-spec", supersedes)` before passing it.
+Pinned 2026-09-23: `ReferentPosition.estimand(part).label()` is `estimand:<part>`, the label `build_estimand` gives each receipt entry, with the part names of `beliefs.estimand._referent_positions` (`contrast.baseline`, `contrast.comparison`, `contrast.quantity`, `measure.quantity`, `control.identification`, `control.conditioning[i]`). The `scale` enum and the kernel's `SUPPORTED_SCALES` must agree; `test_scale_choices_are_the_kernel_scales` keeps them together.
 
-- [ ] **Step 5: Run, regenerate, run** — `just test-fast`; `cd python && uv run science adapters build`; `just test`.
+- [ ] **Step 6: Run, regenerate, run** — `just test-fast`; `cd python && uv run science adapters build`; `just test` (with batch 2's vendored `cli.toml`, or with only `test_surface_equals_table` failing until it lands).
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
-tasks done sci-57c3d3 "spec command: deterministic draft frozen against the kernel's reference rules"
-git add commands/spec python/src/science/commands/spec.py python/tests/test_cmd_spec.py adapters/claude-code tasks/
-git commit -m "feat(commands): spec freezes an analysis spec"
+tasks done sci-57c3d3 "spec command: typed estimand and applicability against the target claim, heldness enforced from the receipts, deterministic draft frozen against the kernel's reference rules"
+git add commands/spec python/src/science/commands/spec.py python/tests/ adapters/claude-code tasks/
+git commit -m "feat(commands): spec freezes an analysis spec with a typed estimand"
 ```
 
 ---
 
 ### Task 7: `run` — execute once under confinement
 
-**Blocked on `beliefs-5fe2e3`** (`writer.operation_port()`).
+**Was blocked on `beliefs-5fe2e3`** (`writer.operation_port()`); landed.
 
 **Files:**
 - Create: `commands/run/command.toml`, `commands/run/prompt.md`, `python/src/science/commands/run.py`
@@ -2089,7 +2361,7 @@ def prepare(ctx, spec_ref: str, dataset_ref: str, code: str, entrypoint: str, ta
     if not view.holds(dataset_ref):
         _refuse(f"dataset {dataset_ref!r} is not in the corpus")
     try:
-        spec = stored.analysis_spec_value(view.get(spec_ref))
+        spec = stored.analysis_spec_value(view.get(spec_ref), profile=ctx.config.profile)
         address = dataset_address(stored.dataset_declaration(view.get(dataset_ref)))
     except MalformedRecord as caught:
         _refuse(str(caught))
@@ -2152,7 +2424,7 @@ git commit -m "feat(commands): run executes a frozen spec under confinement"
 
 ### Task 8: `assess` — derive and mint the assessment
 
-**Blocked on `beliefs-e5ab34`.**
+**Was blocked on `beliefs-e5ab34`; landed.**
 
 **Files:**
 - Create: `commands/assess/command.toml`, `commands/assess/prompt.md`, `python/src/science/commands/assess.py`
@@ -2200,7 +2472,7 @@ def test_assess_mints_the_assessment_the_outcome_file_fixes(rig):
     _, view = ctx.single_view()
     from beliefs import stored
     node = next(n for n in view.iter_stored() if n.kind == "assessment")
-    value = stored.assessment_value(node)
+    value = stored.assessment_value(node, profile=ctx.config.profile)
     assert value.outcome == "supported"
     assert value.proposition == "proposition:p1"
     assert node.id == f"assessment:{value.identity()[:16]}"
@@ -2247,21 +2519,22 @@ def handle(ctx, writer, *, run) -> Report:
     spec_ref = stored.typed_ref("analysis-spec", closure.recipe.spec_identity or "")
     if not closure.recipe.spec_identity or not view.holds(spec_ref):
         _refuse(f"{run} names no analysis-spec this corpus holds")
-    spec = stored.analysis_spec_value(view.get(spec_ref))
+    spec = stored.analysis_spec_value(view.get(spec_ref), profile=ctx.config.profile)
     rule = REFERENCE_RULES.get(spec.interpretation_rule)
     if rule is None:
         _refuse(f"the spec's interpretation rule {spec.interpretation_rule!r} is not a reference rule")
     derived = build_assessment(closure, specs={spec.identity: spec}, implementations={rule.identity: rule})
     if isinstance(derived, AssessmentFinding):
         _refuse(f"assessment finding: {derived.reason}")
-    optional = {k: v for k, v in (("estimate", derived.estimate), ("uncertainty", derived.uncertainty),
-                                   ("estimand", derived.estimand), ("applicability", derived.applicability))
+    # The estimand and applicability are required: the derived assessment
+    # carries the frozen spec's typed pair (design §4.5, amended 2026-09-23).
+    optional = {k: v for k, v in (("estimate", derived.estimate), ("uncertainty", derived.uncertainty))
                 if v is not None}
     node = writer.add(stored.assessment_node(
         derived.identity()[:16], title=f"assessment of {spec.target}", spec=spec.identity, run=run,
         proposition=spec.target, outcome=derived.outcome, interpretation_rule=derived.interpretation_rule,
-        **optional))
-    stored_identity = stored.assessment_value(node).identity()
+        estimand=derived.estimand, applicability=derived.applicability, **optional))
+    stored_identity = stored.assessment_value(node, profile=ctx.config.profile).identity()
     if stored_identity != derived.identity():
         raise RuntimeError(f"stored assessment identity {stored_identity} differs from derived {derived.identity()}")
     return (record_block(node),)
@@ -2281,7 +2554,7 @@ git commit -m "feat(commands): assess derives and mints the assessment"
 
 ### Task 9: `verify` — replay, derive scope and verdict, mint the verification
 
-**Blocked on `beliefs-5fe2e3` and Task 7 (`sci-fe0065`)** (`writer.operation_port()`,
+**Was blocked on `beliefs-5fe2e3` (landed); depends on Task 7 (`sci-fe0065`)** (`writer.operation_port()`,
 `replay` over a closure, and the run preparation interface). Task 9 follows
 Task 7 because it imports `science.commands.run.{prepare, now, POLICY}` directly.
 
@@ -2400,7 +2673,7 @@ def handle(ctx, writer, *, assessment, code, entrypoint, cores=None) -> Report:
     if not view.holds(assessment):
         _refuse(f"assessment {assessment!r} is not in the corpus")
     try:
-        value = stored.assessment_value(view.get(assessment))
+        value = stored.assessment_value(view.get(assessment), profile=ctx.config.profile)
     except MalformedRecord as caught:
         _refuse(f"{assessment}: {caught}")
     run_ref = stored.typed_ref("run", value.run)
@@ -2408,7 +2681,7 @@ def handle(ctx, writer, *, assessment, code, entrypoint, cores=None) -> Report:
     if not view.holds(run_ref) or not view.holds(spec_ref):
         _refuse(f"{assessment} names a run or spec this corpus does not hold")
     original = decode_run_closure(view.get(run_ref))
-    (role,) = stored.analysis_spec_value(view.get(spec_ref)).input_roles
+    (role,) = stored.analysis_spec_value(view.get(spec_ref), profile=ctx.config.profile).input_roles
     dataset_ref = next((n.id for n in view.iter_stored() if n.kind == "dataset"
                         and _address(n) == role.dataset), None)
     if dataset_ref is None:
@@ -2637,9 +2910,9 @@ from science.report import Heading, KeyVals, Report
 CLASSES = ("ready", "not-ready", "assessed-not-admitted", "admitted")
 
 
-def _targeting_specs(view, proposition):
-    return [stored.analysis_spec_value(n) for n in view.iter_stored()
-            if n.kind == "analysis-spec" and stored.analysis_spec_value(n).target == proposition]
+def _targeting_specs(view, proposition, profile):
+    specs = (stored.analysis_spec_value(n, profile=profile) for n in view.iter_stored() if n.kind == "analysis-spec")
+    return [spec for spec in specs if spec.target == proposition]
 
 
 def _inputs_held(ctx, view, spec) -> bool:
@@ -2656,10 +2929,11 @@ def _inputs_held(ctx, view, spec) -> bool:
 
 def classify(ctx, proposition: str) -> str:
     _, view = ctx.single_view()
-    assessed = any(n.kind == "assessment" and stored.assessment_value(n).proposition == proposition
+    profile = ctx.config.profile
+    assessed = any(n.kind == "assessment" and stored.assessment_value(n, profile=profile).proposition == proposition
                    for n in view.iter_stored())
     if not assessed:
-        return "ready" if any(_inputs_held(ctx, view, s) for s in _targeting_specs(view, proposition)) else "not-ready"
+        return "ready" if any(_inputs_held(ctx, view, s) for s in _targeting_specs(view, proposition, profile)) else "not-ready"
     inputs = ctx.gather_inputs(proposition)
     observations = ctx.observations()
     for assessment in inputs.assessments:
@@ -2675,7 +2949,7 @@ def handle(ctx, *, limit=None) -> Report:
     for node in view.iter_stored():
         if node.kind != "proposition":
             continue
-        statement = (stored.display_statement(node) if hasattr(stored, "display_statement") else None) or node.title
+        statement = stored.display_statement(node) or node.title
         rows.append((CLASSES.index(classify(ctx, node.id)), node.id, statement))
     rows.sort()
     shown = rows[: (limit or 10)]
@@ -2684,7 +2958,7 @@ def handle(ctx, *, limit=None) -> Report:
                     or (("none", "no propositions"),)))
 ```
 
-Replace the `hasattr` guess for the display statement with the real accessor (`grep -n "display_statement" ~/d/beliefs/python/src/beliefs/stored.py`).
+Pinned 2026-09-23: `stored.display_statement(node) -> str | None` exists; it is called directly.
 
 - [ ] **Step 5: Run, regenerate, run** — `just test-fast`; `cd python && uv run science adapters build`; `just test`.
 
@@ -3038,7 +3312,7 @@ git commit -m "test(belief-path): the full path on both surfaces, confined and p
 
 - [ ] **Step 1: Write the predictions section first**
 
-Create the record with §1 preflight and §5 predictions before running anything, in the 2026-09-05 record's shape. Predictions to state: the proposition id and claim identity `780ace5964c8ab83…`; the concept-list digest `sha256:c7e45f81…` and the expression dataset address `dataset:sha256:a6bf229e…`; the spec identity differs from `86aaa1a8…` by the rule identity; assessment `inconclusive`; scope `clean-environment`, verdict `passed`; belief `NoBelief(no-directional-outcome)`.
+Create the record with §1 preflight and §5 predictions before running anything, in the 2026-09-05 record's shape. Predictions to state (design §8.3 as amended 2026-09-23): the proposition id and claim identity `780ace5964c8ab83…`; the concept-list digest `sha256:c7e45f81…` and the expression dataset address `dataset:sha256:a6bf229e…`; the stage-level, measure and identification lists held as datasets whose addresses the contract document names; the spec identity differs from `86aaa1a8…` by the rule identity and by the typed estimand; assessment `inconclusive`; scope `clean-environment`, verdict `passed`; belief `NoBelief(no-directional-outcome)`.
 
 - [ ] **Step 2: The operator recipe**
 
@@ -3058,11 +3332,19 @@ from science.contracts import load_contract_document
 
 WORK = Path(".mm30-commands").resolve()
 AUTH = Authority(WritePermit.full(), "operator")
-concepts = (WORK / "mm30-concepts.txt").read_bytes()          # built as the record's step 1b built it
-digest = "sha256:" + sha256(concepts).hexdigest()
-address = dataset_address(DatasetDeclaration(resources=(ResourceDeclaration(name="mm30-concepts.txt", digest=digest),)))
-doc = WORK / "mm30.yaml"                                        # the biology-pack design §3.3 document, with
-doc.write_text(doc.read_text().replace("{{CONCEPTS}}", address.removeprefix("dataset:")))  # the address filled in
+# The four vocabulary lists the contract binds by dataset identity, built as
+# the kernel's reproduction driver builds them (tools/reproduction/lists.py):
+# concepts, stage levels (level:ndmm, level:pd), measures (measure:rna-seq-tpm)
+# and identifications (identification:observational).
+LISTS = {"CONCEPTS": "mm30-concepts.txt", "LEVELS": "mm30-stage-levels.txt",
+         "MEASURES": "mm30-measures.txt", "IDENTIFICATIONS": "mm30-identifications.txt"}
+doc = WORK / "mm30.yaml"   # the kernel driver's mm30.yaml re-authored `lineage: genesis` (design §5.2, §8.2)
+text = doc.read_text()
+for placeholder, name in LISTS.items():
+    digest = "sha256:" + sha256((WORK / name).read_bytes()).hexdigest()
+    address = dataset_address(DatasetDeclaration(resources=(ResourceDeclaration(name=name, digest=digest),)))
+    text = text.replace("{{" + placeholder + "}}", address.removeprefix("dataset:"))
+doc.write_text(text)
 base = shipped_base_contract()
 contract, _ = load_contract_document(doc, base)
 profile = compile_profile(base, [shipped_domain_contract("biology"), contract])
@@ -3084,7 +3366,7 @@ Then write `science.toml` with the world root, id, corpus root, `operations_root
 
 - [ ] **Step 3: Walk the path**
 
-Start `science mcp serve --config science.toml` from a coding-agent session and drive: `dataset` (the concept list), `claim`, `dataset` (the expression matrix from the predecessor's GSE179929 file), `spec` (the record's step 4 draft fields, `outcome-file/v1`, `content-identity-equality/v1`, `alpha=0.05`), `run` (the record's analysis bundle rendered as its `spec.py` rendered it, with the four parameters the finding `beliefs-efc32d` names supplied by the person), `assess`, `verify`, `belief`, `next`. Use the CLI for `belief` and `next` at least once. Record each command's minted id and any refusal in the record's §3 table, classified `design-gap` / `corpus-work` / `defect` / `closed`.
+The contract document is the kernel driver's `tools/reproduction/mm30.yaml` with its `lineage` changed to `genesis` (the loader takes no predecessor, design §5.2); its sorts, `estimands:` row for `affects-concept-molecular-entity` and bindings are otherwise unchanged. Start `science mcp serve --config science.toml` from a coding-agent session and drive: `dataset` (the concept list), `claim`, `dataset` (the expression matrix from the predecessor's GSE179929 file), `dataset` three times (the stage-level, measure and identification lists, design §3 steps 3a–3c), `spec` (the record's step 4 prose for `method`, `assumptions` and `falsification`; the typed estimand the kernel driver's `spec.py` builds — `contrast=levels`, `slot=0`, `baseline=level:ndmm`, `comparison=level:<positive level>`, `measure=measure:rna-seq-tpm`, `scale=additive`, `reference=0`, `identification=identification:observational`, no conditioning, no applicability; `beliefs/outcome-file/v1`, `beliefs/content-identity-equality/v1`, `alpha=0.05`), `run` (the record's analysis bundle rendered as its `spec.py` rendered it, with the four parameters the finding `beliefs-efc32d` names supplied by the person), `assess`, `verify`, `belief`, `next`. Use the CLI for `belief` and `next` at least once. Record each command's minted id and any refusal in the record's §3 table, classified `design-gap` / `corpus-work` / `defect` / `closed`.
 
 - [ ] **Step 4: Compare to the oracle and write the record**
 
