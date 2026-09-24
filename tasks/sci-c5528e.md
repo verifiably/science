@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: main
 created: 2026-09-23T11:40:35Z
-updated: 2026-09-24T10:02:31Z
+updated: 2026-09-24T10:02:43Z
 started: 2026-09-24T09:49:50Z
 depends: []
 tags: [projects]
@@ -25,3 +25,5 @@ The belief path design (dogfood-commands branch, docs/specs/2026-09-09-belief-pa
 - 2026-09-24T09:49:50Z (main): started
   provenance: {"harness_session":"claude-code:dde7b5c4-c65b-4f4c-9ec0-bc965ee48ee6","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-09-24T10:02:31Z (coordination-spec): Selection evaluation: the person chose a beliefs request for live, unpublished query evaluation (S1) over launcher-published epochs or refusing when stale; project-scoped next waits on it. Spec drafted with S2 (selection ledger lines) and S3 (enumerate standing tips by kind) as further beliefs seams, to be filed after spec approval.
+- 2026-09-24T10:02:43Z (coordination-spec): parked (waiting on user, review): Review the spec at .worktrees/coordination-spec/docs/specs/2026-09-24-coordination-command-set-design.md; on approval file S1-S3 in beliefs, then writing-plans
+  provenance: {"harness_session":"claude-code:dde7b5c4-c65b-4f4c-9ec0-bc965ee48ee6","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
