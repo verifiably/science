@@ -57,8 +57,10 @@ def load_config(path: Path) -> ScienceConfig:
         _refuse("config is not valid TOML")
     if type(raw) is not dict:
         _refuse("config must be a table")
-    if set(raw) - set(_OPTIONAL_KEYS) != set(_KEYS):
-        _refuse("config must contain exactly the required keys")
+    missing, unknown = set(_KEYS) - set(raw), set(raw) - set(_KEYS) - set(_OPTIONAL_KEYS)
+    if missing or unknown:
+        _refuse(f"config must contain exactly the required keys; missing {sorted(missing)}, "
+                f"unknown {sorted(unknown)}")
     if any(type(raw[key]) is not str for key in ("world_root", "world_id", "operations_root")):
         _refuse("config paths and world_id must be strings")
     if "service_socket" in raw and type(raw["service_socket"]) is not str:

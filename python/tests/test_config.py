@@ -40,10 +40,11 @@ def write_config(
     return cfg
 
 
-def assert_invalid_config(path: Path) -> None:
+def assert_invalid_config(path: Path):
     with pytest.raises(Refused) as caught:
         load_config(path)
     assert caught.value.refusal.code == "invalid-input"
+    return caught.value.refusal
 
 
 def test_load_config_builds_beliefs_worldconfig(tmp_path):
@@ -122,7 +123,8 @@ def test_unshipped_domain_namespace_is_refused_at_load(tmp_path):
 def test_coordination_key_is_required(tmp_path):
     path = write_config(tmp_path)
     path.write_text(path.read_text().replace("coordination = 2\n", ""))
-    assert_invalid_config(path)
+    message = assert_invalid_config(path).message
+    assert "missing ['coordination']" in message  # the key an upgraded config lacks, by name
 
 
 def test_coordination_version_compiles_into_the_profile(tmp_path):
@@ -147,8 +149,9 @@ def test_missing_or_unknown_fields_are_refused(tmp_path):
     missing = tmp_path / "missing.toml"
     missing.write_text('world_root = "/x"\n')
     assert_invalid_config(missing)
-    assert_invalid_config(write_config(tmp_path, extra="stray = 1\n"))
-    assert_invalid_config(write_config(tmp_path, extra="[untrusted]\nvalue = 1\n"))
+    assert "unknown ['stray']" in assert_invalid_config(write_config(tmp_path, extra="stray = 1\n")).message
+    assert "unknown ['untrusted']" in assert_invalid_config(
+        write_config(tmp_path, extra="[untrusted]\nvalue = 1\n")).message
 
 
 _TAIL = 'domains = []\ncontracts = []\nstore_root = "/x"\ncoordination = 2\n'
