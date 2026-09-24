@@ -70,37 +70,45 @@ def load_config(path: Path) -> ScienceConfig:
         _refuse("config store_root must be a string")
     if not _WORLD_ID_RE.fullmatch(raw["world_id"]):
         _refuse("config world_id must be 32 lowercase hex characters")
+    base_dir = path.resolve().parent
+
+    def located(value: str) -> Path:
+        # Relative paths name places beside the configuration file, never the
+        # process's working directory (projects design P1); an absolute value
+        # is unchanged by the join.
+        return (base_dir / value).resolve()
+
     try:
         domains = [shipped_domain_contract(namespace) for namespace in raw["domains"]]
     except ProfileError as caught:
         _refuse(f"config domains do not compile: {caught}")
     base = shipped_base_contract()
-    local = [load_contract_document(Path(value).resolve(), base) for value in raw["contracts"]]
+    local = [load_contract_document(located(value), base) for value in raw["contracts"]]
     try:
         profile = compile_profile(base, domains + [contract for contract, _ in local])
     except ProfileError as caught:
         _refuse(f"config contracts do not compile: {caught}")
     plans = tuple(plan for _, plan in local if plan is not None)
-    operations_root = Path(raw["operations_root"]).resolve()
+    operations_root = located(raw["operations_root"])
     # The socket defaults beside the operations root. AF_UNIX caps the path at
     # 107 bytes and a worktree checkout's operations root already exceeds it,
     # so the key exists to name a short path; both `science serve` and the
     # CLI's write routing read it here, which is what keeps them agreeing.
     service_socket = (
-        Path(raw["service_socket"]).resolve()
+        located(raw["service_socket"])
         if "service_socket" in raw
         else operations_root / "service.sock"
     )
     return ScienceConfig(
         world=WorldConfig(
-            world_root=Path(raw["world_root"]),
+            world_root=located(raw["world_root"]),
             world_id=raw["world_id"],
-            corpus_roots=tuple(Path(value) for value in raw["corpus_roots"]),
+            corpus_roots=tuple(located(value) for value in raw["corpus_roots"]),
         ),
         operations_root=operations_root,
         profile=profile,
         service_socket=service_socket,
-        store_root=Path(raw["store_root"]).resolve(),
+        store_root=located(raw["store_root"]),
         plans=plans,
     )
 

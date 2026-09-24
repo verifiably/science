@@ -52,10 +52,14 @@ def test_load_config_builds_beliefs_worldconfig(tmp_path):
     assert cfg.world.corpus_roots == ((tmp_path / "corpora" / "one").resolve(),)
 
 
-def test_load_config_resolves_relative_operations_root(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
-    cfg = load_config(write_config(tmp_path, operations_root="operations"))
-    assert cfg.operations_root == tmp_path / "operations"
+def test_relative_paths_resolve_against_the_config_file(tmp_path, monkeypatch):
+    """Not the working directory: one file names one world from anywhere (P1)."""
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
+    cfg = load_config(write_config(tmp_path, operations_root="operations", store_root="store"))
+    assert cfg.operations_root == (tmp_path / "operations").resolve()
+    assert cfg.store_root == (tmp_path / "store").resolve()
 
 
 def test_service_socket_defaults_beside_the_operations_root(tmp_path):
@@ -65,11 +69,27 @@ def test_service_socket_defaults_beside_the_operations_root(tmp_path):
 
 def test_service_socket_is_configurable_and_resolved(tmp_path, monkeypatch):
     """The AF_UNIX path limit is 107 bytes and a worktree's operations root
-    already exceeds it, so the operator can name a short path; relative paths
-    resolve against the working directory like operations_root does."""
-    monkeypatch.chdir(tmp_path)
+    already exceeds it, so the operator can name a short path; a relative one
+    resolves against the configuration file like every other path."""
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
     cfg = load_config(write_config(tmp_path, extra='service_socket = "run/s.sock"\n'))
-    assert cfg.service_socket == tmp_path / "run" / "s.sock"
+    assert cfg.service_socket == (tmp_path / "run" / "s.sock").resolve()
+
+
+def test_world_and_corpus_roots_resolve_against_the_config_file(tmp_path, monkeypatch):
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
+    path = tmp_path / "science.toml"
+    path.write_text(
+        f'world_root = "world"\nworld_id = "{WORLD_ID}"\ncorpus_roots = ["corpora/one"]\n'
+        'operations_root = "ops"\ndomains = []\ncontracts = []\nstore_root = "store"\n'
+    )
+    cfg = load_config(path)
+    assert cfg.world.world_root == (tmp_path / "world").resolve()
+    assert cfg.world.corpus_roots == ((tmp_path / "corpora" / "one").resolve(),)
 
 
 def test_service_socket_must_be_a_string(tmp_path):
