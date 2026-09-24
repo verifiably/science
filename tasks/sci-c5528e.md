@@ -6,9 +6,9 @@ priority: 1
 size: l
 complexity: high
 process: planned
-owner: coordination-commands
+owner: main
 created: 2026-09-23T11:40:35Z
-updated: 2026-09-24T13:56:32Z
+updated: 2026-09-24T14:18:44Z
 started: 2026-09-24T09:49:50Z
 depends: []
 tags: [projects]
@@ -37,4 +37,9 @@ The belief path design (dogfood-commands branch, docs/specs/2026-09-09-belief-pa
   provenance: {"harness_session":"claude-code:9d2d64bd-cdd3-4a14-add8-aa234fa311c0","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-09-24T13:46:36Z (coordination-commands): Part 1 (write surface) landed on branch coordination-commands; follow-ups: data.kind carries two vocabularies (reason codes vs kernel class names) and ProjectNotResolvable's tips are dropped by the generic WriteRefused branch; no test reuses a hypothesis source; tests' socket paths have little headroom under the AF_UNIX limit; an in-flight socket write at shutdown prints a SessionClosed traceback.
 - 2026-09-24T13:56:32Z (coordination-commands): parked (waiting on user, decision): Part 1 on branch coordination-commands (76fa40f, 474 passed): decide merge; before merge fix the nohup/SIG_IGN stop-handler regression; at merge set coordination = false in .work/mm30-commands/science.toml, apply the saved ops cli.toml rows, commit ops, run just vendor-cli
+  provenance: {"harness_session":"claude-code:9d2d64bd-cdd3-4a14-add8-aa234fa311c0","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-09-24T14:18:44Z (main): resumed
+  provenance: {"harness_session":"claude-code:9d2d64bd-cdd3-4a14-add8-aa234fa311c0","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-09-24T14:18:44Z (main): Part 1 merged to main (c40f71c, 476 passed); revise --status respelled as the shared status option for ops's vocabulary rule (1d9add2); ops rows committed (ops 554983c) and re-vendored with just vendor-cli — ten projects hold the uncommitted copy. .work/mm30-commands/science.toml now carries coordination = false; that world still refuses on mm30.yaml's 'also' key under 79dea1a.
+- 2026-09-24T14:18:44Z (main): parked (waiting on agent, dependency): Part 2 (sci-f95f8b) waits on beliefs-cc0aea, beliefs-1148ad, beliefs-1af3fd; plan it when they land
   provenance: {"harness_session":"claude-code:9d2d64bd-cdd3-4a14-add8-aa234fa311c0","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
