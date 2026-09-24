@@ -1,8 +1,11 @@
 import json
 import io
 import re
+import shutil
 import socket
+import tempfile
 import threading
+from pathlib import Path
 
 import pytest
 
@@ -10,8 +13,19 @@ from science.serve import serve
 from helpers.world import build_fixture_world
 
 
+@pytest.fixture
+def short_tmp():
+    """A short directory for sockets. AF_UNIX caps the socket path at 107 bytes, and
+    pytest's `tmp_path` grows with the test name and, under xdist, a worker segment."""
+    root = Path(tempfile.mkdtemp(prefix="sci-", dir="/tmp"))
+    try:
+        yield root
+    finally:
+        shutil.rmtree(root)
+
+
 @pytest.mark.parametrize("state", ["clean", "unclosed", "failing-stream"])
-def test_startup_findings(certified_work, tmp_path, state):
+def test_startup_findings(certified_work, short_tmp, state):
     """An open peer produces session-unclosed, even while alive; classification
     of uncovered commits as session-outcome-unknown belongs to beliefs."""
     from beliefs.session import open_attended_session
@@ -27,7 +41,7 @@ def test_startup_findings(certified_work, tmp_path, state):
             raise OSError("stderr unavailable")
 
     stderr = FailingStream() if state == "failing-stream" else io.StringIO()
-    socket_path = tmp_path / "service.sock"
+    socket_path = short_tmp / "service.sock"
     try:
         if state == "failing-stream":
             with pytest.raises(OSError, match="stderr unavailable"):
@@ -57,7 +71,7 @@ def test_startup_findings(certified_work, tmp_path, state):
 
 
 # The certified work root is long and AF_UNIX caps the socket path at 107
-# bytes, so every bound socket lives under the short `tmp_path` instead.
+# bytes, so every bound socket lives under `short_tmp` instead.
 def _running(cfg, sock_path, **kwargs):
     server = serve(cfg, sock_path, **kwargs)
     threading.Thread(target=server.serve_forever, daemon=True).start()
@@ -71,11 +85,11 @@ def _ask(sock_path, payload):
         return json.loads(s.makefile().readline())
 
 
-def test_service_round_trip_and_cli_routing(certified_work, tmp_path):
+def test_service_round_trip_and_cli_routing(certified_work, short_tmp):
     from helpers.synthetic import synthetic_decls_and_handlers
     cfg = build_fixture_world(certified_work)
     decls, handlers = synthetic_decls_and_handlers()
-    sock_path = tmp_path / "service.sock"
+    sock_path = short_tmp / "service.sock"
     server = _running(cfg, sock_path, declarations=decls, handlers=handlers)
     try:
         with socket.socket(socket.AF_UNIX) as s:
@@ -90,11 +104,11 @@ def test_service_round_trip_and_cli_routing(certified_work, tmp_path):
         server.server_close()
 
 
-def test_service_refusal_carries_envelope_and_replays(certified_work, tmp_path):
+def test_service_refusal_carries_envelope_and_replays(certified_work, short_tmp):
     from helpers.synthetic import synthetic_decls_and_handlers
     cfg = build_fixture_world(certified_work)
     decls, handlers = synthetic_decls_and_handlers()
-    sock_path = tmp_path / "service.sock"
+    sock_path = short_tmp / "service.sock"
     server = _running(cfg, sock_path, declarations=decls, handlers=handlers)
     try:
         req = {"command": "overreach", "inputs": {}, "invocation_id": "K" * 8,
@@ -110,14 +124,14 @@ def test_service_refusal_carries_envelope_and_replays(certified_work, tmp_path):
         server.server_close()
 
 
-def test_malformed_requests_get_structured_refusals_on_one_connection(certified_work, tmp_path):
+def test_malformed_requests_get_structured_refusals_on_one_connection(certified_work, short_tmp):
     """Bad JSON and bad shapes all come back as invalid-input replies over a
     SINGLE connection — the handler loop survives every malformed line and
     still serves a valid request afterwards."""
     from helpers.synthetic import synthetic_decls_and_handlers
     cfg = build_fixture_world(certified_work)
     decls, handlers = synthetic_decls_and_handlers()
-    sock_path = tmp_path / "service.sock"
+    sock_path = short_tmp / "service.sock"
     server = _running(cfg, sock_path, declarations=decls, handlers=handlers)
     try:
         with socket.socket(socket.AF_UNIX) as s:
@@ -143,12 +157,12 @@ def test_malformed_requests_get_structured_refusals_on_one_connection(certified_
         server.server_close()
 
 
-def test_server_close_failure_still_closes_session(certified_work, tmp_path, monkeypatch):
+def test_server_close_failure_still_closes_session(certified_work, short_tmp, monkeypatch):
     """The finally holds: even when socket teardown raises, the session's
     ledger ends with session-close."""
     import socketserver
     cfg = build_fixture_world(certified_work)
-    server = serve(cfg, tmp_path / "service.sock")
+    server = serve(cfg, short_tmp / "service.sock")
 
     def boom(self):
         raise OSError("teardown failed")
@@ -162,12 +176,12 @@ def test_server_close_failure_still_closes_session(certified_work, tmp_path, mon
     assert last["line"] == "session-close"
 
 
-def test_setup_failure_after_the_session_opens_closes_it(certified_work, tmp_path):
+def test_setup_failure_after_the_session_opens_closes_it(certified_work, short_tmp):
     """A socket whose parent is a regular file fails after the session opened —
     the constructor must close it on the way out, which the ledger's
     session-close line proves."""
     cfg = build_fixture_world(certified_work)
-    blocker = tmp_path / "not-a-directory"
+    blocker = short_tmp / "not-a-directory"
     blocker.write_text("")
     with pytest.raises(OSError):
         serve(cfg, blocker / "service.sock")  # the parent mkdir raises
@@ -177,14 +191,14 @@ def test_setup_failure_after_the_session_opens_closes_it(certified_work, tmp_pat
     assert last["line"] == "session-close"
 
 
-def test_overlong_socket_path_refuses_before_the_session(certified_work, tmp_path):
+def test_overlong_socket_path_refuses_before_the_session(certified_work, short_tmp):
     """Past the AF_UNIX limit, `bind` raises a bare `OSError: AF_UNIX path too
     long`. Refuse first, naming the path and the limit — and before the session
     exists, so nothing leaks into the ledger."""
     from science.refusal import Refused
     from science.serve import MAX_SOCKET_PATH_BYTES
     cfg = build_fixture_world(certified_work)
-    long_sock = tmp_path / ("s" * 200 + ".sock")
+    long_sock = short_tmp / ("s" * 200 + ".sock")
     with pytest.raises(Refused) as caught:
         serve(cfg, long_sock)
     assert caught.value.refusal.code == "invalid-input"
@@ -192,10 +206,10 @@ def test_overlong_socket_path_refuses_before_the_session(certified_work, tmp_pat
     assert not (cfg.operations_root / "sessions").exists()
 
 
-def test_existing_socket_refuses_startup(certified_work, tmp_path):
+def test_existing_socket_refuses_startup(certified_work, short_tmp):
     from science.refusal import Refused
     cfg = build_fixture_world(certified_work)
-    sock_path = tmp_path / "service.sock"
+    sock_path = short_tmp / "service.sock"
     sock_path.parent.mkdir(parents=True, exist_ok=True)
     sock_path.touch()  # a stale socket is the operator's to remove
     with pytest.raises(Refused):
@@ -204,13 +218,13 @@ def test_existing_socket_refuses_startup(certified_work, tmp_path):
     assert not (cfg.operations_root / "sessions").exists()
 
 
-def test_cli_write_without_service_refuses(certified_work, tmp_path, capsys):
+def test_cli_write_without_service_refuses(certified_work, short_tmp, capsys):
     """No socket: exit 3 with the same JSON refusal wire as every command."""
     import argparse
     from science.cli import _via_service
     from helpers.synthetic import MINT_CLAIM
     from helpers.world import write_cli_config
-    cfg_path = write_cli_config(certified_work, operations_root=tmp_path / "ops")
+    cfg_path = write_cli_config(certified_work, operations_root=short_tmp / "ops")
     ns = argparse.Namespace(config=str(cfg_path), invocation_id=None, cursor=None)
     code = _via_service(ns, MINT_CLAIM, {"slug": "x"})
     assert code == 3
@@ -220,14 +234,14 @@ def test_cli_write_without_service_refuses(certified_work, tmp_path, capsys):
     assert payload["invocation_id"]
 
 
-def test_cli_write_routes_through_service(certified_work, tmp_path, capsys):
+def test_cli_write_routes_through_service(certified_work, short_tmp, capsys):
     """The success path end to end: CLI -> socket -> dispatcher -> reply."""
     import argparse
     from science.cli import _via_service
     from science.config import load_config
     from helpers.synthetic import MINT_CLAIM, synthetic_decls_and_handlers
     from helpers.world import write_cli_config
-    cfg_path = write_cli_config(certified_work, operations_root=tmp_path / "ops")
+    cfg_path = write_cli_config(certified_work, operations_root=short_tmp / "ops")
     cfg = load_config(cfg_path)
     decls, handlers = synthetic_decls_and_handlers()
     server = _running(cfg, cfg.operations_root / "service.sock",
@@ -244,7 +258,7 @@ def test_cli_write_routes_through_service(certified_work, tmp_path, capsys):
         server.server_close()
 
 
-def test_cli_write_routes_to_the_configured_socket(certified_work, tmp_path, capsys):
+def test_cli_write_routes_to_the_configured_socket(certified_work, short_tmp, capsys):
     """Both ends read `service_socket` from the same config, so a service bound
     at the named path is the one the CLI reaches."""
     import argparse
@@ -252,8 +266,8 @@ def test_cli_write_routes_to_the_configured_socket(certified_work, tmp_path, cap
     from science.config import load_config
     from helpers.synthetic import MINT_CLAIM, synthetic_decls_and_handlers
     from helpers.world import write_cli_config
-    named = tmp_path / "named.sock"
-    cfg_path = write_cli_config(certified_work, operations_root=tmp_path / "ops",
+    named = short_tmp / "named.sock"
+    cfg_path = write_cli_config(certified_work, operations_root=short_tmp / "ops",
                                 service_socket=named)
     cfg = load_config(cfg_path)
     assert cfg.service_socket == named
@@ -265,16 +279,16 @@ def test_cli_write_routes_to_the_configured_socket(certified_work, tmp_path, cap
         assert "proposition:named" in capsys.readouterr().out
     finally:
         server.server_close()
-    assert not (tmp_path / "ops" / "service.sock").exists()
+    assert not (short_tmp / "ops" / "service.sock").exists()
 
 
-def test_serve_verb_binds_the_configured_socket(certified_work, tmp_path, monkeypatch):
+def test_serve_verb_binds_the_configured_socket(certified_work, short_tmp, monkeypatch):
     """`science serve` builds its server at `config.service_socket`, the same
     path `_via_service` connects to."""
     import science.serve as serve_module
     from science.cli import main
     from helpers.world import write_cli_config
-    named = tmp_path / "named.sock"
+    named = short_tmp / "named.sock"
     cfg_path = write_cli_config(certified_work, service_socket=named)
     bound = []
 

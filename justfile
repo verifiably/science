@@ -11,9 +11,15 @@ tt := "python3 tools/tt"
 
 # The three commands, each written once. Recipes and hooks all run these, so a hook can
 # never drift from the gate it is supposed to be. Avoid single quotes inside them.
-# The package lives under python/; `uv run` syncs the dev group (pytest, pytest-testmon).
-fast_cmd := "cd python && uv run pytest --testmon"
-test_cmd := "cd python && uv run pytest"
+# The package lives under python/; `uv run` syncs the dev group (pytest, pytest-testmon,
+# pytest-xdist). Each test builds its own certified world, and atoms certifies the volume
+# on every open by spawning children, so tests wait on I/O and subprocesses rather than
+# CPU: 8 workers with work-stealing took the suite from 626 s to 79 s on 2026-09-23,
+# and 16 workers bought nothing more. Worktree runs need no SCIENCE_TEST_ROOT: conftest
+# resolves the certified test root through the main checkout.
+xdist := "-n 8 --dist worksteal"
+fast_cmd := "cd python && uv run pytest --testmon " + xdist
+test_cmd := "cd python && uv run pytest " + xdist
 # No formatter, linter, or typechecker is configured for this repository yet, so the
 # seconds-long gate is the task-record check alone.
 check_cmd := "python3 tools/ops-check && tasks check"

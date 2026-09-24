@@ -16,6 +16,7 @@ science = "science.cli:main"
 dev = [
     "pytest>=8",
     "pytest-testmon>=2.2.0",
+    "pytest-xdist>=3.6",
 ]
 
 [tool.uv.sources]
