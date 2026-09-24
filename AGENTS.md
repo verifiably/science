@@ -19,7 +19,8 @@ the environment on first use, with `beliefs` as an editable path dependency.
   same commit; `tasks check` before every commit.
 - Tests: `just test-fast` is the inner loop (only the tests a change affects); `just test`
   runs the suite, about 80 seconds on 8 workers. `just check` runs the seconds-long gate;
-  `just gate` runs both. Both test recipes run in a worktree as they are. Every recipe records its run through `tools/tt`, the timing wrapper vendored
-  from the ops repository; do not call `pytest` directly.
+  `just gate` runs both. Both test recipes run in a worktree as they are. Every recipe
+  records its run through `tools/tt`, the timing wrapper vendored from the ops
+  repository; do not call `pytest` directly.
 - Before removing a worktree, run `tt-report` (in the ops repository) so its fallback
   test-timing log is harvested.
