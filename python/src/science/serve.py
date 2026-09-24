@@ -91,19 +91,33 @@ def service_server(dispatcher, socket_path: Path, on_close):
         # a designed-for state: the invocation stays claimed and unclosed,
         # so a retry replays as `outcome-unknown` (spec §5.2).
         daemon_threads = True
+        # None until `server_bind` succeeds. `TCPServer.__init__` calls
+        # `server_close` on a `server_bind` failure (a lost bind race — something
+        # else took the path between `check_socket_path` and `bind`), before this
+        # class attribute would otherwise be set on the instance; the class
+        # default lets that early `server_close` see "nothing bound" instead of
+        # raising `AttributeError` and masking the original `OSError`.
+        bound_ident: tuple[int, int] | None = None
 
         def server_bind(self) -> None:
             super().server_bind()
-            self.bound_inode = os.stat(self.server_address).st_ino
+            stat = os.stat(self.server_address)
+            self.bound_ident = (stat.st_dev, stat.st_ino)
 
         def server_close(self) -> None:
             try:
+                if self.bound_ident is not None:
+                    # Stat and unlink while the server still holds the bound
+                    # socket, before `super().server_close()` releases it — once
+                    # released, the inode could be recycled and this check would
+                    # no longer mean what it says.
+                    try:
+                        stat = os.stat(socket_path)
+                        if (stat.st_dev, stat.st_ino) == self.bound_ident:
+                            os.unlink(socket_path)
+                    except FileNotFoundError:
+                        pass
                 super().server_close()
-                try:
-                    if os.stat(socket_path).st_ino == self.bound_inode:
-                        os.unlink(socket_path)
-                except FileNotFoundError:
-                    pass
             finally:
                 on_close()
 

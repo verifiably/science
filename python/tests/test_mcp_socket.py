@@ -27,6 +27,14 @@ class _BlockingStdin(io.RawIOBase):
     def release(self):
         os.close(self._write)
 
+    def close(self):
+        # Closing the read end only once the reader thread has stopped using it
+        # (the caller joins that thread before calling this): closing a pipe fd
+        # while another thread blocks a read on it races the syscall.
+        if not self.closed:
+            os.close(self._read)
+        super().close()
+
 
 def _wait_for(path, timeout=30):
     deadline = time.monotonic() + timeout
@@ -68,6 +76,7 @@ def test_mcp_serve_accepts_cli_writes_on_the_socket_and_blocks_a_second_launcher
     finally:
         stdin.release()
         thread.join(timeout=30)
+        stdin.close()  # only now: the reader thread is done with the fd
     assert not thread.is_alive()
     assert not sock.exists()  # clean shutdown removed it
 

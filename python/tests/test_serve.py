@@ -311,3 +311,27 @@ def test_close_leaves_a_socket_that_is_no_longer_the_one_bound(certified_work, s
     sock.touch()  # someone else's file now sits at the path
     server.server_close()
     assert sock.exists()
+
+
+def test_lost_bind_race_raises_the_bind_error_and_still_closes_once(short_tmp):
+    """Something else binds the path between `check_socket_path` and `bind`:
+    `server_bind` raises before `bound_ident` is ever set on the instance, and
+    the `server_close` that `TCPServer.__init__` calls on its way out must not
+    mask the bind failure with an `AttributeError` — and `on_close` still runs,
+    exactly once."""
+    import errno
+
+    from science.serve import service_server
+
+    sock_path = short_tmp / "service.sock"
+    foreign = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    foreign.bind(str(sock_path))
+    closed = []
+    try:
+        with pytest.raises(OSError) as caught:
+            service_server(None, sock_path, on_close=lambda: closed.append(1))
+        assert caught.value.errno == errno.EADDRINUSE
+        assert closed == [1]
+        assert sock_path.exists()  # the foreign socket's file survives
+    finally:
+        foreign.close()

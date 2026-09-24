@@ -22,6 +22,7 @@ def _service(cfg_path, socket_path):
     try:
         yield server
     finally:
+        server.shutdown()  # blocks until serve_forever returns, so only once it runs
         server.server_close()
 
 
