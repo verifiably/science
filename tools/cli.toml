@@ -379,6 +379,9 @@ options = [
   { names = ["--no-defer"], value = "none" },
   { names = ["--no-source"], value = "none" },
   { names = ["--no-agent"], value = "none" },
+  { names = ["--no-spec"], value = "none" },
+  { names = ["--no-plan"], value = "none" },
+  { names = ["--no-step"], value = "none" },
   { names = ["--no-complexity"], value = "none" },
   { names = ["--no-process"], value = "none" },
   { names = ["--model"], value = "string" },
@@ -1080,6 +1083,17 @@ options = [
   { names = ["--depends"], value = "string", repeatable = true },
   { names = ["--clear-depends", "--no-clear-depends"], value = "none" },
   { names = ["--repair", "--no-repair"], value = "none" },
+]
+
+[[cli.science.commands]]
+path = ["reuse"]
+summary = "Copy a question or hypothesis into the current project with the same query"
+options = [
+  { shared = "config", value = "path" },
+  { names = ["--invocation-id"], value = "string" },
+  { names = ["--continue"], value = "string" },
+  { names = ["--source"], value = "string", required = true },
+  { names = ["--name"], value = "string" },
 ]
 
 [[cli.science.commands]]
