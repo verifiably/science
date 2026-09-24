@@ -1007,6 +1007,18 @@ options = [
 ]
 
 [[cli.science.commands]]
+path = ["project"]
+summary = "Start a project: a name and a query over the world"
+options = [
+  { shared = "config", value = "path" },
+  { names = ["--invocation-id"], value = "string" },
+  { names = ["--continue"], value = "string" },
+  { names = ["--name"], value = "string", required = true },
+  { names = ["--query"], value = "string", required = true },
+  { names = ["--body"], value = "string" },
+]
+
+[[cli.science.commands]]
 path = ["build"]
 summary = "Build the world from its corpora"
 

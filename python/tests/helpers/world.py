@@ -340,6 +340,33 @@ def open_rig(cfg: ScienceConfig, names: tuple[str, ...]):
         session.close()
 
 
+@contextmanager
+def coordination_rig(work: Path, names: tuple[str, ...], *, selection=None, extra=()):
+    """A dispatcher over the named production commands (plus `extra`,
+    `(declaration, handler)` pairs of synthetic ones — a Declaration holds a
+    dict and is not hashable) on a coordination fixture world, with an
+    attended session and the given selection."""
+    from science.config import ReadContext
+    from science.dispatch import Dispatcher
+    from science.loader import production_tree, resolve_handlers
+    from science.session import open_session
+    cfg = build_fixture_world(work)
+    decls = tuple(d for d in production_tree() if d.name in names)
+    handlers = resolve_handlers(decls)
+    for decl, handler in extra:
+        decls += (decl,)
+        handlers[decl.name] = handler
+    session = open_session(cfg)
+    ctx = ReadContext.open(cfg)
+    try:
+        yield Dispatcher(decls, handlers, ctx, session=session, selection=selection), ctx
+    finally:
+        session.close()
+
+
+QUERY = "version: science.view-query.v1\nclauses:\n  - all:\n      - kinds: [proposition]\n"
+
+
 def build_belief_world(work: Path, **holds: bool) -> ScienceConfig:
     """The contract world plus one proposition typed under the plan: the
     starting state for claim/spec/run/assess/verify/belief/next tests."""
