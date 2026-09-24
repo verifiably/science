@@ -104,3 +104,15 @@ def test_reuse_of_a_source_with_several_standing_tips_refuses_naming_them(certif
     assert caught.value.refusal.code == "kernel-refused"
     assert caught.value.refusal.data["kind"] == "divergent-view"
     assert caught.value.refusal.data["tips"] == sorted(tips)
+
+
+def test_reuse_of_a_malformed_address_refuses_with_the_parse_error(certified_work):
+    """`health` has no `/`, but it is not a project address either: the refusal
+    is the address grammar's, not the project redirect."""
+    with coordination_rig(certified_work, NAMES) as (d, _):
+        d._selection = mint_project(d)
+        with pytest.raises(Refused) as caught:
+            d.invoke("reuse", {"source": "health"})
+    assert caught.value.refusal.code == "invalid-input"
+    assert "is a project" not in caught.value.refusal.message
+    assert "health" in caught.value.refusal.message

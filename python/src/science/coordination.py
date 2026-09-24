@@ -31,9 +31,8 @@ def parse_query_text(text: str) -> dict:
     return value
 
 
-def parse_address(text: str, *, subordinate: bool):
-    """An unpinned `coord:` address: `coord:<project>/<local>` when
-    `subordinate`, else `coord:<project>`."""
+def parse_unpinned(text: str):
+    """An unpinned `coord:` address of either shape."""
     from beliefs.coordination import CoordinationAddress
 
     try:
@@ -42,6 +41,13 @@ def parse_address(text: str, *, subordinate: bool):
         _refuse(str(caught))
     if address.revision is not None:
         _refuse(f"{text!r} pins a revision; name the address unpinned")
+    return address
+
+
+def parse_address(text: str, *, subordinate: bool):
+    """An unpinned `coord:` address: `coord:<project>/<local>` when
+    `subordinate`, else `coord:<project>`."""
+    address = parse_unpinned(text)
     if subordinate and address.local is None:
         _refuse(f"{text!r} is a project address; this input takes coord:<project>/<local>")
     if not subordinate and address.local is not None:
