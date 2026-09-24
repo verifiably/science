@@ -162,13 +162,23 @@ def _stop_signals_exit():
     Installed here, at the CLI entry, because `signal.signal` works only from
     the main thread and tests run `serve` functions from worker threads. The
     first stop signal restores the previous handlers, so a second one while
-    cleanup runs stops the process the old way."""
+    cleanup runs stops the process the old way.
+
+    A signal already ignored (`SIG_IGN`) — as SIGHUP is when a launcher is
+    started under `nohup` — is left ignored rather than overridden: a
+    launcher that used to survive its terminal closing must keep surviving
+    it."""
     def stop(signum, frame):
         for number, handler in previous.items():
             signal.signal(number, handler)
         raise SystemExit(128 + signum)
 
-    previous = {number: signal.signal(number, stop) for number in _STOP_SIGNALS}
+    previous: dict[int, object] = {}
+    for number in _STOP_SIGNALS:
+        current = signal.getsignal(number)
+        if current is signal.SIG_IGN:
+            continue
+        previous[number] = signal.signal(number, stop)
     try:
         yield
     finally:
