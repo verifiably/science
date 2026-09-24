@@ -416,12 +416,26 @@ record that is not a proposition is not a row. The belief path design's §4.8
 **Classification across mounted corpora.** S1 selects across corpora, but the
 classifier does not read across them: `classify` and `ReadContext.gather_inputs`,
 `observations`, `snapshot` and `pins` all go through `single_view()`, which refuses
-more than one root, and each assumes one corpus and one profile. A proposition in the
-mm30 corpus whose new spec is minted in the working corpus — the milestone's case — is
-classified correctly only when the classifier gathers the specs targeting it, the
-assessments naming it and the verifications naming those from **every** mounted
-corpus, each record decoded under its own corpus's profile, with holdings read from
-the one configured store. That is surface scope, owned here and neither S1's nor
+more than one root, and each assumes one corpus and one profile. With two mounted
+corpora the classifier must enumerate the selected propositions from **every** mounted
+corpus and classify each from the evidence in **its own** corpus — the specs
+targeting it, the assessments naming it and the verifications naming those — decoded
+under that corpus's profile, with holdings read from the one configured store and a
+spec input's dataset declaration found in whichever mounted corpus holds its content
+address.
+
+**A proposition's evidence lives in its corpus.** The kernel refuses a spec whose
+target is not held in the spec's own corpus (`CorpusWriter._refuse_estimand_target_mismatch`,
+`estimand-target-unresolvable`: "a cross-corpus target is world-resolution's read",
+estimand-typing §13), so a spec in the working corpus cannot target an mm30
+proposition. The milestone does not need one: its health question mints its own
+proposition in the working corpus and the spec targeting it beside it (projects
+design §9.2 criterion 3). That proposition is typed under the working corpus's
+profile, so if it uses an operator or sort the `mm30` contract declares, the working
+corpus must pin that contract and the configuration must activate it for the writer
+(§6's `contracts`); otherwise the claim is typed under `biology`'s operators. A
+cross-corpus spec target is not requested here: it is the kernel's world-resolution
+read, and the milestone's finding is what would motivate it. The enumeration and the per-corpus classification are surface scope, owned here and neither S1's nor
 `beliefs-fe7149`'s: a child task after both, carrying a two-corpus check (§9). Every
 other `single_view()` caller — `claim`, `dataset`, `spec`, `run`, `assess`,
 `verify`, `belief` — is decided in the same task as either write-root-only (it mints
@@ -435,13 +449,23 @@ the wrong project without being told.
 
 ## 6. Configuration
 
-Framework §9.1's file gains two keys now and designs a third:
+Framework §9.1's file gains two keys now and designs two more:
 
 ```toml
 coordination = 2                 # required: the shipped coordination contract version, or false
 default_project = "coord:…"      # optional: a project address
 # write_root = "…"               # with beliefs-fe7149: one of corpus_roots
+# read_contracts = ["…"]         # with beliefs-fe7149: documents available to read mounts only
 ```
+
+**Activation and availability are separate.** `domains`, `contracts` and
+`coordination` state the **writer's** profile, and nothing else enters it: the
+framework's rule that the launcher states the profile and never infers it from a
+manifest (framework §5.1, 2026-09-09 amendment) holds for the writer unchanged.
+`read_contracts` lists corpus-local contract documents a **read mount** may need and
+the writer must not activate — the `mm30` document, when the working corpus does not
+type under it. A document listed in both keys refuses `invalid-input`: it is either
+activated for the writer or available to mounts only.
 
 **`coordination`** is required, for `domains`' reason: a configuration written
 before this design refuses rather than silently opening a session that cannot mint
@@ -471,21 +495,33 @@ contract. So no configuration ever mounts two corpora under one profile. When
 `beliefs-fe7149` lands, each mount — in the session's resolver and in the
 sessionless read context a CLI read builds alike — is mounted under the profile its
 own manifest pins, compiled by the mechanism that task gives the kernel (projects
-design §3.1: "the kernel owns how a mounted corpus's profile is compiled"), with the
-`contracts` documents supplying any corpus-local contract a manifest pins. The
-session's write profile stays the one the configuration compiles, and must equal the
-write root's manifest pins.
+design §3.1: "the kernel owns how a mounted corpus's profile is compiled"). The rule
+selecting documents for each profile is explicit:
+
+- **The writer's profile** — and so the write root's mount — is
+  `compile_profile(base, [shipped_domain_contract(ns) for ns in domains] + contracts,
+  coordination=…)`, exactly the configuration's statement, and must equal the write
+  root's manifest pins (`require_pins_agree`).
+- **Each other mount's profile** activates exactly the contracts that mount's
+  manifest pins. Each pinned identity is resolved, by contract identity, against the
+  shipped packs and the union of `contracts` and `read_contracts`; a pin no available
+  document or pack carries refuses at open naming the mount and the pin, and nothing
+  available but unpinned is activated. Availability never becomes activation.
+
+So supplying the `mm30` document through `read_contracts` lets the mm30 mount decode
+its own records without changing the writer's profile or the working corpus's pins.
 
 **`default_project`** is an address, not a name: names are content and may collide
 or change (coordination §3.3), and a configuration that followed a name would move
 to another project on a rename. It is checked at launcher start (§5.1) and consulted
 by a CLI read only when no session is live (§5.2).
 
-**`write_root`**, designed here and implemented with `beliefs-fe7149`: the one entry
+**`write_root`** and **`read_contracts`**, designed here and implemented with
+`beliefs-fe7149`. `write_root` is the one entry
 of `corpus_roots` the session writes into, required when `corpus_roots` has more
 than one entry and refused when it names a root outside the list. Until the kernel's
 session takes a write root and a read set, `open_attended_session` refuses more than
-one root, and the key is not accepted.
+one root, and neither key is accepted.
 
 **Relative paths** — `operations_root`, `store_root`, `service_socket`, each
 `contracts` entry, `world_root` and each `corpus_roots` entry — resolve against the
@@ -579,14 +615,23 @@ Beyond the guarantees:
 - **`next` under a selection** classifies exactly the selected propositions (with
   S1); before S1 it refuses naming the dependency (the mutation that falls back to
   the whole world is caught).
-- **Two corpora** (after `beliefs-fe7149` and S1): a fixture world with a read-only
-  corpus holding a proposition typed under a corpus-local contract, and a working
-  corpus pinning base and coordination whose session mints a spec targeting that
-  proposition and holds its input; `next` classifies the proposition **ready**, the
-  mutation that gathers specs from the proposition's own corpus only leaves it **not
-  ready**, and a sessionless CLI read mounts both corpora each under its own
-  manifest's profile (the mutation that mounts both under the write profile is
-  refused by the resolver's pin check).
+- **Two corpora** (after `beliefs-fe7149` and S1), in the shape the kernel admits —
+  each proposition's evidence in its own corpus: a read-only corpus pinning a
+  corpus-local test contract, holding a proposition typed under that contract's
+  operator with its spec, run and assessment; and a working corpus pinning base,
+  `biology` and coordination, whose session mints a proposition under a `biology`
+  operator and a spec targeting it with its input held. The test contract reaches
+  the read mount through `read_contracts`. Under a project selecting both
+  propositions, `next` classifies the read-only corpus's proposition **assessed,
+  not admitted** and the working corpus's **ready**. The mutation that enumerates
+  the write root only drops the first row; the mutation that decodes the read
+  mount's records under the writer's profile fails on the corpus-local operator;
+  the mutation that activates `read_contracts` in the writer is refused by the write
+  root's pin check; and a sessionless CLI read mounts both corpora each under its
+  own manifest's profile.
+- **Profile selection.** A document listed in both `contracts` and
+  `read_contracts` refuses at load; a read mount pinning a contract no available
+  document carries refuses at open naming the pin.
 - **The selection block.** `project-select` then a replay under the same invocation
   id render identical blocks after the project is renamed in between; `clear`
   renders `selected: none`; a report carrying any record block fails the `session`
@@ -621,6 +666,10 @@ measurement and is not a suite test.
   measurement world under `.work/` was adopted without it and takes `coordination =
   false`.
 - **`beliefs`:** S1, S2 and S3 filed as tasks (§8).
+- **The second-project milestone** (`sci-0d00d2`): its health question's proposition
+  and spec are minted in the working corpus (§5.5); if the proposition uses an `mm30`
+  operator or sort, the working corpus is adopted pinning the `mm30` contract and the
+  configuration lists it under `contracts`, otherwise under `read_contracts`.
 
 ## 11. Alternatives rejected
 
@@ -668,8 +717,8 @@ The goal is `sci-c5528e`. The plan decomposes it; the dependencies it must carry
 - `next` through the selection (§5.5) — after S1;
 
 - the preamble and the dated amendments;
-- **multi-corpus**, one child after `beliefs-fe7149` and S1: `write_root`, per-mount
-  profiles in both resolvers (§6), classification across mounted corpora and the
+- **multi-corpus**, one child after `beliefs-fe7149` and S1: `write_root`,
+  `read_contracts` and the per-mount profile rule in both resolvers (§6), classification across mounted corpora and the
   `single_view()` callers' decision (§5.5), with the two-corpus check. It does not
   hold the goal's other work, and milestone criterion 4 (`sci-0d00d2`) depends on it.
 
