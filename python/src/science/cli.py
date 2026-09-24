@@ -3,8 +3,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import signal
 import socket
 import sys
+from contextlib import contextmanager
 from pathlib import Path
 
 from science.config import ReadContext, load_config, resolve_config_path
@@ -145,12 +147,42 @@ def main(argv: list[str] | None = None) -> int:
         return EXIT_INTERNAL
 
 
+# The ordinary ways a long-running launcher is stopped: an MCP client or a
+# service manager sends SIGTERM, a closed terminal sends SIGHUP.
+_STOP_SIGNALS = (signal.SIGTERM, signal.SIGHUP)
+
+
+@contextmanager
+def _stop_signals_exit():
+    """Turn a stop signal into `SystemExit` in the main thread, so the
+    launcher's `finally` blocks run: the socket it bound is unlinked and its
+    session ledgers `session-close`. The default action kills the process
+    without either, and the next launcher then refuses on the stale socket.
+
+    Installed here, at the CLI entry, because `signal.signal` works only from
+    the main thread and tests run `serve` functions from worker threads. The
+    first stop signal restores the previous handlers, so a second one while
+    cleanup runs stops the process the old way."""
+    def stop(signum, frame):
+        for number, handler in previous.items():
+            signal.signal(number, handler)
+        raise SystemExit(128 + signum)
+
+    previous = {number: signal.signal(number, stop) for number in _STOP_SIGNALS}
+    try:
+        yield
+    finally:
+        for number, handler in previous.items():
+            signal.signal(number, handler)
+
+
 def _framework_verb(namespace) -> int:
     declarations = production_tree()
     if namespace.command == "mcp":
         from science.mcp import serve
 
-        serve(resolve_config_path(namespace.config))
+        with _stop_signals_exit():
+            serve(resolve_config_path(namespace.config))
         return EXIT_OK
     if namespace.command == "build":
         from science.adapters import preflight_build
@@ -163,11 +195,12 @@ def _framework_verb(namespace) -> int:
         from science.serve import serve as build_server
 
         config = load_config(resolve_config_path(namespace.config))
-        server = build_server(config, config.service_socket)
-        try:
-            server.serve_forever()
-        finally:
-            server.server_close()
+        with _stop_signals_exit():
+            server = build_server(config, config.service_socket)
+            try:
+                server.serve_forever()
+            finally:
+                server.server_close()
         return EXIT_OK
     if namespace.command == "adapters":
         from science.adapters import build_adapter
