@@ -148,11 +148,15 @@ class Dispatcher:
             )
         if isinstance(error, KernelRefusalValue):
             value = error.value
-            return Refusal(
-                "kernel-refused",
-                str(value.reason),
-                {"kind": type(value).__name__, "reason": str(value.reason)},
-            )
+            data = {"kind": type(value).__name__, "reason": str(value.reason)}
+            message = str(value.reason)
+            # A RunRefused carries the refusing error's message as `detail`;
+            # without it a refusal reads only as its stable reason.
+            detail = str(getattr(value, "detail", ""))
+            if detail:
+                data["detail"] = detail
+                message = f"{message}: {detail}"
+            return Refusal("kernel-refused", message, data)
         return Refusal("kernel-refused", str(error), {"kind": type(error).__name__})
 
     def _invoke_write(self, decl: Declaration, canonical: Mapping[str, object], iid: str) -> Outcome:

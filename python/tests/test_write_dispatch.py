@@ -124,6 +124,26 @@ def test_value_style_kernel_refusal_normalizes(rig):
     assert e.value.invocation_id == "H" * 8
 
 
+def test_value_style_kernel_refusal_carries_detail(rig):
+    from beliefs.session import KernelRefusalValue
+    d, _ = rig
+
+    class FakeRunRefused:
+        reason = "closure-unsupported"
+        detail = "a1_coverage.pth imports 'sys', which is not a closure member"
+
+    def value_refusing_handler(ctx, writer, *, slug):
+        raise KernelRefusalValue(FakeRunRefused())
+
+    d._handlers["mint-claim"] = value_refusing_handler
+    with pytest.raises(Refused) as e:
+        d.invoke("mint-claim", {"slug": "w"}, invocation_id="J" * 8)
+    refusal = e.value.refusal
+    assert refusal.data["reason"] == "closure-unsupported"
+    assert refusal.data["detail"] == FakeRunRefused.detail
+    assert FakeRunRefused.detail in refusal.message
+
+
 def test_forged_kind_and_title_never_render(rig):
     d, _ = rig
     d._handlers["mint-claim"] = forging_handler
