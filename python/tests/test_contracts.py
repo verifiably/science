@@ -93,6 +93,19 @@ def test_malformed_document_refuses(tmp_path):
     assert caught.value.refusal.code == "invalid-input"
 
 
+@pytest.mark.parametrize("key", ["also", "plans"])
+def test_unknown_top_level_key_refuses(tmp_path, key):
+    """A document outside {contract, plan} refuses, naming the key: a misspelled
+    `plan` would otherwise load with no plan and surface only at claim."""
+    from beliefs.profile import shipped_base_contract
+
+    text = DOCUMENT % ("0" * 64) + f"{key}: [biology]\n"
+    with pytest.raises(Refused) as caught:
+        load_contract_document(write_document(tmp_path, text), shipped_base_contract())
+    assert caught.value.refusal.code == "invalid-input"
+    assert repr(key) in caught.value.refusal.message
+
+
 @pytest.mark.parametrize(
     "plan",
     [

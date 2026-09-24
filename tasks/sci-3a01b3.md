@@ -1,15 +1,16 @@
 ---
 id: sci-3a01b3
 title: Contract documents silently ignore unknown top-level keys
-status: doing
+status: done
 priority: 3
 size: xs
 complexity: low
 process: direct
 owner: main
 created: 2026-09-23T20:57:16Z
-updated: 2026-09-24T09:33:27Z
+updated: 2026-09-24T09:38:01Z
 started: 2026-09-24T09:33:27Z
+completed: 2026-09-24T09:38:01Z
 depends: []
 tags: [command-framework]
 agent: claude-code/claude-opus-5-5
@@ -20,4 +21,8 @@ science.contracts.load_contract_document reads `contract` and `plan` and ignores
 ## Notes
 
 - 2026-09-24T09:33:27Z (main): started
+  provenance: {"harness_session":"claude-code:dde7b5c4-c65b-4f4c-9ec0-bc965ee48ee6","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-09-24T09:38:01Z (contract-keys): done
+  provenance: {"harness_session":"claude-code:dde7b5c4-c65b-4f4c-9ec0-bc965ee48ee6","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-09-24T09:38:01Z (contract-keys): load_contract_document refuses invalid-input on any top-level key outside {contract, plan}, naming the keys and pointing at the config's domains; test_unknown_top_level_key_refuses
   provenance: {"harness_session":"claude-code:dde7b5c4-c65b-4f4c-9ec0-bc965ee48ee6","harness_session_source":"CLAUDE_CODE_SESSION_ID"}

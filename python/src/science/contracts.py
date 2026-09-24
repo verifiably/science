@@ -105,6 +105,15 @@ def load_contract_document(path: Path, base) -> tuple[DomainContract, OperatorPl
         _refuse(f"contract document {path} is not readable YAML: {caught}")
     if not isinstance(document, dict) or "contract" not in document:
         _refuse(f"contract document {path} must be a table with a `contract` key")
+    unknown = sorted(set(document) - {"contract", "plan"})
+    if unknown:
+        # The kernel driver's documents carry `also:`; here the config's `domains`
+        # names the composed domain contracts, so the key would be dropped unread.
+        _refuse(
+            f"contract document {path} carries unknown top-level keys {unknown}; "
+            "it holds only `contract` and `plan`, and composed domains come from "
+            "the config's `domains`"
+        )
     try:
         contract = parse_domain_contract(
             document["contract"], source=f"{path}: contract", base=base, predecessor=None
