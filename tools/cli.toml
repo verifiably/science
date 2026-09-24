@@ -1066,6 +1066,23 @@ options = [
 ]
 
 [[cli.science.commands]]
+path = ["revise"]
+summary = "Revise a project, question, hypothesis, task or decision"
+options = [
+  { shared = "config", value = "path" },
+  { names = ["--invocation-id"], value = "string" },
+  { names = ["--continue"], value = "string" },
+  { names = ["--address"], value = "string", required = true },
+  { names = ["--name"], value = "string" },
+  { names = ["--body"], value = "string" },
+  { names = ["--query"], value = "string" },
+  { names = ["--status"], value = "enum", values = ["open", "done", "dropped"] },
+  { names = ["--depends"], value = "string", repeatable = true },
+  { names = ["--clear-depends", "--no-clear-depends"], value = "none" },
+  { names = ["--repair", "--no-repair"], value = "none" },
+]
+
+[[cli.science.commands]]
 path = ["build"]
 summary = "Build the world from its corpora"
 
