@@ -1079,7 +1079,7 @@ options = [
   { names = ["--name"], value = "string" },
   { names = ["--body"], value = "string" },
   { names = ["--query"], value = "string" },
-  { names = ["--status"], value = "enum", values = ["open", "done", "dropped"] },
+  { shared = "status", role = "set", value = "enum", values = ["open", "done", "dropped"], repeatable = false },
   { names = ["--depends"], value = "string", repeatable = true },
   { names = ["--clear-depends", "--no-clear-depends"], value = "none" },
   { names = ["--repair", "--no-repair"], value = "none" },
