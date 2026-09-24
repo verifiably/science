@@ -764,6 +764,13 @@ reserved input names of §3.2 guarantee can never collide with a command's
 own inputs. There is no separate continuation tool; a call carrying
 `cursor` is a continuation. Tool calls enter the same dispatcher.
 
+**Amended 2026-09-24** (coordination command set design, decision 6).
+`science mcp serve` also binds the configuration's `service_socket` and serves the
+§9.2 service protocol on it with the dispatcher its stdio loop uses, so a CLI write
+made while an MCP session is live reaches that one session, and whichever launcher
+starts second refuses on the existing socket. A launcher removes the socket it bound
+at clean shutdown; a stale socket from a crash still refuses at start.
+
 ### 9.4 Equivalence
 
 The three frontings share one dispatcher and one renderer; a transport-level

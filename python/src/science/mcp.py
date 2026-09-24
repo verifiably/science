@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import re
 import sys
+import threading
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -361,16 +362,19 @@ def _read_frame(stream):
 def serve(config_path: Path, stdin=None, stdout=None, stderr=None) -> None:
     from science.config import ReadContext, load_config
     from science.loader import production_tree, resolve_handlers
+    from science.serve import check_socket_path, service_server
     from science.session import open_session
 
     stdin = sys.stdin.buffer if stdin is None else stdin
     stdout = sys.stdout if stdout is None else stdout
     declarations = production_tree()
     config = load_config(config_path)
+    check_socket_path(config.service_socket)
     # One attended session for the process lifetime. A world config naming
     # other than exactly one corpus root raises SessionRefused here; that is a
     # launcher misconfiguration and propagates, never a command refusal.
     session = open_session(config)
+    server, serving = None, False
     try:
         report_findings(session.findings, reported_by=session.session_id,
                         stream=sys.stderr if stderr is None else stderr)
@@ -380,6 +384,12 @@ def serve(config_path: Path, stdin=None, stdout=None, stderr=None) -> None:
             ReadContext.open(config),
             session=session,
         )
+        # One live session per world (projects design §5.1a): CLI writes and, in
+        # part 2, the selection query reach this session over the same socket
+        # `science serve` would bind, and a second launcher refuses on it.
+        server = service_server(dispatcher, config.service_socket, on_close=lambda: None)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        serving = True
         while True:
             frame = _read_frame(stdin)
             if frame is _END_OF_INPUT:
@@ -405,4 +415,12 @@ def serve(config_path: Path, stdin=None, stdout=None, stderr=None) -> None:
             stdout.write(json.dumps(response, separators=(",", ":")) + "\n")
             stdout.flush()
     finally:
-        session.close()  # the ledger's session-close line, crash or EOF alike
+        try:
+            if server is not None:
+                try:
+                    if serving:
+                        server.shutdown()  # blocks until serve_forever returns, so only once it runs
+                finally:
+                    server.server_close()
+        finally:
+            session.close()  # the ledger's session-close line, crash or EOF alike

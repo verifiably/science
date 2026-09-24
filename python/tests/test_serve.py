@@ -1,27 +1,13 @@
 import json
 import io
 import re
-import shutil
 import socket
-import tempfile
 import threading
-from pathlib import Path
 
 import pytest
 
 from science.serve import serve
 from helpers.world import build_fixture_world
-
-
-@pytest.fixture
-def short_tmp():
-    """A short directory for sockets. AF_UNIX caps the socket path at 107 bytes, and
-    pytest's `tmp_path` grows with the test name and, under xdist, a worker segment."""
-    root = Path(tempfile.mkdtemp(prefix="sci-", dir="/tmp"))
-    try:
-        yield root
-    finally:
-        shutil.rmtree(root)
 
 
 @pytest.mark.parametrize("state", ["clean", "unclosed", "failing-stream"])
@@ -306,3 +292,22 @@ def test_serve_verb_binds_the_configured_socket(certified_work, short_tmp, monke
     monkeypatch.setattr(serve_module, "serve", fake_build)
     assert main(["serve", "--config", str(cfg_path)]) == 0
     assert bound == [named, "served", "closed"]
+
+
+def test_clean_close_removes_the_socket_it_bound(certified_work, short_tmp):
+    cfg = build_fixture_world(certified_work)
+    sock = short_tmp / "service.sock"
+    server = serve(cfg, sock)
+    assert sock.exists()
+    server.server_close()
+    assert not sock.exists()  # the next launcher can start
+
+
+def test_close_leaves_a_socket_that_is_no_longer_the_one_bound(certified_work, short_tmp):
+    cfg = build_fixture_world(certified_work)
+    sock = short_tmp / "service.sock"
+    server = serve(cfg, sock)
+    sock.unlink()
+    sock.touch()  # someone else's file now sits at the path
+    server.server_close()
+    assert sock.exists()

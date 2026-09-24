@@ -1,6 +1,7 @@
 import os
 import shutil
 import subprocess
+import tempfile
 import uuid
 from pathlib import Path
 
@@ -25,3 +26,14 @@ def certified_work():
         yield work
     finally:
         shutil.rmtree(work, ignore_errors=True)  # metadata siblings live inside work
+
+
+@pytest.fixture
+def short_tmp():
+    """A short directory for sockets. AF_UNIX caps the socket path at 107 bytes, and
+    pytest's `tmp_path` grows with the test name and, under xdist, a worker segment."""
+    root = Path(tempfile.mkdtemp(prefix="sci-", dir="/tmp"))
+    try:
+        yield root
+    finally:
+        shutil.rmtree(root)

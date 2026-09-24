@@ -395,6 +395,10 @@ builds, sharing its dispatcher — which already serializes invocations under on
 launcher starts second refuses to start. CLI `session`-class and write-class
 invocations route to whichever launcher bound the socket.
 
+**Amended 2026-09-24 (planning):** a launcher removes the socket it bound at clean
+shutdown, while the path is still that inode; a stale socket from a crash still
+refuses at start, so the MCP launcher's restart after a clean exit does not.
+
 ### 5.4 Subordinate mints need a selection
 
 `question`, `hypothesis`, `task`, `decide` and `reuse` read the selection through
