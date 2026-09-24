@@ -619,11 +619,15 @@ there is nothing to reach around.
 
 One launcher-owned TOML file, located by `--config PATH` or
 `SCIENCE_CONFIG`: the fields of `beliefs.WorldConfig` (world root, world id,
-corpus roots) plus `operations_root`, `domains`, `contracts`, and `store_root`.
-The loader constructs
+corpus roots) plus `operations_root`, `domains`, `contracts`, `store_root`, and
+`coordination`. The loader constructs
 `beliefs.WorldConfig` directly — no parallel world model, no drift.
 Configuration is untrusted input (§6.4): paths are resolved and validated at
 session open.
+
+**Amended 2026-09-24:** a relative path in the file resolves against the
+configuration file's real location, symlinks followed, never the process's
+working directory; a refusal for a missing or unknown key names each one.
 
 `domains` (**added 2026-09-09** with §5.1's required `profile`) is the list of
 domain-contract namespaces the world's profile activates — `["biology"]` for a

@@ -213,6 +213,10 @@ write_class = "coordination"
 [inputs.repair]     # optional bool, default false
 ```
 
+**Amended 2026-09-24:** `revise` also takes `clear_depends` (optional bool, default
+false; task only), which sets a task's dependencies to none: a repeated `--depends`
+cannot spell an empty list. Given with `depends`, it refuses `invalid-input`.
+
 The kernel's revision is a whole new record naming its predecessors
 (`revise_coordination(kind, address, predecessors, content)`); a patch is the
 surface's convenience. The handler resolves the address's standing tips, takes the
@@ -399,6 +403,9 @@ invocations route to whichever launcher bound the socket.
 shutdown, while the path is still that inode; a stale socket from a crash still
 refuses at start, so the MCP launcher's restart after a clean exit does not.
 
+**Amended 2026-09-24:** SIGTERM and SIGHUP stop a launcher cleanly: the CLI turns
+either into an exit that runs this cleanup and closes the session.
+
 ### 5.4 Subordinate mints need a selection
 
 `question`, `hypothesis`, `task`, `decide` and `reuse` read the selection through
@@ -490,6 +497,14 @@ resolver to ask. The read context builds a
 `CoordinationResolver` when coordination is on. With one configured root — the only
 shape the kernel's session opens today — that root is mounted under the session's
 profile.
+
+**Amended 2026-09-24:** with `coordination = false`, `revise` refuses
+`invalid-input` from the read side, naming the setting, before any act. Of the
+mints, only `project` reaches its act and refuses `kernel-refused`
+(`CoordinationUnavailable`); `question`, `hypothesis`, `task`, `decide` and `reuse`
+refuse `no-current-project` first, since no project can be selected without
+coordination. A corpus that does not pin the configured coordination contract
+refuses `invalid-input` at session open, naming the root and `coordination = false`.
 
 **Every mount under its own manifest's profile.** The resolver checks each mount's
 manifest pins against the profile it is given (`CoordinationResolver.__init__`), and
