@@ -6,14 +6,15 @@ priority: 1
 size: l
 complexity: high
 process: planned
-owner: main
+owner: coordination-spec
 created: 2026-09-23T11:40:35Z
-updated: 2026-09-24T10:02:43Z
+updated: 2026-09-24T10:54:50Z
 started: 2026-09-24T09:49:50Z
 depends: []
 tags: [projects]
 agent: claude-code/claude-fable-5-1
 spec: docs/specs/2026-09-24-coordination-command-set-design.md
+plan: docs/plans/2026-09-24-coordination-write-surface.md
 ---
 
 The belief path design (dogfood-commands branch, docs/specs/2026-09-09-belief-path-commands-design.md) defers project, question, hypothesis, task and decide to their own spec, written after the belief path measurement. That spec inherits the projects design (docs/specs/2026-09-23-projects-corpora-and-workspaces-design.md) §5 and §7 and carries guarantees P1, P2, P4, P5 and P8: project genesis needs no selection; subordinate view and coordination kinds refuse no-current-project without one; project select rewrites the session's selection and appends a ledger entry; reads resolve selection from an explicit --project, else the live session over service_socket (science mcp serve binds it for this query), else default_project; the same-query mint. Also folds in sci-17851d (coordination profile wired at session open) and the default_project and write_root config keys. Depends on the belief path measurement landing.
@@ -26,4 +27,9 @@ The belief path design (dogfood-commands branch, docs/specs/2026-09-09-belief-pa
   provenance: {"harness_session":"claude-code:dde7b5c4-c65b-4f4c-9ec0-bc965ee48ee6","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-09-24T10:02:31Z (coordination-spec): Selection evaluation: the person chose a beliefs request for live, unpublished query evaluation (S1) over launcher-published epochs or refusing when stale; project-scoped next waits on it. Spec drafted with S2 (selection ledger lines) and S3 (enumerate standing tips by kind) as further beliefs seams, to be filed after spec approval.
 - 2026-09-24T10:02:43Z (coordination-spec): parked (waiting on user, review): Review the spec at .worktrees/coordination-spec/docs/specs/2026-09-24-coordination-command-set-design.md; on approval file S1-S3 in beliefs, then writing-plans
+  provenance: {"harness_session":"claude-code:dde7b5c4-c65b-4f4c-9ec0-bc965ee48ee6","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-09-24T10:54:50Z (coordination-spec): resumed
+  provenance: {"harness_session":"claude-code:dde7b5c4-c65b-4f4c-9ec0-bc965ee48ee6","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-09-24T10:54:50Z (coordination-spec): Plan part 1 (write surface) drafted: docs/plans/2026-09-24-coordination-write-surface.md, steps sci-e383b8, sci-17851d, sci-d338c6, sci-08e27f, sci-b4ee27, sci-549612, sci-ff4644, sci-62baf7, sci-c147e3. Part 2 sci-f95f8b waits on beliefs-cc0aea/1148ad/1af3fd; part 3 sci-923d3a waits on beliefs-fe7149 + S1; sci-0d00d2 now depends on part 3.
+- 2026-09-24T10:54:50Z (coordination-spec): parked (waiting on user, review): Review the part 1 plan at .worktrees/coordination-spec/docs/plans/2026-09-24-coordination-write-surface.md and choose an execution method; then merge coordination-spec to main and execute in .worktrees/coordination-commands
   provenance: {"harness_session":"claude-code:dde7b5c4-c65b-4f4c-9ec0-bc965ee48ee6","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
