@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: coordination-commands
 created: 2026-09-23T11:40:35Z
-updated: 2026-09-24T11:09:23Z
+updated: 2026-09-24T13:46:36Z
 started: 2026-09-24T09:49:50Z
 depends: []
 tags: [projects]
@@ -35,3 +35,4 @@ The belief path design (dogfood-commands branch, docs/specs/2026-09-09-belief-pa
   provenance: {"harness_session":"claude-code:dde7b5c4-c65b-4f4c-9ec0-bc965ee48ee6","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-09-24T11:09:23Z (coordination-commands): resumed
   provenance: {"harness_session":"claude-code:9d2d64bd-cdd3-4a14-add8-aa234fa311c0","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-09-24T13:46:36Z (coordination-commands): Part 1 (write surface) landed on branch coordination-commands; follow-ups: data.kind carries two vocabularies (reason codes vs kernel class names) and ProjectNotResolvable's tips are dropped by the generic WriteRefused branch; no test reuses a hypothesis source; tests' socket paths have little headroom under the AF_UNIX limit; an in-flight socket write at shutdown prints a SessionClosed traceback.
