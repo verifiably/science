@@ -1019,6 +1019,53 @@ options = [
 ]
 
 [[cli.science.commands]]
+path = ["question"]
+summary = "Ask a question in the current project: a name and a query over the world"
+options = [
+  { shared = "config", value = "path" },
+  { names = ["--invocation-id"], value = "string" },
+  { names = ["--continue"], value = "string" },
+  { names = ["--name"], value = "string", required = true },
+  { names = ["--query"], value = "string", required = true },
+  { names = ["--body"], value = "string" },
+]
+
+[[cli.science.commands]]
+path = ["hypothesis"]
+summary = "Ask a hypothesis in the current project: a name and a query over the world"
+options = [
+  { shared = "config", value = "path" },
+  { names = ["--invocation-id"], value = "string" },
+  { names = ["--continue"], value = "string" },
+  { names = ["--name"], value = "string", required = true },
+  { names = ["--query"], value = "string", required = true },
+  { names = ["--body"], value = "string" },
+]
+
+[[cli.science.commands]]
+path = ["task"]
+summary = "Add an open task to the current project"
+options = [
+  { shared = "config", value = "path" },
+  { names = ["--invocation-id"], value = "string" },
+  { names = ["--continue"], value = "string" },
+  { names = ["--name"], value = "string", required = true },
+  { names = ["--body"], value = "string" },
+  { names = ["--depends"], value = "string", repeatable = true },
+]
+
+[[cli.science.commands]]
+path = ["decide"]
+summary = "Record a decision in the current project, with its reasoning"
+options = [
+  { shared = "config", value = "path" },
+  { names = ["--invocation-id"], value = "string" },
+  { names = ["--continue"], value = "string" },
+  { names = ["--name"], value = "string", required = true },
+  { names = ["--body"], value = "string", required = true },
+]
+
+[[cli.science.commands]]
 path = ["build"]
 summary = "Build the world from its corpora"
 

@@ -1,0 +1,21 @@
+schema_version = 1
+name = "question"
+purpose = "Ask a question in the current project: a name and a query over the world."
+write_class = "coordination"
+output_budget = 4096
+
+[inputs.name]
+type = "string"
+required = true
+doc = "The question, as a person would ask it."
+[inputs.query]
+type = "string"
+required = true
+doc = "The world facts that bear on it, as a view query in YAML or JSON text."
+[inputs.body]
+type = "string"
+required = false
+doc = "Context for the question."
+
+[reads]
+families = ["coordination"]

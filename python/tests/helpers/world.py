@@ -367,6 +367,14 @@ def coordination_rig(work: Path, names: tuple[str, ...], *, selection=None, extr
 QUERY = "version: science.view-query.v1\nclauses:\n  - all:\n      - kinds: [proposition]\n"
 
 
+def mint_project(dispatcher, name: str = "health"):
+    import re
+
+    from beliefs.coordination import CoordinationAddress
+    out = dispatcher.invoke("project", {"name": name, "query": QUERY})
+    return CoordinationAddress(re.search(r"project:([0-9a-f]{32})\.", out.text).group(1))
+
+
 def build_belief_world(work: Path, **holds: bool) -> ScienceConfig:
     """The contract world plus one proposition typed under the plan: the
     starting state for claim/spec/run/assess/verify/belief/next tests."""
