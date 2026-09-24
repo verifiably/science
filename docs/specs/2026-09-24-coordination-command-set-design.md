@@ -1,7 +1,7 @@
 # The coordination command set — design
 
 **Date:** 2026-09-24
-**Status:** draft for review. Task `sci-c5528e`.
+**Status:** reviewed and approved 2026-09-24 after two review rounds; implementation plan to follow. Task `sci-c5528e`.
 **Scope:** the second half of sub-project 4 of the user/autonomy layer design
 (`beliefs` `docs/superpowers/specs/2026-08-29-user-and-autonomy-layer-design.md`
 §5.1, §8 item 4): the commands that mint and revise `project`, `question`,
@@ -553,7 +553,7 @@ working directory other than the file's.
 Three `beliefs` requests, each filed as a task and depended on by the plan task that
 needs it. The requirement is stated; the design is `beliefs`'.
 
-**S1 — live, unpublished query evaluation.** Denote a `ViewQuery` over the mounted
+**S1 — live, unpublished query evaluation** (`beliefs-cc0aea`). Denote a `ViewQuery` over the mounted
 corpora's current captured state without building or publishing an epoch, returning
 a selection whose stamp names the capture rather than any epoch identity, so that no
 consumer can mistake it for an epoch-bound answer; publish and every epoch-bound
@@ -562,7 +562,7 @@ in coordination §6.2 for publication; it adds the attention read that §6.2's o
 argument for live coordination resolution covers. Whether it is a new function or a
 view type is the kernel's.
 
-**S2 — selection ledger lines (P3).** The session ledger records the initial
+**S2 — selection ledger lines (P3)** (`beliefs-1148ad`). The session ledger records the initial
 selection at `session-open` and every change, attributable to the invocation that
 made it: a `project` value on `session-open` (an address or null) and a new line
 kind carrying the invocation id, the new value (an address or null) and the
@@ -573,7 +573,7 @@ reader, which is the replay source of §4.1's selection block. Needed by `projec
 selection. `LINE_KINDS` is closed today (`session/ledger.py`), so this is a ledger
 amendment.
 
-**S3 — enumerate standing tips by kind.** A public `CoordinationResolver` method
+**S3 — enumerate standing tips by kind** (`beliefs-1af3fd`). A public `CoordinationResolver` method
 returning every address of a given kind — optionally within one project — with its
 resolution (the tip's node, or `divergent-view` with its tips), over exactly the
 resolver's mounts. Needed by `project-select` by name, `projects` and
