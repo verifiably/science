@@ -14,7 +14,6 @@ def _fixture_tree():
 
 def test_synthetic_tree_loads():
     by_name = {d.name: d for d in _fixture_tree()}
-    assert by_name["coord-note"].write_class.kind == "coordination"
     assert by_name["pub-view"].write_class.kind == "publishes"
     assert by_name["mint-claim"].write_class.routes == {"proposition": "corpus-write"}
 

@@ -1,0 +1,21 @@
+schema_version = 1
+name = "task"
+purpose = "Add an open task to the current project."
+write_class = "coordination"
+output_budget = 4096
+
+[inputs.name]
+type = "string"
+required = true
+doc = "What is to be done."
+[inputs.body]
+type = "string"
+required = false
+doc = "Detail."
+[inputs.depends]
+type = "list-of-string"
+required = false
+doc = "Tasks this one waits on, as coord:<project>/<local> addresses."
+
+[reads]
+families = ["coordination"]

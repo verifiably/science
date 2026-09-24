@@ -1,6 +1,7 @@
 """The dispatcher: the one path every invocation takes (spec §6.1, §7.3)."""
 from __future__ import annotations
 
+import dataclasses
 import threading
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
@@ -29,12 +30,20 @@ class Outcome:
 
 
 class Dispatcher:
-    def __init__(self, declarations, handlers: Mapping[str, Callable], read_context, session=None) -> None:
+    def __init__(
+        self, declarations, handlers: Mapping[str, Callable], read_context, session=None, selection=None
+    ) -> None:
         self._decls = {decl.name: decl for decl in declarations}
         self._handlers = dict(handlers)
         self._ctx = read_context
         self._session = session
+        self._selection = selection
         self._lock = threading.Lock()  # serializes write-class steps 4-7
+
+    def _context(self):
+        """The read context a handler receives: the dispatcher's, with the
+        selection standing when the invocation runs."""
+        return dataclasses.replace(self._ctx, selection=self._selection)
 
     def invoke(
         self,
@@ -64,7 +73,7 @@ class Dispatcher:
             canonical = canonicalize(decl, inputs)
             if decl.write_class.kind != "read-only":
                 return self._invoke_write(decl, canonical, iid)
-            report = self._handlers[decl.name](self._ctx, **canonical)
+            report = self._handlers[decl.name](self._context(), **canonical)
             return Outcome(self._render(decl, canonical, report, (0, 0)), iid)
         except Refused as error:
             raise Refused(error.refusal, iid) from None
@@ -105,7 +114,7 @@ class Dispatcher:
         canonical = canonicalize(decl, inputs)
         if input_digest(canonical) != cursor.input_digest:
             raise Refused(Refusal("input-mismatch", "cursor was issued for different inputs"))
-        report = self._handlers[decl.name](self._ctx, **canonical)
+        report = self._handlers[decl.name](self._context(), **canonical)
         if report_digest(report) != cursor.report_digest:
             raise Refused(Refusal("stale-cursor", "the world moved; re-run the command"))
         self._check_position(report, cursor.block, cursor.offset)
@@ -199,7 +208,7 @@ class Dispatcher:
             if not isinstance(claim, ClaimFresh):  # fail closed, never execute
                 raise TypeError(f"unknown claim type from the session: {claim!r}")
             try:
-                report = self._handlers[decl.name](self._ctx, writer, **canonical)
+                report = self._handlers[decl.name](self._context(), writer, **canonical)
             except (PermitExceeded, KernelRefusalValue, WriteRefused) as caught:
                 return self._close_refused(iid, self._kernel_refusal(caught))
             except Refused as caught:

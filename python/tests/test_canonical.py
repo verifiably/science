@@ -90,7 +90,7 @@ def test_digest_stable_and_order_free():
 
 
 def test_refusal_shapes():
-    assert "kernel-refused" in CODES and len(CODES) == 8
+    assert "kernel-refused" in CODES and len(CODES) == 11
     r = Refusal("invalid-input", "bad", {"field": "a"})
     assert Refused(r).refusal is r
     assert INVOCATION_ID_RE.fullmatch("A-z_09")

@@ -10,7 +10,13 @@ from pathlib import Path
 
 from beliefs.corpus import ReadView
 from beliefs.errors import ProfileError
-from beliefs.profile import ProfileSpec, compile_profile, shipped_base_contract, shipped_domain_contract
+from beliefs.profile import (
+    ProfileSpec,
+    compile_profile,
+    shipped_base_contract,
+    shipped_coordination,
+    shipped_domain_contract,
+)
 from beliefs.root import open_world_read
 from beliefs.world import WorldConfig
 from beliefs.world.registry import load_manifest
@@ -21,7 +27,7 @@ from science.contracts import OperatorPlan, load_contract_document
 _WORLD_ID_RE = re.compile(r"[0-9a-f]{32}")
 _KEYS = (
     "world_root", "world_id", "corpus_roots", "operations_root", "domains", "contracts",
-    "store_root",
+    "store_root", "coordination",
 )
 _OPTIONAL_KEYS = ("service_socket",)
 
@@ -33,6 +39,7 @@ class ScienceConfig:
     profile: ProfileSpec
     service_socket: Path
     store_root: Path
+    coordination: int | None
     plans: tuple[OperatorPlan, ...] = ()
 
 
@@ -50,8 +57,10 @@ def load_config(path: Path) -> ScienceConfig:
         _refuse("config is not valid TOML")
     if type(raw) is not dict:
         _refuse("config must be a table")
-    if set(raw) - set(_OPTIONAL_KEYS) != set(_KEYS):
-        _refuse("config must contain exactly the required keys")
+    missing, unknown = set(_KEYS) - set(raw), set(raw) - set(_KEYS) - set(_OPTIONAL_KEYS)
+    if missing or unknown:
+        _refuse(f"config must contain exactly the required keys; missing {sorted(missing)}, "
+                f"unknown {sorted(unknown)}")
     if any(type(raw[key]) is not str for key in ("world_root", "world_id", "operations_root")):
         _refuse("config paths and world_id must be strings")
     if "service_socket" in raw and type(raw["service_socket"]) is not str:
@@ -68,39 +77,57 @@ def load_config(path: Path) -> ScienceConfig:
         _refuse("config contracts must be a list of strings")
     if type(raw["store_root"]) is not str:
         _refuse("config store_root must be a string")
+    coordination = raw["coordination"]
+    if coordination is False:
+        coordination = None
+    elif type(coordination) is not int or coordination < 1:
+        _refuse("config coordination must be a coordination contract version (an integer) or false")
     if not _WORLD_ID_RE.fullmatch(raw["world_id"]):
         _refuse("config world_id must be 32 lowercase hex characters")
+    base_dir = path.resolve().parent
+
+    def located(value: str) -> Path:
+        # Relative paths name places beside the configuration file, never the
+        # process's working directory (projects design P1); an absolute value
+        # is unchanged by the join.
+        return (base_dir / value).resolve()
+
     try:
         domains = [shipped_domain_contract(namespace) for namespace in raw["domains"]]
     except ProfileError as caught:
         _refuse(f"config domains do not compile: {caught}")
     base = shipped_base_contract()
-    local = [load_contract_document(Path(value).resolve(), base) for value in raw["contracts"]]
+    local = [load_contract_document(located(value), base) for value in raw["contracts"]]
     try:
-        profile = compile_profile(base, domains + [contract for contract, _ in local])
+        profile = compile_profile(
+            base,
+            domains + [contract for contract, _ in local],
+            coordination=None if coordination is None else shipped_coordination(coordination),
+        )
     except ProfileError as caught:
         _refuse(f"config contracts do not compile: {caught}")
     plans = tuple(plan for _, plan in local if plan is not None)
-    operations_root = Path(raw["operations_root"]).resolve()
+    operations_root = located(raw["operations_root"])
     # The socket defaults beside the operations root. AF_UNIX caps the path at
     # 107 bytes and a worktree checkout's operations root already exceeds it,
     # so the key exists to name a short path; both `science serve` and the
     # CLI's write routing read it here, which is what keeps them agreeing.
     service_socket = (
-        Path(raw["service_socket"]).resolve()
+        located(raw["service_socket"])
         if "service_socket" in raw
         else operations_root / "service.sock"
     )
     return ScienceConfig(
         world=WorldConfig(
-            world_root=Path(raw["world_root"]),
+            world_root=located(raw["world_root"]),
             world_id=raw["world_id"],
-            corpus_roots=tuple(Path(value) for value in raw["corpus_roots"]),
+            corpus_roots=tuple(located(value) for value in raw["corpus_roots"]),
         ),
         operations_root=operations_root,
         profile=profile,
         service_socket=service_socket,
-        store_root=Path(raw["store_root"]).resolve(),
+        store_root=located(raw["store_root"]),
+        coordination=coordination,
         plans=plans,
     )
 
@@ -119,10 +146,25 @@ def resolve_config_path(cli_value: str | None, env: Mapping[str, str] | None = N
 class ReadContext:
     world: object
     config: ScienceConfig
+    selection: object = None  # a beliefs.coordination.CoordinationAddress or None; typed
+    # `object` because `beliefs.coordination` is imported lazily like the rest
+    # of this module's kernel reads.
 
     @classmethod
     def open(cls, config: ScienceConfig) -> ReadContext:
         return cls(world=open_world_read(config.world), config=config)
+
+    def current_project(self):
+        """The selected project's unpinned address, or refuse: a subordinate
+        record's address is (project identity, local id), and with nothing
+        selected there is no project identity to bind (projects design §5.3)."""
+        if self.selection is None:
+            raise Refused(Refusal(
+                "no-current-project",
+                "no project is selected; select one with `project-select`, or copy a view "
+                "into the current project with `reuse`",
+            ))
+        return self.selection
 
     def read_views(self) -> tuple[tuple[str, ReadView], ...]:
         """One view per configured root, ordered by corpus id then root. Two
@@ -179,6 +221,17 @@ class ReadContext:
         from science.holdings import is_held
         corpus_id, view = self.single_view()
         return is_held(view, self.world, corpus_id, node)
+
+    def coordination(self):
+        """A live resolver over the configured roots (coordination §6.2). One
+        root today, mounted under the session's profile; part 3 mounts each
+        root under its own manifest's profile."""
+        from beliefs.corpus import CoordinationResolver
+
+        if self.config.coordination is None:
+            raise Refused(Refusal("invalid-input",
+                                  "coordination = false in this configuration; there is no resolver to ask"))
+        return CoordinationResolver({root: self.config.profile for root in self.config.world.corpus_roots})
 
     def pins(self):
         (root,) = self.config.world.corpus_roots

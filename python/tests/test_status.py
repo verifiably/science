@@ -50,6 +50,7 @@ def test_status_renders_corpus_findings(certified_work, tmp_path):
         profile=cfg.profile,
         service_socket=cfg.service_socket,
         store_root=cfg.store_root,
+        coordination=cfg.coordination,
     )
 
     report = handle(ReadContext.open(doubled))

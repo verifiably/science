@@ -546,6 +546,9 @@ This design accepts that answer and makes it cheap:
   current project carrying the same query and a `note` naming the source
   address. One command, one act. The new record is its own; nothing links
   the two in the kernel beyond the note, and nothing needs to.
+  *Amended 2026-09-24:* the source address is carried in the new view's
+  `body`, one act; a separate `note` record would be a second act and cannot
+  hold a `coord:` address (coordination command set design, decision 7).
 - The refusal for minting a view kind with no current project (§5.3) names
   this command, because the person who hits it is usually about to ask
   which project a question belongs to, and the answer is "the one you are

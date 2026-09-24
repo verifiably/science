@@ -1,27 +1,13 @@
 import json
 import io
 import re
-import shutil
 import socket
-import tempfile
 import threading
-from pathlib import Path
 
 import pytest
 
 from science.serve import serve
 from helpers.world import build_fixture_world
-
-
-@pytest.fixture
-def short_tmp():
-    """A short directory for sockets. AF_UNIX caps the socket path at 107 bytes, and
-    pytest's `tmp_path` grows with the test name and, under xdist, a worker segment."""
-    root = Path(tempfile.mkdtemp(prefix="sci-", dir="/tmp"))
-    try:
-        yield root
-    finally:
-        shutil.rmtree(root)
 
 
 @pytest.mark.parametrize("state", ["clean", "unclosed", "failing-stream"])
@@ -306,3 +292,46 @@ def test_serve_verb_binds_the_configured_socket(certified_work, short_tmp, monke
     monkeypatch.setattr(serve_module, "serve", fake_build)
     assert main(["serve", "--config", str(cfg_path)]) == 0
     assert bound == [named, "served", "closed"]
+
+
+def test_clean_close_removes_the_socket_it_bound(certified_work, short_tmp):
+    cfg = build_fixture_world(certified_work)
+    sock = short_tmp / "service.sock"
+    server = serve(cfg, sock)
+    assert sock.exists()
+    server.server_close()
+    assert not sock.exists()  # the next launcher can start
+
+
+def test_close_leaves_a_socket_that_is_no_longer_the_one_bound(certified_work, short_tmp):
+    cfg = build_fixture_world(certified_work)
+    sock = short_tmp / "service.sock"
+    server = serve(cfg, sock)
+    sock.unlink()
+    sock.touch()  # someone else's file now sits at the path
+    server.server_close()
+    assert sock.exists()
+
+
+def test_lost_bind_race_raises_the_bind_error_and_still_closes_once(short_tmp):
+    """Something else binds the path between `check_socket_path` and `bind`:
+    `server_bind` raises before `bound_ident` is ever set on the instance, and
+    the `server_close` that `TCPServer.__init__` calls on its way out must not
+    mask the bind failure with an `AttributeError` — and `on_close` still runs,
+    exactly once."""
+    import errno
+
+    from science.serve import service_server
+
+    sock_path = short_tmp / "service.sock"
+    foreign = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    foreign.bind(str(sock_path))
+    closed = []
+    try:
+        with pytest.raises(OSError) as caught:
+            service_server(None, sock_path, on_close=lambda: closed.append(1))
+        assert caught.value.errno == errno.EADDRINUSE
+        assert closed == [1]
+        assert sock_path.exists()  # the foreign socket's file survives
+    finally:
+        foreign.close()

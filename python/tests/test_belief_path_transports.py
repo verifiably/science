@@ -2,11 +2,28 @@ import io
 import json
 import socket
 import threading
+from contextlib import contextmanager
 
 import pytest
 
 from helpers.world import SPEC_FIELDS, build_fixture_world_with_contract, write_config_for
 from test_mcp import rpc
+
+
+@contextmanager
+def _service(cfg_path, socket_path):
+    """The CLI's launcher, bound only for the segment that needs it: one socket
+    admits one launcher at a time (decision 6), and `mcp_call` binds the same
+    path for the span of its own call."""
+    from science.config import load_config
+    from science.serve import serve
+    server = serve(load_config(cfg_path), socket_path)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    try:
+        yield server
+    finally:
+        server.shutdown()  # blocks until serve_forever returns, so only once it runs
+        server.server_close()
 
 
 @pytest.fixture
@@ -102,9 +119,8 @@ def test_every_write_reaches_its_transport_and_renders_the_canonical_report(worl
     from beliefs.recipe import MINIMAL_POLICY
     from beliefs.session import open_ledger_reader
     from science.cli import main
-    from science.config import ReadContext, load_config
+    from science.config import ReadContext
     from science.report import record_block, serialize_block
-    from science.serve import serve
     from helpers.world import fixture_bundle
     if host_prerequisites() is not None:
         monkeypatch.setattr(run_module, "POLICY", MINIMAL_POLICY)
@@ -136,28 +152,31 @@ def test_every_write_reaches_its_transport_and_renders_the_canonical_report(worl
     prop_text = result["content"][0]["text"]
     prop = ref_in(prop_text, "proposition:")
     assert prop_text == canonical(result["structuredContent"]["invocation_id"])
-    server = serve(load_config(cfg_path), named)
-    threading.Thread(target=server.serve_forever, daemon=True).start()
-    try:
+    # `mcp serve` now binds this same socket for the span of each `mcp_call`
+    # (decision 6), so the CLI's own launcher is bound only around the
+    # segments that need it, never while an `mcp_call` is in flight.
+    with _service(cfg_path, named):
         assert main(["dataset", "--config", str(cfg_path), "--path", str(data), "--title", "expression",
                      "--locator", "accession:GSE-FIXTURE"]) == 0
         output = capsys.readouterr()
         dataset = ref_in(output.out, "dataset:")
         assert output.out == canonical(json.loads(output.err)["invocation_id"])
-        result = mcp_call(cfg_path, "spec", dict(SPEC_FIELDS, target=prop, dataset=dataset))
-        spec_text = result["content"][0]["text"]
-        spec = ref_in(spec_text, "analysis-spec:")
-        assert spec_text == canonical(result["structuredContent"]["invocation_id"])
+    result = mcp_call(cfg_path, "spec", dict(SPEC_FIELDS, target=prop, dataset=dataset))
+    spec_text = result["content"][0]["text"]
+    spec = ref_in(spec_text, "analysis-spec:")
+    assert spec_text == canonical(result["structuredContent"]["invocation_id"])
+    with _service(cfg_path, named):
         assert main(["run", "--config", str(cfg_path), "--spec", spec, "--dataset", dataset,
                      "--code", str(code), "--entrypoint", entrypoint, *sum((["--targets", t] for t in targets), [])]) == 0
         output = capsys.readouterr()
         run_text = output.out
         run = ref_in(run_text, "run:")
         assert run_text == canonical(json.loads(output.err)["invocation_id"])
-        result = mcp_call(cfg_path, "assess", {"run": run})
-        assess_text = result["content"][0]["text"]
-        assessment = ref_in(assess_text, "assessment:")
-        assert assess_text == canonical(result["structuredContent"]["invocation_id"])
+    result = mcp_call(cfg_path, "assess", {"run": run})
+    assess_text = result["content"][0]["text"]
+    assessment = ref_in(assess_text, "assessment:")
+    assert assess_text == canonical(result["structuredContent"]["invocation_id"])
+    with _service(cfg_path, named):
         assert main(["verify", "--config", str(cfg_path), "--assessment", assessment,
                      "--code", str(code), "--entrypoint", entrypoint]) == 0
         output = capsys.readouterr()
@@ -169,8 +188,6 @@ def test_every_write_reaches_its_transport_and_renders_the_canonical_report(worl
         assert main(["verify", "--config", str(cfg_path), "--assessment", assessment,
                      "--code", str(code), "--entrypoint", entrypoint]) == 3
         assert json.loads(capsys.readouterr().err)["refusal"]["code"] == "kernel-refused"
-    finally:
-        server.server_close()
     # And the two commands not yet seen on the other transport: assess's
     # refusal through the service, spec's refusal through MCP.
     result = mcp_call(cfg_path, "spec", dict(SPEC_FIELDS, target=prop, dataset=dataset, interpretation_rule="nope/v9"))

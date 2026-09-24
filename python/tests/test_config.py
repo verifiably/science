@@ -17,6 +17,7 @@ def write_config(
     domains: str = "[]",
     contracts: str | None = "[]",
     store_root: str | Path | None = "",
+    coordination: str = "2",
 ) -> Path:
     world_root = tmp_path / "world"
     ops = tmp_path / "ops" if operations_root is None else operations_root
@@ -34,14 +35,16 @@ def write_config(
         lines.append(f"contracts = {contracts}")
     if store is not None:
         lines.append(f'store_root = "{store}"')
+    lines.append(f"coordination = {coordination}")
     cfg.write_text("\n".join(lines) + "\n" + extra)
     return cfg
 
 
-def assert_invalid_config(path: Path) -> None:
+def assert_invalid_config(path: Path):
     with pytest.raises(Refused) as caught:
         load_config(path)
     assert caught.value.refusal.code == "invalid-input"
+    return caught.value.refusal
 
 
 def test_load_config_builds_beliefs_worldconfig(tmp_path):
@@ -52,10 +55,14 @@ def test_load_config_builds_beliefs_worldconfig(tmp_path):
     assert cfg.world.corpus_roots == ((tmp_path / "corpora" / "one").resolve(),)
 
 
-def test_load_config_resolves_relative_operations_root(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
-    cfg = load_config(write_config(tmp_path, operations_root="operations"))
-    assert cfg.operations_root == tmp_path / "operations"
+def test_relative_paths_resolve_against_the_config_file(tmp_path, monkeypatch):
+    """Not the working directory: one file names one world from anywhere (P1)."""
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
+    cfg = load_config(write_config(tmp_path, operations_root="operations", store_root="store"))
+    assert cfg.operations_root == (tmp_path / "operations").resolve()
+    assert cfg.store_root == (tmp_path / "store").resolve()
 
 
 def test_service_socket_defaults_beside_the_operations_root(tmp_path):
@@ -65,11 +72,28 @@ def test_service_socket_defaults_beside_the_operations_root(tmp_path):
 
 def test_service_socket_is_configurable_and_resolved(tmp_path, monkeypatch):
     """The AF_UNIX path limit is 107 bytes and a worktree's operations root
-    already exceeds it, so the operator can name a short path; relative paths
-    resolve against the working directory like operations_root does."""
-    monkeypatch.chdir(tmp_path)
+    already exceeds it, so the operator can name a short path; a relative one
+    resolves against the configuration file like every other path."""
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
     cfg = load_config(write_config(tmp_path, extra='service_socket = "run/s.sock"\n'))
-    assert cfg.service_socket == tmp_path / "run" / "s.sock"
+    assert cfg.service_socket == (tmp_path / "run" / "s.sock").resolve()
+
+
+def test_world_and_corpus_roots_resolve_against_the_config_file(tmp_path, monkeypatch):
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
+    path = tmp_path / "science.toml"
+    path.write_text(
+        f'world_root = "world"\nworld_id = "{WORLD_ID}"\ncorpus_roots = ["corpora/one"]\n'
+        'operations_root = "ops"\ndomains = []\ncontracts = []\nstore_root = "store"\n'
+        'coordination = 2\n'
+    )
+    cfg = load_config(path)
+    assert cfg.world.world_root == (tmp_path / "world").resolve()
+    assert cfg.world.corpus_roots == ((tmp_path / "corpora" / "one").resolve(),)
 
 
 def test_service_socket_must_be_a_string(tmp_path):
@@ -79,7 +103,7 @@ def test_service_socket_must_be_a_string(tmp_path):
 def test_domains_compile_the_profile_the_session_binds(tmp_path):
     from beliefs.profile import shipped_base_contract
 
-    cfg = load_config(write_config(tmp_path, domains='["biology"]'))
+    cfg = load_config(write_config(tmp_path, domains='["biology"]', coordination="false"))
     assert cfg.profile.base_contract_identity == shipped_base_contract().content_identity
     assert set(cfg.profile.activated_contracts) == {"biology"}
     # The operators the pack contributes are what activation is *for*.
@@ -87,7 +111,7 @@ def test_domains_compile_the_profile_the_session_binds(tmp_path):
 
 
 def test_empty_domains_compile_the_shipped_base_alone(tmp_path):
-    cfg = load_config(write_config(tmp_path, domains="[]"))
+    cfg = load_config(write_config(tmp_path, domains="[]", coordination="false"))
     assert dict(cfg.profile.activated_contracts) == {}
 
 
@@ -96,15 +120,41 @@ def test_unshipped_domain_namespace_is_refused_at_load(tmp_path):
     assert_invalid_config(write_config(tmp_path, domains='["no-such-pack"]'))
 
 
+def test_coordination_key_is_required(tmp_path):
+    path = write_config(tmp_path)
+    path.write_text(path.read_text().replace("coordination = 2\n", ""))
+    message = assert_invalid_config(path).message
+    assert "missing ['coordination']" in message  # the key an upgraded config lacks, by name
+
+
+def test_coordination_version_compiles_into_the_profile(tmp_path):
+    cfg = load_config(write_config(tmp_path, coordination="2"))
+    assert cfg.coordination == 2
+    assert "coordination" in cfg.profile.activated_contracts
+    assert "project" in cfg.profile.coordination_kinds
+
+
+def test_coordination_false_compiles_without_it(tmp_path):
+    cfg = load_config(write_config(tmp_path, coordination="false"))
+    assert cfg.coordination is None
+    assert "coordination" not in cfg.profile.activated_contracts
+
+
+@pytest.mark.parametrize("value", ["true", "3", '"2"', "0"])
+def test_coordination_value_outside_its_forms_is_refused(tmp_path, value):
+    assert_invalid_config(write_config(tmp_path, coordination=value))
+
+
 def test_missing_or_unknown_fields_are_refused(tmp_path):
     missing = tmp_path / "missing.toml"
     missing.write_text('world_root = "/x"\n')
     assert_invalid_config(missing)
-    assert_invalid_config(write_config(tmp_path, extra="stray = 1\n"))
-    assert_invalid_config(write_config(tmp_path, extra="[untrusted]\nvalue = 1\n"))
+    assert "unknown ['stray']" in assert_invalid_config(write_config(tmp_path, extra="stray = 1\n")).message
+    assert "unknown ['untrusted']" in assert_invalid_config(
+        write_config(tmp_path, extra="[untrusted]\nvalue = 1\n")).message
 
 
-_TAIL = 'domains = []\ncontracts = []\nstore_root = "/x"\n'
+_TAIL = 'domains = []\ncontracts = []\nstore_root = "/x"\ncoordination = 2\n'
 
 
 @pytest.mark.parametrize("contents", [
@@ -112,8 +162,8 @@ _TAIL = 'domains = []\ncontracts = []\nstore_root = "/x"\n'
     f'world_root = "/x"\nworld_id = "{WORLD_ID}"\ncorpus_roots = "not-a-list"\noperations_root = "/x"\n' + _TAIL,
     f'world_root = "/x"\nworld_id = "{WORLD_ID}"\ncorpus_roots = ["/x", 3]\noperations_root = "/x"\n' + _TAIL,
     f'world_root = "/x"\nworld_id = "{WORLD_ID}"\ncorpus_roots = ["/x"]\noperations_root = false\n' + _TAIL,
-    f'world_root = "/x"\nworld_id = "{WORLD_ID}"\ncorpus_roots = ["/x"]\noperations_root = "/x"\ndomains = "biology"\ncontracts = []\nstore_root = "/x"\n',
-    f'world_root = "/x"\nworld_id = "{WORLD_ID}"\ncorpus_roots = ["/x"]\noperations_root = "/x"\ndomains = ["biology", 3]\ncontracts = []\nstore_root = "/x"\n',
+    f'world_root = "/x"\nworld_id = "{WORLD_ID}"\ncorpus_roots = ["/x"]\noperations_root = "/x"\ndomains = "biology"\ncontracts = []\nstore_root = "/x"\ncoordination = 2\n',
+    f'world_root = "/x"\nworld_id = "{WORLD_ID}"\ncorpus_roots = ["/x"]\noperations_root = "/x"\ndomains = ["biology", 3]\ncontracts = []\nstore_root = "/x"\ncoordination = 2\n',
     'this = is not [ toml',
 ])
 def test_noncanonical_or_malformed_toml_is_refused(tmp_path, contents):

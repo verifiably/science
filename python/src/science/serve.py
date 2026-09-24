@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import socketserver
 import sys
 from pathlib import Path
@@ -42,18 +43,8 @@ def _validated(request) -> tuple[str, dict, str | None, str | None]:
     return command, inputs, invocation_id, cursor
 
 
-def serve(config: ScienceConfig, socket_path: Path, declarations=None, handlers=None, stderr=None):
-    """`declarations`/`handlers` default to the production tree; tests inject
-    their synthetic set here — production code never imports test modules."""
-    from beliefs.session import open_attended_session
-
-    if declarations is None:
-        from science.loader import production_tree, resolve_handlers
-
-        declarations = production_tree()
-        handlers = resolve_handlers(declarations)
-    # Every pre-session refusal happens before the session exists; after it
-    # is opened, any constructor failure closes it before propagating.
+def check_socket_path(socket_path: Path) -> None:
+    """Every pre-session socket refusal, so a launcher refuses before its session exists."""
     encoded = len(str(socket_path).encode())
     if encoded > MAX_SOCKET_PATH_BYTES:
         raise Refused(Refusal(
@@ -64,58 +55,98 @@ def serve(config: ScienceConfig, socket_path: Path, declarations=None, handlers=
     if socket_path.exists():
         raise Refused(Refusal(
             "invalid-input",
-            f"socket already exists: {socket_path}; a stale one from a crashed "
-            "service is the operator's to remove",
+            f"socket already exists: {socket_path}; another launcher holds this world, or a "
+            "crashed one left it — a stale one is the operator's to remove",
         ))
-    session = open_attended_session(
-        config.world, config.operations_root, profile=config.profile,
-        store_root=config.store_root,
-    )
+
+
+def service_server(dispatcher, socket_path: Path, on_close):
+    """The service protocol for `dispatcher` at `socket_path`. Closing removes the
+    socket this server bound — only while the path is still that inode, so a file
+    someone else put there survives — then calls `on_close`."""
+
+    class Handler(socketserver.StreamRequestHandler):
+        def handle(self) -> None:
+            for line in self.rfile:
+                try:
+                    command, inputs, invocation_id, cursor = _validated(json.loads(line))
+                    out = dispatcher.invoke(command, inputs,
+                                            invocation_id=invocation_id, cursor=cursor)
+                    reply = {"ok": True, "text": out.text,
+                             "invocation_id": out.invocation_id}
+                except json.JSONDecodeError as caught:
+                    reply = {"ok": False, "refusal": envelope(
+                        Refusal("invalid-input", f"request is not JSON: {caught}"))}
+                except Refused as caught:
+                    reply = {"ok": False, "refusal": envelope(caught.refusal)}
+                    if caught.invocation_id is not None:
+                        reply["invocation_id"] = caught.invocation_id
+                self.wfile.write(json.dumps(reply).encode() + b"\n")
+
+    class Server(socketserver.ThreadingUnixStreamServer):
+        # Without this, `server_close` joins every handler thread, and a
+        # handler blocks in its read loop for as long as its client holds
+        # the connection open. One idle client would then wedge shutdown
+        # indefinitely. Killing an in-flight write at shutdown is already
+        # a designed-for state: the invocation stays claimed and unclosed,
+        # so a retry replays as `outcome-unknown` (spec §5.2).
+        daemon_threads = True
+        # None until `server_bind` succeeds. `TCPServer.__init__` calls
+        # `server_close` on a `server_bind` failure (a lost bind race — something
+        # else took the path between `check_socket_path` and `bind`), before this
+        # class attribute would otherwise be set on the instance; the class
+        # default lets that early `server_close` see "nothing bound" instead of
+        # raising `AttributeError` and masking the original `OSError`.
+        bound_ident: tuple[int, int] | None = None
+
+        def server_bind(self) -> None:
+            super().server_bind()
+            stat = os.stat(self.server_address)
+            self.bound_ident = (stat.st_dev, stat.st_ino)
+
+        def server_close(self) -> None:
+            try:
+                if self.bound_ident is not None:
+                    # Stat and unlink while the server still holds the bound
+                    # socket, before `super().server_close()` releases it — once
+                    # released, the inode could be recycled and this check would
+                    # no longer mean what it says.
+                    try:
+                        stat = os.stat(socket_path)
+                        if (stat.st_dev, stat.st_ino) == self.bound_ident:
+                            os.unlink(socket_path)
+                    except FileNotFoundError:
+                        pass
+                super().server_close()
+            finally:
+                on_close()
+
+    socket_path.parent.mkdir(parents=True, exist_ok=True)
+    # No unlink here: check_socket_path already refused an existing one, and if
+    # a socket appears in the race window, bind() fails loudly — never clean up.
+    return Server(str(socket_path), Handler)
+
+
+def serve(config: ScienceConfig, socket_path: Path, declarations=None, handlers=None, stderr=None):
+    """`declarations`/`handlers` default to the production tree; tests inject
+    their synthetic set here — production code never imports test modules."""
+    from science.session import open_session
+
+    if declarations is None:
+        from science.loader import production_tree, resolve_handlers
+
+        declarations = production_tree()
+        handlers = resolve_handlers(declarations)
+    # Every pre-session refusal happens before the session exists; after it
+    # is opened, any constructor failure closes it before propagating.
+    check_socket_path(socket_path)
+    session = open_session(config)
     try:
         report_findings(session.findings, reported_by=session.session_id,
                         stream=sys.stderr if stderr is None else stderr)
         dispatcher = Dispatcher(declarations, handlers, ReadContext.open(config),
                                 session=session)
-
-        class Handler(socketserver.StreamRequestHandler):
-            def handle(self) -> None:
-                for line in self.rfile:
-                    try:
-                        command, inputs, invocation_id, cursor = _validated(json.loads(line))
-                        out = dispatcher.invoke(command, inputs,
-                                                invocation_id=invocation_id, cursor=cursor)
-                        reply = {"ok": True, "text": out.text,
-                                 "invocation_id": out.invocation_id}
-                    except json.JSONDecodeError as caught:
-                        reply = {"ok": False, "refusal": envelope(
-                            Refusal("invalid-input", f"request is not JSON: {caught}"))}
-                    except Refused as caught:
-                        reply = {"ok": False, "refusal": envelope(caught.refusal)}
-                        if caught.invocation_id is not None:
-                            reply["invocation_id"] = caught.invocation_id
-                    self.wfile.write(json.dumps(reply).encode() + b"\n")
-
-        class Server(socketserver.ThreadingUnixStreamServer):
-            # Without this, `server_close` joins every handler thread, and a
-            # handler blocks in its read loop for as long as its client holds
-            # the connection open. One idle client would then wedge shutdown
-            # indefinitely. Killing an in-flight write at shutdown is already
-            # a designed-for state: the invocation stays claimed and unclosed,
-            # so a retry replays as `outcome-unknown` (spec §5.2).
-            daemon_threads = True
-
-            def server_close(self) -> None:
-                try:
-                    super().server_close()
-                finally:
-                    session.close()  # even when the socket teardown raises
-
-        socket_path.parent.mkdir(parents=True, exist_ok=True)
-        # No unlink anywhere: the existence check above refused already, and
-        # if a socket appears in the race window, bind() fails loudly — never
-        # clean up. A bind failure lands in the except below, which closes
-        # the session before re-raising.
-        return Server(str(socket_path), Handler)
+        return service_server(dispatcher, socket_path, on_close=session.close)
     except BaseException:
         session.close()
         raise

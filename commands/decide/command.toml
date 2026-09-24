@@ -1,0 +1,17 @@
+schema_version = 1
+name = "decide"
+purpose = "Record a decision in the current project, with its reasoning."
+write_class = "coordination"
+output_budget = 4096
+
+[inputs.name]
+type = "string"
+required = true
+doc = "What was decided."
+[inputs.body]
+type = "string"
+required = true
+doc = "Why: the reasoning a later reader needs."
+
+[reads]
+families = ["coordination"]

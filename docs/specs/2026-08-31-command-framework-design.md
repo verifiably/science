@@ -345,9 +345,8 @@ an act that could not appear in a chain.
   namespaces the profile activates; `science` compiles
   `compile_profile(shipped_base_contract(), [shipped_domain_contract(ns) …])`
   at config load, so an unrecognized namespace refuses at startup rather than
-  at the first write. `coordination` stays unset until a coordination-class
-  command exists: the shipped base declares no coordination kinds, so passing
-  a resolver would arm nothing.
+  at the first write. `coordination` is set from the configuration's
+  `coordination` key (**amended 2026-09-24**).
 - A run-session constructor with a tier parameter arrives with sub-project 6
   and is out of scope here beyond the seam existing.
 
@@ -620,11 +619,15 @@ there is nothing to reach around.
 
 One launcher-owned TOML file, located by `--config PATH` or
 `SCIENCE_CONFIG`: the fields of `beliefs.WorldConfig` (world root, world id,
-corpus roots) plus `operations_root`, `domains`, `contracts`, and `store_root`.
-The loader constructs
+corpus roots) plus `operations_root`, `domains`, `contracts`, `store_root`, and
+`coordination`. The loader constructs
 `beliefs.WorldConfig` directly — no parallel world model, no drift.
 Configuration is untrusted input (§6.4): paths are resolved and validated at
 session open.
+
+**Amended 2026-09-24:** a relative path in the file resolves against the
+configuration file's real location, symlinks followed, never the process's
+working directory; a refusal for a missing or unknown key names each one.
 
 `domains` (**added 2026-09-09** with §5.1's required `profile`) is the list of
 domain-contract namespaces the world's profile activates — `["biology"]` for a
@@ -655,6 +658,12 @@ It is required and may be empty, for `domains`'s reason. `store_root` is the
 holdings store the session and the `dataset` command bind, resolved like
 `operations_root`; required. Both are superseded whenever the kernel gives
 contracts a home (belief-path ruling 5).
+
+`coordination` (**added 2026-09-24**: coordination command set design §6) is
+required: the shipped coordination contract version compiled into the one profile
+the session binds and passed as its coordination profile, or `false` for a corpus
+adopted without it. Relative paths in the file resolve against the file's own
+directory (the same design, decision 8), never the process's working directory.
 
 ### 9.2 CLI
 
@@ -758,6 +767,13 @@ optional protocol properties `invocation_id` and `cursor`**, which the
 reserved input names of §3.2 guarantee can never collide with a command's
 own inputs. There is no separate continuation tool; a call carrying
 `cursor` is a continuation. Tool calls enter the same dispatcher.
+
+**Amended 2026-09-24** (coordination command set design, decision 6).
+`science mcp serve` also binds the configuration's `service_socket` and serves the
+§9.2 service protocol on it with the dispatcher its stdio loop uses, so a CLI write
+made while an MCP session is live reaches that one session, and whichever launcher
+starts second refuses on the existing socket. A launcher removes the socket it bound
+at clean shutdown; a stale socket from a crash still refuses at start.
 
 ### 9.4 Equivalence
 

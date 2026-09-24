@@ -1,0 +1,44 @@
+schema_version = 1
+name = "revise"
+purpose = "Revise a project, question, hypothesis, task or decision."
+write_class = "coordination"
+output_budget = 4096
+
+[inputs.address]
+type = "string"
+required = true
+doc = "coord:<project> for a project, coord:<project>/<local> for the rest."
+[inputs.name]
+type = "string"
+required = false
+doc = "A new name."
+[inputs.body]
+type = "string"
+required = false
+doc = "A new body."
+[inputs.query]
+type = "string"
+required = false
+doc = "A new view query (projects, questions, hypotheses), YAML or JSON text."
+[inputs.status]
+type = "enum"
+required = false
+choices = ["open", "done", "dropped"]
+doc = "A task's new status."
+[inputs.depends]
+type = "list-of-string"
+required = false
+doc = "A task's new dependencies, replacing the old."
+[inputs.clear_depends]
+type = "bool"
+required = false
+default = false
+doc = "Set a task's dependencies to none; a repeated --depends cannot spell an empty list."
+[inputs.repair]
+type = "bool"
+required = false
+default = false
+doc = "Supersede every standing tip of a divergent address; every content field must then be given."
+
+[reads]
+families = ["coordination"]

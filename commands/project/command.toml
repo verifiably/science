@@ -1,0 +1,21 @@
+schema_version = 1
+name = "project"
+purpose = "Start a project: a name and a query over the world."
+write_class = "coordination"
+output_budget = 4096
+
+[inputs.name]
+type = "string"
+required = true
+doc = "The project's name; content, and it may be shared with another project."
+[inputs.query]
+type = "string"
+required = true
+doc = "The view query as YAML or JSON text (science.view-query.v1)."
+[inputs.body]
+type = "string"
+required = false
+doc = "What the project is for."
+
+[reads]
+families = ["coordination"]
