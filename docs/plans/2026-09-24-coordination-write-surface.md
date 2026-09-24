@@ -1465,7 +1465,7 @@ def test_repair_names_every_tip_and_takes_every_field(certified_work, monkeypatc
     ((kind, address, predecessors, content),) = writer.calls
     assert kind == "project" and predecessors == sorted([real.uid, twin.uid])
     assert content["name"] == "x" and content["author"] == writer.actor
-
+```
 
 - [ ] **Step 2: Run them to verify they fail**
 
