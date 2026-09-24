@@ -274,7 +274,24 @@ def test_coordination_value_outside_its_forms_is_refused(tmp_path, value):
     assert_invalid_config(write_config(tmp_path, coordination=value))
 ```
 
-and give `write_config` a `coordination: str = "2"` parameter that appends `f"coordination = {coordination}"` to `lines`. Append `coordination = 2\n` to `_TAIL` and to the two literal cases at lines 115-116, so each parametrized case still refuses for the reason it names rather than for the missing key.
+and give `write_config` a `coordination: str = "2"` parameter that appends `f"coordination = {coordination}"` to `lines`. Append `coordination = 2\n` to `_TAIL` and to the two literal cases at lines 115-116, so each parametrized case still refuses for the reason it names rather than for the missing key. Add `coordination = 2\n` to the literal config in Task 1's `test_world_and_corpus_roots_resolve_against_the_config_file`.
+
+Two existing tests assert the activated contracts exactly, and coordination now joins them. Pass `coordination="false"` in both, so each keeps testing what its name says:
+
+```python
+def test_domains_compile_the_profile_the_session_binds(tmp_path):
+    from beliefs.profile import shipped_base_contract
+
+    cfg = load_config(write_config(tmp_path, domains='["biology"]', coordination="false"))
+    ...  # body unchanged: activated == {"biology"}
+
+
+def test_empty_domains_compile_the_shipped_base_alone(tmp_path):
+    cfg = load_config(write_config(tmp_path, domains="[]", coordination="false"))
+    assert dict(cfg.profile.activated_contracts) == {}
+```
+
+Then search for any other exact assertion over activated contracts or pins and give it the same treatment or the coordination entry: `grep -rn "activated_contracts\|domains=\|PINS" python/tests`.
 
 - [ ] **Step 2: Run them to verify they fail**
 
@@ -364,44 +381,56 @@ Expected: PASS — the belief path's tests do not depend on the coordination con
 
 - [ ] **Step 7: Write the failing session-open tests**
 
-Create `python/tests/test_session_open.py`:
+Create `python/tests/test_session_open.py`. The writes go through the dispatcher with a synthetic `coordination`-class declaration, since a scoped writer acts only inside a claimed invocation, which the dispatcher makes:
 
 ```python
+from pathlib import Path
+
 import pytest
 
 from helpers.world import build_fixture_world, build_world_without_coordination
+from science.cursor import MIN_OUTPUT_BUDGET
+from science.refusal import Refused
+from science.schema import Declaration, WriteClass
+
+MINT_PROJECT = Declaration("mint-project", "fixture", WriteClass("coordination"),
+                           MIN_OUTPUT_BUDGET, (), (), Path("."))
 
 
-def _project_content(writer):
-    return {"name": "health", "body": "", "author": writer.actor, "at": "2026-09-24T00:00:00Z",
-            "query": {"version": "science.view-query.v1", "clauses": []}}
+def mint_project_handler(ctx, writer):
+    from science.report import record_block
+    node = writer.mint_coordination("project", project=None, content={
+        "name": "health", "body": "", "author": writer.actor, "at": "2026-09-24T00:00:00Z",
+        "query": {"version": "science.view-query.v1", "clauses": []}})
+    return (record_block(node),)
+
+
+def _dispatch(cfg):
+    from science.config import ReadContext
+    from science.dispatch import Dispatcher
+    from science.session import open_session
+    session = open_session(cfg)
+    return session, Dispatcher((MINT_PROJECT,), {"mint-project": mint_project_handler},
+                               ReadContext.open(cfg), session=session)
 
 
 def test_session_opened_by_science_can_mint_a_project(certified_work):
-    from beliefs.permit import RequiredCapabilities
-    from science.session import open_session
-
-    session = open_session(build_fixture_world(certified_work))
+    session, d = _dispatch(build_fixture_world(certified_work))
     try:
-        writer = session.scoped(RequiredCapabilities.coordination(), "a" * 32)
-        node = writer.mint_coordination("project", project=None, content=_project_content(writer))
-        assert node.kind == "project" and node.title == "health"
+        assert "[project] project:" in d.invoke("mint-project", {}).text
     finally:
         session.close()
 
 
 def test_without_coordination_a_project_mint_is_unavailable(certified_work):
-    from beliefs.errors import CoordinationUnavailable
-    from beliefs.permit import RequiredCapabilities
-    from science.session import open_session
-
-    session = open_session(build_world_without_coordination(certified_work))
+    session, d = _dispatch(build_world_without_coordination(certified_work))
     try:
-        writer = session.scoped(RequiredCapabilities.coordination(), "b" * 32)
-        with pytest.raises(CoordinationUnavailable):
-            writer.mint_coordination("project", project=None, content=_project_content(writer))
+        with pytest.raises(Refused) as caught:
+            d.invoke("mint-project", {})
     finally:
         session.close()
+    assert caught.value.refusal.code == "kernel-refused"
+    assert caught.value.refusal.data["kind"] == "CoordinationUnavailable"
 
 
 def test_coordination_asked_of_a_corpus_that_does_not_pin_it_refuses_at_open(certified_work):
@@ -418,7 +447,6 @@ def test_coordination_asked_of_a_corpus_that_does_not_pin_it_refuses_at_open(cer
 
 def test_read_context_resolver_needs_coordination(certified_work):
     from science.config import ReadContext
-    from science.refusal import Refused
 
     ctx = ReadContext.open(build_world_without_coordination(certified_work))
     with pytest.raises(Refused) as caught:
@@ -1359,16 +1387,48 @@ def test_a_revision_with_no_field_refuses(certified_work):
     assert caught.value.refusal.code == "invalid-input"
 
 
+def test_clear_depends_empties_a_tasks_dependencies_through_the_cli_shape(certified_work):
+    from beliefs.coordination import CoordinationAddress
+    with coordination_rig(certified_work, NAMES) as (d, ctx):
+        d._selection = mint_project(d)
+        first, second = _task(d), _task(d)
+        d.invoke("revise", {"address": second, "depends": [first]})
+        d.invoke("revise", {"address": second, "clear_depends": True})
+        node = ctx.coordination().resolve(CoordinationAddress.parse(second))
+        with pytest.raises(Refused) as both:
+            d.invoke("revise", {"address": second, "depends": [first], "clear_depends": True})
+    assert node.facets["coordination"]["depends"] == []
+    assert both.value.refusal.code == "invalid-input"
+
+
+def test_clear_depends_parses_from_the_cli():
+    from science.cli import build_parser
+    from science.loader import production_tree
+    parsed = build_parser(production_tree()).parse_args(
+        ["revise", "--address", "coord:" + "a" * 32 + "/" + "b" * 32, "--clear-depends"])
+    assert parsed.clear_depends is True
+
+
 class _Tip:
     def __init__(self, node):
         self.node = node
 
 
-def test_divergence_refuses_without_repair_and_names_every_tip_with_it(certified_work, monkeypatch):
-    """Two tips cannot arise in one root under the lock (coordination §4.3);
-    the resolver is stubbed to report them, and the writer is stubbed to
-    capture the predecessors the repair names. Part 3's two-corpus fixture
-    exercises a real divergence end to end."""
+class _RecordingWriter:
+    actor = "session:" + "0" * 32
+
+    def __init__(self):
+        self.calls = []
+
+    def revise_coordination(self, kind, address, *, predecessors, content):
+        self.calls.append((kind, address, sorted(predecessors), content))
+        return self.node
+
+
+def test_divergence_refuses_without_repair(certified_work, monkeypatch):
+    """Two tips cannot arise in one root under the lock (coordination §4.3), so
+    the resolver is stubbed to report them. Part 3's two-corpus fixture exercises
+    a real divergence end to end."""
     import science.commands.revise as revise_module
     with coordination_rig(certified_work, NAMES) as (d, ctx):
         project = mint_project(d)
@@ -1378,18 +1438,34 @@ def test_divergence_refuses_without_repair_and_names_every_tip_with_it(certified
         monkeypatch.setattr(revise_module, "standing_tips", lambda ctx, address: (_Tip(real), _Tip(twin)))
         with pytest.raises(Refused) as caught:
             d.invoke("revise", {"address": str(project), "name": "x"})
-        assert caught.value.refusal.data["kind"] == "divergent-view"
-        assert sorted(caught.value.refusal.data["tips"]) == sorted([real.uid, twin.uid])
-        with pytest.raises(Refused) as partial:
-            d.invoke("revise", {"address": str(project), "name": "x", "repair": True})
-        assert partial.value.refusal.code == "invalid-input"  # repair needs every content field
-        captured = {}
-        monkeypatch.setattr(revise_module, "_revise", lambda writer, kind, address, predecessors, content:
-                            captured.update(predecessors=sorted(predecessors)) or real)
-        d.invoke("revise", {"address": str(project), "name": "x", "body": "", "query": QUERY,
-                            "repair": True})
-    assert captured["predecessors"] == sorted([real.uid, twin.uid])
-```
+    assert caught.value.refusal.code == "kernel-refused"
+    assert caught.value.refusal.data["kind"] == "divergent-view"
+    assert caught.value.refusal.data["tips"] == sorted([real.uid, twin.uid])
+
+
+def test_repair_names_every_tip_and_takes_every_field(certified_work, monkeypatch):
+    """The handler alone, with a recording writer: the dispatcher's write audit
+    admits only records an act minted, and a divergence cannot be built in one
+    root, so predecessor construction is checked here and real writes are
+    covered by the dispatcher tests above."""
+    import science.commands.revise as revise_module
+    from science.config import ReadContext
+    with coordination_rig(certified_work, NAMES) as (d, ctx):
+        project = mint_project(d)
+        real = ctx.coordination().tips(project)[0].node
+    twin = real.model_copy(update={"id": real.id.rsplit(".", 1)[0] + "." + "e" * 32, "uid": "e" * 32})
+    monkeypatch.setattr(revise_module, "standing_tips", lambda ctx, address: (_Tip(real), _Tip(twin)))
+    writer = _RecordingWriter()
+    writer.node = real
+    with pytest.raises(Refused) as partial:
+        revise_module.handle(ctx, writer, address=str(project), name="x", repair=True)
+    assert partial.value.refusal.code == "invalid-input"  # body and query missing
+    assert writer.calls == []
+    revise_module.handle(ctx, writer, address=str(project), name="x", body="", query=QUERY, repair=True)
+    ((kind, address, predecessors, content),) = writer.calls
+    assert kind == "project" and predecessors == sorted([real.uid, twin.uid])
+    assert content["name"] == "x" and content["author"] == writer.actor
+
 
 - [ ] **Step 2: Run them to verify they fail**
 
@@ -1432,6 +1508,11 @@ doc = "A task's new status."
 type = "list-of-string"
 required = false
 doc = "A task's new dependencies, replacing the old."
+[inputs.clear_depends]
+type = "bool"
+required = false
+default = false
+doc = "Set a task's dependencies to none; a repeated --depends cannot spell an empty list."
 [inputs.repair]
 type = "bool"
 required = false
@@ -1448,7 +1529,8 @@ families = ["coordination"]
 Run `revise` to change a project, question, hypothesis, task or decision
 by address. Fields not given carry over from the current revision; a
 field the record's kind lacks refuses. Closing a task is `status` `done`
-or `dropped`. An address whose record has diverged into several standing
+or `dropped`; `depends` replaces a task's dependencies and `clear_depends`
+empties them. An address whose record has diverged into several standing
 revisions refuses and names them; `repair` reconciles them into one, and
 then every field must be given, since there is no single revision to
 carry over from. Report the minted revision.
@@ -1477,13 +1559,15 @@ def _refuse(message: str):
     raise Refused(Refusal("invalid-input", message))
 
 
-def _revise(writer, kind, address, predecessors, content):
-    return writer.revise_coordination(kind, address, predecessors=predecessors, content=content)
-
-
 def handle(ctx, writer, *, address, name=None, body=None, query=None, status=None, depends=None,
-           repair=False) -> Report:
+           clear_depends=None, repair=None) -> Report:
+    # Canonicalization supplies each bool's declared `false`; the handler
+    # default is None because the loader requires it of every optional input.
     parsed = parse_address(address, subordinate=address.count("/") == 1)
+    if clear_depends and depends is not None:
+        _refuse("give `depends` or `clear_depends`, not both")
+    if clear_depends:
+        depends = []
     given = {field: value for field, value in
              (("name", name), ("body", body), ("query", query), ("status", status), ("depends", depends))
              if value is not None}
@@ -1514,7 +1598,8 @@ def handle(ctx, writer, *, address, name=None, body=None, query=None, status=Non
     else:
         content = {**content_of(tips[0].node), **given}
     content.update(author=writer.actor, at=now())
-    node = _revise(writer, kind, parsed, [tip.node.uid for tip in tips], content)
+    node = writer.revise_coordination(kind, parsed, predecessors=[tip.node.uid for tip in tips],
+                                      content=content)
     return (record_block(node),)
 ```
 
@@ -1536,6 +1621,7 @@ options = [
   { names = ["--query"], value = "string" },
   { names = ["--status"], value = "enum", values = ["open", "done", "dropped"] },
   { names = ["--depends"], value = "string", repeatable = true },
+  { names = ["--clear-depends"], value = "none" },
   { names = ["--repair"], value = "none" },
 ]
 ```
@@ -1856,6 +1942,28 @@ def test_mcp_serve_accepts_cli_writes_on_the_socket_and_blocks_a_second_launcher
     assert not sock.exists()  # clean shutdown removed it
 ```
 
+Add the MCP counterpart of `test_serve.py`'s `test_server_close_failure_still_closes_session`:
+
+```python
+def test_mcp_socket_teardown_failure_still_closes_the_session(certified_work, short_tmp, monkeypatch):
+    import socketserver
+
+    from science.config import load_config
+    from science.mcp import serve as mcp_serve
+
+    config_path = write_cli_config(certified_work, service_socket=short_tmp / "service.sock")
+
+    def boom(self):
+        raise OSError("teardown failed")
+
+    monkeypatch.setattr(socketserver.ThreadingUnixStreamServer, "server_close", boom)
+    with pytest.raises(OSError):
+        mcp_serve(config_path, stdin=io.BytesIO(), stdout=io.StringIO(), stderr=io.StringIO())
+    ledgers = list((load_config(config_path).operations_root / "sessions").glob("*/ledger.v1"))
+    assert len(ledgers) == 1
+    assert json.loads(ledgers[0].read_text().splitlines()[-1])["line"] == "session-close"
+```
+
 `short_tmp` is `test_serve.py`'s fixture; move it to `python/tests/conftest.py` so both files share it (cut it from `test_serve.py` with its imports of `shutil`, `tempfile` and `Path` where no longer used).
 
 - [ ] **Step 2: Run them to verify they fail**
@@ -1962,11 +2070,15 @@ In `mcp.py` `serve`, after `config = load_config(config_path)`:
         while True:
             ...  # the stdio loop, unchanged
     finally:
-        if server is not None:
-            if serving:
-                server.shutdown()  # blocks until serve_forever returns, so only once it runs
-            server.server_close()
-        session.close()
+        try:
+            if server is not None:
+                try:
+                    if serving:
+                        server.shutdown()  # blocks until serve_forever returns, so only once it runs
+                finally:
+                    server.server_close()
+        finally:
+            session.close()  # the ledger's session-close, even when socket teardown raises
 ```
 
 The dispatcher's lock already serializes writes arriving from the two transports.
