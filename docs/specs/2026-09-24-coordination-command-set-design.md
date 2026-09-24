@@ -1,7 +1,7 @@
 # The coordination command set — design
 
 **Date:** 2026-09-24
-**Status:** reviewed and approved 2026-09-24 after two review rounds; implementation plan to follow. Task `sci-c5528e`.
+**Status:** reviewed and approved 2026-09-24; part 1 (the write surface) implemented 2026-09-24, plan `docs/plans/2026-09-24-coordination-write-surface.md`. Parts 2 and 3 wait on `beliefs-cc0aea`, `beliefs-1148ad`, `beliefs-1af3fd` and `beliefs-fe7149`.
 **Scope:** the second half of sub-project 4 of the user/autonomy layer design
 (`beliefs` `docs/superpowers/specs/2026-08-29-user-and-autonomy-layer-design.md`
 §5.1, §8 item 4): the commands that mint and revise `project`, `question`,
