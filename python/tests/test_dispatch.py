@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
@@ -7,6 +8,12 @@ from science.dispatch import Dispatcher
 from science.refusal import Refusal, Refused
 from science.report import Text
 from science.schema import Declaration, InputSpec, WriteClass
+
+
+@dataclass(frozen=True)
+class StubContext:
+    """The read context shape the dispatcher now relies on: a dataclass carrying `selection`."""
+    selection: object = None
 
 
 def make_decl(name="lots", budget=MIN_OUTPUT_BUDGET, inputs=(), write_class="read-only"):
@@ -26,7 +33,7 @@ def build():
         make_decl("lots", inputs=(InputSpec("corpus", "string", False, "d", "d"),)),
         make_decl("small", inputs=(InputSpec("corpus", "string", False, "d"),)),
     )
-    return Dispatcher(decls, {"lots": lots_handler, "small": small_handler}, read_context=object())
+    return Dispatcher(decls, {"lots": lots_handler, "small": small_handler}, read_context=StubContext())
 
 
 def cursor_from(text):
@@ -155,7 +162,7 @@ def test_write_on_a_sessionless_surface_refuses_before_the_handler():
     dispatcher = Dispatcher(
         (write,),
         {"write": lambda ctx, writer: executed.append(True) or ()},
-        read_context=object(),
+        read_context=StubContext(),
     )
 
     with pytest.raises(Refused) as caught:
@@ -175,7 +182,7 @@ def test_publishes_class_refuses_until_the_publish_family_exists():
     dispatcher = Dispatcher(
         (publish,),
         {"pub": lambda ctx, writer: executed.append(True) or ()},
-        read_context=object(),
+        read_context=StubContext(),
         session=object(),  # a session exists; the class is what refuses
     )
 

@@ -144,10 +144,25 @@ def resolve_config_path(cli_value: str | None, env: Mapping[str, str] | None = N
 class ReadContext:
     world: object
     config: ScienceConfig
+    selection: object = None  # a beliefs.coordination.CoordinationAddress or None; typed
+    # `object` because `beliefs.coordination` is imported lazily like the rest
+    # of this module's kernel reads.
 
     @classmethod
     def open(cls, config: ScienceConfig) -> ReadContext:
         return cls(world=open_world_read(config.world), config=config)
+
+    def current_project(self):
+        """The selected project's unpinned address, or refuse: a subordinate
+        record's address is (project identity, local id), and with nothing
+        selected there is no project identity to bind (projects design §5.3)."""
+        if self.selection is None:
+            raise Refused(Refusal(
+                "no-current-project",
+                "no project is selected; select one with `project-select`, or copy a view "
+                "into the current project with `reuse`",
+            ))
+        return self.selection
 
     def read_views(self) -> tuple[tuple[str, ReadView], ...]:
         """One view per configured root, ordered by corpus id then root. Two

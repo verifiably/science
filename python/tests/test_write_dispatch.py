@@ -8,7 +8,7 @@ from science.refusal import Refused
 from science.schema import Declaration
 from pathlib import Path
 from helpers.synthetic import (
-    HANDLERS, MINT_CLAIM, OVERREACH, echoing_handler, forging_handler,
+    HANDLERS, MINT_CLAIM, OVERREACH, echoing_handler, forging_handler, mint_claim_handler,
 )
 from helpers.world import build_fixture_world
 
@@ -184,6 +184,28 @@ def test_open_invocation_refuses_outcome_unknown(rig):
     with pytest.raises(Refused) as e:
         d.invoke("mint-claim", {"slug": "crashed"}, invocation_id="G" * 8)
     assert e.value.refusal.code == "outcome-unknown"
+
+
+def test_handlers_see_the_dispatchers_selection(certified_work):
+    from beliefs.coordination import CoordinationAddress
+    from beliefs.session import open_attended_session
+    from science.config import ReadContext
+    cfg = build_fixture_world(certified_work)
+    session = open_attended_session(cfg.world, cfg.operations_root, profile=cfg.profile)
+    seen = []
+
+    def spy(ctx, writer, *, slug):
+        seen.append(ctx.selection)
+        return mint_claim_handler(ctx, writer, slug=slug)
+
+    selected = CoordinationAddress("a" * 32)
+    d = Dispatcher((MINT_CLAIM,), {"mint-claim": spy}, ReadContext.open(cfg),
+                   session=session, selection=selected)
+    try:
+        d.invoke("mint-claim", {"slug": "sel"})
+    finally:
+        session.close()
+    assert seen == [selected]
 
 
 def test_write_cursor_rerenders_without_handler(rig):
