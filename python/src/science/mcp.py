@@ -359,10 +359,9 @@ def _read_frame(stream):
 
 
 def serve(config_path: Path, stdin=None, stdout=None, stderr=None) -> None:
-    from beliefs.session import open_attended_session
-
     from science.config import ReadContext, load_config
     from science.loader import production_tree, resolve_handlers
+    from science.session import open_session
 
     stdin = sys.stdin.buffer if stdin is None else stdin
     stdout = sys.stdout if stdout is None else stdout
@@ -371,10 +370,7 @@ def serve(config_path: Path, stdin=None, stdout=None, stderr=None) -> None:
     # One attended session for the process lifetime. A world config naming
     # other than exactly one corpus root raises SessionRefused here; that is a
     # launcher misconfiguration and propagates, never a command refusal.
-    session = open_attended_session(
-        config.world, config.operations_root, profile=config.profile,
-        store_root=config.store_root,
-    )
+    session = open_session(config)
     try:
         report_findings(session.findings, reported_by=session.session_id,
                         stream=sys.stderr if stderr is None else stderr)

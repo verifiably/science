@@ -45,7 +45,7 @@ def _validated(request) -> tuple[str, dict, str | None, str | None]:
 def serve(config: ScienceConfig, socket_path: Path, declarations=None, handlers=None, stderr=None):
     """`declarations`/`handlers` default to the production tree; tests inject
     their synthetic set here — production code never imports test modules."""
-    from beliefs.session import open_attended_session
+    from science.session import open_session
 
     if declarations is None:
         from science.loader import production_tree, resolve_handlers
@@ -67,10 +67,7 @@ def serve(config: ScienceConfig, socket_path: Path, declarations=None, handlers=
             f"socket already exists: {socket_path}; a stale one from a crashed "
             "service is the operator's to remove",
         ))
-    session = open_attended_session(
-        config.world, config.operations_root, profile=config.profile,
-        store_root=config.store_root,
-    )
+    session = open_session(config)
     try:
         report_findings(session.findings, reported_by=session.session_id,
                         stream=sys.stderr if stderr is None else stderr)

@@ -5,7 +5,12 @@ from pathlib import Path
 from beliefs import stored
 from beliefs.consulted import CorpusPins
 from beliefs.permit import Authority, WritePermit
-from beliefs.profile import compile_profile, shipped_base_contract, shipped_domain_contract
+from beliefs.profile import (
+    compile_profile,
+    shipped_base_contract,
+    shipped_coordination,
+    shipped_domain_contract,
+)
 from beliefs.root import init_corpus_root, init_store_root, init_world_root, open_corpus, open_world
 from beliefs.world import Fresh, WorldConfig
 
@@ -16,9 +21,11 @@ from science.config import ScienceConfig
 FIXTURE_AUTHORITY = Authority(WritePermit.full(), "fixture")
 
 DOMAINS = ("biology",)
+COORDINATION = 2
 PROFILE = compile_profile(
     shipped_base_contract(),
     [shipped_domain_contract(namespace) for namespace in DOMAINS],
+    coordination=shipped_coordination(COORDINATION),
 )
 # Derived, never authored: `require_pins_agree` refuses a manifest whose pins do
 # not name exactly the identities this profile compiled from.
@@ -28,6 +35,9 @@ PINS = CorpusPins(
         namespace: f"{namespace}:{identity}"
         for namespace, identity in PROFILE.activated_contracts.items()
     },
+)
+BARE_PROFILE = compile_profile(
+    shipped_base_contract(), [shipped_domain_contract(namespace) for namespace in DOMAINS]
 )
 STORE_IDS: dict[Path, str] = {}
 
@@ -61,7 +71,26 @@ def build_fixture_world(work: Path) -> ScienceConfig:
         profile=PROFILE,
         service_socket=work / "ops" / "service.sock",
         store_root=store_root,
+        coordination=COORDINATION,
     )
+
+
+def build_world_without_coordination(work: Path) -> ScienceConfig:
+    """A corpus adopted before coordination: its pins carry no coordination contract."""
+    corpus_root = work / "corpus"
+    config = WorldConfig(work / "world", secrets.token_hex(16), (corpus_root,))
+    init_world_root(config, authority=FIXTURE_AUTHORITY)
+    init_corpus_root(corpus_root, authority=FIXTURE_AUTHORITY)
+    writer = open_corpus(corpus_root, authority=FIXTURE_AUTHORITY, profile=BARE_PROFILE)
+    writer.adopt_manifest(profile=CorpusPins(
+        science_contract="science:" + BARE_PROFILE.base_contract_identity,
+        domains={ns: f"{ns}:{identity}" for ns, identity in BARE_PROFILE.activated_contracts.items()},
+    ))
+    open_world(config, authority=FIXTURE_AUTHORITY).admit(corpus_root, provenance=Fresh())
+    STORE_IDS[work] = init_store_root(work / "store", authority=FIXTURE_AUTHORITY)
+    return ScienceConfig(world=config, operations_root=work / "ops", profile=BARE_PROFILE,
+                         service_socket=work / "ops" / "service.sock", store_root=work / "store",
+                         coordination=None)
 
 
 def _install_holdings_reducer(world) -> None:
@@ -91,6 +120,7 @@ operations_root = "{ops}"
 domains = {list(DOMAINS)!r}
 contracts = []
 store_root = "{cfg.store_root}"
+coordination = {COORDINATION}
 {socket_line}''')
     return path
 
@@ -112,6 +142,7 @@ operations_root = "{cfg.operations_root}"
 domains = {list(DOMAINS)!r}
 contracts = ["{contract}"]
 store_root = "{cfg.store_root}"
+coordination = {COORDINATION}
 {socket_line}''')
     return path
 
@@ -208,7 +239,8 @@ def build_fixture_world_with_contract(work: Path, *, hold_concepts: bool = True,
     from science.contracts import load_contract_document
     base = shipped_base_contract()
     contract, plan = load_contract_document(fixture_contract_document(work), base)
-    profile = compile_profile(base, [shipped_domain_contract(ns) for ns in DOMAINS] + [contract])
+    profile = compile_profile(base, [shipped_domain_contract(ns) for ns in DOMAINS] + [contract],
+                              coordination=shipped_coordination(COORDINATION))
     pins = CorpusPins(
         science_contract="science:" + profile.base_contract_identity,
         domains={ns: f"{ns}:{identity}" for ns, identity in profile.activated_contracts.items()},
@@ -226,7 +258,7 @@ def build_fixture_world_with_contract(work: Path, *, hold_concepts: bool = True,
     _install_holdings_reducer(world)
     cfg = ScienceConfig(world=config, operations_root=work / "ops", profile=profile,
                         service_socket=work / "ops" / "service.sock", store_root=work / "store",
-                        plans=(plan,))
+                        coordination=COORDINATION, plans=(plan,))
     if hold_concepts:
         hold_fixture_dataset(cfg, "concepts.txt", CONCEPTS, "concept vocabulary")
     if hold_levels:
@@ -295,13 +327,12 @@ SPEC_FIELDS = {"contrast": "levels", "slot": 0, "baseline": "level:early", "comp
 def open_rig(cfg: ScienceConfig, names: tuple[str, ...]):
     """A dispatcher over the production declarations named, with an attended
     session over `cfg` bound to its store; yields (dispatcher, read context)."""
-    from beliefs.session import open_attended_session
     from science.config import ReadContext
     from science.dispatch import Dispatcher
     from science.loader import production_tree, resolve_handlers
+    from science.session import open_session
     decls = tuple(d for d in production_tree() if d.name in names)
-    session = open_attended_session(cfg.world, cfg.operations_root, profile=cfg.profile,
-                                    store_root=cfg.store_root)
+    session = open_session(cfg)
     ctx = ReadContext.open(cfg)
     try:
         yield Dispatcher(decls, resolve_handlers(decls), ctx, session=session), ctx

@@ -10,7 +10,13 @@ from pathlib import Path
 
 from beliefs.corpus import ReadView
 from beliefs.errors import ProfileError
-from beliefs.profile import ProfileSpec, compile_profile, shipped_base_contract, shipped_domain_contract
+from beliefs.profile import (
+    ProfileSpec,
+    compile_profile,
+    shipped_base_contract,
+    shipped_coordination,
+    shipped_domain_contract,
+)
 from beliefs.root import open_world_read
 from beliefs.world import WorldConfig
 from beliefs.world.registry import load_manifest
@@ -21,7 +27,7 @@ from science.contracts import OperatorPlan, load_contract_document
 _WORLD_ID_RE = re.compile(r"[0-9a-f]{32}")
 _KEYS = (
     "world_root", "world_id", "corpus_roots", "operations_root", "domains", "contracts",
-    "store_root",
+    "store_root", "coordination",
 )
 _OPTIONAL_KEYS = ("service_socket",)
 
@@ -33,6 +39,7 @@ class ScienceConfig:
     profile: ProfileSpec
     service_socket: Path
     store_root: Path
+    coordination: int | None
     plans: tuple[OperatorPlan, ...] = ()
 
 
@@ -68,6 +75,11 @@ def load_config(path: Path) -> ScienceConfig:
         _refuse("config contracts must be a list of strings")
     if type(raw["store_root"]) is not str:
         _refuse("config store_root must be a string")
+    coordination = raw["coordination"]
+    if coordination is False:
+        coordination = None
+    elif type(coordination) is not int or coordination < 1:
+        _refuse("config coordination must be a coordination contract version (an integer) or false")
     if not _WORLD_ID_RE.fullmatch(raw["world_id"]):
         _refuse("config world_id must be 32 lowercase hex characters")
     base_dir = path.resolve().parent
@@ -85,7 +97,11 @@ def load_config(path: Path) -> ScienceConfig:
     base = shipped_base_contract()
     local = [load_contract_document(located(value), base) for value in raw["contracts"]]
     try:
-        profile = compile_profile(base, domains + [contract for contract, _ in local])
+        profile = compile_profile(
+            base,
+            domains + [contract for contract, _ in local],
+            coordination=None if coordination is None else shipped_coordination(coordination),
+        )
     except ProfileError as caught:
         _refuse(f"config contracts do not compile: {caught}")
     plans = tuple(plan for _, plan in local if plan is not None)
@@ -109,6 +125,7 @@ def load_config(path: Path) -> ScienceConfig:
         profile=profile,
         service_socket=service_socket,
         store_root=located(raw["store_root"]),
+        coordination=coordination,
         plans=plans,
     )
 
@@ -187,6 +204,17 @@ class ReadContext:
         from science.holdings import is_held
         corpus_id, view = self.single_view()
         return is_held(view, self.world, corpus_id, node)
+
+    def coordination(self):
+        """A live resolver over the configured roots (coordination §6.2). One
+        root today, mounted under the session's profile; part 3 mounts each
+        root under its own manifest's profile."""
+        from beliefs.corpus import CoordinationResolver
+
+        if self.config.coordination is None:
+            raise Refused(Refusal("invalid-input",
+                                  "coordination = false in this configuration; there is no resolver to ask"))
+        return CoordinationResolver({root: self.config.profile for root in self.config.world.corpus_roots})
 
     def pins(self):
         (root,) = self.config.world.corpus_roots

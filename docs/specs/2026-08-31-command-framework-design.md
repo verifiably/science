@@ -345,9 +345,8 @@ an act that could not appear in a chain.
   namespaces the profile activates; `science` compiles
   `compile_profile(shipped_base_contract(), [shipped_domain_contract(ns) …])`
   at config load, so an unrecognized namespace refuses at startup rather than
-  at the first write. `coordination` stays unset until a coordination-class
-  command exists: the shipped base declares no coordination kinds, so passing
-  a resolver would arm nothing.
+  at the first write. `coordination` is set from the configuration's
+  `coordination` key (**amended 2026-09-24**).
 - A run-session constructor with a tier parameter arrives with sub-project 6
   and is out of scope here beyond the seam existing.
 
@@ -655,6 +654,12 @@ It is required and may be empty, for `domains`'s reason. `store_root` is the
 holdings store the session and the `dataset` command bind, resolved like
 `operations_root`; required. Both are superseded whenever the kernel gives
 contracts a home (belief-path ruling 5).
+
+`coordination` (**added 2026-09-24**: coordination command set design §6) is
+required: the shipped coordination contract version compiled into the one profile
+the session binds and passed as its coordination profile, or `false` for a corpus
+adopted without it. Relative paths in the file resolve against the file's own
+directory (the same design, decision 8), never the process's working directory.
 
 ### 9.2 CLI
 

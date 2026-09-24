@@ -20,6 +20,7 @@ def _relative_config(work: Path) -> Path:
         f"domains = {list(DOMAINS)!r}\n"
         "contracts = []\n"
         'store_root = "store"\n'
+        "coordination = 2\n"
     )
     return path
 

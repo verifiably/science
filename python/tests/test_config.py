@@ -17,6 +17,7 @@ def write_config(
     domains: str = "[]",
     contracts: str | None = "[]",
     store_root: str | Path | None = "",
+    coordination: str = "2",
 ) -> Path:
     world_root = tmp_path / "world"
     ops = tmp_path / "ops" if operations_root is None else operations_root
@@ -34,6 +35,7 @@ def write_config(
         lines.append(f"contracts = {contracts}")
     if store is not None:
         lines.append(f'store_root = "{store}"')
+    lines.append(f"coordination = {coordination}")
     cfg.write_text("\n".join(lines) + "\n" + extra)
     return cfg
 
@@ -86,6 +88,7 @@ def test_world_and_corpus_roots_resolve_against_the_config_file(tmp_path, monkey
     path.write_text(
         f'world_root = "world"\nworld_id = "{WORLD_ID}"\ncorpus_roots = ["corpora/one"]\n'
         'operations_root = "ops"\ndomains = []\ncontracts = []\nstore_root = "store"\n'
+        'coordination = 2\n'
     )
     cfg = load_config(path)
     assert cfg.world.world_root == (tmp_path / "world").resolve()
@@ -99,7 +102,7 @@ def test_service_socket_must_be_a_string(tmp_path):
 def test_domains_compile_the_profile_the_session_binds(tmp_path):
     from beliefs.profile import shipped_base_contract
 
-    cfg = load_config(write_config(tmp_path, domains='["biology"]'))
+    cfg = load_config(write_config(tmp_path, domains='["biology"]', coordination="false"))
     assert cfg.profile.base_contract_identity == shipped_base_contract().content_identity
     assert set(cfg.profile.activated_contracts) == {"biology"}
     # The operators the pack contributes are what activation is *for*.
@@ -107,13 +110,37 @@ def test_domains_compile_the_profile_the_session_binds(tmp_path):
 
 
 def test_empty_domains_compile_the_shipped_base_alone(tmp_path):
-    cfg = load_config(write_config(tmp_path, domains="[]"))
+    cfg = load_config(write_config(tmp_path, domains="[]", coordination="false"))
     assert dict(cfg.profile.activated_contracts) == {}
 
 
 def test_unshipped_domain_namespace_is_refused_at_load(tmp_path):
     """Not at the first write: a launcher misconfiguration fails at startup."""
     assert_invalid_config(write_config(tmp_path, domains='["no-such-pack"]'))
+
+
+def test_coordination_key_is_required(tmp_path):
+    path = write_config(tmp_path)
+    path.write_text(path.read_text().replace("coordination = 2\n", ""))
+    assert_invalid_config(path)
+
+
+def test_coordination_version_compiles_into_the_profile(tmp_path):
+    cfg = load_config(write_config(tmp_path, coordination="2"))
+    assert cfg.coordination == 2
+    assert "coordination" in cfg.profile.activated_contracts
+    assert "project" in cfg.profile.coordination_kinds
+
+
+def test_coordination_false_compiles_without_it(tmp_path):
+    cfg = load_config(write_config(tmp_path, coordination="false"))
+    assert cfg.coordination is None
+    assert "coordination" not in cfg.profile.activated_contracts
+
+
+@pytest.mark.parametrize("value", ["true", "3", '"2"', "0"])
+def test_coordination_value_outside_its_forms_is_refused(tmp_path, value):
+    assert_invalid_config(write_config(tmp_path, coordination=value))
 
 
 def test_missing_or_unknown_fields_are_refused(tmp_path):
@@ -124,7 +151,7 @@ def test_missing_or_unknown_fields_are_refused(tmp_path):
     assert_invalid_config(write_config(tmp_path, extra="[untrusted]\nvalue = 1\n"))
 
 
-_TAIL = 'domains = []\ncontracts = []\nstore_root = "/x"\n'
+_TAIL = 'domains = []\ncontracts = []\nstore_root = "/x"\ncoordination = 2\n'
 
 
 @pytest.mark.parametrize("contents", [
@@ -132,8 +159,8 @@ _TAIL = 'domains = []\ncontracts = []\nstore_root = "/x"\n'
     f'world_root = "/x"\nworld_id = "{WORLD_ID}"\ncorpus_roots = "not-a-list"\noperations_root = "/x"\n' + _TAIL,
     f'world_root = "/x"\nworld_id = "{WORLD_ID}"\ncorpus_roots = ["/x", 3]\noperations_root = "/x"\n' + _TAIL,
     f'world_root = "/x"\nworld_id = "{WORLD_ID}"\ncorpus_roots = ["/x"]\noperations_root = false\n' + _TAIL,
-    f'world_root = "/x"\nworld_id = "{WORLD_ID}"\ncorpus_roots = ["/x"]\noperations_root = "/x"\ndomains = "biology"\ncontracts = []\nstore_root = "/x"\n',
-    f'world_root = "/x"\nworld_id = "{WORLD_ID}"\ncorpus_roots = ["/x"]\noperations_root = "/x"\ndomains = ["biology", 3]\ncontracts = []\nstore_root = "/x"\n',
+    f'world_root = "/x"\nworld_id = "{WORLD_ID}"\ncorpus_roots = ["/x"]\noperations_root = "/x"\ndomains = "biology"\ncontracts = []\nstore_root = "/x"\ncoordination = 2\n',
+    f'world_root = "/x"\nworld_id = "{WORLD_ID}"\ncorpus_roots = ["/x"]\noperations_root = "/x"\ndomains = ["biology", 3]\ncontracts = []\nstore_root = "/x"\ncoordination = 2\n',
     'this = is not [ toml',
 ])
 def test_noncanonical_or_malformed_toml_is_refused(tmp_path, contents):
