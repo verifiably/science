@@ -236,19 +236,21 @@ purpose = "Select the current project for this session, or clear it."
 write_class = "session"
 output_budget = 2048
 
-[inputs.project]    # a project name or coord:<project> address; optional
+[inputs.target]     # a project name or coord:<project> address; optional
 [inputs.clear]      # bool, default false
 ```
 
-Exactly one of `project` and `clear=true` is given, or the command refuses
-`invalid-input`. A `coord:` address resolves through the resolver and must be a
+The input is `target`, not `project`: `project` is the reserved read protocol field
+(§4.2), and a declaration naming it is a build refusal. Exactly one of `target` and
+`clear=true` is given, or the command refuses `invalid-input`. A `coord:` address resolves through the resolver and must be a
 `project` with one standing tip. A name resolves by enumerating the standing
 `project` tips (S3) and matching `name` exactly: none refuses `unknown-project`,
 two or more refuse `ambiguous-project` with each candidate's address and query
 digest in `data`. The session's selection becomes the address — never the name, so
 a later rename leaves the selection standing — and the session appends the
-selection ledger line (S2). The report renders the project's address, name and
-tip revision.
+selection ledger line (S2). The report is §4.1's selection block: the project's
+address, the revision it resolved to, and that revision's name; `clear` renders the
+block with no project.
 
 ### 3.8 `projects` and `project-show`
 
@@ -278,9 +280,24 @@ Its requirement is `RequiredCapabilities.none()`, but unlike `read-only` it requ
 a session: the dispatcher refuses it `permit-exceeded` "no writer session on this
 surface" exactly as it refuses a write without one, and the CLI routes it through
 the service (§5.3). It follows the write invocation protocol (framework §6.1):
-claim, `invocation-open`, the handler, `invocation-close` recording `done` with no
-minted identities or the refusal envelope; a retry under the same invocation id
-replays the recorded outcome. The handler receives a **session port** instead of a
+claim, `invocation-open`, the handler, `invocation-close` recording `done` with an
+empty identity list or the refusal envelope; a retry under the same invocation id
+replays the recorded outcome.
+
+**Its report is not a write report.** Framework §7.4's audit admits record blocks
+for minted identities only, and a write's canonical report is rebuilt from those
+identities (§6.1), so a class that mints nothing would render empty or fail the
+audit. A `session` invocation's canonical report is instead exactly one
+**selection block**, rebuilt — on the first response, on replay and on
+continuation alike — from the S2 selection line the invocation appended, found in
+the ledger by invocation id: `selected: <address>@<revision>` and the name that
+pinned revision carries, or `selected: none` for `clear`. The name is read from the
+pinned revision, which is immutable, so a replay after a rename renders what the
+selection was, not what the project is now called. The `session` audit admits
+exactly one selection block whose address and revision equal the ledger line's, and
+nothing else; the handler's own blocks are discarded as a write's are. A `done`
+close with no selection line for its invocation is an internal error, since the
+session port appends the line before the handler returns. The handler receives a **session port** instead of a
 scoped writer — one method, `select(address | None)`, which sets the dispatcher's
 selection and appends S2's line — and no kernel writer at all, so a `session`
 handler cannot act on a corpus. The production write gate admits the class.
@@ -396,6 +413,21 @@ propositions in it are classified by the existing four-class rule, and a selecte
 record that is not a proposition is not a row. The belief path design's §4.8
 ("from the current view") takes this section by reference in a dated amendment.
 
+**Classification across mounted corpora.** S1 selects across corpora, but the
+classifier does not read across them: `classify` and `ReadContext.gather_inputs`,
+`observations`, `snapshot` and `pins` all go through `single_view()`, which refuses
+more than one root, and each assumes one corpus and one profile. A proposition in the
+mm30 corpus whose new spec is minted in the working corpus — the milestone's case — is
+classified correctly only when the classifier gathers the specs targeting it, the
+assessments naming it and the verifications naming those from **every** mounted
+corpus, each record decoded under its own corpus's profile, with holdings read from
+the one configured store. That is surface scope, owned here and neither S1's nor
+`beliefs-fe7149`'s: a child task after both, carrying a two-corpus check (§9). Every
+other `single_view()` caller — `claim`, `dataset`, `spec`, `run`, `assess`,
+`verify`, `belief` — is decided in the same task as either write-root-only (it mints
+into the write root and reads its own evidence there) or read-set-wide, and until
+then refuses `invalid-input` with more than one root, as it does today.
+
 Until S1 lands, `next` under a selection refuses `invalid-input` naming S1's task,
 and `next` under no selection is unchanged. It never falls back to the whole world
 silently: a person who selected `health` and saw the whole world's queue would read
@@ -427,8 +459,22 @@ it; every coordination-class command then refuses `kernel-refused`
 `project-show`, a `--project` on any read, and a `default_project` key each refuse
 `invalid-input` naming the `coordination = false` setting, since there is no
 resolver to ask. The read context builds a
-`CoordinationResolver` over the configured corpus roots under the same profile when
-coordination is on.
+`CoordinationResolver` when coordination is on. With one configured root — the only
+shape the kernel's session opens today — that root is mounted under the session's
+profile.
+
+**Every mount under its own manifest's profile.** The resolver checks each mount's
+manifest pins against the profile it is given (`CoordinationResolver.__init__`), and
+the corpora the milestone mounts pin different contracts: the working corpus pins
+base, `biology` and coordination; the mm30 corpus pins its corpus-local `mm30`
+contract. So no configuration ever mounts two corpora under one profile. When
+`beliefs-fe7149` lands, each mount — in the session's resolver and in the
+sessionless read context a CLI read builds alike — is mounted under the profile its
+own manifest pins, compiled by the mechanism that task gives the kernel (projects
+design §3.1: "the kernel owns how a mounted corpus's profile is compiled"), with the
+`contracts` documents supplying any corpus-local contract a manifest pins. The
+session's write profile stays the one the configuration compiles, and must equal the
+write root's manifest pins.
 
 **`default_project`** is an address, not a name: names are content and may collide
 or change (coordination §3.3), and a configuration that followed a name would move
@@ -483,9 +529,11 @@ view type is the kernel's.
 **S2 — selection ledger lines (P3).** The session ledger records the initial
 selection at `session-open` and every change, attributable to the invocation that
 made it: a `project` value on `session-open` (an address or null) and a new line
-kind carrying the invocation id and the new value, appended with the ledger's
-append-then-fsync discipline. Exposed as one `WriterSession` method the surface's
-session port calls. Needed by `project-select` and by launcher start with an initial
+kind carrying the invocation id, the new value (an address or null) and the
+revision the address resolved to, appended with the ledger's append-then-fsync
+discipline before the invocation closes. Exposed as one `WriterSession` method the
+surface's session port calls, and readable back by invocation id through the ledger
+reader, which is the replay source of §4.1's selection block. Needed by `project-select` and by launcher start with an initial
 selection. `LINE_KINDS` is closed today (`session/ledger.py`), so this is a ledger
 amendment.
 
@@ -531,6 +579,18 @@ Beyond the guarantees:
 - **`next` under a selection** classifies exactly the selected propositions (with
   S1); before S1 it refuses naming the dependency (the mutation that falls back to
   the whole world is caught).
+- **Two corpora** (after `beliefs-fe7149` and S1): a fixture world with a read-only
+  corpus holding a proposition typed under a corpus-local contract, and a working
+  corpus pinning base and coordination whose session mints a spec targeting that
+  proposition and holds its input; `next` classifies the proposition **ready**, the
+  mutation that gathers specs from the proposition's own corpus only leaves it **not
+  ready**, and a sessionless CLI read mounts both corpora each under its own
+  manifest's profile (the mutation that mounts both under the write profile is
+  refused by the resolver's pin check).
+- **The selection block.** `project-select` then a replay under the same invocation
+  id render identical blocks after the project is renamed in between; `clear`
+  renders `selected: none`; a report carrying any record block fails the `session`
+  audit.
 - **The socket.** The selection query answers without an invocation id and leaves no
   ledger line; `science serve` refuses to start while an MCP endpoint holds the
   socket, and the reverse.
@@ -601,13 +661,17 @@ The goal is `sci-c5528e`. The plan decomposes it; the dependencies it must carry
   any command;
 - `project`, `question`, `hypothesis`, `task`, `decide`, `revise`, `reuse` — after the
   profile;
-- `project-select`, launcher initial selection, `default_project` — after S2;
+- `project-select`, the selection block and its audit, launcher initial selection,
+  `default_project` — after S2;
 - `projects`, `project-show`, name resolution — after S3;
 - both launchers on the socket and the CLI's selection resolution (P8);
 - `next` through the selection (§5.5) — after S1;
+
 - the preamble and the dated amendments;
-- `write_root` — after `beliefs-fe7149`, a separate child that does not hold the goal's
-  other work.
+- **multi-corpus**, one child after `beliefs-fe7149` and S1: `write_root`, per-mount
+  profiles in both resolvers (§6), classification across mounted corpora and the
+  `single_view()` callers' decision (§5.5), with the two-corpus check. It does not
+  hold the goal's other work, and milestone criterion 4 (`sci-0d00d2`) depends on it.
 
 `sci-0d00d2`, the second-project milestone, depends on this goal and on
 `beliefs-fe7149` and `beliefs-c08725`, as it already does.
