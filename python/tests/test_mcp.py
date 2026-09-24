@@ -801,3 +801,26 @@ def test_cli_mcp_serve_resolves_config_and_starts_server(monkeypatch):
 
     assert main(["mcp", "serve", "--config", "relative-science.toml"]) == 0
     assert captured == [Path("relative-science.toml")]
+
+
+def test_a_subordinate_mint_without_a_selection_refuses_over_stdio_and_replays(certified_work, short_tmp):
+    """Spec §9's transport arm of P2: through `serve`'s stdio loop, `question`
+    with nothing selected refuses `no-current-project`, and the same
+    invocation id replays the refusal."""
+    from helpers.world import QUERY, write_cli_config
+
+    call = rpc("tools/call", {"name": "question", "arguments": {
+        "name": "Does PHF19 track stage?", "query": QUERY, "invocation_id": "N" * 8}})
+    stdin = io.BytesIO(((json.dumps(call) + "\n") * 2).encode())
+    stdout = io.StringIO()
+
+    serve(write_cli_config(certified_work, service_socket=short_tmp / "service.sock"),
+          stdin=stdin, stdout=stdout, stderr=io.StringIO())
+
+    results = [json.loads(line)["result"] for line in stdout.getvalue().splitlines()]
+    assert len(results) == 2
+    for result in results:
+        assert result["isError"] is True
+        assert result["structuredContent"]["refusal"]["code"] == "no-current-project"
+        assert result["structuredContent"]["invocation_id"] == "N" * 8
+    assert results[0] == results[1]
