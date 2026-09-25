@@ -15,9 +15,11 @@ tt := "python3 tools/tt"
 # pytest-xdist). Each test builds its own certified world, and atoms certifies the volume
 # on every open by spawning children, so tests wait on I/O and subprocesses rather than
 # CPU: 8 workers with work-stealing took the suite from 626 s to 79 s on 2026-09-23,
-# and 16 workers bought nothing more. Worktree runs need no SCIENCE_TEST_ROOT: conftest
-# resolves the certified test root through the main checkout.
-xdist := "-n 8 --dist worksteal"
+# and 16 workers bought nothing more. The worker count is the host's budget: test runs go
+# through `host-budget run` (ops), which sets PYTEST_XDIST_AUTO_NUM_WORKERS for `-n auto`
+# (design: ops docs/specs/2026-09-24-host-budget-design.md). Worktree runs need no
+# SCIENCE_TEST_ROOT: conftest resolves the certified test root through the main checkout.
+xdist := "-n auto --dist worksteal"
 fast_cmd := "cd python && uv run pytest --testmon " + xdist
 test_cmd := "cd python && uv run pytest " + xdist
 # No formatter, linter, or typechecker is configured for this repository yet, so the
@@ -26,11 +28,11 @@ check_cmd := "python3 tools/ops-check && tasks check"
 
 # Affected-only: the inner loop. An empty selection is a result, not a failure.
 test-fast:
-    {{tt}} test-fast -- sh -c '{{fast_cmd}}'
+    {{tt}} test-fast -- host-budget run -- sh -c '{{fast_cmd}}'
 
 # The full suite.
 test:
-    {{tt}} test -- sh -c '{{test_cmd}}'
+    {{tt}} test -- host-budget run -- sh -c '{{test_cmd}}'
 
 # Seconds, not minutes.
 check:
@@ -44,4 +46,4 @@ hook-pre-commit:
 
 # What the pre-push hook runs: the same commands as `gate`, under one hook target.
 hook-pre-push:
-    {{tt}} hook-pre-push -- sh -c '{{check_cmd}} && {{test_cmd}}'
+    {{tt}} hook-pre-push -- host-budget run -- sh -c '{{check_cmd}} && {{test_cmd}}'
