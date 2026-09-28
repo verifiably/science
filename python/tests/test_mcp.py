@@ -21,7 +21,7 @@ META = {
 def test_startup_findings(certified_work, state):
     """An open peer produces session-unclosed, even while alive; classification
     of uncovered commits as session-outcome-unknown belongs to beliefs."""
-    from beliefs.session import open_attended_session
+    from science.session import open_session
     from science.config import load_config
     from helpers.world import write_cli_config
 
@@ -29,7 +29,7 @@ def test_startup_findings(certified_work, state):
     cfg = load_config(config_path)
     peer = None
     if state != "clean":
-        peer = open_attended_session(cfg.world, cfg.operations_root, profile=cfg.profile)
+        peer = open_session(cfg)
         peer.claim_invocation("unfinished", "test-command", "a" * 64)
 
     class FailingStream:

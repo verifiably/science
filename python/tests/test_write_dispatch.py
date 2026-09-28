@@ -15,10 +15,10 @@ from helpers.world import build_fixture_world
 
 @pytest.fixture
 def rig(certified_work):
-    from beliefs.session import open_attended_session
+    from science.session import open_session
     from science.config import ReadContext
     cfg = build_fixture_world(certified_work)
-    session = open_attended_session(cfg.world, cfg.operations_root, profile=cfg.profile)
+    session = open_session(cfg)
     dispatcher = Dispatcher((MINT_CLAIM, OVERREACH), dict(HANDLERS),
                             ReadContext.open(cfg), session=session)
     try:
@@ -188,10 +188,10 @@ def test_open_invocation_refuses_outcome_unknown(rig):
 
 def test_handlers_see_the_dispatchers_selection(certified_work):
     from beliefs.coordination import CoordinationAddress
-    from beliefs.session import open_attended_session
+    from science.session import open_session
     from science.config import ReadContext
     cfg = build_fixture_world(certified_work)
-    session = open_attended_session(cfg.world, cfg.operations_root, profile=cfg.profile)
+    session = open_session(cfg)
     seen = []
 
     def spy(ctx, writer, *, slug):

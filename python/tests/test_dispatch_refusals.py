@@ -28,10 +28,10 @@ def half_acted_handler(ctx, writer, *, slug):
 
 @pytest.fixture
 def rig(certified_work):
-    from beliefs.session import open_attended_session
+    from science.session import open_session
     from science.config import ReadContext
     cfg = build_fixture_world(certified_work)
-    session = open_attended_session(cfg.world, cfg.operations_root, profile=cfg.profile)
+    session = open_session(cfg)
     dispatcher = Dispatcher((REFUSING, HALF_ACTED),
                             {"refusing": refusing_handler, "half-acted": half_acted_handler},
                             ReadContext.open(cfg), session=session)

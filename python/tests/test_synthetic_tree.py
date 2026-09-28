@@ -21,14 +21,14 @@ def test_synthetic_tree_loads():
 def test_declaration_time_refusal_for_class_above_permit(certified_work):
     """A publishes-class command against an attended session without the publish
     family refuses before the handler runs (spec §6.1 step 3)."""
-    from beliefs.session import open_attended_session
+    from science.session import open_session
     from science.config import ReadContext
     from science.dispatch import Dispatcher
     from science.refusal import Refused
     from helpers.world import build_fixture_world
     decls = _fixture_tree()
     cfg = build_fixture_world(certified_work)
-    session = open_attended_session(cfg.world, cfg.operations_root, profile=cfg.profile)
+    session = open_session(cfg)
     d = Dispatcher(decls, {"pub-view": lambda ctx, writer: ()}, ReadContext.open(cfg),
                    session=session)
     try:

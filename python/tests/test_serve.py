@@ -14,12 +14,12 @@ from helpers.world import build_fixture_world
 def test_startup_findings(certified_work, short_tmp, state):
     """An open peer produces session-unclosed, even while alive; classification
     of uncovered commits as session-outcome-unknown belongs to beliefs."""
-    from beliefs.session import open_attended_session
+    from science.session import open_session
 
     cfg = build_fixture_world(certified_work)
     peer = None
     if state != "clean":
-        peer = open_attended_session(cfg.world, cfg.operations_root, profile=cfg.profile)
+        peer = open_session(cfg)
         peer.claim_invocation("unfinished", "test-command", "a" * 64)
 
     class FailingStream:
