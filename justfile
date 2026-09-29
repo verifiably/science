@@ -1,4 +1,5 @@
-# Front door for tests. Inner loop: `just test-fast` (affected-only via pytest-testmon).
+# Front door for tests. Focused loop: `just test-one <pytest args>`.
+# Inner loop: `just test-fast` (affected-only via pytest-testmon).
 # Full suite: `just test`. Gates: `just check` at pre-commit, `just gate` at pre-push.
 # The git hooks in .githooks/ call `hook-pre-commit` and `hook-pre-push`, which run the
 # very same commands under their own target names so the report can price the hooks.
@@ -6,6 +7,7 @@
 # bin/tt) so the run is recorded. Design: ops docs/specs/2026-09-04-test-ci-audit-design.md.
 
 set quiet
+set positional-arguments
 
 tt := "python3 tools/tt"
 
@@ -22,9 +24,24 @@ tt := "python3 tools/tt"
 xdist := "-n auto --dist worksteal"
 fast_cmd := "cd python && uv run pytest --testmon " + xdist
 test_cmd := "cd python && uv run pytest " + xdist
+one_cmd := "cd python && uv run pytest"
 # No formatter, linter, or typechecker is configured for this repository yet, so the
 # seconds-long gate is the task-record check alone.
 check_cmd := "python3 tools/ops-check && tasks check"
+
+# Only passive docs and task records: python/tests/fixtures/*.md are command inputs.
+docs_paths := "README.md AGENTS.md docs/*.md tasks/*.md"
+docs_check_cmd := check_cmd
+
+# No CI workflow runs the full suite on push, so every push keeps the full local gate.
+ci_suite_refs := ""
+ci_remote := "origin"
+# testmon selects from its dependency data, independent of a git push base (form 2).
+push_fast_cmd := fast_cmd
+
+# One path, path::test, or -k expression, with each argument forwarded unchanged.
+test-one +args:
+    {{tt}} test-one -- host-budget run -- sh -c '{{one_cmd}} "$@" 2>&1' test-one "$@"
 
 # Affected-only: the inner loop. An empty selection is a result, not a failure.
 test-fast:
@@ -44,6 +61,14 @@ gate: check test
 hook-pre-commit:
     {{tt}} hook-pre-commit -- sh -c '{{check_cmd}}'
 
+# Every staged path is a passive document or task record.
+hook-pre-commit-docs:
+    {{tt}} hook-pre-commit-docs -- sh -c '{{docs_check_cmd}}'
+
 # What the pre-push hook runs: the same commands as `gate`, under one hook target.
 hook-pre-push:
     {{tt}} hook-pre-push -- host-budget run -- sh -c '{{check_cmd}} && {{test_cmd}}'
+
+# Available for CI-covered pushes when ci_suite_refs is configured; currently unused.
+hook-pre-push-fast:
+    {{tt}} hook-pre-push-fast -- host-budget run -- sh -c '{{check_cmd}} && {{push_fast_cmd}}'
