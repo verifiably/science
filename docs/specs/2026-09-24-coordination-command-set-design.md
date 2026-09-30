@@ -1,7 +1,7 @@
 # The coordination command set — design
 
 **Date:** 2026-09-24
-**Status:** reviewed and approved 2026-09-24; part 1 (the write surface) implemented 2026-09-24, plan `docs/plans/2026-09-24-coordination-write-surface.md`; part 2 (selection and the project reads) implemented 2026-09-30, plan `docs/plans/2026-09-30-coordination-selection-and-reads.md`. part 3 (multi-corpus) implemented 2026-09-30, plan `docs/plans/2026-09-30-coordination-multi-corpus.md`.
+**Status:** reviewed and approved 2026-09-24; part 1 (the write surface) implemented 2026-09-24, plan `docs/plans/2026-09-24-coordination-write-surface.md`; part 2 (selection and the project reads) implemented 2026-09-30, plan `docs/plans/2026-09-30-coordination-selection-and-reads.md`. Part 3 (multi-corpus) implemented 2026-09-30, plan `docs/plans/2026-09-30-coordination-multi-corpus.md`.
 **Scope:** the second half of sub-project 4 of the user/autonomy layer design
 (`beliefs` `docs/superpowers/specs/2026-08-29-user-and-autonomy-layer-design.md`
 §5.1, §8 item 4): the commands that mint and revise `project`, `question`,
@@ -553,13 +553,13 @@ lineage silently dropped. The lineage snapshot is per corpus, and cross-corpus i
 
 ## 6. Configuration
 
-Framework §9.1's file gains two keys now and designs two more:
+Framework §9.1's file gains four keys; the last two landed with part 3:
 
 ```toml
 coordination = 2                 # required: the shipped coordination contract version, or false
 default_project = "coord:…"      # optional: a project address
-# write_root = "…"               # with beliefs-fe7149: one of corpus_roots
-# read_contracts = ["…"]         # with beliefs-fe7149: documents available to read mounts only
+write_root = "…"                 # optional: one of corpus_roots (part 3 amendment below)
+read_contracts = ["…"]           # optional: documents available to read mounts only (same)
 ```
 
 **Activation and availability are separate.** `domains`, `contracts` and
@@ -647,7 +647,11 @@ that pins none (mm30) or another version is mounted under what it pins. With
 root under its own profile, since `next` and `belief` decode records without a resolver.
 A read mount whose manifest does not load, or which pins a contract no shipped pack or
 available document carries, refuses `invalid-input` naming the root (and the pin) at
-session open and at the first read that mounts it.
+session open and at the first read that mounts it. The writer's profile must be exactly
+the write root's pins: a contract the writer activates and the write root does not pin
+(a read mount's document listed under `contracts` rather than `read_contracts`) refuses
+`invalid-input` naming the namespace and `read_contracts`, at session open and before a
+sessionless read builds its resolver, never as the kernel's bare pin mismatch.
 
 **Relative paths** — `operations_root`, `store_root`, `service_socket`, each
 `contracts` entry, `world_root` and each `corpus_roots` entry — resolve against the
