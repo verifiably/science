@@ -3,9 +3,10 @@ from __future__ import annotations
 
 from beliefs import stored
 from beliefs.admission import Admitted, admit
-from beliefs.dataset import Held, admission_state, dataset_address
+from beliefs.dataset import Held, admission_state
 
 from science.coordination import live_selection, selected_project
+from science.holdings import dataset_at
 from science.refusal import Refusal, Refused
 from science.report import Heading, KeyVals, Report
 
@@ -17,18 +18,15 @@ def _targeting_specs(view, proposition, profile):
     return [spec for spec in specs if spec.target == proposition]
 
 
-def _dataset_node(mounts, address):
-    return next((node for mount in mounts for node in mount.view.iter_stored() if node.kind == "dataset"
-                 and dataset_address(stored.dataset_declaration(node)) == address), None)
-
-
 def _inputs_held(ctx, mounts, spec) -> bool:
     observations = ctx.observations()
+    views = tuple((mount.corpus_id, mount.view) for mount in mounts)
     for role in spec.input_roles:
         # One world record, in whichever mount declared it (spec §5.5).
-        node = _dataset_node(mounts, role.dataset)
-        if node is None:
+        found = dataset_at(views, role.dataset)
+        if found is None:
             return False
+        _, node = found
         if not isinstance(admission_state(stored.dataset_declaration(node), observations.get(role.dataset, ())), Held):
             return False
     return True
