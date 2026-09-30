@@ -5,7 +5,7 @@ import pytest
 from helpers.world import QUERY, coordination_rig, mint_project
 from science.refusal import Refused
 
-NAMES = ("project", "task", "revise")
+NAMES = ("project", "project-select", "task", "revise")
 
 
 def _task(d):
@@ -27,7 +27,7 @@ def test_rename_carries_every_other_field(certified_work):
 def test_closing_a_task_is_a_status_revision(certified_work):
     from beliefs.coordination import CoordinationAddress
     with coordination_rig(certified_work, NAMES) as (d, ctx):
-        d._selection = mint_project(d)
+        d.invoke("project-select", {"target": str(mint_project(d))})
         address = _task(d)
         d.invoke("revise", {"address": address, "status": "done"})
         node = ctx.coordination().resolve(CoordinationAddress.parse(address))
@@ -62,7 +62,7 @@ def test_a_revision_with_no_field_refuses(certified_work):
 def test_clear_depends_empties_a_tasks_dependencies_through_the_cli_shape(certified_work):
     from beliefs.coordination import CoordinationAddress
     with coordination_rig(certified_work, NAMES) as (d, ctx):
-        d._selection = mint_project(d)
+        d.invoke("project-select", {"target": str(mint_project(d))})
         first, second = _task(d), _task(d)
         d.invoke("revise", {"address": second, "depends": [first]})
         d.invoke("revise", {"address": second, "clear_depends": True})

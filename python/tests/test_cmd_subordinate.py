@@ -4,7 +4,7 @@ from helpers.synthetic import MINT_CLAIM, mint_claim_handler
 from helpers.world import QUERY, coordination_rig, mint_project
 from science.refusal import Refused
 
-NAMES = ("project", "question", "hypothesis", "task", "decide")
+NAMES = ("project", "project-select", "question", "hypothesis", "task", "decide")
 INPUTS = {
     "question": {"name": "Does PHF19 track stage?", "query": QUERY},
     "hypothesis": {"name": "PHF19 rises with stage", "query": QUERY},
@@ -34,7 +34,7 @@ def test_a_world_kind_write_needs_no_selection(certified_work):
 def test_under_a_selection_mints_the_kind_in_that_project(certified_work, command):
     with coordination_rig(certified_work, NAMES) as (d, ctx):
         project = mint_project(d)
-        d._selection = project  # part 2's project-select sets this through the session port
+        d.invoke("project-select", {"target": str(project)})
         out = d.invoke(command, INPUTS[command])
     assert f"[{KIND[command]}] {KIND[command]}:{project.project}." in out.text
 
@@ -42,7 +42,7 @@ def test_under_a_selection_mints_the_kind_in_that_project(certified_work, comman
 def test_task_depends_on_another_task(certified_work):
     import re
     with coordination_rig(certified_work, NAMES) as (d, _):
-        d._selection = mint_project(d)
+        d.invoke("project-select", {"target": str(mint_project(d))})
         first = d.invoke("task", {"name": "hold"})
         project, local = re.search(r"task:([0-9a-f]{32})\.([0-9a-f]{32})\.", first.text).groups()
         second = d.invoke("task", {"name": "run", "depends": [f"coord:{project}/{local}"]})
@@ -51,7 +51,7 @@ def test_task_depends_on_another_task(certified_work):
 
 def test_decide_requires_its_reasoning(certified_work):
     with coordination_rig(certified_work, NAMES) as (d, _):
-        d._selection = mint_project(d)
+        d.invoke("project-select", {"target": str(mint_project(d))})
         with pytest.raises(Refused) as caught:
             d.invoke("decide", {"name": "no body"})
     assert caught.value.refusal.code == "invalid-input"  # canonicalization: body is required

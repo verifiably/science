@@ -1,0 +1,18 @@
+schema_version = 1
+name = "project-select"
+purpose = "Select the current project for this session, or clear it."
+write_class = "session"
+output_budget = 2048
+
+[inputs.target]
+type = "string"
+required = false
+doc = "The project to select: its name, or its coord:<project> address."
+[inputs.clear]
+type = "bool"
+required = false
+default = false
+doc = "Clear the selection, so that enumerations read the whole world."
+
+[reads]
+families = ["coordination"]

@@ -1184,6 +1184,17 @@ options = [
 ]
 
 [[cli.science.commands]]
+path = ["project-select"]
+summary = "Select the current project for this session, or clear it"
+options = [
+  { shared = "config", value = "path" },
+  { names = ["--invocation-id"], value = "string" },
+  { names = ["--continue"], value = "string" },
+  { names = ["--target"], value = "string" },
+  { names = ["--clear", "--no-clear"], value = "none" },
+]
+
+[[cli.science.commands]]
 path = ["build"]
 summary = "Build the world from its corpora"
 
