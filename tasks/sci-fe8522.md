@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: science-commons
 created: 2026-09-30T23:17:20Z
-updated: 2026-09-30T23:37:12Z
+updated: 2026-09-30T23:37:28Z
 started: 2026-09-30T23:17:27Z
 depends: []
 tags: [commons]
@@ -29,3 +29,5 @@ Design the science commons in verifiably: a user publishes views to git and Zeno
 - 2026-09-30T23:29:38Z (science-commons): Round 1 disposition: all 9 P1 accepted (catalog and provider list are side artifacts, not publications or epoch artifacts; inclusion travels as catalog content; attribution entries are a frozen facet, not identity; pins split origin-confirmed vs recommended; verifier-set moved to milestone 1a; milestone 1 publishes reproducible views; adopt needs a framework §4.4 write class and §9.1 sharing_root; intake is restore_root then admit_publication). P2 fixed (marker uid vs artifact identity; fetch record replaces holdings observation; containers never pruned; [fetch] replaces [holdings]; contributed_by is a set; mounted/unmounted replaces default index). P3: overlap and retirement stated as requirements not mechanism; milestone 1 split into 1a (no overlap) and 1b; verify/run over mounts and world-id discovery at bind added to §11.
 - 2026-09-30T23:37:11Z (science-commons): review: spec round 2 — verdict: revise; findings: P1 7, P2 6, P3 3; reviewer: claude-code/claude-fable-5-1
 - 2026-09-30T23:37:11Z (science-commons): Round 2 disposition: all 7 P1 accepted (corpus_id required everywhere, container listing is the catalog; attribution inputs are address map + registry provenance + adopted markers, frozen with the selection snapshot; loader unions registry roots into corpus_roots and adopt takes effect at next open; accept filter stated as outcomes before any pool rule, science pre-filter as default; retirement is a kernel act the sharing class reaches, 1b requirement; conflict exit rule in §10; milestone 1 needs fetch, plus verify/run/assess over mounts). P2 fixed (bind --world argument; keep flag; aggregator refuses differing pins; overlap covers every kind; ledger evidence named; registry writes are acts). P3: §9 ordering left to beliefs; §11 gains fetch, mounts resolution, assesses-edge question, sci-923d3a; push idempotence is a test row.
+- 2026-09-30T23:37:28Z (science-commons): parked (waiting on user, review): User reviews docs/specs/2026-09-30-science-commons-design.md (two independent review rounds folded in); on approval, file the beliefs requirements from §11 as beliefs tasks, then write the framework amendments and the milestone 1a plan
+  provenance: {"harness_session":"claude-code:5f4da271-d57c-4d0d-9d69-fb6c4c6a0101","harness_session_source":"CLAUDE_CODE_SESSION_ID"}

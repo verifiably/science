@@ -628,7 +628,7 @@ When `adopt` admits a successor:
    pinned but not mounted, and `show` names the conflicting addresses and
    the dependency. The reader either releases the dependency (drops the
    `keep`, republishes without the derived record) and adopts again, or
-   keeps the predecessor and leaves the successor unmounted. Nothing picks
+   keeps the predecessor and leaves the successor pinned but not mounted. Nothing picks
    for them.
 
 Retirement is therefore a milestone 1b requirement on the kernel (§11),
