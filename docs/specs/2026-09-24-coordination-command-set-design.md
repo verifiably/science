@@ -1,7 +1,7 @@
 # The coordination command set — design
 
 **Date:** 2026-09-24
-**Status:** reviewed and approved 2026-09-24; part 1 (the write surface) implemented 2026-09-24, plan `docs/plans/2026-09-24-coordination-write-surface.md`; part 2 (selection and the project reads) implemented 2026-09-30, plan `docs/plans/2026-09-30-coordination-selection-and-reads.md`. Part 3 (multi-corpus, `sci-923d3a`) has no plan yet.
+**Status:** reviewed and approved 2026-09-24; part 1 (the write surface) implemented 2026-09-24, plan `docs/plans/2026-09-24-coordination-write-surface.md`; part 2 (selection and the project reads) implemented 2026-09-30, plan `docs/plans/2026-09-30-coordination-selection-and-reads.md`. Part 3 (multi-corpus, `sci-923d3a`) planned 2026-09-30, plan `docs/plans/2026-09-30-coordination-multi-corpus.md`.
 **Scope:** the second half of sub-project 4 of the user/autonomy layer design
 (`beliefs` `docs/superpowers/specs/2026-08-29-user-and-autonomy-layer-design.md`
 §5.1, §8 item 4): the commands that mint and revise `project`, `question`,
@@ -514,6 +514,22 @@ proposition minted in between while the block said `complete: true`. A selected
 record the configured corpus still does not hold is an internal error until the
 multi-corpus task gives `next` a lookup across mounts; it is never omitted.
 
+**Amended 2026-09-30 (planning, part 3):** the `single_view()` callers are decided.
+**Write-root-only** — `claim`, `dataset`, `spec`, `run`, `assess`, `verify`: each mints
+into the write root and reads the records it is given there; a ref the write root does
+not hold but a read mount does refuses `invalid-input` naming that mount, never a bare
+"not in the corpus". **Read-set-wide** — `belief` and `next` (and `status`, which already
+reads every root): a record is looked up in whichever mounted corpus holds it and read
+under that corpus's profile. What every command shares, since there is one store:
+holdings observations are reduced over every mounted corpus, and a vocabulary or spec
+input's dataset declaration is found in whichever mount holds its content address. A
+record id held by two mounted corpora — the world's `duplicate-location` conflict —
+refuses `invalid-input` in `belief` and `next`, naming both corpora. A selected address
+no mounted corpus holds means the world admits a corpus `corpus_roots` does not mount:
+`next` refuses `invalid-input` naming the addresses and `corpus_roots`, replacing the
+interim internal error above. `single_view()` is removed; the read context offers
+`write_view()`, `mounts()` and `mount_holding(ref)` instead.
+
 ## 6. Configuration
 
 Framework §9.1's file gains two keys now and designs two more:
@@ -597,6 +613,20 @@ of `corpus_roots` the session writes into, required when `corpus_roots` has more
 than one entry and refused when it names a root outside the list. Until the kernel's
 session takes a write root and a read set, `open_attended_session` refuses more than
 one root, and neither key is accepted.
+
+**Amended 2026-09-30 (planning, part 3):** `beliefs-fe7149` landed as
+`beliefs.mount.compile_mount_profile(root, *, available)` and
+`open_attended_session(..., write_root=, mounts=)`. Both keys are optional:
+`write_root` defaults to the sole root when there is one, and `read_contracts` to none;
+`write_root` is a path and resolves against the configuration file like every other.
+"Listed in both" is judged by content identity, so one document under two paths is
+caught. Only the write root must pin the configured coordination contract: a read mount
+that pins none (mm30) or another version is mounted under what it pins. With
+`coordination = false` the session opens with no mounts, and reads still mount every
+root under its own profile, since `next` and `belief` decode records without a resolver.
+A read mount whose manifest does not load, or which pins a contract no shipped pack or
+available document carries, refuses `invalid-input` naming the root (and the pin) at
+session open and at the first read that mounts it.
 
 **Relative paths** — `operations_root`, `store_root`, `service_socket`, each
 `contracts` entry, `world_root` and each `corpus_roots` entry — resolve against the
@@ -704,6 +734,13 @@ Beyond the guarantees:
   the mutation that activates `read_contracts` in the writer is refused by the write
   root's pin check; and a sessionless CLI read mounts both corpora each under its
   own manifest's profile.
+  *Amended 2026-09-30 (planning, part 3):* the working corpus types its proposition
+  under the test contract `testing`, which its writer activates through `contracts`,
+  not under a `biology` operator: `claim` and `spec` type through an operator plan, and
+  only a contract document carries one (`science.contracts`). The read-only corpus pins
+  a second document, `archive` — the test contract under another namespace — supplied
+  through `read_contracts`. The vocabulary lists are held once, in the read-only corpus,
+  and the working corpus's `claim` and `spec` type through them.
 - **Profile selection.** A document listed in both `contracts` and
   `read_contracts` refuses at load; a read mount pinning a contract no available
   document carries refuses at open naming the pin.
