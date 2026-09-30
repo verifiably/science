@@ -1,7 +1,7 @@
 # The coordination command set — design
 
 **Date:** 2026-09-24
-**Status:** reviewed and approved 2026-09-24; part 1 (the write surface) implemented 2026-09-24, plan `docs/plans/2026-09-24-coordination-write-surface.md`; part 2 (selection and the project reads) implemented 2026-09-30, plan `docs/plans/2026-09-30-coordination-selection-and-reads.md`. Part 3 (multi-corpus, `sci-923d3a`) planned 2026-09-30, plan `docs/plans/2026-09-30-coordination-multi-corpus.md`.
+**Status:** reviewed and approved 2026-09-24; part 1 (the write surface) implemented 2026-09-24, plan `docs/plans/2026-09-24-coordination-write-surface.md`; part 2 (selection and the project reads) implemented 2026-09-30, plan `docs/plans/2026-09-30-coordination-selection-and-reads.md`. part 3 (multi-corpus) implemented 2026-09-30, plan `docs/plans/2026-09-30-coordination-multi-corpus.md`.
 **Scope:** the second half of sub-project 4 of the user/autonomy layer design
 (`beliefs` `docs/superpowers/specs/2026-08-29-user-and-autonomy-layer-design.md`
 §5.1, §8 item 4): the commands that mint and revise `project`, `question`,
@@ -539,6 +539,17 @@ no mounted corpus holds means the world admits a corpus `corpus_roots` does not 
 `next` refuses `invalid-input` naming the addresses and `corpus_roots`, replacing the
 interim internal error above. `single_view()` is removed; the read context offers
 `write_view()`, `mounts()` and `mount_holding(ref)` instead.
+
+**Amended 2026-09-30 (implementation, part 3):** two outcomes the planning amendment did
+not state. The unmounted-address refusal is `next`'s translation of the live capture's own
+refusal. The capture reads only the configured roots, so the kernel refuses such an
+address `SelectionRefused` with reason `address-unknown`. `next` re-raises it as the
+`invalid-input` above, naming the admitted corpora `corpus_roots` does not mount, only when
+such corpora exist; every other kernel refusal passes through. `belief` and `next` also
+refuse `invalid-input` for an assessment whose run reads a dataset its own corpus does not
+declare, naming the assessment, corpus, run and datasets, rather than evaluating with that
+lineage silently dropped. The lineage snapshot is per corpus, and cross-corpus inputs are
+`beliefs-9ce6e4`.
 
 ## 6. Configuration
 

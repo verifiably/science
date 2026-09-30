@@ -678,6 +678,10 @@ and renders the selection it read through; with none it classifies every
 stored proposition, as above. The declaration gains `selects = true` and the
 `coordination` read family.
 
+**Amended 2026-09-30 (coordination part 3).** `next` reads across every mounted
+corpus, each proposition under its own corpus's profile: coordination command set
+design §5.5's part 3 amendments.
+
 ## 5. Configuration and the read context
 
 ### 5.1 Two keys

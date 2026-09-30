@@ -696,6 +696,13 @@ the optional key `default_project`, a `coord:<project>` address: the project a
 launcher opens under when it is given no `--project`, and the one a CLI read
 uses when no session is live. It refuses with `coordination = false`.
 
+**Amended 2026-09-30 (coordination part 3):** two optional keys. `write_root` names the
+one entry of `corpus_roots` the session writes — required when there is more than one,
+defaulting to the sole root otherwise, resolved against the file. `read_contracts` lists
+corpus-local contract documents a read mount's pins may resolve against and the writer
+never activates; a document in both lists refuses. Every other root is mounted under the
+profile its own manifest pins (coordination command set §6).
+
 ### 9.2 CLI
 
 `science`, stdlib `argparse`, zero dependencies. One subcommand per shipped

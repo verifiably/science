@@ -1,18 +1,20 @@
 ---
 id: sci-923d3a
 title: "Coordination part 3: multi-corpus (write_root, read_contracts, per-mount profiles, cross-corpus classification)"
-status: doing
+status: done
 priority: 2
 size: l
 complexity: high
 process: planned
 owner: coordination-part3
 created: 2026-09-24T10:54:38Z
-updated: 2026-09-30T20:09:24Z
+updated: 2026-09-30T21:26:10Z
 started: 2026-09-30T14:51:09Z
+completed: 2026-09-30T21:26:10Z
 depends: [beliefs-fe7149, beliefs-cc0aea, sci-f95f8b]
 parent: sci-c5528e
 tags: [projects]
+model: claude-opus-5-5
 agent: claude-code/claude-opus-5-5
 plan: docs/plans/2026-09-30-coordination-multi-corpus.md
 ---
@@ -41,3 +43,7 @@ Spec §5.5 and §6: write_root and read_contracts; the per-mount profile rule in
 - 2026-09-30T16:05:53Z (coordination-part3): parked (waiting on user, review): Re-review the round-2 revision of .worktrees/coordination-part3/docs/plans/2026-09-30-coordination-multi-corpus.md (write-command datasets stay in the write root; beliefs-9ce6e4 filed for cross-corpus inputs; Task 4 walks run → assess → verify) and the §5.5 amendment, and choose an execution method; then the agent runs tasks start sci-e7e630 in .worktrees/coordination-part3
   provenance: {"harness_session":"claude-code:44b120ba-4c5c-4a3e-b096-03eca2443281","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-09-30T20:09:24Z (coordination-part3): review: plan round 3 — verdict: accept; findings: none; reviewer: human
+- 2026-09-30T21:26:10Z (coordination-part3): done
+  provenance: {"harness_session":"claude-code:3b3b2eb8-e8ff-4d3a-ab47-ad4337a07185","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-09-30T21:26:10Z (coordination-part3): write_root and read_contracts; every mount under its own manifest's profile in session and sessionless reads; write commands read the write root; belief and next across mounts; the two-corpus check
+  provenance: {"harness_session":"claude-code:3b3b2eb8-e8ff-4d3a-ab47-ad4337a07185","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
