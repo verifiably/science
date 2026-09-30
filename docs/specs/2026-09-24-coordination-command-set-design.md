@@ -518,11 +518,14 @@ multi-corpus task gives `next` a lookup across mounts; it is never omitted.
 **Write-root-only** — `claim`, `dataset`, `spec`, `run`, `assess`, `verify`: each mints
 into the write root and reads the records it is given there; a ref the write root does
 not hold but a read mount does refuses `invalid-input` naming that mount, never a bare
-"not in the corpus". A dataset is the exception: its id derives from its content, so it
-is one world record, and a second record of the same bytes in another corpus would be a
-`duplicate-location` that refuses every selected read. `spec`'s and `run`'s `dataset`
-input and `verify`'s spec input are found in any mount, and `dataset` refuses bytes any
-mounted corpus already declares, naming that record and its corpus. **Read-set-wide** — `belief` and `next` (and `status`, which already
+"not in the corpus". Datasets are included: the kernel checks an assessment's observed
+dataset through the writer's own corpus (`CorpusWriter._refuse_ineligible`), so a run over
+a read mount's dataset could never be assessed, and `spec` and `run` refuse one at the
+first step, naming the mount. Nor can the bytes be declared again in the write root: a
+dataset's id derives from its content, so a second record would be a `duplicate-location`
+that refuses every selected read, and `dataset` refuses bytes any mounted corpus already
+declares, naming that record and its corpus. Cross-corpus dataset inputs are the kernel's
+`beliefs-9ce6e4`, which the second-project milestone depends on. **Read-set-wide** — `belief` and `next` (and `status`, which already
 reads every root): a record is looked up in whichever mounted corpus holds it and read
 under that corpus's profile. What every command shares, since there is one store:
 holdings observations are reduced over every mounted corpus, and a vocabulary or spec
