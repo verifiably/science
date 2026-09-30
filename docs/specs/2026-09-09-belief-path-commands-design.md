@@ -671,6 +671,13 @@ until then `next` names no priority identity. "Stale verifications" and
 "open tasks" from §4.4 are not classes here: nothing supersedes a
 verification yet, and tasks are the coordination set's.
 
+**Amended 2026-09-30.** "From the current view" is the coordination command
+set design's §5.5, taken by reference: with a project selected `next`
+classifies the propositions that project's query selects, evaluated live,
+and renders the selection it read through; with none it classifies every
+stored proposition, as above. The declaration gains `selects = true` and the
+`coordination` read family.
+
 ## 5. Configuration and the read context
 
 ### 5.1 Two keys

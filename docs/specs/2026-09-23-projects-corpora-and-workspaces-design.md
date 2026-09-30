@@ -302,6 +302,11 @@ command's `select` form during the session, which rewrites the session's
 selection and appends the ledger entry. Nothing else moves it: not a later
 CLI invocation, not a configuration edit, not a workspace file.
 
+*Amended 2026-09-30:* the `project` command's `select` form is the separate
+command `project-select` (coordination command set design decision 1), and
+the launcher's `--project` takes a name as well as an address, resolved once
+at start.
+
 ### 5.1a Reads bind to the session's selection
 
 The framework's CLI is "sessionless reads, service-routed writes"

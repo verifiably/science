@@ -167,9 +167,9 @@ def test_missing_prompt_refusal_preserves_existing_output(tmp_path):
 
 
 def test_preamble_states_the_selected_project_rule(tmp_path):
-    """Design 2026-09-23 §11: sub-project 1 landed, so the preamble no longer
-    says no view exists. It states §5's rule and that selection is not yet
-    possible."""
+    """Coordination design §4.4: selection landed, so the preamble states the
+    rule itself — how the project is chosen, what reads through it, and what
+    needs one."""
     from science.adapters import build_adapter
 
     build_adapter(production_tree(), COMMANDS_ROOT, REPO_ROOT / "skills", tmp_path)
@@ -178,7 +178,12 @@ def test_preamble_states_the_selected_project_rule(tmp_path):
     # are about sentences, so compare with whitespace normalized. The
     # byte-for-byte check stays in test_generated_tree_matches_committed.
     prose = " ".join(skill.split())
-    assert "Until the coordination layer lands there is no current view" not in prose
-    assert "read through the selected project's query when one is selected" in prose
-    assert "no project can be selected yet" in prose
-    assert "A question or task needs a selected project; a fact does not." in prose
+    assert "no project can be selected yet" not in prose
+    assert "The current project is chosen with `project-select`." in prose
+    assert ("A command that enumerates the world reads through the selected project's query, "
+            "and sees the whole world when none is selected") in prose
+    assert "a command given an identity answers for that identity whatever is selected" in prose
+    assert ("A question or any coordination record needs a selected project, "
+            "except a project itself; a fact does not.") in prose
+    assert "Corpus writes are kernel acts that return their own records" in prose
+    assert "session writes return the selection they recorded." in prose

@@ -140,6 +140,15 @@ families = ["registry", "epoch", "corpus-stored"]
   framework maximum**; §5.3 of the layer design makes the declared number
   the contract, and the renderer (§7) makes it a test.
 
+**Amended 2026-09-30** (coordination command set design §4.2). `project` joins
+the reserved input names. It is a protocol field offered exactly on
+declarations that set the new optional top-level key `selects` (bool, default
+false; read-only declarations only, a build refusal otherwise): the CLI's
+`--project`, an optional `project` property in the MCP tool schema, and a
+`project` key on the service request. The dispatcher resolves it to a project
+address for that one invocation; any other command's request carrying it
+refuses `invalid-input`. The documented `reads` families gain `coordination`.
+
 ### 3.3 Write classes
 
 The closed set, and what each requires of the session (both permit
@@ -179,6 +188,11 @@ kind **must** appear, and its omission is a build refusal. Also build
 refusals: a map key that is not one of the class's declared kinds, and a
 route `KIND_ACTS` does not admit for its kind. The required act families
 are then exactly the mapped (or uniquely derived) routes — no more.
+
+**Amended 2026-09-30** (coordination command set design §4.1). The closed set
+gains `session`: no record kinds and no act families, but a live session is
+required and the invocation follows §6.1's claim, open and close. Its handler
+receives a session port (`select`) in place of a scoped writer.
 
 ### 3.4 Build refusals
 
@@ -593,6 +607,11 @@ dispatcher-rendered refusal envelope if there was one, and the renderer's
 own framing — nothing else. The rule is a renderer test with mutations
 that fail it, per block kind (§11).
 
+**Amended 2026-09-30** (coordination command set design §4.1). A `session`
+invocation's canonical report is exactly one selection block, rebuilt from
+the session ledger's `select` line for that invocation on the first response,
+on replay and on continuation; its audit admits that block and nothing else.
+
 ## 8. The preamble
 
 One `commands/PREAMBLE.md`, prepended by the adapter generator to every
@@ -612,6 +631,13 @@ there is nothing to reach around.
 > question or task needs a selected project, a fact does not. Selection
 > itself arrives with the coordination command set (`sci-c5528e`), and until
 > then the preamble says no project can be selected yet.
+
+**Amended 2026-09-30** (coordination command set design §4.4). Selection
+landed: the preamble now says the current project is chosen with
+`project-select`, that enumerations read through its query and see the whole
+world when none is selected, that a command given an identity answers for it
+whatever is selected, and that any coordination record but a project needs a
+selected project. The 2026-09-23 amendment's interim sentence is retired.
 
 ## 9. Surfaces
 
@@ -665,6 +691,11 @@ the session binds and passed as its coordination profile, or `false` for a corpu
 adopted without it. Relative paths in the file resolve against the file's own
 directory (the same design, decision 8), never the process's working directory.
 
+**Amended 2026-09-30** (coordination command set design §6). The file gains
+the optional key `default_project`, a `coord:<project>` address: the project a
+launcher opens under when it is given no `--project`, and the one a CLI read
+uses when no session is live. It refuses with `coordination = false`.
+
 ### 9.2 CLI
 
 `science`, stdlib `argparse`, zero dependencies. One subcommand per shipped
@@ -711,6 +742,15 @@ service of §5.2 of the layer design, same
 endpoint core as the MCP server over a local socket — never an in-process
 writer opened per invocation around the endpoint architecture. Until then the
 production write gate makes this path unreachable; no shipped command writes.
+
+**Amended 2026-09-30** (coordination command set design §5.2, §5.3).
+`science serve` takes `--project <name or address>`, the session's initial
+selection. The service protocol gains the selection query: the one-line
+request `{"query": "selection"}` is answered `{"project": <address> | null}`
+from the endpoint's state, with no invocation and no ledger line. A CLI read
+resolves its selection from `--project`, else that query, else — only when
+nothing listens on the socket — `default_project`; any other socket failure
+is an internal error.
 
 ### 9.3 MCP server
 
@@ -774,6 +814,11 @@ own inputs. There is no separate continuation tool; a call carrying
 made while an MCP session is live reaches that one session, and whichever launcher
 starts second refuses on the existing socket. A launcher removes the socket it bound
 at clean shutdown; a stale socket from a crash still refuses at start.
+
+**Amended 2026-09-30** (coordination command set design §5.1, §5.3).
+`science mcp serve` takes `--project` as `science serve` does and answers the
+selection query on the socket it binds. Tool schemas of `selects` commands
+carry the optional `project` property.
 
 ### 9.4 Equivalence
 
