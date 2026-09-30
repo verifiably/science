@@ -278,6 +278,65 @@ def build_fixture_world_with_contract(work: Path, *, hold_concepts: bool = True,
     return cfg
 
 
+def build_two_corpus_world(work: Path) -> ScienceConfig:
+    """Spec §9's two corpora: the write root `corpus` (base, biology, the
+    `testing` contract and coordination) and the read mount `archive` (base,
+    biology and the corpus-local `archive` contract, no coordination — the mm30
+    shape), in one world and one store. The archive holds the vocabulary lists
+    and proposition:archived; `archive` reaches the mount through
+    read_contracts alone."""
+    from beliefs.claim import Referent, build_claim
+    from beliefs.projection import project_claim
+    from science.contracts import load_contract_document
+    base = shipped_base_contract()
+    testing, testing_plan = load_contract_document(fixture_contract_document(work), base)
+    archive, archive_plan = load_contract_document(archive_contract_document(work), base)
+    biology = [shipped_domain_contract(ns) for ns in DOMAINS]
+    writer_profile = compile_profile(base, biology + [testing], coordination=shipped_coordination(COORDINATION))
+    archive_profile = compile_profile(base, biology + [archive])
+    archive_root, corpus_root = work / "archive", work / "corpus"
+    config = WorldConfig(work / "world", secrets.token_hex(16), (archive_root, corpus_root))
+    init_world_root(config, authority=FIXTURE_AUTHORITY)
+    world = open_world(config, authority=FIXTURE_AUTHORITY)
+    for root, profile in ((archive_root, archive_profile), (corpus_root, writer_profile)):
+        init_corpus_root(root, authority=FIXTURE_AUTHORITY)
+        open_corpus(root, authority=FIXTURE_AUTHORITY, profile=profile).adopt_manifest(profile=CorpusPins(
+            science_contract="science:" + profile.base_contract_identity,
+            domains={ns: f"{ns}:{identity}" for ns, identity in profile.activated_contracts.items()},
+        ))
+        world.admit(root, provenance=Fresh())
+    STORE_IDS[work] = init_store_root(work / "store", authority=FIXTURE_AUTHORITY)
+    _install_holdings_reducer(world)
+    cfg = ScienceConfig(world=config, operations_root=work / "ops", profile=writer_profile,
+                        service_socket=work / "ops" / "service.sock", store_root=work / "store",
+                        coordination=COORDINATION, write_root=corpus_root, plans=(testing_plan,),
+                        available_contracts=(testing, archive))
+    archived = archive_config(cfg)
+    hold_fixture_dataset(archived, "concepts.txt", CONCEPTS, "concept vocabulary")
+    hold_fixture_dataset(archived, "levels.txt", LEVELS, "level vocabulary")
+    claim = build_claim(archive_profile, operator=archive_plan.operator_for("affects", "concept", "protein"),
+                        args=(Referent(sort=archive_plan.sort_for("concept"), term="concept:disease-stage"),
+                              Referent(sort=archive_plan.sort_for("protein"), term="protein:PHF19")),
+                        layer="causal", polarity="positive")
+    open_corpus(archive_root, authority=FIXTURE_AUTHORITY, profile=archive_profile).add(stored.proposition_node(
+        "archived", title="archived", claim=project_claim(claim),
+        display_statement="concept:disease-stage affects protein:PHF19 (archived)"))
+    return cfg
+
+
+def archive_config(cfg: ScienceConfig) -> ScienceConfig:
+    """`cfg`'s world with the archive as the write root, under the profile its
+    manifest pins and its own plan: the fixture's way to write the archive's
+    evidence through the commands."""
+    import dataclasses
+    from beliefs.mount import compile_mount_profile
+    from science.contracts import load_contract_document
+    archive_root = cfg.world.world_root.parent / "archive"
+    _, plan = load_contract_document(archive_root.parent / "archive.yaml", shipped_base_contract())
+    return dataclasses.replace(cfg, write_root=archive_root, coordination=None, plans=(plan,),
+                               profile=compile_mount_profile(archive_root, available=cfg.available_contracts))
+
+
 def hold_fixture_dataset(cfg: ScienceConfig, name: str, content: bytes, title: str, **facets) -> str:
     """Hold bytes the way the `dataset` command will: content-derived location,
     Found observation, dataset record under the content address. Tests hold the
@@ -289,7 +348,7 @@ def hold_fixture_dataset(cfg: ScienceConfig, name: str, content: bytes, title: s
     from beliefs.holdings.records import StoreLocator
     from beliefs.root import holdings_seam
     digest = "sha256:" + sha256(content).hexdigest()
-    (root,) = cfg.world.corpus_roots
+    root = cfg.write_root
     ctx = ActContext(root, cfg.store_root, "fixture", "fixture/hold.v1", FIXTURE_AUTHORITY,
                      holdings_seam(), profile=cfg.profile)
     write(ctx, StoreLocator(STORE_IDS[root.parent], f"{digest.removeprefix('sha256:')}/{name}"),

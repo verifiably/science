@@ -6,11 +6,12 @@ import re
 import tomllib
 from collections.abc import Mapping
 from dataclasses import dataclass
+from functools import cached_property
 from pathlib import Path
 
 from beliefs.contract.domain import DomainContract
 from beliefs.corpus import ReadView
-from beliefs.errors import ManifestMalformed, ManifestMissing, ProfileError
+from beliefs.errors import ManifestMalformed, ManifestMissing, MountPinUnresolved, ProfileError
 from beliefs.profile import (
     ProfileSpec,
     compile_profile,
@@ -200,30 +201,76 @@ def resolve_config_path(cli_value: str | None, env: Mapping[str, str] | None = N
 
 def require_coordination_pinned(config: ScienceConfig) -> None:
     """Spec §6: a configuration that asks for coordination of a corpus whose
-    manifest does not pin it is refused by name. The kernel would refuse the
+    manifest does not pin it is refused by name. Only the write root is checked:
+    a read mount is mounted under whatever it pins. The kernel would refuse the
     same state as a bare pin mismatch, which the CLI can only render as an
     internal error; every pre-coordination configuration upgraded with
     `coordination = N` reaches this. A root whose manifest is missing or
     malformed is left to the kernel's own named `SessionRefused`."""
     namespace = shipped_coordination(config.coordination).namespace
     wanted = f"{namespace}:{config.profile.activated_contracts[namespace]}"
+    root = config.write_root
+    try:
+        pinned = load_manifest(root).profile.domains.get(namespace)
+    except (ManifestMissing, ManifestMalformed):
+        return
+    if pinned is None:
+        raise Refused(Refusal(
+            "invalid-input",
+            f"the configuration asks for coordination the corpus at {root} does not pin; "
+            "set `coordination = false` for a corpus adopted before coordination",
+        ))
+    if pinned != wanted:
+        raise Refused(Refusal(
+            "invalid-input",
+            f"the corpus at {root} pins coordination contract {pinned}, not the one "
+            f"`coordination = {config.coordination}` compiles; set `coordination` to the version it pins",
+        ))
+
+
+@dataclass(frozen=True)
+class Mount:
+    """One configured root as a read sees it: its corpus id, a view opened at
+    the call, and the profile its records decode under."""
+    corpus_id: str
+    root: Path
+    view: ReadView
+    profile: ProfileSpec
+
+
+def _refuse(message: str):
+    raise Refused(Refusal("invalid-input", message))
+
+
+def mount_profiles(config: ScienceConfig) -> dict[Path, ProfileSpec]:
+    """Every configured root under the profile its own manifest pins (spec §6):
+    the write root under the writer's stated profile, every other root compiled
+    from its pins against the shipped packs and the available documents.
+    Availability never becomes activation."""
+    from beliefs.mount import compile_mount_profile
+
+    profiles = {}
     for root in config.world.corpus_roots:
-        try:
-            pinned = load_manifest(root).profile.domains.get(namespace)
-        except (ManifestMissing, ManifestMalformed):
+        if root == config.write_root:
+            profiles[root] = config.profile
             continue
-        if pinned is None:
-            raise Refused(Refusal(
-                "invalid-input",
-                f"the configuration asks for coordination the corpus at {root} does not pin; "
-                "set `coordination = false` for a corpus adopted before coordination",
-            ))
-        if pinned != wanted:
-            raise Refused(Refusal(
-                "invalid-input",
-                f"the corpus at {root} pins coordination contract {pinned}, not the one "
-                f"`coordination = {config.coordination}` compiles; set `coordination` to the version it pins",
-            ))
+        try:
+            profiles[root] = compile_mount_profile(root, available=config.available_contracts)
+        except MountPinUnresolved as caught:
+            _refuse(f"the read mount {root} pins {caught.pin}, which no shipped pack and no "
+                    "document in contracts or read_contracts carries")
+        except (ManifestMissing, ManifestMalformed) as caught:
+            _refuse(f"the read mount {root} has no readable manifest: {caught}")
+    return profiles
+
+
+def corpus_id_at(root: Path) -> str:
+    """The root's corpus id, or a refusal naming the root: a missing or
+    malformed manifest is a configuration state, never an internal error."""
+    try:
+        return load_manifest(root).corpus_id
+    except (ManifestMissing, ManifestMalformed) as caught:
+        _refuse(f"the corpus root {root} has no readable manifest: {caught}")
 
 
 @dataclass(frozen=True)
@@ -250,6 +297,22 @@ class ReadContext:
             ))
         return self.selection
 
+    @cached_property
+    def _profiles(self) -> dict[Path, ProfileSpec]:
+        # Compiled once per context; a dispatcher's per-invocation `replace`
+        # builds a fresh context, so a command compiles once (kernel decision 9).
+        return mount_profiles(self.config)
+
+    def mounts(self) -> tuple[Mount, ...]:
+        """One mount per configured root, ordered by corpus id then root, each
+        view opened now: a view indexes its corpus as of its opening. Profiles
+        first and manifests through `corpus_id_at`, so a root that cannot be
+        mounted refuses by name before any view opens."""
+        profiles = self._profiles
+        keyed = sorted((corpus_id_at(root), str(root), root) for root in self.config.world.corpus_roots)
+        return tuple(Mount(corpus_id, root, ReadView.opened_at(root), profiles[root])
+                     for corpus_id, _, root in keyed)
+
     def read_views(self) -> tuple[tuple[str, ReadView], ...]:
         """One view per configured root, ordered by corpus id then root. Two
         roots carrying the same corpus id both appear: that state is the
@@ -257,7 +320,7 @@ class ReadContext:
         read context that refused or deduplicated would hide it."""
         keyed = []
         for root in self.config.world.corpus_roots:
-            keyed.append((load_manifest(root).corpus_id, str(root), ReadView.opened_at(root)))
+            keyed.append((corpus_id_at(root), str(root), ReadView.opened_at(root)))
         keyed.sort(key=lambda entry: entry[:2])
         return tuple((corpus_id, view) for corpus_id, _, view in keyed)
 
@@ -307,18 +370,15 @@ class ReadContext:
         return is_held(view, self.world, corpus_id, node)
 
     def coordination(self):
-        """A live resolver over the configured roots (coordination §6.2). One
-        root today, mounted under the session's profile; part 3 mounts each
-        root under its own manifest's profile."""
+        """A live resolver over every configured root, each under its own
+        manifest's profile (coordination §6.2; spec §6)."""
         from beliefs.corpus import CoordinationResolver
 
         if self.config.coordination is None:
             raise Refused(Refusal("invalid-input",
                                   "coordination = false in this configuration; there is no resolver to ask"))
-        # The resolver checks each mount's pins and raises a bare ContractMismatch;
-        # refuse the one mismatch a configuration upgrade produces by name first.
         require_coordination_pinned(self.config)
-        return CoordinationResolver({root: self.config.profile for root in self.config.world.corpus_roots})
+        return CoordinationResolver(self._profiles)
 
     def pins(self):
         (root,) = self.config.world.corpus_roots
