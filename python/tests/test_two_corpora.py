@@ -14,7 +14,7 @@ from helpers.world import (
     open_rig, write_two_corpus_config,
 )
 from science.commands.next import handle
-from science.config import ReadContext
+from science.config import ReadContext, corpus_id_at
 from science.refusal import Refused
 from science.session import open_session
 
@@ -127,10 +127,8 @@ def test_activating_read_contracts_in_the_writer_is_refused_by_the_write_root_pi
 
 def test_a_selected_record_no_configured_corpus_holds_refuses_naming_it(world):
     """The world admits the archive; a configuration mounting only the write
-    root cannot read the row, and says so. The live capture reads the world
-    through the configured roots, so the kernel refuses the address before
-    `next`'s own unmounted check (which test_cmd_next_selection reaches with a
-    capture that names a record no mount holds)."""
+    root cannot read the row, and says so: the kernel's unknown address is the
+    configuration's refusal, naming the address and `corpus_roots`."""
     with open_rig(world, ("project",)) as (d, _):
         d.invoke("project", {"name": "archived", "query": _query({"addresses": ["proposition:archived"]})})
     narrowed = dataclasses.replace(world, world=WorldConfig(
@@ -139,9 +137,10 @@ def test_a_selected_record_no_configured_corpus_holds_refuses_naming_it(world):
         d.invoke("project-select", {"target": "archived"})
         with pytest.raises(Refused) as caught:
             d.invoke("next", {})
-    assert caught.value.refusal.code == "kernel-refused"
-    assert caught.value.refusal.data == {"kind": "SelectionRefused", "reason": "address-unknown",
-                                         "refs": ["proposition:archived"]}
+    assert caught.value.refusal.code == "invalid-input"
+    assert "proposition:archived" in caught.value.refusal.message
+    assert "corpus_roots" in caught.value.refusal.message
+    assert corpus_id_at(world.world.world_root.parent / "archive") in caught.value.refusal.message
 
 
 def _twice(world):
@@ -190,3 +189,45 @@ def test_a_read_mount_without_a_manifest_refuses_at_the_read_entry_points(world)
         with pytest.raises(Refused) as caught:
             call()
         assert caught.value.refusal.code == "invalid-input" and str(empty) in caught.value.refusal.message
+
+
+def test_each_corpus_lineage_reaches_the_evaluator(world):
+    """Review fix round 1: the snapshot a mount's evaluation is supplied roots
+    every dataset its runs read. The mutation that drops the holding corpus's
+    lineage changes the belief input digest and nothing else visible."""
+    from beliefs.dataset import dataset_address
+    ctx = ReadContext.open(world)
+    for proposition in ("proposition:archived", "proposition:claimed"):
+        inputs = ctx.gather_inputs(proposition)
+        read = {dataset_address(i.dataset) for run in inputs.runs.values() for i in run.inputs}
+        assert read and read <= set(inputs.snapshot.roots)
+
+
+def test_an_assessment_resting_on_a_dataset_its_corpus_lacks_refuses_naming_it(world):
+    """Review fix round 1: evidence whose lineage the holding mount cannot read
+    is refused, never evaluated over a snapshot missing it. Neither the
+    commands nor the kernel's writer mint one (`EligibilityUnmet`), so a view
+    that hides the write root's observed dataset stands in for an edited
+    corpus."""
+    from beliefs import stored
+    ctx = ReadContext.open(world)
+    mount = ctx.mount_holding("proposition:claimed")
+    (assessment,) = [n for n in mount.view.iter_stored() if n.kind == "assessment"]
+    run = stored.typed_ref("run", stored.assessment_value(assessment, profile=mount.profile).run)
+    (hidden,) = stored.inputs_of(mount.view.get(run), stored.OBSERVES)
+
+    class Hiding:
+        def __init__(self, view):
+            self._view = view
+
+        def holds(self, ref):
+            return ref != hidden and self._view.holds(ref)
+
+        def __getattr__(self, name):
+            return getattr(self._view, name)
+
+    hiding = dataclasses.replace(mount, view=Hiding(mount.view))
+    with pytest.raises(Refused) as caught:
+        ctx._context(hiding, ctx.observations())
+    assert caught.value.refusal.code == "invalid-input"
+    assert hidden in caught.value.refusal.message and mount.corpus_id in caught.value.refusal.message

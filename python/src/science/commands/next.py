@@ -68,6 +68,36 @@ def _selection_pairs(selection, project, live) -> tuple:
     return tuple(pairs)
 
 
+def _unmounted_corpora(world) -> list[str]:
+    """The live admitted corpora with no configured carrier, from the world's
+    own registry and status: what `corpus_roots` leaves unmounted."""
+    admitted = sorted({record.corpus_id for record in world.registry().admissions})
+    return [corpus_id for corpus_id in admitted
+            if (status := world.status(corpus_id)).live and not status.present]
+
+
+def _unmounted(ctx, refs) -> Refused:
+    corpora = _unmounted_corpora(ctx.world)
+    where = f"; the world admits {', '.join(corpora)}, which corpus_roots does not mount" if corpora else ""
+    return Refused(Refusal("invalid-input",
+                           f"the selection names {', '.join(refs)}, which no corpus in corpus_roots holds{where}"))
+
+
+def _capture(ctx, project):
+    """The live selection. The capture reads the world through the configured
+    roots, so an address in an admitted corpus `corpus_roots` does not mount is
+    unknown to it: that refusal is the configuration's, and says so (spec §5.5).
+    Every other kernel refusal passes through."""
+    try:
+        return live_selection(ctx, project)
+    except Refused as caught:
+        data = caught.refusal.data
+        if (caught.refusal.code == "kernel-refused" and data.get("kind") == "SelectionRefused"
+                and data.get("reason") == "address-unknown" and _unmounted_corpora(ctx.world)):
+            raise _unmounted(ctx, data["refs"]) from None
+        raise
+
+
 def handle(ctx, *, limit=None) -> Report:
     project = selected_project(ctx)
     blocks: list = [Heading("Next")]
@@ -77,7 +107,7 @@ def handle(ctx, *, limit=None) -> Report:
         # The project's query, denoted over the world as it stands: no epoch
         # mediates seeing a proposition just minted (coordination design
         # decision 3).
-        live = live_selection(ctx, project)
+        live = _capture(ctx, project)
         # Opened after the capture, never before it: a read view indexes the
         # corpus as it stood when it was opened, so an earlier one would not hold
         # a proposition minted in between, and its row would vanish under
@@ -88,9 +118,7 @@ def handle(ctx, *, limit=None) -> Report:
             # A capture naming a record no mounted corpus holds (one wider than
             # corpus_roots, or a view opened short of it) leaves a row this
             # read cannot classify: refused by name, never dropped.
-            raise Refused(Refusal("invalid-input",
-                                  f"the selection names {', '.join(unmounted)}, which no corpus in "
-                                  "corpus_roots holds; the world admits a corpus this configuration does not mount"))
+            raise _unmounted(ctx, unmounted)
         blocks.append(KeyVals("selection", _selection_pairs(ctx.selection, project, live)))
         # A selected record that is not a proposition is not a row.
         nodes = [node for node in (next(m.view.get(ref) for m in mounts if m.view.holds(ref))

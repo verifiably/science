@@ -417,20 +417,42 @@ class ReadContext:
     def _context(self, mount: Mount, observations):
         from science.closure import supplied_context
         from beliefs import stored
+        assessments = [node for node in mount.view.iter_stored() if node.kind == "assessment"]
         # Keyed as `gather` reads it: the stored assessment's identity, attributed
         # to the one corpus that holds it.
         node_corpus = {
             stored.assessment_value(node, profile=mount.profile).identity(): (mount.corpus_id,)
-            for node in mount.view.iter_stored() if node.kind == "assessment"
+            for node in assessments
         }
+        self._refuse_foreign_observations(mount, assessments)
         # The lineage snapshot walks from each observed dataset through this
-        # mount's view, which cannot resolve another mount's dataset. A write
-        # command reads its refs in the write root, so evidence here observes
-        # only datasets this corpus declares (spec §5.5, part 3).
+        # mount's view, which cannot resolve another mount's dataset. The check
+        # above refuses evidence here that observes one, so the datasets left
+        # out are ones no assessment in this corpus observes (spec §5.5, part 3).
         declared = {address: found for address, found in observations.items() if mount.view.holds(address)}
         return supplied_context(mount.view, corpus_id=mount.corpus_id, pins=self.pins(mount.root),
                                 epoch_identity=self.epoch_identity(), observations=declared,
                                 node_corpus=node_corpus)
+
+    def _refuse_foreign_observations(self, mount: Mount, assessments) -> None:
+        """Refuse an assessment in `mount` whose run reads a dataset the mount
+        does not declare: its lineage cannot be read through the mount's view,
+        and leaving it out would degrade admission without saying so. Write
+        commands never mint one (`CorpusWriter._refuse_ineligible` reads the
+        writer's own view); only an edited corpus can hold one."""
+        from beliefs import stored
+        for node in assessments:
+            run = stored.typed_ref("run", stored.assessment_value(node, profile=mount.profile).run)
+            if not mount.view.holds(run):
+                continue  # a missing run is `gather`'s to report
+            foreign = sorted(target for role in stored.INPUT_ROLES
+                             for target in stored.inputs_of(mount.view.get(run), role)
+                             if not mount.view.holds(target))
+            if foreign:
+                raise Refused(Refusal(
+                    "invalid-input",
+                    f"{node.id} in corpus {mount.corpus_id} rests on {run}, which reads {', '.join(foreign)}; "
+                    "that corpus does not declare them, and a corpus's evidence reads only its own datasets"))
 
     def gather_inputs(self, proposition: str):
         from science.closure import gather_inputs
