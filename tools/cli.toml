@@ -1094,7 +1094,7 @@ options = [
   { names = ["--invocation-id"], value = "string" },
   { names = ["--continue"], value = "string" },
   { shared = "limit", value = "int" },
-  { names = ["--project"], value = "string" },
+  { shared = "project", role = "select", value = "string", repeatable = false },
 ]
 
 [[cli.science.commands]]
@@ -1211,7 +1211,7 @@ options = [
   { shared = "config", value = "path" },
   { names = ["--invocation-id"], value = "string" },
   { names = ["--continue"], value = "string" },
-  { names = ["--project"], value = "string" },
+  { shared = "project", role = "select", value = "string", repeatable = false },
 ]
 
 [[cli.science.commands]]
@@ -1224,7 +1224,7 @@ summary = "Serve the world over HTTP"
 protocol = "server on stdio or a socket"
 options = [
   { shared = "config", value = "path" },
-  { names = ["--project"], value = "string" },
+  { shared = "project", role = "select", value = "string", repeatable = false },
 ]
 
 [[cli.science.commands]]
@@ -1234,7 +1234,7 @@ protocol = "server on stdio or a socket"
 args = [{ name = "mode", value = "enum", values = ["serve"], required = true }]
 options = [
   { shared = "config", value = "path" },
-  { names = ["--project"], value = "string" },
+  { shared = "project", role = "select", value = "string", repeatable = false },
 ]
 
 [[cli.science.commands]]

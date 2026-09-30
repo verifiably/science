@@ -1,7 +1,7 @@
 # The coordination command set — design
 
 **Date:** 2026-09-24
-**Status:** reviewed and approved 2026-09-24; part 1 (the write surface) implemented 2026-09-24, plan `docs/plans/2026-09-24-coordination-write-surface.md`. Part 2 (selection and the project reads) repository implementation and docs committed 2026-09-30, plan `docs/plans/2026-09-30-coordination-selection-and-reads.md`; ops CLI publication awaits explicit approval. Part 3 (multi-corpus, `sci-923d3a`) has no plan yet.
+**Status:** reviewed and approved 2026-09-24; part 1 (the write surface) implemented 2026-09-24, plan `docs/plans/2026-09-24-coordination-write-surface.md`; part 2 (selection and the project reads) implemented 2026-09-30, plan `docs/plans/2026-09-30-coordination-selection-and-reads.md`. Part 3 (multi-corpus, `sci-923d3a`) has no plan yet.
 **Scope:** the second half of sub-project 4 of the user/autonomy layer design
 (`beliefs` `docs/superpowers/specs/2026-08-29-user-and-autonomy-layer-design.md`
 §5.1, §8 item 4): the commands that mint and revise `project`, `question`,
