@@ -319,10 +319,13 @@ and the loader's handler-shape check leads a `session` handler with `ctx, port`.
 port appends S2's line first and sets the dispatcher's selection after it (`beliefs`
 selection-ledger design decision 4). A kernel refusal from `select` —
 `ProjectNotResolvable` — closes the invocation with the refusal envelope, as a
-write's does; no selection line was appended. A handler that returns without
-selecting, or that refuses after selecting, is a handler defect: the invocation
-closes `done` and the dispatcher raises an internal error, on the first response and
-on replay alike. The selection block serializes as `selected: <address>@<revision>`
+write's does; no selection line was appended. Two handler defects close the
+invocation `done` and raise an internal error on the first response. A handler that
+refuses after selecting left a selection line, which is truth, so a replay renders
+the canonical block from it — as a write that refused after acting replays its
+minted records (framework §6.1, 2026-09-09 amendment). A handler that returns
+without selecting left none, so a replay is the same internal error: a `done` close
+with no selection line. The selection block serializes as `selected: <address>@<revision>`
 and a `name: <name>` line, or `selected: none`.
 
 ### 4.2 The `selects` key and the `project` protocol field
@@ -504,7 +507,12 @@ pinned address and name, `complete`, the absent corpora, and the capture stamp's
 world and per-corpus states (`beliefs` live-query design §7). The evaluation's
 kernel refusals — `SelectionRefused`, `ResolutionRefused`, `AddressMapConflict`,
 `CaptureDrift`, and `BuildContended` when a write holds the corpus at that moment —
-arrive as `kernel-refused` with the class name in `data.kind`.
+arrive as `kernel-refused` with the class name in `data.kind`. The handler opens the
+view it looks selected records up in after the capture, never before: a read view
+indexes the corpus as of its opening, and one opened earlier would drop a
+proposition minted in between while the block said `complete: true`. A selected
+record the configured corpus still does not hold is an internal error until the
+multi-corpus task gives `next` a lookup across mounts; it is never omitted.
 
 ## 6. Configuration
 

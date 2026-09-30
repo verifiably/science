@@ -37,7 +37,7 @@
 
 - `project-select` naming a project whose address has two standing tips — a person expects a refusal that lists the tips and leaves the selection where it was, not half a project selected or a traceback. Task 3 pins it.
 - A CLI read when the socket path exists but nothing listens (a crashed launcher), or the path is too long for any launcher to bind — a person expects the read to proceed under `default_project`; a listener that answers something else must be an internal error, never a silent fallback. Task 6 pins all three.
-- `next` under a selection whose query names an address the world does not hold, or evaluated while a write holds the corpus — a person expects a refusal naming the address or the contention, never the whole world's queue. Task 7 pins both.
+- `next` under a selection whose query names an address the world does not hold, or evaluated while a write holds the corpus — a person expects a refusal naming the address or the contention, never the whole world's queue. And a proposition minted while `next` runs — a person expects its row, never a queue one short under `complete: true`. Task 7 pins all three.
 - A truncated read continued without the `project` field it was issued under, and a selection block whose project name exceeds the budget — the first must refuse `stale-cursor`, the second must continue from the ledger without running the handler. Tasks 1 and 2 pin them.
 - A `project-select` target that starts with `coord:` but is not an address, an empty target, and `target` with `clear` — each must refuse `invalid-input` before any ledger line, and a malformed address must not be looked up as a name. Task 3 pins them.
 
@@ -1753,13 +1753,16 @@ def _task(node) -> str:
 
 
 def handle(ctx) -> Report:
+    # First, before the selection is looked at: with `coordination = false`
+    # nothing can be selected, and the refusal that says so must not be
+    # pre-empted by `no-current-project`.
+    resolver = ctx.coordination()
     project = selected_project(ctx)
     if project is None:
         raise Refused(Refusal(
             "no-current-project",
             "no project is selected; select one with `project-select`, or name one with `--project`",
         ))
-    resolver = ctx.coordination()
     query = json.dumps(stored_query(project).projection(), sort_keys=True, separators=(",", ":"))
     blocks: list = [
         Heading(f"Project: {project.title}"),
@@ -2722,6 +2725,46 @@ def test_a_proposition_minted_after_selecting_appears_without_republishing(certi
         assert "proposition:p2" in _rows(d.invoke("next", {}).text)
 
 
+def test_a_proposition_minted_while_next_runs_is_not_dropped(certified_work, monkeypatch):
+    """The lookup view opens after the live capture. One opened before it does
+    not hold a record minted in between, which the capture then selects: the
+    mutation that opens the view first drops p2's row under `complete: true`."""
+    import science.commands.next as next_module
+
+    cfg = build_fixture_world(certified_work)
+    evaluate = next_module.live_selection
+
+    def minting_first(ctx, project):
+        add_one_more_record(cfg)  # lands after the handler began, before the capture
+        return evaluate(ctx, project)
+
+    with open_rig(cfg, NAMES) as (d, _):
+        _project(d, "claims", _kinds(["proposition"]))
+        d.invoke("project-select", {"target": "claims"})
+        monkeypatch.setattr(next_module, "live_selection", minting_first)
+        text = d.invoke("next", {}).text
+    assert "complete: true" in text
+    assert "proposition:p1" in _rows(text) and "proposition:p2" in _rows(text)
+
+
+def test_a_selected_record_the_corpus_does_not_hold_fails_rather_than_vanishing(world, monkeypatch):
+    """Unreachable with one configured root short of a raw edit, so it is an
+    internal error and not a refusal code; what it must never be is a silently
+    shorter queue."""
+    from types import SimpleNamespace
+
+    import science.commands.next as next_module
+
+    stamp = SimpleNamespace(world_id=world.world.world_id, coverage=())
+    ghost = SimpleNamespace(selected=("proposition:ghost", "proposition:p1"), complete=True, absent=(), stamp=stamp)
+    with open_rig(world, NAMES) as (d, _):
+        _project(d, "one", _addresses("proposition:p1"))
+        d.invoke("project-select", {"target": "one"})
+        monkeypatch.setattr(next_module, "live_selection", lambda ctx, project: ghost)
+        with pytest.raises(RuntimeError, match="proposition:ghost"):
+            d.invoke("next", {})
+
+
 def test_a_revised_query_is_followed_without_reselecting(world):
     with open_rig(world, NAMES) as (d, _):
         one = _project(d, "one", _addresses("proposition:p1"))
@@ -2881,19 +2924,33 @@ def _selection_pairs(selection, project, live) -> tuple:
 
 
 def handle(ctx, *, limit=None) -> Report:
-    _, view = ctx.single_view()
     project = selected_project(ctx)
     blocks: list = [Heading("Next")]
     if project is None:
+        _, view = ctx.single_view()
         nodes = [node for node in view.iter_stored() if node.kind == "proposition"]
     else:
         # The project's query, denoted over the world as it stands: no epoch
         # mediates seeing a proposition just minted (coordination design
-        # decision 3). A selected record that is not a proposition is not a row.
+        # decision 3).
         live = live_selection(ctx, project)
+        # Opened after the capture, never before it: a read view indexes the
+        # corpus as it stood when it was opened, so an earlier one would not hold
+        # a proposition minted in between, and its row would vanish under
+        # `complete: true`.
+        _, view = ctx.single_view()
+        unheld = [ref for ref in live.selected if not view.holds(ref)]
+        if unheld:
+            # With one configured root, the capture reads no corpus but this
+            # one, so a selected record it does not hold is an invariant broken,
+            # not an outcome: fail rather than render a queue missing rows. Part
+            # 3 replaces this with the lookup across mounted corpora.
+            raise RuntimeError(
+                "the live capture selected records the configured corpus does not hold: "
+                + ", ".join(unheld))
         blocks.append(KeyVals("selection", _selection_pairs(ctx.selection, project, live)))
-        nodes = [node for node in (view.get(ref) for ref in live.selected if view.holds(ref))
-                 if node.kind == "proposition"]
+        # A selected record that is not a proposition is not a row.
+        nodes = [node for node in map(view.get, live.selected) if node.kind == "proposition"]
     rows = sorted((CLASSES.index(classify(ctx, node.id)), node.id,
                    stored.display_statement(node) or node.title) for node in nodes)
     shown = rows[: (limit or 10)]
