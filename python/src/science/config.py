@@ -238,10 +238,6 @@ class Mount:
     profile: ProfileSpec
 
 
-def _refuse(message: str):
-    raise Refused(Refusal("invalid-input", message))
-
-
 def mount_profiles(config: ScienceConfig) -> dict[Path, ProfileSpec]:
     """Every configured root under the profile its own manifest pins (spec §6):
     the write root under the writer's stated profile, every other root compiled

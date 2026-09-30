@@ -12,6 +12,11 @@ from science.coordination import resolve_project_ref
 from science.refusal import Refused
 
 
+def two_pin_identity(two) -> str:
+    from beliefs.world.registry import load_manifest
+    return load_manifest(two.world.world_root.parent / "archive").profile.domains["archive"].removeprefix("archive:")
+
+
 @pytest.fixture
 def two(certified_work):
     return build_two_corpus_world(certified_work)
@@ -39,8 +44,17 @@ def test_mounts_are_ordered_by_corpus_id(two):
 def test_a_read_mount_pin_no_document_carries_refuses_naming_root_and_pin(two):
     bare = dataclasses.replace(two, available_contracts=two.available_contracts[:1])
     message = _refused(lambda: mount_profiles(bare))
-    assert "archive" in message and "archive:" in message
+    pin = "archive:" + two_pin_identity(two)
+    assert str(two.world.world_root.parent / "archive") in message and pin in message
     assert "archive" in _refused(lambda: ReadContext.open(bare).coordination())
+
+
+def test_the_session_refuses_an_unresolvable_read_mount_pin_at_open(two):
+    from science.session import open_session
+    bare = dataclasses.replace(two, available_contracts=two.available_contracts[:1])
+    message = _refused(lambda: open_session(bare))
+    assert "archive:" + two_pin_identity(two) in message
+    assert str(two.world.world_root.parent / "archive") in message
 
 
 def test_a_read_mount_without_a_manifest_refuses_naming_the_root(two):
