@@ -1,15 +1,16 @@
 ---
 id: sci-f95f8b
 title: "Coordination part 2: selection, project reads, selection query, next through the selection"
-status: doing
+status: done
 priority: 1
 size: l
 complexity: high
 process: planned
 owner: coordination-part2
 created: 2026-09-24T10:54:38Z
-updated: 2026-09-30T13:58:55Z
+updated: 2026-09-30T14:28:31Z
 started: 2026-09-30T11:01:17Z
+completed: 2026-09-30T14:27:46Z
 depends: [beliefs-cc0aea, beliefs-1148ad, beliefs-1af3fd, sci-c147e3]
 parent: sci-c5528e
 tags: [projects]
@@ -45,3 +46,15 @@ Spec docs/specs/2026-09-24-coordination-command-set-design.md §3.7, §3.8, §4.
 - 2026-09-30T13:58:55Z (coordination-part2): Repository implementation and final fix review accepted at df2e38e; just gate 606 passed. Optional coverage suggestions deferred: unexpected RuntimeError outcome-unknown and subordinate-record isolation. External ops publication remains the only implementation step awaiting user approval.
 - 2026-09-30T13:58:55Z (coordination-part2): parked (waiting on user, approval): Controller after user approval: complete Task 8 ops CLI publication and re-vendoring, close Task 8 and this parent, then record part 3 as unblocked
   provenance: {"harness_session":"codex:01a0f21d-ccb2-7141-83c5-8d21fea93221","harness_session_source":"CODEX_SESSION_ID"}
+- 2026-09-30T14:08:47Z (coordination-part2): resumed
+  provenance: {"harness_session":"codex:01a0f21d-ccb2-7141-83c5-8d21fea93221","harness_session_source":"CODEX_SESSION_ID"}
+- 2026-09-30T14:27:46Z (coordination-part2): done
+  provenance: {"harness_session":"codex:01a0f21d-ccb2-7141-83c5-8d21fea93221","harness_session_source":"CODEX_SESSION_ID"}
+- 2026-09-30T14:27:46Z (coordination-part2): project-select and session class, projects and project-show, project protocol field, launcher initial selection/default_project, selection query and CLI resolution, selected next, preamble, reviewed ops CLI publication
+  provenance: {"harness_session":"codex:01a0f21d-ccb2-7141-83c5-8d21fea93221","harness_session_source":"CODEX_SESSION_ID"}
+- 2026-09-30T14:28:30Z (coordination-part2): Ruling: Defer Task 8 and parent closure until the explicitly approval-gated ops update is authorized and finished — keeps task status truthful while all repository work and reviews complete first — if wrong, closure is delayed until one user reply.
+- 2026-09-30T14:28:30Z (coordination-part2): Ruling: Task 2 treats a second select and a kernel WriteRefused raised after a recorded selection as HandlerContractViolation, closing done and preserving canonical replay; generic unexpected exceptions retain ordinary write outcome-unknown semantics — the one-selection contract and recorded ledger line are authoritative — if wrong, two defect paths change error/replay classification and need rework.
+- 2026-09-30T14:28:30Z (coordination-part2): Ruling: Task 8 preamble distinguishes corpus writes returning records from session writes returning recorded selection, instead of the plan sample claiming every write is a kernel act — session-class spec §4.1 and Task 3 review expose the contradiction — if wrong, only common prompt wording and its prose assertion need reverting.
+- 2026-09-30T14:28:30Z (coordination-part2): Ruling: Task 6 reuses the existing socket newline framing without a new frame-limit mechanism — matches the approved transport and keeps this change focused on selection validation and timeout — if wrong, a wrong local listener can still send an oversized response and shared socket framing needs hardening.
+- 2026-09-30T14:28:30Z (coordination-part2): Ruling: Publish the exact reviewed CLI rows from ops default checkout before its source commit, using the approved plan's explicit default-branch instruction as the in-place exception — vendored pre-commit requires matching copies, while branch publication refuses before main carries the source, so the prescribed commit-before-vendor order cannot satisfy both gates — if wrong, cross-project copies change before the source commit and must be restored from the original source. No gate bypass or force publish.
+- 2026-09-30T14:28:31Z (coordination-part2): Ruling: Replace the four local --project entries with existing shared project rows (role select, string, repeatable false) — ops source validator forbids local duplicates of vocabulary names; equivalent spelling/type/cardinality preserve runtime behavior — if wrong, shared metadata must be revised and all CLI copies re-vendored. Broader check-vendored keys drift is unrelated and remains untouched; CLI copies verified separately.

@@ -1,15 +1,16 @@
 ---
 id: sci-103ec2
 title: "Preamble, dated amendments, and close-out of part 2"
-status: doing
+status: done
 priority: 1
 size: s
 complexity: low
 process: direct
 owner: coordination-part2
 created: 2026-09-30T11:25:02Z
-updated: 2026-09-30T13:58:55Z
+updated: 2026-09-30T14:27:46Z
 started: 2026-09-30T13:24:01Z
+completed: 2026-09-30T14:27:46Z
 depends: [sci-5b8997]
 parent: sci-f95f8b
 tags: [projects]
@@ -30,4 +31,14 @@ step: "Task 8: The preamble, the dated amendments, and the close-out"
 - 2026-09-30T13:58:55Z (coordination-part2): resumed
   provenance: {"harness_session":"codex:01a0f21d-ccb2-7141-83c5-8d21fea93221","harness_session_source":"CODEX_SESSION_ID"}
 - 2026-09-30T13:58:55Z (coordination-part2): parked (waiting on user, approval): Controller after user approval: apply the prepared science CLI patch to ops, commit under its guide, run just vendor-cli, verify branch table identity and affected CLI checks, then close Task 8 and parent
+  provenance: {"harness_session":"codex:01a0f21d-ccb2-7141-83c5-8d21fea93221","harness_session_source":"CODEX_SESSION_ID"}
+- 2026-09-30T14:08:47Z (coordination-part2): resumed
+  provenance: {"harness_session":"codex:01a0f21d-ccb2-7141-83c5-8d21fea93221","harness_session_source":"CODEX_SESSION_ID"}
+- 2026-09-30T14:08:47Z (coordination-part2): User approved ops CLI publication and cross-project vendoring; resuming final publication and task closure
+- 2026-09-30T14:17:04Z (coordination-part2): Publication validation found four --project rows must reference the shared project vocabulary with role select; correcting table metadata preserves the CLI spelling and runtime behavior. Broader vendored audit also reports unrelated keys.toml drift, which this publication leaves untouched.
+- 2026-09-30T14:27:46Z (coordination-part2): review: impl round 2 — verdict: accept; findings: none; reviewer: codex/gpt-6.1-sol
+- 2026-09-30T14:27:46Z (coordination-part2): Ops publication complete in 6178374 (ops-9ff308); science table correction and final status in 0950d4e. Ops focused 4 and full fast 870 (1 skip) passed with a clean command-local TMPDIR; science CLI focused 31 passed. Verified all 11 CLI tables and 10 helpers plus this worktree byte-identical to ops. Broader vendored audit still reports unrelated keys.toml drift in mind6/tui, left untouched. Feedback: ops-ee3851 ordering, ops-3c531b temporary Git metadata, tack-89dff8 omitted source validation.
+- 2026-09-30T14:27:46Z (coordination-part2): done
+  provenance: {"harness_session":"codex:01a0f21d-ccb2-7141-83c5-8d21fea93221","harness_session_source":"CODEX_SESSION_ID"}
+- 2026-09-30T14:27:46Z (coordination-part2): preamble, dated amendments, 606-test gate, reviewed ops CLI publication and re-vendoring
   provenance: {"harness_session":"codex:01a0f21d-ccb2-7141-83c5-8d21fea93221","harness_session_source":"CODEX_SESSION_ID"}
