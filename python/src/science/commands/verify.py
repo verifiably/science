@@ -22,9 +22,9 @@ def _refuse(message: str):
 
 
 def handle(ctx, writer, *, assessment, code, entrypoint, cores=None) -> Report:
-    _, view = ctx.single_view()
+    view = ctx.write_view()
     if not view.holds(assessment):
-        _refuse(f"assessment {assessment!r} is not in the corpus")
+        ctx.not_held(assessment)
     try:
         value = stored.assessment_value(view.get(assessment), profile=ctx.config.profile)
     except MalformedRecord as caught:
@@ -60,7 +60,7 @@ def handle(ctx, writer, *, assessment, code, entrypoint, cores=None) -> Report:
     # Both runs in their stored form, as the audit re-derives the verdict: an
     # in-memory result keeps the workflow's target order while the stored one is
     # sorted, and the equivalence rule compares them as tuples (beliefs-97075f).
-    _, view = ctx.single_view()
+    view = ctx.write_view()
     replayed = decode_run_closure(view.get(run_ref_of(outcome.run.address())))
     derive_scope(original, replayed, certification=None)
     verification = build_verification(original, replayed, specs={spec.identity: spec},

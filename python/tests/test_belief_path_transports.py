@@ -64,7 +64,7 @@ def test_mcp_write_replays_under_one_invocation_id(world):
     assert first["content"][0]["text"] == again["content"][0]["text"]
     assert first["structuredContent"]["invocation_id"] == "A" * 8
     from science.config import ReadContext
-    _, view = ReadContext.open(cfg).single_view()
+    view = ReadContext.open(cfg).write_view()
     assert sum(1 for n in view.iter_stored() if n.kind == "proposition") == 1
     # One act in the session's ledger, not two: the second call replayed.
     from beliefs.session import ledger_path

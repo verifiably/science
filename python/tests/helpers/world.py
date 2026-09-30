@@ -366,8 +366,8 @@ def unhold_fixture_dataset(cfg: ScienceConfig, ref: str) -> None:
     from beliefs.holdings.boundary import ActContext, delete
     from beliefs.root import holdings_seam
     from science.config import ReadContext
-    (root,) = cfg.world.corpus_roots
-    _, view = ReadContext.open(cfg).single_view()
+    root = cfg.write_root
+    view = ReadContext.open(cfg).write_view()
     (resource,) = stored.dataset_declaration(view.get(ref)).resources
     relative = f"{resource.digest.removeprefix('sha256:')}/{resource.name}"
     standing = tuple(stored.holdings_observation_value(n) for n in view.iter_stored()
@@ -509,10 +509,10 @@ def mint_fixture_run(cfg: ScienceConfig, spec_ref: str, dataset_ref: str, bundle
     from science.config import ReadContext
     code, entrypoint, targets = bundle
     ctx = ReadContext.open(cfg)
-    _, view = ctx.single_view()
+    view = ctx.write_view()
     spec = stored.analysis_spec_value(view.get(spec_ref), profile=cfg.profile)
     address = dataset_address(stored.dataset_declaration(view.get(dataset_ref)))
-    (root,) = cfg.world.corpus_roots
+    root = cfg.write_root
     outcome = execute_assessment_run(
         spec=spec, port=durable_operation_port(root, FIXTURE_AUTHORITY, profile=cfg.profile),
         boundary_policy=MINIMAL_POLICY,

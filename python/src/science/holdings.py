@@ -6,7 +6,6 @@ from __future__ import annotations
 from pathlib import Path
 
 from beliefs import stored
-from beliefs.corpus import ReadView
 from beliefs.dataset import ByteObservation, Held, admission_state, dataset_address
 from beliefs.holdings.adapter import DatasetAnswer, DatasetBlocked, dataset_observations
 from beliefs.holdings.receipt import derive_holdings
@@ -17,8 +16,8 @@ from beliefs.world.rules import binding_for
 from science.refusal import Refusal, Refused
 
 
-def reduced_heads(world, corpus_id: str):
-    """(active, blocked) from the world's held reducer over this corpus.
+def reduced_heads(world, corpus_ids: frozenset[str]):
+    """(active, blocked) from the world's held reducer over these corpora.
 
     Detached inspection, deliberately: the registered inspection reaches the
     engine's recovering `inspect_chain`, which may reclaim debris and append
@@ -27,32 +26,45 @@ def reduced_heads(world, corpus_id: str):
     ledger never saw. Pending evidence is read as pending."""
     seam = log_seam()
     active, blocked, _ = derive_holdings(
-        world, frozenset({corpus_id}), binding_for(holdings_rule_bundle()),
+        world, corpus_ids, binding_for(holdings_rule_bundle()),
         chain_view=seam.inspect_detached, state_facts=seam.state_facts,
     )
     return active, blocked
 
 
-def reduced_observations(view: ReadView, world, corpus_id: str) -> dict[str, DatasetAnswer | DatasetBlocked]:
-    """The reduction's answer for every dataset record that has an address."""
-    active, blocked = reduced_heads(world, corpus_id)
+def reduced_observations(views, world) -> dict[str, DatasetAnswer | DatasetBlocked]:
+    """The reduction's answer for every dataset record any mount holds: one
+    store, whichever corpus declared the dataset."""
+    active, blocked = reduced_heads(world, frozenset(corpus_id for corpus_id, _ in views))
     answers: dict[str, DatasetAnswer | DatasetBlocked] = {}
-    for node in view.iter_stored():
-        if node.kind != "dataset":
-            continue
-        declaration = stored.dataset_declaration(node)
-        address = dataset_address(declaration)
-        if address is not None:
-            answers[address] = dataset_observations(declaration, active, blocked)
+    for _, view in views:
+        for node in view.iter_stored():
+            if node.kind != "dataset":
+                continue
+            declaration = stored.dataset_declaration(node)
+            address = dataset_address(declaration)
+            if address is not None:
+                answers[address] = dataset_observations(declaration, active, blocked)
     return answers
 
 
-def found_observations(view: ReadView, world, corpus_id: str) -> dict[str, tuple[ByteObservation, ...]]:
+def dataset_at(views, address: str):
+    """(corpus id, dataset record) declaring `address` in any mount, or None.
+    A dataset's id derives from its content, so one address has one record
+    world-wide; `dataset` refuses to mint a second."""
+    for corpus_id, view in views:
+        for node in view.iter_stored():
+            if node.kind == "dataset" and dataset_address(stored.dataset_declaration(node)) == address:
+                return corpus_id, node
+    return None
+
+
+def found_observations(views, world) -> dict[str, tuple[ByteObservation, ...]]:
     """Address -> the reduced Found observations; blocked and empty answers
     are absent from the mapping, which is what `Availability` wants."""
     return {
         address: answer.observations
-        for address, answer in reduced_observations(view, world, corpus_id).items()
+        for address, answer in reduced_observations(views, world).items()
         if isinstance(answer, DatasetAnswer) and answer.observations
     }
 
@@ -71,8 +83,8 @@ def held_path_for(store_root: Path, store_id: str, observations: tuple[ByteObser
                           f"{sorted(o.location for o in observations)}"))
 
 
-def held_path(view: ReadView, world, corpus_id: str, store_root: Path, store_id: str, address: str) -> Path:
-    answer = reduced_observations(view, world, corpus_id).get(address)
+def held_path(views, world, store_root: Path, store_id: str, address: str) -> Path:
+    answer = reduced_observations(views, world).get(address)
     if isinstance(answer, DatasetBlocked):
         raise Refused(Refusal("invalid-input",
                               f"{address} is blocked at {answer.locations}: {answer.reasons}"))
@@ -81,12 +93,12 @@ def held_path(view: ReadView, world, corpus_id: str, store_root: Path, store_id:
     return held_path_for(store_root, store_id, answer.observations)
 
 
-def is_held(view: ReadView, world, corpus_id: str, node) -> bool:
+def is_held(views, world, node) -> bool:
     declaration = stored.dataset_declaration(node)
     address = dataset_address(declaration)
     if address is None:
         return False
-    answer = reduced_observations(view, world, corpus_id).get(address)
+    answer = reduced_observations(views, world).get(address)
     if not isinstance(answer, DatasetAnswer):
         return False
     return isinstance(admission_state(declaration, answer.observations), Held)

@@ -11,7 +11,7 @@ def test_claim_types_under_the_plan_and_mints(certified_work):
     with open_rig(build_fixture_world_with_contract(certified_work), ("claim",)) as (d, ctx):
         out = d.invoke("claim", dict(BASE))
         assert "[proposition] proposition:concept-disease-stage-affects-protein-phf19" in out.text
-        _, view = ctx.single_view()
+        view = ctx.write_view()
         node = view.get("proposition:concept-disease-stage-affects-protein-phf19")
         assert node.facets["proposition"]["operator"] == "testing/affects-concept-protein"
 

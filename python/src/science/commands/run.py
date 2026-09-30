@@ -31,11 +31,11 @@ def now() -> str:
 
 def prepare(ctx, spec_ref: str, dataset_ref: str, code: str, entrypoint: str, targets) -> dict:
     """Everything the boundary needs, validated; shared with verify."""
-    _, view = ctx.single_view()
+    view = ctx.write_view()
     if not view.holds(spec_ref):
-        _refuse(f"spec {spec_ref!r} is not in the corpus")
+        ctx.not_held(spec_ref)
     if not view.holds(dataset_ref):
-        _refuse(f"dataset {dataset_ref!r} is not in the corpus")
+        ctx.not_held(dataset_ref)
     try:
         spec = stored.analysis_spec_value(view.get(spec_ref), profile=ctx.config.profile)
         address = dataset_address(stored.dataset_declaration(view.get(dataset_ref)))
@@ -80,5 +80,5 @@ def handle(ctx, writer, *, spec, dataset, code, entrypoint, targets, cores=None)
         # dispatcher normalizes it to `kernel-refused` carrying the reason.
         raise KernelRefusalValue(outcome)
     assert isinstance(outcome, RunMinted)
-    _, view = ctx.single_view()
+    view = ctx.write_view()
     return (record_block(view.get(run_ref(outcome.run.address()))),)

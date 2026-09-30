@@ -8,6 +8,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
+from typing import NoReturn
 
 from beliefs.contract.domain import DomainContract
 from beliefs.corpus import ReadView
@@ -335,15 +336,32 @@ class ReadContext:
                                   f"the belief path reads exactly one corpus; the config names {len(views)}"))
         return views[0]
 
-    def snapshot(self):
+    def write_view(self) -> ReadView:
+        """The write root's view, opened now: what a write command reads the
+        records it is given in (spec §5.5, part 3)."""
+        return ReadView.opened_at(self.config.write_root)
+
+    def not_held(self, ref: str) -> NoReturn:
+        """Refuse a ref the write root does not hold, naming the read mount that
+        does: a person who passed an mm30 record learns where it is."""
+        elsewhere = [corpus_id_at(root) for root in self.config.world.corpus_roots
+                     if root != self.config.write_root and ReadView.opened_at(root).holds(ref)]
+        where = (f"; read mount {', '.join(elsewhere)} holds it, and this command reads the write root"
+                 if elsewhere else "")
+        raise Refused(Refusal("invalid-input", f"{ref!r} is not in the corpus{where}"))
+
+    def dataset_at(self, address: str):
+        from science.holdings import dataset_at
+        return dataset_at(self.read_views(), address)
+
+    def snapshot(self, profile: ProfileSpec | None = None):
         from science.vocabulary import snapshot
-        _, view = self.single_view()
-        return snapshot(self.config.profile, view, self.config.store_root, self.store_id(), self.observations())
+        return snapshot(self.config.profile if profile is None else profile, self.read_views(),
+                        self.config.store_root, self.store_id(), self.observations())
 
     def observations(self):
         from science.holdings import found_observations
-        corpus_id, view = self.single_view()
-        return found_observations(view, self.world, corpus_id)
+        return found_observations(self.read_views(), self.world)
 
     def store_id(self) -> str:
         """The configured store's verified identity, read from its genesis by
@@ -357,13 +375,11 @@ class ReadContext:
 
     def held_path(self, address: str) -> Path:
         from science.holdings import held_path
-        corpus_id, view = self.single_view()
-        return held_path(view, self.world, corpus_id, self.config.store_root, self.store_id(), address)
+        return held_path(self.read_views(), self.world, self.config.store_root, self.store_id(), address)
 
     def is_held(self, node) -> bool:
         from science.holdings import is_held
-        corpus_id, view = self.single_view()
-        return is_held(view, self.world, corpus_id, node)
+        return is_held(self.read_views(), self.world, node)
 
     def coordination(self):
         """A live resolver over every configured root, each under its own
@@ -376,9 +392,8 @@ class ReadContext:
         require_coordination_pinned(self.config)
         return CoordinationResolver(self._profiles)
 
-    def pins(self):
-        (root,) = self.config.world.corpus_roots
-        return load_manifest(root).profile
+    def pins(self, root: Path | None = None):
+        return load_manifest(self.config.write_root if root is None else root).profile
 
     def epoch_identity(self, *, absent: str | None = None) -> str:
         """The current epoch's packaging identity, or `absent` when none is
