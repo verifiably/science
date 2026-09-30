@@ -40,10 +40,33 @@ class Dispatcher:
         self._selection = selection
         self._lock = threading.Lock()  # serializes write-class steps 4-7
 
+    @property
+    def selection(self):
+        """The endpoint's current project: an unpinned address, or None (spec §5.1)."""
+        return self._selection
+
     def _context(self):
         """The read context a handler receives: the dispatcher's, with the
         selection standing when the invocation runs."""
         return dataclasses.replace(self._ctx, selection=self._selection)
+
+    def _read_context(self, decl: Declaration, project):
+        """The context a read handler receives. `project` is the invocation's
+        protocol field (spec §4.2): offered on `selects` commands only, resolved
+        here, and binding this invocation alone — the endpoint's selection is
+        untouched, and the handler never sees the raw value."""
+        if project is None:
+            return self._context()
+        if type(project) is not str:
+            raise Refused(Refusal("invalid-input", "project must be a string"))
+        if not decl.selects:
+            raise Refused(Refusal(
+                "invalid-input",
+                f"`project` binds a command that enumerates through the current project; {decl.name} does not",
+            ))
+        from science.coordination import resolve_project_ref
+
+        return dataclasses.replace(self._ctx, selection=resolve_project_ref(self._ctx, project))
 
     def invoke(
         self,
@@ -52,6 +75,7 @@ class Dispatcher:
         *,
         invocation_id: str | None = None,
         cursor: str | None = None,
+        project: str | None = None,
     ) -> Outcome:
         valid_iid = type(invocation_id) is str and INVOCATION_ID_RE.fullmatch(invocation_id) is not None
         iid = invocation_id if valid_iid else mint_token()
@@ -68,12 +92,15 @@ class Dispatcher:
             if not isinstance(inputs, Mapping):
                 raise Refused(Refusal("invalid-input", "inputs must be a mapping"))
             if cursor is not None:
-                return self._continue(command, inputs, decode(cursor), iid)
+                return self._continue(command, inputs, decode(cursor), iid, project)
             assert decl is not None
             canonical = canonicalize(decl, inputs)
             if decl.write_class.kind != "read-only":
+                if project is not None:
+                    raise Refused(Refusal(
+                        "invalid-input", "no write takes `project`; a write binds to the session's selection"))
                 return self._invoke_write(decl, canonical, iid)
-            report = self._handlers[decl.name](self._context(), **canonical)
+            report = self._handlers[decl.name](self._read_context(decl, project), **canonical)
             return Outcome(self._render(decl, canonical, report, (0, 0)), iid)
         except Refused as error:
             raise Refused(error.refusal, iid) from None
@@ -103,8 +130,12 @@ class Dispatcher:
         inputs: Mapping[str, object],
         cursor: ReadCursor | WriteCursor,
         iid: str,
+        project: str | None,
     ) -> Outcome:
         if isinstance(cursor, WriteCursor):
+            if project is not None:
+                raise Refused(Refusal(
+                    "invalid-input", "no write takes `project`; a write binds to the session's selection"))
             return self._continue_write(command, cursor, iid)
         decl = self._decls.get(cursor.command)
         if decl is None:
@@ -114,7 +145,7 @@ class Dispatcher:
         canonical = canonicalize(decl, inputs)
         if input_digest(canonical) != cursor.input_digest:
             raise Refused(Refusal("input-mismatch", "cursor was issued for different inputs"))
-        report = self._handlers[decl.name](self._context(), **canonical)
+        report = self._handlers[decl.name](self._read_context(decl, project), **canonical)
         if report_digest(report) != cursor.report_digest:
             raise Refused(Refusal("stale-cursor", "the world moved; re-run the command"))
         self._check_position(report, cursor.block, cursor.offset)

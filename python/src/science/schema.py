@@ -12,7 +12,7 @@ NAME_RE = re.compile(r"^[a-z][a-z0-9]*(-[a-z0-9]+)*$")
 INPUT_NAME_RE = re.compile(r"^[a-z][a-z0-9]*(_[a-z0-9]+)*$")
 MAX_NAME_BYTES = 32
 RESERVED_COMMANDS = frozenset({"continue", "serve", "mcp", "adapters", "build"})
-RESERVED_INPUTS = frozenset({"cursor", "invocation_id", "view", "session", "config"})
+RESERVED_INPUTS = frozenset({"cursor", "invocation_id", "view", "session", "config", "project"})
 INPUT_TYPES = frozenset({"string", "int", "bool", "enum", "list-of-string"})
 WRITE_CLASS_KINDS = frozenset({"read-only", "coordination", "mints", "publishes"})
 SCHEMA_VERSION = 1
@@ -58,6 +58,9 @@ class Declaration:
     inputs: tuple[InputSpec, ...]
     reads: tuple[str, ...]
     directory: Path
+    # The command enumerates through the current project (coordination design
+    # §4.2): it reads the selection and accepts the `project` protocol field.
+    selects: bool = False
 
 
 def handler_module(name: str) -> str:
@@ -199,6 +202,11 @@ def load_declaration(dir_path: Path, *, kind_acts: Mapping[str, frozenset[str]],
              and all(type(k) is str and type(v) is str for k, v in routes_raw.items()),
              path, "write.routes", "must be a table of kind = \"route\" strings")
     write_class = _parse_write_class(write_raw, routes_raw, path, kind_acts, contract_kinds)
+    selects = raw.get("selects", False)
+    _require(type(selects) is bool, path, "selects", "must be a bool")
+    _require(not selects or write_class.kind == "read-only", path, "selects",
+             "only a read-only command enumerates through the current project; "
+             "a write binds to the session's selection")
     reads_tbl = raw.get("reads", {})
     _require(type(reads_tbl) is dict, path, "reads", "must be a table")
     _require(set(reads_tbl) <= {"families"}, path, "reads",
@@ -213,10 +221,10 @@ def load_declaration(dir_path: Path, *, kind_acts: Mapping[str, frozenset[str]],
     _require(type(inputs_tbl) is dict, path, "inputs", "must be a table")
     inputs = _parse_inputs(inputs_tbl, path)
     known_top = {"schema_version", "name", "purpose", "write_class", "write",
-                 "output_budget", "inputs", "reads"}
+                 "output_budget", "inputs", "reads", "selects"}
     extra = set(raw) - known_top
     _require(not extra, path, "command.toml", f"unknown keys {sorted(extra)}")
-    return Declaration(name, purpose, write_class, budget, inputs, reads, dir_path)
+    return Declaration(name, purpose, write_class, budget, inputs, reads, dir_path, selects)
 
 
 def load_command_tree(root: Path, *, kind_acts, contract_kinds) -> tuple[Declaration, ...]:

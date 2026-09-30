@@ -274,3 +274,37 @@ def test_nested_list_enum_choice_is_a_declaration_error(tmp_path):
     d = write_command(tmp_path, "st2", toml)
     with pytest.raises(DeclarationError):
         load_declaration(d, kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)
+
+
+def test_selects_loads_on_a_read_only_declaration(tmp_path):
+    plain = load_declaration(write_command(tmp_path, "status", GOOD),
+                             kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)
+    assert plain.selects is False
+    toml = GOOD.replace('name = "status"', 'name = "peek"\nselects = true')
+    decl = load_declaration(write_command(tmp_path, "peek", toml),
+                            kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)
+    assert decl.selects is True
+
+
+def test_selects_on_a_write_is_a_build_refusal(tmp_path):
+    toml = GOOD.replace('write_class = "read-only"', 'write_class = "coordination"\nselects = true')
+    with pytest.raises(DeclarationError) as caught:
+        load_declaration(write_command(tmp_path, "status", toml),
+                         kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)
+    assert caught.value.field == "selects"
+
+
+def test_selects_must_be_a_bool(tmp_path):
+    toml = GOOD.replace('name = "status"', 'name = "status"\nselects = "yes"')
+    with pytest.raises(DeclarationError) as caught:
+        load_declaration(write_command(tmp_path, "status", toml),
+                         kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)
+    assert caught.value.field == "selects"
+
+
+def test_project_is_a_reserved_input_name(tmp_path):
+    toml = GOOD.replace("[inputs.corpus]", "[inputs.project]")
+    with pytest.raises(DeclarationError) as caught:
+        load_declaration(write_command(tmp_path, "status", toml),
+                         kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)
+    assert caught.value.field == "inputs.project"

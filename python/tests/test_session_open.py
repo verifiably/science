@@ -112,3 +112,19 @@ def test_read_context_resolver_needs_coordination(certified_work):
         ctx.coordination()
     assert caught.value.refusal.code == "invalid-input"
     assert "coordination = false" in caught.value.refusal.message
+
+
+def test_a_sessionless_resolver_names_a_corpus_that_does_not_pin_coordination(certified_work):
+    from dataclasses import replace
+
+    from helpers.world import PROFILE
+    from science.config import ReadContext
+
+    bare = build_world_without_coordination(certified_work)
+    ctx = ReadContext.open(replace(bare, profile=PROFILE, coordination=2))
+    with pytest.raises(Refused) as caught:
+        ctx.coordination()
+    refusal = caught.value.refusal
+    assert refusal.code == "invalid-input"
+    assert str(bare.world.corpus_roots[0]) in refusal.message
+    assert "coordination = false" in refusal.message

@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from beliefs.corpus import ReadView
-from beliefs.errors import ProfileError
+from beliefs.errors import ManifestMalformed, ManifestMissing, ProfileError
 from beliefs.profile import (
     ProfileSpec,
     compile_profile,
@@ -142,6 +142,34 @@ def resolve_config_path(cli_value: str | None, env: Mapping[str, str] | None = N
     raise AssertionError
 
 
+def require_coordination_pinned(config: ScienceConfig) -> None:
+    """Spec §6: a configuration that asks for coordination of a corpus whose
+    manifest does not pin it is refused by name. The kernel would refuse the
+    same state as a bare pin mismatch, which the CLI can only render as an
+    internal error; every pre-coordination configuration upgraded with
+    `coordination = N` reaches this. A root whose manifest is missing or
+    malformed is left to the kernel's own named `SessionRefused`."""
+    namespace = shipped_coordination(config.coordination).namespace
+    wanted = f"{namespace}:{config.profile.activated_contracts[namespace]}"
+    for root in config.world.corpus_roots:
+        try:
+            pinned = load_manifest(root).profile.domains.get(namespace)
+        except (ManifestMissing, ManifestMalformed):
+            continue
+        if pinned is None:
+            raise Refused(Refusal(
+                "invalid-input",
+                f"the configuration asks for coordination the corpus at {root} does not pin; "
+                "set `coordination = false` for a corpus adopted before coordination",
+            ))
+        if pinned != wanted:
+            raise Refused(Refusal(
+                "invalid-input",
+                f"the corpus at {root} pins coordination contract {pinned}, not the one "
+                f"`coordination = {config.coordination}` compiles; set `coordination` to the version it pins",
+            ))
+
+
 @dataclass(frozen=True)
 class ReadContext:
     world: object
@@ -231,6 +259,9 @@ class ReadContext:
         if self.config.coordination is None:
             raise Refused(Refusal("invalid-input",
                                   "coordination = false in this configuration; there is no resolver to ask"))
+        # The resolver checks each mount's pins and raises a bare ContractMismatch;
+        # refuse the one mismatch a configuration upgrade produces by name first.
+        require_coordination_pinned(self.config)
         return CoordinationResolver({root: self.config.profile for root in self.config.world.corpus_roots})
 
     def pins(self):

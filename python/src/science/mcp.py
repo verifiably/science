@@ -49,6 +49,11 @@ def tool_schema(declaration: Declaration) -> dict:
         "type": "string",
         "description": "Continuation cursor from a truncated result.",
     }
+    if declaration.selects:
+        properties["project"] = {
+            "type": "string",
+            "description": "Read through this project, by name or coord: address, for this call only.",
+        }
     input_schema = {
         "type": "object",
         "properties": properties,
@@ -271,7 +276,8 @@ def handle_request(request: object, dispatcher: Dispatcher, decls) -> dict | Non
         arguments = dict(raw_arguments)
         cursor = arguments.pop("cursor", None)
         invocation_id = arguments.pop("invocation_id", None)
-        for field, value in (("cursor", cursor), ("invocation_id", invocation_id)):
+        project = arguments.pop("project", None)
+        for field, value in (("cursor", cursor), ("invocation_id", invocation_id), ("project", project)):
             if field in raw_arguments and type(value) is not str:
                 return _invalid_params(request_id, f"{field} must be a string")
         try:
@@ -280,6 +286,7 @@ def handle_request(request: object, dispatcher: Dispatcher, decls) -> dict | Non
                 arguments,
                 invocation_id=invocation_id,
                 cursor=cursor,
+                project=project,
             )
         except Refused as error:
             structured = {"refusal": envelope(error.refusal)}

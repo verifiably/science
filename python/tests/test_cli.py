@@ -151,10 +151,10 @@ def test_read_dispatch_is_sessionless_and_writes_exact_text(certified_work, caps
         def __init__(self, declarations, handlers, context, session=None):
             assert session is None
 
-        def invoke(self, command, inputs, *, invocation_id=None, cursor=None):
+        def invoke(self, command, inputs, *, invocation_id=None, cursor=None, project=None):
             assert command == "status"
             assert inputs == {}
-            assert re.fullmatch(r"[0-9a-f]{32}", invocation_id) and cursor is None
+            assert re.fullmatch(r"[0-9a-f]{32}", invocation_id) and cursor is None and project is None
             return Outcome("dispatcher output", invocation_id)
 
     monkeypatch.setattr(cli, "Dispatcher", SessionlessDispatcher)

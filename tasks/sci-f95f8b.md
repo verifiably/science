@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: coordination-part2
 created: 2026-09-24T10:54:38Z
-updated: 2026-09-30T11:38:16Z
+updated: 2026-09-30T11:43:29Z
 started: 2026-09-30T11:01:17Z
 depends: [beliefs-cc0aea, beliefs-1148ad, beliefs-1af3fd, sci-c147e3]
 parent: sci-c5528e
@@ -35,3 +35,6 @@ Spec docs/specs/2026-09-24-coordination-command-set-design.md §3.7, §3.8, §4.
 - 2026-09-30T11:38:16Z (coordination-part2): Plan round 1 findings, all three verified and taken: (1) next opened its lookup view before the live capture, so a proposition minted in between was dropped under complete: true (probed: a view opened before a write does not hold the new record) — the view now opens after the capture, an unheld selected record is an internal error, two tests added; (2) project-show checked the selection before coordination, so coordination = false gave no-current-project — coordination() is now first; (3) the spec amendment said a refuse-after-select replays an internal error while the plan's test replays the block — amendment corrected: only a done close with no selection line errors on replay.
 - 2026-09-30T11:38:16Z (coordination-part2): parked (waiting on user, review): Re-review the revised part 2 plan at .worktrees/coordination-part2/docs/plans/2026-09-30-coordination-selection-and-reads.md (round 1's three findings taken: Task 7's handler and tests, Task 4's project-show, spec §4.1 and §5.5 amendments) and choose an execution method; then the agent runs tasks start sci-451329 in .worktrees/coordination-part2
   provenance: {"harness_session":"claude-code:2dfb2b90-3871-4afc-bd8c-8f7d26431d3c","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-09-30T11:43:29Z (coordination-part2): resumed
+  provenance: {"harness_session":"codex:01a0f21d-ccb2-7141-83c5-8d21fea93221","harness_session_source":"CODEX_SESSION_ID"}
+- 2026-09-30T11:43:29Z (coordination-part2): review: plan round 2 — verdict: accept; findings: none; reviewer: human

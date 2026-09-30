@@ -12,14 +12,14 @@ from science.dispatch import Dispatcher
 from science.findings import report_findings
 from science.refusal import Refusal, Refused, envelope
 
-_REQUEST_KEYS = frozenset({"command", "inputs", "invocation_id", "cursor"})
+_REQUEST_KEYS = frozenset({"command", "inputs", "invocation_id", "cursor", "project"})
 # Linux `sockaddr_un.sun_path` is 108 bytes including the terminating NUL, so
 # 107 are usable. `bind` past that raises a bare `OSError: AF_UNIX path too
 # long`, which says nothing about which path or what the limit is.
 MAX_SOCKET_PATH_BYTES = 107
 
 
-def _validated(request) -> tuple[str, dict, str | None, str | None]:
+def _validated(request) -> tuple[str, dict, str | None, str | None, str | None]:
     def refuse(message: str):
         raise Refused(Refusal("invalid-input", message))
 
@@ -36,11 +36,11 @@ def _validated(request) -> tuple[str, dict, str | None, str | None]:
         inputs = {}
     if not isinstance(inputs, dict):  # a list or scalar never becomes {}
         refuse("inputs must be an object or null")
-    invocation_id, cursor = request.get("invocation_id"), request.get("cursor")
-    for label, value in (("invocation_id", invocation_id), ("cursor", cursor)):
+    invocation_id, cursor, project = request.get("invocation_id"), request.get("cursor"), request.get("project")
+    for label, value in (("invocation_id", invocation_id), ("cursor", cursor), ("project", project)):
         if value is not None and not isinstance(value, str):
             refuse(f"{label} must be a string or null")
-    return command, inputs, invocation_id, cursor
+    return command, inputs, invocation_id, cursor, project
 
 
 def check_socket_path(socket_path: Path) -> None:
@@ -69,9 +69,9 @@ def service_server(dispatcher, socket_path: Path, on_close):
         def handle(self) -> None:
             for line in self.rfile:
                 try:
-                    command, inputs, invocation_id, cursor = _validated(json.loads(line))
-                    out = dispatcher.invoke(command, inputs,
-                                            invocation_id=invocation_id, cursor=cursor)
+                    command, inputs, invocation_id, cursor, project = _validated(json.loads(line))
+                    out = dispatcher.invoke(command, inputs, invocation_id=invocation_id,
+                                            cursor=cursor, project=project)
                     reply = {"ok": True, "text": out.text,
                              "invocation_id": out.invocation_id}
                 except json.JSONDecodeError as caught:

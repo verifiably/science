@@ -47,6 +47,12 @@ def _add_command(
                 kwargs["action"] = "append"
         parser.add_argument("--" + spec.name.replace("_", "-"), *_VOCABULARY_ALIASES.get(spec.name, ()), **kwargs)
 
+    if decl.selects:
+        parser.add_argument(
+            "--project", dest="project",
+            help="Read through this project, by name or coord: address, for this invocation only.",
+        )
+
 
 def _command_options() -> argparse.ArgumentParser:
     common = argparse.ArgumentParser(add_help=False)
@@ -128,6 +134,7 @@ def main(argv: list[str] | None = None) -> int:
             inputs,
             invocation_id=invocation_id,
             cursor=namespace.cursor,
+            project=getattr(namespace, "project", None),
         )
         sys.stdout.write(output.text)
         _json_line({"invocation_id": output.invocation_id})
