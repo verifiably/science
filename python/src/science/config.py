@@ -8,6 +8,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
+from beliefs.contract.domain import DomainContract
 from beliefs.corpus import ReadView
 from beliefs.errors import ManifestMalformed, ManifestMissing, ProfileError
 from beliefs.profile import (
@@ -29,7 +30,7 @@ _KEYS = (
     "world_root", "world_id", "corpus_roots", "operations_root", "domains", "contracts",
     "store_root", "coordination",
 )
-_OPTIONAL_KEYS = ("service_socket", "default_project")
+_OPTIONAL_KEYS = ("service_socket", "default_project", "write_root", "read_contracts")
 
 
 @dataclass(frozen=True)
@@ -40,10 +41,17 @@ class ScienceConfig:
     service_socket: Path
     store_root: Path
     coordination: int | None
+    # The one configured root the session writes (spec §6); the others are
+    # read mounts.
+    write_root: Path
     plans: tuple[OperatorPlan, ...] = ()
     # An unpinned beliefs.coordination.CoordinationAddress or None: the project a
     # launcher opens under and a CLI read falls back to with no live session.
     default_project: object = None
+    # What a read mount's pins may resolve against: the `contracts` documents,
+    # which the writer activates, then the `read_contracts` documents, which it
+    # never does.
+    available_contracts: tuple[DomainContract, ...] = ()
 
 
 def _refuse(message: str) -> None:
@@ -93,6 +101,11 @@ def load_config(path: Path) -> ScienceConfig:
         _refuse("config domains must be a list of strings")
     if type(raw["contracts"]) is not list or any(type(value) is not str for value in raw["contracts"]):
         _refuse("config contracts must be a list of strings")
+    if "write_root" in raw and type(raw["write_root"]) is not str:
+        _refuse("config write_root must be a string")
+    read_contracts = raw.get("read_contracts", [])
+    if type(read_contracts) is not list or any(type(value) is not str for value in read_contracts):
+        _refuse("config read_contracts must be a list of strings")
     if type(raw["store_root"]) is not str:
         _refuse("config store_root must be a string")
     coordination = raw["coordination"]
@@ -122,6 +135,12 @@ def load_config(path: Path) -> ScienceConfig:
         _refuse(f"config domains do not compile: {caught}")
     base = shipped_base_contract()
     local = [load_contract_document(located(value), base) for value in raw["contracts"]]
+    readable = [load_contract_document(located(value), base) for value in read_contracts]
+    activated = {contract.content_identity for contract, _ in local}
+    both = sorted(contract.namespace for contract, _ in readable if contract.content_identity in activated)
+    if both:
+        _refuse(f"config lists {both} in both contracts and read_contracts; a document is "
+                "activated for the writer or available to read mounts only")
     try:
         profile = compile_profile(
             base,
@@ -131,6 +150,16 @@ def load_config(path: Path) -> ScienceConfig:
     except ProfileError as caught:
         _refuse(f"config contracts do not compile: {caught}")
     plans = tuple(plan for _, plan in local if plan is not None)
+    corpus_roots = tuple(located(value) for value in raw["corpus_roots"])
+    if "write_root" in raw:
+        write_root = located(raw["write_root"])
+        if write_root not in corpus_roots:
+            _refuse(f"config write_root {write_root} is not one of corpus_roots")
+    elif len(corpus_roots) == 1:
+        (write_root,) = corpus_roots
+    else:
+        _refuse(f"config names {len(corpus_roots)} corpus_roots and no write_root; "
+                "name the one the session writes")
     operations_root = located(raw["operations_root"])
     # The socket defaults beside the operations root. AF_UNIX caps the path at
     # 107 bytes and a worktree checkout's operations root already exceeds it,
@@ -145,15 +174,17 @@ def load_config(path: Path) -> ScienceConfig:
         world=WorldConfig(
             world_root=located(raw["world_root"]),
             world_id=raw["world_id"],
-            corpus_roots=tuple(located(value) for value in raw["corpus_roots"]),
+            corpus_roots=corpus_roots,
         ),
         operations_root=operations_root,
         profile=profile,
         service_socket=service_socket,
         store_root=located(raw["store_root"]),
         coordination=coordination,
+        write_root=write_root,
         plans=plans,
         default_project=default_project,
+        available_contracts=tuple(contract for contract, _ in local + readable),
     )
 
 

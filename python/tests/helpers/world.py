@@ -72,6 +72,7 @@ def build_fixture_world(work: Path) -> ScienceConfig:
         service_socket=work / "ops" / "service.sock",
         store_root=store_root,
         coordination=COORDINATION,
+        write_root=corpus_root,
     )
 
 
@@ -90,7 +91,7 @@ def build_world_without_coordination(work: Path) -> ScienceConfig:
     STORE_IDS[work] = init_store_root(work / "store", authority=FIXTURE_AUTHORITY)
     return ScienceConfig(world=config, operations_root=work / "ops", profile=BARE_PROFILE,
                          service_socket=work / "ops" / "service.sock", store_root=work / "store",
-                         coordination=None)
+                         coordination=None, write_root=corpus_root)
 
 
 def _install_holdings_reducer(world) -> None:
@@ -231,6 +232,16 @@ def fixture_contract_document(work: Path) -> Path:
     return path
 
 
+def archive_contract_document(work: Path) -> Path:
+    """A second corpus-local contract, `archive`: the test contract under
+    another namespace, for a read mount the writer never activates (spec §9)."""
+    path = work / "archive.yaml"
+    path.write_text((TEST_CONTRACT % {"concepts": concept_list_address().removeprefix("dataset:"),
+                                      "levels": level_list_address().removeprefix("dataset:")})
+                    .replace("contract: testing", "contract: archive", 1))
+    return path
+
+
 def build_fixture_world_with_contract(work: Path, *, hold_concepts: bool = True,
                                       hold_levels: bool = True) -> ScienceConfig:
     """A world whose profile compiles the test contract, with the concept and
@@ -258,7 +269,8 @@ def build_fixture_world_with_contract(work: Path, *, hold_concepts: bool = True,
     _install_holdings_reducer(world)
     cfg = ScienceConfig(world=config, operations_root=work / "ops", profile=profile,
                         service_socket=work / "ops" / "service.sock", store_root=work / "store",
-                        coordination=COORDINATION, plans=(plan,))
+                        coordination=COORDINATION, write_root=corpus_root,
+                        plans=(plan,), available_contracts=(contract,))
     if hold_concepts:
         hold_fixture_dataset(cfg, "concepts.txt", CONCEPTS, "concept vocabulary")
     if hold_levels:

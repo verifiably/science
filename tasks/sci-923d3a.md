@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: coordination-part3
 created: 2026-09-24T10:54:38Z
-updated: 2026-09-30T16:05:54Z
+updated: 2026-09-30T20:09:24Z
 started: 2026-09-30T14:51:09Z
 depends: [beliefs-fe7149, beliefs-cc0aea, sci-f95f8b]
 parent: sci-c5528e
@@ -40,3 +40,4 @@ Spec §5.5 and §6: write_root and read_contracts; the per-mount profile rule in
 - 2026-09-30T16:05:53Z (coordination-part3): Plan round 2 finding verified and taken: CorpusWriter._refuse_ineligible reads eligibility through the writer's own view, so a read mount's dataset would pass spec/run and fail assess with EligibilityUnmet. Write-command dataset inputs stay in the write root (spec/run refuse a read mount's dataset naming it); dataset keeps refusing bytes any mount declares; cross-corpus inputs filed as beliefs-9ce6e4 (committed in beliefs cbcba20), and sci-0d00d2 now depends on it. Task 4's fixture walks claim → spec → run → assess → verify in the write root with the archive mounted, and next/belief read all three propositions. Rejected: blocking all of part 3 on beliefs-9ce6e4 — the read-across and config work do not need it.
 - 2026-09-30T16:05:53Z (coordination-part3): parked (waiting on user, review): Re-review the round-2 revision of .worktrees/coordination-part3/docs/plans/2026-09-30-coordination-multi-corpus.md (write-command datasets stay in the write root; beliefs-9ce6e4 filed for cross-corpus inputs; Task 4 walks run → assess → verify) and the §5.5 amendment, and choose an execution method; then the agent runs tasks start sci-e7e630 in .worktrees/coordination-part3
   provenance: {"harness_session":"claude-code:44b120ba-4c5c-4a3e-b096-03eca2443281","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-09-30T20:09:24Z (coordination-part3): review: plan round 3 — verdict: accept; findings: none; reviewer: human
