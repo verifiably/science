@@ -69,11 +69,13 @@ def test_protocol_options_are_scoped_to_the_verbs_that_consume_them():
         "command": "mcp",
         "mode": "serve",
         "config": Path("science.toml"),
+        "project": None,
     }
-    # `serve` consumes --config and nothing else (registered by Task 13).
+    # Launcher selection is scoped to `serve` and `mcp`.
     assert vars(parser.parse_args(["serve", "--config", "science.toml"])) == {
         "command": "serve",
         "config": Path("science.toml"),
+        "project": None,
     }
     for argv in (
         ["build", "--config", "science.toml"],

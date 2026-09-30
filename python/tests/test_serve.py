@@ -285,7 +285,7 @@ def test_serve_verb_binds_the_configured_socket(certified_work, short_tmp, monke
         def server_close(self):
             bound.append("closed")
 
-    def fake_build(config, socket_path, declarations=None, handlers=None, stderr=None):
+    def fake_build(config, socket_path, declarations=None, handlers=None, stderr=None, project=None):
         bound.append(socket_path)
         return FakeServer()
 

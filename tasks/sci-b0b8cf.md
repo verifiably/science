@@ -8,7 +8,7 @@ complexity: mid
 process: direct
 owner: coordination-part2
 created: 2026-09-30T11:25:02Z
-updated: 2026-09-30T12:36:07Z
+updated: 2026-09-30T12:40:29Z
 started: 2026-09-30T12:29:37Z
 completed: 2026-09-30T12:36:07Z
 depends: [sci-a66ca4]
@@ -24,3 +24,4 @@ step: "Task 4: `projects` and `project-show`"
 - 2026-09-30T12:29:37Z (coordination-part2): started
 - 2026-09-30T12:36:07Z (coordination-part2): done
 - 2026-09-30T12:36:07Z (coordination-part2): Added projects and project-show reads, adapters, and coverage for selection, divergence, and CLI/MCP parity
+- 2026-09-30T12:40:29Z (coordination-part2): review: impl round 1 — verdict: accept; findings: P3 2; reviewer: codex/gpt-6.1-sol

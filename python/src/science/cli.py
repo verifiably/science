@@ -18,6 +18,9 @@ from science.schema import Declaration
 EXIT_OK, EXIT_INTERNAL, EXIT_USAGE, EXIT_REFUSED = 0, 1, 2, 3
 
 
+_LAUNCHER_PROJECT_HELP = "Open the session under this project, by name or coord: address."
+
+
 # A declared input named for a shared CLI vocabulary option takes the
 # vocabulary's short names too, so the generated surface is the shared option
 # (ops docs/specs/2026-09-20-cli-conventions-design.md; tools/cli.toml).
@@ -72,9 +75,11 @@ def build_parser(decls) -> argparse.ArgumentParser:
     subparsers.add_parser("build", help="Build the world from its corpora")
     serve_parser = subparsers.add_parser("serve", help="Serve the world over HTTP")
     serve_parser.add_argument("--config", type=Path)
+    serve_parser.add_argument("--project", help=_LAUNCHER_PROJECT_HELP)
     mcp = subparsers.add_parser("mcp", help="Serve the world over MCP on stdio")
     mcp.add_argument("mode", choices=["serve"])
     mcp.add_argument("--config", type=Path)
+    mcp.add_argument("--project", help=_LAUNCHER_PROJECT_HELP)
     adapters = subparsers.add_parser("adapters", help="Build the corpus adapters")
     adapters.add_argument("mode", choices=["build"])
     adapters.add_argument(
@@ -199,7 +204,7 @@ def _framework_verb(namespace) -> int:
         from science.mcp import serve
 
         with _stop_signals_exit():
-            serve(resolve_config_path(namespace.config))
+            serve(resolve_config_path(namespace.config), project=namespace.project)
         return EXIT_OK
     if namespace.command == "build":
         from science.adapters import preflight_build
@@ -213,7 +218,7 @@ def _framework_verb(namespace) -> int:
 
         config = load_config(resolve_config_path(namespace.config))
         with _stop_signals_exit():
-            server = build_server(config, config.service_socket)
+            server = build_server(config, config.service_socket, project=namespace.project)
             try:
                 server.serve_forever()
             finally:

@@ -366,10 +366,10 @@ def _read_frame(stream):
     return frame
 
 
-def serve(config_path: Path, stdin=None, stdout=None, stderr=None) -> None:
+def serve(config_path: Path, stdin=None, stdout=None, stderr=None, project=None) -> None:
     from science.config import ReadContext, load_config
     from science.loader import production_tree, resolve_handlers
-    from science.serve import check_socket_path, service_server
+    from science.serve import check_socket_path, initial_selection, service_server
     from science.session import open_session
 
     stdin = sys.stdin.buffer if stdin is None else stdin
@@ -377,10 +377,12 @@ def serve(config_path: Path, stdin=None, stdout=None, stderr=None) -> None:
     declarations = production_tree()
     config = load_config(config_path)
     check_socket_path(config.service_socket)
+    read_context = ReadContext.open(config)
+    selection = initial_selection(config, read_context, project)
     # One attended session for the process lifetime. A world config naming
     # other than exactly one corpus root raises SessionRefused here; that is a
     # launcher misconfiguration and propagates, never a command refusal.
-    session = open_session(config)
+    session = open_session(config, project=selection)
     server, serving = None, False
     try:
         report_findings(session.findings, reported_by=session.session_id,
@@ -388,8 +390,9 @@ def serve(config_path: Path, stdin=None, stdout=None, stderr=None) -> None:
         dispatcher = Dispatcher(
             declarations,
             resolve_handlers(declarations),
-            ReadContext.open(config),
+            read_context,
             session=session,
+            selection=selection,
         )
         # One live session per world (projects design §5.1a): CLI writes and, in
         # part 2, the selection query reach this session over the same socket

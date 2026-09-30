@@ -748,7 +748,7 @@ def test_serve_holds_one_attended_session_and_closes_it(certified_work, monkeypa
     captured = []
 
     class CapturingDispatcher:
-        def __init__(self, declarations, handlers, context, session=None):
+        def __init__(self, declarations, handlers, context, session=None, selection=None):
             captured.append(session)
 
     monkeypatch.setattr(mcp, "Dispatcher", CapturingDispatcher)
@@ -797,10 +797,10 @@ def test_cli_mcp_serve_resolves_config_and_starts_server(monkeypatch):
     from science.cli import main
 
     captured = []
-    monkeypatch.setattr(mcp, "serve", captured.append)
+    monkeypatch.setattr(mcp, "serve", lambda path, project=None: captured.append((path, project)))
 
     assert main(["mcp", "serve", "--config", "relative-science.toml"]) == 0
-    assert captured == [Path("relative-science.toml")]
+    assert captured == [(Path("relative-science.toml"), None)]
 
 
 def test_a_subordinate_mint_without_a_selection_refuses_over_stdio_and_replays(certified_work, short_tmp):

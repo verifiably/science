@@ -127,7 +127,18 @@ def service_server(dispatcher, socket_path: Path, on_close):
     return Server(str(socket_path), Handler)
 
 
-def serve(config: ScienceConfig, socket_path: Path, declarations=None, handlers=None, stderr=None):
+def initial_selection(config: ScienceConfig, read_context: ReadContext, project: str | None):
+    """The session's selection at open (projects design §5.1): the launcher's
+    `--project`, by name or address, else the configuration's `default_project`,
+    else none."""
+    if project is None:
+        return config.default_project
+    from science.coordination import resolve_project_ref
+
+    return resolve_project_ref(read_context, project)
+
+
+def serve(config: ScienceConfig, socket_path: Path, declarations=None, handlers=None, stderr=None, project=None):
     """`declarations`/`handlers` default to the production tree; tests inject
     their synthetic set here — production code never imports test modules."""
     from science.session import open_session
@@ -140,12 +151,14 @@ def serve(config: ScienceConfig, socket_path: Path, declarations=None, handlers=
     # Every pre-session refusal happens before the session exists; after it
     # is opened, any constructor failure closes it before propagating.
     check_socket_path(socket_path)
-    session = open_session(config)
+    read_context = ReadContext.open(config)
+    selection = initial_selection(config, read_context, project)
+    session = open_session(config, project=selection)
     try:
         report_findings(session.findings, reported_by=session.session_id,
                         stream=sys.stderr if stderr is None else stderr)
-        dispatcher = Dispatcher(declarations, handlers, ReadContext.open(config),
-                                session=session)
+        dispatcher = Dispatcher(declarations, handlers, read_context,
+                                session=session, selection=selection)
         return service_server(dispatcher, socket_path, on_close=session.close)
     except BaseException:
         session.close()

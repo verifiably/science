@@ -29,7 +29,7 @@ _KEYS = (
     "world_root", "world_id", "corpus_roots", "operations_root", "domains", "contracts",
     "store_root", "coordination",
 )
-_OPTIONAL_KEYS = ("service_socket",)
+_OPTIONAL_KEYS = ("service_socket", "default_project")
 
 
 @dataclass(frozen=True)
@@ -41,10 +41,28 @@ class ScienceConfig:
     store_root: Path
     coordination: int | None
     plans: tuple[OperatorPlan, ...] = ()
+    # An unpinned beliefs.coordination.CoordinationAddress or None: the project a
+    # launcher opens under and a CLI read falls back to with no live session.
+    default_project: object = None
 
 
 def _refuse(message: str) -> None:
     raise Refused(Refusal("invalid-input", message))
+
+
+def _project_address(value: object):
+    """`default_project` is an address, never a name: names are content and may
+    collide or change (coordination design §6)."""
+    from beliefs.coordination import CoordinationAddress
+
+    try:
+        address = CoordinationAddress.parse(value)
+    except ValueError:
+        address = None
+    if address is None or address.local is not None or address.revision is not None:
+        _refuse("config default_project must be a project address, coord:<project>; "
+                "a name is content and may change")
+    return address
 
 
 def load_config(path: Path) -> ScienceConfig:
@@ -82,6 +100,12 @@ def load_config(path: Path) -> ScienceConfig:
         coordination = None
     elif type(coordination) is not int or coordination < 1:
         _refuse("config coordination must be a coordination contract version (an integer) or false")
+    default_project = None
+    if "default_project" in raw:
+        if coordination is None:
+            _refuse("config default_project needs a resolver, and this configuration sets "
+                    "`coordination = false`")
+        default_project = _project_address(raw["default_project"])
     if not _WORLD_ID_RE.fullmatch(raw["world_id"]):
         _refuse("config world_id must be 32 lowercase hex characters")
     base_dir = path.resolve().parent
@@ -129,6 +153,7 @@ def load_config(path: Path) -> ScienceConfig:
         store_root=located(raw["store_root"]),
         coordination=coordination,
         plans=plans,
+        default_project=default_project,
     )
 
 

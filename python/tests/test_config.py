@@ -271,3 +271,23 @@ def test_relative_science_config_resolves_against_cwd_and_is_not_discovery(tmp_p
     assert resolve_config_path(None, {"SCIENCE_CONFIG": "science.toml"}) == Path("science.toml")
     loaded = load_config(resolve_config_path(None, {"SCIENCE_CONFIG": "science.toml"}))
     assert loaded.world.corpus_roots == (tmp_path / "corpora" / "one",)
+
+
+def test_default_project_is_an_unpinned_project_address(tmp_path):
+    address = "coord:" + "a" * 32
+    cfg = load_config(write_config(tmp_path, extra=f'default_project = "{address}"\n'))
+    assert str(cfg.default_project) == address
+    assert load_config(write_config(tmp_path)).default_project is None
+
+
+@pytest.mark.parametrize("value", ['"health"', f'"coord:{"a" * 32}/{"b" * 32}"',
+                                   f'"coord:{"a" * 32}@{"c" * 32}"', "3"])
+def test_default_project_that_is_not_a_project_address_refuses(tmp_path, value):
+    refusal = assert_invalid_config(write_config(tmp_path, extra=f"default_project = {value}\n"))
+    assert "default_project" in refusal.message
+
+
+def test_default_project_without_coordination_refuses_naming_the_setting(tmp_path):
+    refusal = assert_invalid_config(write_config(
+        tmp_path, coordination="false", extra=f'default_project = "coord:{"a" * 32}"\n'))
+    assert "coordination = false" in refusal.message

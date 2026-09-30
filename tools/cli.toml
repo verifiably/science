@@ -1223,6 +1223,7 @@ summary = "Serve the world over HTTP"
 protocol = "server on stdio or a socket"
 options = [
   { shared = "config", value = "path" },
+  { names = ["--project"], value = "string" },
 ]
 
 [[cli.science.commands]]
@@ -1232,6 +1233,7 @@ protocol = "server on stdio or a socket"
 args = [{ name = "mode", value = "enum", values = ["serve"], required = true }]
 options = [
   { shared = "config", value = "path" },
+  { names = ["--project"], value = "string" },
 ]
 
 [[cli.science.commands]]
