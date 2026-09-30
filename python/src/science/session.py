@@ -1,7 +1,7 @@
 """The one place a science launcher opens its attended session."""
 from __future__ import annotations
 
-from science.config import ScienceConfig, mount_profiles, require_coordination_pinned
+from science.config import ScienceConfig, mount_profiles, require_write_root_pins
 from science.refusal import Refusal, Refused
 
 
@@ -15,9 +15,8 @@ def open_session(config: ScienceConfig, project=None):
     from beliefs.errors import ProjectNotResolvable
     from beliefs.session import open_attended_session
 
-    if config.coordination is not None:
-        require_coordination_pinned(config)
-    elif project is not None:
+    require_write_root_pins(config)
+    if config.coordination is None and project is not None:
         raise Refused(Refusal(
             "invalid-input", "coordination = false in this configuration; no project can be selected"))
     try:

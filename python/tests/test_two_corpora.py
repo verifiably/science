@@ -5,7 +5,6 @@ import json
 
 import pytest
 
-from beliefs.errors import ContractMismatch
 from beliefs.profile import compile_profile, shipped_base_contract, shipped_coordination, shipped_domain_contract
 from beliefs.world import WorldConfig
 from helpers.world import (
@@ -121,8 +120,16 @@ def test_activating_read_contracts_in_the_writer_is_refused_by_the_write_root_pi
               for name in ("testing.yaml", "archive.yaml")]
     widened = compile_profile(base, [shipped_domain_contract(ns) for ns in DOMAINS] + loaded,
                               coordination=shipped_coordination(COORDINATION))
-    with pytest.raises(ContractMismatch):
-        open_session(dataclasses.replace(world, profile=widened))
+    widened_config = dataclasses.replace(world, profile=widened)
+    with pytest.raises(Refused) as caught:
+        open_session(widened_config)
+    assert caught.value.refusal.code == "invalid-input"
+    assert "archive" in caught.value.refusal.message
+    assert "read_contracts" in caught.value.refusal.message
+    # A sessionless read asks the same pins before building its resolver.
+    with pytest.raises(Refused) as sessionless:
+        ReadContext.open(widened_config).coordination()
+    assert sessionless.value.refusal.message == caught.value.refusal.message
 
 
 def test_a_selected_record_no_configured_corpus_holds_refuses_naming_it(world):

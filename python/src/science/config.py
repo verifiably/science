@@ -56,7 +56,7 @@ class ScienceConfig:
     available_contracts: tuple[DomainContract, ...] = ()
 
 
-def _refuse(message: str) -> None:
+def _refuse(message: str) -> NoReturn:
     raise Refused(Refusal("invalid-input", message))
 
 
@@ -200,33 +200,40 @@ def resolve_config_path(cli_value: str | None, env: Mapping[str, str] | None = N
     raise AssertionError
 
 
-def require_coordination_pinned(config: ScienceConfig) -> None:
-    """Spec §6: a configuration that asks for coordination of a corpus whose
-    manifest does not pin it is refused by name. Only the write root is checked:
-    a read mount is mounted under whatever it pins. The kernel would refuse the
-    same state as a bare pin mismatch, which the CLI can only render as an
-    internal error; every pre-coordination configuration upgraded with
-    `coordination = N` reaches this. A root whose manifest is missing or
-    malformed is left to the kernel's own named `SessionRefused`."""
-    namespace = shipped_coordination(config.coordination).namespace
-    wanted = f"{namespace}:{config.profile.activated_contracts[namespace]}"
+def require_write_root_pins(config: ScienceConfig) -> None:
+    """Spec §6: the writer's stated profile must be exactly what the write
+    root's manifest pins, and a configuration that disagrees is refused by name.
+    Only the write root is checked: a read mount is mounted under whatever it
+    pins. The kernel would refuse the same state as a bare pin mismatch, which
+    the CLI can only render as an internal error. Two mistakes reach this: a
+    pre-coordination configuration upgraded with `coordination = N`, and a read
+    mount's contract listed under `contracts`, which activates it for the
+    writer, instead of `read_contracts`. A root whose manifest is missing or
+    malformed is left to the kernel's own named `SessionRefused` for a session,
+    and to `corpus_id_at` for a sessionless read."""
     root = config.write_root
     try:
-        pinned = load_manifest(root).profile.domains.get(namespace)
+        pinned = dict(load_manifest(root).profile.domains)
     except (ManifestMissing, ManifestMalformed):
         return
-    if pinned is None:
-        raise Refused(Refusal(
-            "invalid-input",
-            f"the configuration asks for coordination the corpus at {root} does not pin; "
-            "set `coordination = false` for a corpus adopted before coordination",
-        ))
-    if pinned != wanted:
-        raise Refused(Refusal(
-            "invalid-input",
-            f"the corpus at {root} pins coordination contract {pinned}, not the one "
-            f"`coordination = {config.coordination}` compiles; set `coordination` to the version it pins",
-        ))
+    wanted = {namespace: f"{namespace}:{identity}"
+              for namespace, identity in config.profile.activated_contracts.items()}
+    if config.coordination is not None:
+        namespace = shipped_coordination(config.coordination).namespace
+        if namespace not in pinned:
+            _refuse(f"the configuration asks for coordination the corpus at {root} does not pin; "
+                    "set `coordination = false` for a corpus adopted before coordination")
+        if pinned[namespace] != wanted[namespace]:
+            _refuse(f"the corpus at {root} pins coordination contract {pinned[namespace]}, not the one "
+                    f"`coordination = {config.coordination}` compiles; set `coordination` to the version it pins")
+    unpinned = sorted(set(wanted) - set(pinned))
+    if unpinned:
+        _refuse(f"the writer activates {unpinned}, which the write root {root} does not pin; a contract "
+                "only a read mount pins belongs in read_contracts, not contracts")
+    disagreeing = sorted(namespace for namespace in pinned if pinned[namespace] != wanted.get(namespace))
+    if disagreeing:
+        _refuse(f"the write root {root} pins {[pinned[namespace] for namespace in disagreeing]}, which the "
+                "writer's profile does not activate; the writer's profile is exactly the write root's pins")
 
 
 @dataclass(frozen=True)
@@ -382,7 +389,11 @@ class ReadContext:
         if self.config.coordination is None:
             raise Refused(Refusal("invalid-input",
                                   "coordination = false in this configuration; there is no resolver to ask"))
-        require_coordination_pinned(self.config)
+        # Every root's manifest read by name first: a resolver over a root
+        # without one would stop at a bare ManifestMissing (spec §5.5).
+        for root in self.config.world.corpus_roots:
+            corpus_id_at(root)
+        require_write_root_pins(self.config)
         return CoordinationResolver(self._profiles)
 
     def pins(self, root: Path | None = None):

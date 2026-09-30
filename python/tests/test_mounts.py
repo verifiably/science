@@ -69,6 +69,14 @@ def test_a_read_mount_without_a_manifest_refuses_naming_the_root(two):
         assert str(empty) in _refused(call)
 
 
+def test_a_write_root_without_a_manifest_refuses_naming_it_through_coordination(two):
+    """Final review: a sessionless `--project` read asks for the resolver, which
+    must refuse by name rather than reach a bare ManifestMissing (spec §5.5)."""
+    ctx = ReadContext.open(two)
+    (two.write_root / "corpus.yaml").rename(two.write_root / "corpus.yaml.moved")
+    assert str(two.write_root) in _refused(ctx.coordination)
+
+
 def test_the_session_opens_over_both_roots_though_the_archive_pins_no_coordination(two):
     with open_rig(two, ("project",)) as (dispatcher, _):
         mint_project(dispatcher, "health")
