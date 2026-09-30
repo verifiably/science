@@ -1,13 +1,15 @@
 ---
 id: sci-f95f8b
 title: "Coordination part 2: selection, project reads, selection query, next through the selection"
-status: todo
+status: doing
 priority: 1
 size: l
 complexity: high
 process: planned
+owner: main
 created: 2026-09-24T10:54:38Z
-updated: 2026-09-25T13:52:46Z
+updated: 2026-09-30T11:01:17Z
+started: 2026-09-30T11:01:17Z
 depends: [beliefs-cc0aea, beliefs-1148ad, beliefs-1af3fd, sci-c147e3]
 parent: sci-c5528e
 tags: [projects]
@@ -20,3 +22,5 @@ Spec docs/specs/2026-09-24-coordination-command-set-design.md §3.7, §3.8, §4.
 
 - 2026-09-24T14:26:54Z (main): From part 1's final review: with coordination = N on a corpus that does not pin coordination, sessionless reads through ReadContext.coordination() build a CoordinationResolver that checks pins and raises a bare ContractMismatch (internal-error). open_session now refuses this by name (science.session._require_coordination_pinned); part 2's projects, project-show and --project reads need the same named refusal.
 - 2026-09-25T13:52:46Z (main): All three beliefs seams landed on beliefs main (local, not pushed), 2026-09-25: beliefs-1af3fd CoordinationResolver.standing(kind, project=) (d0d964e); beliefs-1148ad session selection (7cf5d17): open_attended_session(..., project=), WriterSession.select_project(invocation_id, address) -> pinned CoordinationAddress | None, invocation_selection(invocation_id) -> SelectLine | None, the ledger's select line, LedgerReader.initial_project / InvocationRecord.selection / attributed_acts(), SelectLine exported from beliefs.session; beliefs-cc0aea cut 41 discharged: beliefs.world.live.evaluate_live_query(world, query) -> LiveSelection — render complete, absent and stamp (CaptureStamp: world_id, coverage). Part 2's plan can now be written.
+- 2026-09-30T11:01:17Z (main): started
+  provenance: {"harness_session":"claude-code:2dfb2b90-3871-4afc-bd8c-8f7d26431d3c","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
