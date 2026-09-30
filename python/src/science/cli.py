@@ -109,6 +109,43 @@ def _bind_invocation_id(value: object) -> str:
     return invocation_id
 
 
+_SELECTION_QUERY = b'{"query":"selection"}\n'
+_SELECTION_TIMEOUT_SECONDS = 5
+
+
+def _ambient_selection(config):
+    """Coordination design §5.2 steps 2–4: the live session's selection, asked
+    over the service socket, and the configuration's `default_project` only
+    when no session is live. A live session's null is the answer. Any failure
+    but "nothing listens" propagates: a live session this read could not ask
+    is not an absent one."""
+    from beliefs.coordination import CoordinationAddress
+
+    from science.serve import MAX_SOCKET_PATH_BYTES
+
+    if config.coordination is None:
+        return None  # no resolver: nothing can be selected
+    path = str(config.service_socket)
+    if len(path.encode()) > MAX_SOCKET_PATH_BYTES:
+        return config.default_project  # no launcher can bind it, so none is live
+    try:
+        with socket.socket(socket.AF_UNIX) as connection:
+            connection.settimeout(_SELECTION_TIMEOUT_SECONDS)
+            connection.connect(path)
+            connection.sendall(_SELECTION_QUERY)
+            reply = json.loads(connection.makefile().readline())
+    except (FileNotFoundError, ConnectionRefusedError):
+        return config.default_project
+    if type(reply) is not dict or set(reply) != {"project"}:
+        raise RuntimeError("the live session did not answer the selection query")
+    if reply["project"] is None:
+        return None
+    address = CoordinationAddress.parse(reply["project"])
+    if address.local is not None or address.revision is not None:
+        raise RuntimeError("the live session answered with something other than a project address")
+    return address
+
+
 def main(argv: list[str] | None = None) -> int:
     invocation_id = None
     try:
@@ -130,16 +167,20 @@ def main(argv: list[str] | None = None) -> int:
         if declaration.write_class.kind != "read-only":
             return _via_service(namespace, declaration, inputs)
         config = load_config(resolve_config_path(namespace.config))
+        project = getattr(namespace, "project", None)
         output = Dispatcher(
             declarations,
             resolve_handlers(declarations),
             ReadContext.open(config),
+            # An explicit --project binds this invocation (step 1), so the
+            # session is not asked.
+            selection=None if project is not None else _ambient_selection(config),
         ).invoke(
             namespace.command,
             inputs,
             invocation_id=invocation_id,
             cursor=namespace.cursor,
-            project=getattr(namespace, "project", None),
+            project=project,
         )
         sys.stdout.write(output.text)
         _json_line({"invocation_id": output.invocation_id})

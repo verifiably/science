@@ -150,8 +150,8 @@ def test_read_dispatch_is_sessionless_and_writes_exact_text(certified_work, caps
     cfg_path = write_cli_config(certified_work)
 
     class SessionlessDispatcher:
-        def __init__(self, declarations, handlers, context, session=None):
-            assert session is None
+        def __init__(self, declarations, handlers, context, session=None, selection=None):
+            assert session is None and selection is None
 
         def invoke(self, command, inputs, *, invocation_id=None, cursor=None, project=None):
             assert command == "status"

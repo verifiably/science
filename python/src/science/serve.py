@@ -60,6 +60,15 @@ def check_socket_path(socket_path: Path) -> None:
         ))
 
 
+def _answer_query(dispatcher, query) -> dict:
+    """The selection query (coordination design §5.2 step 2): answered from the
+    endpoint's state — no invocation, no ledger line, no dispatcher lock."""
+    if query != "selection":
+        raise Refused(Refusal("invalid-input", f"unknown query {query!r}; the service answers `selection`"))
+    selection = dispatcher.selection
+    return {"project": None if selection is None else str(selection)}
+
+
 def service_server(dispatcher, socket_path: Path, on_close):
     """The service protocol for `dispatcher` at `socket_path`. Closing removes the
     socket this server bound — only while the path is still that inode, so a file
@@ -69,11 +78,15 @@ def service_server(dispatcher, socket_path: Path, on_close):
         def handle(self) -> None:
             for line in self.rfile:
                 try:
-                    command, inputs, invocation_id, cursor, project = _validated(json.loads(line))
-                    out = dispatcher.invoke(command, inputs, invocation_id=invocation_id,
-                                            cursor=cursor, project=project)
-                    reply = {"ok": True, "text": out.text,
-                             "invocation_id": out.invocation_id}
+                    request = json.loads(line)
+                    if isinstance(request, dict) and set(request) == {"query"}:
+                        reply = _answer_query(dispatcher, request["query"])
+                    else:
+                        command, inputs, invocation_id, cursor, project = _validated(request)
+                        out = dispatcher.invoke(command, inputs, invocation_id=invocation_id,
+                                                cursor=cursor, project=project)
+                        reply = {"ok": True, "text": out.text,
+                                 "invocation_id": out.invocation_id}
                 except json.JSONDecodeError as caught:
                     reply = {"ok": False, "refusal": envelope(
                         Refusal("invalid-input", f"request is not JSON: {caught}"))}

@@ -6,6 +6,8 @@ import socket
 import threading
 from pathlib import Path
 
+import pytest
+
 from helpers.world import build_fixture_world, build_fixture_world_with_contract, DOMAINS
 
 
@@ -117,3 +119,41 @@ def test_a_relative_contracts_entry_resolves_against_the_file(certified_work, tm
     from_home = load_config(config).profile.compiled_identity
     monkeypatch.chdir(_decoy(tmp_path / "decoy"))
     assert load_config(config).profile.compiled_identity == from_home
+
+
+def _default_project_config(work: Path, extra: str = "") -> tuple[Path, object]:
+    """A relative-path configuration whose `default_project` is a standing project."""
+    from helpers.world import mint_projects
+    from science.config import load_config
+
+    config = _relative_config(work, extra=extra)
+    (health,) = mint_projects(load_config(config), "health")
+    config.write_text(config.read_text() + f'default_project = "{health}"\n')
+    return config, health
+
+
+def test_a_cli_read_takes_the_selection_the_file_names_from_a_decoy_directory(certified_work, tmp_path,
+                                                                             monkeypatch, capsys):
+    from science.cli import main
+
+    config, _ = _default_project_config(certified_work)
+    monkeypatch.chdir(certified_work)
+    assert main(["project-show", "--config", str(config)]) == 0
+    from_home = capsys.readouterr().out
+    monkeypatch.chdir(_decoy(tmp_path / "decoy"))
+    assert main(["project-show", "--config", str(config)]) == 0
+    assert capsys.readouterr().out == from_home
+    assert from_home.startswith("## Project: health\n")
+
+
+@pytest.mark.parametrize("kind", ["serve", "mcp serve"])
+def test_a_launcher_opens_under_the_selection_the_file_names_from_a_decoy_directory(
+        certified_work, short_tmp, tmp_path, monkeypatch, kind):
+    from test_mcp_socket import _request
+    from test_selection_query import launcher
+
+    sock = short_tmp / "service.sock"
+    config, health = _default_project_config(certified_work, extra=f'service_socket = "{sock}"\n')
+    monkeypatch.chdir(_decoy(tmp_path / "decoy"))
+    with launcher(kind, config, sock):
+        assert _request(sock, {"query": "selection"}) == {"project": str(health)}
