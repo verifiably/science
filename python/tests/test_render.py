@@ -109,3 +109,22 @@ def test_write_audit_rules():
     for block in (Heading("h"), KeyVals("k", ()), Finding("f"), Text("t")):
         with pytest.raises(AuditViolation):  # every non-record block kind
             audit_write_report((block,), minted)
+
+
+def test_session_audit_admits_exactly_the_recorded_selection_block():
+    from science.render import audit_session_report
+    from science.report import SelectionBlock
+
+    address = "coord:" + "a" * 32 + "@" + "b" * 32
+    audit_session_report((SelectionBlock(address, "health"),), address)
+    audit_session_report((SelectionBlock(None, None),), None)
+    with pytest.raises(AuditViolation):  # another revision
+        audit_session_report((SelectionBlock(address, "health"),), "coord:" + "a" * 32 + "@" + "c" * 32)
+    with pytest.raises(AuditViolation):  # a clear reported as a selection
+        audit_session_report((SelectionBlock(address, "health"),), None)
+    with pytest.raises(AuditViolation):  # anything beside the block
+        audit_session_report((SelectionBlock(address, "health"), Text("and more")), address)
+    with pytest.raises(AuditViolation):  # a record block is a write's, not a session's
+        audit_session_report((RecordBlock("u" * 32, "note:n1", "note", "t"),), address)
+    with pytest.raises(AuditViolation):
+        audit_session_report((), None)

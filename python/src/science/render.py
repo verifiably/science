@@ -6,7 +6,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from science.cursor import MARKER_TEMPLATE
-from science.report import RecordBlock, Report, serialize_block
+from science.report import RecordBlock, Report, SelectionBlock, serialize_block
 
 
 class AuditViolation(Exception):
@@ -37,6 +37,17 @@ def audit_write_report(report: Report, minted: frozenset[tuple[str, str]]) -> No
             raise AuditViolation(
                 f"record ({block.uid!r}, {block.record_id!r}) was not minted by this invocation"
             )
+
+
+def audit_session_report(report: Report, recorded: str | None) -> None:
+    """Coordination design §4.1: a `session` report is exactly one selection
+    block naming what the ledger recorded — the pinned address, or None."""
+    if len(report) != 1 or type(report[0]) is not SelectionBlock:
+        raise AuditViolation("a session report is exactly one selection block")
+    if report[0].address != recorded:
+        raise AuditViolation(
+            f"the selection block names {report[0].address!r}; the ledger recorded {recorded!r}"
+        )
 
 
 def render_full(report: Report) -> str:

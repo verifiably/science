@@ -10,12 +10,13 @@ from science.canonical import canonicalize, input_digest
 from science.cursor import ReadCursor, WriteCursor, decode, encode
 from science.refusal import INVOCATION_ID_RE, Refusal, Refused, mint_token
 from science.render import render_page, report_digest
-from science.report import Report, serialize_block
+from science.report import Report, SelectionBlock, serialize_block
 from science.schema import Declaration
 
 
 class HandlerContractViolation(RuntimeError):
-    """A write handler raised a surface refusal after it had already acted.
+    """A write handler raised a surface refusal after it had already acted, or a
+    session handler broke its one-selection contract.
 
     Validation precedes the first act (belief-path design §6.3). The acts
     committed are truth, so the invocation closes `done` with them; the
@@ -27,6 +28,20 @@ class HandlerContractViolation(RuntimeError):
 class Outcome:
     text: str
     invocation_id: str
+
+
+class SessionPort:
+    """What a `session`-class handler receives in place of a scoped writer
+    (coordination design §4.1): one method, and no way to act on a corpus."""
+
+    def __init__(self, select: Callable) -> None:
+        self._select = select
+
+    def select(self, address):
+        """Make `address` — an unpinned project address, or None to clear —
+        the session's selection. Returns it pinned to the revision it resolved
+        to, or None."""
+        return self._select(address)
 
 
 class Dispatcher:
@@ -99,6 +114,8 @@ class Dispatcher:
                 if project is not None:
                     raise Refused(Refusal(
                         "invalid-input", "no write takes `project`; a write binds to the session's selection"))
+                if decl.write_class.kind == "session":
+                    return self._invoke_session(decl, canonical, iid)
                 return self._invoke_write(decl, canonical, iid)
             report = self._handlers[decl.name](self._read_context(decl, project), **canonical)
             return Outcome(self._render(decl, canonical, report, (0, 0)), iid)
@@ -199,14 +216,28 @@ class Dispatcher:
             return Refusal("kernel-refused", message, data)
         return Refusal("kernel-refused", str(error), {"kind": type(error).__name__})
 
+    def _claim(self, decl: Declaration, canonical: Mapping[str, object], iid: str):
+        """Claim `iid` for this command and payload: `ClaimDone` to replay or
+        `ClaimFresh` to run, and every other claim refuses. The caller holds
+        the dispatcher lock."""
+        from beliefs.session import ClaimDone, ClaimFresh, ClaimMismatch, ClaimOpen
+
+        claim = self._session.claim_invocation(iid, decl.name, input_digest(canonical))
+        if isinstance(claim, ClaimOpen):
+            raise Refused(
+                Refusal("outcome-unknown", "a prior attempt is open; its outcome is unknown"), iid)
+        if isinstance(claim, ClaimMismatch):
+            raise Refused(
+                Refusal("input-mismatch", "invocation_id was used with a different payload"), iid)
+        if not isinstance(claim, (ClaimDone, ClaimFresh)):  # fail closed, never execute
+            raise TypeError(f"unknown claim type from the session: {claim!r}")
+        return claim
+
     def _invoke_write(self, decl: Declaration, canonical: Mapping[str, object], iid: str) -> Outcome:
         from beliefs.errors import WriteRefused
         from beliefs.permit import PermitExceeded
         from beliefs.session import (
             ClaimDone,
-            ClaimFresh,
-            ClaimMismatch,
-            ClaimOpen,
             KernelRefusalValue,
         )
 
@@ -223,21 +254,9 @@ class Dispatcher:
         except PermitExceeded as caught:
             raise Refused(self._kernel_refusal(caught), iid) from None
         with self._lock:
-            claim = self._session.claim_invocation(iid, decl.name, input_digest(canonical))
+            claim = self._claim(decl, canonical, iid)
             if isinstance(claim, ClaimDone):
                 return Outcome(self._replay_outcome(decl, claim.outcome, iid, (0, 0)), iid)
-            if isinstance(claim, ClaimOpen):
-                raise Refused(
-                    Refusal("outcome-unknown", "a prior attempt is open; its outcome is unknown"),
-                    iid,
-                )
-            if isinstance(claim, ClaimMismatch):
-                raise Refused(
-                    Refusal("input-mismatch", "invocation_id was used with a different payload"),
-                    iid,
-                )
-            if not isinstance(claim, ClaimFresh):  # fail closed, never execute
-                raise TypeError(f"unknown claim type from the session: {claim!r}")
             try:
                 report = self._handlers[decl.name](self._context(), writer, **canonical)
             except (PermitExceeded, KernelRefusalValue, WriteRefused) as caught:
@@ -278,6 +297,81 @@ class Dispatcher:
             return Outcome(
                 self._render_write(decl.output_budget, canonical_report, iid, (0, 0)), iid
             )
+
+    def _select(self, iid: str, address):
+        # The ledger line first, the endpoint's state after it: a line that did
+        # not append changed nothing, and a line that did is live even if this
+        # invocation never closes (beliefs selection-ledger design decision 4).
+        pinned = self._session.select_project(iid, address)
+        self._selection = None if pinned is None else pinned.unpinned()
+        return pinned
+
+    def _invoke_session(self, decl: Declaration, canonical: Mapping[str, object], iid: str) -> Outcome:
+        """A `session`-class invocation (coordination design §4.1): the write
+        protocol's claim, open and close, a port instead of a writer, and one
+        selection block rebuilt from the ledger as its report."""
+        from beliefs.errors import SessionProtocolError, WriteRefused
+        from beliefs.session import ClaimDone
+
+        from science.render import audit_session_report
+
+        if self._session is None:
+            raise Refused(Refusal("permit-exceeded", "no writer session on this surface"), iid)
+        with self._lock:
+            claim = self._claim(decl, canonical, iid)
+            if isinstance(claim, ClaimDone):
+                return Outcome(self._replay_session(decl, claim.outcome, iid), iid)
+            port = SessionPort(lambda address: self._select(iid, address))
+            try:
+                report = self._handlers[decl.name](self._context(), port, **canonical)
+            except (WriteRefused, Refused, SessionProtocolError) as caught:
+                if self._session.invocation_selection(iid) is None:
+                    if isinstance(caught, SessionProtocolError):
+                        raise
+                    refusal = (
+                        caught.refusal if isinstance(caught, Refused)
+                        else self._kernel_refusal(caught)
+                    )
+                    return self._close_refused(iid, refusal)
+                # A recorded selection is truth, even if the handler then
+                # refuses or breaks the kernel's one-selection protocol.
+                self._session.close_invocation(iid, {"done": []})
+                raise HandlerContractViolation(
+                    f"{decl.name} failed after selecting: {caught}; "
+                    "a session handler validates first and selects exactly once"
+                ) from caught
+            line = self._session.invocation_selection(iid)
+            try:
+                if line is None:
+                    raise HandlerContractViolation(
+                        f"{decl.name} returned without selecting; a session handler selects exactly once")
+                audit_session_report(report, None if line.project is None else str(line.project))
+            finally:
+                # Close first in every case, as a write does: the ledger records
+                # what happened whether or not the report survives its audit.
+                self._session.close_invocation(iid, {"done": []})
+            return Outcome(
+                self._render_write(decl.output_budget, self._selection_report(line), iid, (0, 0)), iid)
+
+    def _selection_report(self, line) -> Report:
+        """The canonical session report, rebuilt from the ledger's selection
+        line. The name is read from the pinned revision, which is immutable, so
+        a replay after a rename renders what the selection was."""
+        if line.project is None:
+            return (SelectionBlock(None, None),)
+        node = self._ctx.coordination().resolve(line.project)
+        if node is None:
+            raise RuntimeError(f"{line.project}: the recorded selection's revision is not in the configured corpora")
+        return (SelectionBlock(str(line.project), node.title),)
+
+    def _replay_session(self, decl: Declaration, outcome: Mapping[str, object], iid: str) -> str:
+        if "refusal" in outcome:
+            refusal = outcome["refusal"]
+            raise Refused(Refusal(refusal["code"], refusal["message"], refusal.get("data", {})), iid)
+        line = self._session.invocation_selection(iid)
+        if line is None:
+            raise HandlerContractViolation(f"{decl.name} closed done with no selection line for {iid}")
+        return self._render_write(decl.output_budget, self._selection_report(line), iid, (0, 0))
 
     def _close_refused(self, iid: str, refusal: Refusal) -> Outcome:
         from science.refusal import envelope
@@ -339,7 +433,13 @@ class Dispatcher:
             raise Refused(
                 Refusal("unknown-cursor", "that invocation refused; nothing to page")
             )
-        report = self._minted_report(record.outcome["done"])
+        if decl.write_class.kind == "session":
+            if record.selection is None:
+                raise HandlerContractViolation(
+                    f"{command} closed done with no selection line for {cursor.invocation_id}")
+            report = self._selection_report(record.selection)
+        else:
+            report = self._minted_report(record.outcome["done"])
         if report_digest(report) != cursor.report_digest:
             raise Refused(Refusal("stale-cursor", "the records changed; re-run"))
         self._check_position(report, cursor.block, cursor.offset)

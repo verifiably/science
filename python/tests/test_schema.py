@@ -121,7 +121,7 @@ def test_mints_routes_resolve(tmp_path):
     assert decl.write_class.routes == {"note": "corpus-write", "run": "run"}
 
 
-@pytest.mark.parametrize("write_class", ["coordination", "publishes"])
+@pytest.mark.parametrize("write_class", ["coordination", "publishes", "session"])
 def test_generic_tree_accepts_non_read_only_write_classes(tmp_path, write_class):
     toml = GOOD.replace('write_class = "read-only"', f'write_class = "{write_class}"')
     d = write_command(tmp_path, "status", toml)
@@ -308,3 +308,11 @@ def test_project_is_a_reserved_input_name(tmp_path):
         load_declaration(write_command(tmp_path, "status", toml),
                          kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)
     assert caught.value.field == "inputs.project"
+
+
+def test_session_takes_no_routes(tmp_path):
+    toml = GOOD.replace('write_class = "read-only"', 'write_class = "session"') + '\n[write.routes]\nnote = "corpus-write"\n'
+    with pytest.raises(DeclarationError) as caught:
+        load_declaration(write_command(tmp_path, "status", toml),
+                         kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)
+    assert caught.value.field == "write.routes"

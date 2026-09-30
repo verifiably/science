@@ -27,3 +27,11 @@ def test_serialization_is_deterministic_and_distinct():
     assert "packaging: abc" in outs[1]
     assert "[proposition] proposition:x" in outs[2] and "u" * 32 in outs[2]
     assert outs[3].startswith("! ")
+
+
+def test_a_selection_block_serializes_the_selection_or_none():
+    from science.report import SelectionBlock
+
+    address = "coord:" + "a" * 32 + "@" + "b" * 32
+    assert serialize_block(SelectionBlock(address, "health")) == f"selected: {address}\nname: health\n"
+    assert serialize_block(SelectionBlock(None, None)) == "selected: none\n"

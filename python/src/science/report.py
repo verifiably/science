@@ -38,7 +38,16 @@ class Text:
     text: str
 
 
-Block = Heading | KeyVals | RecordBlock | Finding | Text
+@dataclass(frozen=True)
+class SelectionBlock:
+    """What a `session` invocation reports (coordination design §4.1): the
+    selection it recorded, as the project's address pinned to the revision it
+    resolved to and the name that revision carries, or nothing selected."""
+    address: str | None
+    name: str | None
+
+
+Block = Heading | KeyVals | RecordBlock | Finding | Text | SelectionBlock
 Report = tuple[Block, ...]
 
 
@@ -55,4 +64,8 @@ def serialize_block(block: Block) -> str:
             return f"! {text}\n"
         case Text(text):
             return text + "\n"
+        case SelectionBlock(None, _):
+            return "selected: none\n"
+        case SelectionBlock(address, name):
+            return f"selected: {address}\nname: {name}\n"
     raise TypeError(f"not a block: {block!r}")

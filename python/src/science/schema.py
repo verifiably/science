@@ -14,7 +14,7 @@ MAX_NAME_BYTES = 32
 RESERVED_COMMANDS = frozenset({"continue", "serve", "mcp", "adapters", "build"})
 RESERVED_INPUTS = frozenset({"cursor", "invocation_id", "view", "session", "config", "project"})
 INPUT_TYPES = frozenset({"string", "int", "bool", "enum", "list-of-string"})
-WRITE_CLASS_KINDS = frozenset({"read-only", "coordination", "mints", "publishes"})
+WRITE_CLASS_KINDS = frozenset({"read-only", "coordination", "mints", "publishes", "session"})
 SCHEMA_VERSION = 1
 
 _TOML_CHECKS = {
@@ -136,11 +136,11 @@ def _parse_inputs(raw: Mapping, path: Path) -> tuple[InputSpec, ...]:
 def _parse_write_class(raw: str, routes_raw: Mapping[str, str], path: Path,
                        kind_acts: Mapping[str, frozenset[str]],
                        contract_kinds: frozenset[str]) -> WriteClass:
-    if raw in ("read-only", "coordination", "publishes"):
+    if raw in ("read-only", "coordination", "publishes", "session"):
         _require(not routes_raw, path, "write.routes", f"{raw} takes no routes")
         return WriteClass(raw)
     _require(raw.startswith("mints:"), path, "write_class",
-             "must be read-only | coordination | mints:<kinds> | publishes")
+             "must be read-only | coordination | session | mints:<kinds> | publishes")
     kinds = tuple(sorted(k.strip() for k in raw[len("mints:"):].split(",") if k.strip()))
     _require(len(kinds) > 0, path, "write_class", "mints: names no kinds")
     routes: dict[str, str] = {}
