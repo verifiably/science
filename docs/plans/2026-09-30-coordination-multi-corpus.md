@@ -4,7 +4,7 @@
 
 **Goal:** One configuration names a write root and several mounted corpora; the session writes only the write root, every mount is read under the profile its own manifest pins, and `next` and `belief` read across the mounts while the write commands read their own evidence in the write root.
 
-**Architecture:** The configuration gains `write_root` and `read_contracts`. One function, `science.config.mount_profiles(config)`, maps every configured root to its profile: the write root to the writer's stated profile, every other root to `beliefs.mount.compile_mount_profile(root, available=contracts ∪ read_contracts)`. The launcher's session and the sessionless read context's resolver both take that mapping. `ReadContext.single_view()` is replaced by `write_view()` (write-root-only commands), `mounts()` and `mount_holding(ref)` (read-set-wide commands). Holdings observations and vocabulary lookups read every mount, since there is one store.
+**Architecture:** The configuration gains `write_root` and `read_contracts`. One function, `science.config.mount_profiles(config)`, maps every configured root to its profile: the write root to the writer's stated profile, every other root to `beliefs.mount.compile_mount_profile(root, available=contracts ∪ read_contracts)`. The launcher's session and the sessionless read context's resolver both take that mapping. `ReadContext.single_view()` is replaced by `write_view()` (write-root-only commands), `mounts()` and `mount_holding(ref)` (read-set-wide commands). Holdings observations, vocabulary lookups and dataset records are read from every mount: there is one store, and a dataset is one world record whose id derives from its content, so a write command's dataset input may live in a read mount and is never held twice.
 
 **Tech Stack:** Python 3.13, `beliefs` (editable path dependency), pytest with pytest-xdist and pytest-testmon, `just` recipes over `tools/tt`.
 
@@ -25,7 +25,7 @@
 - Tests run through the front door only, never bare `pytest`: `just test-one <path relative to python/>` for the test at hand, `just test-fast` before each commit, `just gate` before the branch merges.
 - `tasks check` before every commit; each task's `tasks done <id> "<what landed>"` goes in that task's final commit. Conventional commits; no AI attribution lines.
 - The writer's profile is stated, never inferred (spec §6): the write root is always mounted under `config.profile`, and nothing from `read_contracts` enters it. Availability never becomes activation.
-- Write-root-only commands — `claim`, `dataset`, `spec`, `run`, `assess`, `verify` — read the refs they are given in the write root. Read-set-wide commands — `belief`, `next`, `status` — find a record in whichever mount holds it and decode it under that mount's profile.
+- Write-root-only commands — `claim`, `dataset`, `spec`, `run`, `assess`, `verify` — read the refs they are given in the write root, except a dataset: `spec`'s and `run`'s `dataset` input, `verify`'s spec input and `dataset`'s already-held check read every mount (review round 1, P1). Read-set-wide commands — `belief`, `next`, `status` — find a record in whichever mount holds it and decode it under that mount's profile.
 - A ref no longer "is not in the corpus" without saying where it is: when a read mount holds it, the refusal names that mount's corpus id.
 - No compatibility layer: `single_view()` is deleted in Task 4, not kept beside its replacements.
 - No docs or comments name absolute host paths.
@@ -33,10 +33,10 @@
 ## Review Focus
 
 - **A world that admits a corpus the configuration does not mount**, with a project selecting one of its records — a person expects `next` to refuse naming the address and `corpus_roots`, not a traceback and not a queue missing the row. Task 4 pins it.
-- **The same record id held in two mounted corpora** (two corpora minting the same claim slug) — a person expects `belief` and `next` to refuse naming both corpora, never to answer from whichever mount sorted first. Task 4 pins it.
+- **The same record id held in two mounted corpora** (two corpora minting the same claim slug) — a person expects a refusal, never an answer from whichever mount sorted first: `belief` and unselected `next` refuse `invalid-input` naming both corpora; selected `next` refuses `kernel-refused` with `data.kind: AddressMapConflict`, since the live capture refuses the duplicate before the project's query applies. Task 4 pins all three paths.
 - **A write command given a record only a read mount holds** (`spec --target` an mm30 proposition) — a person expects a refusal saying the record lives in the read mount and this command reads the write root, not "is not in the corpus". Task 3 pins it for `spec`, and the shared `not_held` covers every write command.
-- **A read mount whose manifest is missing or pins an unavailable contract** — a person expects a refusal naming the root and the pin at session open and at a sessionless read, never a bare `MountPinUnresolved` rendered as an internal error. Task 2 pins both.
-- **Holding in the write root bytes a read mount already holds** (the milestone re-holds an mm30 input) — a person expects the `dataset` command to mint the record in the write root. Task 3 pins it; if the kernel's holdings write refuses the other corpus's standing observation, stop and record it as a kernel question rather than working around it.
+- **A read mount whose manifest is missing or pins an unavailable contract** — a person expects a refusal naming the root and the pin at session open and at a sessionless read, never a bare `ManifestMissing` or `MountPinUnresolved` rendered as an internal error. Task 2 pins the read context; Task 4 pins the entry points, sessionless `belief` and unselected `next`.
+- **Holding in the write root bytes a read mount already declares** (the milestone reaching for an mm30 input) — a second dataset record would put one content-derived address in two corpora, and every selected `next` would then refuse `duplicate-location`. A person expects `dataset` to refuse naming the existing record and its corpus, and `spec` and `run` to accept that record as it stands. Task 3 pins the refusal and the spec; Task 4's headline test runs a selected `next` over a working spec observing the archive's dataset.
 
 ---
 
@@ -261,7 +261,8 @@ git commit -m "feat(config): write_root and read_contracts"
 - Produces:
   - `science.config.Mount` — frozen dataclass `(corpus_id: str, root: Path, view: ReadView, profile: ProfileSpec)`.
   - `science.config.mount_profiles(config: ScienceConfig) -> dict[Path, ProfileSpec]` — refuses `invalid-input` naming the root (and the pin).
-  - `ReadContext.mounts() -> tuple[Mount, ...]` — one per configured root, ordered by corpus id then root, each view opened at the call.
+  - `science.config.corpus_id_at(root: Path) -> str` — the root's manifest corpus id, or refuses `invalid-input` naming the root when its manifest is missing or malformed.
+  - `ReadContext.mounts() -> tuple[Mount, ...]` — one per configured root, ordered by corpus id then root, each view opened at the call; every profile is compiled, and every manifest read through `corpus_id_at`, before any view opens.
   - `helpers.world.build_two_corpus_world(work: Path) -> ScienceConfig` — the write root `work/"corpus"` (base, biology, `testing`, coordination 2; empty) and the read mount `work/"archive"` (base, biology, `archive`; no coordination), in one world and one store. The archive holds the concept and level vocabulary lists and `proposition:archived`, typed under `archive`'s `affects-concept-protein`. `read_contracts` supplies `archive`.
   - `helpers.world.archive_config(cfg: ScienceConfig) -> ScienceConfig` — the same world with the archive as write root under its own profile and plan, `coordination=None`: how a fixture writes the archive's evidence through the commands.
 
@@ -380,11 +381,15 @@ def test_a_read_mount_pin_no_document_carries_refuses_naming_root_and_pin(two):
 
 
 def test_a_read_mount_without_a_manifest_refuses_naming_the_root(two):
+    """Review round 1, P2: through the read context's own methods, not only
+    `mount_profiles` — `mounts()` must not reach a raw ManifestMissing."""
     empty = two.world.world_root.parent / "empty"
     empty.mkdir()
     widened = dataclasses.replace(two, world=WorldConfig(
         two.world.world_root, two.world.world_id, two.world.corpus_roots + (empty,)))
-    assert str(empty) in _refused(lambda: mount_profiles(widened))
+    ctx = ReadContext.open(widened)
+    for call in (lambda: mount_profiles(widened), ctx.mounts, ctx.read_views, ctx.coordination):
+        assert str(empty) in _refused(call)
 
 
 def test_the_session_opens_over_both_roots_though_the_archive_pins_no_coordination(two):
@@ -444,9 +449,18 @@ def mount_profiles(config: ScienceConfig) -> dict[Path, ProfileSpec]:
         except (ManifestMissing, ManifestMalformed) as caught:
             _refuse(f"the read mount {root} has no readable manifest: {caught}")
     return profiles
+
+
+def corpus_id_at(root: Path) -> str:
+    """The root's corpus id, or a refusal naming the root: a missing or
+    malformed manifest is a configuration state, never an internal error."""
+    try:
+        return load_manifest(root).corpus_id
+    except (ManifestMissing, ManifestMalformed) as caught:
+        _refuse(f"the corpus root {root} has no readable manifest: {caught}")
 ```
 
-(`MountPinUnresolved` joins the `beliefs.errors` import.)
+(`MountPinUnresolved` joins the `beliefs.errors` import.) `ReadContext.read_views` reads its corpus ids through `corpus_id_at` too, in place of `load_manifest(root).corpus_id`.
 
 `require_coordination_pinned` checks the write root only — a read mount is mounted under whatever it pins:
 
@@ -472,9 +486,12 @@ In `ReadContext`:
 
     def mounts(self) -> tuple[Mount, ...]:
         """One mount per configured root, ordered by corpus id then root, each
-        view opened now: a view indexes its corpus as of its opening."""
-        keyed = sorted((load_manifest(root).corpus_id, str(root), root) for root in self.config.world.corpus_roots)
-        return tuple(Mount(corpus_id, root, ReadView.opened_at(root), self._profiles[root])
+        view opened now: a view indexes its corpus as of its opening. Profiles
+        first and manifests through `corpus_id_at`, so a root that cannot be
+        mounted refuses by name before any view opens."""
+        profiles = self._profiles
+        keyed = sorted((corpus_id_at(root), str(root), root) for root in self.config.world.corpus_roots)
+        return tuple(Mount(corpus_id, root, ReadView.opened_at(root), profiles[root])
                      for corpus_id, _, root in keyed)
 
     def coordination(self):
@@ -534,8 +551,8 @@ git commit -m "feat(config): mount every corpus under its own manifest's profile
 ### Task 3: The write-root-only commands
 
 **Files:**
-- Modify: `python/src/science/config.py` (`ReadContext.write_view`, `not_held`, `observations`, `snapshot`, `held_path`, `is_held`, `pins`)
-- Modify: `python/src/science/holdings.py` (every function takes the read views, not one view and corpus id)
+- Modify: `python/src/science/config.py` (`ReadContext.write_view`, `not_held`, `dataset_at`, `dataset_record`, `observations`, `snapshot`, `held_path`, `is_held`, `pins`)
+- Modify: `python/src/science/holdings.py` (every function takes the read views, not one view and corpus id; new `dataset_at`)
 - Modify: `python/src/science/vocabulary.py` (`snapshot`, `_dataset_at`)
 - Modify: `python/src/science/commands/dataset.py`, `spec.py`, `run.py`, `assess.py`, `verify.py`
 - Modify: `python/tests/helpers/world.py` (`unhold_fixture_dataset`, `mint_fixture_run`), and every test calling `single_view()` except `test_cmd_belief.py`/`test_cmd_next*.py`
@@ -550,6 +567,9 @@ git commit -m "feat(config): mount every corpus under its own manifest's profile
   - `ReadContext.pins(root: Path | None = None)` — the write root's pins by default.
   - `science.holdings`: `reduced_heads(world, corpus_ids: frozenset[str])`, `reduced_observations(views, world)`, `found_observations(views, world)`, `held_path(views, world, store_root, store_id, address)`, `is_held(views, world, node)`, where `views` is `ReadContext.read_views()`'s `((corpus_id, ReadView), ...)`.
   - `science.vocabulary.snapshot(profile, views, store_root, store_id, observations)`.
+  - `science.holdings.dataset_at(views, address: str) -> tuple[str, Node] | None` — the corpus id and dataset record declaring `address`, in any mount.
+  - `ReadContext.dataset_at(address)` — the same over the configured roots.
+  - `ReadContext.dataset_record(ref: str) -> Node` — the record `ref` names in whichever mount holds it; refuses `invalid-input` `"{ref!r} is not in the configured corpora"` when none does.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -581,16 +601,18 @@ def test_claim_types_through_a_vocabulary_held_in_the_read_mount(two):
     assert not ReadView.opened_at(two.world.world_root.parent / "archive").holds("proposition:claimed")
 
 
-def test_a_spec_in_the_write_root_reads_its_dataset_there(two):
-    data = hold_fixture_dataset(two, "data.txt", b"y\n", "expression", **OBSERVED)
+def test_a_spec_in_the_write_root_observes_a_dataset_the_read_mount_declared(two):
+    """A dataset is one world record: the working spec names the archive's."""
+    data = hold_fixture_dataset(archive_config(two), "data.txt", b"y\n", "expression", **OBSERVED)
     with open_rig(two, ("claim", "spec")) as (d, ctx):
         d.invoke("claim", CLAIM)
         out = d.invoke("spec", dict(SPEC_FIELDS, target="proposition:claimed", dataset=data))
         assert "analysis-spec:" in out.text
+        assert not ctx.write_view().holds(data)
 
 
 def test_a_write_command_given_a_read_mount_record_names_the_mount(two):
-    data = hold_fixture_dataset(two, "data.txt", b"y\n", "expression", **OBSERVED)
+    data = hold_fixture_dataset(archive_config(two), "data.txt", b"y\n", "expression", **OBSERVED)
     archive_id = next(m.corpus_id for m in ReadContext.open(two).mounts() if m.root.name == "archive")
     with open_rig(two, ("spec",)) as (d, _):
         with pytest.raises(Refused) as caught:
@@ -599,17 +621,21 @@ def test_a_write_command_given_a_read_mount_record_names_the_mount(two):
     assert archive_id in caught.value.refusal.message and "write root" in caught.value.refusal.message
 
 
-def test_bytes_a_read_mount_holds_can_be_held_again_in_the_write_root(two, certified_work):
-    hold_fixture_dataset(archive_config(two), "data.txt", b"z\n", "expression", **OBSERVED)
+def test_holding_bytes_a_read_mount_declares_refuses_naming_its_record(two, certified_work):
+    """Review round 1, P1: a second record would put one content-derived
+    address in two corpora, and every selected `next` would refuse
+    duplicate-location. The refusal names the record to use instead."""
+    data = hold_fixture_dataset(archive_config(two), "data.txt", b"z\n", "expression", **OBSERVED)
+    archive_id = next(m.corpus_id for m in ReadContext.open(two).mounts() if m.root.name == "archive")
     source = certified_work / "data.txt"
     source.write_bytes(b"z\n")
     with open_rig(two, ("dataset",)) as (d, ctx):
-        out = d.invoke("dataset", {"path": str(source), "title": "expression again"})
-        ref = out.text.split("\n", 1)[0].split()[-1]  # adjust to the record block's id line
-        assert ctx.write_view().holds(ref)
+        with pytest.raises(Refused) as caught:
+            d.invoke("dataset", {"path": str(source), "title": "expression again"})
+        assert not any(n.kind == "dataset" for n in ctx.write_view().iter_stored())
+    assert caught.value.refusal.code == "invalid-input"
+    assert data in caught.value.refusal.message and archive_id in caught.value.refusal.message
 ```
-
-(Read the `dataset` record block's rendering in an existing `test_cmd_dataset.py` test and extract the ref the same way.)
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
@@ -654,10 +680,21 @@ def reduced_observations(views, world) -> dict[str, DatasetAnswer | DatasetBlock
 
 ```python
 def _dataset_at(views, address: str):
-    for _, view in views:
+    found = dataset_at(views, address)  # from science.holdings
+    return None if found is None else found[1]
+```
+
+and in `python/src/science/holdings.py`:
+
+```python
+def dataset_at(views, address: str):
+    """(corpus id, dataset record) declaring `address` in any mount, or None.
+    A dataset's id derives from its content, so one address has one record
+    world-wide; `dataset` refuses to mint a second."""
+    for corpus_id, view in views:
         for node in view.iter_stored():
             if node.kind == "dataset" and dataset_address(stored.dataset_declaration(node)) == address:
-                return node
+                return corpus_id, node
     return None
 ```
 
@@ -672,11 +709,23 @@ def _dataset_at(views, address: str):
     def not_held(self, ref: str) -> NoReturn:
         """Refuse a ref the write root does not hold, naming the read mount that
         does: a person who passed an mm30 record learns where it is."""
-        elsewhere = [load_manifest(root).corpus_id for root in self.config.world.corpus_roots
+        elsewhere = [corpus_id_at(root) for root in self.config.world.corpus_roots
                      if root != self.config.write_root and ReadView.opened_at(root).holds(ref)]
         where = (f"; read mount {', '.join(elsewhere)} holds it, and this command reads the write root"
                  if elsewhere else "")
         raise Refused(Refusal("invalid-input", f"{ref!r} is not in the corpus{where}"))
+
+    def dataset_at(self, address: str):
+        from science.holdings import dataset_at
+        return dataset_at(self.read_views(), address)
+
+    def dataset_record(self, ref: str):
+        """The record `ref` names in whichever mount holds it: a write
+        command's dataset input, which is one world record (review round 1, P1)."""
+        for _, view in self.read_views():
+            if view.holds(ref):
+                return view.get(ref)
+        raise Refused(Refusal("invalid-input", f"{ref!r} is not in the configured corpora"))
 
     def snapshot(self, profile: ProfileSpec | None = None):
         from science.vocabulary import snapshot
@@ -703,13 +752,24 @@ def _dataset_at(views, address: str):
 
 - [ ] **Step 4: Convert the write commands**
 
-Each of these replaces `_, view = ctx.single_view()` with `view = ctx.write_view()`, and each "is not in the corpus" refusal of a given ref with `ctx.not_held(ref)`:
+Each of these replaces `_, view = ctx.single_view()` with `view = ctx.write_view()`, and each "is not in the corpus" refusal of a given ref with `ctx.not_held(ref)` — except a dataset, which is read from any mount:
 
-- `commands/dataset.py` — the view only (it is given a path, not a ref). Its `standing` observations stay the write root's: the holdings write is the write root's act.
-- `commands/spec.py` — `for ref in (target, dataset): if not view.holds(ref): ctx.not_held(ref)`; `supersedes` likewise.
-- `commands/run.py` — `prepare`'s `spec_ref` and `dataset_ref`; `handle`'s view after the run.
+- `commands/dataset.py` — the already-held check reads every mount, and names the corpus:
+
+  ```python
+      found = ctx.dataset_at(address)
+      if found is not None:
+          corpus_id, node = found
+          _refuse(f"these bytes are already held as {node.id} in corpus {corpus_id}; a dataset is one "
+                  "world record, so name that ref where a command asks for the dataset")
+      view = ctx.write_view()
+  ```
+
+  Its `standing` observations stay the write root's: the holdings write is the write root's act.
+- `commands/spec.py` — `if not view.holds(target): ctx.not_held(target)`; the dataset is `ctx.dataset_record(dataset)` in place of `view.get(dataset)`; `supersedes` stays write-root-only through `not_held`.
+- `commands/run.py` — `prepare`'s `spec_ref` through `not_held`; its `dataset_ref` through `ctx.dataset_record`; `handle`'s view after the run is `write_view()`.
 - `commands/assess.py` — `run`. The "names no analysis-spec this corpus holds" refusal stays as it is: the run is in the write root, so its spec must be too.
-- `commands/verify.py` — `assessment`; the view after the replay. `ctx.pins()` is already the write root's.
+- `commands/verify.py` — `assessment`; the spec input's dataset is `ctx.dataset_at(role.dataset)` in place of the one-view scan; the view after the replay. `ctx.pins()` is already the write root's.
 
 `commands/claim.py` needs no change: `ctx.snapshot()` now finds the vocabulary in any mount.
 
@@ -718,7 +778,7 @@ In `python/tests/helpers/world.py`: `unhold_fixture_dataset` uses `root = cfg.wr
 - [ ] **Step 5: Run the tests to verify they pass**
 
 Run: `just test-one tests/test_write_root.py tests/test_cmd_dataset.py tests/test_cmd_spec.py tests/test_cmd_run.py tests/test_cmd_assess.py tests/test_cmd_verify.py tests/test_cmd_claim.py tests/test_belief_path.py`
-Expected: PASS. If `test_bytes_a_read_mount_holds_can_be_held_again_in_the_write_root` fails inside the kernel's holdings write (a refusal about the location's standing observation), stop: note the error on the task and park it `--reason decision`; it is a kernel question for the milestone, not something to route around here.
+Expected: PASS.
 
 - [ ] **Step 6: Commit**
 
@@ -745,7 +805,7 @@ git commit -m "feat(commands): write commands read the write root; one store acr
   - `ReadContext.mount_holding(ref: str) -> Mount` — the one mount holding `ref`; refuses `invalid-input` `"{ref!r} is not in the configured corpora"` when none does, and naming both corpus ids when two do.
   - `ReadContext.gather_inputs(proposition)`, `ReadContext.evaluate(proposition)` — under the holding mount's view, corpus id, pins and profile.
   - `science.commands.next.classify(ctx, proposition) -> str` — signature unchanged; reads the holding mount.
-  - `helpers.world.add_archived_assessment(cfg, work) -> str` — the archive's spec, run and assessment of `proposition:archived`, returning the assessment ref.
+  - `helpers.world.add_archived_assessment(cfg, work) -> str` — the archive's observed dataset, spec, run and assessment of `proposition:archived`, returning the dataset ref (the working spec observes the same record).
   - `helpers.world.write_two_corpus_config(cfg) -> Path` — the launcher TOML with `write_root` and `read_contracts`.
 
 - [ ] **Step 1: Write the fixtures and the failing tests**
@@ -756,7 +816,8 @@ Add to `python/tests/helpers/world.py`:
 def add_archived_assessment(cfg: ScienceConfig, work: Path) -> str:
     """The archive's evidence for proposition:archived — a spec over held data,
     one run and its assessment, no verification — written through the commands
-    with the archive as write root. `next` then reads it assessed-not-admitted."""
+    with the archive as write root. `next` then reads it assessed-not-admitted.
+    Returns the dataset ref: one world record, which a working spec may observe."""
     archived = archive_config(cfg)
     data = hold_fixture_dataset(archived, "data.txt", b"x\n", "expression", **OBSERVED)
     with open_rig(archived, ("spec",)) as (d, _):
@@ -764,7 +825,8 @@ def add_archived_assessment(cfg: ScienceConfig, work: Path) -> str:
     spec = _minted_ref(out.text, "analysis-spec")
     run = mint_fixture_run(archived, spec, data, fixture_bundle(work))
     with open_rig(archived, ("assess",)) as (d, _):
-        return _minted_ref(d.invoke("assess", {"run": run}).text, "assessment")
+        d.invoke("assess", {"run": run})
+    return data
 
 
 def write_two_corpus_config(cfg: ScienceConfig) -> Path:
@@ -804,8 +866,8 @@ from beliefs.errors import ContractMismatch
 from beliefs.profile import compile_profile, shipped_base_contract, shipped_coordination, shipped_domain_contract
 from beliefs.world import WorldConfig
 from helpers.world import (
-    COORDINATION, DOMAINS, OBSERVED, SPEC_FIELDS, FIXTURE_AUTHORITY, add_archived_assessment,
-    build_two_corpus_world, hold_fixture_dataset, open_rig, write_two_corpus_config,
+    COORDINATION, DOMAINS, SPEC_FIELDS, FIXTURE_AUTHORITY, add_archived_assessment,
+    build_two_corpus_world, open_rig, write_two_corpus_config,
 )
 from science.commands.next import handle
 from science.config import ReadContext
@@ -830,8 +892,9 @@ def _rows(text):
 def world(certified_work):
     """The archive's proposition assessed; the write root's claimed and ready."""
     cfg = build_two_corpus_world(certified_work)
-    add_archived_assessment(cfg, certified_work)
-    data = hold_fixture_dataset(cfg, "data.txt", b"y\n", "expression", **OBSERVED)
+    # The working spec observes the archive's dataset record: one world record,
+    # never held twice (review round 1, P1).
+    data = add_archived_assessment(cfg, certified_work)
     with open_rig(cfg, ("claim", "spec")) as (d, _):
         d.invoke("claim", CLAIM)
         d.invoke("spec", dict(SPEC_FIELDS, target="proposition:claimed", dataset=data))
@@ -841,7 +904,8 @@ def world(certified_work):
 def test_next_under_a_project_selecting_both_classifies_each_from_its_own_corpus(world):
     """The mutation that enumerates the write root only drops the archived row;
     the mutation that decodes the read mount under the writer's profile fails
-    on the corpus-local `archive` operator."""
+    on the corpus-local `archive` operator. The claimed row's `ready` reads a
+    dataset the archive declares, through a selected (live) query."""
     with open_rig(world, NAMES) as (d, _):
         d.invoke("project", {"name": "both",
                              "query": _query({"addresses": ["proposition:archived", "proposition:claimed"]})})
@@ -904,21 +968,55 @@ def test_a_selected_record_no_configured_corpus_holds_refuses_naming_it(world):
     assert "corpus_roots" in caught.value.refusal.message
 
 
-def test_one_id_in_two_corpora_refuses_naming_both(world):
+def _twice(world):
     from beliefs import stored
     from beliefs.root import open_corpus
     from helpers.world import archive_config
     node = stored.proposition_node("twice", title="twice", claim={"operator": "affects"})
     for cfg in (world, archive_config(world)):
         open_corpus(cfg.write_root, authority=FIXTURE_AUTHORITY, profile=cfg.profile).add(node)
+
+
+def test_one_id_in_two_corpora_refuses_naming_both_in_belief_and_unselected_next(world):
+    from science.commands.belief import handle as belief
+    _twice(world)
     ctx = ReadContext.open(world)
     ids = [mount.corpus_id for mount in ctx.mounts()]
-    for call in (lambda: ctx.mount_holding("proposition:twice"), lambda: handle(ctx, limit=None)):
+    for call in (lambda: belief(ctx, proposition="proposition:twice"), lambda: handle(ctx, limit=None)):
         with pytest.raises(Refused) as caught:
             call()
         assert caught.value.refusal.code == "invalid-input"
         assert all(corpus_id in caught.value.refusal.message for corpus_id in ids)
+
+
+def test_one_id_in_two_corpora_refuses_selected_next_as_the_kernel_duplicate_location(world):
+    """Review round 1, P2: the live capture refuses the duplicate before the
+    project's query applies, whatever the project selects."""
+    _twice(world)
+    with open_rig(world, NAMES) as (d, _):
+        d.invoke("project", {"name": "claimed", "query": _query({"addresses": ["proposition:claimed"]})})
+        d.invoke("project-select", {"target": "claimed"})
+        with pytest.raises(Refused) as caught:
+            d.invoke("next", {})
+    assert caught.value.refusal.code == "kernel-refused"
+    assert caught.value.refusal.data["kind"] == "AddressMapConflict"
+
+
+def test_a_read_mount_without_a_manifest_refuses_at_the_read_entry_points(world):
+    """Review round 1, P2: sessionless `belief` and unselected `next` name the
+    root, never an internal error."""
+    from science.commands.belief import handle as belief
+    empty = world.world.world_root.parent / "empty"
+    empty.mkdir()
+    ctx = ReadContext.open(dataclasses.replace(world, world=WorldConfig(
+        world.world.world_root, world.world.world_id, world.world.corpus_roots + (empty,))))
+    for call in (lambda: belief(ctx, proposition="proposition:archived"), lambda: handle(ctx, limit=None)):
+        with pytest.raises(Refused) as caught:
+            call()
+        assert caught.value.refusal.code == "invalid-input" and str(empty) in caught.value.refusal.message
 ```
+
+(The dispatcher's refusal attribute for `data` is whatever `test_cmd_next_selection.py` reads for the existing `kernel-refused` cases; use the same.)
 
 (`Heading.text` is the heading's text. The row order in the first test is class order then id — `ready` before `assessed-not-admitted` — as `CLASSES` sorts it.)
 
@@ -996,6 +1094,7 @@ def _dataset_node(mounts, address):
 def _inputs_held(ctx, mounts, spec) -> bool:
     observations = ctx.observations()
     for role in spec.input_roles:
+        # One world record, in whichever mount declared it (spec §5.5).
         node = _dataset_node(mounts, role.dataset)
         if node is None:
             return False
