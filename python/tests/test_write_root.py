@@ -69,3 +69,29 @@ def test_holding_bytes_a_read_mount_declares_refuses_naming_its_record(two, cert
         assert not any(n.kind == "dataset" for n in ctx.write_view().iter_stored())
     assert caught.value.refusal.code == "invalid-input"
     assert data in caught.value.refusal.message and archive_id in caught.value.refusal.message
+
+
+def test_run_given_a_read_mount_dataset_refuses_naming_the_mount_before_any_act(two, monkeypatch, certified_work):
+    """Final review: `run` reads the dataset it is given in the write root, so
+    the archive's dataset refuses by the archive's corpus id before the
+    boundary runs anything."""
+    import science.commands.run as run_module
+    from helpers.world import _minted_ref, fixture_bundle
+
+    monkeypatch.setattr(run_module, "host_prerequisites", lambda: None)
+    monkeypatch.setattr(run_module, "execute_assessment_run",
+                        lambda **_: pytest.fail("run reached the boundary"))
+    data = hold_fixture_dataset(two, "data.txt", b"y\n", "expression", **OBSERVED)
+    archived = hold_fixture_dataset(archive_config(two), "archived.txt", b"z\n", "expression", **OBSERVED)
+    archive_id = next(m.corpus_id for m in ReadContext.open(two).mounts() if m.root.name == "archive")
+    code, entrypoint, targets = fixture_bundle(certified_work)
+    with open_rig(two, ("claim", "spec", "run")) as (d, ctx):
+        d.invoke("claim", CLAIM)
+        out = d.invoke("spec", dict(SPEC_FIELDS, target="proposition:claimed", dataset=data))
+        spec = _minted_ref(out.text, "analysis-spec")
+        with pytest.raises(Refused) as caught:
+            d.invoke("run", {"spec": spec, "dataset": archived, "code": str(code),
+                             "entrypoint": entrypoint, "targets": list(targets)})
+        assert not any(n.kind == "run" for n in ctx.write_view().iter_stored())
+    assert caught.value.refusal.code == "invalid-input"
+    assert archive_id in caught.value.refusal.message and "write root" in caught.value.refusal.message
