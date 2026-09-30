@@ -433,6 +433,7 @@ summary = "Claim a task: status=doing, owner=you"
 args = [{ name = "id", value = "ref", required = true }]
 options = [
   { shared = "force", value = "none" },
+  { names = ["--reason"], value = "string" },
 ]
 
 [[cli.tasks.commands]]
