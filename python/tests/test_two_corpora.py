@@ -235,6 +235,9 @@ def test_an_assessment_resting_on_a_dataset_its_corpus_lacks_refuses_naming_it(w
 
     hiding = dataclasses.replace(mount, view=Hiding(mount.view))
     with pytest.raises(Refused) as caught:
-        ctx._context(hiding, ctx.observations())
+        ctx._context(hiding, ctx.observations(), "proposition:claimed")
     assert caught.value.refusal.code == "invalid-input"
     assert hidden in caught.value.refusal.message and mount.corpus_id in caught.value.refusal.message
+    # Final review: the check reads only the assessments of the proposition
+    # being gathered, so proposition:queued, in the same corpus, is not blocked.
+    ctx._context(hiding, ctx.observations(), "proposition:queued")

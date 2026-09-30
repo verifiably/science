@@ -425,35 +425,37 @@ class ReadContext:
                                   "one address in two corpora is a duplicate location, which `status` reports"))
         return holders[0]
 
-    def _context(self, mount: Mount, observations):
+    def _context(self, mount: Mount, observations, proposition: str):
         from science.closure import supplied_context
         from beliefs import stored
-        assessments = [node for node in mount.view.iter_stored() if node.kind == "assessment"]
+        assessments = [(node, stored.assessment_value(node, profile=mount.profile))
+                       for node in mount.view.iter_stored() if node.kind == "assessment"]
         # Keyed as `gather` reads it: the stored assessment's identity, attributed
         # to the one corpus that holds it.
-        node_corpus = {
-            stored.assessment_value(node, profile=mount.profile).identity(): (mount.corpus_id,)
-            for node in assessments
-        }
-        self._refuse_foreign_observations(mount, assessments)
+        node_corpus = {value.identity(): (mount.corpus_id,) for _, value in assessments}
+        # Only the evidence `gather` reads for this proposition: one edited
+        # assessment elsewhere in the corpus does not block every proposition.
+        self._refuse_foreign_observations(
+            mount, [(node, value) for node, value in assessments if value.proposition == proposition])
         # The lineage snapshot walks from each observed dataset through this
         # mount's view, which cannot resolve another mount's dataset. The check
-        # above refuses evidence here that observes one, so the datasets left
-        # out are ones no assessment in this corpus observes (spec §5.5, part 3).
+        # above refuses this proposition's evidence that observes one, so the
+        # datasets left out are ones no gathered assessment observes (spec §5.5,
+        # part 3).
         declared = {address: found for address, found in observations.items() if mount.view.holds(address)}
         return supplied_context(mount.view, corpus_id=mount.corpus_id, pins=self.pins(mount.root),
                                 epoch_identity=self.epoch_identity(), observations=declared,
                                 node_corpus=node_corpus)
 
     def _refuse_foreign_observations(self, mount: Mount, assessments) -> None:
-        """Refuse an assessment in `mount` whose run reads a dataset the mount
-        does not declare: its lineage cannot be read through the mount's view,
+        """Refuse an assessment, of the (node, value) pairs given, whose run
+        reads a dataset the mount does not declare: its lineage cannot be read through the mount's view,
         and leaving it out would degrade admission without saying so. Write
         commands never mint one (`CorpusWriter._refuse_ineligible` reads the
         writer's own view); only an edited corpus can hold one."""
         from beliefs import stored
-        for node in assessments:
-            run = stored.typed_ref("run", stored.assessment_value(node, profile=mount.profile).run)
+        for node, value in assessments:
+            run = stored.typed_ref("run", value.run)
             if not mount.view.holds(run):
                 continue  # a missing run is `gather`'s to report
             foreign = sorted(target for role in stored.INPUT_ROLES
@@ -469,7 +471,7 @@ class ReadContext:
         from science.closure import gather_inputs
         mount = self.mount_holding(proposition)
         observations = self.observations()
-        return gather_inputs(mount.view, proposition, context=self._context(mount, observations),
+        return gather_inputs(mount.view, proposition, context=self._context(mount, observations, proposition),
                              profile=mount.profile, resolution=self.snapshot(mount.profile))
 
     def evaluate(self, proposition: str):
@@ -477,5 +479,5 @@ class ReadContext:
         mount = self.mount_holding(proposition)
         observations = self.observations()
         return evaluate(mount.view, proposition, observations=observations,
-                        context=self._context(mount, observations),
+                        context=self._context(mount, observations, proposition),
                         profile=mount.profile, resolution=self.snapshot(mount.profile))
