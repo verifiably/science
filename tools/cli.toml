@@ -1094,6 +1094,7 @@ options = [
   { names = ["--invocation-id"], value = "string" },
   { names = ["--continue"], value = "string" },
   { shared = "limit", value = "int" },
+  { names = ["--project"], value = "string" },
 ]
 
 [[cli.science.commands]]

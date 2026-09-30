@@ -166,3 +166,24 @@ def selected_project(ctx):
     if resolved is None or resolved.kind != "project":
         raise Refused(Refusal("unknown-project", f"{ctx.selection} names no standing project"))
     return resolved
+
+
+def live_selection(ctx, project):
+    """What the project's query denotes over the world's current state (beliefs
+    live-query design): attention, never an epoch's answer. The kernel's
+    refusals arrive as `kernel-refused`, its class name in `data.kind`."""
+    from beliefs.errors import (
+        AddressMapConflict, BuildContended, CaptureDrift, ResolutionRefused, SelectionRefused,
+    )
+    from beliefs.view_query import stored_query
+    from beliefs.world import live
+
+    try:
+        return live.evaluate_live_query(ctx.world, stored_query(project))
+    except SelectionRefused as caught:
+        raise Refused(Refusal(
+            "kernel-refused", str(caught),
+            {"kind": "SelectionRefused", "reason": caught.reason, "refs": list(caught.refs)},
+        )) from None
+    except (AddressMapConflict, BuildContended, CaptureDrift, ResolutionRefused) as caught:
+        raise Refused(Refusal("kernel-refused", str(caught), {"kind": type(caught).__name__})) from None

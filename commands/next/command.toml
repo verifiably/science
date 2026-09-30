@@ -2,6 +2,7 @@ schema_version = 1
 name = "next"
 purpose = "Rank the propositions this world can act on, from the current view."
 write_class = "read-only"
+selects = true
 output_budget = 16384
 
 [inputs.limit]
@@ -11,4 +12,4 @@ default = 10
 doc = "How many propositions to show."
 
 [reads]
-families = ["corpus-stored", "holdings", "epoch", "registry"]
+families = ["corpus-stored", "holdings", "epoch", "registry", "coordination"]
