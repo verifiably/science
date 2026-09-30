@@ -6,6 +6,7 @@ from beliefs.admission import Admitted, admit
 from beliefs.dataset import Held, admission_state, dataset_address
 
 from science.coordination import live_selection, selected_project
+from science.refusal import Refusal, Refused
 from science.report import Heading, KeyVals, Report
 
 CLASSES = ("ready", "not-ready", "assessed-not-admitted", "admitted")
@@ -16,11 +17,16 @@ def _targeting_specs(view, proposition, profile):
     return [spec for spec in specs if spec.target == proposition]
 
 
-def _inputs_held(ctx, view, spec) -> bool:
+def _dataset_node(mounts, address):
+    return next((node for mount in mounts for node in mount.view.iter_stored() if node.kind == "dataset"
+                 and dataset_address(stored.dataset_declaration(node)) == address), None)
+
+
+def _inputs_held(ctx, mounts, spec) -> bool:
     observations = ctx.observations()
     for role in spec.input_roles:
-        node = next((n for n in view.iter_stored() if n.kind == "dataset"
-                     and dataset_address(stored.dataset_declaration(n)) == role.dataset), None)
+        # One world record, in whichever mount declared it (spec §5.5).
+        node = _dataset_node(mounts, role.dataset)
         if node is None:
             return False
         if not isinstance(admission_state(stored.dataset_declaration(node), observations.get(role.dataset, ())), Held):
@@ -29,12 +35,16 @@ def _inputs_held(ctx, view, spec) -> bool:
 
 
 def classify(ctx, proposition: str) -> str:
-    _, view = ctx.single_view()
-    profile = ctx.config.profile
+    """The four-class rule over the evidence in the proposition's own corpus,
+    decoded under that corpus's profile (spec §5.5)."""
+    mount = ctx.mount_holding(proposition)
+    view, profile = mount.view, mount.profile
     assessed = any(n.kind == "assessment" and stored.assessment_value(n, profile=profile).proposition == proposition
                    for n in view.iter_stored())
     if not assessed:
-        return "ready" if any(_inputs_held(ctx, view, s) for s in _targeting_specs(view, proposition, profile)) else "not-ready"
+        mounts = ctx.mounts()
+        return ("ready" if any(_inputs_held(ctx, mounts, s) for s in _targeting_specs(view, proposition, profile))
+                else "not-ready")
     inputs = ctx.gather_inputs(proposition)
     observations = ctx.observations()
     for assessment in inputs.assessments:
@@ -62,8 +72,7 @@ def handle(ctx, *, limit=None) -> Report:
     project = selected_project(ctx)
     blocks: list = [Heading("Next")]
     if project is None:
-        _, view = ctx.single_view()
-        nodes = [node for node in view.iter_stored() if node.kind == "proposition"]
+        nodes = [node for mount in ctx.mounts() for node in mount.view.iter_stored() if node.kind == "proposition"]
     else:
         # The project's query, denoted over the world as it stands: no epoch
         # mediates seeing a proposition just minted (coordination design
@@ -73,19 +82,19 @@ def handle(ctx, *, limit=None) -> Report:
         # corpus as it stood when it was opened, so an earlier one would not hold
         # a proposition minted in between, and its row would vanish under
         # `complete: true`.
-        _, view = ctx.single_view()
-        unheld = [ref for ref in live.selected if not view.holds(ref)]
-        if unheld:
-            # With one configured root, the capture reads no corpus but this
-            # one, so a selected record it does not hold is an invariant broken,
-            # not an outcome: fail rather than render a queue missing rows. Part
-            # 3 replaces this with the lookup across mounted corpora.
-            raise RuntimeError(
-                "the live capture selected records the configured corpus does not hold: "
-                + ", ".join(unheld))
+        mounts = ctx.mounts()
+        unmounted = [ref for ref in live.selected if not any(m.view.holds(ref) for m in mounts)]
+        if unmounted:
+            # A capture naming a record no mounted corpus holds (one wider than
+            # corpus_roots, or a view opened short of it) leaves a row this
+            # read cannot classify: refused by name, never dropped.
+            raise Refused(Refusal("invalid-input",
+                                  f"the selection names {', '.join(unmounted)}, which no corpus in "
+                                  "corpus_roots holds; the world admits a corpus this configuration does not mount"))
         blocks.append(KeyVals("selection", _selection_pairs(ctx.selection, project, live)))
         # A selected record that is not a proposition is not a row.
-        nodes = [node for node in map(view.get, live.selected) if node.kind == "proposition"]
+        nodes = [node for node in (next(m.view.get(ref) for m in mounts if m.view.holds(ref))
+                                   for ref in live.selected) if node.kind == "proposition"]
     rows = sorted((CLASSES.index(classify(ctx, node.id)), node.id,
                    stored.display_statement(node) or node.title) for node in nodes)
     shown = rows[: (limit or 10)]

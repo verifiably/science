@@ -329,13 +329,6 @@ class ReadContext:
                     return node
         raise Refused(Refusal("unknown-cursor", f"record {record_id!r} not found"))
 
-    def single_view(self) -> tuple[str, ReadView]:
-        views = self.read_views()
-        if len(views) != 1:
-            raise Refused(Refusal("invalid-input",
-                                  f"the belief path reads exactly one corpus; the config names {len(views)}"))
-        return views[0]
-
     def write_view(self) -> ReadView:
         """The write root's view, opened now: what a write command reads the
         records it is given in (spec §5.5, part 3)."""
@@ -408,29 +401,48 @@ class ReadContext:
         except EpochUnknown:
             return NO_EPOCH_SNAPSHOT if absent is None else absent
 
-    def _context(self, view, corpus_id, observations):
+    def mount_holding(self, ref: str) -> Mount:
+        """The one mounted corpus holding `ref`. A record id in two corpora is
+        the world's duplicate-location conflict, refused rather than answered
+        from whichever mount sorts first."""
+        holders = [mount for mount in self.mounts() if mount.view.holds(ref)]
+        if not holders:
+            raise Refused(Refusal("invalid-input", f"{ref!r} is not in the configured corpora"))
+        if len(holders) > 1:
+            raise Refused(Refusal("invalid-input",
+                                  f"{ref!r} is held by corpora {', '.join(m.corpus_id for m in holders)}; "
+                                  "one address in two corpora is a duplicate location, which `status` reports"))
+        return holders[0]
+
+    def _context(self, mount: Mount, observations):
         from science.closure import supplied_context
         from beliefs import stored
         # Keyed as `gather` reads it: the stored assessment's identity, attributed
         # to the one corpus that holds it.
         node_corpus = {
-            stored.assessment_value(node, profile=self.config.profile).identity(): (corpus_id,)
-            for node in view.iter_stored() if node.kind == "assessment"
+            stored.assessment_value(node, profile=mount.profile).identity(): (mount.corpus_id,)
+            for node in mount.view.iter_stored() if node.kind == "assessment"
         }
-        return supplied_context(view, corpus_id=corpus_id, pins=self.pins(), epoch_identity=self.epoch_identity(),
-                                observations=observations, node_corpus=node_corpus)
+        # The lineage snapshot walks from each observed dataset through this
+        # mount's view, which cannot resolve another mount's dataset. A write
+        # command reads its refs in the write root, so evidence here observes
+        # only datasets this corpus declares (spec §5.5, part 3).
+        declared = {address: found for address, found in observations.items() if mount.view.holds(address)}
+        return supplied_context(mount.view, corpus_id=mount.corpus_id, pins=self.pins(mount.root),
+                                epoch_identity=self.epoch_identity(), observations=declared,
+                                node_corpus=node_corpus)
 
     def gather_inputs(self, proposition: str):
         from science.closure import gather_inputs
-        corpus_id, view = self.single_view()
+        mount = self.mount_holding(proposition)
         observations = self.observations()
-        return gather_inputs(view, proposition, context=self._context(view, corpus_id, observations),
-                             profile=self.config.profile, resolution=self.snapshot())
+        return gather_inputs(mount.view, proposition, context=self._context(mount, observations),
+                             profile=mount.profile, resolution=self.snapshot(mount.profile))
 
     def evaluate(self, proposition: str):
         from science.closure import evaluate
-        corpus_id, view = self.single_view()
+        mount = self.mount_holding(proposition)
         observations = self.observations()
-        return evaluate(view, proposition, observations=observations,
-                        context=self._context(view, corpus_id, observations),
-                        profile=self.config.profile, resolution=self.snapshot())
+        return evaluate(mount.view, proposition, observations=observations,
+                        context=self._context(mount, observations),
+                        profile=mount.profile, resolution=self.snapshot(mount.profile))

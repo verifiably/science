@@ -523,3 +523,43 @@ def mint_fixture_run(cfg: ScienceConfig, spec_ref: str, dataset_ref: str, bundle
         host_realization=socket.gethostname(), scratch_base=cfg.operations_root / "scratch" / "fixture")
     assert isinstance(outcome, RunMinted), outcome
     return run_ref(outcome.run.address())
+
+
+def _minted_ref(text: str, kind: str) -> str:
+    """The id of the `kind` record a command's report names."""
+    return next(token for token in text.split() if token.startswith(f"{kind}:"))
+
+
+def add_archived_assessment(cfg: ScienceConfig, work: Path) -> None:
+    """The archive's evidence for proposition:archived — a spec over held data,
+    one run and its assessment, no verification — written through the commands
+    with the archive as write root. `next` then reads it assessed-not-admitted.
+    """
+    archived = archive_config(cfg)
+    data = hold_fixture_dataset(archived, "data.txt", b"x\n", "expression", **OBSERVED)
+    with open_rig(archived, ("spec",)) as (d, _):
+        out = d.invoke("spec", dict(SPEC_FIELDS, target="proposition:archived", dataset=data))
+    spec = _minted_ref(out.text, "analysis-spec")
+    run = mint_fixture_run(archived, spec, data, fixture_bundle(work))
+    with open_rig(archived, ("assess",)) as (d, _):
+        d.invoke("assess", {"run": run})
+
+
+def write_two_corpus_config(cfg: ScienceConfig) -> Path:
+    """The launcher TOML for `build_two_corpus_world`: both roots, the write
+    root, `testing` activated and `archive` available to the read mount only."""
+    work = cfg.world.world_root.parent
+    path = work / "science.toml"
+    path.write_text(f'''\
+world_root = "world"
+world_id = "{cfg.world.world_id}"
+corpus_roots = ["archive", "corpus"]
+write_root = "corpus"
+operations_root = "ops"
+domains = {list(DOMAINS)!r}
+contracts = ["testing.yaml"]
+read_contracts = ["archive.yaml"]
+store_root = "store"
+coordination = {COORDINATION}
+''')
+    return path

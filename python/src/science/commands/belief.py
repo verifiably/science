@@ -3,14 +3,11 @@ from __future__ import annotations
 
 from beliefs.belief import Belief, NoBelief
 
-from science.refusal import Refusal, Refused
 from science.report import Heading, KeyVals, Report
 
 
 def handle(ctx, *, proposition) -> Report:
-    _, view = ctx.single_view()
-    if not view.holds(proposition):
-        raise Refused(Refusal("invalid-input", f"proposition {proposition!r} is not in the corpus"))
+    ctx.mount_holding(proposition)  # refuses a proposition no mount holds, or two do
     answer = ctx.evaluate(proposition)
     if isinstance(answer, Belief):
         pairs = (("kind", "Belief"), ("value", str(answer.value)),

@@ -118,10 +118,9 @@ def test_a_proposition_minted_while_next_runs_is_not_dropped(certified_work, mon
     assert "proposition:p1" in _rows(text) and "proposition:p2" in _rows(text)
 
 
-def test_a_selected_record_the_corpus_does_not_hold_fails_rather_than_vanishing(world, monkeypatch):
-    """Unreachable with one configured root short of a raw edit, so it is an
-    internal error and not a refusal code; what it must never be is a silently
-    shorter queue."""
+def test_a_selected_record_no_mounted_corpus_holds_refuses_rather_than_vanishing(world, monkeypatch):
+    """A capture naming a record no mounted corpus holds leaves a row `next`
+    cannot read: refused by name, never a silently shorter queue."""
     from types import SimpleNamespace
 
     import science.commands.next as next_module
@@ -132,8 +131,8 @@ def test_a_selected_record_the_corpus_does_not_hold_fails_rather_than_vanishing(
         _project(d, "one", _addresses("proposition:p1"))
         d.invoke("project-select", {"target": "one"})
         monkeypatch.setattr(next_module, "live_selection", lambda ctx, project: ghost)
-        with pytest.raises(RuntimeError, match="proposition:ghost"):
-            d.invoke("next", {})
+        refusal = _refused(lambda: d.invoke("next", {}), "invalid-input")
+    assert "proposition:ghost" in refusal.message and "corpus_roots" in refusal.message
 
 
 def test_a_revised_query_is_followed_without_reselecting(world):
