@@ -22,7 +22,7 @@ def test_assess_mints_the_assessment_the_outcome_file_fixes(rig):
     d, ctx, run_ref = rig
     out = d.invoke("assess", {"run": run_ref})
     assert "[assessment] assessment:" in out.text
-    _, view = ctx.single_view()
+    view = ctx.write_view()
     from beliefs import stored
     node = next(n for n in view.iter_stored() if n.kind == "assessment")
     value = stored.assessment_value(node, profile=ctx.config.profile)

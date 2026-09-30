@@ -26,7 +26,7 @@ def test_verify_mints_a_verification_naming_the_assessment_and_both_runs(rig):
     d, ctx, assessment_ref, (code, entrypoint, _) = rig
     out = d.invoke("verify", {"assessment": assessment_ref, "code": str(code), "entrypoint": entrypoint})
     assert "[verification] verification:" in out.text
-    _, view = ctx.single_view()
+    view = ctx.write_view()
     node = next(n for n in view.iter_stored() if n.kind == "verification")
     facet = node.facets["verification"]
     assert facet["verdict"] == "passed"
@@ -71,7 +71,7 @@ def test_a_disagreeing_replay_under_one_recipe_yields_failed_and_still_mints(cer
         code, entrypoint, _ = bundle
         out = d.invoke("verify", {"assessment": assessment_ref, "code": str(code), "entrypoint": entrypoint})
         assert "[verification] verification:" in out.text
-        _, view = ctx.single_view()
+        view = ctx.write_view()
         (node,) = [n for n in view.iter_stored() if n.kind == "verification"]
         assert node.facets["verification"]["verdict"] == "failed"
         assert sum(1 for n in view.iter_stored() if n.kind == "run") == 2
@@ -98,5 +98,5 @@ def test_verify_refuses_before_the_replay_when_the_equivalence_implementation_ch
     assert first.value.refusal.code == "invalid-input"
     assert "impl-eq-other" in first.value.refusal.message
     assert again.value.refusal == first.value.refusal
-    _, view = ctx.single_view()
+    view = ctx.write_view()
     assert sum(1 for n in view.iter_stored() if n.kind == "run") == 1  # no replay was minted

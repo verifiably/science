@@ -17,7 +17,7 @@ def test_dataset_holds_bytes_and_mints_the_record(rig, tmp_path):
     out = d.invoke("dataset", {"path": str(data), "title": "expression", "locator": "accession:GSE1",
                                "facets": ["biology/gene-axis=axis:rows,namespace:HGNC"]})
     assert "[dataset] dataset:sha256:" in out.text
-    _, view = ctx.single_view()
+    view = ctx.write_view()
     node = next(n for n in view.iter_stored() if n.kind == "dataset" and n.title == "expression")
     assert ctx.is_held(node)
     from beliefs import stored
@@ -29,7 +29,7 @@ def test_non_regular_path_refuses_before_any_act(rig, tmp_path):
     with pytest.raises(Refused) as caught:
         d.invoke("dataset", {"path": str(tmp_path), "title": "dir"})
     assert caught.value.refusal.code == "invalid-input"
-    _, view = ctx.single_view()
+    view = ctx.write_view()
     assert not any(n.kind == "dataset" and n.title == "dir" for n in view.iter_stored())
 
 
@@ -41,7 +41,8 @@ def test_same_bytes_twice_refuse_naming_the_record(rig, tmp_path):
     with pytest.raises(Refused) as caught:
         d.invoke("dataset", {"path": str(data), "title": "two"})
     assert "dataset:sha256:" in caught.value.refusal.message
-    assert caught.value.refusal.message.split()[-1] in first.text
+    record = caught.value.refusal.message.split("already declared as ")[1].split()[0]
+    assert record.startswith("dataset:sha256:") and record in first.text
 
 
 def test_two_files_with_one_title_and_basename_land_apart(rig, tmp_path):
@@ -68,7 +69,7 @@ def test_malformed_metadata_leaves_no_acts(rig, tmp_path):
     from beliefs import stored
     digest = sha256(b"M\n").hexdigest()
     assert not (ctx.config.store_root / digest).exists()  # no bytes were written
-    _, view = ctx.single_view()
+    view = ctx.write_view()
     assert not any(n.kind == "dataset" and n.title == "m" for n in view.iter_stored())
     assert not any(n.kind == "holdings-observation"
                    and stored.holdings_observation_value(n).location.relative_path.startswith(digest)
@@ -86,7 +87,7 @@ def test_malformed_locator_leaves_no_acts(rig, tmp_path):
     assert caught.value.refusal.code == "invalid-input"
     from hashlib import sha256
     assert not (ctx.config.store_root / sha256(b"L\n").hexdigest()).exists()
-    _, view = ctx.single_view()
+    view = ctx.write_view()
     assert not any(n.kind == "dataset" and n.title == "l" for n in view.iter_stored())
 
 
@@ -95,7 +96,7 @@ def test_attested_by_is_the_session_actor(rig, tmp_path):
     data = tmp_path / "e.txt"
     data.write_bytes(b"E\n")
     d.invoke("dataset", {"path": str(data), "title": "e", "locator": "accession:X"})
-    _, view = ctx.single_view()
+    view = ctx.write_view()
     node = next(n for n in view.iter_stored() if n.kind == "dataset" and n.title == "e")
     facet = node.facets["empirical-observation"]
     assert facet["attested_by"].startswith("session:")
@@ -124,10 +125,10 @@ def test_bytes_held_with_no_record_are_re_held_superseding_the_earlier_observati
                      holdings_seam(), profile=ctx.config.profile)
     write(act, StoreLocator(ctx.store_id(), f"{digest.removeprefix('sha256:')}/orphan.txt"), content, expected=digest)
     address = dataset_address(DatasetDeclaration(resources=(ResourceDeclaration(name="orphan.txt", digest=digest),)))
-    _, view = ctx.single_view()
+    view = ctx.write_view()
     assert not view.holds(address)
     d.invoke("dataset", {"path": str(data), "title": "orphan"})
-    _, view = ctx.single_view()
+    view = ctx.write_view()
     assert view.holds(address) and ctx.is_held(view.get(address))
     assert len(ctx.observations()[address]) == 1
     relative = f"{digest.removeprefix('sha256:')}/orphan.txt"

@@ -1,33 +1,28 @@
 """The one place a science launcher opens its attended session."""
 from __future__ import annotations
 
-from science.config import ScienceConfig, require_coordination_pinned
+from science.config import ScienceConfig, mount_profiles, require_write_root_pins
 from science.refusal import Refusal, Refused
 
 
 def open_session(config: ScienceConfig, project=None):
-    """Open the configured single corpus as the writer and optional read mount.
+    """Open the configured write root as the writer, with every configured root
+    mounted under its own manifest's profile when coordination is on.
 
     `project`, an unpinned project address, is the initial selection: the
     kernel resolves and pins it into `session-open` before the session
     directory exists, so one that names no standing project refuses here."""
-    from beliefs.errors import ProjectNotResolvable, SessionRefused
+    from beliefs.errors import ProjectNotResolvable
     from beliefs.session import open_attended_session
 
-    if len(config.world.corpus_roots) != 1:
-        raise SessionRefused(
-            f"a session needs exactly one corpus root; the config names {len(config.world.corpus_roots)}"
-        )
-    (root,) = config.world.corpus_roots
-    if config.coordination is not None:
-        require_coordination_pinned(config)
-    elif project is not None:
+    require_write_root_pins(config)
+    if config.coordination is None and project is not None:
         raise Refused(Refusal(
             "invalid-input", "coordination = false in this configuration; no project can be selected"))
     try:
         return open_attended_session(
-            config.world, config.operations_root, write_root=root, profile=config.profile,
-            mounts={root: config.profile} if config.coordination is not None else None,
+            config.world, config.operations_root, write_root=config.write_root, profile=config.profile,
+            mounts=mount_profiles(config) if config.coordination is not None else None,
             store_root=config.store_root, project=project,
         )
     except ProjectNotResolvable as caught:

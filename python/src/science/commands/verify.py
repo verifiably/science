@@ -12,6 +12,8 @@ from beliefs.session import KernelRefusalValue
 from beliefs.verify import AssessmentVerification, build_verification, publication_node
 
 from science.closure import NO_EPOCH_VERIFICATION
+from science.config import corpus_id_at
+from science.holdings import dataset_at
 from science.commands.run import now, prepare
 from science.refusal import Refusal, Refused
 from science.report import Report, record_block
@@ -22,9 +24,9 @@ def _refuse(message: str):
 
 
 def handle(ctx, writer, *, assessment, code, entrypoint, cores=None) -> Report:
-    _, view = ctx.single_view()
+    view = ctx.write_view()
     if not view.holds(assessment):
-        _refuse(f"assessment {assessment!r} is not in the corpus")
+        ctx.not_held(assessment)
     try:
         value = stored.assessment_value(view.get(assessment), profile=ctx.config.profile)
     except MalformedRecord as caught:
@@ -35,10 +37,15 @@ def handle(ctx, writer, *, assessment, code, entrypoint, cores=None) -> Report:
         _refuse(f"{assessment} names a run or spec this corpus does not hold")
     original = decode_run_closure(view.get(run_ref))
     (role,) = stored.analysis_spec_value(view.get(spec_ref), profile=ctx.config.profile).input_roles
-    dataset_ref = next((n.id for n in view.iter_stored() if n.kind == "dataset"
-                        and _address(n) == role.dataset), None)
-    if dataset_ref is None:
+    # The write root's own view, as every write command reads (spec §5.5); a
+    # read mount that declares the dataset is named in the refusal.
+    found = dataset_at(((corpus_id_at(ctx.config.write_root), view),), role.dataset)
+    if found is None:
+        elsewhere = ctx.dataset_at(role.dataset)
+        if elsewhere is not None:
+            ctx.not_held(elsewhere[1].id)
         _refuse(f"the spec's dataset {role.dataset} is not in the corpus")
+    dataset_ref = found[1].id
     prepared = prepare(ctx, spec_ref, dataset_ref, code, entrypoint, original.recipe.invocation.targets)
     spec = prepared.pop("spec")
     equivalence = REFERENCE_RULES.get(spec.equivalence_rule)
@@ -60,7 +67,7 @@ def handle(ctx, writer, *, assessment, code, entrypoint, cores=None) -> Report:
     # Both runs in their stored form, as the audit re-derives the verdict: an
     # in-memory result keeps the workflow's target order while the stored one is
     # sorted, and the equivalence rule compares them as tuples (beliefs-97075f).
-    _, view = ctx.single_view()
+    view = ctx.write_view()
     replayed = decode_run_closure(view.get(run_ref_of(outcome.run.address())))
     derive_scope(original, replayed, certification=None)
     verification = build_verification(original, replayed, specs={spec.identity: spec},
@@ -71,8 +78,3 @@ def handle(ctx, writer, *, assessment, code, entrypoint, cores=None) -> Report:
         raise RuntimeError(f"build_verification over an assessment run returned {type(verification).__name__}")
     node = writer.add(publication_node(verification, assessment_ref=assessment))
     return (record_block(node),)
-
-
-def _address(node) -> str | None:
-    from beliefs.dataset import dataset_address
-    return dataset_address(stored.dataset_declaration(node))

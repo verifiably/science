@@ -68,7 +68,7 @@ def _answer(ctx, prop):
 
 def test_every_step_left_exactly_its_record(walked_portable):
     _, ctx, _, _ = walked_portable
-    _, view = ctx.single_view()
+    view = ctx.write_view()
     kinds = sorted(n.kind for n in view.iter_stored())
     # The contract world holds the concept and level lists; the walk holds the data.
     assert kinds.count("proposition") == 1 and kinds.count("dataset") == 3
@@ -80,7 +80,7 @@ def test_without_confinement_the_verification_does_not_admit(walked_portable):
     """same-environment, passed — a real verification, not an admitting one."""
     from science.commands.next import classify
     _, ctx, prop, _ = walked_portable
-    _, view = ctx.single_view()
+    view = ctx.write_view()
     facet = next(n for n in view.iter_stored() if n.kind == "verification").facets["verification"]
     assert facet["verdict"] == "passed" and facet["scope"] == "same-environment"
     pairs = _answer(ctx, prop)
@@ -91,7 +91,7 @@ def test_without_confinement_the_verification_does_not_admit(walked_portable):
 def test_under_confinement_the_path_ends_in_an_admitted_belief(walked_confined):
     from science.commands.next import classify
     _, ctx, prop, _ = walked_confined
-    _, view = ctx.single_view()
+    view = ctx.write_view()
     facet = next(n for n in view.iter_stored() if n.kind == "verification").facets["verification"]
     assert facet["scope"] == "clean-environment" and facet["verdict"] == "passed"
     pairs = _answer(ctx, prop)

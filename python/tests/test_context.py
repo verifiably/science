@@ -6,10 +6,18 @@ from science.refusal import Refused
 from helpers.world import build_belief_world, hold_fixture_dataset
 
 
-def test_single_view_names_the_one_corpus(certified_work):
+def test_mount_holding_names_the_one_corpus(certified_work):
+    cfg = build_belief_world(certified_work)
+    mount = ReadContext.open(cfg).mount_holding("proposition:p1")
+    assert len(mount.corpus_id) == 32 and mount.root == cfg.write_root and mount.profile == cfg.profile
+
+
+def test_mount_holding_refuses_a_record_no_mount_holds(certified_work):
     ctx = ReadContext.open(build_belief_world(certified_work))
-    corpus_id, view = ctx.single_view()
-    assert len(corpus_id) == 32 and view.holds("proposition:p1")
+    with pytest.raises(Refused) as caught:
+        ctx.mount_holding("proposition:absent")
+    assert caught.value.refusal.code == "invalid-input"
+    assert "'proposition:absent' is not in the configured corpora" in caught.value.refusal.message
 
 
 def test_snapshot_resolves_the_held_concept_vocabulary(certified_work):
@@ -37,11 +45,11 @@ def test_a_later_absent_observation_removes_heldness(certified_work):
     cfg = build_belief_world(certified_work)
     ref = hold_fixture_dataset(cfg, "data.txt", b"gone\n", "expression")
     ctx = ReadContext.open(cfg)
-    _, view = ctx.single_view()
+    view = ctx.write_view()
     assert ctx.is_held(view.get(ref))
     unhold_fixture_dataset(cfg, ref)
     ctx = ReadContext.open(cfg)
-    _, view = ctx.single_view()
+    view = ctx.write_view()
     assert not ctx.is_held(view.get(ref))
     from beliefs import stored
     from beliefs.dataset import dataset_address
@@ -85,7 +93,7 @@ def test_observations_and_held_path_follow_the_store(certified_work):
     cfg = build_belief_world(certified_work)
     ref = hold_fixture_dataset(cfg, "data.txt", b"hello\n", "expression")
     ctx = ReadContext.open(cfg)
-    _, view = ctx.single_view()
+    view = ctx.write_view()
     node = view.get(ref)
     assert ctx.is_held(node)
     from beliefs import stored

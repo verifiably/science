@@ -26,7 +26,7 @@ def test_run_mints_one_run_record(rig, certified_work):
     out = d.invoke("run", {"spec": spec_ref, "dataset": ref, "code": str(code),
                            "entrypoint": entrypoint, "targets": list(targets)})
     assert "[run] run:" in out.text
-    _, view = ctx.single_view()
+    view = ctx.write_view()
     assert sum(1 for n in view.iter_stored() if n.kind == "run") == 1
 
 
@@ -39,7 +39,7 @@ def test_run_refuses_without_bubblewrap_before_any_act(certified_work, monkeypat
             d.invoke("run", {"spec": "analysis-spec:" + "0" * 64, "dataset": "dataset:x", "code": "/nowhere",
                              "entrypoint": "e", "targets": ["t"]})
         assert "bubblewrap" in caught.value.refusal.message
-        _, view = ctx.single_view()
+        view = ctx.write_view()
         assert not any(n.kind == "run" for n in view.iter_stored())
 
 

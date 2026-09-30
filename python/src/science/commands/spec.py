@@ -117,10 +117,10 @@ def handle(ctx, writer, *, target, dataset, contrast, slot, measure, scale, refe
            baseline=None, comparison=None, quantity=None, increment=None, conditioning=None,
            applicability=None, parameters=None, supersedes=None) -> Report:
     profile = ctx.config.profile
-    _, view = ctx.single_view()
+    view = ctx.write_view()
     for ref in (target, dataset):
         if not view.holds(ref):
-            _refuse(f"{ref!r} is not in the corpus")
+            ctx.not_held(ref)
     try:
         address = dataset_address(stored.dataset_declaration(view.get(dataset)))
     except MalformedRecord as caught:
@@ -136,7 +136,7 @@ def handle(ctx, writer, *, target, dataset, contrast, slot, measure, scale, refe
         except MalformedRecord as caught:
             _refuse(f"supersedes {supersedes!r} is not an analysis-spec ref: {caught}")
         if not view.holds(supersedes):
-            _refuse(f"supersedes {supersedes!r} is not in the corpus")
+            ctx.not_held(supersedes)
     held_rules = {interpretation_rule: _rule(interpretation_rule), equivalence_rule: _rule(equivalence_rule)}
     snapshot = ctx.snapshot()
     try:

@@ -95,7 +95,8 @@ def test_coordination_pinned_at_another_version_refuses_at_open(certified_work):
     init_store_root(certified_work / "store", authority=FIXTURE_AUTHORITY)
     cfg = ScienceConfig(world=world, operations_root=certified_work / "ops", profile=PROFILE,
                         service_socket=certified_work / "ops" / "service.sock",
-                        store_root=certified_work / "store", coordination=2)
+                        store_root=certified_work / "store", coordination=2,
+                        write_root=root)
     with pytest.raises(Refused) as caught:
         open_session(cfg)
     refusal = caught.value.refusal

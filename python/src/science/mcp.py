@@ -379,9 +379,11 @@ def serve(config_path: Path, stdin=None, stdout=None, stderr=None, project=None)
     check_socket_path(config.service_socket)
     read_context = ReadContext.open(config)
     selection = initial_selection(config, read_context, project)
-    # One attended session for the process lifetime. A world config naming
-    # other than exactly one corpus root raises SessionRefused here; that is a
-    # launcher misconfiguration and propagates, never a command refusal.
+    # One attended session for the process lifetime, writing `write_root` with
+    # every other corpus root mounted for reading. A configuration the session
+    # cannot open over (write-root pins the writer's profile does not match, an
+    # unmountable read mount, a root without a readable manifest) refuses here;
+    # that is a launcher misconfiguration and propagates, never a command refusal.
     session = open_session(config, project=selection)
     server, serving = None, False
     try:

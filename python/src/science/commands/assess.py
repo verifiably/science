@@ -16,9 +16,9 @@ def _refuse(message: str):
 
 
 def handle(ctx, writer, *, run) -> Report:
-    _, view = ctx.single_view()
+    view = ctx.write_view()
     if not view.holds(run):
-        _refuse(f"run {run!r} is not in the corpus")
+        ctx.not_held(run)
     try:
         closure = decode_run_closure(view.get(run))
     except MalformedRecord as caught:

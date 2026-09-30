@@ -72,6 +72,7 @@ def build_fixture_world(work: Path) -> ScienceConfig:
         service_socket=work / "ops" / "service.sock",
         store_root=store_root,
         coordination=COORDINATION,
+        write_root=corpus_root,
     )
 
 
@@ -90,7 +91,7 @@ def build_world_without_coordination(work: Path) -> ScienceConfig:
     STORE_IDS[work] = init_store_root(work / "store", authority=FIXTURE_AUTHORITY)
     return ScienceConfig(world=config, operations_root=work / "ops", profile=BARE_PROFILE,
                          service_socket=work / "ops" / "service.sock", store_root=work / "store",
-                         coordination=None)
+                         coordination=None, write_root=corpus_root)
 
 
 def _install_holdings_reducer(world) -> None:
@@ -231,6 +232,16 @@ def fixture_contract_document(work: Path) -> Path:
     return path
 
 
+def archive_contract_document(work: Path) -> Path:
+    """A second corpus-local contract, `archive`: the test contract under
+    another namespace, for a read mount the writer never activates (spec §9)."""
+    path = work / "archive.yaml"
+    path.write_text((TEST_CONTRACT % {"concepts": concept_list_address().removeprefix("dataset:"),
+                                      "levels": level_list_address().removeprefix("dataset:")})
+                    .replace("contract: testing", "contract: archive", 1))
+    return path
+
+
 def build_fixture_world_with_contract(work: Path, *, hold_concepts: bool = True,
                                       hold_levels: bool = True) -> ScienceConfig:
     """A world whose profile compiles the test contract, with the concept and
@@ -258,12 +269,72 @@ def build_fixture_world_with_contract(work: Path, *, hold_concepts: bool = True,
     _install_holdings_reducer(world)
     cfg = ScienceConfig(world=config, operations_root=work / "ops", profile=profile,
                         service_socket=work / "ops" / "service.sock", store_root=work / "store",
-                        coordination=COORDINATION, plans=(plan,))
+                        coordination=COORDINATION, write_root=corpus_root,
+                        plans=(plan,), available_contracts=(contract,))
     if hold_concepts:
         hold_fixture_dataset(cfg, "concepts.txt", CONCEPTS, "concept vocabulary")
     if hold_levels:
         hold_fixture_dataset(cfg, "levels.txt", LEVELS, "level vocabulary")
     return cfg
+
+
+def build_two_corpus_world(work: Path) -> ScienceConfig:
+    """Spec §9's two corpora: the write root `corpus` (base, biology, the
+    `testing` contract and coordination) and the read mount `archive` (base,
+    biology and the corpus-local `archive` contract, no coordination — the mm30
+    shape), in one world and one store. The archive holds the vocabulary lists
+    and proposition:archived; `archive` reaches the mount through
+    read_contracts alone."""
+    from beliefs.claim import Referent, build_claim
+    from beliefs.projection import project_claim
+    from science.contracts import load_contract_document
+    base = shipped_base_contract()
+    testing, testing_plan = load_contract_document(fixture_contract_document(work), base)
+    archive, archive_plan = load_contract_document(archive_contract_document(work), base)
+    biology = [shipped_domain_contract(ns) for ns in DOMAINS]
+    writer_profile = compile_profile(base, biology + [testing], coordination=shipped_coordination(COORDINATION))
+    archive_profile = compile_profile(base, biology + [archive])
+    archive_root, corpus_root = work / "archive", work / "corpus"
+    config = WorldConfig(work / "world", secrets.token_hex(16), (archive_root, corpus_root))
+    init_world_root(config, authority=FIXTURE_AUTHORITY)
+    world = open_world(config, authority=FIXTURE_AUTHORITY)
+    for root, profile in ((archive_root, archive_profile), (corpus_root, writer_profile)):
+        init_corpus_root(root, authority=FIXTURE_AUTHORITY)
+        open_corpus(root, authority=FIXTURE_AUTHORITY, profile=profile).adopt_manifest(profile=CorpusPins(
+            science_contract="science:" + profile.base_contract_identity,
+            domains={ns: f"{ns}:{identity}" for ns, identity in profile.activated_contracts.items()},
+        ))
+        world.admit(root, provenance=Fresh())
+    STORE_IDS[work] = init_store_root(work / "store", authority=FIXTURE_AUTHORITY)
+    _install_holdings_reducer(world)
+    cfg = ScienceConfig(world=config, operations_root=work / "ops", profile=writer_profile,
+                        service_socket=work / "ops" / "service.sock", store_root=work / "store",
+                        coordination=COORDINATION, write_root=corpus_root, plans=(testing_plan,),
+                        available_contracts=(testing, archive))
+    archived = archive_config(cfg)
+    hold_fixture_dataset(archived, "concepts.txt", CONCEPTS, "concept vocabulary")
+    hold_fixture_dataset(archived, "levels.txt", LEVELS, "level vocabulary")
+    claim = build_claim(archive_profile, operator=archive_plan.operator_for("affects", "concept", "protein"),
+                        args=(Referent(sort=archive_plan.sort_for("concept"), term="concept:disease-stage"),
+                              Referent(sort=archive_plan.sort_for("protein"), term="protein:PHF19")),
+                        layer="causal", polarity="positive")
+    open_corpus(archive_root, authority=FIXTURE_AUTHORITY, profile=archive_profile).add(stored.proposition_node(
+        "archived", title="archived", claim=project_claim(claim),
+        display_statement="concept:disease-stage affects protein:PHF19 (archived)"))
+    return cfg
+
+
+def archive_config(cfg: ScienceConfig) -> ScienceConfig:
+    """`cfg`'s world with the archive as the write root, under the profile its
+    manifest pins and its own plan: the fixture's way to write the archive's
+    evidence through the commands."""
+    import dataclasses
+    from beliefs.mount import compile_mount_profile
+    from science.contracts import load_contract_document
+    archive_root = cfg.world.world_root.parent / "archive"
+    _, plan = load_contract_document(archive_root.parent / "archive.yaml", shipped_base_contract())
+    return dataclasses.replace(cfg, write_root=archive_root, coordination=None, plans=(plan,),
+                               profile=compile_mount_profile(archive_root, available=cfg.available_contracts))
 
 
 def hold_fixture_dataset(cfg: ScienceConfig, name: str, content: bytes, title: str, **facets) -> str:
@@ -277,7 +348,7 @@ def hold_fixture_dataset(cfg: ScienceConfig, name: str, content: bytes, title: s
     from beliefs.holdings.records import StoreLocator
     from beliefs.root import holdings_seam
     digest = "sha256:" + sha256(content).hexdigest()
-    (root,) = cfg.world.corpus_roots
+    root = cfg.write_root
     ctx = ActContext(root, cfg.store_root, "fixture", "fixture/hold.v1", FIXTURE_AUTHORITY,
                      holdings_seam(), profile=cfg.profile)
     write(ctx, StoreLocator(STORE_IDS[root.parent], f"{digest.removeprefix('sha256:')}/{name}"),
@@ -295,8 +366,8 @@ def unhold_fixture_dataset(cfg: ScienceConfig, ref: str) -> None:
     from beliefs.holdings.boundary import ActContext, delete
     from beliefs.root import holdings_seam
     from science.config import ReadContext
-    (root,) = cfg.world.corpus_roots
-    _, view = ReadContext.open(cfg).single_view()
+    root = cfg.write_root
+    view = ReadContext.open(cfg).write_view()
     (resource,) = stored.dataset_declaration(view.get(ref)).resources
     relative = f"{resource.digest.removeprefix('sha256:')}/{resource.name}"
     standing = tuple(stored.holdings_observation_value(n) for n in view.iter_stored()
@@ -438,10 +509,10 @@ def mint_fixture_run(cfg: ScienceConfig, spec_ref: str, dataset_ref: str, bundle
     from science.config import ReadContext
     code, entrypoint, targets = bundle
     ctx = ReadContext.open(cfg)
-    _, view = ctx.single_view()
+    view = ctx.write_view()
     spec = stored.analysis_spec_value(view.get(spec_ref), profile=cfg.profile)
     address = dataset_address(stored.dataset_declaration(view.get(dataset_ref)))
-    (root,) = cfg.world.corpus_roots
+    root = cfg.write_root
     outcome = execute_assessment_run(
         spec=spec, port=durable_operation_port(root, FIXTURE_AUTHORITY, profile=cfg.profile),
         boundary_policy=MINIMAL_POLICY,
@@ -452,3 +523,43 @@ def mint_fixture_run(cfg: ScienceConfig, spec_ref: str, dataset_ref: str, bundle
         host_realization=socket.gethostname(), scratch_base=cfg.operations_root / "scratch" / "fixture")
     assert isinstance(outcome, RunMinted), outcome
     return run_ref(outcome.run.address())
+
+
+def _minted_ref(text: str, kind: str) -> str:
+    """The id of the `kind` record a command's report names."""
+    return next(token for token in text.split() if token.startswith(f"{kind}:"))
+
+
+def add_archived_assessment(cfg: ScienceConfig, work: Path) -> None:
+    """The archive's evidence for proposition:archived — a spec over held data,
+    one run and its assessment, no verification — written through the commands
+    with the archive as write root. `next` then reads it assessed-not-admitted.
+    """
+    archived = archive_config(cfg)
+    data = hold_fixture_dataset(archived, "data.txt", b"x\n", "expression", **OBSERVED)
+    with open_rig(archived, ("spec",)) as (d, _):
+        out = d.invoke("spec", dict(SPEC_FIELDS, target="proposition:archived", dataset=data))
+    spec = _minted_ref(out.text, "analysis-spec")
+    run = mint_fixture_run(archived, spec, data, fixture_bundle(work))
+    with open_rig(archived, ("assess",)) as (d, _):
+        d.invoke("assess", {"run": run})
+
+
+def write_two_corpus_config(cfg: ScienceConfig) -> Path:
+    """The launcher TOML for `build_two_corpus_world`: both roots, the write
+    root, `testing` activated and `archive` available to the read mount only."""
+    work = cfg.world.world_root.parent
+    path = work / "science.toml"
+    path.write_text(f'''\
+world_root = "world"
+world_id = "{cfg.world.world_id}"
+corpus_roots = ["archive", "corpus"]
+write_root = "corpus"
+operations_root = "ops"
+domains = {list(DOMAINS)!r}
+contracts = ["testing.yaml"]
+read_contracts = ["archive.yaml"]
+store_root = "store"
+coordination = {COORDINATION}
+''')
+    return path

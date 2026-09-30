@@ -7,8 +7,8 @@ size: m
 complexity: high
 process: planned
 created: 2026-09-23T11:40:35Z
-updated: 2026-09-24T14:26:54Z
-depends: [beliefs-fe7149, beliefs-c08725, sci-c5528e, sci-923d3a]
+updated: 2026-09-30T21:26:10Z
+depends: [beliefs-fe7149, beliefs-c08725, sci-c5528e, sci-923d3a, beliefs-9ce6e4]
 tags: [projects]
 agent: claude-code/claude-fable-5-1
 ---
@@ -18,3 +18,4 @@ The milestone of docs/specs/2026-09-23-projects-corpora-and-workspaces-design.md
 ## Notes
 
 - 2026-09-24T14:26:54Z (main): The mm30-commands world under .work/ carries coordination = false (added at part 1's merge) but still refuses to load: its mm30.yaml has the top-level 'also: [biology]' key that sci-3a01b3 made a refusal. Drop the key (config domains supplies biology) before the milestone uses that world.
+- 2026-09-30T21:26:10Z (coordination-part3): criterion 4's dependency sci-923d3a landed: write_root, read_contracts, per-mount profiles, next and belief across mounts

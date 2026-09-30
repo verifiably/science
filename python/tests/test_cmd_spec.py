@@ -16,7 +16,7 @@ def rig(certified_work):
 
 
 def _specs(ctx):
-    _, view = ctx.single_view()
+    view = ctx.write_view()
     return [n for n in view.iter_stored() if n.kind == "analysis-spec"]
 
 

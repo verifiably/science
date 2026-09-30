@@ -47,10 +47,12 @@ def handle(ctx, writer, *, path, title, locator=None, facets=None) -> Report:
     digest = "sha256:" + sha256(content).hexdigest()
     declaration = DatasetDeclaration(resources=(ResourceDeclaration(name=source.name, digest=digest),))
     address = dataset_address(declaration)
-    _, view = ctx.single_view()
-    for node in view.iter_stored():
-        if node.kind == "dataset" and dataset_address(stored.dataset_declaration(node)) == address:
-            _refuse(f"these bytes are already held as {node.id}")
+    found = ctx.dataset_at(address)
+    if found is not None:
+        corpus_id, node = found
+        _refuse(f"these bytes are already declared as {node.id} in corpus {corpus_id}; a dataset is one "
+                "world record, and a second would be a duplicate location")
+    view = ctx.write_view()
     relative = f"{digest.removeprefix('sha256:')}/{source.name}"
     standing = tuple(
         stored.holdings_observation_value(node)
