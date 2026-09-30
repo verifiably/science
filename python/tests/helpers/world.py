@@ -375,6 +375,14 @@ def mint_project(dispatcher, name: str = "health"):
     return CoordinationAddress(re.search(r"project:([0-9a-f]{32})\.", out.text).group(1))
 
 
+def mint_projects(cfg: ScienceConfig, *names: str) -> list:
+    """Open a session over `cfg`, mint one project per name, and close it: the
+    addresses, in order. For tests that need projects standing before a
+    launcher or a sessionless read starts."""
+    with open_rig(cfg, ("project",)) as (dispatcher, _):
+        return [mint_project(dispatcher, name) for name in names]
+
+
 def build_belief_world(work: Path, **holds: bool) -> ScienceConfig:
     """The contract world plus one proposition typed under the plan: the
     starting state for claim/spec/run/assess/verify/belief/next tests."""

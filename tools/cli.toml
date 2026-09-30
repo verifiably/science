@@ -1195,6 +1195,25 @@ options = [
 ]
 
 [[cli.science.commands]]
+path = ["projects"]
+summary = "List every project in the world, marking the selected one"
+options = [
+  { shared = "config", value = "path" },
+  { names = ["--invocation-id"], value = "string" },
+  { names = ["--continue"], value = "string" },
+]
+
+[[cli.science.commands]]
+path = ["project-show"]
+summary = "Show one project: its query and its questions, hypotheses, tasks and decisions"
+options = [
+  { shared = "config", value = "path" },
+  { names = ["--invocation-id"], value = "string" },
+  { names = ["--continue"], value = "string" },
+  { names = ["--project"], value = "string" },
+]
+
+[[cli.science.commands]]
 path = ["build"]
 summary = "Build the world from its corpora"
 

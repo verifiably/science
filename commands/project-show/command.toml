@@ -1,0 +1,9 @@
+schema_version = 1
+name = "project-show"
+purpose = "Show one project: its query and its questions, hypotheses, tasks and decisions."
+write_class = "read-only"
+selects = true
+output_budget = 16384
+
+[reads]
+families = ["coordination"]

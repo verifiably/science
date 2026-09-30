@@ -1,0 +1,8 @@
+schema_version = 1
+name = "projects"
+purpose = "List every project in the world, marking the selected one."
+write_class = "read-only"
+output_budget = 16384
+
+[reads]
+families = ["coordination"]
