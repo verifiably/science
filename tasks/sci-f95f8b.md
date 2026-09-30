@@ -8,12 +8,14 @@ complexity: high
 process: planned
 owner: main
 created: 2026-09-24T10:54:38Z
-updated: 2026-09-30T11:01:17Z
+updated: 2026-09-30T11:25:21Z
 started: 2026-09-30T11:01:17Z
 depends: [beliefs-cc0aea, beliefs-1148ad, beliefs-1af3fd, sci-c147e3]
 parent: sci-c5528e
 tags: [projects]
 agent: claude-code/claude-opus-5-5
+spec: docs/specs/2026-09-24-coordination-command-set-design.md
+plan: docs/plans/2026-09-30-coordination-selection-and-reads.md
 ---
 
 Spec docs/specs/2026-09-24-coordination-command-set-design.md §3.7, §3.8, §4.1, §4.2, §4.4, §5.1-5.3, §5.5 and P5/P8: project-select and the session write class with its selection block; projects and project-show; the selects key and the project read protocol field; launcher initial selection and default_project; the selection query on the socket and the CLI's resolution order; next through the selection; the preamble. Its plan is written when the beliefs seams land.
@@ -24,3 +26,4 @@ Spec docs/specs/2026-09-24-coordination-command-set-design.md §3.7, §3.8, §4.
 - 2026-09-25T13:52:46Z (main): All three beliefs seams landed on beliefs main (local, not pushed), 2026-09-25: beliefs-1af3fd CoordinationResolver.standing(kind, project=) (d0d964e); beliefs-1148ad session selection (7cf5d17): open_attended_session(..., project=), WriterSession.select_project(invocation_id, address) -> pinned CoordinationAddress | None, invocation_selection(invocation_id) -> SelectLine | None, the ledger's select line, LedgerReader.initial_project / InvocationRecord.selection / attributed_acts(), SelectLine exported from beliefs.session; beliefs-cc0aea cut 41 discharged: beliefs.world.live.evaluate_live_query(world, query) -> LiveSelection — render complete, absent and stamp (CaptureStamp: world_id, coverage). Part 2's plan can now be written.
 - 2026-09-30T11:01:17Z (main): started
   provenance: {"harness_session":"claude-code:2dfb2b90-3871-4afc-bd8c-8f7d26431d3c","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-09-30T11:25:21Z (coordination-part2): Part 2 plan drafted: docs/plans/2026-09-30-coordination-selection-and-reads.md, eight steps sci-451329, sci-108756, sci-a66ca4, sci-b0b8cf, sci-1217b5, sci-1391bd, sci-5b8997, sci-103ec2 (a chain). The spec takes seven 2026-09-30 planning amendments reviewed with the plan: project-show refuses no-current-project with nothing selected; --project is on selects rows and the two launcher rows only; the launcher's --project takes a name; every CLI read asks the socket; next renders a selection block; the session handler's parameter is port; a project key on the socket request. The three beliefs seams were probed against a fixture world while planning.

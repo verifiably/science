@@ -1,7 +1,7 @@
 # The coordination command set — design
 
 **Date:** 2026-09-24
-**Status:** reviewed and approved 2026-09-24; part 1 (the write surface) implemented 2026-09-24, plan `docs/plans/2026-09-24-coordination-write-surface.md`. Parts 2 and 3 wait on `beliefs-cc0aea`, `beliefs-1148ad`, `beliefs-1af3fd` and `beliefs-fe7149`.
+**Status:** reviewed and approved 2026-09-24; part 1 (the write surface) implemented 2026-09-24, plan `docs/plans/2026-09-24-coordination-write-surface.md`. Part 2's seams (`beliefs-cc0aea`, `beliefs-1148ad`, `beliefs-1af3fd`) landed 2026-09-25; its plan is `docs/plans/2026-09-30-coordination-selection-and-reads.md`, written 2026-09-30 and not yet implemented. Part 3's seam (`beliefs-fe7149`) landed 2026-09-27; part 3 has no plan yet.
 **Scope:** the second half of sub-project 4 of the user/autonomy layer design
 (`beliefs` `docs/superpowers/specs/2026-08-29-user-and-autonomy-layer-design.md`
 §5.1, §8 item 4): the commands that mint and revise `project`, `question`,
@@ -270,6 +270,14 @@ closed tasks — each with its address, name and, for tasks, status. Both read
 coordination records through the resolver, which is live (coordination §6.2); they
 need no epoch and do not wait on S1.
 
+**Amended 2026-09-30 (planning):** with nothing selected and no `project` field,
+`project-show` refuses `no-current-project`, its message naming `project-select` and
+`--project`; §4.3's code covers this read as well as the subordinate mints. A
+subordinate address with two tips renders once in its kind's section with `divergent`
+and every tip, as a project does in `projects`; a divergent task lists under open
+tasks. An address none of whose revisions stands renders `no standing revision`
+rather than being dropped.
+
 ## 4. Framework amendments
 
 ### 4.1 The `session` write class
@@ -306,6 +314,17 @@ scoped writer — one method, `select(address | None)`, which sets the dispatche
 selection and appends S2's line — and no kernel writer at all, so a `session`
 handler cannot act on a corpus. The production write gate admits the class.
 
+**Amended 2026-09-30 (planning):** the handler's second parameter is named `port`,
+and the loader's handler-shape check leads a `session` handler with `ctx, port`. The
+port appends S2's line first and sets the dispatcher's selection after it (`beliefs`
+selection-ledger design decision 4). A kernel refusal from `select` —
+`ProjectNotResolvable` — closes the invocation with the refusal envelope, as a
+write's does; no selection line was appended. A handler that returns without
+selecting, or that refuses after selecting, is a handler defect: the invocation
+closes `done` and the dispatcher raises an internal error, on the first response and
+on replay alike. The selection block serializes as `selected: <address>@<revision>`
+and a `name: <name>` line, or `selected: none`.
+
 ### 4.2 The `selects` key and the `project` protocol field
 
 A declaration gains one optional top-level key, `selects` (bool, default false): the
@@ -324,6 +343,13 @@ hands the handler the resolved selection; handlers never see the raw value.
 
 The documented `reads` families (framework §3.2, belief path §5.4) gain
 `coordination`, for commands that read coordination records through the resolver.
+
+**Amended 2026-09-30 (planning):** the service protocol's command request carries
+the same optional `project` key (§5.3), so the field reaches the dispatcher from all
+three transports and is refused in one place. A continuation carries the field
+again: a cursor continued under another selection refuses `stale-cursor`, since the
+report it was issued for is not the one being read. §10's "a `--project` option on
+every read row" is read as every `selects` row — `next` and `project-show`.
 
 ### 4.3 Refusal codes
 
@@ -365,6 +391,11 @@ An initial selection that resolves to no standing project refuses the launcher's
 start with `unknown-project`, before the session opens, so a stale `default_project`
 is found at startup rather than at the first question.
 
+**Amended 2026-09-30 (planning):** the launcher's `--project` takes a name or an
+address and resolves it as `project-select` resolves its target (§3.7), before the
+session opens; the session then holds the address. The projects design §5.1 names an
+address only; a name is resolved once, at start, and is never what is stored.
+
 ### 5.2 How a read resolves its selection
 
 A read in a session-bearing endpoint uses the invocation's `project` field when
@@ -386,6 +417,14 @@ Any other socket failure — a timeout, a malformed answer, a permission error �
 `internal-error`, never a silent step to 3: a live session the read could not ask is
 not an absent one. An explicit `--project` naming no standing project refuses
 `unknown-project` before anything is read.
+
+**Amended 2026-09-30 (planning):** every CLI read resolves its selection this way,
+not only the `selects` commands: `projects` marks the selected project without
+enumerating through it. An invocation carrying `--project` does not ask the socket,
+and a configuration with `coordination = false` has no selection to ask for. A
+`service_socket` path longer than the AF_UNIX limit is read as no live session,
+since no launcher can bind it (`serve.py` `check_socket_path`). The query waits at
+most five seconds for its answer.
 
 ### 5.3 The service protocol on both launchers
 
@@ -457,6 +496,15 @@ Until S1 lands, `next` under a selection refuses `invalid-input` naming S1's tas
 and `next` under no selection is unchanged. It never falls back to the whole world
 silently: a person who selected `health` and saw the whole world's queue would read
 the wrong project without being told.
+
+**Amended 2026-09-30 (planning):** S1 landed as
+`beliefs.world.live.evaluate_live_query`, so the interim refusal is never built.
+Under a selection `next` renders a `selection` block before its rows: the project's
+pinned address and name, `complete`, the absent corpora, and the capture stamp's
+world and per-corpus states (`beliefs` live-query design §7). The evaluation's
+kernel refusals — `SelectionRefused`, `ResolutionRefused`, `AddressMapConflict`,
+`CaptureDrift`, and `BuildContended` when a write holds the corpus at that moment —
+arrive as `kernel-refused` with the class name in `data.kind`.
 
 ## 6. Configuration
 
@@ -675,7 +723,8 @@ measurement and is not a suite test.
 - **Projects design:** §7's "a `note` naming the source address" is read as decision
   7; a dated note there points here.
 - **`tools/cli.toml`:** one row per new command and a `--project` option on every read
-  row, edited in the ops repository first and re-vendored. Its shared `--project`
+  row (*amended 2026-09-30:* every `selects` row, and the two launcher rows),
+  edited in the ops repository first and re-vendored. Its shared `--project`
   vocabulary entry means a tasks project prefix, so science's rows carry their own
   option rather than the shared one.
 - **`coord-note`:** the synthetic fixture's `unreachable` handler becomes a real one
