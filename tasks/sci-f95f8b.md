@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: main
 created: 2026-09-24T10:54:38Z
-updated: 2026-09-30T11:25:21Z
+updated: 2026-09-30T11:25:45Z
 started: 2026-09-30T11:01:17Z
 depends: [beliefs-cc0aea, beliefs-1148ad, beliefs-1af3fd, sci-c147e3]
 parent: sci-c5528e
@@ -27,3 +27,5 @@ Spec docs/specs/2026-09-24-coordination-command-set-design.md §3.7, §3.8, §4.
 - 2026-09-30T11:01:17Z (main): started
   provenance: {"harness_session":"claude-code:2dfb2b90-3871-4afc-bd8c-8f7d26431d3c","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-09-30T11:25:21Z (coordination-part2): Part 2 plan drafted: docs/plans/2026-09-30-coordination-selection-and-reads.md, eight steps sci-451329, sci-108756, sci-a66ca4, sci-b0b8cf, sci-1217b5, sci-1391bd, sci-5b8997, sci-103ec2 (a chain). The spec takes seven 2026-09-30 planning amendments reviewed with the plan: project-show refuses no-current-project with nothing selected; --project is on selects rows and the two launcher rows only; the launcher's --project takes a name; every CLI read asks the socket; next renders a selection block; the session handler's parameter is port; a project key on the socket request. The three beliefs seams were probed against a fixture world while planning.
+- 2026-09-30T11:25:45Z (coordination-part2): parked (waiting on user, review): Review the part 2 plan at .worktrees/coordination-part2/docs/plans/2026-09-30-coordination-selection-and-reads.md and the seven 2026-09-30 planning amendments in .worktrees/coordination-part2/docs/specs/2026-09-24-coordination-command-set-design.md, and choose an execution method; then the agent runs tasks start sci-451329 (Task 1) in .worktrees/coordination-part2
+  provenance: {"harness_session":"claude-code:2dfb2b90-3871-4afc-bd8c-8f7d26431d3c","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
