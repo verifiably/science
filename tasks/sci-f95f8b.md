@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: coordination-part2
 created: 2026-09-24T10:54:38Z
-updated: 2026-09-30T12:02:55Z
+updated: 2026-09-30T13:44:19Z
 started: 2026-09-30T11:01:17Z
 depends: [beliefs-cc0aea, beliefs-1148ad, beliefs-1af3fd, sci-c147e3]
 parent: sci-c5528e
@@ -39,3 +39,5 @@ Spec docs/specs/2026-09-24-coordination-command-set-design.md §3.7, §3.8, §4.
   provenance: {"harness_session":"codex:01a0f21d-ccb2-7141-83c5-8d21fea93221","harness_session_source":"CODEX_SESSION_ID"}
 - 2026-09-30T11:43:29Z (coordination-part2): review: plan round 2 — verdict: accept; findings: none; reviewer: human
 - 2026-09-30T12:02:55Z (coordination-part2): Tooling feedback relay-60ae9e: conflicting Codex child identity variables omit provenance and fall back to Unix claim identity
+- 2026-09-30T13:35:29Z (coordination-part2): Tooling feedback tack-c437b4: SDD workers force-staged ignored reports and task reviews missed scratch additions; final fix wave will untrack them
+- 2026-09-30T13:44:19Z (coordination-part2): review: impl round 1 — verdict: revise; findings: P2 2, Minor 2; reviewer: codex/gpt-6-astra

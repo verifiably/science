@@ -6,6 +6,7 @@ import json
 import signal
 import socket
 import sys
+import time
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -129,11 +130,23 @@ def _ambient_selection(config):
     if len(path.encode()) > MAX_SOCKET_PATH_BYTES:
         return config.default_project  # no launcher can bind it, so none is live
     try:
+        deadline = time.monotonic() + _SELECTION_TIMEOUT_SECONDS
         with socket.socket(socket.AF_UNIX) as connection:
-            connection.settimeout(_SELECTION_TIMEOUT_SECONDS)
+            connection.settimeout(max(0, deadline - time.monotonic()))
             connection.connect(path)
+            connection.settimeout(max(0, deadline - time.monotonic()))
             connection.sendall(_SELECTION_QUERY)
-            reply = json.loads(connection.makefile().readline())
+            response = bytearray()
+            while True:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise TimeoutError("the selection query deadline expired")
+                connection.settimeout(remaining)
+                chunk = connection.recv(4096)
+                response.extend(chunk)
+                if not chunk or b"\n" in chunk:
+                    break
+            reply = json.loads(response.partition(b"\n")[0].decode())
     except (FileNotFoundError, ConnectionRefusedError):
         return config.default_project
     if type(reply) is not dict or set(reply) != {"project"}:
