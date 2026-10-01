@@ -1,0 +1,252 @@
+# Consuming mount citations: write commands over the session's corpora, belief at an epoch
+
+Status: draft for review, 2026-10-01. Task `sci-dc0381`, which absorbs `sci-b1c777` and
+`sci-498acb`.
+
+Sources: beliefs `docs/superpowers/specs/2026-10-01-mount-citations-design.md` (cut 44,
+merged at beliefs `7932481`), §4 "What science gains and must change", decision 10 and
+limitations 1–4; this repository's coordination command set design
+(`docs/specs/2026-09-24-coordination-command-set-design.md`) §5.5 and its part 3
+amendments; the command framework design §4.4; the science commons design §11.
+
+## 1. What this is
+
+Cut 43 gave a session one write root and N read mounts. Coordination part 3
+(`sci-923d3a`) fenced every non-coordination command onto the write root, because the
+kernel could not write a record citing a mount's record, and could not judge its
+eligibility. Cut 44 lifts that: a session's writes may cite records in its read mounts,
+and a corpus-local belief read now refuses `input-outside-corpus` itself.
+
+This slice moves science onto that surface. It is the last thing the second-project
+milestone (`sci-0d00d2`) waits on, and one of the four prerequisites of commons
+milestone 1a (`sci-13050a`). Concretely:
+
+1. `spec`, `run`, `assess` and `verify` resolve the records they cite over the session's
+   corpora, not the write root alone.
+2. Science's foreign-observation guard goes. The kernel now refuses that state.
+3. Belief, and `next`'s admission check, read a session with read mounts as a world
+   read at an epoch. An operator verb publishes that epoch.
+4. The `publishes` declaration-time refusal is retired, because the publish act family
+   has landed (`sci-498acb`).
+
+Measured before writing (2026-10-01): the relocated mm30 corpus pins
+`biology:24bcec43…` and base `science:52a43993…`, the identities the shipped `biology`
+domain contract and base contract carry. A working corpus written under science's
+shipped profile therefore cites mm30 without `CitationContractMismatch` (kernel
+decision 3), which beliefs §4 asked to establish before `sci-0d00d2`.
+
+## 2. Decisions
+
+1. **The citation scope is the session's corpora.** A write command may cite a record
+   held by exactly one session corpus. A session corpus is the write root plus every read
+   mount, and read mounts exist only when coordination is on (`open_session` passes
+   `mounts=None` otherwise). With coordination off, the scope is the write root alone,
+   as today. Science's own check mirrors the kernel writer's scope: it never admits a
+   ref the writer would then refuse as unresolved.
+   *Rejected:* every configured `corpus_root` whatever coordination says. The writer
+   would not hold those mounts, so science would accept refs the kernel then refuses.
+
+2. **One resolver replaces `write_view()` and `not_held()`.** `ReadContext.cited(ref)`
+   returns the one session corpus holding `ref`, as a `Mount` (view and profile). It
+   refuses `invalid-input` when no session corpus holds it, naming any configured
+   corpus outside the session that does (the successor to `not_held`'s hint). It refuses
+   `invalid-input` naming the corpora when more than one holds it, matching kernel
+   decision 4's `duplicate-location`. Each command reads the cited record through the
+   returned mount's view and decodes it under that mount's profile.
+   *Rejected:* keeping `write_view()` and adding a fallback to the mounts. A fallback
+   hides which corpus answered, and a write root holding a stale copy would shadow it.
+
+3. **Mutation targets stay in the write root** (kernel decision 1). `spec --supersedes`
+   and every target a command replaces, revises or corrects resolve through the write
+   root alone. Those sites keep a write-root-only read, renamed `own(ref)`, which
+   refuses `invalid-input` naming the mount that holds the ref when one does.
+
+4. **`dataset` is unchanged.** It still refuses bytes a mount already declares. Two
+   declarations of the same content are a `duplicate-location` that every world read
+   refuses.
+
+5. **Kernel refusals reach the person by name.** The dispatcher's `_kernel_refusal`
+   maps three new exceptions from the writer's citation view:
+   - `CitationContractMismatch` → `invalid-input`, naming the mount and namespace.
+   - `AddressMapConflict` with a `duplicate-location` finding → `invalid-input`, naming
+     the corpora.
+   - `BuildContended` from a read mount's capture hold → `contended`, retryable: a read
+     mount mid-write blocks the citing write (kernel limitation 3).
+
+   Before mapping `contended`, the plan checks it against the refusal vocabulary in
+   `refusal.py`; an existing kind that fits is reused.
+
+6. **`_refuse_foreign_observations` is removed.** A corpus-local `gather` now raises
+   `InputOutsideCorpus`, and `_evaluate_over_inputs` maps it to
+   `Refused("input-outside-corpus: …")`. Science passes that refusal through as
+   `invalid-input` with the kernel's message. The `declared` filter in `_context`
+   stays: the lineage snapshot can walk only the mount's own datasets.
+
+7. **Belief has two read modes, chosen by the session's shape, never by the evidence.**
+   - **No read mounts** (coordination off, or a single corpus root): the live
+     corpus-local read, as today, at the current epoch's identity or
+     `NO_EPOCH_SNAPSHOT`.
+   - **Read mounts present:** a world read at the current epoch, using the kernel's
+     proven recipe (beliefs J20, `test_world_view.split_evaluation_world`):
+     `open_world_view(world, current_epoch(world))`, `lineage_snapshot` over that view,
+     `producer_snapshot_identity` from the view, and pins per covered corpus. The read
+     refuses, with no answer, in three cases:
+     - `no-epoch`: the world has no current epoch.
+     - `epoch-stale`: the epoch's coverage omits a session corpus.
+     - `epoch-stale`: the view reports drift for a session corpus, meaning a changed
+       state or unmapped records.
+
+     Each refusal names the corpora and the remedy, `science epoch`.
+
+   *Rejected:* picking the mode from where the proposition's evidence lives. Belief
+   depends on assessments, verifications, retractions and corrections, and any session
+   corpus may hold one of them about the proposition. Deciding the evidence is local
+   means reading every corpus for all of those relations, which is the world read
+   itself. A wrong guess silently omits evidence.
+
+   *Rejected:* reading the stale epoch and warning. The view holds only records the
+   epoch mapped, so an assessment written after it would be absent from the answer,
+   and the answer would not say so.
+
+   *Rejected:* asking beliefs for a live multi-corpus belief read. Kernel decision 10
+   refused it because it has no epoch identity in its reproducibility context. One
+   operator command per change to the evidence is the cost of that identity, and the
+   dogfood measures whether the cost is tolerable (§6, limitation 1).
+
+8. **`science epoch` is an operator verb, not a command.** It is dispatched like
+   `build` and `serve` (framework §4.4: epoch acts are launcher- and operator-time
+   library operations), with no write class, no permit from the session, and no ledger
+   entry. It:
+   1. opens the world with an operator authority covering `epoch`;
+   2. installs the shipped rule bindings (`install_shipped_world_rules`), or reuses
+      bindings already installed;
+   3. builds one epoch whose coverage is exactly the session corpora's ids, under the
+      configuration `--config` names;
+   4. prints the packaging identity and coverage.
+
+   A `BuildContended` from a corpus mid-write exits non-zero, naming the corpus; it
+   never waits. Framework §4.4 needs no amendment, because no write class maps to
+   `epoch`. The plan confirms how an operator `Authority` is constructed and whether
+   reinstalling a binding is idempotent, before writing the verb.
+
+9. **`next` keeps its live attention read, and says when it cannot judge admission.**
+   - Whether a proposition is *assessed* is a live scan of every session corpus for an
+     assessment of it. Today `next` scans only the proposition's corpus, which misses a
+     working corpus's assessment of an mm30 proposition.
+   - With no read mounts, admission is judged as today.
+   - With read mounts, admission is judged through decision 7's world read when the
+     epoch is current. When it is absent or stale, the row is classified
+     **`assessed-unevaluated`** and carries the reason (`no-epoch` or `epoch-stale`).
+     This is a fifth class, and it amends the coordination design's four-class rule.
+
+   *Rejected:* refusing the whole `next`. Its rows are attention over the live world
+   (coordination §5.5), and one stale epoch would blank every row, including rows that
+   need no admission judgment.
+
+10. **The `publishes` arm calls the permit** (`sci-498acb`):
+    `return RequiredCapabilities.publishes()`. The framework §4.4 amendment of
+    2026-09-09 is struck by citation, with a dated note. No `publishes`-class command
+    exists yet, so the effect is tested at the dispatcher with a declared fixture
+    command: the permit decides, and no declaration-time refusal remains.
+
+11. **`status` gains nothing.** It reports `world.status` findings per corpus. Beliefs
+    §4 expected `eligibility-unresolved` warnings there; the plan's first step checks
+    whether `world.status` runs `corpus_check`'s eligibility arm. If it does, the
+    warning is expected output on a working corpus that cites mm30, and the two-corpus
+    test pins it. If it does not, nothing changes and this decision says so in the
+    results.
+
+## 3. Surface
+
+- `config.ReadContext`
+  - gains `session_mounts()`: the write root's `Mount`, plus every read mount's when
+    coordination is on.
+  - gains `cited(ref) -> Mount` (decision 2) and `own(ref) -> ReadView` (decision 3).
+  - loses `write_view()`, `not_held()` and `_refuse_foreign_observations`.
+  - `evaluate` and `gather_inputs` dispatch on decision 7's mode. The world mode lives
+    in a new `science/world_belief.py`, which builds the view, checks staleness, and
+    builds the supplied context, so `config.py` does not grow a second evaluation path
+    inline.
+- `commands/spec.py`, `run.py`, `assess.py` and `verify.py`: every
+  `write_view()`/`not_held()` site moves to `cited` or `own`, per decisions 2 and 3.
+  `dataset.py`'s site becomes `own`, with its declared-elsewhere refusal unchanged.
+- `commands/next.py`: `classify` per decision 9.
+- `dispatch.py`: the `publishes` arm (decision 10), and `_kernel_refusal`'s three
+  mappings (decision 5).
+- `cli.py`: the `epoch` operator verb (decision 8), added to the framework-verb set and
+  to the reserved names.
+- Docs:
+  - coordination design §5.5 gets a dated amendment, which lifts part 3's two refusals,
+    adds the fifth class, and names this spec;
+  - framework §4.4 gets the 2026-09-09 amendment struck with a dated note;
+  - commons §11's "belief evaluating over a world read" gets a pointer here;
+  - `docs/plans/2026-10-01-mount-citations-consumer.md` is the plan.
+
+## 4. Testing
+
+The full two-corpus fixture already exists (`test_two_corpora`; `sci-9b20ea` makes it
+module-scoped, which is independent of this slice). Cases added to it:
+
+- **Citation.**
+  - `spec` against a mount's proposition and dataset; `run` and `assess` over them;
+    `verify` of a mount's assessment. Each record is written to the write root, and
+    every cited ref resolves into the mount.
+  - The same refs with coordination off refuse `invalid-input`, naming the mount.
+  - A ref held by two session corpora refuses, naming both.
+  - `spec --supersedes` of a mount's spec refuses (decision 3).
+- **Contract mismatch.** A mount pinning a different `biology` identity:
+  `CitationContractMismatch` arrives as a named `invalid-input`, not an internal error.
+- **Belief.**
+  - Single corpus: unchanged answers. The existing belief tests are the oracle.
+  - Mounted, with no epoch → `no-epoch`.
+  - After `science epoch` → an answer that counts the working corpus's assessment of
+    the mount's proposition.
+  - After one more write → `epoch-stale`, naming the write root.
+  - An edited corpus whose run reads a dataset it does not declare → the kernel's
+    `input-outside-corpus`, replacing the removed guard's test.
+- **`next`.**
+  - Live scan: a working-corpus assessment of a mount proposition makes the row
+    assessed.
+  - With no epoch, the row is `assessed-unevaluated (no-epoch)`; after `science epoch`
+    it is admitted or not by the world read.
+- **`science epoch`.**
+  - It builds over exactly the session corpora.
+  - Rerunning it with no change is idempotent: the same packaging identity.
+  - A corpus held mid-write exits non-zero, naming it.
+- **`publishes`.** A declared fixture command reaches the permit; no declaration-time
+  refusal.
+
+Every case runs under `just test-one` while working, and `just test-fast` before each
+commit. The pre-push hook carries the full suite (science has no CI).
+
+## 5. What does not change
+
+- Coordination citations and `CoordinationResolver` (cut 43, J14).
+- `dataset`'s declared-elsewhere refusal.
+- The live, unpublished view-query read `next` uses for selection (`beliefs-cc0aea`).
+- What a session may write: no write class, act family or session ledger evidence
+  changes. `epoch` is an operator verb outside the session.
+
+## 6. Limitations
+
+1. **Belief in a mounted session costs one `science epoch` per change to the
+   evidence.** Each epoch build captures every session corpus. The second-project
+   measurement records how often that happens and how long it takes. That record is
+   the evidence for or against asking beliefs for a cheaper epoch, or a live read with
+   a stated identity.
+2. **Any session-corpus write makes the epoch stale for every proposition**, including
+   writes unrelated to the one asked about. Narrowing staleness to a proposition's
+   evidence would need the evidence closure, which is the world read itself.
+3. **Read mounts are opened per citing write** (kernel limitation 1), and per
+   `cited()` call here. `sci-d92797` (open mounts once per read command) covers the
+   read side. Write commands will be measured in `sci-0d00d2` before any caching.
+4. **A read mount mid-write refuses a citing write** (kernel limitation 3), and it
+   refuses `science epoch`. Both are immediate and retryable.
+
+## 7. Task linkage
+
+- `sci-dc0381`: this spec, its plan, and implementation. It closes with `sci-b1c777`
+  (decision 6, plus the coordination §5.5 amendment) and `sci-498acb` (decision 10).
+- `sci-0d00d2` (second-project milestone) is unblocked when this lands. It measures
+  limitations 1 and 3.
+- `sci-13050a` (commons 1a) still waits on `beliefs-f50596` and `beliefs-d9bc57`.
