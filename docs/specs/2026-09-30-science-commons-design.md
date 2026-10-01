@@ -1,8 +1,10 @@
 # Science commons — design
 
 **Date:** 2026-09-30
-**Status:** draft for user review, revised after review rounds 1 to 7. Task
-`sci-fe8522`.
+**Status:** reviewed and approved 2026-10-01 after eight review rounds (two
+independent rounds per revision cycle, the external reviewer's accept at round
+8). Milestone tasks filed; the framework amendments §11 names are made in
+`2026-08-31-command-framework-design.md` §3.3, §4.4 and §9.1. Task `sci-fe8522`.
 **Scope:** how published science is shared, found, trusted, reproduced,
 changed and preserved across installations of verifiably, and what a
 *commons* is in that model. The kernel has ruled that publishing mints an

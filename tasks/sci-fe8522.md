@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: science-commons
 created: 2026-09-30T23:17:20Z
-updated: 2026-10-01T01:18:03Z
+updated: 2026-10-01T02:21:10Z
 started: 2026-09-30T23:17:27Z
 depends: []
 tags: [commons]
@@ -82,3 +82,13 @@ Design the science commons in verifiably: a user publishes views to git and Zeno
 - 2026-10-01T01:18:00Z (science-commons): Round 7 disposition: accepted. §10.2 now requires the predecessor's own authority for every supersession link in a transition: only markers origin-confirmed to the world the current publication's marker names supply links to the fold; other worlds' markers and recommended markers are held but supply none; a missing or unauthorized intermediate leaves current unmoved and nothing retired.
 - 2026-10-01T01:18:00Z (science-commons): parked (waiting on user, review): Focused re-review of §10.2 in docs/specs/2026-09-30-science-commons-design.md (round 7 fix: same-authority supersession). On accept: file §11 beliefs requirements, write the framework §4.4/§9.1 amendments, then the milestone 1a plan
   provenance: {"harness_session":"claude-code:5f4da271-d57c-4d0d-9d69-fb6c4c6a0101","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-01T02:12:19Z (science-commons): resumed
+  provenance: {"harness_session":"codex:01a0f47e-0750-7060-9543-df2764d43697","harness_session_source":"CODEX_SESSION_ID"}
+- 2026-10-01T02:12:19Z (science-commons): review: spec round 8 — verdict: accept; findings: none; reviewer: codex
+- 2026-10-01T02:12:20Z (science-commons): Focused re-review of §10.2 at 6d3156f: round 7 is resolved. A confirmed foreign-world marker cannot supply a supersession link, and a recommended or missing intermediate cannot establish a transition to a later confirmed candidate. Every effective link must be origin-confirmed to the current publication publisher. Unresolved transitions preserve current and prevent retirement; candidate admission remains subject to the existing conflict preflight. All prior reviewer findings are closed. Design accepted for the author to file §11 requirements, write framework amendments, and prepare the milestone 1a plan under its stated prerequisites.
+- 2026-10-01T02:12:20Z (science-commons): parked (waiting on user): Spec author resumes after accepted round 8: file §11 beliefs requirements, write framework §4.4/§9.1 amendments, and prepare the milestone 1a plan under its stated prerequisites
+  provenance: {"harness_session":"codex:01a0f47e-0750-7060-9543-df2764d43697","harness_session_source":"CODEX_SESSION_ID"}
+- 2026-10-01T02:19:39Z (science-commons): resumed
+  provenance: {"harness_session":"claude-code:5f4da271-d57c-4d0d-9d69-fb6c4c6a0101","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-01T02:19:39Z (science-commons): review: spec round 8 — verdict: accept; findings: none; reviewer: codex (pasted by the user)
+- 2026-10-01T02:21:10Z (science-commons): Spec approved at round 8. Filed beliefs requirements beliefs-f50596 beliefs-d9bc57 beliefs-724941 (1a), noted beliefs-81367e (1b), ideas beliefs-42d201 beliefs-36d11c beliefs-51fa7d; sci milestones sci-13050a (1a), sci-9104fb (1b), ideas sci-8363b5 sci-65d6c9 sci-66d347. Framework amendments to §3.3, §4.4 and §9.1 made in this commit.
