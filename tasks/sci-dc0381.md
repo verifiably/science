@@ -8,7 +8,7 @@ complexity: mid
 process: planned
 owner: feat/dc0381-mount-citations
 created: 2026-10-01T11:07:18Z
-updated: 2026-10-01T21:22:39Z
+updated: 2026-10-01T21:29:18Z
 started: 2026-10-01T21:17:59Z
 depends: [beliefs-9ce6e4]
 tags: [commons, projects]
@@ -29,3 +29,6 @@ beliefs mount-citations spec (beliefs docs/superpowers/specs/2026-10-01-mount-ci
 - 2026-10-01T21:22:34Z (feat/dc0381-mount-citations): spec drafted: belief in a mounted session is a world read at the current epoch (refuses no-epoch/epoch-stale), new operator verb 'science epoch', next gains assessed-unevaluated; mm30 pins match shipped biology/base (no CitationContractMismatch)
 - 2026-10-01T21:22:39Z (feat/dc0381-mount-citations): parked (waiting on user, review): user reviews docs/specs/2026-10-01-mount-citations-consumer-design.md (decisions 7–9: epoch-bound belief, science epoch verb, next's fifth class); on approval the agent writes the plan via writing-plans
   provenance: {"harness_session":"claude-code:e278d911-5d98-4ab3-83dd-1a16988a96a4","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-01T21:29:17Z (feat/dc0381-mount-citations): resumed
+  provenance: {"harness_session":"claude-code:e278d911-5d98-4ab3-83dd-1a16988a96a4","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-01T21:29:17Z (feat/dc0381-mount-citations): review: spec round 1 — verdict: revise; findings: P2 3; reviewer: human

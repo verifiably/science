@@ -89,14 +89,24 @@ decision 3), which beliefs §4 asked to establish before `sci-0d00d2`.
    - **Read mounts present:** a world read at the current epoch, using the kernel's
      proven recipe (beliefs J20, `test_world_view.split_evaluation_world`):
      `open_world_view(world, current_epoch(world))`, `lineage_snapshot` over that view,
-     `producer_snapshot_identity` from the view, and pins per covered corpus. The read
-     refuses, with no answer, in three cases:
-     - `no-epoch`: the world has no current epoch.
-     - `epoch-stale`: the epoch's coverage omits a session corpus.
-     - `epoch-stale`: the view reports drift for a session corpus, meaning a changed
-       state or unmapped records.
+     `producer_snapshot_identity` from the view, and pins per covered corpus.
 
-     Each refusal names the corpora and the remedy, `science epoch`.
+     The epoch is **current for the session** when two things hold. First, its coverage
+     *equals* the session corpora's ids. Second, the view opened at it reports no drift
+     for any of them, meaning no changed state and no unmapped records. The read
+     answers only at a current epoch. Otherwise it refuses, with no answer:
+     - `no-epoch`: the world has no current epoch.
+     - `epoch-stale`: the coverage differs from the session corpora in either
+       direction. A missing corpus would leave its evidence out. An extra one, from an
+       epoch another configuration published, is one the kernel reads as absent, and
+       belief then answers `NoBelief("unavailable-corpus-absent")` even when every
+       session corpus is available. The refusal names the corpora missing and the
+       corpora extra.
+     - `epoch-stale`: the view reports drift for a session corpus.
+
+     Each refusal names the corpora and the remedy, `science epoch`. The check is one
+     function, `epoch_currency(world, session_ids)`, in `science/world_belief.py`.
+     Belief, `next` (decision 9) and `science epoch` (decision 8) all call it.
 
    *Rejected:* picking the mode from where the proposition's evidence lives. Belief
    depends on assessments, verifications, retractions and corrections, and any session
@@ -118,11 +128,18 @@ decision 3), which beliefs §4 asked to establish before `sci-0d00d2`.
    library operations), with no write class, no permit from the session, and no ledger
    entry. It:
    1. opens the world with an operator authority covering `epoch`;
-   2. installs the shipped rule bindings (`install_shipped_world_rules`), or reuses
-      bindings already installed;
-   3. builds one epoch whose coverage is exactly the session corpora's ids, under the
+   2. asks `epoch_currency` (decision 7). When the current epoch is already current for
+      the session, it builds nothing and prints that epoch's packaging identity and
+      coverage, marked `current`. Rebuilding is not an idempotent way to get there. An
+      epoch's bytes include the world's chain head, publication advances that head, and
+      a second build over unchanged corpora therefore yields a different packaging
+      identity. The kernel's identical-rebuild tests hold only because they inject a
+      fixed chain head;
+   3. otherwise, installs the shipped rule bindings (`install_shipped_world_rules`), or
+      reuses bindings already installed;
+   4. builds one epoch whose coverage is exactly the session corpora's ids, under the
       configuration `--config` names;
-   4. prints the packaging identity and coverage.
+   5. prints the new packaging identity and coverage, marked `built`.
 
    A `BuildContended` from a corpus mid-write exits non-zero, naming the corpus; it
    never waits. Framework §4.4 needs no amendment, because no write class maps to
@@ -133,6 +150,13 @@ decision 3), which beliefs §4 asked to establish before `sci-0d00d2`.
    - Whether a proposition is *assessed* is a live scan of every session corpus for an
      assessment of it. Today `next` scans only the proposition's corpus, which misses a
      working corpus's assessment of an mm30 proposition.
+   - Readiness, for a proposition no session corpus has assessed, is a live scan of
+     every session corpus for specs targeting it. Each spec is decoded under its
+     holder's profile, and its inputs are then judged held as today (`_inputs_held`).
+     Today `_targeting_specs` reads only the proposition's corpus. A spec written in
+     the write root against a mounted proposition, the first step of the
+     second-project measurement, would therefore leave the row `not-ready` even with
+     its inputs held.
    - With no read mounts, admission is judged as today.
    - With read mounts, admission is judged through decision 7's world read when the
      epoch is current. When it is absent or stale, the row is classified
@@ -164,13 +188,14 @@ decision 3), which beliefs §4 asked to establish before `sci-0d00d2`.
   - gains `cited(ref) -> Mount` (decision 2) and `own(ref) -> ReadView` (decision 3).
   - loses `write_view()`, `not_held()` and `_refuse_foreign_observations`.
   - `evaluate` and `gather_inputs` dispatch on decision 7's mode. The world mode lives
-    in a new `science/world_belief.py`, which builds the view, checks staleness, and
-    builds the supplied context, so `config.py` does not grow a second evaluation path
+    in a new `science/world_belief.py`, which holds `epoch_currency`, builds the view,
+    and builds the supplied context, so `config.py` does not grow a second evaluation path
     inline.
 - `commands/spec.py`, `run.py`, `assess.py` and `verify.py`: every
   `write_view()`/`not_held()` site moves to `cited` or `own`, per decisions 2 and 3.
   `dataset.py`'s site becomes `own`, with its declared-elsewhere refusal unchanged.
-- `commands/next.py`: `classify` per decision 9.
+- `commands/next.py`: `classify` per decision 9. Both the assessment scan and
+  `_targeting_specs` read every session corpus.
 - `dispatch.py`: the `publishes` arm (decision 10), and `_kernel_refusal`'s three
   mappings (decision 5).
 - `cli.py`: the `epoch` operator verb (decision 8), added to the framework-verb set and
@@ -202,16 +227,28 @@ module-scoped, which is independent of this slice). Cases added to it:
   - After `science epoch` → an answer that counts the working corpus's assessment of
     the mount's proposition.
   - After one more write → `epoch-stale`, naming the write root.
+  - Coverage mismatch in each direction, each → `epoch-stale` naming the corpora. A
+    published epoch covering a session corpus too few. A published epoch covering one
+    extra admitted corpus, built directly through the kernel as another configuration
+    would.
   - An edited corpus whose run reads a dataset it does not declare → the kernel's
     `input-outside-corpus`, replacing the removed guard's test.
 - **`next`.**
+  - Readiness, before any assessment exists: a spec in the write root that targets a
+    mount's proposition, with its inputs held, makes the row `ready`. Without the
+    spec, the row is `not-ready`.
   - Live scan: a working-corpus assessment of a mount proposition makes the row
     assessed.
   - With no epoch, the row is `assessed-unevaluated (no-epoch)`; after `science epoch`
     it is admitted or not by the world read.
 - **`science epoch`.**
   - It builds over exactly the session corpora.
-  - Rerunning it with no change is idempotent: the same packaging identity.
+  - Rerunning it with no change builds nothing. It reports `current` with the same
+    packaging identity, and the world's epoch pointer and chain head are byte-identical
+    before and after. This is a production-backed check: no chain head is injected.
+  - Rerunning it after a write builds a new epoch, reported `built`.
+  - Rerunning it when the current epoch covers an extra corpus builds a new epoch over
+    exactly the session corpora.
   - A corpus held mid-write exits non-zero, naming it.
 - **`publishes`.** A declared fixture command reaches the permit; no declaration-time
   refusal.
