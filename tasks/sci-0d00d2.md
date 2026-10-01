@@ -7,8 +7,8 @@ size: m
 complexity: high
 process: planned
 created: 2026-09-23T11:40:35Z
-updated: 2026-09-30T22:07:36Z
-depends: [sci-b1c777, beliefs-fe7149, beliefs-c08725, sci-c5528e, sci-923d3a, beliefs-9ce6e4]
+updated: 2026-10-01T11:07:18Z
+depends: [sci-b1c777, beliefs-fe7149, beliefs-c08725, sci-c5528e, sci-923d3a, beliefs-9ce6e4, sci-dc0381]
 tags: [projects]
 agent: claude-code/claude-fable-5-1
 ---
