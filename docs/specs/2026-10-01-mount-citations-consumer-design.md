@@ -46,15 +46,26 @@ decision 3), which beliefs §4 asked to establish before `sci-0d00d2`.
    *Rejected:* every configured `corpus_root` whatever coordination says. The writer
    would not hold those mounts, so science would accept refs the kernel then refuses.
 
-2. **One resolver replaces `write_view()` and `not_held()`.** `ReadContext.cited(ref)`
+2. **One resolver replaces `not_held()` at every citation.** `ReadContext.cited(ref)`
    returns the one session corpus holding `ref`, as a `Mount` (view and profile). It
    refuses `invalid-input` when no session corpus holds it, naming any configured
    corpus outside the session that does (the successor to `not_held`'s hint). It refuses
    `invalid-input` naming the corpora when more than one holds it, matching kernel
    decision 4's `duplicate-location`. Each command reads the cited record through the
-   returned mount's view and decodes it under that mount's profile.
-   *Rejected:* keeping `write_view()` and adding a fallback to the mounts. A fallback
-   hides which corpus answered, and a write root holding a stale copy would shadow it.
+   returned mount's view. It decodes the record under the **writer's** profile
+   (`config.profile`), as the kernel's checks do (kernel decision 3).
+   - A record whose content needs a namespace only the mount pins fails that decode, as
+     it would in the kernel. For example, a claim operator declared only by mm30's
+     corpus-local `mm30` contract. So the second-project working corpus must pin every
+     namespace its citations use, at mm30's identity. mm30 pins `biology` and `mm30`.
+     `sci-0d00d2` records which of them the working corpus pins.
+   - `write_view()` stays, for reads of the write root's own records: the read-back of a
+     record just minted (`run`, `verify`) and `dataset`'s standing holdings
+     observations.
+
+   *Rejected:* keeping each citation on `write_view()` and adding a fallback to the
+   mounts. A fallback hides which corpus answered, and a write root holding a stale
+   copy would shadow it.
 
 3. **Mutation targets stay in the write root** (kernel decision 1). `spec --supersedes`
    and every target a command replaces, revises or corrects resolve through the write
@@ -65,22 +76,25 @@ decision 3), which beliefs §4 asked to establish before `sci-0d00d2`.
    declarations of the same content are a `duplicate-location` that every world read
    refuses.
 
-5. **Kernel refusals reach the person by name.** The dispatcher's `_kernel_refusal`
-   maps three new exceptions from the writer's citation view:
-   - `CitationContractMismatch` → `invalid-input`, naming the mount and namespace.
-   - `AddressMapConflict` with a `duplicate-location` finding → `invalid-input`, naming
-     the corpora.
-   - `BuildContended` from a read mount's capture hold → `contended`, retryable: a read
-     mount mid-write blocks the citing write (kernel limitation 3).
-
-   Before mapping `contended`, the plan checks it against the refusal vocabulary in
-   `refusal.py`; an existing kind that fits is reused.
+5. **Kernel refusals reach the person by name.** The writer's citation view raises three
+   errors that are not `WriteRefused`: `CitationContractMismatch` (a `ContractError`),
+   and `AddressMapConflict` and `BuildContended` (both bare `ScienceError`s). Today the
+   dispatcher's write path catches only `PermitExceeded`, `KernelRefusalValue` and
+   `WriteRefused`, so these three would escape as internal errors. The write path's
+   catch gains them. `_kernel_refusal`'s existing generic arm already normalizes them to
+   `kernel-refused` with `data.kind` set to the class name and the kernel's message,
+   which names the mount and the namespace, the corpora, or the held lock. No new
+   refusal code is needed. A `BuildContended` is retryable, and its message says so.
 
 6. **`_refuse_foreign_observations` is removed.** A corpus-local `gather` now raises
-   `InputOutsideCorpus`, and `_evaluate_over_inputs` maps it to
-   `Refused("input-outside-corpus: …")`. Science passes that refusal through as
-   `invalid-input` with the kernel's message. The `declared` filter in `_context`
-   stays: the lineage snapshot can walk only the mount's own datasets.
+   `InputOutsideCorpus`, and `_evaluate_over_inputs` returns it as
+   `beliefs.belief.Refused("input-outside-corpus: …")`, a value and not an exception.
+   `belief` already renders a returned `Refused` as `kind: Refused` with its reason, so
+   no mapping is added. `next`'s admission path calls `gather` directly, where
+   `InputOutsideCorpus` raises; `next` lets it propagate as an internal error. Only an
+   edited corpus can hold that state, and the write boundary refuses to mint it. The
+   `declared` filter in `_context` stays, because the lineage snapshot can walk only
+   the mount's own datasets.
 
 7. **Belief has two read modes, chosen by the session's shape, never by the evidence.**
    - **No read mounts** (coordination off, or a single corpus root): the live
@@ -102,7 +116,16 @@ decision 3), which beliefs §4 asked to establish before `sci-0d00d2`.
        belief then answers `NoBelief("unavailable-corpus-absent")` even when every
        session corpus is available. The refusal names the corpora missing and the
        corpora extra.
-     - `epoch-stale`: the view reports drift for a session corpus.
+     - `epoch-stale`: the view reports drift for a session corpus that belief could
+       read. Drift is inert when the corpus's captured state moved only by records
+       the epoch did not map, all of kinds in `beliefs.coordination.COORDINATION_KINDS`.
+       Belief never reads those kinds: the kernel never consults coordination content.
+       A view at the epoch holds only mapped records, so the answer is unchanged.
+       Inert drift does not make the epoch stale. Any other drift does, including a
+       moved state with no unmapped records. A changed mapped record never reaches this
+       check, because `open_world_view` refuses it as corruption. Without this rule,
+       every `project`, `question` or `hypothesis` write would force a rebuild before
+       the next belief.
 
      Each refusal names the corpora and the remedy, `science epoch`. The check is one
      function, `epoch_currency(world, session_ids)`, in `science/world_belief.py`.
@@ -173,12 +196,13 @@ decision 3), which beliefs §4 asked to establish before `sci-0d00d2`.
     exists yet, so the effect is tested at the dispatcher with a declared fixture
     command: the permit decides, and no declaration-time refusal remains.
 
-11. **`status` gains nothing.** It reports `world.status` findings per corpus. Beliefs
-    §4 expected `eligibility-unresolved` warnings there; the plan's first step checks
-    whether `world.status` runs `corpus_check`'s eligibility arm. If it does, the
-    warning is expected output on a working corpus that cites mm30, and the two-corpus
-    test pins it. If it does not, nothing changes and this decision says so in the
-    results.
+11. **`status` is unchanged.** It reports `world.status` findings, and `World.status`
+    runs only the registry reduction, whose one finding is `duplicate-carrier`. It never
+    runs `corpus_check`, so the `eligibility-unresolved` warning beliefs §4 anticipated
+    does not reach `status`. `audit_world` is where a cross-mount assessment is judged.
+
+12. **Two refusal codes are added**, `no-epoch` and `epoch-stale` (decision 7). They join
+    `refusal.CODES` and the coordination design's list of refusal codes.
 
 ## 3. Surface
 
@@ -186,18 +210,21 @@ decision 3), which beliefs §4 asked to establish before `sci-0d00d2`.
   - gains `session_mounts()`: the write root's `Mount`, plus every read mount's when
     coordination is on.
   - gains `cited(ref) -> Mount` (decision 2) and `own(ref) -> ReadView` (decision 3).
-  - loses `write_view()`, `not_held()` and `_refuse_foreign_observations`.
+  - loses `not_held()` and `_refuse_foreign_observations`. `write_view()` stays for
+    reads of the write root's own records (decision 2).
   - `evaluate` and `gather_inputs` dispatch on decision 7's mode. The world mode lives
     in a new `science/world_belief.py`, which holds `epoch_currency`, builds the view,
     and builds the supplied context, so `config.py` does not grow a second evaluation path
     inline.
 - `commands/spec.py`, `run.py`, `assess.py` and `verify.py`: every
   `write_view()`/`not_held()` site moves to `cited` or `own`, per decisions 2 and 3.
-  `dataset.py`'s site becomes `own`, with its declared-elsewhere refusal unchanged.
+  `dataset.py` is unchanged: it reads `write_view()` for its own holdings, and its
+  declared-elsewhere refusal stays.
 - `commands/next.py`: `classify` per decision 9. Both the assessment scan and
   `_targeting_specs` read every session corpus.
-- `dispatch.py`: the `publishes` arm (decision 10), and `_kernel_refusal`'s three
-  mappings (decision 5).
+- `dispatch.py`: the `publishes` arm (decision 10). The write path's catch adds the
+  three citation errors (decision 5).
+- `refusal.py`: `no-epoch` and `epoch-stale` (decision 12).
 - `cli.py`: the `epoch` operator verb (decision 8), added to the framework-verb set and
   to the reserved names.
 - Docs:
@@ -271,8 +298,9 @@ commit. The pre-push hook carries the full suite (science has no CI).
    measurement records how often that happens and how long it takes. That record is
    the evidence for or against asking beliefs for a cheaper epoch, or a live read with
    a stated identity.
-2. **Any session-corpus write makes the epoch stale for every proposition**, including
-   writes unrelated to the one asked about. Narrowing staleness to a proposition's
+2. **Any evidence write in a session corpus makes the epoch stale for every
+   proposition**, including writes unrelated to the one asked about. Coordination
+   writes are exempt (decision 7). Narrowing staleness to a proposition's
    evidence would need the evidence closure, which is the world read itself.
 3. **Read mounts are opened per citing write** (kernel limitation 1), and per
    `cited()` call here. `sci-d92797` (open mounts once per read command) covers the
