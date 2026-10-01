@@ -7,7 +7,7 @@ size: xs
 complexity: low
 process: direct
 created: 2026-09-09T10:22:34Z
-updated: 2026-10-01T09:35:31Z
+updated: 2026-10-01T21:17:58Z
 depends: []
 tags: [command-framework]
 ---
@@ -21,3 +21,4 @@ Filed as an idea because no sub-project 5 task exists to depend on. Promote it t
 ## Notes
 
 - 2026-10-01T09:35:30Z (main): Unblocked: beliefs ships the publish act family (beliefs a312745, permit.ACT_FAMILIES holds 'publish'; RequiredCapabilities.publishes() returns the publication permit). Scoped as the direct change this body describes; science commons milestone 1a (sci-13050a) depends on it.
+- 2026-10-01T21:17:58Z (main): rides along with sci-dc0381; closes in its lane

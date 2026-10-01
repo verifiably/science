@@ -7,7 +7,7 @@ size: m
 complexity: high
 process: planned
 created: 2026-09-30T22:07:29Z
-updated: 2026-09-30T22:07:30Z
+updated: 2026-10-01T21:17:58Z
 depends: [beliefs-9ce6e4]
 tags: [projects]
 agent: claude-code/claude-opus-5-5
@@ -18,3 +18,4 @@ Coordination part 3 fenced two behaviours on the kernel's single-corpus eligibil
 ## Notes
 
 - 2026-09-30T22:07:29Z (main): concerns: sci-923d3a extension — part 3 refuses cross-corpus dataset inputs and foreign lineage pending beliefs-9ce6e4
+- 2026-10-01T21:17:58Z (main): folded into sci-dc0381: both lift the same refusals over beliefs-9ce6e4; closes with it
