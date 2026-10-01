@@ -1,7 +1,7 @@
 # Science commons — design
 
 **Date:** 2026-09-30
-**Status:** draft for user review, revised after review rounds 1 to 6. Task
+**Status:** draft for user review, revised after review rounds 1 to 7. Task
 `sci-fe8522`.
 **Scope:** how published science is shared, found, trusted, reproduced,
 changed and preserved across installations of verifiably, and what a
@@ -694,17 +694,25 @@ When the candidate is a successor:
    unshared, and the reader's own runs or other held publications may depend
    on it.
 2. The **current** publication for `(view, destination)` advances only after
-   admission succeeds, supersession resolves to one tip, **and the
-   successor's pin is at least as confirmed as the predecessor's**: an
-   origin-confirmed predecessor is never superseded, and never retired, on
-   a recommended successor's word, since a followed catalog can serve a
-   chain-valid corpus whose marker merely claims the predecessor's world
-   and names it in `supersedes` (§4.4 layer 2). A recommended successor of
-   an origin-confirmed predecessor is held — admitted and mounted — with
-   `current` unmoved and nothing retired, and `show` says what confirmation
-   would advance it. A divergent sibling (`divergent-publication`) leaves
-   the update unresolved and the candidate `fetched`, as does a missing
-   intermediate.
+   admission succeeds and supersession resolves to one tip **under the
+   predecessor's own authority**. Origin confirmation establishes who
+   published a corpus; it establishes no right to supersede another. The
+   kernel's `publication_tip` folds every supplied marker's `supersedes`
+   claims, so the surface decides which markers it supplies: a transition
+   from the current publication *P* to a candidate uses only supersession
+   links from markers whose pin is origin-confirmed **to the same world
+   *P*'s marker names**, every intermediate included. A marker from any
+   other world claiming *P*'s view and destination, however well
+   confirmed, is a different publisher's publication and supplies no link;
+   a recommended marker is held but supplies no link; a transition whose
+   chain needs a link that is missing, recommended, or confirmed to another
+   world stays unresolved, with the candidate held — admitted and mounted
+   — `current` unmoved and nothing retired, and `show` names the link that
+   would resolve it. This is what stops a followed catalog serving a
+   chain-valid corpus that merely claims *P*'s world and names *P* in
+   `supersedes` (§4.4 layer 2) from retiring *P*. A divergent sibling
+   (`divergent-publication`) among authorized links leaves the update
+   unresolved and the candidate `fetched`.
 3. The predecessor is **retired** — the kernel's existing `World.retire`,
    reached by the `sharing` write class, after which it leaves the mounts
    and the live span — only when nothing requires it: no pin flagged

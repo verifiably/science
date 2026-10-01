@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: science-commons
 created: 2026-09-30T23:17:20Z
-updated: 2026-10-01T01:10:17Z
+updated: 2026-10-01T01:18:03Z
 started: 2026-09-30T23:17:27Z
 depends: []
 tags: [commons]
@@ -68,4 +68,17 @@ Design the science commons in verifiably: a user publishes views to git and Zeno
 - 2026-10-01T01:10:15Z (science-commons): review: spec round 6 — verdict: revise; findings: P1 2, P2 2; reviewer: claude-code/claude-fable-5-1
 - 2026-10-01T01:10:15Z (science-commons): Round 6 disposition: all accepted. §10 closure is the publish act's world-relation walk (composes, grounded-in included) plus inward verification and correction targets; current advances and retirement runs only when the successor's pin is at least as confirmed as the predecessor's; preflight opens the write root and configured roots from configuration and adopted roots from the sharing registry. §12 1b: the carried copy contributes nothing, the write-root copy counts.
 - 2026-10-01T01:10:15Z (science-commons): parked (waiting on user, review): Re-review docs/specs/2026-09-30-science-commons-design.md (rounds 5 and 6 folded in). On accept: file §11 beliefs requirements, write the framework §4.4/§9.1 amendments, then the milestone 1a plan
+  provenance: {"harness_session":"claude-code:5f4da271-d57c-4d0d-9d69-fb6c4c6a0101","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-01T01:13:32Z (science-commons): resumed
+  provenance: {"harness_session":"codex:01a0f47e-0750-7060-9543-df2764d43697","harness_session_source":"CODEX_SESSION_ID"}
+- 2026-10-01T01:13:32Z (science-commons): review: spec round 7 — verdict: revise; findings: P1 1; reviewer: codex
+- 2026-10-01T01:13:32Z (science-commons): Round 7 re-review at d3fdc65: all five round 5 findings are resolved: carried provenance precedes own-publication acceptance; retention follows required local dependency closure; adoption includes pending/live roots; catalog statements avoid self-hashing; replay reuses kernel recipe validation. One remaining finding concerns round 6's new successor confirmation guard.
+- 2026-10-01T01:13:33Z (science-commons): Round 7 P1 (§10.2 lines 696-707): confirmation strength does not establish authority to supersede a predecessor. publication_tip groups only by marker_address(view,destination), whose derivation excludes world_id, and folds every held marker's supersedes pairs without pin authentication. An origin-confirmed publication from another bound world can therefore claim the same view/destination and supersede an origin-confirmed predecessor while satisfying the new grade comparison. An unconfirmed intermediate can likewise supply a supersession edge used when a later confirmed candidate advances current. Require the same authenticated publisher authority and authenticate every supersession edge/intermediate used to advance an origin-confirmed current or retire its predecessors. Recommended markers may remain held but cannot supply authority to that fold; absent authenticated intermediates leave the transition unresolved. Include both cross-world and mixed-confirmation-chain negative cases.
+- 2026-10-01T01:13:33Z (science-commons): parked (waiting on user, review): Spec author resolves round 7 supersession-authority finding in .worktrees/science-commons/docs/specs/2026-09-30-science-commons-design.md, then requests focused re-review; all round 5 findings are closed
+  provenance: {"harness_session":"codex:01a0f47e-0750-7060-9543-df2764d43697","harness_session_source":"CODEX_SESSION_ID"}
+- 2026-10-01T01:18:00Z (science-commons): resumed
+  provenance: {"harness_session":"claude-code:5f4da271-d57c-4d0d-9d69-fb6c4c6a0101","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-01T01:18:00Z (science-commons): review: spec round 7 — verdict: revise; findings: P1 1; reviewer: codex (pasted by the user)
+- 2026-10-01T01:18:00Z (science-commons): Round 7 disposition: accepted. §10.2 now requires the predecessor's own authority for every supersession link in a transition: only markers origin-confirmed to the world the current publication's marker names supply links to the fold; other worlds' markers and recommended markers are held but supply none; a missing or unauthorized intermediate leaves current unmoved and nothing retired.
+- 2026-10-01T01:18:00Z (science-commons): parked (waiting on user, review): Focused re-review of §10.2 in docs/specs/2026-09-30-science-commons-design.md (round 7 fix: same-authority supersession). On accept: file §11 beliefs requirements, write the framework §4.4/§9.1 amendments, then the milestone 1a plan
   provenance: {"harness_session":"claude-code:5f4da271-d57c-4d0d-9d69-fb6c4c6a0101","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
