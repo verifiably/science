@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: science-commons
 created: 2026-09-30T23:17:20Z
-updated: 2026-10-01T00:20:43Z
+updated: 2026-10-01T00:20:57Z
 started: 2026-09-30T23:17:27Z
 depends: []
 tags: [commons]
@@ -48,3 +48,5 @@ Design the science commons in verifiably: a user publishes views to git and Zeno
 - 2026-10-01T00:12:10Z (science-commons): Round 3 disposition: all accepted. §9 acceptance is per record by provenance world with authenticated attribution (carried records need an origin-confirmed pin of the origin publication; own-world records need none) and covers correction records before their effects. §10 checks marker layout, supersession and conflicts on a fetched, unadmitted root; pin states fetched/admitted/mounted/retired; refusal leaves the world untouched. §5/§7.2: workspace locator supplied out of band in 1a, checked against code identity; catalog carries execution claims from milestone 2; marker locator filed as a question. §11 adds spec over mounts. §7.2 inclusions are per-cataloguer statements; promises owned by their author; aggregators never inherit.
 - 2026-10-01T00:20:42Z (science-commons): review: spec round 4 — verdict: revise; findings: P1 2, P2 7, P3 2; reviewer: claude-code/claude-fable-5-1
 - 2026-10-01T00:20:42Z (science-commons): Round 4 disposition: all accepted. §9 own branch requires the write root or a corpus the reader's own publication-binding bound (a marker claiming the reader's world id never qualifies); acceptance is a kernel-side predicate counts(corpus_id, address) on gather before retraction folding, since science hands a view not records; node_corpus exists, the world does not. World.retire exists: the 1b requirement is the sharing write class reaching it, kernel row removed; retirement irreversible and keep is set before adopting the successor. belief over a world read added to §11; fetch composes look + store write, never acquire; execution locators include the environment bundle; 1b clause moved out of 1a; publish window after adopt stated; the conflict read is per-root opened_at.
+- 2026-10-01T00:20:57Z (science-commons): parked (waiting on user, review): Re-review docs/specs/2026-09-30-science-commons-design.md (round 3 findings fixed; round 4 self-review folded in: per-record acceptance with an own branch keyed on the reader's publication-binding, kernel-side counts predicate on gather, World.retire reached by the sharing write class, belief over a world read). On accept: file §11 beliefs requirements, write the framework §4.4/§9.1 amendments, then the milestone 1a plan
+  provenance: {"harness_session":"claude-code:5f4da271-d57c-4d0d-9d69-fb6c4c6a0101","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
