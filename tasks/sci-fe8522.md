@@ -1,17 +1,19 @@
 ---
 id: sci-fe8522
 title: "Science commons: design spec (sub-project 5, the science half of publish)"
-status: doing
+status: done
 priority: 1
 size: l
 complexity: high
 process: planned
 owner: science-commons
 created: 2026-09-30T23:17:20Z
-updated: 2026-10-01T02:21:10Z
+updated: 2026-10-01T02:21:34Z
 started: 2026-09-30T23:17:27Z
+completed: 2026-10-01T02:21:34Z
 depends: []
 tags: [commons]
+model: claude-fable-5-1
 agent: claude-code/claude-fable-5-1
 spec: docs/specs/2026-09-30-science-commons-design.md
 ---
@@ -92,3 +94,7 @@ Design the science commons in verifiably: a user publishes views to git and Zeno
   provenance: {"harness_session":"claude-code:5f4da271-d57c-4d0d-9d69-fb6c4c6a0101","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-01T02:19:39Z (science-commons): review: spec round 8 — verdict: accept; findings: none; reviewer: codex (pasted by the user)
 - 2026-10-01T02:21:10Z (science-commons): Spec approved at round 8. Filed beliefs requirements beliefs-f50596 beliefs-d9bc57 beliefs-724941 (1a), noted beliefs-81367e (1b), ideas beliefs-42d201 beliefs-36d11c beliefs-51fa7d; sci milestones sci-13050a (1a), sci-9104fb (1b), ideas sci-8363b5 sci-65d6c9 sci-66d347. Framework amendments to §3.3, §4.4 and §9.1 made in this commit.
+- 2026-10-01T02:21:34Z (science-commons): done
+  provenance: {"harness_session":"claude-code:5f4da271-d57c-4d0d-9d69-fb6c4c6a0101","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-01T02:21:34Z (science-commons): Science commons design spec approved after eight review rounds; framework §3.3/§4.4/§9.1 amended; beliefs requirements beliefs-f50596, beliefs-d9bc57, beliefs-724941 and milestones sci-13050a (1a), sci-9104fb (1b) filed with 2-4 as ideas
+  provenance: {"harness_session":"claude-code:5f4da271-d57c-4d0d-9d69-fb6c4c6a0101","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
