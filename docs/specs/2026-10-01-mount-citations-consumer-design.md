@@ -89,12 +89,16 @@ decision 3), which beliefs §4 asked to establish before `sci-0d00d2`.
 6. **`_refuse_foreign_observations` is removed.** A corpus-local `gather` now raises
    `InputOutsideCorpus`, and `_evaluate_over_inputs` returns it as
    `beliefs.belief.Refused("input-outside-corpus: …")`, a value and not an exception.
-   `belief` already renders a returned `Refused` as `kind: Refused` with its reason, so
-   no mapping is added. `next`'s admission path calls `gather` directly, where
-   `InputOutsideCorpus` raises; `next` lets it propagate as an internal error. Only an
-   edited corpus can hold that state, and the write boundary refuses to mint it. The
-   `declared` filter in `_context` stays, because the lineage snapshot can walk only
-   the mount's own datasets.
+   The state is reachable without editing any corpus. Cross-corpus evidence is authored
+   normally with coordination on, then read where the session has no read mounts:
+   with coordination off, or under a configuration naming fewer roots.
+   - `belief` already renders a returned `Refused` as `kind: Refused` with its reason.
+   - `next` calls `gather` directly, where `InputOutsideCorpus` raises. `next`
+     classifies that row `assessed-unevaluated (input-outside-corpus)` (decision 9). It
+     neither lets the error escape as an internal error nor blanks every row.
+
+   The `declared` filter in `_context` stays, because the lineage snapshot can walk
+   only the mount's own datasets.
 
 7. **Belief has two read modes, chosen by the session's shape, never by the evidence.**
    - **No read mounts** (coordination off, or a single corpus root): the live
@@ -116,16 +120,18 @@ decision 3), which beliefs §4 asked to establish before `sci-0d00d2`.
        belief then answers `NoBelief("unavailable-corpus-absent")` even when every
        session corpus is available. The refusal names the corpora missing and the
        corpora extra.
-     - `epoch-stale`: the view reports drift for a session corpus that belief could
-       read. Drift is inert when the corpus's captured state moved only by records
-       the epoch did not map, all of kinds in `beliefs.coordination.COORDINATION_KINDS`.
-       Belief never reads those kinds: the kernel never consults coordination content.
-       A view at the epoch holds only mapped records, so the answer is unchanged.
-       Inert drift does not make the epoch stale. Any other drift does, including a
-       moved state with no unmapped records. A changed mapped record never reaches this
-       check, because `open_world_view` refuses it as corruption. Without this rule,
-       every `project`, `question` or `hypothesis` write would force a rebuild before
-       the next belief.
+     - `epoch-stale`: the view reports drift for any session corpus, whatever moved.
+       Coordination writes count too.
+     - `kernel-refused` (`data.kind` `BuildContended`): opening the view needs every
+       covered corpus's capture hold, and one is mid-write. This is retryable, and is
+       the same normalization as decision 5.
+
+     *Rejected (plan review round 1, P1):* treating drift as inert when every unmapped
+     record is a coordination kind. `open_world_view` checks mapped addresses and uids,
+     not content. A mapped dataset's facet revised alongside a new coordination record
+     was served changed while the rule called the drift inert. The exception returns
+     only when the kernel can prove mapped content and the manifest unchanged
+     (limitation 2).
 
      Each refusal names the corpora and the remedy, `science epoch`. The check is one
      function, `epoch_currency(world, session_ids)`, in `science/world_belief.py`.
@@ -151,7 +157,8 @@ decision 3), which beliefs §4 asked to establish before `sci-0d00d2`.
    library operations), with no write class, no permit from the session, and no ledger
    entry. It:
    1. opens the world with an operator authority covering `epoch`;
-   2. asks `epoch_currency` (decision 7). When the current epoch is already current for
+   2. asks `epoch_currency` (decision 7). A `kernel-refused` contention from it
+      propagates, and the verb exits 3 naming it. When the current epoch is already current for
       the session, it builds nothing and prints that epoch's packaging identity and
       coverage, marked `current`. Rebuilding is not an idempotent way to get there. An
       epoch's bytes include the world's chain head, publication advances that head, and
@@ -180,10 +187,16 @@ decision 3), which beliefs §4 asked to establish before `sci-0d00d2`.
      the write root against a mounted proposition, the first step of the
      second-project measurement, would therefore leave the row `not-ready` even with
      its inputs held.
-   - With no read mounts, admission is judged as today.
+   - With no read mounts (coordination off, or one configured root), classification
+     is holder-local, exactly as today. The scans read the proposition's own corpus,
+     so a mounted proposition keeps the specs and assessments its corpus holds.
+     `InputOutsideCorpus` from that corpus-local read makes the row
+     `assessed-unevaluated (input-outside-corpus)`.
    - With read mounts, admission is judged through decision 7's world read when the
      epoch is current. When it is absent or stale, the row is classified
      **`assessed-unevaluated`** and carries the reason (`no-epoch` or `epoch-stale`).
+     Contention while opening the view (`kernel-refused`) refuses the whole `next`,
+     as any kernel refusal does.
      This is a fifth class, and it amends the coordination design's four-class rule.
 
    *Rejected:* refusing the whole `next`. Its rows are attention over the live world
@@ -298,9 +311,14 @@ commit. The pre-push hook carries the full suite (science has no CI).
    measurement records how often that happens and how long it takes. That record is
    the evidence for or against asking beliefs for a cheaper epoch, or a live read with
    a stated identity.
-2. **Any evidence write in a session corpus makes the epoch stale for every
-   proposition**, including writes unrelated to the one asked about. Coordination
-   writes are exempt (decision 7). Narrowing staleness to a proposition's
+2. **Any write in a session corpus makes the epoch stale for every proposition**,
+   including coordination writes (`project`, `question`, `hypothesis`) and writes
+   unrelated to the one asked about.
+   - In daily use, each of those writes is followed by `science epoch` before the next
+     belief or admission read.
+   - Exempting coordination drift needs a kernel witness that a world view's mapped
+     content and manifests are unchanged since the epoch. Beliefs has none today;
+     the follow-up is `beliefs-655c10`. Narrowing staleness to a proposition's
    evidence would need the evidence closure, which is the world read itself.
 3. **Read mounts are opened per citing write** (kernel limitation 1), and per
    `cited()` call here. `sci-d92797` (open mounts once per read command) covers the

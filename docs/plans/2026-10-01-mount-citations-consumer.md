@@ -51,7 +51,8 @@ beliefs `docs/superpowers/specs/2026-10-01-mount-citations-design.md` (cut 44).
 ## Review Focus
 
 1. A session with coordination off and two configured roots should keep today's
-   corpus-local belief, with no epoch required. Task 4 pins it.
+   corpus-local belief and holder-local `next`, with no epoch required. Tasks 4 and 5
+   pin it.
 2. After `science epoch`, a write to a **read mount** (not the write root) should make
    belief refuse `epoch-stale` naming the mount. Task 4 pins it.
 3. `science epoch` run from the CLI should exit 0 and print `built`, then `current` on a
@@ -83,7 +84,8 @@ beliefs `docs/superpowers/specs/2026-10-01-mount-citations-design.md` (cut 44).
   - `ReadContext.own(ref: str) -> ReadView`
   - In helpers: `build_shared_contract_world(work: Path) -> ScienceConfig`, whose mount
     holds `proposition:shared` and an evidence-free `proposition:fresh`;
-    `mount_config(cfg) -> ScienceConfig`; `write_shared_config(cfg) -> Path`; and
+    `mount_config(cfg) -> ScienceConfig`; `write_shared_config(cfg) -> Path`;
+    `WORKING_FIELDS`, the write root's spec fields; and
     `add_mounted_evidence(cfg, work) -> dict[str, str]`, with keys `data`, `spec`, `run`
     and `assessment`.
 
@@ -163,6 +165,12 @@ store_root = "store"
 coordination = {COORDINATION}
 ''')
     return path
+
+
+WORKING_FIELDS = dict(SPEC_FIELDS, method="rank comparison, working corpus")
+"""Spec fields for a spec the write root authors. A spec is content-addressed,
+so the mount's `SPEC_FIELDS` spec over the same target and dataset would be
+the same record in two corpora, a duplicate location (plan review round 1, P2)."""
 
 
 def mount_config(cfg: ScienceConfig) -> ScienceConfig:
@@ -382,7 +390,7 @@ git commit -m "feat(config): resolve citations over the session's corpora"
 Append to `python/tests/test_mount_citations.py`:
 
 ```python
-from helpers.world import SPEC_FIELDS, _minted_ref, fixture_bundle, mint_fixture_run, open_rig
+from helpers.world import SPEC_FIELDS, WORKING_FIELDS, _minted_ref, fixture_bundle, mint_fixture_run, open_rig
 
 
 def test_spec_run_and_assess_in_the_write_root_cite_the_mount(shared, certified_work):
@@ -390,8 +398,9 @@ def test_spec_run_and_assess_in_the_write_root_cite_the_mount(shared, certified_
     write root, and every record it cites stays in the mount."""
     cfg, mounted = shared
     with open_rig(cfg, ("spec",)) as (d, _):
-        spec = _minted_ref(d.invoke("spec", dict(SPEC_FIELDS, target="proposition:shared",
+        spec = _minted_ref(d.invoke("spec", dict(WORKING_FIELDS, target="proposition:shared",
                                                  dataset=mounted["data"])).text, "analysis-spec")
+    assert spec != mounted["spec"]
     run = mint_fixture_run(cfg, spec, mounted["data"], fixture_bundle(certified_work))
     with open_rig(cfg, ("assess",)) as (d, _):
         assessment = _minted_ref(d.invoke("assess", {"run": run}).text, "assessment")
@@ -776,16 +785,54 @@ def test_a_write_root_write_makes_it_stale_and_the_verb_rebuilds(shared):
     assert rebuilt.state == "built" and rebuilt.packaging_identity != first.packaging_identity
 
 
-def test_a_coordination_write_after_the_epoch_leaves_it_current(shared):
-    """Consumer spec decision 7: belief never reads coordination records, and
-    a view at the epoch holds only mapped ones, so the answer is unchanged."""
+def test_a_coordination_write_after_the_epoch_makes_it_stale(shared):
+    """Strict drift (plan review round 1, P1): nothing proves a coordination
+    write left mapped content unchanged, so it is drift like any other."""
     from helpers.world import QUERY, open_rig
-    first = publish_session_epoch(shared)
+    publish_session_epoch(shared)
     with open_rig(shared, ("project",)) as (d, _):
         d.invoke("project", {"name": "health", "query": QUERY})
-    ctx = ReadContext.open(shared)
-    assert epoch_currency(ctx.world, ctx.session_ids()).epoch.packaging_identity == first.packaging_identity
-    assert publish_session_epoch(shared).state == "current"
+    refusal = _refusal(shared)
+    write_id = next(m.corpus_id for m in ReadContext.open(shared).session_mounts() if m.root == shared.write_root)
+    assert refusal.code == "epoch-stale" and refusal.data["drifted"] == [write_id]
+    assert publish_session_epoch(shared).state == "built"
+
+
+def test_a_mapped_facet_change_beside_a_coordination_write_is_stale(shared):
+    """The plan-review P1 regression: a mapped dataset's facet revised in the
+    mount alongside a new coordination record in the write root. The view
+    would serve the changed facet; currency must refuse, naming both."""
+    from helpers.world import QUERY, mount_config, open_rig
+    publish_session_epoch(shared)
+    mounted = mount_config(shared)
+    writer = open_corpus(mounted.write_root, authority=FIXTURE_AUTHORITY, profile=mounted.profile)
+    (dataset,) = [n for n in ReadContext.open(mounted).write_view().iter_stored()
+                  if n.kind == "dataset" and "empirical-observation" in n.facets]
+    candidate = dataset.model_copy(deep=True)
+    candidate.facets["empirical-observation"] = {"locator": "accession:GSE-REVISED", "attested_by": "fixture"}
+    writer.revise(candidate)
+    with open_rig(shared, ("project",)) as (d, _):
+        d.invoke("project", {"name": "health", "query": QUERY})
+    refusal = _refusal(shared)
+    assert refusal.code == "epoch-stale"
+    assert refusal.data["drifted"] == sorted(ReadContext.open(shared).session_ids())
+
+
+def test_contention_while_checking_an_existing_epoch_is_a_named_refusal(shared, monkeypatch):
+    """Plan review round 1, P2: opening the view takes every covered corpus's
+    capture hold, so a busy corpus refuses here too, never internal-error."""
+    import science.world_belief as world_belief
+    from beliefs.errors import BuildContended
+    publish_session_epoch(shared)
+
+    def contended(*_, **__):
+        raise BuildContended("an epoch build cannot capture this root: its operation lock is held")
+
+    monkeypatch.setattr(world_belief, "open_world_view", contended)
+    with pytest.raises(Refused) as caught:
+        publish_session_epoch(shared)
+    assert caught.value.refusal.code == "kernel-refused"
+    assert caught.value.refusal.data["kind"] == "BuildContended"
 
 
 def test_coverage_missing_a_session_corpus_is_stale(shared):
@@ -879,14 +926,13 @@ RESERVED_COMMANDS = frozenset({"continue", "serve", "mcp", "adapters", "build", 
 
 A mounted session's belief is a world read at the current epoch, and only at
 one that is current for the session: coverage equal to the session corpora's
-ids, and no drift in any of them. `science epoch` is the operator verb that
+ids, and no drift in any of them, whatever moved. `science epoch` is the operator verb that
 makes one current; it reuses an epoch already current rather than rebuilding,
 because a rebuild anchors a moved world chain head and mints a new identity."""
 from __future__ import annotations
 
 from dataclasses import dataclass
 
-from beliefs.coordination import COORDINATION_KINDS
 from beliefs.errors import BuildContended, EpochUnknown
 from beliefs.permit import Authority, WritePermit
 from beliefs.root import install_shipped_world_rules, open_world
@@ -930,16 +976,10 @@ def _stale(message: str, *, missing=(), extra=(), drifted=()) -> Refused:
                            {"missing": sorted(missing), "extra": sorted(extra), "drifted": sorted(drifted)}))
 
 
-def _inert(view: WorldReadView, report) -> bool:
-    """Drift belief cannot see (consumer spec decision 7): the state moved only
-    by unmapped records, every one of a coordination kind. A moved state with
-    nothing unmapped is not inert; a changed mapped record never gets here,
-    because `open_world_view` refuses it."""
-    if not report.unmapped:
-        return False
-    unmapped = frozenset(report.unmapped)
-    return all(node.kind in COORDINATION_KINDS
-               for node in view.captured_records(report.corpus_id) if node.uid in unmapped)
+def _contended(caught: BuildContended) -> Refused:
+    """A covered corpus mid-write: retryable, named like every kernel refusal
+    (consumer spec decisions 5 and 7)."""
+    return Refused(Refusal("kernel-refused", str(caught), {"kind": "BuildContended"}))
 
 
 def epoch_currency(world, session_ids: frozenset[str]) -> Current:
@@ -954,8 +994,14 @@ def epoch_currency(world, session_ids: frozenset[str]) -> Current:
     if missing or extra:
         raise _stale(f"epoch {published.packaging_identity} covers {', '.join(sorted(covered))}, not exactly the "
                      f"session's {', '.join(sorted(session_ids))}", missing=missing, extra=extra)
-    view = open_world_view(world, published)
-    drifted = sorted(report.corpus_id for report in view.drift() if not _inert(view, report))
+    try:
+        view = open_world_view(world, published)
+    except BuildContended as caught:
+        raise _contended(caught) from None
+    # Strict: any drift, coordination writes included. The view checks mapped
+    # addresses and uids, not content, so no drift can be proved inert today
+    # (plan review round 1, P1; spec limitation 2).
+    drifted = sorted(report.corpus_id for report in view.drift())
     if drifted:
         raise _stale(f"corpora {', '.join(drifted)} have moved since epoch {published.packaging_identity}",
                      drifted=drifted)
@@ -972,7 +1018,7 @@ def build_over(config, coverage: frozenset[str]):
     try:
         return build_epoch(world, coverage=coverage, bindings=DerivationBindings(**fields))
     except BuildContended as caught:
-        raise Refused(Refusal("kernel-refused", str(caught), {"kind": "BuildContended"})) from None
+        raise _contended(caught) from None
 
 
 def publish_session_epoch(config) -> Published:
@@ -1044,11 +1090,11 @@ git commit -m "feat(cli): science epoch publishes or reuses the session's epoch"
 **Files:**
 - Modify: `python/src/science/world_belief.py`. Add `world_context`.
 - Modify: `python/src/science/config.py`:
-  - add `_world_read`, `world_read` and `epoch_refusal`;
+  - add `_world_read` and `world_read`;
   - change `gather_inputs` and `evaluate`;
   - delete `_refuse_foreign_observations` and its call in `_context`.
-- Modify: `python/tests/test_two_corpora.py`. Its fixture publishes an epoch, and the
-  foreign-observation test is replaced.
+- Modify: `python/tests/test_two_corpora.py`. Its fixture mints the projects its tests
+  select and then publishes an epoch, and the view-hiding test is deleted.
 - Modify: `python/tests/test_mount_citations.py`.
 
 **Interfaces:**
@@ -1056,7 +1102,6 @@ git commit -m "feat(cli): science epoch publishes or reuses the session's epoch"
   `EPOCH_CODES`.
 - Produces:
   - `ReadContext.world_read() -> Current`, which raises `Refused` with an epoch code.
-  - `ReadContext.epoch_refusal() -> Refusal | None`.
   - `world_belief.world_context(current, observations, pins) -> SuppliedContext`.
   - `ReadContext.gather_inputs` and `evaluate` choose the mode with `has_read_mounts()`.
 
@@ -1069,7 +1114,7 @@ def _walk(cfg, mounted, work) -> str:
     """spec → run → assess in the write root over the mount's proposition and
     data; returns the assessment ref."""
     with open_rig(cfg, ("spec",)) as (d, _):
-        spec = _minted_ref(d.invoke("spec", dict(SPEC_FIELDS, target="proposition:shared",
+        spec = _minted_ref(d.invoke("spec", dict(WORKING_FIELDS, target="proposition:shared",
                                                  dataset=mounted["data"])).text, "analysis-spec")
     run = mint_fixture_run(cfg, spec, mounted["data"], fixture_bundle(work))
     with open_rig(cfg, ("assess",)) as (d, _):
@@ -1125,56 +1170,67 @@ def test_with_coordination_off_belief_stays_corpus_local_without_an_epoch(shared
     assert dict(report[1].pairs)["kind"] in ("Belief", "NoBelief", "Refused")
 ```
 
-The last test reads `proposition:shared` from its holder alone, which is today's path.
-With coordination off, `mount_holding` still finds it in the configured `shared` root.
+The coordination-off test reads `proposition:shared` from its holder alone, which is
+today's path. With coordination off, `mount_holding` still finds it in the configured
+`shared` root.
+
+Then add the evidence-outside-corpus case (consumer spec decision 6). It needs no edited
+corpus: evidence authored across corpora with coordination on is read with coordination
+off.
+
+```python
+LOCAL = {"subject": "concept:remission", "predicate": "affects", "object": "protein:PHF19",
+         "layer": "causal", "polarity": "positive", "slug": "local"}
+
+
+def _local_walk(cfg, mounted, work) -> str:
+    """claim → spec → run → assess, all in the write root, on a write-root
+    proposition over the mount's dataset; returns the assessment ref."""
+    with open_rig(cfg, ("claim", "spec")) as (d, _):
+        d.invoke("claim", LOCAL)
+        spec = _minted_ref(d.invoke("spec", dict(WORKING_FIELDS, target="proposition:local",
+                                                 dataset=mounted["data"])).text, "analysis-spec")
+    run = mint_fixture_run(cfg, spec, mounted["data"], fixture_bundle(work))
+    with open_rig(cfg, ("assess",)) as (d, _):
+        return _minted_ref(d.invoke("assess", {"run": run}).text, "assessment")
+
+
+def test_cross_corpus_evidence_read_without_mounts_is_the_kernels_input_outside_corpus(shared, certified_work):
+    from science.commands.belief import handle as belief
+    cfg, mounted = shared
+    _local_walk(cfg, mounted, certified_work)
+    report = belief(ReadContext.open(dataclasses.replace(cfg, coordination=None)), proposition="proposition:local")
+    answer = dict(report[1].pairs)
+    assert answer["kind"] == "Refused" and answer["reason"].startswith("input-outside-corpus")
+    assert mounted["data"] in answer["reason"]
+```
 
 In `python/tests/test_two_corpora.py`:
 
-1. End the `world` fixture with an epoch, so its existing belief and `next` tests read a
-   current one:
+1. Drift is strict, so a `project` write after the epoch makes it stale. Mint the projects
+   the tests select in the `world` fixture, before it publishes. A `project-select` writes
+   the session ledger, not a corpus, and leaves the epoch current. End the fixture with:
 
 ```python
+    with open_rig(cfg, ("project",)) as (d, _):
+        d.invoke("project", {"name": "all three", "query": _query({"addresses": [
+            "proposition:archived", "proposition:claimed", "proposition:queued"]})})
+        d.invoke("project", {"name": "all", "query": _query({"kinds": ["proposition"]})})
     from science.world_belief import publish_session_epoch
     publish_session_epoch(cfg)
     return cfg
 ```
 
-2. Replace `test_an_assessment_resting_on_a_dataset_its_corpus_lacks_refuses_naming_it`
-   with the kernel's refusal, now that science's guard is gone (consumer spec
-   decision 6):
+   Then delete the two `d.invoke("project", …)` lines from
+   `test_next_under_a_project_selecting_both_classifies_each_from_its_own_corpus` and
+   `test_the_unselected_session_reads_both_corpora_as_a_project_of_every_kind_does`.
+   Their `project-select` lines and assertions stay unchanged. Any other test in this
+   module that mints a `project` before a classified `next` and does not refuse first is
+   moved the same way.
 
-```python
-def test_a_corpus_local_read_of_evidence_resting_outside_the_corpus_is_the_kernels_refusal(world):
-    """Consumer spec decision 6: science's guard is gone; the kernel's
-    corpus-local gather refuses input-outside-corpus itself. A view hiding the
-    observed dataset stands in for an edited corpus."""
-    from beliefs import stored
-    from beliefs.belief import Refused as BeliefRefused
-    from science.closure import evaluate
-    ctx = ReadContext.open(world)
-    mount = ctx.mount_holding("proposition:claimed")
-    (assessment,) = [n for n in mount.view.iter_stored() if n.kind == "assessment"]
-    run = stored.typed_ref("run", stored.assessment_value(assessment, profile=mount.profile).run)
-    (hidden,) = stored.inputs_of(mount.view.get(run), stored.OBSERVES)
-
-    class Hiding:
-        def __init__(self, view):
-            self._view = view
-
-        def holds(self, ref):
-            return ref != hidden and self._view.holds(ref)
-
-        def __getattr__(self, name):
-            return getattr(self._view, name)
-
-    hiding = dataclasses.replace(mount, view=Hiding(mount.view))
-    observations = ctx.observations()
-    answer = evaluate(hiding.view, "proposition:claimed", observations=observations,
-                      context=ctx._context(hiding, observations, "proposition:claimed"),
-                      profile=mount.profile, resolution=ctx.snapshot(mount.profile))
-    assert isinstance(answer, BeliefRefused) and answer.reason.startswith("input-outside-corpus")
-    assert hidden in answer.reason
-```
+2. Delete `test_an_assessment_resting_on_a_dataset_its_corpus_lacks_refuses_naming_it`.
+   Its view-hiding stand-in for an edited corpus is superseded by the authored case
+   above, which reaches the same kernel refusal without editing anything.
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
@@ -1183,7 +1239,8 @@ Expected: FAIL.
 - `test_mounted_belief_needs_an_epoch` gets an answer, not `no-epoch`.
 - The counting test misses the write root's assessment, because `gather` reads only the
   mount.
-- The replaced two-corpora test fails on science's own `invalid-input`.
+- The `input-outside-corpus` test passes already (the kernel refuses in the corpus-local
+  read); it pins decision 6 against a later change of mode.
 
 - [ ] **Step 3: Add `world_context` to `world_belief.py`**
 
@@ -1224,9 +1281,6 @@ In `config.py`, add after `has_read_mounts`:
         if isinstance(current, Refused):
             raise current
         return current
-
-    def epoch_refusal(self) -> Refusal | None:
-        return self._world_read.refusal if isinstance(self._world_read, Refused) else None
 
     def _world_context(self, current):
         from science.world_belief import world_context
@@ -1305,11 +1359,15 @@ git commit -m "feat(belief): a mounted session reads belief at the current epoch
 **Interfaces:**
 - Consumes:
   - Task 1's `session_mounts`;
-  - Task 4's `gather_inputs` (which raises an epoch `Refused` in world mode) and
-    `epoch_refusal()`;
+  - Task 4's `gather_inputs` (which raises an epoch `Refused` in world mode, and the
+    kernel's `InputOutsideCorpus` in corpus-local mode) and `has_read_mounts`;
+  - Task 4's test helpers `_walk` and `_local_walk`;
   - Task 3's `EPOCH_CODES`.
 - Produces: `CLASSES = ("ready", "not-ready", "assessed-unevaluated",
-  "assessed-not-admitted", "admitted")`. `classify` may return `"assessed-unevaluated"`.
+  "assessed-not-admitted", "admitted")`. `_classify(ctx, proposition) -> tuple[str,
+  str | None]` returns the class and, for `assessed-unevaluated`, its reason
+  (`no-epoch`, `epoch-stale` or `input-outside-corpus`). `classify` keeps returning the
+  class alone.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -1324,7 +1382,7 @@ def test_a_write_root_spec_on_a_mounted_proposition_makes_it_ready(shared, certi
     cfg, mounted = shared
     assert classify(ReadContext.open(cfg), "proposition:fresh") == "not-ready"
     with open_rig(cfg, ("spec",)) as (d, _):
-        d.invoke("spec", dict(SPEC_FIELDS, target="proposition:fresh", dataset=mounted["data"]))
+        d.invoke("spec", dict(WORKING_FIELDS, target="proposition:fresh", dataset=mounted["data"]))
     assert classify(ReadContext.open(cfg), "proposition:fresh") == "ready"
 
 
@@ -1339,21 +1397,51 @@ def test_next_marks_mounted_evidence_unevaluated_without_an_epoch_and_judges_it_
     assert dict(rows)["proposition:shared"].startswith("assessed-unevaluated (no-epoch): ")
     publish_session_epoch(cfg)
     assert classify(ReadContext.open(cfg), "proposition:shared") == "assessed-not-admitted"
+
+
+def test_with_coordination_off_next_classifies_from_the_holders_own_corpus(shared, certified_work):
+    """Plan review round 1, P2 4: no read mounts means today's holder-local
+    rule. The mount's proposition keeps the spec and assessment its own corpus
+    holds, and no epoch is asked for."""
+    from science.commands.next import classify
+    cfg, _ = shared
+    off = ReadContext.open(dataclasses.replace(cfg, coordination=None))
+    assert classify(off, "proposition:shared") == "assessed-not-admitted"
+    assert classify(off, "proposition:fresh") == "not-ready"
+
+
+def test_cross_corpus_evidence_read_without_mounts_is_an_unevaluated_row(shared, certified_work):
+    """Plan review round 1, P2 5: authored normally, then read with
+    coordination off, the corpus-local gather raises InputOutsideCorpus. The
+    row says so; next neither fails internally nor blanks every row."""
+    from science.commands.next import classify, handle
+    cfg, mounted = shared
+    _local_walk(cfg, mounted, certified_work)
+    off = dataclasses.replace(cfg, coordination=None)
+    assert classify(ReadContext.open(off), "proposition:local") == "assessed-unevaluated"
+    rows = dict(handle(ReadContext.open(off), limit=None)[-1].pairs)
+    assert rows["proposition:local"].startswith("assessed-unevaluated (input-outside-corpus): ")
+    assert rows["proposition:shared"].startswith("assessed-not-admitted: ")
 ```
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `just test-one tests/test_mount_citations.py -k "ready or unevaluated"`
+Run: `just test-one tests/test_mount_citations.py -k "ready or unevaluated or holders_own"`
 Expected: FAIL.
 - The readiness test reads `not-ready` after the spec, because `_targeting_specs` reads
   only the mount.
 - The `next` test raises `Refused` `no-epoch` out of `classify` instead of classifying.
+- The input-outside-corpus row raises `InputOutsideCorpus` out of `classify`.
+- The holder-local test passes already; it pins the coordination-off rule against
+  step 3.
 
 - [ ] **Step 3: Implement**
 
 In `next.py`:
 
 ```python
+from beliefs.errors import InputOutsideCorpus
+
 from science.world_belief import EPOCH_CODES
 
 CLASSES = ("ready", "not-ready", "assessed-unevaluated", "assessed-not-admitted", "admitted")
@@ -1372,45 +1460,56 @@ def _assessed(mounts, proposition) -> bool:
                for mount in mounts for node in mount.view.iter_stored())
 ```
 
-Replace `classify`:
+Replace `classify` with `_classify` and a thin `classify`:
 
 ```python
-def classify(ctx, proposition: str) -> str:
-    """The class rule over the evidence in every session corpus (consumer spec
-    decision 9). Admission of a mounted session's evidence is judged at the
-    current epoch; without one it is `assessed-unevaluated`."""
-    ctx.mount_holding(proposition)  # refuses a proposition no mount holds, or two do
-    mounts = ctx.session_mounts()
+def _classify(ctx, proposition: str) -> tuple[str, str | None]:
+    """The class rule, and the reason an assessed row is unevaluated (consumer
+    spec decision 9). A mounted session scans every session corpus and judges
+    admission at the current epoch. Without read mounts the rule is today's,
+    over the proposition's own corpus."""
+    holder = ctx.mount_holding(proposition)  # refuses a proposition no mount holds, or two do
+    mounts = ctx.session_mounts() if ctx.has_read_mounts() else (holder,)
     if not _assessed(mounts, proposition):
         everywhere = ctx.mounts()
-        return ("ready" if any(_inputs_held(ctx, everywhere, s) for s in _targeting_specs(mounts, proposition))
-                else "not-ready")
+        held = any(_inputs_held(ctx, everywhere, spec) for spec in _targeting_specs(mounts, proposition))
+        return ("ready" if held else "not-ready"), None
     try:
         inputs = ctx.gather_inputs(proposition)
     except Refused as caught:
         if caught.refusal.code in EPOCH_CODES:
-            return "assessed-unevaluated"
+            return "assessed-unevaluated", caught.refusal.code
         raise
+    except InputOutsideCorpus:
+        # Cross-corpus evidence read where the session has no read mounts
+        # (decision 6): the corpus-local read cannot see its lineage.
+        return "assessed-unevaluated", "input-outside-corpus"
     observations = ctx.observations()
     for assessment in inputs.assessments:
         run = inputs.runs.get(assessment.run)
         if run is not None and isinstance(admit(assessment, run, observations, inputs.verifications), Admitted):
-            return "admitted"
-    return "assessed-not-admitted"
+            return "admitted", None
+    return "assessed-not-admitted", None
+
+
+def classify(ctx, proposition: str) -> str:
+    return _classify(ctx, proposition)[0]
 ```
 
-In `handle`, change the `propositions` rendering so an unevaluated row carries its
-reason:
+In `handle`, classify each row once and carry the reason into its label. Replace the
+`rows = sorted(...)` statement and the `propositions` block:
 
 ```python
-    def label(c: int) -> str:
-        refusal = ctx.epoch_refusal()
-        return f"{CLASSES[c]} ({refusal.code})" if CLASSES[c] == "assessed-unevaluated" and refusal else CLASSES[c]
-
+    rows = sorted((CLASSES.index(cls), node.id, stored.display_statement(node) or node.title, reason)
+                  for node in nodes for cls, reason in (_classify(ctx, node.id),))
+    shown = rows[: (limit or 10)]
     blocks.append(KeyVals("propositions",
-                          tuple((pid, f"{label(c)}: {statement}") for c, pid, statement in shown)
+                          tuple((pid, f"{CLASSES[c]} ({reason}): {statement}" if reason
+                                 else f"{CLASSES[c]}: {statement}") for c, pid, statement, reason in shown)
                           or (("none", "no propositions"),)))
 ```
+
+Ids are unique, so the sort never compares two reasons.
 
 `_inputs_held` keeps reading `ctx.mounts()`: a spec's dataset is one world record, in
 whichever configured corpus declares it (part 3).
