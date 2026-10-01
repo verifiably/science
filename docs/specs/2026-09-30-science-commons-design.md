@@ -1,7 +1,7 @@
 # Science commons — design
 
 **Date:** 2026-09-30
-**Status:** draft for user review, revised after review rounds 1 to 3. Task
+**Status:** draft for user review, revised after review rounds 1 to 4. Task
 `sci-fe8522`.
 **Scope:** how published science is shared, found, trusted, reproduced,
 changed and preserved across installations of verifiably, and what a
@@ -93,7 +93,7 @@ lacks.
 | **location** | a remote destination URL under the holdings `url` canonicalization (publication records decision 9), or a local path. A publication may be held at several locations; its identity is its verified contents, never a location. |
 | **container** | what a location names: a directory-shaped remote holding `<corpus_id>/` roots and their `<corpus_id>.head-artifact.v1` siblings (`transport_files`), plus this design's side artifacts (§7). |
 | **side artifact** | a file science places in a container beside the corpora: a catalog or a provider list. Identified by its artifact identity. Not a world record, not a publication, never selected by a view, invisible to the kernel's `listing` check (§7). |
-| **pin** | `(corpus_id, marker uid, head artifact identity)` plus its **source** (where the reader learned it), its **fetch record** (§4.5), and a `keep` flag the reader sets to hold a revision past its retirement (§10). A pin is what the reader holds or intends to hold. |
+| **pin** | `(corpus_id, marker uid, head artifact identity)` plus its **source** (where the reader learned it), its **fetch record** (§4.5), and a `keep` flag the reader sets, **before adopting a successor**, to hold that revision when the successor arrives (§10); retirement is irreversible, so a need discovered later cannot be met by re-adoption. A pin is what the reader holds or intends to hold. |
 | **provider** | a world id bound, in the reader's sharing registry, to the locations the reader has confirmed speak for that world (§4.4). |
 | **mirror** | any location holding a publication the reader has already pinned. A mirror is not a provider: it serves bytes whose identity is known. |
 | **catalog** | a side artifact a host publishes: the publications it holds, with locations, observed holdings, and the host's inclusion decisions (§7.2). |
@@ -397,7 +397,9 @@ declarations follow the framework's write classes, extended as §11 says.
    registry. A session's mounts are fixed at open (session mounts design
    decision 3), so the mount takes effect at the next session open, and
    `adopt` says so; the epoch that covers the new corpus is captured at that
-   open. A pin needs a source: a bound provider for that location, or a
+   open. Until then the corpus is live and uncovered, so `publish` refuses
+   `selection-incomplete` naming it; `adopt`'s report says this too, and the
+   remedy is to reopen. A pin needs a source: a bound provider for that location, or a
    followed catalog naming the corpus. Neither present, `adopt` refuses
    `pin-unsourced` naming the world the marker claims and the two remedies,
    `provider bind` and `follow`. `adopt` of a successor also runs §10's
@@ -409,18 +411,23 @@ declarations follow the framework's write classes, extended as §11 says.
    assess. **The workspace revision has no carrier in the kernel today.** A
    marker names no repository or commit; a run's recipe carries the code
    identity and the environment identity, which is what a reproduction is
-   checked against. So in milestone 1 the workspace inputs — repository
-   location and commit — are supplied beside the publication, out of band,
-   and `verify` refuses `code-identity-mismatch` when the rendered workflow
-   at that commit does not digest to the recipe's code identity. From
+   checked against. So in milestone 1 the execution inputs — repository
+   location, commit, and the environment bundle's location — are supplied
+   beside the publication, out of band, and `verify` refuses
+   `code-identity-mismatch` when the rendered workflow at that commit does
+   not digest to the recipe's code identity, and `environment-mismatch`
+   when the bundle does not digest to its environment identity. From
    milestone 2 the catalog entry carries `execution` locators per run
    (§7.2), the cataloguer's claim, checked the same way. Whether the marker
    itself should carry a workspace locator is filed to `beliefs` as an open
    question, not required here. Three science changes and one kernel change make
    this possible and are in §11: `fetch <dataset>` acquires the bytes of a
    dataset a mount declares into the user's store and records the holdings
-   observation there (observing needs no write access to the dataset's
-   home, and nothing is redeclared); `verify`, `run` and `assess` resolve
+   observation there, composed from the holdings boundary's `look` and the
+   store write, **never** from the kernel's `acquire` act, which mints a
+   dataset node and would redeclare the mount's content-addressed dataset
+   (observing needs no write access to the dataset's home, and nothing is
+   redeclared); `verify`, `run` and `assess` resolve
    datasets, and the assessment, run, spec and proposition they name, over
    the session's mounts, not the write root alone; and the kernel admits an
    assessment whose run observed a mount's dataset (`beliefs-9ce6e4`).
@@ -496,12 +503,13 @@ One entry per held publication:
 | `kinds` | record kinds and counts in the corpus |
 | `propositions` | the proposition identities the corpus's assessments assess |
 | `datasets` | per selected dataset: identity, observed locations with times and outcomes, redistribution status and its basis (§4.11) |
-| `execution` | per run in the corpus: the workspace locator `(repository location, commit)` the cataloguer observed to reproduce the run's code identity, with the observation time; the cataloguer's claim (§5 step 4) |
+| `execution` | per run in the corpus: the locators `(repository location, commit, environment bundle location)` the cataloguer observed to reproduce the run's code identity and environment identity, with the observation time; the cataloguer's claim (§5 step 4). A `preserves: execution` promise covers both. |
 | `inclusions` | one or more statements, each `{by: world id, in: catalog artifact identity, reason, relates, preserves}`: `relates` is zero or more `(pin, relation, reason)` with `relation` from the closed set `alternative-analysis-of`, `addresses-related-question`, `supersedes-in-our-view`; `preserves` is the subset of {records, data, execution} that world promises. A statement is never edited or merged by another cataloguer. |
 | `contributed_by` | for an aggregator, the set of followed catalog artifact identities the entry came from; empty for the host's own pins |
 
 Entries for retired publications remain, with `superseded_by` set, so a
-reader can find a version an explicit pin or dependency needs (§10).
+reader who still holds that revision, or who never adopted it, can find
+it; a reader who retired it cannot re-adopt it (§10).
 
 ### 7.3 Provider list artifact
 
@@ -582,20 +590,26 @@ evaluated, and to every kind that lifecycle reads:
 
 1. The verifier set is the reader's own world plus `accept`.
 2. Acceptance is decided **per record, by its provenance world**, never by
-   the corpus that happens to carry it. A record's provenance world is: the
-   reader's own world for a record in a corpus the reader writes, or in a
-   corpus adopted from the reader's own publication; the origin world the
-   carrier's marker attributes it to (§4.8) when the carrier carries it;
-   and otherwise the carrier's own `published_from` world. A record
-   **counts** only when its provenance world is in the verifier set **and**
-   that attribution is authenticated: for the reader's own records nothing
-   further; for a carrier's own records, an origin-confirmed pin of the
-   carrier (§4.4); for a carried record, an origin-confirmed pin of the
-   origin publication that holds it, so that accepted *B* carrying
-   unaccepted *A*'s assessment through closure never makes it count under
-   `accept(B)`, and *B*'s attribution of a record to *A* is not taken on
-   *B*'s word. A corpus pinned through a followed catalog is held, readable
-   and citable, and none of its records count until an origin-confirmed pin
+   the corpus that happens to carry it, and the branches apply in this
+   order:
+   - **Own.** A record in the reader's write root, or in a corpus whose
+     `(corpus_id, marker uid, artifact identity)` a `publication-binding`
+     in the reader's own world bound — the reader's own publication, adopted
+     back. Counts, with nothing further. A marker that merely *claims* the
+     reader's world id proves nothing (§4.4 layer 2) and never takes this
+     branch. This branch governs whenever the reader's own world holds the
+     record, even if a carrier also holds it.
+   - **Carried.** A record the carrier's marker attributes to an origin
+     (§4.8). Counts only when the origin world is in the verifier set and
+     the reader holds an origin-confirmed pin of the origin publication that
+     holds the record. So accepted *B* carrying unaccepted *A*'s assessment
+     through closure never makes it count under `accept(B)`, and *B*'s
+     attribution of a record to *A* is not taken on *B*'s word.
+   - **Carrier's own.** Otherwise the carrier's `published_from` world.
+     Counts only when that world is in the verifier set and the reader's
+     pin of the carrier is origin-confirmed (§4.4).
+   A corpus pinned through a followed catalog is held, readable and
+   citable, and none of its records count until an origin-confirmed pin
    names the same head artifact identity.
 3. The rule applies to every record kind that can change what belief reads:
    assessments, verifications, superseding verifications, and the
@@ -614,20 +628,24 @@ evaluated, and to every kind that lifecycle reads:
    the same policy. Different selections can legitimately give different
    results, and the context is what shows why.
 
-Two outcomes are required, and the kernel's evaluation records carry no
-corpus or world today, so how they are met is `beliefs`' choice (§11):
-the filter applies to assessments, verifications and correction records
-alike **before any of their effects and before any pool-level rule** —
-retraction standing and the identity collapse included — so an unaccepted
-retraction cannot remove accepted evidence and an unaccepted corpus's
-facet-disagreeing twin cannot refuse an accepted assessment; and the
-context states the policy. Science's default proposal is that science
-filters the records it hands to evaluation by corpus provenance, which it
-knows from the read context, and passes the policy statement for the
-context; a kernel-side predicate is the alternative. Science computes the
-set from `accept` and pin provenance. It is a milestone 1a precondition:
-without it, *B*'s belief after adopting *A* simply contains *A*'s
-assessments.
+Two outcomes are required: the filter applies to assessments,
+verifications and correction records alike **before any of their effects
+and before any pool-level rule** — retraction standing and the identity
+collapse included — so an unaccepted retraction cannot remove accepted
+evidence and an unaccepted corpus's facet-disagreeing twin cannot refuse an
+accepted assessment; and the context states the policy. Science cannot meet
+the first from outside: it hands a view, not records, to evaluation, and
+the kernel's gather takes the retraction enumeration from the view, folds
+standing and subtracts retracted targets before any assessment is decoded.
+So the requirement on `beliefs` (§11) is a **kernel-side predicate**
+supplied to gather, `counts(corpus_id, address)`, consulted before standing
+is folded, and the policy statement carried into the context. The kernel
+already attributes every node to a corpus (`node_corpus`); what it lacks is
+the world and the pin state, which the predicate encapsulates. Science
+computes the predicate from `accept`, the pins' confirmation state, the
+reader's own publication bindings, and the carriers' attribution entries.
+It is a milestone 1a precondition: without it, *B*'s belief after adopting
+*A* simply contains *A*'s assessments.
 
 ## 10. Retirement, supersession and pinned dependencies
 
@@ -639,12 +657,15 @@ refuse runs **before** the kernel's world is touched:
 | `fetched` | the copy is on disk and `restore_root` has verified its chain; the root is readable and **not** in the reader's world |
 | `admitted` | `admit_publication` succeeded; the corpus is live in the kernel's registry |
 | `mounted` | the loader will mount it at the next session open |
-| `retired` | the kernel's lifecycle act has run; it has left the live span |
+| `retired` | the kernel's `World.retire` has written its terminal status under registry authority; it has left the live span. Irreversible: a retired `corpus_id` is never re-admitted to that world. |
 
 On a `fetched` candidate `adopt` checks, by reading the restored root
 directly: the marker layout; supersession (the tip rule over held markers);
 and the conflict rule below, comparing the candidate's addresses and
-content identities against every corpus the reader's world holds. A
+content identities against every corpus the reader's world holds, read
+per root as the read context opens its mounts (`ReadView.opened_at` over
+`corpus_roots`), which needs no epoch and so cannot itself refuse
+`duplicate-location`. A
 refusal at this stage leaves the candidate `fetched` and the world exactly
 as it was, usable. Only a clean candidate is admitted, then marked
 `mounted`. A crash between admission and the mark is reconciled at the next
@@ -661,11 +682,12 @@ When the candidate is a successor:
    admission succeeds and supersession resolves to one tip; a divergent
    sibling (`divergent-publication`) leaves the update unresolved and the
    candidate `fetched`, as does a missing intermediate.
-3. The predecessor is **retired** — the kernel's registry lifecycle act,
+3. The predecessor is **retired** — the kernel's existing `World.retire`,
    reached by the `sharing` write class, after which it leaves the mounts
    and the live span — only when nothing requires it: no pin flagged
-   `keep`, no run in the reader's write root observing a dataset only it
-   declares, no held publication whose attribution entries name it. An
+   `keep` (set before this adoption; §3), no run in the reader's write root
+   observing a dataset only it declares, no held publication whose
+   attribution entries name it. An
    admitted corpus that is merely absent from the mounts is not an option:
    the kernel counts it live, and every later publish would refuse
    `selection-incomplete` naming it. While something requires it, it stays
@@ -683,8 +705,9 @@ When the candidate is a successor:
    republishes without the derived record) and adopts again, or keeps the
    predecessor and leaves the successor `fetched`. Nothing picks for them.
 
-Retirement is therefore a milestone 1b requirement on the kernel (§11),
-not an option.
+Retirement is therefore a milestone 1b obligation of the surface — the
+kernel has the act, and "nothing acts on it" (remote §13 item 1) is the
+`sharing` write class's gap (§11) — not an option.
 
 ## 11. What `beliefs` must add, what the framework must amend, what `science` builds
 
@@ -695,9 +718,8 @@ review, with the milestone part that needs it:
 |---|---|
 | cross-corpus dataset inputs at assessment and admission (`beliefs-9ce6e4`) | 1a |
 | attribution entries on the marker, as a frozen facet (§7.1) | 1a |
-| verifier-set parameter on belief evaluation and the policy in the context (§9) | 1a |
+| an acceptance predicate `counts(corpus_id, address)` on gather, consulted before retraction standing is folded, and the policy statement in the context (§9) | 1a |
 | overlapping publications in the world index under §4.7's three outcomes (`beliefs-81367e`) | 1b |
-| recipient retirement reachable as an act: a retired corpus leaves the live span (remote §13 item 1) | 1b |
 | whether `beliefs-9ce6e4` covers an `assesses` edge and a `verification` whose targets live in a mount, or a sibling task does | 1a |
 | whether the marker should carry a workspace locator, or the catalog's `execution` claim suffices (§5 step 4) | open, asked at 1a |
 | key-bound provider identity: signed head artifacts (§4.4) | 4 |
@@ -707,16 +729,21 @@ Framework amendments, made in the framework document before milestone 1a's
 plan:
 
 - §4.4: a `sharing` write class reaching the `lifecycle` (`restore_root`)
-  and `registry` (`admit_publication`, retire) act families for `adopt`,
-  with the ledger evidence §7.4 names; today "no write class maps to any
-  of them". The framework document defines the evidence's shape.
+  and `registry` (`admit_publication`, `World.retire`) act families for
+  `adopt`, with the ledger evidence §7.4 names; today "no write class maps
+  to any of them". Reaching `World.retire` is milestone 1b's whole
+  retirement requirement. The framework document defines the evidence's
+  shape.
 - §9.1: the `sharing_root` key and mounts derived from the sharing registry
   (§7.4).
 
 Science builds: the `publish` command with dry run; `adopt`, `show`,
 `provider bind`, `follow`, `find`, `fetch`; `spec`, `verify`, `run` and
 `assess` resolving datasets, propositions and the records they name over
-mounts (today each checks through the write view alone); the git
+mounts (today each checks through the write view alone), and `belief`
+evaluating over a world read rather than the one mount holding the
+proposition, since after adoption the assessment and the proposition it
+assesses live in different corpora; the git
 transport; the catalog and provider list artifacts; `catalog` and
 `providers export`; the fetch policy; the accept-policy computation; later,
 the Zenodo transport. Science's own precondition for 1a is the session
@@ -744,9 +771,7 @@ publishes a reproducible view to its own remote. Decisive cases:
   identity, its lineage reaches *A*'s dataset by identity, and *B*'s marker
   attributes the carried records to *A*'s publication; *B*'s belief with
   `accept = []` excludes *A*'s assessments and says so in its context, and
-  with `accept = [A]` includes them; *A*, having adopted *B* in 1b with
-  `accept = [B]` only, does not count its own assessment carried in *B*'s
-  corpus as *B*'s evidence;
+  with `accept = [A]` includes them;
 - **transport:** a `publish` retried after a partial push converges on the
   same remote content and commits nothing new when the files are present.
 
@@ -755,8 +780,10 @@ publishes an update that drops one record; *B* adopts the update. Decisive
 cases:
 
 - **overlap:** after *A* adopts *B*'s publication, *A*'s records held in
-  both corpora read once and contribute once to belief; after *B* adopts
-  *A*'s update, the records the two revisions share read once;
+  both corpora read once and contribute once to belief, and with
+  `accept = [B]` only, *A*'s own assessment carried in *B*'s corpus counts
+  under the own branch, never as *B*'s evidence; after *B* adopts *A*'s
+  update, the records the two revisions share read once;
 - **pinned derivation:** adopting *A*'s update does not make *B*'s derived
   analysis unreadable: the dropped record *B* depends on stays mounted from
   the retired revision, and `show` says why.
