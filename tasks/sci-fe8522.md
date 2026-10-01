@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: science-commons
 created: 2026-09-30T23:17:20Z
-updated: 2026-10-01T01:04:18Z
+updated: 2026-10-01T01:10:17Z
 started: 2026-09-30T23:17:27Z
 depends: []
 tags: [commons]
@@ -65,3 +65,7 @@ Design the science commons in verifiably: a user publishes views to git and Zeno
   provenance: {"harness_session":"claude-code:5f4da271-d57c-4d0d-9d69-fb6c4c6a0101","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-01T01:04:17Z (science-commons): review: spec round 5 — verdict: revise; findings: P1 3, P2 2; reviewer: codex (pasted by the user)
 - 2026-10-01T01:04:17Z (science-commons): Round 5 disposition: all accepted. §9 tests Carried first for every carrier, the reader's re-adopted publication included; Own is the write root or an unattributed record of a corpus the reader's binding bound; catalog-only pins count carried records when Carried independently authenticates. §10 retirement keeps a predecessor while any write-root record's required dependency closure (publish closure plus inward verification and correction targets) reaches a record only it holds; preflight reads every live corpus and every candidate admitted or marked this session by root. §7.2 statements name no self-referencing source; aggregators attach from. §5/§7.2 replay check is the kernel's recipe validation, no parallel digest.
+- 2026-10-01T01:10:15Z (science-commons): review: spec round 6 — verdict: revise; findings: P1 2, P2 2; reviewer: claude-code/claude-fable-5-1
+- 2026-10-01T01:10:15Z (science-commons): Round 6 disposition: all accepted. §10 closure is the publish act's world-relation walk (composes, grounded-in included) plus inward verification and correction targets; current advances and retirement runs only when the successor's pin is at least as confirmed as the predecessor's; preflight opens the write root and configured roots from configuration and adopted roots from the sharing registry. §12 1b: the carried copy contributes nothing, the write-root copy counts.
+- 2026-10-01T01:10:15Z (science-commons): parked (waiting on user, review): Re-review docs/specs/2026-09-30-science-commons-design.md (rounds 5 and 6 folded in). On accept: file §11 beliefs requirements, write the framework §4.4/§9.1 amendments, then the milestone 1a plan
+  provenance: {"harness_session":"claude-code:5f4da271-d57c-4d0d-9d69-fb6c4c6a0101","harness_session_source":"CLAUDE_CODE_SESSION_ID"}

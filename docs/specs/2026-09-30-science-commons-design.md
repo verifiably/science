@@ -1,7 +1,7 @@
 # Science commons — design
 
 **Date:** 2026-09-30
-**Status:** draft for user review, revised after review rounds 1 to 5. Task
+**Status:** draft for user review, revised after review rounds 1 to 6. Task
 `sci-fe8522`.
 **Scope:** how published science is shared, found, trusted, reproduced,
 changed and preserved across installations of verifiably, and what a
@@ -675,10 +675,12 @@ directly: the marker layout; supersession (the tip rule over held markers);
 and the conflict rule below, comparing the candidate's addresses and
 content identities against **every corpus the kernel's registry lists
 live, plus every candidate this session has already admitted or marked
-`mounted`** — not the session's fixed `corpus_roots`, which miss an
-adoption made moments ago — each opened by its root from the sharing
-registry (`ReadView.opened_at`), which needs no epoch and so cannot itself
-refuse `duplicate-location`. A
+`mounted`** — not the session's fixed `corpus_roots` alone, which miss an
+adoption made moments ago — each opened by its root (`ReadView.opened_at`):
+the write root and the configured roots from the configuration, adopted
+roots from the sharing registry, since the kernel's admission record
+carries no path. The read needs no epoch and so cannot itself refuse
+`duplicate-location`. A
 refusal at this stage leaves the candidate `fetched` and the world exactly
 as it was, usable. Only a clean candidate is admitted, then marked
 `mounted`. A crash between admission and the mark is reconciled at the next
@@ -692,22 +694,32 @@ When the candidate is a successor:
    unshared, and the reader's own runs or other held publications may depend
    on it.
 2. The **current** publication for `(view, destination)` advances only after
-   admission succeeds and supersession resolves to one tip; a divergent
-   sibling (`divergent-publication`) leaves the update unresolved and the
-   candidate `fetched`, as does a missing intermediate.
+   admission succeeds, supersession resolves to one tip, **and the
+   successor's pin is at least as confirmed as the predecessor's**: an
+   origin-confirmed predecessor is never superseded, and never retired, on
+   a recommended successor's word, since a followed catalog can serve a
+   chain-valid corpus whose marker merely claims the predecessor's world
+   and names it in `supersedes` (§4.4 layer 2). A recommended successor of
+   an origin-confirmed predecessor is held — admitted and mounted — with
+   `current` unmoved and nothing retired, and `show` says what confirmation
+   would advance it. A divergent sibling (`divergent-publication`) leaves
+   the update unresolved and the candidate `fetched`, as does a missing
+   intermediate.
 3. The predecessor is **retired** — the kernel's existing `World.retire`,
    reached by the `sharing` write class, after which it leaves the mounts
    and the live span — only when nothing requires it: no pin flagged
    `keep` (set before this adoption; §3); no held publication whose
    attribution entries name it; and no record in the reader's write root,
    published or not, whose **required dependency closure** reaches a record
-   only the predecessor holds. That closure is the publish act's (projects
-   §8.1) — outward over `assesses`, `produced_by`, `observes`, `reads`,
-   `transforms` and `produces`, plus a spec's `addresses` — extended by
-   what the publish act leaves inward: a verification's target assessment
-   and the runs it compares, and a correction's target. A verification of
-   *A1*'s assessment that *B* has not yet published therefore keeps *A1*
-   when *A2* drops that assessment, its run or its spec. An
+   only the predecessor holds. That closure is exactly what the publish act
+   computes for `closure-incomplete`: the walk over every world relation
+   the contract declares — which includes `composes`, so a composite keeps
+   its members, and `grounded-in`, so a retraction keeps its grounds — plus
+   a spec's projection-held `addresses`, extended by what the act leaves
+   inward: a verification's target assessment and the runs it compares,
+   and a correction's target. A verification of *A1*'s assessment that *B*
+   has not yet published, or a composite of *B*'s over *A1*'s proposition,
+   therefore keeps *A1* when *A2* drops that record. An
    admitted corpus that is merely absent from the mounts is not an option:
    the kernel counts it live, and every later publish would refuse
    `selection-incomplete` naming it. While something requires it, it stays
@@ -801,9 +813,10 @@ cases:
 
 - **overlap:** after *A* adopts *B*'s publication, *A*'s records held in
   both corpora read once and contribute once to belief, and with
-  `accept = [B]` only, *A*'s own assessment carried in *B*'s corpus counts
-  under the own branch, never as *B*'s evidence; after *B* adopts *A*'s
-  update, the records the two revisions share read once;
+  `accept = [B]` only, *A*'s own assessment counts through its write-root
+  copy under the own branch, while the copy carried in *B*'s corpus
+  contributes nothing and never counts as *B*'s evidence; after *B* adopts
+  *A*'s update, the records the two revisions share read once;
 - **pinned derivation:** adopting *A*'s update does not make *B*'s derived
   analysis unreadable: the dropped record *B* depends on stays mounted from
   the retired revision, and `show` says why.
