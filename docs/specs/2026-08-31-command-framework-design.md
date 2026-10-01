@@ -160,6 +160,7 @@ dimensions — see §4.2 for the capability model):
 | `coordination` | the coordination contract's kinds (sub-project 1) | `corpus-write` |
 | `mints:<k1,…>` | the named kinds | exactly the declared routes (below) |
 | `publishes` | the publication kinds (sub-project 5) | `publish` |
+| `sharing` | none — it writes no corpus; see the 2026-10-01 amendment to §4.4 | `lifecycle` (`restore_root`), `registry` (`admit_publication`, `World.retire`) |
 
 A `mints` class must name kinds that exist in the governing contract the
 build validates against; an unknown kind is a build refusal. Until
@@ -328,6 +329,26 @@ and §7.1's comparison can check — not merely to map a class to it. The
 session ledger (§5.2) therefore only ever claims acts that have
 corpus-chain evidence, and the ledger-versus-chain comparison never meets
 an act that could not appear in a chain.
+
+**Amended 2026-10-01 (science commons design §11).** One write class
+reaches two of the three families, under this section's own condition: its
+ledger evidence is defined first. The `sharing` class (§3.3) is what `adopt`
+declares, and it reaches `lifecycle` for `restore_root` and `registry` for
+`admit_publication` (the recipient's door, remote design decision 10, which
+runs `admit_arrival`) and `World.retire`. Its **ledger evidence** is the pin
+the act wrote or changed, as the science commons design §7.4 names it:
+`corpus_id`, marker uid, head artifact identity, the pin's source (a bound
+provider's location or a followed catalog's artifact identity), the location
+fetched from, the chain verification verdict, and the transition made
+(`fetched`, `admitted`, `mounted`, `retired`). The §7.1 comparison for this
+class is **ledger-versus-registry**, not ledger-versus-chain: a `sharing`
+entry is checked against the kernel's admission record and lifecycle status
+for that `corpus_id`, which are the truth about admission and retirement, and
+an entry the registry does not show is the discrepancy. The sharing registry
+under `sharing_root` (§9.1) is the act's durable effect and is rebuildable
+from these entries. `epoch` remains unreachable, and `lifecycle`'s other
+acts (`adopt_manifest`, `init_*`, `replicate_root`, `fork_*`) remain
+launcher- and operator-time.
 
 ## 5. Writer sessions in `beliefs`
 
@@ -702,6 +723,19 @@ defaulting to the sole root otherwise, resolved against the file. `read_contract
 corpus-local contract documents a read mount's pins may resolve against and the writer
 never activates; a document in both lists refuses. Every other root is mounted under the
 profile its own manifest pins (coordination command set §6).
+
+**Amended 2026-10-01 (science commons design §7.4):** one optional key,
+`sharing_root`, resolved like `operations_root`: the directory of the sharing
+registry — pins, provider bindings, follows and adopted corpora's roots —
+written only by `sharing`-class acts (§4.4 amendment). When present, the
+loader **unions** the roots the registry marks `mounted` into
+`WorldConfig.corpus_roots` before the session opens, so the kernel's rule that
+a session's mounts equal its `corpus_roots` exactly still holds; `write_root`
+and `read_contracts` apply to the union unchanged. The registry is validated
+at session open like the file itself: an unreadable or malformed registry, or
+a mounted root whose manifest the kernel refuses, is `invalid-input` naming
+the entry. `accept` and `[fetch]` (science commons §7.4) are policy the person
+authors and are two further optional keys of this file, not registry state.
 
 ### 9.2 CLI
 
