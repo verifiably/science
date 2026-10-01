@@ -8,7 +8,7 @@ complexity: mid
 process: planned
 owner: feat/dc0381-mount-citations
 created: 2026-10-01T11:07:18Z
-updated: 2026-10-01T22:21:14Z
+updated: 2026-10-01T22:21:15Z
 started: 2026-10-01T21:17:59Z
 depends: [beliefs-9ce6e4]
 tags: [commons, projects]
@@ -40,3 +40,5 @@ beliefs mount-citations spec (beliefs docs/superpowers/specs/2026-10-01-mount-ci
   provenance: {"harness_session":"claude-code:e278d911-5d98-4ab3-83dd-1a16988a96a4","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-01T22:18:29Z (feat/dc0381-mount-citations): review: plan round 1 — verdict: revise; findings: P1 1, P2 4; reviewer: human
 - 2026-10-01T22:21:14Z (feat/dc0381-mount-citations): plan round 1 revised: strict drift restored with the mixed-change regression; WORKING_FIELDS keeps write-root specs distinct; currency-check contention normalized; coordination-off next stays holder-local; input-outside-corpus is a named row reason. Follow-up beliefs-655c10 (inert-drift witness).
+- 2026-10-01T22:21:14Z (feat/dc0381-mount-citations): parked (waiting on user, review): user re-reviews the revised plan (round 2) and picks an execution method; then the agent executes Task 1 (sci-c7aad5)
+  provenance: {"harness_session":"claude-code:e278d911-5d98-4ab3-83dd-1a16988a96a4","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
