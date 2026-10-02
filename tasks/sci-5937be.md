@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: test-latency
 created: 2026-10-02T01:00:04Z
-updated: 2026-10-02T10:14:38Z
+updated: 2026-10-02T10:24:00Z
 started: 2026-10-02T07:52:47Z
 depends: []
 tags: [halt, test-latency, testing]
@@ -56,3 +56,5 @@ Process: planned
 - 2026-10-02T10:14:37Z (test-latency): review: plan round 2 — verdict: accept; findings: none; reviewer: human
 - 2026-10-02T10:14:37Z (test-latency): resumed
   provenance: {"harness_session":"claude-code:fdd0a33b-81b7-41f1-82a2-bf45de0a4198","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-02T10:22:28Z (test-latency): before: test_mount_citations setup 217.8 s, test_epoch_verb setup 188.9 s
+- 2026-10-02T10:24:00Z (test-latency): after: test_mount_citations setup 112.1 s, test_epoch_verb setup 57.5 s (one ~11.5 s build per worker, restores ~0.05 s)

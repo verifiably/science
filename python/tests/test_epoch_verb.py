@@ -9,9 +9,10 @@ from beliefs.root import chain_head_reader, init_corpus_root, open_corpus, open_
 from beliefs.consulted import CorpusPins
 from beliefs.corpus import Finding
 from beliefs.world import Fresh, WorldConfig
+from helpers.snapshot import snapshot
 from helpers.world import (
-    FIXTURE_AUTHORITY, QUERY, add_mounted_evidence, build_shared_contract_world,
-    fixture_proposition_node, mount_config, open_rig, write_shared_config,
+    FIXTURE_AUTHORITY, QUERY, build_shared_world_with_evidence, fixture_proposition_node,
+    mount_config, open_rig, write_shared_config,
 )
 from science.cli import main
 from science.config import ReadContext
@@ -22,9 +23,10 @@ from beliefs.errors import AddressMapConflict, BuildContended, ResolutionRefused
 
 
 @pytest.fixture
-def shared(certified_work):
-    cfg = build_shared_contract_world(certified_work)
-    add_mounted_evidence(cfg, certified_work)
+def shared(certified_worker_work):
+    snap = snapshot(certified_worker_work, "shared-with-evidence", build_shared_world_with_evidence)
+    snap.restore()
+    cfg, _ = snap.value
     return cfg
 
 

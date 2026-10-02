@@ -6,9 +6,10 @@ import pytest
 
 from beliefs import stored
 from beliefs.root import open_corpus
+from helpers.snapshot import snapshot
 from helpers.world import (
-    FIXTURE_AUTHORITY, SPEC_FIELDS, WORKING_FIELDS, _minted_ref, add_mounted_evidence,
-    build_shared_contract_world, fixture_bundle, mint_fixture_run, mount_config, open_rig,
+    FIXTURE_AUTHORITY, SPEC_FIELDS, WORKING_FIELDS, _minted_ref, build_shared_world_with_evidence,
+    fixture_bundle, mint_fixture_run, mount_config, open_rig,
 )
 from science.commands.next import classify, handle as next_handle
 from science.config import ReadContext
@@ -28,28 +29,19 @@ def _confine(monkeypatch) -> None:
 
 
 @pytest.fixture
-def shared(certified_work, monkeypatch):
+def shared(certified_worker_work, monkeypatch):
+    snap = snapshot(certified_worker_work, "shared-with-evidence", build_shared_world_with_evidence)
+    snap.restore()
     _confine(monkeypatch)
-    cfg = build_shared_contract_world(certified_work)
-    return cfg, add_mounted_evidence(cfg, certified_work)
-
-
-@pytest.fixture(scope="module")
-def shared_read(certified_module_work):
-    """`shared`, built once for the module's read-only resolver tests (final
-    review I5). A test that writes, or publishes an epoch, takes `shared`."""
-    with pytest.MonkeyPatch.context() as monkeypatch:
-        _confine(monkeypatch)
-        cfg = build_shared_contract_world(certified_module_work)
-        return cfg, add_mounted_evidence(cfg, certified_module_work)
+    return snap.value
 
 
 def _ids(cfg) -> dict[str, str]:
     return {mount.root.name: mount.corpus_id for mount in ReadContext.open(cfg).mounts()}
 
 
-def test_a_mounted_record_is_cited_from_its_holder(shared_read):
-    cfg, mounted = shared_read
+def test_a_mounted_record_is_cited_from_its_holder(shared):
+    cfg, mounted = shared
     ctx = ReadContext.open(cfg)
     assert [m.root.name for m in ctx.session_mounts()] == sorted(
         ("corpus", "shared"), key=lambda name: _ids(cfg)[name])
@@ -58,8 +50,8 @@ def test_a_mounted_record_is_cited_from_its_holder(shared_read):
         assert ctx.cited(ref).root.name == "shared"
 
 
-def test_with_coordination_off_a_mounted_ref_refuses_naming_the_mount(shared_read):
-    cfg, mounted = shared_read
+def test_with_coordination_off_a_mounted_ref_refuses_naming_the_mount(shared):
+    cfg, mounted = shared
     ctx = ReadContext.open(dataclasses.replace(cfg, coordination=None))
     assert [m.root.name for m in ctx.session_mounts()] == ["corpus"] and not ctx.has_read_mounts()
     with pytest.raises(Refused) as caught:
@@ -69,10 +61,10 @@ def test_with_coordination_off_a_mounted_ref_refuses_naming_the_mount(shared_rea
     assert "coordination" in caught.value.refusal.message
 
 
-def test_has_read_mounts_opens_no_corpus(shared_read, monkeypatch):
+def test_has_read_mounts_opens_no_corpus(shared, monkeypatch):
     """Final review M5: the question is the configuration's, answered without
     opening a view or reading a manifest."""
-    cfg, _ = shared_read
+    cfg, _ = shared
 
     def opened(*_, **__):
         pytest.fail("has_read_mounts opened the corpora")
@@ -93,8 +85,8 @@ def test_a_ref_two_session_corpora_hold_refuses_naming_both(shared):
     assert all(corpus_id in caught.value.refusal.message for corpus_id in _ids(cfg).values())
 
 
-def test_own_refuses_a_mounted_record_naming_the_mount(shared_read):
-    cfg, mounted = shared_read
+def test_own_refuses_a_mounted_record_naming_the_mount(shared):
+    cfg, mounted = shared
     with pytest.raises(Refused) as caught:
         ReadContext.open(cfg).own(mounted["spec"])
     assert caught.value.refusal.code == "invalid-input"
@@ -102,8 +94,8 @@ def test_own_refuses_a_mounted_record_naming_the_mount(shared_read):
     assert "write root" in caught.value.refusal.message
 
 
-def test_an_unheld_ref_refuses_without_a_hint(shared_read):
-    cfg, _ = shared_read
+def test_an_unheld_ref_refuses_without_a_hint(shared):
+    cfg, _ = shared
     with pytest.raises(Refused) as caught:
         ReadContext.open(cfg).cited("proposition:nowhere")
     assert caught.value.refusal.message == "'proposition:nowhere' is not in the session's corpora"

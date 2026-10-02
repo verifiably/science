@@ -230,8 +230,9 @@ conversion, which carries all three of its requirements.
 
 ## 5. What does not change
 
-Production code; the builders in `helpers/world.py`; `certified_work` and
-`certified_module_work`, which non-converted tests keep using; the test recipes.
+Production code; the builders in `helpers/world.py`; `certified_work`, which
+non-converted tests keep using (`certified_module_work` had one user, `shared_read`,
+and is removed); the test recipes.
 
 ## 6. Limitations
 
