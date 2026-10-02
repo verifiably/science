@@ -6,9 +6,9 @@ priority: 0
 size: m
 complexity: high
 process: planned
-owner: test-latency
+owner: main
 created: 2026-10-02T01:00:04Z
-updated: 2026-10-02T12:55:57Z
+updated: 2026-10-02T13:01:15Z
 started: 2026-10-02T07:52:47Z
 depends: []
 tags: [halt, test-latency, testing]
@@ -66,4 +66,9 @@ Process: planned
 - 2026-10-02T12:43:06Z (test-latency): timing (load avg 13-15, worker grants 14-16): main 36e1a57 test-fast cold 296.7 s (16w), test 254.5 s (16w); branch 1159e85 test-fast cold 172.0 s (14w), test 121.0 s (16w); module setup sums before->after: two_corpora 292.7->193.2, mount_citations 217.8->112.1, epoch_verb 188.9->57.5, belief_path 62.5->59.4, cmd_spec 73.8->41.5, cmd_verify 34.1->24.5. Longest remaining: transports call 43 s, confined walk build 39 s per worker. An earlier attempt ran main at 1 worker (host-budget under concurrent test load) for 75 min and was discarded.
 - 2026-10-02T12:55:46Z (test-latency): review: impl round 1 — verdict: revise; findings: Critical 1, Important 1, Minor 4; reviewer: claude-code/claude-opus-5-5
 - 2026-10-02T12:55:57Z (test-latency): parked (waiting on user, decision): user picks merge/PR/keep for branch test-latency (2301cb3, suite 690 passed); after a merge the agent runs tt-latency verify sci-5937be --after <merge ts> on titan and closes the halt only if it exits 0, else takes sci-97727a
+  provenance: {"harness_session":"claude-code:fdd0a33b-81b7-41f1-82a2-bf45de0a4198","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-02T13:01:13Z (main): resumed
+  provenance: {"harness_session":"claude-code:fdd0a33b-81b7-41f1-82a2-bf45de0a4198","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-02T13:01:13Z (main): merged as daa5449 at 2026-10-02T12:58:24Z; just test on the merge 690 passed in 123.4 s (16 workers). tt-latency verify sci-5937be --after 2026-10-02T12:58:24Z: 'titan test-fast outstanding here; not verified: obligations outstanding' (needs 3 uncontended post-remedy test-fast runs). Worktree test-latency removed after tt-report.
+- 2026-10-02T13:01:13Z (main): parked (waiting on agent, dependency): agent reruns tt-latency verify sci-5937be --after 2026-10-02T12:58:24Z on titan once 3 uncontended test-fast runs from real work exist after the merge; exit 0 -> tasks done with the verify output; a breach -> take sci-97727a
   provenance: {"harness_session":"claude-code:fdd0a33b-81b7-41f1-82a2-bf45de0a4198","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
