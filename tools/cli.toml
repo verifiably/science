@@ -1232,6 +1232,13 @@ path = ["build"]
 summary = "Build the world from its corpora"
 
 [[cli.science.commands]]
+path = ["epoch"]
+summary = "Publish an epoch over the session's corpora, or report the current one"
+options = [
+  { shared = "config", value = "path" },
+]
+
+[[cli.science.commands]]
 path = ["serve"]
 summary = "Serve the world over HTTP"
 protocol = "server on stdio or a socket"

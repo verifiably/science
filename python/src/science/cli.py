@@ -74,6 +74,8 @@ def build_parser(decls) -> argparse.ArgumentParser:
     for decl in decls:
         _add_command(subparsers, decl, common)
     subparsers.add_parser("build", help="Build the world from its corpora")
+    epoch = subparsers.add_parser("epoch", help="Publish an epoch over the session's corpora, or report the current one")
+    epoch.add_argument("--config", type=Path)
     serve_parser = subparsers.add_parser("serve", help="Serve the world over HTTP")
     serve_parser.add_argument("--config", type=Path)
     serve_parser.add_argument("--project", help=_LAUNCHER_PROJECT_HELP)
@@ -167,7 +169,7 @@ def main(argv: list[str] | None = None) -> int:
         if namespace.command == "help":
             build_parser(declarations).parse_args([*namespace.words, "--help"])
             return EXIT_OK
-        if namespace.command in {"mcp", "adapters", "build", "serve"}:
+        if namespace.command in {"mcp", "adapters", "build", "serve", "epoch"}:
             return _framework_verb(namespace)
         invocation_id = _bind_invocation_id(namespace.invocation_id)
         namespace.invocation_id = invocation_id
@@ -288,6 +290,13 @@ def _framework_verb(namespace) -> int:
             REPO_ROOT / "skills",
             namespace.out or REPO_ROOT / "adapters" / "claude-code",
         )
+        return EXIT_OK
+    if namespace.command == "epoch":
+        from science.world_belief import publish_session_epoch
+
+        published = publish_session_epoch(load_config(resolve_config_path(namespace.config)))
+        sys.stdout.write(f"{published.state}: {published.packaging_identity}\n")
+        sys.stdout.writelines(f"  {corpus_id} {state}\n" for corpus_id, state in published.coverage)
         return EXIT_OK
     raise NotImplementedError(f"{namespace.command} arrives in a later task")
 

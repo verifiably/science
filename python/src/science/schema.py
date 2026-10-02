@@ -11,7 +11,7 @@ from pathlib import Path
 NAME_RE = re.compile(r"^[a-z][a-z0-9]*(-[a-z0-9]+)*$")
 INPUT_NAME_RE = re.compile(r"^[a-z][a-z0-9]*(_[a-z0-9]+)*$")
 MAX_NAME_BYTES = 32
-RESERVED_COMMANDS = frozenset({"continue", "serve", "mcp", "adapters", "build"})
+RESERVED_COMMANDS = frozenset({"continue", "serve", "mcp", "adapters", "build", "epoch"})
 RESERVED_INPUTS = frozenset({"cursor", "invocation_id", "view", "session", "config", "project"})
 INPUT_TYPES = frozenset({"string", "int", "bool", "enum", "list-of-string"})
 WRITE_CLASS_KINDS = frozenset({"read-only", "coordination", "mints", "publishes", "session"})
