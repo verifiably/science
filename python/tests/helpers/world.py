@@ -1,3 +1,4 @@
+import json
 import secrets
 from contextlib import contextmanager
 from pathlib import Path
@@ -544,6 +545,48 @@ def add_archived_assessment(cfg: ScienceConfig, work: Path) -> None:
     run = mint_fixture_run(archived, spec, data, fixture_bundle(work))
     with open_rig(archived, ("assess",)) as (d, _):
         d.invoke("assess", {"run": run})
+
+
+def build_two_corpus_walked_world(work: Path) -> ScienceConfig:
+    """`build_two_corpus_world` with the archive's assessment, and in the write
+    root proposition:claimed walked run → assess → verify and proposition:queued
+    with a spec only; two projects and a published epoch. Every session it
+    opens is closed."""
+    import science.commands.run as run_module
+    from beliefs.confinement import host_prerequisites
+    from beliefs.recipe import MINIMAL_POLICY
+    from science.world_belief import publish_session_epoch
+    claim = {"subject": "concept:disease-stage", "predicate": "affects", "object": "protein:PHF19",
+             "layer": "causal", "polarity": "positive", "slug": "claimed"}
+    queued = dict(claim, object="protein:EZH2", slug="queued")
+
+    def query(clause):
+        return json.dumps({"version": "science.view-query.v1", "clauses": [{"all": [clause]}]})
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        if host_prerequisites() is not None:
+            monkeypatch.setattr(run_module, "POLICY", MINIMAL_POLICY)
+        cfg = build_two_corpus_world(work)
+        add_archived_assessment(cfg, work)
+        data = hold_fixture_dataset(cfg, "data.txt", b"y\n", "expression", **OBSERVED)
+        bundle = fixture_bundle(work)
+        with open_rig(cfg, ("claim", "spec")) as (d, _):
+            d.invoke("claim", claim)
+            d.invoke("claim", queued)
+            spec = _minted_ref(d.invoke("spec", dict(SPEC_FIELDS, target="proposition:claimed", dataset=data)).text,
+                               "analysis-spec")
+            d.invoke("spec", dict(SPEC_FIELDS, target="proposition:queued", dataset=data))
+        run = mint_fixture_run(cfg, spec, data, bundle)
+        code, entrypoint, _ = bundle
+        with open_rig(cfg, ("assess", "verify")) as (d, _):
+            assessment = _minted_ref(d.invoke("assess", {"run": run}).text, "assessment")
+            d.invoke("verify", {"assessment": assessment, "code": str(code), "entrypoint": entrypoint})
+        with open_rig(cfg, ("project",)) as (d, _):
+            d.invoke("project", {"name": "all three", "query": query({"addresses": [
+                "proposition:archived", "proposition:claimed", "proposition:queued"]})})
+            d.invoke("project", {"name": "all", "query": query({"kinds": ["proposition"]})})
+        publish_session_epoch(cfg)
+    return cfg
 
 
 def write_two_corpus_config(cfg: ScienceConfig) -> Path:

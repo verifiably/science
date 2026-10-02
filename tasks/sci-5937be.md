@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: test-latency
 created: 2026-10-02T01:00:04Z
-updated: 2026-10-02T10:24:00Z
+updated: 2026-10-02T10:34:41Z
 started: 2026-10-02T07:52:47Z
 depends: []
 tags: [halt, test-latency, testing]
@@ -58,3 +58,6 @@ Process: planned
   provenance: {"harness_session":"claude-code:fdd0a33b-81b7-41f1-82a2-bf45de0a4198","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-02T10:22:28Z (test-latency): before: test_mount_citations setup 217.8 s, test_epoch_verb setup 188.9 s
 - 2026-10-02T10:24:00Z (test-latency): after: test_mount_citations setup 112.1 s, test_epoch_verb setup 57.5 s (one ~11.5 s build per worker, restores ~0.05 s)
+- 2026-10-02T10:28:35Z (test-latency): before: test_two_corpora setup 292.7 s
+- 2026-10-02T10:29:05Z (test-latency): halt override: attempted sci-9b20ea by fdd0a33b-81b7-41f1-82a2-bf45de0a4198: absorbed by the halt's own remedy (spec §7); closed in sci-16a04d's commit
+- 2026-10-02T10:34:41Z (test-latency): after: test_two_corpora setup 193.2 s (module alone: ~1 test per worker, so each still builds; refusal tests build the cheap world, ~3.4 s)
