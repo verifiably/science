@@ -363,6 +363,9 @@ every read row" is read as every `selects` row — `next` and `project-show`.
 - `unknown-project` — a name or address resolving to no standing project;
 - `ambiguous-project` — a name matching two or more standing projects; `data.candidates`
   lists each address and query digest.
+
+**Amended 2026-10-01 (§5.5):** two more codes:
+
 - `no-epoch` — a mounted session's belief or admission read with no published epoch;
   the remedy is `science epoch`.
 - `epoch-stale` — the current epoch's coverage differs from the session's corpora, or a
