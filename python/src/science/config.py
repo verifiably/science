@@ -425,6 +425,53 @@ class ReadContext:
                                   "one address in two corpora is a duplicate location, which `status` reports"))
         return holders[0]
 
+    def session_mounts(self) -> tuple[Mount, ...]:
+        """The corpora a write may cite (consumer spec decision 1): the write
+        root, plus every read mount when coordination is on, which is exactly
+        what `open_session` hands the kernel writer as its read mounts."""
+        mounts = self.mounts()
+        if self.config.coordination is None:
+            return tuple(mount for mount in mounts if mount.root == self.config.write_root)
+        return mounts
+
+    def has_read_mounts(self) -> bool:
+        return len(self.session_mounts()) > 1
+
+    def session_ids(self) -> frozenset[str]:
+        return frozenset(mount.corpus_id for mount in self.session_mounts())
+
+    def cited(self, ref: str) -> Mount:
+        """The one session corpus holding `ref` (decision 2). Two holders are a
+        duplicate location, refused rather than picked by corpus order; none
+        refuses, naming a configured corpus outside the session that holds it."""
+        session = self.session_mounts()
+        holders = [mount for mount in session if mount.view.holds(ref)]
+        if len(holders) > 1:
+            raise Refused(Refusal(
+                "invalid-input",
+                f"{ref!r} is held by corpora {', '.join(m.corpus_id for m in holders)}; one address in two "
+                "corpora is a duplicate location, and a citation never picks one"))
+        if holders:
+            return holders[0]
+        inside = {mount.root for mount in session}
+        outside = [corpus_id_at(root) for root in self.config.world.corpus_roots
+                   if root not in inside and ReadView.opened_at(root).holds(ref)]
+        where = (f"; corpus {', '.join(outside)} holds it, but coordination = false, so this session "
+                 "mounts only the write root" if outside else "")
+        raise Refused(Refusal("invalid-input", f"{ref!r} is not in the session's corpora{where}"))
+
+    def own(self, ref: str) -> ReadView:
+        """The write root's view, holding `ref`: a record a command changes is
+        the write root's own (decision 3, kernel decision 1)."""
+        view = self.write_view()
+        if view.holds(ref):
+            return view
+        elsewhere = [mount.corpus_id for mount in self.mounts()
+                     if mount.root != self.config.write_root and mount.view.holds(ref)]
+        where = (f"; read mount {', '.join(elsewhere)} holds it, and a record this command changes must "
+                 "be in the write root" if elsewhere else "")
+        raise Refused(Refusal("invalid-input", f"{ref!r} is not in the write root{where}"))
+
     def _context(self, mount: Mount, observations, proposition: str):
         from science.closure import supplied_context
         from beliefs import stored

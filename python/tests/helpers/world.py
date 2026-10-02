@@ -563,3 +563,106 @@ store_root = "store"
 coordination = {COORDINATION}
 ''')
     return path
+
+
+def build_shared_contract_world(work: Path) -> ScienceConfig:
+    """Two corpora pinning `testing` at one identity: the write root `corpus`
+    (with coordination) and the read mount `shared`, which holds the vocabulary
+    lists and proposition:shared. The shape a working corpus citing mm30 takes
+    (mount citations consumer spec, decision 2)."""
+    from beliefs.claim import Referent, build_claim
+    from beliefs.projection import project_claim
+    from science.contracts import load_contract_document
+    base = shipped_base_contract()
+    testing, plan = load_contract_document(fixture_contract_document(work), base)
+    biology = [shipped_domain_contract(ns) for ns in DOMAINS]
+    writer_profile = compile_profile(base, biology + [testing], coordination=shipped_coordination(COORDINATION))
+    mount_profile = compile_profile(base, biology + [testing])
+    mount_root, corpus_root = work / "shared", work / "corpus"
+    config = WorldConfig(work / "world", secrets.token_hex(16), (mount_root, corpus_root))
+    init_world_root(config, authority=FIXTURE_AUTHORITY)
+    world = open_world(config, authority=FIXTURE_AUTHORITY)
+    for root, profile in ((mount_root, mount_profile), (corpus_root, writer_profile)):
+        init_corpus_root(root, authority=FIXTURE_AUTHORITY)
+        open_corpus(root, authority=FIXTURE_AUTHORITY, profile=profile).adopt_manifest(profile=CorpusPins(
+            science_contract="science:" + profile.base_contract_identity,
+            domains={ns: f"{ns}:{identity}" for ns, identity in profile.activated_contracts.items()},
+        ))
+        world.admit(root, provenance=Fresh())
+    STORE_IDS[work] = init_store_root(work / "store", authority=FIXTURE_AUTHORITY)
+    _install_holdings_reducer(world)
+    cfg = ScienceConfig(world=config, operations_root=work / "ops", profile=writer_profile,
+                        service_socket=work / "ops" / "service.sock", store_root=work / "store",
+                        coordination=COORDINATION, write_root=corpus_root, plans=(plan,),
+                        available_contracts=(testing,))
+    mounted = mount_config(cfg)
+    hold_fixture_dataset(mounted, "concepts.txt", CONCEPTS, "concept vocabulary")
+    hold_fixture_dataset(mounted, "levels.txt", LEVELS, "level vocabulary")
+    claim = build_claim(mount_profile, operator=plan.operator_for("affects", "concept", "protein"),
+                        args=(Referent(sort=plan.sort_for("concept"), term="concept:disease-stage"),
+                              Referent(sort=plan.sort_for("protein"), term="protein:PHF19")),
+                        layer="causal", polarity="positive")
+    mount = open_corpus(mount_root, authority=FIXTURE_AUTHORITY, profile=mount_profile)
+    mount.add(stored.proposition_node(
+        "shared", title="shared", claim=project_claim(claim),
+        display_statement="concept:disease-stage affects protein:PHF19 (shared)"))
+    # A second mounted proposition with no evidence anywhere: `next`'s readiness case.
+    fresh = build_claim(mount_profile, operator=plan.operator_for("affects", "concept", "protein"),
+                        args=(Referent(sort=plan.sort_for("concept"), term="concept:disease-stage"),
+                              Referent(sort=plan.sort_for("protein"), term="protein:EZH2")),
+                        layer="causal", polarity="positive")
+    mount.add(stored.proposition_node(
+        "fresh", title="fresh", claim=project_claim(fresh),
+        display_statement="concept:disease-stage affects protein:EZH2 (fresh)"))
+    return cfg
+
+
+def write_shared_config(cfg: ScienceConfig) -> Path:
+    """The launcher TOML for `build_shared_contract_world`: both roots pin
+    `testing`, so no read contract is needed."""
+    work = cfg.world.world_root.parent
+    path = work / "science.toml"
+    path.write_text(f'''\
+world_root = "world"
+world_id = "{cfg.world.world_id}"
+corpus_roots = ["shared", "corpus"]
+write_root = "corpus"
+operations_root = "ops"
+domains = {list(DOMAINS)!r}
+contracts = ["testing.yaml"]
+store_root = "store"
+coordination = {COORDINATION}
+''')
+    return path
+
+
+WORKING_FIELDS = dict(SPEC_FIELDS, method="rank comparison, working corpus")
+"""Spec fields for a spec the write root authors. A spec is content-addressed,
+so the mount's `SPEC_FIELDS` spec over the same target and dataset would be
+the same record in two corpora, a duplicate location (plan review round 1, P2)."""
+
+
+def mount_config(cfg: ScienceConfig) -> ScienceConfig:
+    """`cfg`'s world with the `shared` mount as the write root, under the
+    profile its manifest pins: the fixture's way to write the mount's records
+    through the commands."""
+    import dataclasses
+    from beliefs.mount import compile_mount_profile
+    root = cfg.world.world_root.parent / "shared"
+    return dataclasses.replace(cfg, write_root=root, coordination=None,
+                               profile=compile_mount_profile(root, available=cfg.available_contracts))
+
+
+def add_mounted_evidence(cfg: ScienceConfig, work: Path) -> dict[str, str]:
+    """In the mount: an observed dataset, a spec on proposition:shared over it,
+    one run and its assessment (unverified), written through the commands with
+    the mount as write root."""
+    mounted = mount_config(cfg)
+    data = hold_fixture_dataset(mounted, "data.txt", b"z\n", "expression", **OBSERVED)
+    with open_rig(mounted, ("spec",)) as (d, _):
+        spec = _minted_ref(d.invoke("spec", dict(SPEC_FIELDS, target="proposition:shared", dataset=data)).text,
+                           "analysis-spec")
+    run = mint_fixture_run(mounted, spec, data, fixture_bundle(work))
+    with open_rig(mounted, ("assess",)) as (d, _):
+        assessment = _minted_ref(d.invoke("assess", {"run": run}).text, "assessment")
+    return {"data": data, "spec": spec, "run": run, "assessment": assessment}
