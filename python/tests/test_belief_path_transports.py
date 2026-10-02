@@ -108,19 +108,41 @@ def test_cli_write_routes_through_the_service_and_refuses_with_the_json_line(wor
         server.server_close()
 
 
+def _canonical(cfg, invocation_id):
+    """The text an invocation's report must equal: every record it minted,
+    rebuilt from the corpus in (uid, record_id) order."""
+    from beliefs.session import open_ledger_reader
+    from science.config import ReadContext
+    from science.report import record_block, serialize_block
+    (invocation,) = [
+        entry
+        for path in (cfg.operations_root / "sessions").glob("*/ledger.v1")
+        if (entry := open_ledger_reader(cfg.operations_root, path.parent.name).invocation(invocation_id)) is not None
+    ]
+    pairs = sorted({pair for act in invocation.acts for pair in act.record_ids})
+    assert pairs
+    assert invocation.outcome == {"done": [list(pair) for pair in pairs]}
+    ctx = ReadContext.open(cfg)
+    return "".join(serialize_block(record_block(ctx.load_record(uid, record_id)))
+                   for uid, record_id in pairs)
+
+
+def _ref_in(text, prefix):
+    return next(t for t in text.split() if t.startswith(prefix))
+
+
 def test_every_write_reaches_its_transport_and_renders_the_canonical_report(world, tmp_path, capsys, monkeypatch):
-    """spec and assess through MCP, run and verify through the CLI service:
-    each write's text contains every record minted by its invocation, rebuilt
-    from the corpus in (uid, record_id) order. Uids are minted per world, so
-    writes are compared to the corpus, not byte-for-byte across transports
-    (design §7)."""
+    """claim, spec and assess through MCP, dataset and run through the CLI
+    service: each write's text contains every record minted by its invocation,
+    rebuilt from the corpus in (uid, record_id) order. Uids are minted per
+    world, so writes are compared to the corpus, not byte-for-byte across
+    transports (design §7). Verify through the service is split out below, on
+    the verify-rig world: each replay is a workflow execution, and one test
+    holding all three set the suite's critical path (sci-97727a)."""
     import science.commands.run as run_module
     from beliefs.confinement import host_prerequisites
     from beliefs.recipe import MINIMAL_POLICY
-    from beliefs.session import open_ledger_reader
     from science.cli import main
-    from science.config import ReadContext
-    from science.report import record_block, serialize_block
     from helpers.world import fixture_bundle
     if host_prerequisites() is not None:
         monkeypatch.setattr(run_module, "POLICY", MINIMAL_POLICY)
@@ -132,26 +154,10 @@ def test_every_write_reaches_its_transport_and_renders_the_canonical_report(worl
     data = tmp_path / "data.txt"
     data.write_bytes(b"x\n")
 
-    def canonical(invocation_id):
-        (invocation,) = [
-            entry
-            for path in (cfg.operations_root / "sessions").glob("*/ledger.v1")
-            if (entry := open_ledger_reader(cfg.operations_root, path.parent.name).invocation(invocation_id)) is not None
-        ]
-        pairs = sorted({pair for act in invocation.acts for pair in act.record_ids})
-        assert pairs
-        assert invocation.outcome == {"done": [list(pair) for pair in pairs]}
-        ctx = ReadContext.open(cfg)
-        return "".join(serialize_block(record_block(ctx.load_record(uid, record_id)))
-                       for uid, record_id in pairs)
-
-    def ref_in(text, prefix):
-        return next(t for t in text.split() if t.startswith(prefix))
-
     result = mcp_call(cfg_path, "claim", CLAIM)
     prop_text = result["content"][0]["text"]
-    prop = ref_in(prop_text, "proposition:")
-    assert prop_text == canonical(result["structuredContent"]["invocation_id"])
+    prop = _ref_in(prop_text, "proposition:")
+    assert prop_text == _canonical(cfg, result["structuredContent"]["invocation_id"])
     # `mcp serve` now binds this same socket for the span of each `mcp_call`
     # (decision 6), so the CLI's own launcher is bound only around the
     # segments that need it, never while an `mcp_call` is in flight.
@@ -159,39 +165,64 @@ def test_every_write_reaches_its_transport_and_renders_the_canonical_report(worl
         assert main(["dataset", "--config", str(cfg_path), "--path", str(data), "--title", "expression",
                      "--locator", "accession:GSE-FIXTURE"]) == 0
         output = capsys.readouterr()
-        dataset = ref_in(output.out, "dataset:")
-        assert output.out == canonical(json.loads(output.err)["invocation_id"])
+        dataset = _ref_in(output.out, "dataset:")
+        assert output.out == _canonical(cfg, json.loads(output.err)["invocation_id"])
     result = mcp_call(cfg_path, "spec", dict(SPEC_FIELDS, target=prop, dataset=dataset))
     spec_text = result["content"][0]["text"]
-    spec = ref_in(spec_text, "analysis-spec:")
-    assert spec_text == canonical(result["structuredContent"]["invocation_id"])
+    spec = _ref_in(spec_text, "analysis-spec:")
+    assert spec_text == _canonical(cfg, result["structuredContent"]["invocation_id"])
     with _service(cfg_path, named):
         assert main(["run", "--config", str(cfg_path), "--spec", spec, "--dataset", dataset,
                      "--code", str(code), "--entrypoint", entrypoint, *sum((["--targets", t] for t in targets), [])]) == 0
         output = capsys.readouterr()
         run_text = output.out
-        run = ref_in(run_text, "run:")
-        assert run_text == canonical(json.loads(output.err)["invocation_id"])
+        run = _ref_in(run_text, "run:")
+        assert run_text == _canonical(cfg, json.loads(output.err)["invocation_id"])
     result = mcp_call(cfg_path, "assess", {"run": run})
     assess_text = result["content"][0]["text"]
-    assessment = ref_in(assess_text, "assessment:")
-    assert assess_text == canonical(result["structuredContent"]["invocation_id"])
+    _ref_in(assess_text, "assessment:")
+    assert assess_text == _canonical(cfg, result["structuredContent"]["invocation_id"])
+    # spec's refusal through MCP.
+    result = mcp_call(cfg_path, "spec", dict(SPEC_FIELDS, target=prop, dataset=dataset, interpretation_rule="nope/v9"))
+    assert result["isError"] is True and result["structuredContent"]["refusal"]["code"] == "invalid-input"
+
+
+@pytest.fixture
+def verify_rig(certified_worker_work, tmp_path):
+    """The verify-rig world (`test_cmd_verify.py`'s): an assessment over a
+    minted run, with the launcher config naming a service socket outside the
+    world, so the restore never meets a live socket."""
+    from helpers.snapshot import snapshot
+    from helpers.world import build_verify_rig_world
+    snap = snapshot(certified_worker_work, "verify-rig", build_verify_rig_world)
+    snap.restore()
+    cfg, assessment, (code, entrypoint, _) = snap.value
+    named = tmp_path / "svc.sock"
+    return cfg, write_config_for(cfg, service_socket=named), named, assessment, code, entrypoint
+
+
+def test_verify_through_the_service_renders_the_canonical_report(verify_rig, capsys):
+    from science.cli import main
+    cfg, cfg_path, named, assessment, code, entrypoint = verify_rig
     with _service(cfg_path, named):
         assert main(["verify", "--config", str(cfg_path), "--assessment", assessment,
                      "--code", str(code), "--entrypoint", entrypoint]) == 0
         output = capsys.readouterr()
-        assert ref_in(output.out, "verification:")
-        assert output.out == canonical(json.loads(output.err)["invocation_id"])
-        # A kernel refusal through the service: the same bundle edited between
-        # run and replay is a different recipe, refused by the boundary.
-        (code / "workflow" / "Snakefile").write_text((code / "workflow" / "Snakefile").read_text().replace("supported", "refuted"))
+    assert _ref_in(output.out, "verification:")
+    assert output.out == _canonical(cfg, json.loads(output.err)["invocation_id"])
+
+
+def test_a_kernel_refusal_through_the_service_carries_its_code(verify_rig, capsys):
+    """The same bundle edited between run and replay is a different recipe,
+    refused by the boundary."""
+    from science.cli import main
+    _, cfg_path, named, assessment, code, entrypoint = verify_rig
+    snakefile = code / "workflow" / "Snakefile"
+    snakefile.write_text(snakefile.read_text().replace("supported", "refuted"))
+    with _service(cfg_path, named):
         assert main(["verify", "--config", str(cfg_path), "--assessment", assessment,
                      "--code", str(code), "--entrypoint", entrypoint]) == 3
         assert json.loads(capsys.readouterr().err)["refusal"]["code"] == "kernel-refused"
-    # And the two commands not yet seen on the other transport: assess's
-    # refusal through the service, spec's refusal through MCP.
-    result = mcp_call(cfg_path, "spec", dict(SPEC_FIELDS, target=prop, dataset=dataset, interpretation_rule="nope/v9"))
-    assert result["isError"] is True and result["structuredContent"]["refusal"]["code"] == "invalid-input"
 
 
 def test_reads_render_identically_through_mcp_and_cli(world, capsys):
