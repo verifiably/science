@@ -345,10 +345,13 @@ class ReadContext:
         from science.holdings import dataset_at
         return dataset_at(self.read_views(), address)
 
-    def snapshot(self, profile: ProfileSpec | None = None):
+    def snapshot(self, profile: ProfileSpec | None = None, *, observations=None):
+        """The resolution snapshot; `observations` passes ones the caller
+        already found, so a world read finds them once."""
         from science.vocabulary import snapshot
         return snapshot(self.config.profile if profile is None else profile, self.read_views(),
-                        self.config.store_root, self.store_id(), self.observations())
+                        self.config.store_root, self.store_id(),
+                        self.observations() if observations is None else observations)
 
     def observations(self):
         from science.holdings import found_observations
@@ -426,7 +429,10 @@ class ReadContext:
         return mounts
 
     def has_read_mounts(self) -> bool:
-        return len(self.session_mounts()) > 1
+        """Whether the session mounts more than the write root, answered from
+        the configuration alone: with coordination on the session is every
+        configured root (one mount each), and with it off the write root only."""
+        return self.config.coordination is not None and len(self.config.world.corpus_roots) > 1
 
     @cached_property
     def _world_read(self):
@@ -444,10 +450,16 @@ class ReadContext:
             raise current
         return current
 
-    def _world_context(self, current):
+    @cached_property
+    def _world_inputs(self):
+        """The current epoch, the observations and the world read's supplied
+        context, computed once per context: none depends on the proposition.
+        A context without a current epoch refuses on every access, uncached."""
         from science.world_belief import world_context
+        current = self.world_read()
+        observations = self.observations()
         pins = {mount.corpus_id: self.pins(mount.root) for mount in self.session_mounts()}
-        return world_context(current, self.observations(), pins)
+        return current, observations, world_context(current, observations, pins)
 
     def session_ids(self) -> frozenset[str]:
         return frozenset(mount.corpus_id for mount in self.session_mounts())
@@ -504,9 +516,9 @@ class ReadContext:
         from science.closure import gather_inputs
         mount = self.mount_holding(proposition)
         if self.has_read_mounts():
-            current = self.world_read()
-            return gather_inputs(current.view, proposition, context=self._world_context(current),
-                                 profile=mount.profile, resolution=self.snapshot(mount.profile))
+            current, observations, context = self._world_inputs
+            return gather_inputs(current.view, proposition, context=context, profile=mount.profile,
+                                 resolution=self.snapshot(mount.profile, observations=observations))
         observations = self.observations()
         return gather_inputs(mount.view, proposition, context=self._context(mount, observations, proposition),
                              profile=mount.profile, resolution=self.snapshot(mount.profile))
@@ -514,12 +526,11 @@ class ReadContext:
     def evaluate(self, proposition: str):
         from science.closure import evaluate
         mount = self.mount_holding(proposition)
-        observations = self.observations()
         if self.has_read_mounts():
-            current = self.world_read()
-            return evaluate(current.view, proposition, observations=observations,
-                            context=self._world_context(current), profile=mount.profile,
-                            resolution=self.snapshot(mount.profile))
+            current, observations, context = self._world_inputs
+            return evaluate(current.view, proposition, observations=observations, context=context,
+                            profile=mount.profile, resolution=self.snapshot(mount.profile, observations=observations))
+        observations = self.observations()
         return evaluate(mount.view, proposition, observations=observations,
                         context=self._context(mount, observations, proposition),
                         profile=mount.profile, resolution=self.snapshot(mount.profile))
