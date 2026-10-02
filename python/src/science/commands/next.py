@@ -4,18 +4,28 @@ from __future__ import annotations
 from beliefs import stored
 from beliefs.admission import Admitted, admit
 from beliefs.dataset import Held, admission_state
+from beliefs.errors import InputOutsideCorpus
 
 from science.coordination import live_selection, selected_project
 from science.holdings import dataset_at
 from science.refusal import Refusal, Refused
 from science.report import Heading, KeyVals, Report
+from science.world_belief import EPOCH_CODES
 
-CLASSES = ("ready", "not-ready", "assessed-not-admitted", "admitted")
+CLASSES = ("ready", "not-ready", "assessed-unevaluated", "assessed-not-admitted", "admitted")
 
 
-def _targeting_specs(view, proposition, profile):
-    specs = (stored.analysis_spec_value(n, profile=profile) for n in view.iter_stored() if n.kind == "analysis-spec")
-    return [spec for spec in specs if spec.target == proposition]
+def _targeting_specs(mounts, proposition):
+    """Every session corpus's specs targeting `proposition`, each decoded under
+    its holder's profile (consumer spec decision 9)."""
+    return [spec for mount in mounts for node in mount.view.iter_stored() if node.kind == "analysis-spec"
+            for spec in (stored.analysis_spec_value(node, profile=mount.profile),) if spec.target == proposition]
+
+
+def _assessed(mounts, proposition) -> bool:
+    return any(node.kind == "assessment"
+               and stored.assessment_value(node, profile=mount.profile).proposition == proposition
+               for mount in mounts for node in mount.view.iter_stored())
 
 
 def _inputs_held(ctx, mounts, spec) -> bool:
@@ -32,24 +42,37 @@ def _inputs_held(ctx, mounts, spec) -> bool:
     return True
 
 
-def classify(ctx, proposition: str) -> str:
-    """The four-class rule over the evidence in the proposition's own corpus,
-    decoded under that corpus's profile (spec §5.5)."""
-    mount = ctx.mount_holding(proposition)
-    view, profile = mount.view, mount.profile
-    assessed = any(n.kind == "assessment" and stored.assessment_value(n, profile=profile).proposition == proposition
-                   for n in view.iter_stored())
-    if not assessed:
-        mounts = ctx.mounts()
-        return ("ready" if any(_inputs_held(ctx, mounts, s) for s in _targeting_specs(view, proposition, profile))
-                else "not-ready")
-    inputs = ctx.gather_inputs(proposition)
+def _classify(ctx, proposition: str) -> tuple[str, str | None]:
+    """The class rule, and the reason an assessed row is unevaluated (consumer
+    spec decision 9). A mounted session scans every session corpus and judges
+    admission at the current epoch. Without read mounts the rule is today's,
+    over the proposition's own corpus."""
+    holder = ctx.mount_holding(proposition)  # refuses a proposition no mount holds, or two do
+    mounts = ctx.session_mounts() if ctx.has_read_mounts() else (holder,)
+    if not _assessed(mounts, proposition):
+        everywhere = ctx.mounts()
+        held = any(_inputs_held(ctx, everywhere, spec) for spec in _targeting_specs(mounts, proposition))
+        return ("ready" if held else "not-ready"), None
+    try:
+        inputs = ctx.gather_inputs(proposition)
+    except Refused as caught:
+        if caught.refusal.code in EPOCH_CODES:
+            return "assessed-unevaluated", caught.refusal.code
+        raise
+    except InputOutsideCorpus:
+        # Cross-corpus evidence read where the session has no read mounts
+        # (decision 6): the corpus-local read cannot see its lineage.
+        return "assessed-unevaluated", "input-outside-corpus"
     observations = ctx.observations()
     for assessment in inputs.assessments:
         run = inputs.runs.get(assessment.run)
         if run is not None and isinstance(admit(assessment, run, observations, inputs.verifications), Admitted):
-            return "admitted"
-    return "assessed-not-admitted"
+            return "admitted", None
+    return "assessed-not-admitted", None
+
+
+def classify(ctx, proposition: str) -> str:
+    return _classify(ctx, proposition)[0]
 
 
 def _selection_pairs(selection, project, live) -> tuple:
@@ -121,10 +144,11 @@ def handle(ctx, *, limit=None) -> Report:
         # A selected record that is not a proposition is not a row.
         nodes = [node for node in (next(m.view.get(ref) for m in mounts if m.view.holds(ref))
                                    for ref in live.selected) if node.kind == "proposition"]
-    rows = sorted((CLASSES.index(classify(ctx, node.id)), node.id,
-                   stored.display_statement(node) or node.title) for node in nodes)
+    rows = sorted((CLASSES.index(cls), node.id, stored.display_statement(node) or node.title, reason)
+                  for node in nodes for cls, reason in (_classify(ctx, node.id),))
     shown = rows[: (limit or 10)]
     blocks.append(KeyVals("propositions",
-                          tuple((pid, f"{CLASSES[c]}: {statement}") for c, pid, statement in shown)
+                          tuple((pid, f"{CLASSES[c]} ({reason}): {statement}" if reason
+                                 else f"{CLASSES[c]}: {statement}") for c, pid, statement, reason in shown)
                           or (("none", "no propositions"),)))
     return tuple(blocks)

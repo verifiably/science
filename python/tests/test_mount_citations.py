@@ -10,8 +10,10 @@ from helpers.world import (
     FIXTURE_AUTHORITY, SPEC_FIELDS, WORKING_FIELDS, _minted_ref, add_mounted_evidence,
     build_shared_contract_world, fixture_bundle, mint_fixture_run, mount_config, open_rig,
 )
+from science.commands.next import classify, handle as next_handle
 from science.config import ReadContext
 from science.refusal import Refused
+from science.world_belief import publish_session_epoch
 
 LOCAL = {"subject": "concept:remission", "predicate": "affects", "object": "protein:PHF19",
          "layer": "causal", "polarity": "positive", "slug": "local"}
@@ -205,3 +207,48 @@ def test_cross_corpus_evidence_read_without_mounts_is_the_kernels_input_outside_
     answer = dict(report[1].pairs)
     assert answer["kind"] == "Refused" and answer["reason"].startswith("input-outside-corpus")
     assert mounted["data"] in answer["reason"]
+
+
+def test_a_write_root_spec_on_a_mounted_proposition_makes_it_ready(shared, certified_work):
+    """Review round 1, P2 1: readiness reads specs in every session corpus.
+    proposition:fresh is mounted with no evidence anywhere until the write root
+    writes a spec on it."""
+    cfg, mounted = shared
+    assert classify(ReadContext.open(cfg), "proposition:fresh") == "not-ready"
+    with open_rig(cfg, ("spec",)) as (d, _):
+        d.invoke("spec", dict(WORKING_FIELDS, target="proposition:fresh", dataset=mounted["data"]))
+    assert classify(ReadContext.open(cfg), "proposition:fresh") == "ready"
+
+
+def test_next_marks_mounted_evidence_unevaluated_without_an_epoch_and_judges_it_with_one(
+        shared, certified_work):
+    cfg, mounted = shared
+    _walk(cfg, mounted, certified_work)
+    assert classify(ReadContext.open(cfg), "proposition:shared") == "assessed-unevaluated"
+    rows = next_handle(ReadContext.open(cfg), limit=None)[-1].pairs
+    assert dict(rows)["proposition:shared"].startswith("assessed-unevaluated (no-epoch): ")
+    publish_session_epoch(cfg)
+    assert classify(ReadContext.open(cfg), "proposition:shared") == "assessed-not-admitted"
+
+
+def test_with_coordination_off_next_classifies_from_the_holders_own_corpus(shared, certified_work):
+    """Plan review round 1, P2 4: no read mounts means today's holder-local
+    rule. The mount's proposition keeps the spec and assessment its own corpus
+    holds, and no epoch is asked for."""
+    cfg, _ = shared
+    off = ReadContext.open(dataclasses.replace(cfg, coordination=None))
+    assert classify(off, "proposition:shared") == "assessed-not-admitted"
+    assert classify(off, "proposition:fresh") == "not-ready"
+
+
+def test_cross_corpus_evidence_read_without_mounts_is_an_unevaluated_row(shared, certified_work):
+    """Plan review round 1, P2 5: authored normally, then read with
+    coordination off, the corpus-local gather raises InputOutsideCorpus. The
+    row says so; next neither fails internally nor blanks every row."""
+    cfg, mounted = shared
+    _local_walk(cfg, mounted, certified_work)
+    off = dataclasses.replace(cfg, coordination=None)
+    assert classify(ReadContext.open(off), "proposition:local") == "assessed-unevaluated"
+    rows = dict(next_handle(ReadContext.open(off), limit=None)[-1].pairs)
+    assert rows["proposition:local"].startswith("assessed-unevaluated (input-outside-corpus): ")
+    assert rows["proposition:shared"].startswith("assessed-not-admitted: ")
