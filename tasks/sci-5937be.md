@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: test-latency
 created: 2026-10-02T01:00:04Z
-updated: 2026-10-02T09:06:09Z
+updated: 2026-10-02T09:06:17Z
 started: 2026-10-02T07:52:47Z
 depends: []
 tags: [halt, test-latency, testing]
@@ -36,3 +36,5 @@ Process: planned
 - 2026-10-02T08:58:54Z (test-latency): resumed
   provenance: {"harness_session":"claude-code:fdd0a33b-81b7-41f1-82a2-bf45de0a4198","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-02T08:59:04Z (test-latency): filed atoms-257797 (cache WAL certification per volume); science-side remedy is fixture snapshots, per user 2026-10-02
+- 2026-10-02T09:06:17Z (test-latency): parked (waiting on user, review): user reviews docs/specs/2026-10-02-world-fixture-snapshots-design.md (in .worktrees/test-latency); on approval agent writes the plan
+  provenance: {"harness_session":"claude-code:fdd0a33b-81b7-41f1-82a2-bf45de0a4198","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
