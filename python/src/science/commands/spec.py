@@ -117,12 +117,9 @@ def handle(ctx, writer, *, target, dataset, contrast, slot, measure, scale, refe
            baseline=None, comparison=None, quantity=None, increment=None, conditioning=None,
            applicability=None, parameters=None, supersedes=None) -> Report:
     profile = ctx.config.profile
-    view = ctx.write_view()
-    for ref in (target, dataset):
-        if not view.holds(ref):
-            ctx.not_held(ref)
+    target_view, dataset_view = ctx.cited(target).view, ctx.cited(dataset).view
     try:
-        address = dataset_address(stored.dataset_declaration(view.get(dataset)))
+        address = dataset_address(stored.dataset_declaration(dataset_view.get(dataset)))
     except MalformedRecord as caught:
         _refuse(f"{dataset}: {caught}")
     if address is None:
@@ -135,12 +132,11 @@ def handle(ctx, writer, *, target, dataset, contrast, slot, measure, scale, refe
             superseded = stored.local_id("analysis-spec", supersedes)
         except MalformedRecord as caught:
             _refuse(f"supersedes {supersedes!r} is not an analysis-spec ref: {caught}")
-        if not view.holds(supersedes):
-            ctx.not_held(supersedes)
+        ctx.own(supersedes)  # a mutation target is the write root's (decision 3)
     held_rules = {interpretation_rule: _rule(interpretation_rule), equivalence_rule: _rule(equivalence_rule)}
     snapshot = ctx.snapshot()
     try:
-        claim, _ = claim_from_stored(view.get(target), profile=profile, snapshot=snapshot)
+        claim, _ = claim_from_stored(target_view.get(target), profile=profile, snapshot=snapshot)
         decl = profile.estimand(claim.operator)
         contrast_value, referents = _contrast(decl, contrast, slot, baseline, comparison, quantity, increment)
         referents["measure.quantity"] = Referent(decl.measure_sort, measure)

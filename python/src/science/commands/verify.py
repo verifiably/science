@@ -12,7 +12,6 @@ from beliefs.session import KernelRefusalValue
 from beliefs.verify import AssessmentVerification, build_verification, publication_node
 
 from science.closure import NO_EPOCH_VERIFICATION
-from science.config import corpus_id_at
 from science.holdings import dataset_at
 from science.commands.run import now, prepare
 from science.refusal import Refusal, Refused
@@ -24,27 +23,19 @@ def _refuse(message: str):
 
 
 def handle(ctx, writer, *, assessment, code, entrypoint, cores=None) -> Report:
-    view = ctx.write_view()
-    if not view.holds(assessment):
-        ctx.not_held(assessment)
     try:
-        value = stored.assessment_value(view.get(assessment), profile=ctx.config.profile)
+        value = stored.assessment_value(ctx.cited(assessment).view.get(assessment), profile=ctx.config.profile)
     except MalformedRecord as caught:
         _refuse(f"{assessment}: {caught}")
     run_ref = stored.typed_ref("run", value.run)
     spec_ref = stored.typed_ref("analysis-spec", value.spec)
-    if not view.holds(run_ref) or not view.holds(spec_ref):
-        _refuse(f"{assessment} names a run or spec this corpus does not hold")
-    original = decode_run_closure(view.get(run_ref))
-    (role,) = stored.analysis_spec_value(view.get(spec_ref), profile=ctx.config.profile).input_roles
-    # The write root's own view, as every write command reads (spec §5.5); a
-    # read mount that declares the dataset is named in the refusal.
-    found = dataset_at(((corpus_id_at(ctx.config.write_root), view),), role.dataset)
+    original = decode_run_closure(ctx.cited(run_ref).view.get(run_ref))
+    (role,) = stored.analysis_spec_value(ctx.cited(spec_ref).view.get(spec_ref),
+                                         profile=ctx.config.profile).input_roles
+    # The session's corpora, as every citation reads (consumer spec decision 1).
+    found = dataset_at(tuple((mount.corpus_id, mount.view) for mount in ctx.session_mounts()), role.dataset)
     if found is None:
-        elsewhere = ctx.dataset_at(role.dataset)
-        if elsewhere is not None:
-            ctx.not_held(elsewhere[1].id)
-        _refuse(f"the spec's dataset {role.dataset} is not in the corpus")
+        _refuse(f"the spec's dataset {role.dataset} is not in the session's corpora")
     dataset_ref = found[1].id
     prepared = prepare(ctx, spec_ref, dataset_ref, code, entrypoint, original.recipe.invocation.targets)
     spec = prepared.pop("spec")

@@ -62,3 +62,60 @@ def test_refusal_after_an_act_closes_done_and_is_an_internal_error(rig):
     assert len(session.invocation_acts("H" * 8)) == 1
     out = d.invoke("half-acted", {"slug": "acted"}, invocation_id="H" * 8)
     assert "proposition:acted" in out.text
+
+
+@pytest.mark.parametrize("raised", [
+    lambda: __import__("beliefs.errors", fromlist=["x"]).CitationContractMismatch(
+        Path("/m"), "testing", "testing:aa", "testing:bb"),
+    lambda: __import__("beliefs.errors", fromlist=["x"]).BuildContended("read mount /m: build-contended"),
+], ids=["CitationContractMismatch", "BuildContended"])
+def test_a_citation_error_from_the_writer_is_a_named_kernel_refusal(certified_work, raised):
+    """Consumer spec decision 5: these are not WriteRefused, and would
+    otherwise escape as internal errors."""
+    from science.session import open_session
+    from science.config import ReadContext
+    error = raised()
+    citing = Declaration("citing", "fixture",
+                         WriteClass("mints", ("proposition",), {"proposition": "corpus-write"}),
+                         MIN_OUTPUT_BUDGET, (), (), Path("."))
+
+    def handler(ctx, writer):
+        raise error
+
+    cfg = build_fixture_world(certified_work)
+    session = open_session(cfg)
+    try:
+        d = Dispatcher((citing,), {"citing": handler}, ReadContext.open(cfg), session=session)
+        with pytest.raises(Refused) as caught:
+            d.invoke("citing", {})
+    finally:
+        session.close()
+    assert caught.value.refusal.code == "kernel-refused"
+    assert caught.value.refusal.data["kind"] == type(error).__name__
+    assert caught.value.refusal.message == str(error)
+
+
+def test_a_duplicate_citation_from_the_writer_is_a_named_kernel_refusal(certified_work):
+    from beliefs.errors import AddressMapConflict
+    from beliefs.corpus import Finding
+    from science.session import open_session
+    from science.config import ReadContext
+    error = AddressMapConflict(Finding("error", "duplicate-location", "proposition:twice", "c1, c2",
+                                       "proposition:twice: held by corpora c1, c2"))
+    citing = Declaration("citing", "fixture",
+                         WriteClass("mints", ("proposition",), {"proposition": "corpus-write"}),
+                         MIN_OUTPUT_BUDGET, (), (), Path("."))
+
+    def handler(ctx, writer):
+        raise error
+
+    cfg = build_fixture_world(certified_work)
+    session = open_session(cfg)
+    try:
+        d = Dispatcher((citing,), {"citing": handler}, ReadContext.open(cfg), session=session)
+        with pytest.raises(Refused) as caught:
+            d.invoke("citing", {})
+    finally:
+        session.close()
+    assert caught.value.refusal.code == "kernel-refused"
+    assert caught.value.refusal.data["kind"] == "AddressMapConflict"

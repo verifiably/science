@@ -16,17 +16,15 @@ def _refuse(message: str):
 
 
 def handle(ctx, writer, *, run) -> Report:
-    view = ctx.write_view()
-    if not view.holds(run):
-        ctx.not_held(run)
+    view = ctx.cited(run).view
     try:
         closure = decode_run_closure(view.get(run))
     except MalformedRecord as caught:
         _refuse(f"{run}: {caught}")
-    spec_ref = stored.typed_ref("analysis-spec", closure.recipe.spec_identity or "")
-    if not closure.recipe.spec_identity or not view.holds(spec_ref):
-        _refuse(f"{run} names no analysis-spec this corpus holds")
-    spec = stored.analysis_spec_value(view.get(spec_ref), profile=ctx.config.profile)
+    if not closure.recipe.spec_identity:
+        _refuse(f"{run} names no analysis-spec")
+    spec_ref = stored.typed_ref("analysis-spec", closure.recipe.spec_identity)
+    spec = stored.analysis_spec_value(ctx.cited(spec_ref).view.get(spec_ref), profile=ctx.config.profile)
     rule = REFERENCE_RULES.get(spec.interpretation_rule)
     if rule is None:
         _refuse(f"the spec's interpretation rule {spec.interpretation_rule!r} is not a reference rule")

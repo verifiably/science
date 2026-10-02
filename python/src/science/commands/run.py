@@ -30,15 +30,13 @@ def now() -> str:
 
 
 def prepare(ctx, spec_ref: str, dataset_ref: str, code: str, entrypoint: str, targets) -> dict:
-    """Everything the boundary needs, validated; shared with verify."""
-    view = ctx.write_view()
-    if not view.holds(spec_ref):
-        ctx.not_held(spec_ref)
-    if not view.holds(dataset_ref):
-        ctx.not_held(dataset_ref)
+    """Everything the boundary needs, validated; shared with verify. The spec
+    and dataset are cited from whichever session corpus holds them, decoded
+    under the writer's profile (consumer spec decision 2)."""
+    spec_view, dataset_view = ctx.cited(spec_ref).view, ctx.cited(dataset_ref).view
     try:
-        spec = stored.analysis_spec_value(view.get(spec_ref), profile=ctx.config.profile)
-        address = dataset_address(stored.dataset_declaration(view.get(dataset_ref)))
+        spec = stored.analysis_spec_value(spec_view.get(spec_ref), profile=ctx.config.profile)
+        address = dataset_address(stored.dataset_declaration(dataset_view.get(dataset_ref)))
     except MalformedRecord as caught:
         _refuse(str(caught))
     if address is None or all(role.dataset != address for role in spec.input_roles):

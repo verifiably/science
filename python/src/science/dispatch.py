@@ -234,7 +234,7 @@ class Dispatcher:
         return claim
 
     def _invoke_write(self, decl: Declaration, canonical: Mapping[str, object], iid: str) -> Outcome:
-        from beliefs.errors import WriteRefused
+        from beliefs.errors import AddressMapConflict, BuildContended, CitationContractMismatch, WriteRefused
         from beliefs.permit import PermitExceeded
         from beliefs.session import (
             ClaimDone,
@@ -259,7 +259,8 @@ class Dispatcher:
                 return Outcome(self._replay_outcome(decl, claim.outcome, iid, (0, 0)), iid)
             try:
                 report = self._handlers[decl.name](self._context(), writer, **canonical)
-            except (PermitExceeded, KernelRefusalValue, WriteRefused) as caught:
+            except (PermitExceeded, KernelRefusalValue, WriteRefused,
+                    CitationContractMismatch, AddressMapConflict, BuildContended) as caught:
                 return self._close_refused(iid, self._kernel_refusal(caught))
             except Refused as caught:
                 acted = self._session.invocation_acts(iid)

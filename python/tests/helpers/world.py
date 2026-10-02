@@ -509,9 +509,8 @@ def mint_fixture_run(cfg: ScienceConfig, spec_ref: str, dataset_ref: str, bundle
     from science.config import ReadContext
     code, entrypoint, targets = bundle
     ctx = ReadContext.open(cfg)
-    view = ctx.write_view()
-    spec = stored.analysis_spec_value(view.get(spec_ref), profile=cfg.profile)
-    address = dataset_address(stored.dataset_declaration(view.get(dataset_ref)))
+    spec = stored.analysis_spec_value(ctx.cited(spec_ref).view.get(spec_ref), profile=cfg.profile)
+    address = dataset_address(stored.dataset_declaration(ctx.cited(dataset_ref).view.get(dataset_ref)))
     root = cfg.write_root
     outcome = execute_assessment_run(
         spec=spec, port=durable_operation_port(root, FIXTURE_AUTHORITY, profile=cfg.profile),

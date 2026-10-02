@@ -341,15 +341,6 @@ class ReadContext:
         records it is given in (spec §5.5, part 3)."""
         return ReadView.opened_at(self.config.write_root)
 
-    def not_held(self, ref: str) -> NoReturn:
-        """Refuse a ref the write root does not hold, naming the read mount that
-        does: a person who passed an mm30 record learns where it is."""
-        elsewhere = [corpus_id_at(root) for root in self.config.world.corpus_roots
-                     if root != self.config.write_root and ReadView.opened_at(root).holds(ref)]
-        where = (f"; read mount {', '.join(elsewhere)} holds it, and this command reads the write root"
-                 if elsewhere else "")
-        raise Refused(Refusal("invalid-input", f"{ref!r} is not in the corpus{where}"))
-
     def dataset_at(self, address: str):
         from science.holdings import dataset_at
         return dataset_at(self.read_views(), address)
