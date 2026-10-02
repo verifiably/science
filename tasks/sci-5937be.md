@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: main
 created: 2026-10-02T01:00:04Z
-updated: 2026-10-02T13:01:15Z
+updated: 2026-10-02T20:26:14Z
 started: 2026-10-02T07:52:47Z
 depends: []
 tags: [halt, test-latency, testing]
@@ -72,3 +72,4 @@ Process: planned
 - 2026-10-02T13:01:13Z (main): merged as daa5449 at 2026-10-02T12:58:24Z; just test on the merge 690 passed in 123.4 s (16 workers). tt-latency verify sci-5937be --after 2026-10-02T12:58:24Z: 'titan test-fast outstanding here; not verified: obligations outstanding' (needs 3 uncontended post-remedy test-fast runs). Worktree test-latency removed after tt-report.
 - 2026-10-02T13:01:13Z (main): parked (waiting on agent, dependency): agent reruns tt-latency verify sci-5937be --after 2026-10-02T12:58:24Z on titan once 3 uncontended test-fast runs from real work exist after the merge; exit 0 -> tasks done with the verify output; a breach -> take sci-97727a
   provenance: {"harness_session":"claude-code:fdd0a33b-81b7-41f1-82a2-bf45de0a4198","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-02T20:26:14Z (main): halt override: attempted sci-97727a by 54e3b78d-e88d-4e32-8d7d-a54e5a20e916: the halt's named follow-up (spec §2.6); its test-fast runs are the post-remedy evidence tt-latency verify needs
