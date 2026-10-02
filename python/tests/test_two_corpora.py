@@ -59,6 +59,12 @@ def world(certified_work, monkeypatch):
     with open_rig(cfg, ("assess", "verify")) as (d, _):
         assessment = _minted_ref(d.invoke("assess", {"run": run}).text, "assessment")
         d.invoke("verify", {"assessment": assessment, "code": str(code), "entrypoint": entrypoint})
+    with open_rig(cfg, ("project",)) as (d, _):
+        d.invoke("project", {"name": "all three", "query": _query({"addresses": [
+            "proposition:archived", "proposition:claimed", "proposition:queued"]})})
+        d.invoke("project", {"name": "all", "query": _query({"kinds": ["proposition"]})})
+    from science.world_belief import publish_session_epoch
+    publish_session_epoch(cfg)
     return cfg
 
 
@@ -67,8 +73,6 @@ def test_next_under_a_project_selecting_both_classifies_each_from_its_own_corpus
     the mutation that decodes the read mount under the writer's profile fails
     on the corpus-local `archive` operator. Rows sort by class, then id."""
     with open_rig(world, NAMES) as (d, _):
-        d.invoke("project", {"name": "all three", "query": _query({"addresses": [
-            "proposition:archived", "proposition:claimed", "proposition:queued"]})})
         d.invoke("project-select", {"target": "all three"})
         text = d.invoke("next", {}).text
     assert _rows(text) == (
@@ -82,7 +86,6 @@ def test_the_unselected_session_reads_both_corpora_as_a_project_of_every_kind_do
     """P5 across two corpora."""
     with open_rig(world, NAMES) as (d, _):
         unselected = _rows(d.invoke("next", {}).text)
-        d.invoke("project", {"name": "all", "query": _query({"kinds": ["proposition"]})})
         d.invoke("project-select", {"target": "all"})
         selected = _rows(d.invoke("next", {}).text)
     assert unselected == selected and "proposition:archived" in unselected
@@ -160,14 +163,22 @@ def _twice(world):
 
 
 def test_one_id_in_two_corpora_refuses_naming_both_in_belief_and_unselected_next(world):
+    """The two halves differ in who judges. `belief` names the proposition, and
+    `mount_holding` refuses it as `invalid-input`. The unselected `next` reads the
+    world at the epoch first, so the kernel's W8b uid-uniqueness refusal
+    (`ResolutionRefused`) is what reaches the reader."""
     from science.commands.belief import handle as belief
     _twice(world)
     ctx = ReadContext.open(world)
     ids = [mount.corpus_id for mount in ctx.mounts()]
-    for call in (lambda: belief(ctx, proposition="proposition:twice"), lambda: handle(ctx, limit=None)):
-        with pytest.raises(Refused) as caught:
-            call()
-        assert caught.value.refusal.code == "invalid-input"
+    with pytest.raises(Refused) as in_belief:
+        belief(ctx, proposition="proposition:twice")
+    assert in_belief.value.refusal.code == "invalid-input"
+    with pytest.raises(Refused) as in_next:
+        handle(ctx, limit=None)
+    assert in_next.value.refusal.code == "kernel-refused"
+    assert in_next.value.refusal.data["kind"] == "ResolutionRefused"
+    for caught in (in_belief, in_next):
         assert all(corpus_id in caught.value.refusal.message for corpus_id in ids)
 
 
@@ -208,36 +219,3 @@ def test_each_corpus_lineage_reaches_the_evaluator(world):
         inputs = ctx.gather_inputs(proposition)
         read = {dataset_address(i.dataset) for run in inputs.runs.values() for i in run.inputs}
         assert read and read <= set(inputs.snapshot.roots)
-
-
-def test_an_assessment_resting_on_a_dataset_its_corpus_lacks_refuses_naming_it(world):
-    """Review fix round 1: evidence whose lineage the holding mount cannot read
-    is refused, never evaluated over a snapshot missing it. Neither the
-    commands nor the kernel's writer mint one (`EligibilityUnmet`), so a view
-    that hides the write root's observed dataset stands in for an edited
-    corpus."""
-    from beliefs import stored
-    ctx = ReadContext.open(world)
-    mount = ctx.mount_holding("proposition:claimed")
-    (assessment,) = [n for n in mount.view.iter_stored() if n.kind == "assessment"]
-    run = stored.typed_ref("run", stored.assessment_value(assessment, profile=mount.profile).run)
-    (hidden,) = stored.inputs_of(mount.view.get(run), stored.OBSERVES)
-
-    class Hiding:
-        def __init__(self, view):
-            self._view = view
-
-        def holds(self, ref):
-            return ref != hidden and self._view.holds(ref)
-
-        def __getattr__(self, name):
-            return getattr(self._view, name)
-
-    hiding = dataclasses.replace(mount, view=Hiding(mount.view))
-    with pytest.raises(Refused) as caught:
-        ctx._context(hiding, ctx.observations(), "proposition:claimed")
-    assert caught.value.refusal.code == "invalid-input"
-    assert hidden in caught.value.refusal.message and mount.corpus_id in caught.value.refusal.message
-    # Final review: the check reads only the assessments of the proposition
-    # being gathered, so proposition:queued, in the same corpus, is not blocked.
-    ctx._context(hiding, ctx.observations(), "proposition:queued")

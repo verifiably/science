@@ -13,6 +13,9 @@ from helpers.world import (
 from science.config import ReadContext
 from science.refusal import Refused
 
+LOCAL = {"subject": "concept:remission", "predicate": "affects", "object": "protein:PHF19",
+         "layer": "causal", "polarity": "positive", "slug": "local"}
+
 
 @pytest.fixture
 def shared(certified_work, monkeypatch):
@@ -120,3 +123,85 @@ def test_supersedes_names_a_write_root_spec_only(shared):
     assert caught.value.refusal.code == "invalid-input"
     assert _ids(cfg)["shared"] in caught.value.refusal.message
     assert "write root" in caught.value.refusal.message
+
+
+def _walk(cfg, mounted, work) -> str:
+    """spec → run → assess in the write root over the mount's proposition and
+    data; returns the assessment ref."""
+    with open_rig(cfg, ("spec",)) as (d, _):
+        spec = _minted_ref(d.invoke("spec", dict(WORKING_FIELDS, target="proposition:shared",
+                                                 dataset=mounted["data"])).text, "analysis-spec")
+    run = mint_fixture_run(cfg, spec, mounted["data"], fixture_bundle(work))
+    with open_rig(cfg, ("assess",)) as (d, _):
+        return _minted_ref(d.invoke("assess", {"run": run}).text, "assessment")
+
+
+def test_mounted_belief_needs_an_epoch(shared, certified_work):
+    from science.commands.belief import handle as belief
+    cfg, mounted = shared
+    _walk(cfg, mounted, certified_work)
+    with pytest.raises(Refused) as caught:
+        belief(ReadContext.open(cfg), proposition="proposition:shared")
+    assert caught.value.refusal.code == "no-epoch"
+
+
+def test_at_a_current_epoch_belief_counts_the_write_roots_assessment_of_a_mounted_proposition(
+        shared, certified_work):
+    from science.commands.belief import handle as belief
+    from science.world_belief import publish_session_epoch
+    cfg, mounted = shared
+    assessment = _walk(cfg, mounted, certified_work)
+    publish_session_epoch(cfg)
+    ctx = ReadContext.open(cfg)
+    inputs = ctx.gather_inputs("proposition:shared")
+    local = stored.assessment_value(ctx.write_view().get(assessment), profile=cfg.profile).identity()
+    held = stored.assessment_value(ctx.cited(mounted["assessment"]).view.get(mounted["assessment"]),
+                                   profile=cfg.profile).identity()
+    assert {local, held} <= {a.identity() for a in inputs.assessments}
+    report = belief(ctx, proposition="proposition:shared")
+    assert dict(report[1].pairs)["kind"] in ("Belief", "NoBelief")
+
+
+def test_a_read_mount_write_after_the_epoch_is_stale_naming_the_mount(shared, certified_work):
+    from science.commands.belief import handle as belief
+    from science.world_belief import publish_session_epoch
+    cfg, mounted = shared
+    publish_session_epoch(cfg)
+    mounted_cfg = mount_config(cfg)
+    open_corpus(mounted_cfg.write_root, authority=FIXTURE_AUTHORITY, profile=mounted_cfg.profile).add(
+        stored.proposition_node("late", title="late", claim={"operator": "affects"}))
+    with pytest.raises(Refused) as caught:
+        belief(ReadContext.open(cfg), proposition="proposition:shared")
+    assert caught.value.refusal.code == "epoch-stale"
+    assert caught.value.refusal.data["drifted"] == [_ids(cfg)["shared"]]
+
+
+def test_with_coordination_off_belief_stays_corpus_local_without_an_epoch(shared):
+    """Review focus 1: no read mounts, no epoch needed."""
+    from science.commands.belief import handle as belief
+    cfg, _ = shared
+    local = dataclasses.replace(cfg, coordination=None)
+    report = belief(ReadContext.open(local), proposition="proposition:shared")
+    assert dict(report[1].pairs)["kind"] in ("Belief", "NoBelief", "Refused")
+
+
+def _local_walk(cfg, mounted, work) -> str:
+    """claim → spec → run → assess, all in the write root, on a write-root
+    proposition over the mount's dataset; returns the assessment ref."""
+    with open_rig(cfg, ("claim", "spec")) as (d, _):
+        d.invoke("claim", LOCAL)
+        spec = _minted_ref(d.invoke("spec", dict(WORKING_FIELDS, target="proposition:local",
+                                                 dataset=mounted["data"])).text, "analysis-spec")
+    run = mint_fixture_run(cfg, spec, mounted["data"], fixture_bundle(work))
+    with open_rig(cfg, ("assess",)) as (d, _):
+        return _minted_ref(d.invoke("assess", {"run": run}).text, "assessment")
+
+
+def test_cross_corpus_evidence_read_without_mounts_is_the_kernels_input_outside_corpus(shared, certified_work):
+    from science.commands.belief import handle as belief
+    cfg, mounted = shared
+    _local_walk(cfg, mounted, certified_work)
+    report = belief(ReadContext.open(dataclasses.replace(cfg, coordination=None)), proposition="proposition:local")
+    answer = dict(report[1].pairs)
+    assert answer["kind"] == "Refused" and answer["reason"].startswith("input-outside-corpus")
+    assert mounted["data"] in answer["reason"]

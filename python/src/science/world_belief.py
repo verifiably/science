@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from beliefs.errors import BuildContended, EpochUnknown
+from beliefs.errors import BuildContended, EpochUnknown, ResolutionRefused
 from beliefs.permit import Authority, WritePermit
 from beliefs.root import install_shipped_world_rules, open_world
 from beliefs.world.epoch import DerivationBindings, build_epoch
@@ -74,10 +74,16 @@ def epoch_currency(world, session_ids: frozenset[str]) -> Current:
         view = open_world_view(world, published)
     except BuildContended as caught:
         raise _contended(caught) from None
-    # Strict: any drift, coordination writes included. The view checks mapped
-    # addresses and uids, not content, so no drift can be proved inert today
-    # (plan review round 1, P1; spec limitation 2).
-    drifted = sorted(report.corpus_id for report in view.drift())
+    except ResolutionRefused as caught:
+        # A uid held by two corpora is world corruption the kernel already
+        # judges (W8b); science names it rather than re-scanning for it.
+        raise Refused(Refusal("kernel-refused", str(caught), {"kind": "ResolutionRefused"})) from None
+    # Strict on any move: every write after the epoch, coordination writes
+    # included, changes the corpus state identity, so no drift is presumed inert
+    # (plan review round 1, P1). Records the epoch left unmapped at an unchanged
+    # state are kinds it excludes by design (only world kinds are mapped), not drift.
+    drifted = sorted(report.corpus_id for report in view.drift()
+                     if report.published_state != report.captured_state)
     if drifted:
         raise _stale(f"corpora {', '.join(drifted)} have moved since epoch {published.packaging_identity}",
                      drifted=drifted)
@@ -113,3 +119,19 @@ def publish_session_epoch(config) -> Published:
         return Published("current", current.epoch.packaging_identity, current.epoch.coverage)
     built = build_over(config, session_ids)
     return Published("built", built.packaging_identity, built.coverage)
+
+
+def world_context(current: Current, observations, pins):
+    """The supplied context of a world read (beliefs J20's recipe): lineage
+    rooted at every observed dataset the epoch maps, the epoch's producer
+    snapshot, and each covered corpus's pins. `gather` fills node_corpus."""
+    from beliefs.belief import SuppliedContext
+    from beliefs.corpus import lineage_snapshot
+
+    view = current.view
+    return SuppliedContext(
+        snapshot=lineage_snapshot(view, sorted(address for address in observations if view.holds(address))),
+        producer_snapshot_identity=view.producer_snapshot_identity(),
+        node_corpus={},
+        pins=pins,
+    )

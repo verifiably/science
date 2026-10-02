@@ -428,6 +428,27 @@ class ReadContext:
     def has_read_mounts(self) -> bool:
         return len(self.session_mounts()) > 1
 
+    @cached_property
+    def _world_read(self):
+        """The session's epoch currency, computed once per context: a `Current`,
+        or the `Refused` saying why there is none (consumer spec decision 7)."""
+        from science.world_belief import epoch_currency
+        try:
+            return epoch_currency(self.world, self.session_ids())
+        except Refused as caught:
+            return caught
+
+    def world_read(self):
+        current = self._world_read
+        if isinstance(current, Refused):
+            raise current
+        return current
+
+    def _world_context(self, current):
+        from science.world_belief import world_context
+        pins = {mount.corpus_id: self.pins(mount.root) for mount in self.session_mounts()}
+        return world_context(current, self.observations(), pins)
+
     def session_ids(self) -> frozenset[str]:
         return frozenset(mount.corpus_id for mount in self.session_mounts())
 
@@ -471,43 +492,21 @@ class ReadContext:
         # Keyed as `gather` reads it: the stored assessment's identity, attributed
         # to the one corpus that holds it.
         node_corpus = {value.identity(): (mount.corpus_id,) for _, value in assessments}
-        # Only the evidence `gather` reads for this proposition: one edited
-        # assessment elsewhere in the corpus does not block every proposition.
-        self._refuse_foreign_observations(
-            mount, [(node, value) for node, value in assessments if value.proposition == proposition])
         # The lineage snapshot walks from each observed dataset through this
-        # mount's view, which cannot resolve another mount's dataset. The check
-        # above refuses this proposition's evidence that observes one, so the
-        # datasets left out are ones no gathered assessment observes (spec §5.5,
-        # part 3).
+        # mount's view, which resolves only its own datasets; evidence resting
+        # outside the corpus is the kernel's input-outside-corpus refusal.
         declared = {address: found for address, found in observations.items() if mount.view.holds(address)}
         return supplied_context(mount.view, corpus_id=mount.corpus_id, pins=self.pins(mount.root),
                                 epoch_identity=self.epoch_identity(), observations=declared,
                                 node_corpus=node_corpus)
 
-    def _refuse_foreign_observations(self, mount: Mount, assessments) -> None:
-        """Refuse an assessment, of the (node, value) pairs given, whose run
-        reads a dataset the mount does not declare: its lineage cannot be read through the mount's view,
-        and leaving it out would degrade admission without saying so. Write
-        commands never mint one (`CorpusWriter._refuse_ineligible` reads the
-        writer's own view); only an edited corpus can hold one."""
-        from beliefs import stored
-        for node, value in assessments:
-            run = stored.typed_ref("run", value.run)
-            if not mount.view.holds(run):
-                continue  # a missing run is `gather`'s to report
-            foreign = sorted(target for role in stored.INPUT_ROLES
-                             for target in stored.inputs_of(mount.view.get(run), role)
-                             if not mount.view.holds(target))
-            if foreign:
-                raise Refused(Refusal(
-                    "invalid-input",
-                    f"{node.id} in corpus {mount.corpus_id} rests on {run}, which reads {', '.join(foreign)}; "
-                    "that corpus does not declare them, and a corpus's evidence reads only its own datasets"))
-
     def gather_inputs(self, proposition: str):
         from science.closure import gather_inputs
         mount = self.mount_holding(proposition)
+        if self.has_read_mounts():
+            current = self.world_read()
+            return gather_inputs(current.view, proposition, context=self._world_context(current),
+                                 profile=mount.profile, resolution=self.snapshot(mount.profile))
         observations = self.observations()
         return gather_inputs(mount.view, proposition, context=self._context(mount, observations, proposition),
                              profile=mount.profile, resolution=self.snapshot(mount.profile))
@@ -516,6 +515,11 @@ class ReadContext:
         from science.closure import evaluate
         mount = self.mount_holding(proposition)
         observations = self.observations()
+        if self.has_read_mounts():
+            current = self.world_read()
+            return evaluate(current.view, proposition, observations=observations,
+                            context=self._world_context(current), profile=mount.profile,
+                            resolution=self.snapshot(mount.profile))
         return evaluate(mount.view, proposition, observations=observations,
                         context=self._context(mount, observations, proposition),
                         profile=mount.profile, resolution=self.snapshot(mount.profile))

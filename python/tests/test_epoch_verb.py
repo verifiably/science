@@ -16,7 +16,7 @@ from science.config import ReadContext
 from science.refusal import Refused
 import science.world_belief as world_belief
 from science.world_belief import build_over, epoch_currency, publish_session_epoch
-from beliefs.errors import BuildContended
+from beliefs.errors import BuildContended, ResolutionRefused
 
 
 @pytest.fixture
@@ -81,6 +81,18 @@ def test_a_coordination_write_after_the_epoch_makes_it_stale(shared):
     write_id = next(m.corpus_id for m in ReadContext.open(shared).session_mounts() if m.root == shared.write_root)
     assert refusal.code == "epoch-stale" and refusal.data["drifted"] == [write_id]
     assert publish_session_epoch(shared).state == "built"
+    ctx = ReadContext.open(shared)
+    epoch_currency(ctx.world, ctx.session_ids())
+
+
+def test_a_project_minted_before_the_epoch_leaves_it_current(shared):
+    """The epoch maps only world kinds, so a coordination record it leaves
+    unmapped at an unchanged state is not drift."""
+    with open_rig(shared, ("project",)) as (d, _):
+        d.invoke("project", {"name": "health", "query": QUERY})
+    publish_session_epoch(shared)
+    ctx = ReadContext.open(shared)
+    epoch_currency(ctx.world, ctx.session_ids())
 
 
 def test_a_mapped_facet_change_beside_a_coordination_write_is_stale(shared):
@@ -115,6 +127,22 @@ def test_contention_while_checking_an_existing_epoch_is_a_named_refusal(shared, 
         publish_session_epoch(shared)
     assert caught.value.refusal.code == "kernel-refused"
     assert caught.value.refusal.data["kind"] == "BuildContended"
+
+
+def test_a_world_the_kernel_refuses_to_resolve_is_a_named_refusal(shared, monkeypatch):
+    """A uid held by two corpora is the kernel's W8b refusal at view open; it
+    reaches the reader named, never as a raw exception."""
+    publish_session_epoch(shared)
+
+    def refused(*_, **__):
+        raise ResolutionRefused("uid 'u' is held by both a and b; world uid uniqueness is enforced")
+
+    monkeypatch.setattr(world_belief, "open_world_view", refused)
+    ctx = ReadContext.open(shared)
+    with pytest.raises(Refused) as caught:
+        epoch_currency(ctx.world, ctx.session_ids())
+    assert caught.value.refusal.code == "kernel-refused"
+    assert caught.value.refusal.data["kind"] == "ResolutionRefused"
 
 
 def test_coverage_missing_a_session_corpus_is_stale(shared):
