@@ -71,9 +71,9 @@ def test_holding_bytes_a_read_mount_declares_refuses_naming_its_record(two, cert
 
 
 def test_run_given_a_mounted_dataset_the_spec_does_not_observe_refuses_before_any_act(two, monkeypatch, certified_work):
-    """Final review: `run` reads the dataset it is given in the write root, so
-    the archive's dataset refuses by the archive's corpus id before the
-    boundary runs anything."""
+    """A mounted dataset is citable (consumer spec decision 1), but one the
+    spec does not observe refuses as `invalid-input` naming that mismatch,
+    before the boundary runs anything and with no run minted."""
     import science.commands.run as run_module
     from helpers.world import _minted_ref, fixture_bundle
 

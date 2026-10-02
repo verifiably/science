@@ -19,23 +19,37 @@ LOCAL = {"subject": "concept:remission", "predicate": "affects", "object": "prot
          "layer": "causal", "polarity": "positive", "slug": "local"}
 
 
-@pytest.fixture
-def shared(certified_work, monkeypatch):
+def _confine(monkeypatch) -> None:
     import science.commands.run as run_module
     from beliefs.confinement import host_prerequisites
     from beliefs.recipe import MINIMAL_POLICY
     if host_prerequisites() is not None:
         monkeypatch.setattr(run_module, "POLICY", MINIMAL_POLICY)
+
+
+@pytest.fixture
+def shared(certified_work, monkeypatch):
+    _confine(monkeypatch)
     cfg = build_shared_contract_world(certified_work)
     return cfg, add_mounted_evidence(cfg, certified_work)
+
+
+@pytest.fixture(scope="module")
+def shared_read(certified_module_work):
+    """`shared`, built once for the module's read-only resolver tests (final
+    review I5). A test that writes, or publishes an epoch, takes `shared`."""
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        _confine(monkeypatch)
+        cfg = build_shared_contract_world(certified_module_work)
+        return cfg, add_mounted_evidence(cfg, certified_module_work)
 
 
 def _ids(cfg) -> dict[str, str]:
     return {mount.root.name: mount.corpus_id for mount in ReadContext.open(cfg).mounts()}
 
 
-def test_a_mounted_record_is_cited_from_its_holder(shared):
-    cfg, mounted = shared
+def test_a_mounted_record_is_cited_from_its_holder(shared_read):
+    cfg, mounted = shared_read
     ctx = ReadContext.open(cfg)
     assert [m.root.name for m in ctx.session_mounts()] == sorted(
         ("corpus", "shared"), key=lambda name: _ids(cfg)[name])
@@ -44,8 +58,8 @@ def test_a_mounted_record_is_cited_from_its_holder(shared):
         assert ctx.cited(ref).root.name == "shared"
 
 
-def test_with_coordination_off_a_mounted_ref_refuses_naming_the_mount(shared):
-    cfg, mounted = shared
+def test_with_coordination_off_a_mounted_ref_refuses_naming_the_mount(shared_read):
+    cfg, mounted = shared_read
     ctx = ReadContext.open(dataclasses.replace(cfg, coordination=None))
     assert [m.root.name for m in ctx.session_mounts()] == ["corpus"] and not ctx.has_read_mounts()
     with pytest.raises(Refused) as caught:
@@ -53,6 +67,19 @@ def test_with_coordination_off_a_mounted_ref_refuses_naming_the_mount(shared):
     assert caught.value.refusal.code == "invalid-input"
     assert _ids(cfg)["shared"] in caught.value.refusal.message
     assert "coordination" in caught.value.refusal.message
+
+
+def test_has_read_mounts_opens_no_corpus(shared_read, monkeypatch):
+    """Final review M5: the question is the configuration's, answered without
+    opening a view or reading a manifest."""
+    cfg, _ = shared_read
+
+    def opened(*_, **__):
+        pytest.fail("has_read_mounts opened the corpora")
+
+    monkeypatch.setattr(ReadContext, "mounts", opened)
+    assert ReadContext.open(cfg).has_read_mounts()
+    assert not ReadContext.open(dataclasses.replace(cfg, coordination=None)).has_read_mounts()
 
 
 def test_a_ref_two_session_corpora_hold_refuses_naming_both(shared):
@@ -66,8 +93,8 @@ def test_a_ref_two_session_corpora_hold_refuses_naming_both(shared):
     assert all(corpus_id in caught.value.refusal.message for corpus_id in _ids(cfg).values())
 
 
-def test_own_refuses_a_mounted_record_naming_the_mount(shared):
-    cfg, mounted = shared
+def test_own_refuses_a_mounted_record_naming_the_mount(shared_read):
+    cfg, mounted = shared_read
     with pytest.raises(Refused) as caught:
         ReadContext.open(cfg).own(mounted["spec"])
     assert caught.value.refusal.code == "invalid-input"
@@ -75,8 +102,8 @@ def test_own_refuses_a_mounted_record_naming_the_mount(shared):
     assert "write root" in caught.value.refusal.message
 
 
-def test_an_unheld_ref_refuses_without_a_hint(shared):
-    cfg, _ = shared
+def test_an_unheld_ref_refuses_without_a_hint(shared_read):
+    cfg, _ = shared_read
     with pytest.raises(Refused) as caught:
         ReadContext.open(cfg).cited("proposition:nowhere")
     assert caught.value.refusal.message == "'proposition:nowhere' is not in the session's corpora"
@@ -164,6 +191,26 @@ def test_at_a_current_epoch_belief_counts_the_write_roots_assessment_of_a_mounte
     assert dict(report[1].pairs)["kind"] in ("Belief", "NoBelief")
 
 
+def test_a_world_read_finds_the_observations_once_per_context(shared, monkeypatch):
+    """Final review M5: the world context, its observations and the snapshot's
+    are one computation per context, however many propositions it evaluates."""
+    cfg, _ = shared
+    publish_session_epoch(cfg)
+    found = ReadContext.observations
+    calls = []
+
+    def counted(self):
+        calls.append(None)
+        return found(self)
+
+    monkeypatch.setattr(ReadContext, "observations", counted)
+    ctx = ReadContext.open(cfg)
+    for proposition in ("proposition:shared", "proposition:fresh"):
+        ctx.evaluate(proposition)
+        ctx.gather_inputs(proposition)
+    assert len(calls) == 1
+
+
 def test_a_read_mount_write_after_the_epoch_is_stale_naming_the_mount(shared, certified_work):
     from science.commands.belief import handle as belief
     from science.world_belief import publish_session_epoch
@@ -184,7 +231,7 @@ def test_with_coordination_off_belief_stays_corpus_local_without_an_epoch(shared
     cfg, _ = shared
     local = dataclasses.replace(cfg, coordination=None)
     report = belief(ReadContext.open(local), proposition="proposition:shared")
-    assert dict(report[1].pairs)["kind"] in ("Belief", "NoBelief", "Refused")
+    assert dict(report[1].pairs)["kind"] in ("Belief", "NoBelief")
 
 
 def _local_walk(cfg, mounted, work) -> str:
@@ -225,8 +272,9 @@ def test_next_marks_mounted_evidence_unevaluated_without_an_epoch_and_judges_it_
     cfg, mounted = shared
     _walk(cfg, mounted, certified_work)
     assert classify(ReadContext.open(cfg), "proposition:shared") == "assessed-unevaluated"
-    rows = next_handle(ReadContext.open(cfg), limit=None)[-1].pairs
-    assert dict(rows)["proposition:shared"].startswith("assessed-unevaluated (no-epoch): ")
+    rows = dict(next_handle(ReadContext.open(cfg), limit=None)[-1].pairs)
+    assert rows["proposition:shared"].startswith("assessed-unevaluated (no-epoch): ")
+    assert rows["proposition:fresh"].startswith("not-ready: ")
     publish_session_epoch(cfg)
     assert classify(ReadContext.open(cfg), "proposition:shared") == "assessed-not-admitted"
 
@@ -252,3 +300,18 @@ def test_cross_corpus_evidence_read_without_mounts_is_an_unevaluated_row(shared,
     rows = dict(next_handle(ReadContext.open(off), limit=None)[-1].pairs)
     assert rows["proposition:local"].startswith("assessed-unevaluated (input-outside-corpus): ")
     assert rows["proposition:shared"].startswith("assessed-not-admitted: ")
+
+
+def test_verify_with_coordination_off_names_the_corpus_declaring_the_dataset(shared, certified_work):
+    """Final review M1: a spec whose dataset only a read mount declares refuses
+    with `cited`'s hint, naming that corpus, not a bare "not in the session"."""
+    from science.commands.verify import handle as verify
+    cfg, mounted = shared
+    assessment = _local_walk(cfg, mounted, certified_work)
+    code, entrypoint, _ = fixture_bundle(certified_work)
+    off = ReadContext.open(dataclasses.replace(cfg, coordination=None))
+    with pytest.raises(Refused) as caught:
+        verify(off, None, assessment=assessment, code=str(code), entrypoint=entrypoint)
+    assert caught.value.refusal.code == "invalid-input"
+    assert _ids(cfg)["shared"] in caught.value.refusal.message
+    assert "coordination" in caught.value.refusal.message

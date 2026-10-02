@@ -3,6 +3,7 @@ import shutil
 import subprocess
 import tempfile
 import uuid
+from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
@@ -17,8 +18,8 @@ MAIN_ROOT = Path(subprocess.run(
 ).stdout.strip()).parent
 
 
-@pytest.fixture()
-def certified_work():
+@contextmanager
+def _certified_dir():
     base = Path(os.environ.get("SCIENCE_TEST_ROOT", MAIN_ROOT / ".framework-test"))
     work = base / uuid.uuid4().hex
     work.mkdir(parents=True)
@@ -26,6 +27,21 @@ def certified_work():
         yield work
     finally:
         shutil.rmtree(work, ignore_errors=True)  # metadata siblings live inside work
+
+
+@pytest.fixture()
+def certified_work():
+    with _certified_dir() as work:
+        yield work
+
+
+@pytest.fixture(scope="module")
+def certified_module_work():
+    """One certified directory shared by a module's read-only tests; a test
+    that writes takes `certified_work`. Under worksteal each worker that runs
+    one of the module's tests builds its own."""
+    with _certified_dir() as work:
+        yield work
 
 
 @pytest.fixture
