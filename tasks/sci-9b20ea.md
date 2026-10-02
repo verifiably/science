@@ -8,7 +8,7 @@ complexity: low
 process: direct
 owner: test-latency
 created: 2026-09-30T21:43:20Z
-updated: 2026-10-02T10:34:41Z
+updated: 2026-10-02T12:55:46Z
 started: 2026-10-02T10:29:05Z
 completed: 2026-10-02T10:34:41Z
 depends: []
@@ -31,3 +31,4 @@ tests/test_two_corpora.py rebuilds a function-scoped fixture (claim → spec →
   provenance: {"harness_session":"claude-code:fdd0a33b-81b7-41f1-82a2-bf45de0a4198","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-02T10:34:41Z (test-latency): test_two_corpora restores a walked snapshot and a cheaper two-corpus snapshot for refusals; belief test pinned to NoBelief/no-eligible-assessment (sci-5937be)
   provenance: {"harness_session":"claude-code:fdd0a33b-81b7-41f1-82a2-bf45de0a4198","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-02T12:55:46Z (test-latency): correction: the pin claimed at close had not landed (the edit sat behind a halted tasks start in an && chain); landed in the final-review fix commit, verified passing and failing on a wrong expected value

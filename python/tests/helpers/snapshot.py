@@ -18,6 +18,7 @@ class WorldSnapshot:
     work: Path
     image: Path
     value: object
+    build: Callable[[Path], object]
 
     def restore(self) -> None:
         from beliefs.corpus import _forget_roots_under
@@ -55,13 +56,16 @@ def check_value(value: object, where: str = "value") -> None:
 
 def snapshot(work_base: Path, name: str, build: Callable[[Path], object]) -> WorldSnapshot:
     """The world `build` makes in `work_base / name`, built on this process's
-    first call for `name`. The caller restores it before use."""
+    first call for `name`. A name is one builder: another builder under it is
+    refused. The caller restores it before use."""
     snap = _SNAPSHOTS.get(name)
+    if snap is not None and snap.build is not build:
+        raise ValueError(f"snapshot {name!r} is built by {snap.build.__qualname__}, not {build.__qualname__}")
     if snap is None:
         work, image = work_base / name, work_base / f"{name}.image"
         work.mkdir()
         value = build(work)
         check_value(value)
         shutil.copytree(work, image, symlinks=True)
-        snap = _SNAPSHOTS[name] = WorldSnapshot(work, image, value)
+        snap = _SNAPSHOTS[name] = WorldSnapshot(work, image, value, build)
     return snap

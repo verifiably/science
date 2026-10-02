@@ -8,7 +8,7 @@ import pytest
 from beliefs.confinement import host_prerequisites
 from helpers.snapshot import check_value, snapshot
 from helpers.world import (
-    build_belief_world, build_shared_world_with_evidence, hold_fixture_dataset, open_rig, walk_belief_path,
+    build_belief_world, build_shared_world_with_evidence, hold_fixture_dataset, open_rig, walk_belief_path_confined,
 )
 from science.config import ReadContext
 
@@ -51,8 +51,7 @@ def _links(root):
 
 @pytest.mark.skipif(host_prerequisites() is not None, reason="confinement unavailable")
 def test_a_confined_world_restores_its_sandbox_links_as_links(certified_worker_work):
-    snap = snapshot(certified_worker_work, "walked-confined",
-                    lambda work: walk_belief_path(work, confined=True))
+    snap = snapshot(certified_worker_work, "walked-confined", walk_belief_path_confined)
     links = _links(snap.image)
     assert links, "a confined walk left no links; this check exercises nothing"
     for _ in range(2):
@@ -86,3 +85,11 @@ def test_a_socket_under_the_world_refuses_the_restore(certified_worker_work):
     finally:
         server.close()
         path.unlink()
+
+
+def test_a_name_reused_with_another_builder_is_refused(certified_worker_work):
+    """A name is one world: a second builder under it would get whichever world
+    its worker built first, depending on worksteal order."""
+    snapshot(certified_worker_work, "snapshot-check", _belief_world)
+    with pytest.raises(ValueError, match="snapshot-check"):
+        snapshot(certified_worker_work, "snapshot-check", build_belief_world)

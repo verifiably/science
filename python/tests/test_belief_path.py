@@ -8,7 +8,7 @@ import pytest
 from beliefs.confinement import host_prerequisites
 from science.report import KeyVals
 from helpers.snapshot import snapshot
-from helpers.world import BELIEF_PATH_COMMANDS, open_rig, walk_belief_path
+from helpers.world import BELIEF_PATH_COMMANDS, open_rig, walk_belief_path_confined, walk_belief_path_portable
 
 CONFINED = host_prerequisites() is None
 
@@ -16,8 +16,10 @@ CONFINED = host_prerequisites() is None
 def _walked(work_base, monkeypatch, *, confined: bool):
     import science.commands.run as run_module
     from beliefs.recipe import MINIMAL_POLICY
-    name = "walked-confined" if confined else "walked-portable"
-    snap = snapshot(work_base, name, lambda work: walk_belief_path(work, confined=confined))
+    if confined:
+        snap = snapshot(work_base, "walked-confined", walk_belief_path_confined)
+    else:
+        snap = snapshot(work_base, "walked-portable", walk_belief_path_portable)
     snap.restore()
     if not confined:
         monkeypatch.setattr(run_module, "POLICY", MINIMAL_POLICY)

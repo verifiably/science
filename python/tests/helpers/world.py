@@ -773,3 +773,13 @@ def build_verify_rig_world(work: Path) -> tuple[ScienceConfig, str, tuple[Path, 
         run_ref = mint_fixture_run(cfg, spec_ref, ref, bundle)
         assessment_ref = _minted_ref(d.invoke("assess", {"run": run_ref}).text, "assessment")
     return cfg, assessment_ref, bundle
+
+
+def walk_belief_path_portable(work: Path) -> tuple[ScienceConfig, str]:
+    """`walk_belief_path` unconfined, as a snapshot builder."""
+    return walk_belief_path(work, confined=False)
+
+
+def walk_belief_path_confined(work: Path) -> tuple[ScienceConfig, str]:
+    """`walk_belief_path` confined, as a snapshot builder."""
+    return walk_belief_path(work, confined=True)

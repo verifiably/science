@@ -69,14 +69,17 @@ def test_the_unselected_session_reads_both_corpora_as_a_project_of_every_kind_do
 
 
 def test_belief_answers_for_each_corpus_proposition_whatever_is_selected(world):
-    """The archive's under its own profile; the write root's over its verified
-    assessment, with the archive mounted beside it."""
+    """The archive's under its own profile; the write root's with the archive
+    mounted beside it. Both runs are minted under `MINIMAL_POLICY`, so neither
+    assessment is eligible: the archive's is unverified and the write root's
+    verification replays a minimal-policy run; each answer is read under its
+    own corpus's profile."""
     from science.commands.belief import handle as belief
     ctx = ReadContext.open(world)
     for proposition in ("proposition:archived", "proposition:claimed"):
         report = belief(ctx, proposition=proposition)
         assert report[0].text == f"Belief: {proposition}"
-        assert dict(report[1].pairs)["kind"] in ("Belief", "NoBelief")
+        assert dict(report[1].pairs) == {"kind": "NoBelief", "reason": "no-eligible-assessment", "detail": ""}
 
 
 def test_the_walked_write_path_minted_every_record_in_the_write_root(world):
