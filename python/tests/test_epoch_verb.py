@@ -1,11 +1,13 @@
 """Consumer spec decisions 7, 8 and 12: an epoch is current for a session only
 at exact coverage with no drift; `science epoch` builds one or reuses it."""
 import dataclasses
+import json
 
 import pytest
 
 from beliefs.root import chain_head_reader, init_corpus_root, open_corpus, open_world
 from beliefs.consulted import CorpusPins
+from beliefs.corpus import Finding
 from beliefs.world import Fresh, WorldConfig
 from helpers.world import (
     FIXTURE_AUTHORITY, QUERY, add_mounted_evidence, build_shared_contract_world,
@@ -16,7 +18,7 @@ from science.config import ReadContext
 from science.refusal import Refused
 import science.world_belief as world_belief
 from science.world_belief import build_over, epoch_currency, publish_session_epoch
-from beliefs.errors import BuildContended, ResolutionRefused
+from beliefs.errors import AddressMapConflict, BuildContended, ResolutionRefused
 
 
 @pytest.fixture
@@ -145,6 +147,23 @@ def test_a_world_the_kernel_refuses_to_resolve_is_a_named_refusal(shared, monkey
     assert caught.value.refusal.data["kind"] == "ResolutionRefused"
 
 
+def test_a_mapped_record_deleted_after_the_epoch_is_rebuilt_over(shared):
+    """Final review I2: a mapped record the carrier no longer holds makes the
+    kernel refuse the old epoch's view (`ResolutionRefused`). The read names
+    the remedy, and the remedy runs: `science epoch` rebuilds over the present
+    corpora rather than re-raising the old epoch's refusal."""
+    publish_session_epoch(shared)
+    mount_root = next(root for root in shared.world.corpus_roots if root != shared.write_root)
+    profile = ReadContext.open(shared)._profiles[mount_root]
+    open_corpus(mount_root, authority=FIXTURE_AUTHORITY, profile=profile).delete("proposition:fresh")
+    refusal = _refusal(shared)
+    assert refusal.code == "kernel-refused" and refusal.data["kind"] == "ResolutionRefused"
+    assert "science epoch" in refusal.message
+    assert publish_session_epoch(shared).state == "built"
+    ctx = ReadContext.open(shared)
+    epoch_currency(ctx.world, ctx.session_ids())
+
+
 def test_coverage_missing_a_session_corpus_is_stale(shared):
     ctx = ReadContext.open(shared)
     write_id = next(m.corpus_id for m in ctx.session_mounts() if m.root == shared.write_root)
@@ -175,15 +194,41 @@ def test_coverage_with_an_extra_corpus_is_stale_and_the_verb_rebuilds_exactly(sh
     assert frozenset(cid for cid, _ in rebuilt.coverage) == ReadContext.open(shared).session_ids()
 
 
-def test_a_contended_corpus_refuses_naming_the_lock(shared, monkeypatch):
+_DUPLICATE = Finding(severity="error", code="duplicate-location", ref="proposition:twice",
+                     detail="corpus claims=('a', 'b')", message="one canonical address, several records")
+
+
+@pytest.mark.parametrize("raised", [
+    BuildContended("an epoch build cannot capture this root: its operation lock is held"),
+    ResolutionRefused("uid 'u' is held by both a and b; world uid uniqueness is enforced"),
+    AddressMapConflict(_DUPLICATE),
+], ids=lambda raised: type(raised).__name__)
+def test_a_kernel_refusal_from_the_build_is_named(shared, monkeypatch, raised):
+    """A busy corpus (`BuildContended`), and a build the kernel will not resolve
+    or map (final review I2), each refuse named, never internal-error."""
+    def refused(*_, **__):
+        raise raised
+
+    monkeypatch.setattr(world_belief, "build_epoch", refused)
+    with pytest.raises(Refused) as caught:
+        publish_session_epoch(shared)
+    assert caught.value.refusal.code == "kernel-refused"
+    assert caught.value.refusal.data["kind"] == type(raised).__name__
+
+
+def test_the_cli_verb_refuses_on_the_wire(shared, monkeypatch, capsys):
+    """Final review M9: the verb's refusal path is the CLI's, exit 3 and the
+    refusal envelope on stderr."""
     def contended(*_, **__):
         raise BuildContended("an epoch build cannot capture this root: its operation lock is held")
 
     monkeypatch.setattr(world_belief, "build_epoch", contended)
-    with pytest.raises(Refused) as caught:
-        publish_session_epoch(shared)
-    assert caught.value.refusal.code == "kernel-refused"
-    assert caught.value.refusal.data["kind"] == "BuildContended"
+    path = write_shared_config(shared)
+    assert main(["epoch", "--config", str(path)]) == 3
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    refusal = json.loads(captured.err.strip().splitlines()[-1])["refusal"]
+    assert refusal["code"] == "kernel-refused" and refusal["data"] == {"kind": "BuildContended"}
 
 
 def test_the_cli_verb_prints_built_then_current(shared, capsys):

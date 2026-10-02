@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from beliefs.errors import BuildContended, EpochUnknown, ResolutionRefused
+from beliefs.errors import AddressMapConflict, BuildContended, EpochUnknown, ResolutionRefused
 from beliefs.permit import Authority, WritePermit
 from beliefs.root import install_shipped_world_rules, open_world
 from beliefs.world.epoch import DerivationBindings, build_epoch
@@ -52,10 +52,13 @@ def _stale(message: str, *, missing=(), extra=(), drifted=()) -> Refused:
                            {"missing": sorted(missing), "extra": sorted(extra), "drifted": sorted(drifted)}))
 
 
-def _contended(caught: BuildContended) -> Refused:
-    """A covered corpus mid-write: retryable, named like every kernel refusal
-    (consumer spec decisions 5 and 7)."""
-    return Refused(Refusal("kernel-refused", str(caught), {"kind": "BuildContended"}))
+def _kernel_refused(caught: Exception, *, remedy: bool = False) -> Refused:
+    """A kernel refusal named like every other (consumer spec decisions 5 and
+    7). `BuildContended` is a covered corpus mid-write: retryable, so no remedy
+    is named; a read's `ResolutionRefused` names `science epoch`, which
+    rebuilds over the present carriers."""
+    message = f"{caught}; {REMEDY}" if remedy else str(caught)
+    return Refused(Refusal("kernel-refused", message, {"kind": type(caught).__name__}))
 
 
 def epoch_currency(world, session_ids: frozenset[str]) -> Current:
@@ -73,11 +76,12 @@ def epoch_currency(world, session_ids: frozenset[str]) -> Current:
     try:
         view = open_world_view(world, published)
     except BuildContended as caught:
-        raise _contended(caught) from None
+        raise _kernel_refused(caught) from None
     except ResolutionRefused as caught:
-        # A uid held by two corpora is world corruption the kernel already
-        # judges (W8b); science names it rather than re-scanning for it.
-        raise Refused(Refusal("kernel-refused", str(caught), {"kind": "ResolutionRefused"})) from None
+        # A uid held by two corpora (W8b), or a mapped record its carrier no
+        # longer holds at the mapped address: the kernel judges both, and
+        # science names them rather than re-scanning for them.
+        raise _kernel_refused(caught, remedy=True) from None
     # Strict on any move: every write after the epoch, coordination writes
     # included, changes the corpus state identity, so no drift is presumed inert
     # (plan review round 1, P1). Records the epoch left unmapped at an unchanged
@@ -99,8 +103,8 @@ def build_over(config, coverage: frozenset[str]):
     fields = {field: bindings[symbol] for symbol, field in SYMBOL_FIELDS.items()}
     try:
         return build_epoch(world, coverage=coverage, bindings=DerivationBindings(**fields))
-    except BuildContended as caught:
-        raise _contended(caught) from None
+    except (BuildContended, ResolutionRefused, AddressMapConflict) as caught:
+        raise _kernel_refused(caught) from None
 
 
 def publish_session_epoch(config) -> Published:
@@ -113,7 +117,13 @@ def publish_session_epoch(config) -> Published:
     try:
         current = epoch_currency(ctx.world, session_ids)
     except Refused as caught:
-        if caught.refusal.code not in EPOCH_CODES:
+        # The old epoch's view refusing to resolve over the present carriers
+        # (a mapped record deleted or moved) is grounds to rebuild: the build
+        # captures the present corpora and judges them itself. Contention is
+        # retryable and a rebuild cannot help it.
+        rebuildable = caught.refusal.code in EPOCH_CODES or (
+            caught.refusal.code == "kernel-refused" and caught.refusal.data.get("kind") == "ResolutionRefused")
+        if not rebuildable:
             raise
     else:
         return Published("current", current.epoch.packaging_identity, current.epoch.coverage)
