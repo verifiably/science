@@ -3,11 +3,10 @@
 **Date:** 2026-08-31
 **Status:** implemented 2026-09-09 (Tasks 1–13). The beliefs permit and
 writer-session deliverables this design is the companion contract for landed
-first (`beliefs-96a24a`, `beliefs-afbbff`). Two amendments were taken during
+first (`beliefs-96a24a`, `beliefs-afbbff`). Amendments were taken during
 implementation and are marked in place: §5.1 and §9.1 for the required session
-`profile` and the `domains` configuration key, and §4.4's consequence that a
-`publishes` command refuses at declaration time until sub-project 5 supplies
-the publish act family.
+`profile` and the `domains` configuration key. A `publishes` command's requirement
+is decided by the permit (§4.4, amended 2026-10-01).
 **Scope:** sub-project 2 of the user/autonomy layer design (`beliefs`
 `docs/superpowers/specs/2026-08-29-user-and-autonomy-layer-design.md`, §5 and
 §8 item 2): the command declaration schema, write classes, the budgeted
@@ -166,8 +165,7 @@ A `mints` class must name kinds that exist in the governing contract the
 build validates against; an unknown kind is a build refusal. Until
 sub-project 1 lands there is no coordination contract, so a
 `coordination`-class command cannot ship — which is exactly decision 1's
-scope: it exists only in test fixtures until then. Likewise `publishes`
-until sub-project 5.
+scope: it exists only in test fixtures until then.
 
 **The declaration selects the minting route; nothing is inferred by
 union.** A kind can be mintable through more than one entry point — a `run`
@@ -228,7 +226,7 @@ is tracked there as `beliefs-96a24a`.
   `revise`, `import_bundle` judged member-by-member).
 - **`act_families`** — a frozenset over a closed enumeration owned by
   `beliefs`: `corpus-write`, `run`, `holdings`, `registry`, `epoch`,
-  `lifecycle`, and, when sub-project 5 lands, `publish`.
+  `lifecycle`, and `publish`.
 
 `beliefs` also owns **`KIND_ACTS`**, a closed mapping from each mintable
 kind to the set of act families **admissible as its minting route** (for
@@ -310,7 +308,7 @@ commit through the world registry, not a corpus log), and `epoch`
 (`build_epoch`, `delete_epoch`, `install_rule_binding` likewise). All
 three remain permit-gated, but **no write class maps to any of them**: the
 command-reachable act families are exactly `corpus-write`, `run`,
-`holdings`, and — with sub-project 5 — `publish`.
+`holdings`, and `publish`.
 
 **Amended 2026-09-09.** Until sub-project 5 lands, `publish` is not merely
 uncovered by any permit — it is not an act family at all, and
