@@ -1,6 +1,6 @@
 # World fixture snapshots: build each test world once per worker, restore it per test
 
-Status: draft 2026-10-02, for review. Task `sci-5937be` (test-latency halt), which absorbs
+Status: draft 2026-10-02, revised after review round 1, for review. Task `sci-5937be` (test-latency halt), which absorbs
 `sci-9b20ea`.
 
 Sources: the breach note on `sci-5937be` (test-fast median 93.984 s against 90 s);
@@ -48,6 +48,13 @@ Probe (2026-10-02, scratch script, not kept): build `build_shared_contract_world
 and run `add_mounted_evidence` through the commands. All three writes succeeded and
 minted the same four records each time.
 
+Both copies, snapshot and restore, use `shutil.copytree(..., symlinks=True)` and copy
+links as links. A confined run materializes environment links that point at sandbox
+paths (`/science/env/...`, beliefs `adapter.SANDBOX_ENV`) which do not exist on the
+host; the default `copytree` follows links and fails on them (review round 1, P1,
+reproduced). A world is restored exactly as the builder left it, dangling links
+included.
+
 ### 2.2 Evict beliefs' per-process registries on every restore
 
 beliefs keeps one open `Corpus` per root path (`corpus._ROOT_STATES`) and one registry
@@ -83,7 +90,7 @@ build cost moves from per test to per worker; the saving is measured, not assume
 class WorldSnapshot:
     work: Path          # the fixed directory the world lives in
     image: Path         # its sibling copy
-    value: object       # whatever the builder returned (a config, refs)
+    value: object       # the builder's plain data: a config and record refs
 
     def restore(self) -> None: ...   # evict, rmtree work, copytree image -> work
 ```
@@ -111,6 +118,36 @@ The test then writes freely; the next test's restore discards it. A test that re
 or corrupts a root (several do, to provoke refusals) is covered the same way, because
 restore replaces the whole directory.
 
+### 2.4a What a snapshot may hold: data, never open sessions
+
+The snapshot caches only what outlives the files being replaced: the `ScienceConfig`,
+record refs, and other plain values (review round 1, P2). Several fixtures today yield
+live objects backed by an open session: `rig` in `test_cmd_spec.py` and
+`test_cmd_verify.py`, and `walked_portable`/`walked_confined` in `test_belief_path.py`,
+yield the dispatcher and context of an `open_rig`. Registry eviction cannot reset a
+dispatcher's invocation index, a context's cached properties, or a session's open
+ledger handles, and a snapshot taken while a session is open copies a ledger mid-write.
+
+So a builder closes every session it opened (its `open_rig` block ends) before it
+returns, and returns data only; `snapshot()` asserts the value is built from `Path`,
+`str`, `int`, tuples, dicts and frozen dataclasses of those (`ScienceConfig` qualifies)
+and refuses anything else by type name. A function-scoped fixture that hands tests a
+dispatcher opens a fresh `open_rig` over the restored world after `restore()` and
+closes it at teardown:
+
+```python
+@pytest.fixture
+def rig(certified_worker_work):
+    snap = snapshot(certified_worker_work, "spec-rig", _build_spec_world)
+    snap.restore()
+    cfg, ref = snap.value
+    with open_rig(cfg, ("spec",)) as (d, ctx):
+        yield d, ctx, ref
+```
+
+Opening a rig is cheap next to building the world: the build cost in §1 sits in the
+corpora, the store, the datasets and the walked run, all of which the snapshot holds.
+
 ### 2.5 Build-time patches are applied twice, explicitly
 
 Some builders run under a monkeypatch (`test_two_corpora.world` sets `run.POLICY` to
@@ -129,6 +166,21 @@ its own commit with its module's setup time before and after. A module whose bui
 turns out to read state the snapshot does not carry (§2.2) stays function-scoped, and
 the plan records why.
 
+`test_two_corpora.py` also takes the two requirements of `sci-9b20ea` that are not about
+snapshots (review round 1, P2):
+
+- The refusal tests that need no walked run, assessment or verification
+  (`test_activating_read_contracts_in_the_writer_is_refused_by_the_write_root_pins`,
+  `test_a_selected_record_no_configured_corpus_holds_refuses_naming_it`, the two
+  `test_one_id_in_two_corpora_*` tests and
+  `test_a_read_mount_without_a_manifest_refuses_at_the_read_entry_points`) take a
+  second, cheaper snapshot of `build_two_corpus_world` alone. The plan confirms per
+  test, by reading it, that it touches nothing the walked path mints; a test that does
+  stays on the full world.
+- `test_belief_answers_for_each_corpus_proposition_whatever_is_selected` today accepts
+  `Belief` or `NoBelief`. It is pinned to each proposition's actual kind and reason,
+  observed on the full world before the conversion and asserted after it.
+
 Not here: the 49 s call in `test_belief_path_transports.py` and the call-time cost in
 `test_cli_surface.py` and `test_selection_query.py` (no setup to save); YAML parse
 caching in beliefs; atoms' certification cache (`atoms-257797`). Each is filed as a
@@ -137,13 +189,15 @@ follow-up if §4's measurement leaves the target unmet.
 ## 3. Surface
 
 Test code only. New: `python/tests/helpers/snapshot.py`, the `certified_worker_work`
-fixture. Changed: the six modules' fixtures. `sci-9b20ea` (two-corpus fixture once per
-module) is closed by the `test_two_corpora.py` conversion.
+fixture. Changed: the six modules' fixtures, and the one pinned assertion in
+`test_two_corpora.py` (§2.6). `sci-9b20ea` is closed by the `test_two_corpora.py`
+conversion, which carries all three of its requirements.
 
 ## 4. Testing and acceptance
 
-1. Behaviour: `just test` passes with no assertion changed. A conversion may change a
-   fixture's body and its scope, never a test's assertions.
+1. Behaviour: `just test` passes with no assertion weakened or removed. A conversion
+   may change a fixture's body and its scope; the only assertion change is the
+   tightening named in §2.6.
 2. Isolation: each converted module passes serially on one worker
    (`just test-one tests/<module>.py`), where every test after the first runs on a
    restored world, and passes with its test ids passed in reverse order on the
@@ -153,7 +207,13 @@ module) is closed by the `test_two_corpora.py` conversion.
 3. Restore check: a test in `tests/test_snapshot.py` builds a small world, writes a
    record, restores, and asserts the record is gone from both the files and a fresh
    read through the commands; then writes the same record again and restores again,
-   which fails with `CollisionRefused` if eviction is skipped. This pins §2.2.
+   which fails with `CollisionRefused` if eviction is skipped. This pins §2.2. A
+   second case snapshots a world after a confined walk, where the host has the
+   confinement prerequisites, and restores it twice: the sandbox links come back as
+   links with their targets unchanged (§2.1). Without the prerequisites the case is
+   skipped by the same `host_prerequisites()` check the confined fixtures use. A third
+   case passes a value holding a dispatcher to `snapshot()` and expects the refusal
+   (§2.4a).
 4. Timing: `just test` and `just test-fast` from cold testmon on the breach host, before (main) and
    after (branch head), recorded as task notes with the summed setup per module. The
    target is the halt's: test-fast's median under 90 s. The task closes when
@@ -179,5 +239,5 @@ Production code; the builders in `helpers/world.py`; `certified_work` and
 
 ## 7. Task linkage
 
-`sci-5937be` carries this spec. `sci-9b20ea` is absorbed (closed when the
-`test_two_corpora.py` conversion lands). `atoms-257797` is independent.
+`sci-5937be` carries this spec. `sci-9b20ea` is absorbed with all three of its
+requirements (§2.6) and closed when the `test_two_corpora.py` conversion lands. `atoms-257797` is independent.
