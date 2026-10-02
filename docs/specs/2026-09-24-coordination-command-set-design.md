@@ -576,6 +576,12 @@ writes cite its read mounts, and both part 3 fences come down
 - `next` scans every session corpus for specs and assessments. With read mounts and no
   current epoch, an assessed proposition is `assessed-unevaluated`, a fifth class
   between `not-ready` and `assessed-not-admitted`, carrying the refusal code.
+- With read mounts, a uid held by two session corpora refuses the whole read
+  `kernel-refused` (`data.kind` `ResolutionRefused`, the kernel's W8b) when the world
+  view opens. Which code reaches the user of unselected `next` depends on row order: a
+  duplicated proposition met first refuses `invalid-input` from the holder lookup, as
+  above; otherwise the first assessed row opens the view and the kernel's refusal
+  arrives.
 
 ## 6. Configuration
 

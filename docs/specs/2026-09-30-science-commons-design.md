@@ -782,14 +782,12 @@ plan:
 Science builds: the `publish` command with dry run; `adopt`, `show`,
 `provider bind`, `follow`, `find`, `fetch`; `spec`, `verify`, `run` and
 `assess` resolving datasets, propositions and the records they name over
-mounts (today each checks through the write view alone), and `belief`
-evaluating over a world read rather than the one mount holding the
-proposition, since after adoption the assessment and the proposition it
-assesses live in different corpora;
-(built by `docs/specs/2026-10-01-mount-citations-consumer-design.md`: an epoch-bound
-world read, with `science epoch` as its operator verb)
-the git
-transport; the catalog and provider list artifacts; `catalog` and
+mounts, and `belief` evaluating over a world read rather than the one mount
+holding the proposition, since after adoption the assessment and the
+proposition it assesses live in different corpora (both built by
+`docs/specs/2026-10-01-mount-citations-consumer-design.md`: citations over the
+session's corpora, and an epoch-bound world read with `science epoch` as its
+operator verb); the git transport; the catalog and provider list artifacts; `catalog` and
 `providers export`; the fetch policy; the accept-policy computation; later,
 the Zenodo transport. Science's own precondition for 1a is the session
 mounts landing in the coordination command set (`sci-923d3a`).

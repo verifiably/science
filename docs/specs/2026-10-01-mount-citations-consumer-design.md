@@ -1,6 +1,6 @@
 # Consuming mount citations: write commands over the session's corpora, belief at an epoch
 
-Status: draft for review, 2026-10-01. Task `sci-dc0381`, which absorbs `sci-b1c777` and
+Status: implemented 2026-10-01 (sci-dc0381). Task `sci-dc0381`, which absorbs `sci-b1c777` and
 `sci-498acb`.
 
 Sources: beliefs `docs/superpowers/specs/2026-10-01-mount-citations-design.md` (cut 44,
@@ -111,7 +111,7 @@ decision 3), which beliefs §4 asked to establish before `sci-0d00d2`.
 
      The epoch is **current for the session** when two things hold. First, its coverage
      *equals* the session corpora's ids. Second, the view opened at it reports no drift
-     for any of them, meaning no changed state and no unmapped records. The read
+     for any of them, meaning no changed state and no unmapped records (amended below). The read
      answers only at a current epoch. Otherwise it refuses, with no answer:
      - `no-epoch`: the world has no current epoch.
      - `epoch-stale`: the coverage differs from the session corpora in either
@@ -124,7 +124,7 @@ decision 3), which beliefs §4 asked to establish before `sci-0d00d2`.
        Coordination writes count too.
      - `kernel-refused` (`data.kind` `BuildContended`): opening the view needs every
        covered corpus's capture hold, and one is mid-write. This is retryable, and is
-       the same normalization as decision 5.
+       the same normalization as decision 5. (Amended below: `ResolutionRefused` too.)
 
      *Rejected (plan review round 1, P1):* treating drift as inert when every unmapped
      record is a coordination kind. `open_world_view` checks mapped addresses and uids,
@@ -152,13 +152,28 @@ decision 3), which beliefs §4 asked to establish before `sci-0d00d2`.
    operator command per change to the evidence is the cost of that identity, and the
    dogfood measures whether the cost is tolerable (§6, limitation 1).
 
+   **Amended 2026-10-01 (implementation, Task 4).** (1) A session corpus has drifted
+   when the state the view captured differs from the state the epoch published. Records
+   the epoch leaves unmapped at an unchanged state are kinds it never maps (the epoch
+   maps only world kinds, so `project` and the other coordination kinds stay unmapped),
+   not drift: an unchanged corpus state identity digests every stored record (beliefs
+   `registry.corpus_state_identity`), so no mapped content can have moved. Any write
+   after the epoch, coordination writes included, still moves the state and is
+   `epoch-stale`. (2) `kernel-refused` also arrives with `data.kind`
+   `ResolutionRefused`, when the kernel will not open the view over the present
+   carriers: a uid held by two corpora (W8b), or a mapped record the carrier no longer
+   holds at its mapped address. `science epoch` rebuilds in the second case (I2).
+
 8. **`science epoch` is an operator verb, not a command.** It is dispatched like
    `build` and `serve` (framework §4.4: epoch acts are launcher- and operator-time
    library operations), with no write class, no permit from the session, and no ledger
    entry. It:
    1. opens the world with an operator authority covering `epoch`;
-   2. asks `epoch_currency` (decision 7). A `kernel-refused` contention from it
-      propagates, and the verb exits 3 naming it. When the current epoch is already current for
+   2. asks `epoch_currency` (decision 7). A `kernel-refused` contention
+      (`BuildContended`) from it propagates, and the verb exits 3 naming it. A
+      `kernel-refused` `ResolutionRefused` (decision 7's amendment) is grounds to
+      rebuild, as `no-epoch` and `epoch-stale` are: the build captures the present
+      corpora and judges them itself. When the current epoch is already current for
       the session, it builds nothing and prints that epoch's packaging identity and
       coverage, marked `current`. Rebuilding is not an idempotent way to get there. An
       epoch's bytes include the world's chain head, publication advances that head, and
@@ -175,6 +190,13 @@ decision 3), which beliefs §4 asked to establish before `sci-0d00d2`.
    never waits. Framework §4.4 needs no amendment, because no write class maps to
    `epoch`. The plan confirms how an operator `Authority` is constructed and whether
    reinstalling a binding is idempotent, before writing the verb.
+
+   **Amended 2026-10-01 (final review).** A kernel refusal from the build itself
+   (`BuildContended`, `ResolutionRefused`, `AddressMapConflict`) exits 3 as
+   `kernel-refused` naming its `data.kind`, never as an internal error. `science epoch`
+   run under a configuration without read mounts publishes over its write root alone
+   and so replaces a wider current epoch; a mounted configuration's belief then refuses
+   `epoch-stale` (its other corpora missing) until its own `science epoch` runs.
 
 9. **`next` keeps its live attention read, and says when it cannot judge admission.**
    - Whether a proposition is *assessed* is a live scan of every session corpus for an
@@ -260,7 +282,18 @@ module-scoped, which is independent of this slice). Cases added to it:
   - A ref held by two session corpora refuses, naming both.
   - `spec --supersedes` of a mount's spec refuses (decision 3).
 - **Contract mismatch.** A mount pinning a different `biology` identity:
-  `CitationContractMismatch` arrives as a named `invalid-input`, not an internal error.
+  `CitationContractMismatch` arrives as `kernel-refused` (`data.kind`
+  `CitationContractMismatch`, decision 5), not an internal error.
+  - *Note (2026-10-01, final review):* the test injects a synthetic exception from the
+    writer (`tests/test_dispatch_refusals.py`) rather than building a mount that pins a
+    different identity of a shared namespace. The plan scoped the case to the
+    dispatcher's normalization, and the fixture worlds have no second identity of
+    `testing` to pin (it would take a variant contract document under `read_contracts`
+    and a third world builder). The real-mount case is the kernel's: beliefs
+    `tests/test_mount_citations.py` (`test_a_citation_into_a_differing_namespace_identity_refuses`,
+    `test_a_citation_across_differing_identities_refuses`) and
+    `tests/acceptance/test_mount_citations_acceptance.py`
+    (`test_j16_a_citation_across_differing_identities_refuses_durably`).
 - **Belief.**
   - Single corpus: unchanged answers. The existing belief tests are the oracle.
   - Mounted, with no epoch → `no-epoch`.
