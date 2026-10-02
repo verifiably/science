@@ -140,7 +140,7 @@ def test_coordination_false_compiles_without_it(tmp_path):
     assert "coordination" not in cfg.profile.activated_contracts
 
 
-@pytest.mark.parametrize("value", ["true", "3", '"2"', "0"])
+@pytest.mark.parametrize("value", ["true", "4", '"2"', "0"])
 def test_coordination_value_outside_its_forms_is_refused(tmp_path, value):
     assert_invalid_config(write_config(tmp_path, coordination=value))
 
