@@ -1,6 +1,6 @@
 # World fixture snapshots: build each test world once per worker, restore it per test
 
-Status: draft 2026-10-02, revised after review round 1, for review. Task `sci-5937be` (test-latency halt), which absorbs
+Status: draft 2026-10-02, revised after review round 2, for review. Task `sci-5937be` (test-latency halt), which absorbs
 `sci-9b20ea`.
 
 Sources: the breach note on `sci-5937be` (test-fast median 93.984 s against 90 s);
@@ -129,9 +129,13 @@ dispatcher's invocation index, a context's cached properties, or a session's ope
 ledger handles, and a snapshot taken while a session is open copies a ledger mid-write.
 
 So a builder closes every session it opened (its `open_rig` block ends) before it
-returns, and returns data only; `snapshot()` asserts the value is built from `Path`,
-`str`, `int`, tuples, dicts and frozen dataclasses of those (`ScienceConfig` qualifies)
-and refuses anything else by type name. A function-scoped fixture that hands tests a
+returns, and returns data only. `snapshot()` checks the value's shape, not its depth:
+`ScienceConfig` is a trusted leaf and is not walked (its fields hold `ProfileSpec`,
+`OperatorPlan`, `DomainContract`, mapping proxies, frozensets, a registry and `None`,
+all of it immutable configuration that names paths and opens nothing; review round 2,
+P1). Around it, the check walks tuples, lists and `str`-keyed dicts and accepts as
+leaves only `ScienceConfig`, `Path`, `str`, `int`, `bool` and `None`. Anything else
+is refused by type name. A function-scoped fixture that hands tests a
 dispatcher opens a fresh `open_rig` over the restored world after `restore()` and
 closes it at teardown:
 
@@ -171,12 +175,15 @@ snapshots (review round 1, P2):
 
 - The refusal tests that need no walked run, assessment or verification
   (`test_activating_read_contracts_in_the_writer_is_refused_by_the_write_root_pins`,
-  `test_a_selected_record_no_configured_corpus_holds_refuses_naming_it`, the two
-  `test_one_id_in_two_corpora_*` tests and
-  `test_a_read_mount_without_a_manifest_refuses_at_the_read_entry_points`) take a
+  `test_a_selected_record_no_configured_corpus_holds_refuses_naming_it`,
+  `test_one_id_in_two_corpora_refuses_selected_next_as_the_kernel_duplicate_location`
+  and `test_a_read_mount_without_a_manifest_refuses_at_the_read_entry_points`) take a
   second, cheaper snapshot of `build_two_corpus_world` alone. The plan confirms per
   test, by reading it, that it touches nothing the walked path mints; a test that does
   stays on the full world.
+  `test_one_id_in_two_corpora_refuses_naming_both_in_belief_and_unselected_next`
+  stays on the full world: it depends on the walked assessment and the published
+  epoch (review round 2).
 - `test_belief_answers_for_each_corpus_proposition_whatever_is_selected` today accepts
   `Belief` or `NoBelief`. It is pinned to each proposition's actual kind and reason,
   observed on the full world before the conversion and asserted after it.
@@ -212,7 +219,9 @@ conversion, which carries all three of its requirements.
    confinement prerequisites, and restores it twice: the sandbox links come back as
    links with their targets unchanged (§2.1). Without the prerequisites the case is
    skipped by the same `host_prerequisites()` check the confined fixtures use. A third
-   case passes a value holding a dispatcher to `snapshot()` and expects the refusal
+   case passes a value holding a dispatcher to `snapshot()` and expects the refusal,
+   and a fourth passes the `(ScienceConfig, refs)` value a real builder returns
+   (`build_shared_contract_world` plus `add_mounted_evidence`) and expects it accepted
    (§2.4a).
 4. Timing: `just test` and `just test-fast` from cold testmon on the breach host, before (main) and
    after (branch head), recorded as task notes with the summed setup per module. The
