@@ -1,24 +1,24 @@
 import pytest
 
 from science.refusal import Refused
-from helpers.world import OBSERVED, SPEC_FIELDS, build_belief_world, fixture_bundle, hold_fixture_dataset, mint_fixture_run, open_rig
+from helpers.snapshot import snapshot
+from helpers.world import (
+    OBSERVED, SPEC_FIELDS, build_belief_world, build_verify_rig_world, fixture_bundle, hold_fixture_dataset,
+    mint_fixture_run, open_rig,
+)
 
 
 @pytest.fixture
-def rig(certified_work, monkeypatch):
+def rig(certified_worker_work, monkeypatch):
     import science.commands.run as run_module
     from beliefs.confinement import host_prerequisites
     from beliefs.recipe import MINIMAL_POLICY
+    snap = snapshot(certified_worker_work, "verify-rig", build_verify_rig_world)
+    snap.restore()
     if host_prerequisites() is not None:
         monkeypatch.setattr(run_module, "POLICY", MINIMAL_POLICY)
-    cfg = build_belief_world(certified_work)
-    ref = hold_fixture_dataset(cfg, "data.txt", b"x\n", "expression", **OBSERVED)
-    bundle = fixture_bundle(certified_work, "supported")
+    cfg, assessment_ref, bundle = snap.value
     with open_rig(cfg, ("spec", "assess", "verify")) as (d, ctx):
-        spec_ref = next(t for t in d.invoke("spec", dict(SPEC_FIELDS, target="proposition:p1", dataset=ref)).text.split()
-                        if t.startswith("analysis-spec:"))
-        run_ref = mint_fixture_run(cfg, spec_ref, ref, bundle)
-        assessment_ref = next(t for t in d.invoke("assess", {"run": run_ref}).text.split() if t.startswith("assessment:"))
         yield d, ctx, assessment_ref, bundle
 
 

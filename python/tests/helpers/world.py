@@ -751,3 +751,25 @@ def walk_belief_path(work: Path, *, confined: bool) -> tuple[ScienceConfig, str]
             assessment = ref(d.invoke("assess", {"run": run}).text, "assessment:")
             d.invoke("verify", {"assessment": assessment, "code": str(code), "entrypoint": entrypoint})
     return cfg, prop
+
+
+def build_spec_rig_world(work: Path) -> tuple[ScienceConfig, str]:
+    """`build_belief_world` holding one expression dataset: the spec command's
+    starting point."""
+    cfg = build_belief_world(work)
+    return cfg, hold_fixture_dataset(cfg, "data.txt", b"x\n", "expression")
+
+
+def build_verify_rig_world(work: Path) -> tuple[ScienceConfig, str, tuple[Path, str, tuple[str, ...]]]:
+    """`build_belief_world` with one observed dataset, a spec, a minimal-policy
+    run and its assessment: verify's starting point. The bundle lives under
+    `work`, so a test that rewrites it is undone by the next restore."""
+    cfg = build_belief_world(work)
+    ref = hold_fixture_dataset(cfg, "data.txt", b"x\n", "expression", **OBSERVED)
+    bundle = fixture_bundle(work, "supported")
+    with open_rig(cfg, ("spec", "assess")) as (d, _):
+        spec_ref = _minted_ref(d.invoke("spec", dict(SPEC_FIELDS, target="proposition:p1", dataset=ref)).text,
+                               "analysis-spec")
+        run_ref = mint_fixture_run(cfg, spec_ref, ref, bundle)
+        assessment_ref = _minted_ref(d.invoke("assess", {"run": run_ref}).text, "assessment")
+    return cfg, assessment_ref, bundle
