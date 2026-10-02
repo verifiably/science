@@ -44,6 +44,14 @@ def certified_module_work():
         yield work
 
 
+@pytest.fixture(scope="session")
+def certified_worker_work():
+    """One certified directory per worker process, holding the worlds
+    `helpers.snapshot` builds once and restores per test."""
+    with _certified_dir() as work:
+        yield work
+
+
 @pytest.fixture
 def short_tmp():
     """A short directory for sockets. AF_UNIX caps the socket path at 107 bytes, and

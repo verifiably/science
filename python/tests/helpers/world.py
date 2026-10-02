@@ -2,6 +2,8 @@ import secrets
 from contextlib import contextmanager
 from pathlib import Path
 
+import pytest
+
 from beliefs import stored
 from beliefs.consulted import CorpusPins
 from beliefs.permit import Authority, WritePermit
@@ -665,3 +667,44 @@ def add_mounted_evidence(cfg: ScienceConfig, work: Path) -> dict[str, str]:
     with open_rig(mounted, ("assess",)) as (d, _):
         assessment = _minted_ref(d.invoke("assess", {"run": run}).text, "assessment")
     return {"data": data, "spec": spec, "run": run, "assessment": assessment}
+
+
+def build_shared_world_with_evidence(work: Path) -> tuple[ScienceConfig, dict[str, str]]:
+    """`build_shared_contract_world` with `add_mounted_evidence`: the shape the
+    mount-citation and epoch tests start from. Every session it opens is closed."""
+    cfg = build_shared_contract_world(work)
+    return cfg, add_mounted_evidence(cfg, work)
+
+
+BELIEF_PATH_COMMANDS = ("claim", "dataset", "spec", "run", "assess", "verify", "belief", "next")
+
+
+def walk_belief_path(work: Path, *, confined: bool) -> tuple[ScienceConfig, str]:
+    """claim -> dataset -> spec -> run -> assess -> verify through one dispatcher,
+    the dispatcher closed at the end. Unconfined, the run command is patched to
+    the minimal policy for the walk only."""
+    import science.commands.run as run_module
+    from beliefs.recipe import MINIMAL_POLICY
+
+    def ref(text, prefix):
+        return next(t for t in text.split() if t.startswith(prefix))
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        if not confined:
+            monkeypatch.setattr(run_module, "POLICY", MINIMAL_POLICY)
+            monkeypatch.setattr(run_module, "host_prerequisites", lambda: None)
+        cfg = build_fixture_world_with_contract(work)
+        code, entrypoint, targets = fixture_bundle(work, "supported")
+        data = work / "data.txt"
+        data.write_bytes(b"x\n")
+        with open_rig(cfg, BELIEF_PATH_COMMANDS) as (d, _):
+            prop = ref(d.invoke("claim", {"subject": "concept:disease-stage", "predicate": "affects",
+                                          "object": "protein:PHF19", "layer": "causal",
+                                          "polarity": "positive"}).text, "proposition:")
+            dataset = ref(d.invoke("dataset", {"path": str(data), "title": "expression",
+                                               "locator": "accession:GSE-FIXTURE"}).text, "dataset:")
+            spec = ref(d.invoke("spec", dict(SPEC_FIELDS, target=prop, dataset=dataset)).text, "analysis-spec:")
+            run = ref(d.invoke("run", {"spec": spec, "dataset": dataset, "code": str(code),
+                                       "entrypoint": entrypoint, "targets": list(targets)}).text, "run:")
+            assessment = ref(d.invoke("assess", {"run": run}).text, "assessment:")
+            d.invoke("verify", {"assessment": assessment, "code": str(code), "entrypoint": entrypoint})
+    return cfg, prop
