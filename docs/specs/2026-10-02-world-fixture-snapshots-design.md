@@ -1,7 +1,7 @@
 # World fixture snapshots: build each test world once per worker, restore it per test
 
-Status: draft 2026-10-02, revised after review round 2, for review. Task `sci-5937be` (test-latency halt), which absorbs
-`sci-9b20ea`.
+Status: implemented 2026-10-02 (sci-5937be); latency verify pending. Task `sci-5937be` (test-latency halt), which
+absorbs `sci-9b20ea`.
 
 Sources: the breach note on `sci-5937be` (test-fast median 93.984 s against 90 s);
 the profiles recorded on that task's notes on 2026-10-02; atoms task `atoms-257797`
