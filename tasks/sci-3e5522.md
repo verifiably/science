@@ -7,8 +7,8 @@ size: s
 complexity: low
 process: direct
 created: 2026-10-02T09:52:51Z
-updated: 2026-10-02T09:52:51Z
-depends: []
+updated: 2026-10-02T10:05:35Z
+depends: [sci-1e0712]
 parent: sci-5937be
 tags: [testing, test-latency]
 agent: claude-code/claude-opus-5-5

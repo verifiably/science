@@ -608,16 +608,22 @@ git commit -m "test: belief path, spec and verify tests restore built worlds"
 
 - [ ] **Step 1: Each converted module serially, in order and reversed**
 
-For each of `test_two_corpora`, `test_mount_citations`, `test_epoch_verb`, `test_belief_path`, `test_cmd_spec`, `test_cmd_verify`, `test_snapshot`:
+Run this as a bash script (`bash <file>` from the worktree root; not zsh, whose word splitting differs):
 
 ```bash
-m=tests/<module>.py
-just test-one "$m"
-ids=$(just test-one "$m" --collect-only -q | grep '::' | tac | tr '\n' ' ')
-just test-one $ids
+#!/usr/bin/env bash
+set -euo pipefail
+for module in test_two_corpora test_mount_citations test_epoch_verb test_belief_path \
+              test_cmd_spec test_cmd_verify test_snapshot; do
+    m="tests/$module.py"
+    just test-one "$m"
+    mapfile -t ids < <(just test-one "$m" --collect-only -q | grep '::' | tac)
+    (( ${#ids[@]} > 0 )) || { echo "no node ids collected for $m" >&2; exit 1; }
+    just test-one "${ids[@]}"
+done
 ```
 
-`--collect-only` lists node ids and runs no test; `tac` reverses them, and pytest runs explicit node ids in the order given. Expected: both runs pass for every module. A failure in only one order means a test depends on another's writes or on a first build: fix the fixture (never the assertion) and rerun both orders.
+`--collect-only` lists node ids and runs no test; `tac` reverses them, each id is its own array element and so its own argument, and pytest runs explicit node ids in the order given. Expected: both runs pass for every module. A failure in only one order means a test depends on another's writes or on a first build: fix the fixture (never the assertion) and rerun both orders.
 
 - [ ] **Step 2: The full suite**
 
@@ -629,7 +635,10 @@ Expected: every test passes.
 On main and on this branch head, in turn, with the host otherwise quiet (`host-load` first; if it shows competing load, park with `--reason quiet` per the tasks skill):
 
 ```bash
-rm -f python/.testmondata*   # cold testmon: test-fast selects everything
+#!/usr/bin/env bash
+set -euo pipefail
+# Cold testmon, so test-fast selects everything; find matches nothing harmlessly.
+find python -maxdepth 1 -name '.testmondata*' -delete
 just test-fast
 just test
 ```
