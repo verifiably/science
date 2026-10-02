@@ -330,6 +330,12 @@ session ledger (§5.2) therefore only ever claims acts that have
 corpus-chain evidence, and the ledger-versus-chain comparison never meets
 an act that could not appear in a chain.
 
+**Amended 2026-10-01 (`sci-498acb`).** The 2026-09-09 amendment above no longer
+holds: `publish` is an act family, `RequiredCapabilities.publishes()` constructs, and a
+`publishes`-class command's requirement is decided by the permit like every other
+write class. The dispatcher's declaration-time refusal is removed
+(`docs/specs/2026-10-01-mount-citations-consumer-design.md` decision 10).
+
 **Amended 2026-10-01 (science commons design §11).** One write class
 reaches two of the three families, under this section's own condition: its
 ledger evidence is defined first. The `sharing` class (§3.3) is what `adopt`

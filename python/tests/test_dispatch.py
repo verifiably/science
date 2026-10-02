@@ -173,23 +173,11 @@ def test_write_on_a_sessionless_surface_refuses_before_the_handler():
     assert not executed
 
 
-def test_publishes_class_refuses_until_the_publish_family_exists():
-    """`RequiredCapabilities.publishes()` raises rather than returning an
-    uncoverable requirement, so the dispatcher states the refusal itself —
-    exit 3 with an envelope, never exit 1 with an internal error."""
-    executed = []
+def test_publishes_class_requires_the_publication_permit():
+    """sci-498acb: the publish act family has landed, so the permit decides;
+    no declaration-time refusal remains."""
+    from beliefs.permit import RequiredCapabilities
     publish = make_decl("pub", write_class="publishes")
-    dispatcher = Dispatcher(
-        (publish,),
-        {"pub": lambda ctx, writer: executed.append(True) or ()},
-        read_context=StubContext(),
-        session=object(),  # a session exists; the class is what refuses
-    )
-
-    with pytest.raises(Refused) as caught:
-        dispatcher.invoke("pub", {}, invocation_id="caller_id")
-
-    assert caught.value.refusal.code == "permit-exceeded"
-    assert "sub-project 5" in caught.value.refusal.message
-    assert caught.value.invocation_id == "caller_id"
-    assert not executed
+    dispatcher = Dispatcher((publish,), {"pub": lambda ctx, writer: ()},
+                            read_context=StubContext(), session=object())
+    assert dispatcher._required(publish) == RequiredCapabilities.publishes()

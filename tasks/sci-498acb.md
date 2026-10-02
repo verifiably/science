@@ -1,13 +1,14 @@
 ---
 id: sci-498acb
 title: "Retire the publishes declaration-time refusal: the publish act family has landed"
-status: todo
+status: done
 priority: 1
 size: xs
 complexity: low
 process: direct
 created: 2026-09-09T10:22:34Z
-updated: 2026-10-01T21:17:58Z
+updated: 2026-10-02T01:58:09Z
+completed: 2026-10-02T01:58:09Z
 depends: []
 tags: [command-framework]
 ---
@@ -22,3 +23,7 @@ Filed as an idea because no sub-project 5 task exists to depend on. Promote it t
 
 - 2026-10-01T09:35:30Z (main): Unblocked: beliefs ships the publish act family (beliefs a312745, permit.ACT_FAMILIES holds 'publish'; RequiredCapabilities.publishes() returns the publication permit). Scoped as the direct change this body describes; science commons milestone 1a (sci-13050a) depends on it.
 - 2026-10-01T21:17:58Z (main): rides along with sci-dc0381; closes in its lane
+- 2026-10-02T01:58:09Z (feat/dc0381-mount-citations): done
+  provenance: {"harness_session":"claude-code:6051398c-8f0e-4511-a835-e90a0c6e83e9","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-02T01:58:09Z (feat/dc0381-mount-citations): publishes class calls RequiredCapabilities.publishes(); declaration-time refusal and its §4.4 amendment retired (sci-dc0381 Task 6)
+  provenance: {"harness_session":"claude-code:6051398c-8f0e-4511-a835-e90a0c6e83e9","harness_session_source":"CLAUDE_CODE_SESSION_ID"}

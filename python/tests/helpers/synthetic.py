@@ -50,8 +50,8 @@ HANDLERS = {"mint-claim": mint_claim_handler, "overreach": overreach_handler}
 def synthetic_decls_and_handlers():
     """The fixture tree as a real declaration set, with handlers bound by hand.
 
-    `pub-view` exists to prove schema and dispatch shape: no publish act
-    family exists yet, so it can never reach its handler.
+    `pub-view` exists to prove schema and dispatch shape: it reaches its
+    handler under an attended session, whose ceiling covers the publication permit.
     """
     from science.schema import load_command_tree
 
@@ -60,9 +60,6 @@ def synthetic_decls_and_handlers():
     decls = load_command_tree(root, kind_acts=kind_acts,
                               contract_kinds=frozenset(kind_acts))
 
-    def unreachable(ctx, writer, **inputs):
-        raise AssertionError("dispatch must refuse before this handler runs")
-
     handlers = dict(HANDLERS)
-    handlers["pub-view"] = unreachable    # no publish act family yet
+    handlers["pub-view"] = lambda ctx, writer, **inputs: ()  # the permit decides (sci-498acb)
     return decls, handlers

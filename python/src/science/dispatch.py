@@ -180,15 +180,7 @@ class Dispatcher:
             case "mints":
                 return RequiredCapabilities.for_kinds(write_class.kinds, write_class.routes)
             case "publishes":
-                # The publish act family arrives with sub-project 5 (spec
-                # §4.1, §4.4); until then `RequiredCapabilities.publishes()`
-                # raises rather than returning an uncoverable requirement, so
-                # the class refuses here. `invoke` binds the invocation id.
-                raise Refused(Refusal(
-                    "permit-exceeded",
-                    "publishes commands need the publish act family, "
-                    "which arrives with sub-project 5",
-                ))
+                return RequiredCapabilities.publishes()
         raise AssertionError(write_class.kind)
 
     @staticmethod

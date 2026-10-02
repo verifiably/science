@@ -18,22 +18,21 @@ def test_synthetic_tree_loads():
     assert by_name["mint-claim"].write_class.routes == {"proposition": "corpus-write"}
 
 
-def test_declaration_time_refusal_for_class_above_permit(certified_work):
-    """A publishes-class command against an attended session without the publish
-    family refuses before the handler runs (spec §6.1 step 3)."""
+def test_a_publishes_class_command_reaches_its_handler_under_an_attended_session(certified_work):
+    """An attended session's ceiling is the full permit, which covers the
+    publication requirement, so the handler runs (sci-498acb)."""
     from science.session import open_session
     from science.config import ReadContext
     from science.dispatch import Dispatcher
-    from science.refusal import Refused
     from helpers.world import build_fixture_world
     decls = _fixture_tree()
     cfg = build_fixture_world(certified_work)
     session = open_session(cfg)
-    d = Dispatcher(decls, {"pub-view": lambda ctx, writer: ()}, ReadContext.open(cfg),
-                   session=session)
+    executed = []
+    d = Dispatcher(decls, {"pub-view": lambda ctx, writer: executed.append(True) or ()},
+                   ReadContext.open(cfg), session=session)
     try:
-        with pytest.raises(Refused) as e:
-            d.invoke("pub-view", {})
-        assert e.value.refusal.code == "permit-exceeded"
+        d.invoke("pub-view", {})
     finally:
         session.close()
+    assert executed == [True]
