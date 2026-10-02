@@ -363,6 +363,11 @@ every read row" is read as every `selects` row — `next` and `project-show`.
 - `unknown-project` — a name or address resolving to no standing project;
 - `ambiguous-project` — a name matching two or more standing projects; `data.candidates`
   lists each address and query digest.
+- `no-epoch` — a mounted session's belief or admission read with no published epoch;
+  the remedy is `science epoch`.
+- `epoch-stale` — the current epoch's coverage differs from the session's corpora, or a
+  session corpus moved since it; `data.missing`, `data.extra` and `data.drifted` name the
+  corpora.
 
 `divergent-view`, `ProjectNotResolvable` and every other kernel refusal keep
 arriving as `kernel-refused`, with the kernel's kind and detail (`sci-23e773`) in
@@ -550,6 +555,24 @@ refuse `invalid-input` for an assessment whose run reads a dataset its own corpu
 declare, naming the assessment, corpus, run and datasets, rather than evaluating with that
 lineage silently dropped. The lineage snapshot is per corpus, and cross-corpus inputs are
 `beliefs-9ce6e4`.
+
+**Amended 2026-10-01 (mount citations, `sci-dc0381`).** Beliefs cut 44 lets a session's
+writes cite its read mounts, and both part 3 fences come down
+(`docs/specs/2026-10-01-mount-citations-consumer-design.md`):
+
+- `spec`, `run`, `assess` and `verify` resolve what they cite over the session's
+  corpora, which are the write root plus every read mount when coordination is on.
+  `dataset` still refuses bytes a mount declares, and `spec --supersedes` names a
+  write-root spec only.
+- Science's foreign-observation guard is removed. The kernel's corpus-local read
+  refuses `input-outside-corpus` itself.
+- Belief in a session with read mounts is a world read at the current epoch. It answers
+  only when the epoch's coverage equals the session's corpora and none has drifted.
+  Otherwise it refuses `no-epoch` or `epoch-stale`, and `science epoch` (an operator
+  verb) publishes or reuses one.
+- `next` scans every session corpus for specs and assessments. With read mounts and no
+  current epoch, an assessed proposition is `assessed-unevaluated`, a fifth class
+  between `not-ready` and `assessed-not-admitted`, carrying the refusal code.
 
 ## 6. Configuration
 
