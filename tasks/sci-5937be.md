@@ -8,12 +8,13 @@ complexity: high
 process: planned
 owner: test-latency
 created: 2026-10-02T01:00:04Z
-updated: 2026-10-02T09:33:14Z
+updated: 2026-10-02T09:52:51Z
 started: 2026-10-02T07:52:47Z
 depends: []
 tags: [halt, test-latency, testing]
 source: "tt-latency:titan:2026-10-02T01:00:03Z"
 spec: docs/specs/2026-10-02-world-fixture-snapshots-design.md
+plan: docs/plans/2026-10-02-world-fixture-snapshots.md
 ---
 
 Filed by tt-latency on titan: the median of successful, uncontended runs over the trailing window is over the limit in latency.toml (ops). The sci project is halted while this task is open: tasks start refuses new lower-priority work there. Each pair in a `breach:` note below is an obligation on the host it names. Fix the suite, then run `tt-latency verify <this id> --after <remedy timestamp>` on each host named; the task closes when verify exits 0, and the tasks done message carries its output.
@@ -43,4 +44,7 @@ Process: planned
   provenance: {"harness_session":"claude-code:fdd0a33b-81b7-41f1-82a2-bf45de0a4198","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-02T09:32:56Z (test-latency): review: spec round 2 — verdict: revise; findings: P1 1; reviewer: human
 - 2026-10-02T09:33:14Z (test-latency): parked (waiting on user, review): user re-reviews docs/specs/2026-10-02-world-fixture-snapshots-design.md (round 3, in .worktrees/test-latency); on approval agent writes the plan
+  provenance: {"harness_session":"claude-code:fdd0a33b-81b7-41f1-82a2-bf45de0a4198","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-02T09:47:48Z (test-latency): review: spec round 3 — verdict: accept; findings: none; reviewer: human
+- 2026-10-02T09:47:48Z (test-latency): resumed
   provenance: {"harness_session":"claude-code:fdd0a33b-81b7-41f1-82a2-bf45de0a4198","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
