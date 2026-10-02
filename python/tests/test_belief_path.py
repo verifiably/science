@@ -7,58 +7,41 @@ import pytest
 
 from beliefs.confinement import host_prerequisites
 from science.report import KeyVals
-from helpers.world import SPEC_FIELDS, build_fixture_world_with_contract, fixture_bundle, open_rig
+from helpers.snapshot import snapshot
+from helpers.world import BELIEF_PATH_COMMANDS, open_rig, walk_belief_path_confined, walk_belief_path_portable
 
 CONFINED = host_prerequisites() is None
 
 
-def walk(certified_work, monkeypatch, *, confined: bool):
+def _walked(work_base, monkeypatch, *, confined: bool):
     import science.commands.run as run_module
     from beliefs.recipe import MINIMAL_POLICY
+    if confined:
+        snap = snapshot(work_base, "walked-confined", walk_belief_path_confined)
+    else:
+        snap = snapshot(work_base, "walked-portable", walk_belief_path_portable)
+    snap.restore()
     if not confined:
         monkeypatch.setattr(run_module, "POLICY", MINIMAL_POLICY)
         monkeypatch.setattr(run_module, "host_prerequisites", lambda: None)
-    cfg = build_fixture_world_with_contract(certified_work)
-    code, entrypoint, targets = fixture_bundle(certified_work, "supported")
-    data = certified_work / "data.txt"
-    data.write_bytes(b"x\n")
-    names = ("claim", "dataset", "spec", "run", "assess", "verify", "belief", "next")
-    rig = open_rig(cfg, names)
-    d, ctx = rig.__enter__()
-
-    def ref(text, prefix):
-        return next(t for t in text.split() if t.startswith(prefix))
-    prop = ref(d.invoke("claim", {"subject": "concept:disease-stage", "predicate": "affects",
-                                  "object": "protein:PHF19", "layer": "causal", "polarity": "positive"}).text,
-               "proposition:")
-    dataset = ref(d.invoke("dataset", {"path": str(data), "title": "expression",
-                                       "locator": "accession:GSE-FIXTURE"}).text, "dataset:")
-    spec = ref(d.invoke("spec", dict(SPEC_FIELDS, target=prop, dataset=dataset)).text, "analysis-spec:")
-    run = ref(d.invoke("run", {"spec": spec, "dataset": dataset, "code": str(code),
-                               "entrypoint": entrypoint, "targets": list(targets)}).text, "run:")
-    assessment = ref(d.invoke("assess", {"run": run}).text, "assessment:")
-    d.invoke("verify", {"assessment": assessment, "code": str(code), "entrypoint": entrypoint})
-    return rig, d, ctx, prop, cfg
+    cfg, prop = snap.value
+    return cfg, prop
 
 
 @pytest.fixture
-def walked_portable(certified_work, monkeypatch):
-    rig, d, ctx, prop, cfg = walk(certified_work, monkeypatch, confined=False)
-    try:
+def walked_portable(certified_worker_work, monkeypatch):
+    cfg, prop = _walked(certified_worker_work, monkeypatch, confined=False)
+    with open_rig(cfg, BELIEF_PATH_COMMANDS) as (d, ctx):
         yield d, ctx, prop, cfg
-    finally:
-        rig.__exit__(None, None, None)
 
 
 @pytest.fixture
-def walked_confined(certified_work, monkeypatch):
+def walked_confined(certified_worker_work, monkeypatch):
     if not CONFINED:
         pytest.skip(f"confinement unavailable: {host_prerequisites()}")
-    rig, d, ctx, prop, cfg = walk(certified_work, monkeypatch, confined=True)
-    try:
+    cfg, prop = _walked(certified_worker_work, monkeypatch, confined=True)
+    with open_rig(cfg, BELIEF_PATH_COMMANDS) as (d, ctx):
         yield d, ctx, prop, cfg
-    finally:
-        rig.__exit__(None, None, None)
 
 
 def _answer(ctx, prop):

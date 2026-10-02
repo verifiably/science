@@ -1,6 +1,9 @@
+import json
 import secrets
 from contextlib import contextmanager
 from pathlib import Path
+
+import pytest
 
 from beliefs import stored
 from beliefs.consulted import CorpusPins
@@ -544,6 +547,48 @@ def add_archived_assessment(cfg: ScienceConfig, work: Path) -> None:
         d.invoke("assess", {"run": run})
 
 
+def build_two_corpus_walked_world(work: Path) -> ScienceConfig:
+    """`build_two_corpus_world` with the archive's assessment, and in the write
+    root proposition:claimed walked run → assess → verify and proposition:queued
+    with a spec only; two projects and a published epoch. Every session it
+    opens is closed."""
+    import science.commands.run as run_module
+    from beliefs.confinement import host_prerequisites
+    from beliefs.recipe import MINIMAL_POLICY
+    from science.world_belief import publish_session_epoch
+    claim = {"subject": "concept:disease-stage", "predicate": "affects", "object": "protein:PHF19",
+             "layer": "causal", "polarity": "positive", "slug": "claimed"}
+    queued = dict(claim, object="protein:EZH2", slug="queued")
+
+    def query(clause):
+        return json.dumps({"version": "science.view-query.v1", "clauses": [{"all": [clause]}]})
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        if host_prerequisites() is not None:
+            monkeypatch.setattr(run_module, "POLICY", MINIMAL_POLICY)
+        cfg = build_two_corpus_world(work)
+        add_archived_assessment(cfg, work)
+        data = hold_fixture_dataset(cfg, "data.txt", b"y\n", "expression", **OBSERVED)
+        bundle = fixture_bundle(work)
+        with open_rig(cfg, ("claim", "spec")) as (d, _):
+            d.invoke("claim", claim)
+            d.invoke("claim", queued)
+            spec = _minted_ref(d.invoke("spec", dict(SPEC_FIELDS, target="proposition:claimed", dataset=data)).text,
+                               "analysis-spec")
+            d.invoke("spec", dict(SPEC_FIELDS, target="proposition:queued", dataset=data))
+        run = mint_fixture_run(cfg, spec, data, bundle)
+        code, entrypoint, _ = bundle
+        with open_rig(cfg, ("assess", "verify")) as (d, _):
+            assessment = _minted_ref(d.invoke("assess", {"run": run}).text, "assessment")
+            d.invoke("verify", {"assessment": assessment, "code": str(code), "entrypoint": entrypoint})
+        with open_rig(cfg, ("project",)) as (d, _):
+            d.invoke("project", {"name": "all three", "query": query({"addresses": [
+                "proposition:archived", "proposition:claimed", "proposition:queued"]})})
+            d.invoke("project", {"name": "all", "query": query({"kinds": ["proposition"]})})
+        publish_session_epoch(cfg)
+    return cfg
+
+
 def write_two_corpus_config(cfg: ScienceConfig) -> Path:
     """The launcher TOML for `build_two_corpus_world`: both roots, the write
     root, `testing` activated and `archive` available to the read mount only."""
@@ -665,3 +710,76 @@ def add_mounted_evidence(cfg: ScienceConfig, work: Path) -> dict[str, str]:
     with open_rig(mounted, ("assess",)) as (d, _):
         assessment = _minted_ref(d.invoke("assess", {"run": run}).text, "assessment")
     return {"data": data, "spec": spec, "run": run, "assessment": assessment}
+
+
+def build_shared_world_with_evidence(work: Path) -> tuple[ScienceConfig, dict[str, str]]:
+    """`build_shared_contract_world` with `add_mounted_evidence`: the shape the
+    mount-citation and epoch tests start from. Every session it opens is closed."""
+    cfg = build_shared_contract_world(work)
+    return cfg, add_mounted_evidence(cfg, work)
+
+
+BELIEF_PATH_COMMANDS = ("claim", "dataset", "spec", "run", "assess", "verify", "belief", "next")
+
+
+def walk_belief_path(work: Path, *, confined: bool) -> tuple[ScienceConfig, str]:
+    """claim -> dataset -> spec -> run -> assess -> verify through one dispatcher,
+    the dispatcher closed at the end. Unconfined, the run command is patched to
+    the minimal policy for the walk only."""
+    import science.commands.run as run_module
+    from beliefs.recipe import MINIMAL_POLICY
+
+    def ref(text, prefix):
+        return next(t for t in text.split() if t.startswith(prefix))
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        if not confined:
+            monkeypatch.setattr(run_module, "POLICY", MINIMAL_POLICY)
+            monkeypatch.setattr(run_module, "host_prerequisites", lambda: None)
+        cfg = build_fixture_world_with_contract(work)
+        code, entrypoint, targets = fixture_bundle(work, "supported")
+        data = work / "data.txt"
+        data.write_bytes(b"x\n")
+        with open_rig(cfg, BELIEF_PATH_COMMANDS) as (d, _):
+            prop = ref(d.invoke("claim", {"subject": "concept:disease-stage", "predicate": "affects",
+                                          "object": "protein:PHF19", "layer": "causal",
+                                          "polarity": "positive"}).text, "proposition:")
+            dataset = ref(d.invoke("dataset", {"path": str(data), "title": "expression",
+                                               "locator": "accession:GSE-FIXTURE"}).text, "dataset:")
+            spec = ref(d.invoke("spec", dict(SPEC_FIELDS, target=prop, dataset=dataset)).text, "analysis-spec:")
+            run = ref(d.invoke("run", {"spec": spec, "dataset": dataset, "code": str(code),
+                                       "entrypoint": entrypoint, "targets": list(targets)}).text, "run:")
+            assessment = ref(d.invoke("assess", {"run": run}).text, "assessment:")
+            d.invoke("verify", {"assessment": assessment, "code": str(code), "entrypoint": entrypoint})
+    return cfg, prop
+
+
+def build_spec_rig_world(work: Path) -> tuple[ScienceConfig, str]:
+    """`build_belief_world` holding one expression dataset: the spec command's
+    starting point."""
+    cfg = build_belief_world(work)
+    return cfg, hold_fixture_dataset(cfg, "data.txt", b"x\n", "expression")
+
+
+def build_verify_rig_world(work: Path) -> tuple[ScienceConfig, str, tuple[Path, str, tuple[str, ...]]]:
+    """`build_belief_world` with one observed dataset, a spec, a minimal-policy
+    run and its assessment: verify's starting point. The bundle lives under
+    `work`, so a test that rewrites it is undone by the next restore."""
+    cfg = build_belief_world(work)
+    ref = hold_fixture_dataset(cfg, "data.txt", b"x\n", "expression", **OBSERVED)
+    bundle = fixture_bundle(work, "supported")
+    with open_rig(cfg, ("spec", "assess")) as (d, _):
+        spec_ref = _minted_ref(d.invoke("spec", dict(SPEC_FIELDS, target="proposition:p1", dataset=ref)).text,
+                               "analysis-spec")
+        run_ref = mint_fixture_run(cfg, spec_ref, ref, bundle)
+        assessment_ref = _minted_ref(d.invoke("assess", {"run": run_ref}).text, "assessment")
+    return cfg, assessment_ref, bundle
+
+
+def walk_belief_path_portable(work: Path) -> tuple[ScienceConfig, str]:
+    """`walk_belief_path` unconfined, as a snapshot builder."""
+    return walk_belief_path(work, confined=False)
+
+
+def walk_belief_path_confined(work: Path) -> tuple[ScienceConfig, str]:
+    """`walk_belief_path` confined, as a snapshot builder."""
+    return walk_belief_path(work, confined=True)

@@ -3,14 +3,16 @@ from decimal import Decimal
 import pytest
 
 from science.refusal import Refused
+from helpers.snapshot import snapshot
 from helpers.world import (SPEC_FIELDS as FIELDS, build_belief_world, build_fixture_world_with_contract,
-                           hold_fixture_dataset, level_list_address, open_rig)
+                           build_spec_rig_world, hold_fixture_dataset, level_list_address, open_rig)
 
 
 @pytest.fixture
-def rig(certified_work):
-    cfg = build_belief_world(certified_work)
-    ref = hold_fixture_dataset(cfg, "data.txt", b"x\n", "expression")
+def rig(certified_worker_work):
+    snap = snapshot(certified_worker_work, "spec-rig", build_spec_rig_world)
+    snap.restore()
+    cfg, ref = snap.value
     with open_rig(cfg, ("spec",)) as (d, ctx):
         yield d, ctx, ref
 

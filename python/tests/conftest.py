@@ -35,11 +35,10 @@ def certified_work():
         yield work
 
 
-@pytest.fixture(scope="module")
-def certified_module_work():
-    """One certified directory shared by a module's read-only tests; a test
-    that writes takes `certified_work`. Under worksteal each worker that runs
-    one of the module's tests builds its own."""
+@pytest.fixture(scope="session")
+def certified_worker_work():
+    """One certified directory per worker process, holding the worlds
+    `helpers.snapshot` builds once and restores per test."""
     with _certified_dir() as work:
         yield work
 

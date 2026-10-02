@@ -7,9 +7,9 @@ import pytest
 
 from beliefs.profile import compile_profile, shipped_base_contract, shipped_coordination, shipped_domain_contract
 from beliefs.world import WorldConfig
+from helpers.snapshot import snapshot
 from helpers.world import (
-    COORDINATION, DOMAINS, OBSERVED, SPEC_FIELDS, FIXTURE_AUTHORITY, add_archived_assessment,
-    _minted_ref, build_two_corpus_world, fixture_bundle, hold_fixture_dataset, mint_fixture_run,
+    COORDINATION, DOMAINS, FIXTURE_AUTHORITY, build_two_corpus_walked_world, build_two_corpus_world,
     open_rig, write_two_corpus_config,
 )
 from science.commands.next import handle
@@ -19,9 +19,6 @@ from science.session import open_session
 
 NAMES = ("claim", "spec", "project", "project-select", "next", "belief")
 VERSION = "science.view-query.v1"
-CLAIM = {"subject": "concept:disease-stage", "predicate": "affects", "object": "protein:PHF19",
-         "layer": "causal", "polarity": "positive", "slug": "claimed"}
-QUEUED = dict(CLAIM, object="protein:EZH2", slug="queued")
 
 
 def _query(clause):
@@ -33,39 +30,19 @@ def _rows(text):
 
 
 @pytest.fixture
-def world(certified_work, monkeypatch):
-    """The archive's proposition assessed. In the write root, alongside the
-    mounted archive: proposition:claimed walked run → assess → verify, and
-    proposition:queued with a spec only (review round 2: the acceptance check
-    runs the whole write path with a read mount present). Both working specs
-    observe a dataset the write root holds."""
-    import science.commands.run as run_module
-    from beliefs.confinement import host_prerequisites
-    from beliefs.recipe import MINIMAL_POLICY
-    if host_prerequisites() is not None:
-        monkeypatch.setattr(run_module, "POLICY", MINIMAL_POLICY)
-    cfg = build_two_corpus_world(certified_work)
-    add_archived_assessment(cfg, certified_work)
-    data = hold_fixture_dataset(cfg, "data.txt", b"y\n", "expression", **OBSERVED)
-    bundle = fixture_bundle(certified_work)
-    with open_rig(cfg, ("claim", "spec")) as (d, _):
-        d.invoke("claim", CLAIM)
-        d.invoke("claim", QUEUED)
-        spec = _minted_ref(d.invoke("spec", dict(SPEC_FIELDS, target="proposition:claimed", dataset=data)).text,
-                           "analysis-spec")
-        d.invoke("spec", dict(SPEC_FIELDS, target="proposition:queued", dataset=data))
-    run = mint_fixture_run(cfg, spec, data, bundle)
-    code, entrypoint, _ = bundle
-    with open_rig(cfg, ("assess", "verify")) as (d, _):
-        assessment = _minted_ref(d.invoke("assess", {"run": run}).text, "assessment")
-        d.invoke("verify", {"assessment": assessment, "code": str(code), "entrypoint": entrypoint})
-    with open_rig(cfg, ("project",)) as (d, _):
-        d.invoke("project", {"name": "all three", "query": _query({"addresses": [
-            "proposition:archived", "proposition:claimed", "proposition:queued"]})})
-        d.invoke("project", {"name": "all", "query": _query({"kinds": ["proposition"]})})
-    from science.world_belief import publish_session_epoch
-    publish_session_epoch(cfg)
-    return cfg
+def world(certified_worker_work):
+    """The walked two-corpus world (`build_two_corpus_walked_world`), restored."""
+    snap = snapshot(certified_worker_work, "two-corpus-walked", build_two_corpus_walked_world)
+    snap.restore()
+    return snap.value
+
+
+@pytest.fixture
+def two_corpora(certified_worker_work):
+    """`build_two_corpus_world` alone, for refusals that read nothing the walk mints."""
+    snap = snapshot(certified_worker_work, "two-corpus", build_two_corpus_world)
+    snap.restore()
+    return snap.value
 
 
 def test_next_under_a_project_selecting_both_classifies_each_from_its_own_corpus(world):
@@ -92,14 +69,17 @@ def test_the_unselected_session_reads_both_corpora_as_a_project_of_every_kind_do
 
 
 def test_belief_answers_for_each_corpus_proposition_whatever_is_selected(world):
-    """The archive's under its own profile; the write root's over its verified
-    assessment, with the archive mounted beside it."""
+    """The archive's under its own profile; the write root's with the archive
+    mounted beside it. Both runs are minted under `MINIMAL_POLICY`, so neither
+    assessment is eligible: the archive's is unverified and the write root's
+    verification replays a minimal-policy run; each answer is read under its
+    own corpus's profile."""
     from science.commands.belief import handle as belief
     ctx = ReadContext.open(world)
     for proposition in ("proposition:archived", "proposition:claimed"):
         report = belief(ctx, proposition=proposition)
         assert report[0].text == f"Belief: {proposition}"
-        assert dict(report[1].pairs)["kind"] in ("Belief", "NoBelief")
+        assert dict(report[1].pairs) == {"kind": "NoBelief", "reason": "no-eligible-assessment", "detail": ""}
 
 
 def test_the_walked_write_path_minted_every_record_in_the_write_root(world):
@@ -116,7 +96,8 @@ def test_a_sessionless_cli_read_mounts_both_corpora_each_under_its_own_profile(w
     assert "proposition:archived: assessed-not-admitted" in out and "proposition:queued: ready" in out
 
 
-def test_activating_read_contracts_in_the_writer_is_refused_by_the_write_root_pins(world):
+def test_activating_read_contracts_in_the_writer_is_refused_by_the_write_root_pins(two_corpora):
+    world = two_corpora
     from science.contracts import load_contract_document
     base = shipped_base_contract()
     loaded = [load_contract_document(world.world.world_root.parent / name, base)[0]
@@ -135,10 +116,11 @@ def test_activating_read_contracts_in_the_writer_is_refused_by_the_write_root_pi
     assert sessionless.value.refusal.message == caught.value.refusal.message
 
 
-def test_a_selected_record_no_configured_corpus_holds_refuses_naming_it(world):
+def test_a_selected_record_no_configured_corpus_holds_refuses_naming_it(two_corpora):
     """The world admits the archive; a configuration mounting only the write
     root cannot read the row, and says so: the kernel's unknown address is the
     configuration's refusal, naming the address and `corpus_roots`."""
+    world = two_corpora
     with open_rig(world, ("project",)) as (d, _):
         d.invoke("project", {"name": "archived", "query": _query({"addresses": ["proposition:archived"]})})
     narrowed = dataclasses.replace(world, world=WorldConfig(
@@ -182,9 +164,10 @@ def test_one_id_in_two_corpora_refuses_naming_both_in_belief_and_unselected_next
         assert all(corpus_id in caught.value.refusal.message for corpus_id in ids)
 
 
-def test_one_id_in_two_corpora_refuses_selected_next_as_the_kernel_duplicate_location(world):
+def test_one_id_in_two_corpora_refuses_selected_next_as_the_kernel_duplicate_location(two_corpora):
     """Review round 1, P2: the live capture refuses the duplicate before the
     project's query applies, whatever the project selects."""
+    world = two_corpora
     _twice(world)
     with open_rig(world, NAMES) as (d, _):
         d.invoke("project", {"name": "claimed", "query": _query({"addresses": ["proposition:claimed"]})})
@@ -195,9 +178,10 @@ def test_one_id_in_two_corpora_refuses_selected_next_as_the_kernel_duplicate_loc
     assert caught.value.refusal.data["kind"] == "AddressMapConflict"
 
 
-def test_a_read_mount_without_a_manifest_refuses_at_the_read_entry_points(world):
+def test_a_read_mount_without_a_manifest_refuses_at_the_read_entry_points(two_corpora):
     """Review round 1, P2: sessionless `belief` and unselected `next` name the
     root, never an internal error."""
+    world = two_corpora
     from science.commands.belief import handle as belief
     empty = world.world.world_root.parent / "empty"
     empty.mkdir()
