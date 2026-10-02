@@ -35,6 +35,11 @@ def handle(ctx, writer, *, assessment, code, entrypoint, cores=None) -> Report:
     # The session's corpora, as every citation reads (consumer spec decision 1).
     found = dataset_at(tuple((mount.corpus_id, mount.view) for mount in ctx.session_mounts()), role.dataset)
     if found is None:
+        # A configured corpus outside the session may declare it: `cited`
+        # refuses naming that corpus and why the session does not mount it.
+        elsewhere = ctx.dataset_at(role.dataset)
+        if elsewhere is not None:
+            ctx.cited(elsewhere[1].id)
         _refuse(f"the spec's dataset {role.dataset} is not in the session's corpora")
     dataset_ref = found[1].id
     prepared = prepare(ctx, spec_ref, dataset_ref, code, entrypoint, original.recipe.invocation.targets)
