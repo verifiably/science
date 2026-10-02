@@ -1,15 +1,16 @@
 ---
 id: sci-dc0381
 title: "Consume beliefs mount citations: write commands name mount records, belief over a world read"
-status: doing
+status: done
 priority: 1
 size: m
 complexity: mid
 process: planned
 owner: feat/dc0381-mount-citations
 created: 2026-10-01T11:07:18Z
-updated: 2026-10-01T23:07:39Z
+updated: 2026-10-02T02:41:44Z
 started: 2026-10-01T21:17:59Z
+completed: 2026-10-02T02:41:41Z
 depends: [beliefs-9ce6e4]
 tags: [commons, projects]
 source: beliefs-9ce6e4
@@ -45,4 +46,11 @@ beliefs mount-citations spec (beliefs docs/superpowers/specs/2026-10-01-mount-ci
 - 2026-10-01T23:07:32Z (feat/dc0381-mount-citations): review: plan round 2 — verdict: accept; findings: none; reviewer: human
 - 2026-10-01T23:07:32Z (feat/dc0381-mount-citations): execution: subagent-driven, controller claude-code/claude-opus-5-5 pid 3790747
 - 2026-10-01T23:07:39Z (feat/dc0381-mount-citations): resumed
+  provenance: {"harness_session":"claude-code:6051398c-8f0e-4511-a835-e90a0c6e83e9","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-02T02:41:41Z (feat/dc0381-mount-citations): review: impl round 1 — verdict: revise; findings: Important 5, Minor 8; reviewer: claude-code/claude-opus-5-5 (subagent, whole-branch)
+- 2026-10-02T02:41:41Z (feat/dc0381-mount-citations): review: impl round 2 — verdict: accept; findings: none; reviewer: claude-code/claude-sonnet-5-5 (subagent, scoped re-review of 8af7908..c5d4796)
+- 2026-10-02T02:41:41Z (feat/dc0381-mount-citations): execution rulings: (1) epoch drift = corpus state moved (published_state != captured_state); unmapped non-world kinds (project) at an unchanged state are not drift — epoch maps only WORLD_KINDS, so strict unmapped-drift made any project-holding session permanently stale; (2) ResolutionRefused opening the world view is kernel-refused; science epoch rebuilds over it; (3) tools/cli.toml carries a local epoch row — ops cli.toml (vendoring authority) needs the same row before the next vendor-cli; (4) plan finished through halt sci-5937be with recorded --force overrides; its first step is measuring this branch's test-fast delta (~+50 s estimated); (5) deferred: catching every ScienceError (CaptureDrift, EpochMalformed, ContractMismatch) around view/build as kernel-refused
+- 2026-10-02T02:41:41Z (feat/dc0381-mount-citations): done
+  provenance: {"harness_session":"claude-code:6051398c-8f0e-4511-a835-e90a0c6e83e9","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-02T02:41:41Z (feat/dc0381-mount-citations): write commands cite read mounts; belief and next read a mounted session at the current epoch via science epoch; publishes reaches the permit; specs amended (7 tasks + final-review fix wave, review accepted)
   provenance: {"harness_session":"claude-code:6051398c-8f0e-4511-a835-e90a0c6e83e9","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
