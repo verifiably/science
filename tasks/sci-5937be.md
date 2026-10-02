@@ -6,13 +6,14 @@ priority: 0
 size: m
 complexity: high
 process: planned
-owner: main
+owner: test-latency
 created: 2026-10-02T01:00:04Z
-updated: 2026-10-02T08:36:38Z
+updated: 2026-10-02T09:06:09Z
 started: 2026-10-02T07:52:47Z
 depends: []
 tags: [halt, test-latency, testing]
 source: "tt-latency:titan:2026-10-02T01:00:03Z"
+spec: docs/specs/2026-10-02-world-fixture-snapshots-design.md
 ---
 
 Filed by tt-latency on titan: the median of successful, uncontended runs over the trailing window is over the limit in latency.toml (ops). The sci project is halted while this task is open: tasks start refuses new lower-priority work there. Each pair in a `breach:` note below is an obligation on the host it names. Fix the suite, then run `tt-latency verify <this id> --after <remedy timestamp>` on each host named; the task closes when verify exits 0, and the tasks done message carries its output.
@@ -32,3 +33,6 @@ Process: planned
 - 2026-10-02T08:36:29Z (main): cProfile of build_shared_contract_world+add_mounted_evidence (11.0 s): atoms bind_project_volume runs certify_sqlite_wal on every bind (50 binds, 100 child processes, 2.7 s, uncached); 414 yaml.load calls 1.1 s; mint_fixture_run 4.9 s incl capture_environment 1.2 s. Remedy candidates: (a) atoms caches WAL certification per volume per process, (b) cache parsed contracts, (c) test fixtures build once per module and copy per test
 - 2026-10-02T08:36:38Z (main): parked (waiting on user, decision): user picks remedy scope (recommended: science-side fixture snapshots + atoms task for cached WAL certification); then agent creates .worktrees/test-latency and drafts the spec
   provenance: {"harness_session":"claude-code:fdd0a33b-81b7-41f1-82a2-bf45de0a4198","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-02T08:58:54Z (test-latency): resumed
+  provenance: {"harness_session":"claude-code:fdd0a33b-81b7-41f1-82a2-bf45de0a4198","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-02T08:59:04Z (test-latency): filed atoms-257797 (cache WAL certification per volume); science-side remedy is fixture snapshots, per user 2026-10-02

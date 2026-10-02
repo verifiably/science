@@ -7,7 +7,7 @@ size: s
 complexity: low
 process: direct
 created: 2026-09-30T21:43:20Z
-updated: 2026-09-30T22:07:29Z
+updated: 2026-10-02T09:06:09Z
 depends: []
 tags: [projects]
 agent: claude-code/claude-opus-5-5
@@ -19,3 +19,4 @@ tests/test_two_corpora.py rebuilds a function-scoped fixture (claim → spec →
 
 - 2026-09-30T21:43:20Z (coordination-part3): concerns: sci-923d3a extension — the two-corpus check's fixture costs ~185s per run
 - 2026-09-30T22:07:29Z (main): Also: test_belief_answers_for_each_corpus_proposition_whatever_is_selected accepts Belief or NoBelief; pin each proposition's actual kind and reason while reworking the fixture.
+- 2026-10-02T09:06:09Z (test-latency): absorbed by sci-5937be (world fixture snapshots spec); closes with the test_two_corpora conversion
