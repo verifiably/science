@@ -68,6 +68,40 @@ def test_the_unselected_session_reads_both_corpora_as_a_project_of_every_kind_do
     assert unselected == selected and "proposition:archived" in unselected
 
 
+def test_next_opens_each_root_once_and_reduces_observations_once_however_many_rows(world, monkeypatch):
+    """sci-d92797: a read command's context opens every configured root once
+    and reduces the holdings once, rather than per row and per spec."""
+    import science.config
+    import science.holdings
+    from beliefs.corpus import ReadView
+
+    opened, reduced = [], []
+
+    class Counting:
+        @staticmethod
+        def opened_at(root):
+            opened.append(root)
+            return ReadView.opened_at(root)
+
+    reduce = science.holdings.reduced_observations
+
+    def counting_reduce(views, world_):
+        reduced.append(len(views))
+        return reduce(views, world_)
+
+    with open_rig(world, NAMES) as (d, _):
+        for target in (None, "all three"):
+            if target is not None:
+                d.invoke("project-select", {"target": target})
+            opened.clear(), reduced.clear()
+            with monkeypatch.context() as patch:
+                patch.setattr(science.config, "ReadView", Counting)
+                patch.setattr(science.holdings, "reduced_observations", counting_reduce)
+                assert _rows(d.invoke("next", {}).text).count("\n") == 3
+            assert sorted(map(str, opened)) == sorted(map(str, world.world.corpus_roots))
+            assert reduced == [2]
+
+
 def test_belief_answers_for_each_corpus_proposition_whatever_is_selected(world):
     """The archive's under its own profile; the write root's with the archive
     mounted beside it. Both runs are minted under `MINIMAL_POLICY`, so neither
