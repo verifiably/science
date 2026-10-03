@@ -239,7 +239,7 @@ def require_write_root_pins(config: ScienceConfig) -> None:
 @dataclass(frozen=True)
 class Mount:
     """One configured root as a read sees it: its corpus id, a view opened at
-    the call, and the profile its records decode under."""
+    the context's first read, and the profile its records decode under."""
     corpus_id: str
     root: Path
     view: ReadView
@@ -307,26 +307,30 @@ class ReadContext:
         # builds a fresh context, so a command compiles once (kernel decision 9).
         return mount_profiles(self.config)
 
-    def mounts(self) -> tuple[Mount, ...]:
-        """One mount per configured root, ordered by corpus id then root, each
-        view opened now: a view indexes its corpus as of its opening. Profiles
-        first and manifests through `corpus_id_at`, so a root that cannot be
-        mounted refuses by name before any view opens."""
-        profiles = self._profiles
+    @cached_property
+    def _views(self) -> tuple[tuple[str, Path, ReadView], ...]:
+        # Every configured root opened once per context, ordered by corpus id
+        # then root, every manifest read before any view opens; a refusal is
+        # never cached, so it repeats at each read entry point. A view indexes
+        # its corpus as of its opening, and a read command reads the corpora as
+        # of its first read: the dispatcher's per-invocation `replace` builds a
+        # fresh context, so the cache never outlives an invocation.
         keyed = sorted((corpus_id_at(root), str(root), root) for root in self.config.world.corpus_roots)
-        return tuple(Mount(corpus_id, root, ReadView.opened_at(root), profiles[root])
-                     for corpus_id, _, root in keyed)
+        return tuple((corpus_id, root, ReadView.opened_at(root)) for corpus_id, _, root in keyed)
+
+    def mounts(self) -> tuple[Mount, ...]:
+        """One mount per configured root, ordered by corpus id then root, over
+        the context's views. Profiles first, so a root that cannot be mounted
+        refuses by name before any view opens."""
+        profiles = self._profiles
+        return tuple(Mount(corpus_id, root, view, profiles[root]) for corpus_id, root, view in self._views)
 
     def read_views(self) -> tuple[tuple[str, ReadView], ...]:
         """One view per configured root, ordered by corpus id then root. Two
         roots carrying the same corpus id both appear: that state is the
         registry's `duplicate-carrier` finding, which `status` reports, and a
         read context that refused or deduplicated would hide it."""
-        keyed = []
-        for root in self.config.world.corpus_roots:
-            keyed.append((corpus_id_at(root), str(root), ReadView.opened_at(root)))
-        keyed.sort(key=lambda entry: entry[:2])
-        return tuple((corpus_id, view) for corpus_id, _, view in keyed)
+        return tuple((corpus_id, view) for corpus_id, _, view in self._views)
 
     def load_record(self, uid: str, record_id: str):
         for _, read_view in self.read_views():
@@ -337,8 +341,9 @@ class ReadContext:
         raise Refused(Refusal("unknown-cursor", f"record {record_id!r} not found"))
 
     def write_view(self) -> ReadView:
-        """The write root's view, opened now: what a write command reads the
-        records it is given in (spec §5.5, part 3)."""
+        """The write root's view, opened now, never the context's cached one:
+        what a write command reads the records it is given in, after its own
+        writes (spec §5.5, part 3)."""
         return ReadView.opened_at(self.config.write_root)
 
     def dataset_at(self, address: str):
@@ -353,9 +358,14 @@ class ReadContext:
                         self.config.store_root, self.store_id(),
                         self.observations() if observations is None else observations)
 
-    def observations(self):
+    @cached_property
+    def _observations(self):
         from science.holdings import found_observations
         return found_observations(self.read_views(), self.world)
+
+    def observations(self):
+        """The holdings reduced once per context, over the context's views."""
+        return self._observations
 
     def store_id(self) -> str:
         """The configured store's verified identity, read from its genesis by

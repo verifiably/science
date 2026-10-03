@@ -385,12 +385,13 @@ class Dispatcher:
         ).text
 
     def _minted_report(self, pairs) -> Report:
-        """The canonical write report: record blocks rebuilt from ledger pairs."""
+        """The canonical write report: record blocks rebuilt from ledger pairs,
+        read through a context built after the write, since a context's views
+        index the corpora as of its first read."""
         from science.report import record_block
 
-        return tuple(
-            record_block(self._ctx.load_record(uid, record_id)) for uid, record_id in pairs
-        )
+        ctx = self._context()
+        return tuple(record_block(ctx.load_record(uid, record_id)) for uid, record_id in pairs)
 
     def _replay_outcome(
         self, decl: Declaration, outcome: Mapping[str, object], iid: str, position: tuple[int, int]

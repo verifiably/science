@@ -33,6 +33,15 @@ def test_write_returns_only_its_record(rig):
     assert "proposition:hello" in out.text and "audit echo" not in out.text
 
 
+def test_each_write_report_reads_the_corpus_after_its_own_write(rig):
+    """A context's views index the corpora as of its first read, so a report
+    read through the dispatcher's long-lived context would miss every record
+    minted after the first write's."""
+    d, _ = rig
+    for slug in ("first", "second"):
+        assert f"proposition:{slug}" in d.invoke("mint-claim", {"slug": slug}).text
+
+
 def test_act_time_refusal_when_body_exceeds_declaration(rig):
     d, _ = rig
     with pytest.raises(Refused) as e:
