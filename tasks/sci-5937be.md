@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: main
 created: 2026-10-02T01:00:04Z
-updated: 2026-10-02T20:38:19Z
+updated: 2026-10-03T10:36:05Z
 started: 2026-10-02T07:52:47Z
 depends: []
 tags: [halt, test-latency, testing]
@@ -75,3 +75,4 @@ Process: planned
 - 2026-10-02T20:26:14Z (main): halt override: attempted sci-97727a by 54e3b78d-e88d-4e32-8d7d-a54e5a20e916: the halt's named follow-up (spec §2.6); its test-fast runs are the post-remedy evidence tt-latency verify needs
 - 2026-10-02T20:34:26Z (transports-floor): halt override: attempted sci-181ac0 by 54e3b78d-e88d-4e32-8d7d-a54e5a20e916: fails the suite on main since beliefs shipped coordination v3; blocks a green merge of the halt's follow-up
 - 2026-10-02T20:38:19Z (main): follow-up sci-97727a merged as 776eb75 (longest item 44.5 s -> 20.2 s); stale test_config case fixed (sci-181ac0); test-fast on main at load 16-17: 692 passed in 202 s; verify: 1 of 3 runs, median 203.1 s, outstanding. That run was contended and full (testmon reselected all after beliefs moved), so it is not evidence of the remedy.
+- 2026-10-03T10:36:05Z (main): halt override: attempted sci-d92797 by d241d684-82ac-4795-95e3-23fba574c29f: its test-fast runs are the post-remedy evidence tt-latency verify for the halt needs; unblocks sci-0d00d2
