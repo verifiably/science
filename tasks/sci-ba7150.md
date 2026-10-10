@@ -6,7 +6,7 @@ priority: 2
 process: planned
 owner: quarry-design
 created: 2026-10-10T16:34:30Z
-updated: 2026-10-10T18:14:08Z
+updated: 2026-10-10T18:14:13Z
 started: 2026-10-10T17:12:51Z
 depends: []
 tags: []
@@ -43,3 +43,5 @@ Agents currently work out each bio resource themselves (GEO E-utilities, ENA por
   provenance: {"harness_session":"claude-code:812ecacd-3a65-4c38-8af4-57938f12afc5","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-10T18:14:07Z (quarry-design): review: spec round 1 — verdict: revise; findings: P1 6, P2 8, P3 3; reviewer: claude-code subagent (general-purpose; model not verified)
 - 2026-10-10T18:14:07Z (quarry-design): Round 1 disposition: all 17 folded. Largest change, verified in beliefs (holdings/acquire.py, guide writes-operations §Acquiring data): quarry drops fetch; files --acquisition emits the kernel acquisition request; science acquire and the accession-namespace question are follow-ups filed when the plan lands.
+- 2026-10-10T18:14:13Z (quarry-design): parked (waiting on user, review): User reviews the spec at .worktrees/quarry-design/docs/specs/2026-10-10-quarry-domain-layers-design.md (or runs an external review round); then the agent folds findings, and on approval writes the implementation plan
+  provenance: {"harness_session":"claude-code:812ecacd-3a65-4c38-8af4-57938f12afc5","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
