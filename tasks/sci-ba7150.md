@@ -6,7 +6,7 @@ priority: 2
 process: planned
 owner: quarry-design
 created: 2026-10-10T16:34:30Z
-updated: 2026-10-10T19:32:32Z
+updated: 2026-10-10T19:32:33Z
 started: 2026-10-10T17:12:51Z
 depends: []
 tags: []
@@ -87,3 +87,5 @@ Agents currently work out each bio resource themselves (GEO E-utilities, ENA por
 - 2026-10-10T19:28:30Z (quarry-design): review: plan round 1 — verdict: revise; findings: P1 2, P2 8; reviewer: codex
 - 2026-10-10T19:28:43Z (quarry-design): correction: the 19:28:30Z 'review: plan round 1' note duplicates the reviewer's own 19:23:34Z note; there is one plan round 1.
 - 2026-10-10T19:32:32Z (quarry-design): Plan round 1 disposition: all 10 folded. P1: GET-only redirects rebuilt per hop, credentials kept on the original origin only (key header and key param dropped elsewhere); Task 2 runs ops-projects pull in the ops worktree before just check and commits the fragment, leaving only lore's just assemble behind the gate. P2: Registry.is_upstream separates Bioregistry from local prefixes; replay answers each recording once in order and keeps content-type/retry-after/location; Retry-After parses seconds and HTTP-dates and fails beyond the 60 s budget; ENA refuses * and double quotes in phrases, native coverage reports match native (spec §8.2 amended); Throttle shared process-wide, recorder reuses one client, tests use a virtual-clock replay client; ENA count/listing shapes validated into upstream_failed; global options hoisted from any position and output flags on groups; Task 1 seeds main with tasks/ and identity.toml only and builds the front door in the worktree.
+- 2026-10-10T19:32:33Z (quarry-design): parked (waiting on user, review): User reviews the revised plan (or runs plan review round 2) and picks an execution method; then the agent files the science acquire and roster-migration tasks and starts Task 1
+  provenance: {"harness_session":"claude-code:812ecacd-3a65-4c38-8af4-57938f12afc5","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
