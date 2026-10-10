@@ -6,7 +6,7 @@ priority: 2
 process: planned
 owner: quarry-design
 created: 2026-10-10T16:34:30Z
-updated: 2026-10-10T19:54:05Z
+updated: 2026-10-10T19:54:06Z
 started: 2026-10-10T17:12:51Z
 depends: []
 tags: []
@@ -99,3 +99,5 @@ Agents currently work out each bio resource themselves (GEO E-utilities, ENA por
 - 2026-10-10T19:53:10Z (quarry-design): resumed
   provenance: {"harness_session":"claude-code:812ecacd-3a65-4c38-8af4-57938f12afc5","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-10T19:54:05Z (quarry-design): Plan round 2 disposition: all 5 folded. P1: the recorder scrubs a key in every spelling (as is, percent- and form-encoded) and sets credential params in recorded Location URLs to REDACTED; a test echoes a key with + / = in body and Location. P2: same-origin hops re-set key_param; every redirect hop waits on the throttle and is traced redacted (tests for query-only auth and hop timing); with_local skips any prefix that is a Bioregistry prefix or synonym in any case, and check reports a local prefix that did not register (is_local); ENA validates every field _row reads (PRJ accession, text fields, numeric tax_id) into upstream_failed.
+- 2026-10-10T19:54:06Z (quarry-design): parked (waiting on user, review): User reviews the revised plan (or runs plan review round 3) and picks an execution method; then the agent files the science acquire and roster-migration tasks and starts Task 1
+  provenance: {"harness_session":"claude-code:812ecacd-3a65-4c38-8af4-57938f12afc5","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
