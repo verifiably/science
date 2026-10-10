@@ -6,7 +6,7 @@ priority: 2
 process: planned
 owner: quarry-design
 created: 2026-10-10T16:34:30Z
-updated: 2026-10-10T18:51:56Z
+updated: 2026-10-10T18:51:57Z
 started: 2026-10-10T17:12:51Z
 depends: []
 tags: []
@@ -57,3 +57,5 @@ Agents currently work out each bio resource themselves (GEO E-utilities, ENA por
 - 2026-10-10T18:51:55Z (quarry-design): resumed
   provenance: {"harness_session":"claude-code:812ecacd-3a65-4c38-8af4-57938f12afc5","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-10T18:51:55Z (quarry-design): Round 3 disposition: both folded. -n allowed with --native (applied through paging, complete: limited; --since/--until still refused there). Result rows gain a publication field (one parent paper CURIE) kept apart from xrefs; pitfall test on figshare:34254439's two DOIs.
+- 2026-10-10T18:51:56Z (quarry-design): parked (waiting on user, review): User reviews the revised spec (or runs review round 4); on approval the agent writes the implementation plan
+  provenance: {"harness_session":"claude-code:812ecacd-3a65-4c38-8af4-57938f12afc5","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
