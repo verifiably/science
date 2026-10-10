@@ -582,7 +582,7 @@ git branch -d quarry-cli
 
 **Interfaces:**
 - Produces: `quarry.errors.QuarryError(kind: str, detail: str)` with `.kind`, `.detail`.
-- Produces: `quarry.catalog`: constants `ROLES`, `DATA_ROLES`, `ROUTE_KINDS`, `AUTH`, `CATALOG_ROOT`; dataclasses `Route`, `Pitfall`, `LocalPrefix`, `Resource` (method `owned_prefixes() -> tuple[str, ...]`), `Domain`, `Finding` (method `as_dict()`), `Catalog` (methods `lineage(domain_id) -> list[str]`, `effective_resources(domain_id) -> list[str]`, `search_set(domain_id) -> list[str]`, `domain_filters(domain_id) -> set[str]`, `owner(prefix) -> Resource | None`); `CatalogError(QuarryError)`; `load(root: Path = CATALOG_ROOT) -> Catalog`; `adapter_modules() -> list[str]`; `check(catalog: Catalog, registry: PrefixLookup, modules: list[str] | None = None) -> list[Finding]`, where `PrefixLookup` is any object with `canonical(prefix: str) -> str | None` and `is_upstream(prefix: str) -> bool`.
+- Produces: `quarry.catalog`: constants `ROLES`, `DATA_ROLES`, `ROUTE_KINDS`, `AUTH`, `CATALOG_ROOT`; dataclasses `Route`, `Pitfall`, `LocalPrefix`, `Resource` (method `owned_prefixes() -> tuple[str, ...]`), `Domain`, `Finding` (method `as_dict()`), `Catalog` (methods `lineage(domain_id) -> list[str]`, `effective_resources(domain_id) -> list[str]`, `search_set(domain_id) -> list[str]`, `domain_filters(domain_id) -> set[str]`, `owner(prefix) -> Resource | None`); `CatalogError(QuarryError)`; `load(root: Path = CATALOG_ROOT) -> Catalog`; `adapter_modules() -> list[str]`; `check(catalog: Catalog, registry: PrefixLookup, modules: list[str] | None = None) -> list[Finding]`, where `PrefixLookup` is any object with `canonical(prefix: str) -> str | None` `is_upstream(prefix: str) -> bool` and `is_local(prefix: str) -> bool`.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -608,6 +608,9 @@ class Lookup:
 
     def is_upstream(self, prefix):
         return prefix in self.CANONICAL
+
+    def is_local(self, prefix):
+        return False
 
 
 ENA = """
@@ -831,6 +834,8 @@ class PrefixLookup(Protocol):
     def canonical(self, prefix: str) -> str | None: ...
 
     def is_upstream(self, prefix: str) -> bool: ...   # in Bioregistry itself, not a local prefix
+
+    def is_local(self, prefix: str) -> bool: ...      # registered from a resource's local_prefixes
 
 
 @dataclass(frozen=True)
@@ -1094,8 +1099,9 @@ def check(catalog: Catalog, registry: PrefixLookup, modules: list[str] | None = 
             if not registry.is_upstream(p) or registry.canonical(p) != p:
                 add("unknown_prefix", where, f"{p!r} is not a canonical Bioregistry prefix")
         for p in r.local_prefixes:
-            if registry.is_upstream(p):
-                add("local_prefix_in_bioregistry", where, f"{p!r} is in Bioregistry; list it under prefixes")
+            if not registry.is_local(p):
+                add("local_prefix_in_bioregistry", where,
+                    f"{p!r} is a Bioregistry prefix or synonym ({registry.canonical(p)}); list it under prefixes")
         for p in r.owned_prefixes():
             if p in owners:
                 add("prefix_owned_twice", where, f"{p!r} is already owned by {owners[p]}")
@@ -1190,7 +1196,7 @@ git commit -m "feat(catalog): load and check resources and domains"
 
 **Interfaces:**
 - Consumes: `quarry.catalog.Catalog`, `Resource.local_prefixes`, `CATALOG_ROOT`, `Finding`; `quarry.errors.QuarryError`.
-- Produces: `quarry.ids`: `REGISTRY_PATH`; `Scheme(prefix, name, pattern: re.Pattern | None, uri_format: str | None)`; `Curie(prefix: str, local: str)` with `__str__`; `Registry` with `load(path=REGISTRY_PATH) -> Registry` (classmethod), `with_local(catalog) -> Registry`, `canonical(prefix) -> str | None`, `is_upstream(prefix) -> bool`, `scheme(prefix) -> Scheme`, `version: str`; `parse(text, registry) -> Curie`; `check_ids(texts, registry) -> list[Finding]`; `normalize(text, registry, owned: Iterable[str]) -> Curie`; `resolve(curie, registry) -> list[str]`.
+- Produces: `quarry.ids`: `REGISTRY_PATH`; `Scheme(prefix, name, pattern: re.Pattern | None, uri_format: str | None)`; `Curie(prefix: str, local: str)` with `__str__`; `Registry` with `load(path=REGISTRY_PATH) -> Registry` (classmethod), `with_local(catalog) -> Registry`, `canonical(prefix) -> str | None`, `is_upstream(prefix) -> bool`, `is_local(prefix) -> bool`, `scheme(prefix) -> Scheme`, `version: str`; `parse(text, registry) -> Curie`; `check_ids(texts, registry) -> list[Finding]`; `normalize(text, registry, owned: Iterable[str]) -> Curie`; `resolve(curie, registry) -> list[str]`.
 
 - [ ] **Step 1: Write the vendoring script**
 
@@ -1341,6 +1347,17 @@ def test_local_prefixes_join_the_registry():
     assert catalog.check(cat, reg, modules=[]) == []
 
 
+@pytest.mark.parametrize("local", ["pmid", "PMID", "geo"])
+def test_a_local_prefix_never_shadows_bioregistry(local):
+    route = Route(kind="rest", url="https://x.example", min_interval=0.5, service="x", auth="none", reports_total=False)
+    shadow = Resource(id="shadow", name="shadow", roles=("repository",), adapter="quarry.adapters", routes=(route,),
+                      local_prefixes={local: LocalPrefix(r"^\d+$", "https://x.example/$1", "test")})
+    cat = Catalog({"shadow": shadow}, {})
+    reg = REG.with_local(cat)
+    assert str(ids.parse("PMID:123", reg)) == "pubmed:123"
+    assert [f.kind for f in catalog.check(cat, reg, modules=[])] == ["local_prefix_in_bioregistry"]
+
+
 def test_the_shipped_catalog_checks_clean_against_the_snapshot():
     cat = catalog.load()
     assert catalog.check(cat, REG.with_local(cat)) == []
@@ -1415,8 +1432,9 @@ class Registry:
         schemes, lookup, added = dict(self._schemes), dict(self._lookup), set()
         for resource in catalog.resources.values():
             for prefix, local in resource.local_prefixes.items():
-                if prefix in self._schemes:
-                    continue        # already upstream: check() reports it; never shadow Bioregistry
+                if prefix.lower() in self._lookup:
+                    continue        # a Bioregistry prefix or synonym, any case: check() reports it;
+                                    # a local prefix never shadows Bioregistry
                 schemes[prefix] = Scheme(prefix, resource.name, re.compile(local.pattern), local.uri_format)
                 lookup[prefix.lower()] = prefix
                 added.add(prefix)
@@ -1427,6 +1445,9 @@ class Registry:
 
     def is_upstream(self, prefix: str) -> bool:
         return prefix in self._schemes and prefix not in self._local
+
+    def is_local(self, prefix: str) -> bool:
+        return prefix in self._local
 
     def scheme(self, prefix: str) -> Scheme:
         return self._schemes[prefix]
@@ -2251,6 +2272,22 @@ def test_redirects_keep_credentials_on_their_origin_only():
     assert sentinel not in str(other.url) and "X-Api-Key" not in other.headers
 
 
+def test_same_origin_redirect_keeps_a_query_key_and_every_hop_is_throttled_and_traced():
+    sentinel, seen, lines, clock = "SENTINEL-7f3a", [], [], FakeClock()
+
+    def hop(request):
+        seen.append((clock.t, request))
+        if request.url.path.endswith("/start"):
+            return httpx.Response(302, headers={"Location": "/entrez/moved"})
+        return httpx.Response(200)
+    c = client(hop, clock, environ={"TEST_KEY": sentinel}, trace=lines.append)
+    c.request(keyed(key_param="api_key"), "GET", "start")
+    (t0, first), (t1, moved) = seen
+    assert moved.url.params["api_key"] == sentinel               # query-only auth survives the hop
+    assert t1 - t0 >= 0.1 - 1e-9                                 # the hop waited on the throttle
+    assert len(lines) == 2 and all(sentinel not in line for line in lines)
+
+
 def test_a_redirected_post_fails():
     with pytest.raises(UpstreamError, match="redirected"):
         client(lambda r: httpx.Response(307, headers={"Location": "https://eutils.example/y"})).request(
@@ -2270,6 +2307,22 @@ def test_the_credential_never_leaks():
     recorded = json.dumps(recorder.exchanges)
     assert sentinel not in "\n".join(lines) and sentinel not in caught.value.detail and sentinel not in recorded
     assert "REDACTED" in "\n".join(lines)
+
+
+def test_encoded_echoes_of_the_key_are_redacted_in_fixtures():
+    sentinel = "k+ey/with=odd"
+
+    def echo(request):
+        encoded = httpx.QueryParams({"api_key": sentinel})
+        return httpx.Response(302 if request.url.path.endswith("go") else 200,
+                              headers={"Location": f"https://eutils.example/entrez/back?{encoded}"},
+                              text=f"seen {encoded} and {sentinel}")
+    recorder = RecordingTransport(frozenset({"api_key"}), [sentinel], inner=mock(echo))
+    c = Client(transport=recorder, throttle=Throttle(FakeClock()), environ={"TEST_KEY": sentinel})
+    c.request(keyed(key_param="api_key"), "GET", "go")
+    recorded = json.dumps(recorder.exchanges)
+    for spelling in (sentinel, "k%2Bey%2Fwith%3Dodd", "k%2Bey/with%3Dodd"):
+        assert spelling not in recorded, spelling
 
 
 def test_replay_answers_in_recorded_order_with_headers():
@@ -2414,20 +2467,26 @@ class Client:
         if self._trace is not None:
             self._trace(line)
 
-    def _send(self, route: Route, request: httpx.Request, shown: str, credentials: dict[str, str]) -> httpx.Response:
-        """Send, following GET redirects. Each hop is a fresh request: it carries the credential
-        headers only on the original origin, and a hop elsewhere loses the key parameter too."""
+    def _send(self, route: Route, request: httpx.Request, shown: str, key: str | None, interval: float,
+              credentials: dict[str, str]) -> httpx.Response:
+        """Send, following GET redirects. Every hop waits on the throttle and is traced, redacted.
+        Each hop is a fresh request: on the original origin it carries the credential header and
+        the key parameter again; a hop elsewhere carries neither."""
         origin = _origin(request.url)
-        for _ in range(MAX_REDIRECTS + 1):
+        for hop in range(MAX_REDIRECTS + 1):
+            if hop:
+                self._throttle.wait(route.service, key, interval)
             response = self._http.send(request)
+            self._log(f"{request.method} {self._shown(request.url, route)} -> {response.status_code}")
             if not response.is_redirect:
                 return response
             if request.method != "GET":
                 raise UpstreamError(f"{request.method} {shown}: redirected; quarry follows redirects for GET only")
             target = request.url.join(response.headers["Location"])
             same = _origin(target) == origin
-            if not same and route.key_param:
-                target = target.copy_remove_param(route.key_param)
+            if route.key_param:
+                target = (target.copy_set_param(route.key_param, key) if same and key
+                          else target.copy_remove_param(route.key_param))
             request = self._http.build_request("GET", target, headers=credentials if same else {})
         raise UpstreamError(f"{shown}: more than {MAX_REDIRECTS} redirects")
 
@@ -2449,14 +2508,13 @@ class Client:
             self._throttle.wait(route.service, key, interval)
             request = self._http.build_request(method, full, params=params, json=json, data=data, headers=headers)
             try:
-                response = self._send(route, request, shown, headers)
+                response = self._send(route, request, shown, key, interval, headers)
             except httpx.TransportError as error:
                 self._log(f"{method} {shown} -> {type(error).__name__}")
                 if attempt == MAX_ATTEMPTS:
                     raise UpstreamError(f"{method} {shown}: {type(error).__name__} after {attempt} attempts") from None
                 sleep(2 ** (attempt - 1))
                 continue
-            self._log(f"{method} {shown} -> {response.status_code}")
             if response.status_code in RETRY_STATUS and attempt < MAX_ATTEMPTS:
                 delay = _retry_after(response)
                 if delay is not None and delay > WAIT_BUDGET:
@@ -2484,6 +2542,7 @@ from __future__ import annotations
 import json
 from collections.abc import Iterable
 from pathlib import Path
+from urllib.parse import quote, quote_plus
 
 import httpx
 
@@ -2559,9 +2618,18 @@ class RecordingTransport(httpx.BaseTransport):
         self.exchanges: list[dict] = []
 
     def _scrub(self, text: str) -> str:
+        """Replace each credential in every spelling a response can echo it in: as is, and
+        percent- or form-encoded (a key with `+` or `/` comes back as `%2B` or `%2F`)."""
         for value in self.secret_values:
-            text = text.replace(value, REDACTED)
+            for spelling in {value, quote(value, safe=""), quote(value), quote_plus(value)}:
+                text = text.replace(spelling, REDACTED)
         return text
+
+    def _scrub_url(self, text: str) -> str:
+        url = httpx.URL(text)
+        for name in self.secrets & set(url.params):
+            url = url.copy_set_param(name, REDACTED)
+        return self._scrub(str(url))
 
     def handle_request(self, request: httpx.Request) -> httpx.Response:
         response = self.inner.handle_request(request)
@@ -2569,7 +2637,8 @@ class RecordingTransport(httpx.BaseTransport):
         self.exchanges.append({
             "request": exchange_key(request, self.secrets),
             "response": {"status": response.status_code,
-                         "headers": {h: self._scrub(response.headers[h]) for h in KEPT_HEADERS if h in response.headers},
+                         "headers": {h: (self._scrub_url if h == "location" else self._scrub)(response.headers[h])
+                                     for h in KEPT_HEADERS if h in response.headers},
                          "body": self._scrub(content.decode(errors="replace"))},
         })
         return httpx.Response(response.status_code, headers=response.headers, content=content, request=request)
@@ -3314,7 +3383,24 @@ def compile_query(query: Query) -> str:
     return " AND ".join(clauses)
 
 
+OPTIONAL_TEXT = ("secondary_study_accession", "study_alias", "study_title", "study_description",
+                 "tax_id", "scientific_name", "first_public")
+
+
+def _valid(d: dict) -> dict:
+    """The fields _row reads, checked: a malformed value is the upstream's fault, never a crash."""
+    if type(d.get("study_accession")) is not str or not d["study_accession"].startswith("PRJ"):
+        raise UpstreamError(f"ena search: a study without a PRJ accession: {str(d)[:120]}")
+    for name in OPTIONAL_TEXT:
+        if d.get(name) is not None and type(d[name]) is not str:
+            raise UpstreamError(f"ena search: {name} of {d['study_accession']} is not text")
+    if d.get("tax_id") and not d["tax_id"].isdigit():
+        raise UpstreamError(f"ena search: tax_id of {d['study_accession']} is not a number")
+    return d
+
+
 def _row(d: dict) -> Result:
+    d = _valid(d)
     xrefs = [f"insdc.sra:{s}" for s in (d.get("secondary_study_accession") or "").split(";") if s]
     if GSE.match(d.get("study_alias") or ""):
         xrefs.append(f"geo:{d['study_alias']}")
@@ -3344,8 +3430,8 @@ def _rows(text: str) -> list[dict]:
         data = json.loads(text)
     except ValueError:
         raise UpstreamError(f"ena search: not JSON: {text[:80]!r}") from None
-    if type(data) is not list or any(type(d) is not dict or "study_accession" not in d for d in data):
-        raise UpstreamError("ena search: expected a list of studies with study_accession")
+    if type(data) is not list or any(type(d) is not dict for d in data):
+        raise UpstreamError("ena search: expected a list of studies")
     return data
 
 
@@ -3541,6 +3627,16 @@ def test_malformed_answers_are_upstream_errors(count, listing):
                                            "limit": 0}, body=listing, content_type="text/html"),
     ])
     with replay_client(transport) as client, pytest.raises(QuarryError) as caught:
+        ENA.search(client, Query(phrases=("x",)))
+    assert caught.value.kind == "upstream_failed"
+
+
+@pytest.mark.parametrize("field, value", [
+    ("study_accession", None), ("study_accession", "SRP1"), ("secondary_study_accession", ["SRP1"]),
+    ("tax_id", "human"), ("study_title", 7),
+])
+def test_malformed_field_values_are_upstream_errors(field, value):
+    with synthetic(1, json.dumps([{**STUDY, field: value}])) as client, pytest.raises(QuarryError) as caught:
         ENA.search(client, Query(phrases=("x",)))
     assert caught.value.kind == "upstream_failed"
 
