@@ -6,12 +6,13 @@ priority: 2
 process: planned
 owner: quarry-design
 created: 2026-10-10T16:34:30Z
-updated: 2026-10-10T18:51:57Z
+updated: 2026-10-10T19:11:21Z
 started: 2026-10-10T17:12:51Z
 depends: []
 tags: []
 agent: claude-code/claude-opus-5-5
 spec: docs/specs/2026-10-10-quarry-domain-layers-design.md
+plan: docs/plans/2026-10-10-quarry-foundation.md
 ---
 
 Agents currently work out each bio resource themselves (GEO E-utilities, ENA portal, BioStudies, EGA, dbGaP, GDC, cBioPortal, Zenodo/figshare, PubMed), which produces inconsistent clients and reinvented workarounds. A new project would build a `bio` CLI plus skills: one simpler, more robust and consistent interface agents call instead of hand-rolling requests. Evidence from the myeloma dataset survey (mm-159cb7, 2026-10-10): ENA wildcard queries containing a hyphen, period or space silently return 0, so 22 of 38 cell-line terms never ran; BioStudies phrase queries expand via ontology with no off switch, and its search snippets omit organism; figshare returns publisher supplements as separate 'dataset' items; Zenodo refuses page sizes above 25 when unauthenticated; GEO needed a restructured client (esummary cross-refs, SuperSeries-only brief text) to drop a 1.5–6 h harvest to ~10 min; ENA returned HTTP 500 even on its count endpoint during a re-harvest. Scope questions: which resources first, what it owns (query grammar, pagination and truncation guards, rate limits and retries, canonical accession forms, recorded-response test fixtures), and how it relates to the existing projects' tooling.
@@ -59,3 +60,10 @@ Agents currently work out each bio resource themselves (GEO E-utilities, ENA por
 - 2026-10-10T18:51:55Z (quarry-design): Round 3 disposition: both folded. -n allowed with --native (applied through paging, complete: limited; --since/--until still refused there). Result rows gain a publication field (one parent paper CURIE) kept apart from xrefs; pitfall test on figshare:34254439's two DOIs.
 - 2026-10-10T18:51:56Z (quarry-design): parked (waiting on user, review): User reviews the revised spec (or runs review round 4); on approval the agent writes the implementation plan
   provenance: {"harness_session":"claude-code:812ecacd-3a65-4c38-8af4-57938f12afc5","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-10T18:56:25Z (quarry-design): resumed
+  provenance: {"harness_session":"claude-code:812ecacd-3a65-4c38-8af4-57938f12afc5","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-10T18:56:25Z (quarry-design): review: spec round 4 — verdict: accept; findings: none; reviewer: human
+- 2026-10-10T18:56:26Z (quarry-design): Spec approved by the user 2026-10-10; writing the implementation plan.
+- 2026-10-10T19:01:19Z (quarry-design): resumed
+  provenance: {"harness_session":"claude-code:812ecacd-3a65-4c38-8af4-57938f12afc5","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-10T19:11:21Z (quarry-design): Plan 1 of 3 drafted: docs/plans/2026-10-10-quarry-foundation.md (foundation + ENA), steps sci-005df0..sci-6da492. Plans 2 (GEO, BioStudies, Zenodo, figshare, PubMed; files --acquisition) and 3 (OLS terms; skills; live checks) follow. Spec amended: catalog inside the package; key-variable exception as a comment beside [cli.quarry] (ops-1aa74e).

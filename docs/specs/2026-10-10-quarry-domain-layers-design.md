@@ -117,11 +117,11 @@ A verb used on a resource that lacks its role is refused with the error kind
 
 ```
 quarry/
-  catalog/
-    resources/<resource>.toml   # one file per resource, whatever domains list it
-    domains/<domain>.toml       # membership, beliefs contract, default search set
-    bioregistry.json            # pinned snapshot; its version is in catalog/SOURCES.toml
   src/quarry/
+    catalog/                    # inside the package, so an installed quarry carries it
+      resources/<resource>.toml # one file per resource, whatever domains list it
+      domains/<domain>.toml     # membership, beliefs contract, default search set
+      bioregistry.json          # pinned snapshot; its version is in catalog/SOURCES.toml
     cli.py                      # the click surface; thin over the library
     catalog.py                  # loading and checking the catalog
     ids.py                      # CURIE parsing, normalization, resolution
@@ -365,8 +365,9 @@ configuration; that file describes a world, not a workspace.
 - **Keys.** A route names its key variable (`key_env`, for example `NCBI_API_KEY`)
   and its keyed interval (`keyed_min_interval`). When the variable is set, the key is
   sent and the keyed interval applies. Key variables keep each service's own names, so
-  they are an exception to the `QUARRY_<OPTION>` rule, recorded on the `[cli.quarry]`
-  row.
+  they are an exception to the `QUARRY_<OPTION>` rule. The conventions give a CLI header
+  no `exception` field, so the exception is a comment beside the `[cli.quarry]` header
+  until ops provides one.
 - **Paging.** Adapters page by the route's cap and never request more (Zenodo: 25
   without a key).
 - **Acquisition, not download.** quarry does not download a record's files. The
@@ -432,7 +433,7 @@ does.
   project is registered with tasks under the prefix `quarry` first, since a
   `[cli.<name>]` header must name a registered project. Its header is `[cli.quarry]`
   with `project = "quarry"`, env `QUARRY`, default output `pretty`, and the
-  key-variable exception (§9). Its rows are edited into ops `cli.toml` first, then
+  key-variable exception noted beside it (§9). Its rows are edited into ops `cli.toml` first, then
   vendored, and one conformance test checks them.
 - **The verifiably family.** quarry is not a member; like lit, it is a tool that
   workspaces use. Joining later is an adoption under the family's README contract.
