@@ -52,7 +52,7 @@ and astronomy are meant to follow without changing the interface.
 | Repositories | one project holding the runtime, `core` and every domain | one repository per domain: separate CLI tables, tests and adoption, which drift |
 | Domain names | science's domain names (`biology`) | short names (`bio`): two names for one thing |
 | The beliefs contract | the domain file names it; its code stays in beliefs | moving the code here: beliefs is the only thing that interprets it |
-| Relation to the kernel | a plain automation-tier CLI that makes no kernel acts; `fetch` writes files and a manifest, and `science dataset` mints the record | a science command or protocol CLI: data access is upstream of belief |
+| Relation to the kernel | a plain automation-tier CLI that makes no kernel acts. It describes records and their files; the kernel's `acquisition` operation (beliefs cut 35) retrieves the bytes and mints the dataset with its report (§9) | a `fetch` of quarry's own feeding `science dataset`: a second download path whose provenance the kernel never sees, and `science dataset` holds one file per record; a science command or protocol CLI: data access is upstream of belief |
 | Identifiers | Bioregistry's canonical prefixes, from a pinned snapshot | a prefix table of our own |
 | Caching | none; recorded responses serve the tests | a response cache now: no evidence yet that harvests need one |
 
@@ -82,8 +82,8 @@ and to `quarry check`. Each role carries a FAIRsharing crosswalk where one exist
 
 A resource lists every role it plays: HGNC is `identifier-scheme` and `knowledgebase`;
 ChEBI is `ontology` and `knowledgebase`. File formats (FASTQ, FITS, mmCIF) are not a
-role in this version. `fetch` records a file's media type, and a `format` role is
-added when a command needs one.
+role in this version. `files` reports a file's media type when the resource gives
+one, and a `format` role is added when a command needs one.
 
 ### 4.2 Access routes
 
@@ -105,7 +105,7 @@ the variable that holds the key, its page-size cap, and whether it reports a tot
 | `id check`, `id normalize`, `id resolve` | `identifier-scheme`, and any resource whose records have ids |
 | `term search`, `term show` | `vocabulary`, `ontology` |
 | `term ancestors` | `ontology` |
-| `search`, `show`, `files`, `fetch` | `repository`, `knowledgebase`, `literature-index` (`files` and `fetch` only where records have files) |
+| `search`, `show`, `files` | `repository`, `knowledgebase`, `literature-index` (`files` only where records have files) |
 | `resources list`, `resources show`, `domains list` | the catalog itself |
 
 `data-model` has no verbs in this version; it is catalogued so agents can find it.
@@ -126,7 +126,7 @@ quarry/
     ids.py                      # CURIE parsing, normalization, resolution
     http.py                     # the shared client (§9)
     query.py                    # shared and domain filters, compilation contract (§8)
-    fetch.py                    # downloads and the manifest
+    acquisition.py              # the acquisition request `files --acquisition` emits (§9)
     adapters/<name>.py          # one module per resource, or per service several resources share (OLS)
   skills/
     quarry/SKILL.md             # using the CLI, in any domain
@@ -147,7 +147,7 @@ A resource:
 id = "ena"
 name = "European Nucleotide Archive"
 roles = ["repository"]
-prefixes = ["ena.embl", "bioproject"]   # Bioregistry prefixes whose records it serves
+prefixes = ["bioproject", "insdc.sra"]  # Bioregistry prefixes this resource owns (§7)
 fairsharing = "FAIRsharing.…"        # its FAIRsharing record, when one exists
 adapter = "quarry.adapters.ena"     # several resources may name one service adapter
 
@@ -170,19 +170,31 @@ A domain:
 id = "biology"
 summary = "life-science repositories, knowledgebases, identifiers and ontologies"
 beliefs_contract = "biology"           # the contract science activates by this name
+beliefs_contract_version = 1           # the version this domain was written against
 includes = ["core"]
 resources = ["geo", "ena", "biostudies", "go", "uberon", "ncbitaxon"]
 search_default = ["geo", "ena", "biostudies"]
 filters = ["organism"]                 # domain filters this domain defines (§8)
+
+[facet_namespaces]                     # the contract's facet namespaces, as Bioregistry prefixes
+HGNC = "hgnc"
 ```
 
-`quarry check` validates the catalog and prints nothing when it is clean. It finds:
+A domain's effective resources and search set are its own plus those of every domain
+it `includes`, in that order. `core` has `search_default = ["zenodo", "figshare"]`, so a
+biology search covers GEO, ENA, BioStudies, Zenodo and figshare. Literature indexes are
+searched by naming them with `--in`.
+
+`quarry check` validates the catalog under the shared `check` meaning: it prints nothing
+and exits 0 when the catalog is clean, and prints its findings on stdout and exits 1
+otherwise. It finds:
 
 - an unknown role or route kind;
 - a resource with no adapter module, or an adapter with no resource file;
 - a prefix that is missing from the Bioregistry snapshot (the resource may declare
   `local_prefixes` for schemes Bioregistry lacks, and says why);
 - a domain naming a missing resource;
+- a prefix owned by two resources, or a facet namespace that maps to no known prefix;
 - a pitfall without `handling` or `evidence`.
 
 ## 7. Identifiers
@@ -191,17 +203,35 @@ filters = ["organism"]                 # domain filters this domain defines (§8
   `geo:GSE24080`, `pubmed:…`, `doi:10.…`.
 - **Input.** quarry accepts Bioregistry synonyms (`PMID:` and `pmid:` both become
   `pubmed:`) and canonical prefixes in any case.
-- **Bare accessions.** `id normalize GSE24080` matches the snapshot's patterns. When
-  exactly one prefix matches, it returns that CURIE; when several match, it lists them
-  and exits 1. Other commands refuse a bare accession (`ambiguous_id`) rather than
-  guess.
+- **Ownership.** Each prefix has at most one owning resource in the catalog; `show`
+  and `files` on a CURIE go to its owner. Other resources may still emit ids under
+  that prefix as results or cross-references (BioStudies emits `geo:` cross-references,
+  and Zenodo and figshare emit `doi:`). A CURIE whose prefix has no owner is refused
+  (`no_owner`). In the first version `doi:` has none: it is a cross-reference only,
+  until a resource that owns it (DataCite, Crossref) is added.
+- **Bare accessions.** `id normalize GSE24080` matches the patterns of owned prefixes
+  only, not the whole snapshot: several Bioregistry patterns (`ena.embl`'s
+  `^[A-Z]+[0-9]+(\.\d+)?$`) match nearly every accession. When exactly one owned prefix
+  matches, it prints that CURIE. When several match, it fails with the error kind
+  `ambiguous_id`, whose detail names the candidates. Other commands refuse a bare
+  accession with the same error rather than guess.
 - **Resolution.** `id resolve <curie>` prints the URLs the snapshot and the owning
-  resource give for the id. `id check <curie>` prints nothing and exits 0 when the id
-  is well formed for its prefix.
+  resource give for the id. `id check <id>…` takes the shared `check` meaning: nothing
+  and exit 0 when every id is well formed for its prefix; otherwise one finding per id
+  on stdout (`unknown_prefix` or `malformed`) and exit 1.
 - **Outside Bioregistry.** Schemes Bioregistry lacks (many in astronomy) are
   `local_prefixes` on their resource and follow the same rules.
-- **The roster.** Its cross-reference forms (`geo:`, `pmid:`, `sra:`, `bioproject:`)
-  become canonical CURIEs.
+- **The roster.** Its id forms map as follows (Bioregistry, checked 2026-10-10):
+
+  | Roster form | quarry form | Note |
+  |---|---|---|
+  | `geo:GSEn` | `geo:GSEn` | owned by GEO |
+  | `bioproject:PRJ…` | `bioproject:PRJ…` | owned by ENA |
+  | `sra:SRP…` | `insdc.sra:SRP…` | `sra` is not a Bioregistry prefix or synonym |
+  | `pmid:n` | `pubmed:n` | synonym |
+  | BioStudies `E-GEOD-n` | `arrayexpress:E-GEOD-n`, with cross-reference `geo:GSEn` | `biostudies` covers `S-…` accessions only |
+  | Zenodo record | `zenodo.record:n` | `zenodo` is a synonym |
+  | figshare item | `figshare:n` | a `local_prefix`: Bioregistry has none |
 
 ## 8. Command surface
 
@@ -210,10 +240,9 @@ filters = ["organism"]                 # domain filters this domain defines (§8
 | `domains list` | the domains, their resources, and their beliefs contracts |
 | `resources list [--domain D] [--role R] [--route K]` | the catalog |
 | `resources show <resource>` | roles, routes, limits, pitfalls, crosswalks |
-| `search <terms>… [--in R]… [--domain D] [filters] [--native Q] [--since] [--until] [-n]` | records across data-holding resources |
+| `search <terms>… [--in R]… [--domain D] [filters] [--exact] [--native Q] [--allow-partial] [--since] [--until] [-n]` | records across data-holding resources |
 | `show <curie>` | one record |
-| `files <curie>` | a record's files: URL, size, checksum when known |
-| `fetch <curie> --to DIR [--file GLOB]` | download files and write the manifest |
+| `files <curie> [--file GLOB] [--acquisition]` | a record's files: URL, size, checksum and media type when known; with `--acquisition`, the request the kernel's acquisition takes (§9) |
 | `id check\|normalize\|resolve <id>` | identifiers |
 | `term search <text> --in R`, `term show <curie>`, `term ancestors <curie>` | vocabularies and ontologies |
 | `check` | validate the catalog |
@@ -222,8 +251,10 @@ filters = ["organism"]                 # domain filters this domain defines (§8
 The commands follow the shared conventions: `--json` and `--pretty`, `-n/--limit`,
 `--since` and `--until` (bounds on the record's release date), the error object on
 stderr, and exits 0, 1 and 2. `check` and `id check` take the shared `check` meaning.
-Local options (`--domain`, `--in`, `--role`, `--route`, `--native`, `--allow-partial`,
-`--to`, `--file`, and the domain filters) become rows in ops `cli.toml` before they are built.
+Local options (`--domain`, `--in`, `--role`, `--route`, `--exact`, `--native`,
+`--allow-partial`, `--file`, `--acquisition`, `--trace`, and the domain filters) become
+rows in ops `cli.toml` before they are built, under a `[cli.quarry]` header (§11). The
+shared `--config` and `-C` are bound too (§8.1).
 
 ### 8.1 The lens
 
@@ -236,8 +267,9 @@ The domain comes from, in order of precedence (highest first):
 
 1. `--domain`;
 2. `QUARRY_DOMAIN`;
-3. `domain` in the nearest `quarry.toml` above the working directory (a workspace such
-   as multiple-myeloma sets `domain = "biology"` once);
+3. `domain` in the configuration file: the one `--config` names, else the nearest
+   `quarry.toml` at or above the working directory (or the `-C` directory). A workspace
+   such as multiple-myeloma sets `domain = "biology"` there once;
 4. `core`.
 
 Every result names the domain it used. quarry does not read science's world
@@ -246,16 +278,20 @@ configuration; that file describes a world, not a workspace.
 ### 8.2 Filters and queries
 
 - **Shared filters** apply to every data-holding resource: the terms, `--since`,
-  `--until` and `-n`.
+  `--until` and `-n`. Each term is a phrase. `-n` caps each resource's listing, not the
+  merged results; results are merged in the order of the search set.
 - **Domain filters** are declared by a domain (biology: `--organism`, which takes a
   taxon name or `ncbitaxon:` CURIE).
 - **Compilation.** Each adapter compiles the filters into its resource's native query,
   with the resource's escaping rules: ENA terms become exact-equality clauses, and
   GEO's become `[All Fields]` phrases with `[ORGN]`.
+- **Matching.** Each coverage entry says how the resource matched the terms:
+  `"match": "exact"` (ENA's equality clauses) or `"expanded"` (BioStudies expands
+  phrases through an ontology and has no off switch). `--exact` requires exact
+  matching everywhere.
 - **Refusal.** An adapter that cannot express a filter refuses (`unsupported_filter`,
-  naming the resource and filter) rather than drop it. One example: the BioStudies
-  phrase query cannot turn off ontology expansion, so a request for exact phrases
-  refuses there.
+  naming the resource and filter) rather than drop it. Under `--exact`, BioStudies
+  refuses, so a biology search with `--exact` needs `--in` without it.
 - **`--native Q`** passes one resource's own query unchanged. It requires exactly one
   `--in`.
 
@@ -266,8 +302,8 @@ configuration; that file describes a world, not a workspace.
 ```json
 {"domain": "biology",
  "coverage": [{"resource": "ena", "native": "(study_title=\"myeloma\" …) AND tax_eq(9606)",
-               "total": 412, "returned": 412, "complete": "total"}],
- "results": [{"id": "ena.embl:PRJNA…", "resource": "ena", "kind": "dataset",
+               "match": "exact", "total": 412, "returned": 412, "complete": "total"}],
+ "results": [{"id": "bioproject:PRJNA…", "resource": "ena", "kind": "dataset",
               "title": "…", "date": "2021-03-04", "summary": "…",
               "xrefs": ["geo:GSE…", "pubmed:…"],
               "domain_fields": {"biology": {"organism": "Homo sapiens", "taxon": "ncbitaxon:9606"}}}],
@@ -279,9 +315,11 @@ configuration; that file describes a world, not a workspace.
   (figshare). A listing shorter than the reported total is a failure, not a result.
 - **`-n`.** A search with `-n` stops early by request; its coverage says
   `"complete": "limited"`.
-- **Failures.** When one resource fails, the command fails. `--allow-partial` turns
-  that into a coverage entry with `"complete": "failed"` and the error, and the exit
-  code is 1.
+- **Failures.** When one resource fails, the command fails with that resource's error
+  object, and no results are printed. `--allow-partial` instead completes with exit 0,
+  marks the resource `"complete": "failed"` in coverage with its error, and adds a
+  warning naming it. The failure stays in the result rather than in the exit code,
+  since the conventions allow no result beside an error.
 - **Reproducibility.** `native` is the query actually sent, so a harvest can be
   rerun.
 - **Kinds.** `kind` is `dataset`, `record` or `publication`. The fields every domain
@@ -290,22 +328,43 @@ configuration; that file describes a world, not a workspace.
 
 ## 9. Runtime
 
-- **One HTTP client** (httpx, as lit uses). It starts from the roster's `Http`:
+- **One HTTP client**, new and on httpx (as lit uses). It keeps what the roster's
+  urllib `Http` learned (per-source intervals, a User-Agent, retries on 429 and 5xx)
+  and adds what it lacked:
   - a per-route minimum interval taken from the catalog, shared across a process;
   - a User-Agent naming quarry and its version;
   - retries with backoff on 408, 429, 5xx and transport errors, honouring
     `Retry-After`;
-  - a log of every request, which `--pretty` hides and `QUARRY_TRACE=1` prints.
-- **Keys.** An optional key is read from the variable the route names (for example
-  `NCBI_API_KEY`), and the route's rate rises to the documented keyed rate.
+  - a log of every request, printed to stderr under `--trace` (`QUARRY_TRACE`
+    mirrors it).
+- **Keys.** A route names its key variable (`key_env`, for example `NCBI_API_KEY`)
+  and its keyed interval (`keyed_min_interval`). When the variable is set, the key is
+  sent and the keyed interval applies. Key variables keep each service's own names, so
+  they are an exception to the `QUARRY_<OPTION>` rule, recorded on the `[cli.quarry]`
+  row.
 - **Paging.** Adapters page by the route's cap and never request more (Zenodo: 25
   without a key).
-- **Fetch.** Files land under `--to` beside one `quarry-manifest.json`, which records
-  for each file: the CURIE, URL, retrieval time, size, sha256, Last-Modified and media
-  type. An existing file with a matching sha256 is kept, and a mismatch is refused.
-  Large-file transfer may delegate to curl, as the GSE24080 retrieval found faster
-  than Python; the manifest is the same either way. The manifest is what a workspace
-  hands to `science dataset`, with `locator` set from the CURIE.
+- **Acquisition, not download.** quarry does not download a record's files. The
+  kernel's `acquisition` operation (beliefs cut 35) does: per resource it looks at a
+  URL under recorded bounds, hashes the bytes, optionally stores them, and mints one
+  dataset with its act report in one transaction. `files <curie> --acquisition`
+  prints the request that operation takes, as one JSON value:
+  - `title`: the record's title;
+  - `locator`: `accession:<local id>` (`accession:GSE24080`). The kernel's accession
+    grammar carries no prefix, so the CURIE travels beside it in a `source` field.
+    The kernel's request has no such field; the namespace question below decides
+    where the CURIE lands;
+  - `resources`: one per file (after `--file`), each a unique name, its URL, and
+    `expected` as a sha256 digest when the resource publishes one. Resources that
+    publish only MD5 (GEO) leave `expected` unset, since the kernel's instrument
+    checks sha256.
+
+  Retrieval bounds (timeout, byte ceiling) are the consuming command's to set, not
+  quarry's. Several files make one dataset, not one record per file. science exposes no command
+  for acquisition yet. A `science acquire` command that takes this request is a
+  science task, filed when this plan lands, and it is a dependency of the end-to-end
+  path but not of quarry's first version. Whether the kernel's accession locator
+  should carry a namespace is a question for beliefs, filed at the same time.
 
 ## 10. Skills
 
@@ -326,26 +385,35 @@ does.
 ## 11. Relations to other projects
 
 - **science and beliefs.** quarry makes no kernel acts. A domain file names the beliefs
-  contract (`biology`) it corresponds to, and `domains list` shows the pair. A
-  workspace fetches with quarry, then mints with `science dataset`.
+  contract (`biology`, version 1) it corresponds to, and `domains list` shows the pair;
+  quarry does not read beliefs, so the version is a declaration a reviewer checks when
+  the contract changes. A workspace finds records and their files with quarry, then
+  hands `files --acquisition` to the kernel's acquisition (§9).
 - **lit.** lit owns literature as a world model: OpenAlex snapshots, corpora and walks.
   quarry's `literature-index` resources serve live per-record lookup and search. They
-  do not replace lit's snapshot, and lit may later call quarry's adapter for its API
-  enrichment.
+  do not replace lit's snapshot. lit has PubMed pipelines and `world place --pmid` of
+  its own, so the two overlap on PubMed: quarry searches it live, lit places records in
+  its world. Whether lit's PubMed and OpenAlex API calls move onto quarry's adapters is
+  a later question for lit, and quarry's first version changes nothing there.
 - **multiple-myeloma.** The roster becomes quarry's first consumer once the biology
   domain covers its resources. Its migration is a task in that project, filed when
-  this plan lands.
-- **ops.** quarry joins the shared CLI vocabulary as an automation-tier CLI
-  (`[cli.quarry]`, env `QUARRY`, default output `pretty`), with its rows edited into
-  ops `cli.toml` first and one conformance test.
+  this plan lands. The roster's fixtures are re-recorded rather than reused, since its
+  replay matches by substring and ignores request bodies (§12).
+- **ops.** quarry joins the shared CLI vocabulary as an automation-tier CLI. The
+  project is registered with tasks under the prefix `quarry` first, since a
+  `[cli.<name>]` header must name a registered project. Its header is `[cli.quarry]`
+  with `project = "quarry"`, env `QUARRY`, default output `pretty`, and the
+  key-variable exception (§9). Its rows are edited into ops `cli.toml` first, then
+  vendored, and one conformance test checks them.
 - **The verifiably family.** quarry is not a member; like lit, it is a tool that
   workspaces use. Joining later is an adoption under the family's README contract.
 
 ## 12. Testing
 
 - **Fixtures.** Tests never reach the network. Each adapter's tests replay recorded
-  responses from `tests/fixtures/<resource>/`. Matching is on method, path and sorted
-  query parameters, not on substrings, so a changed request fails loudly.
+  responses from `tests/fixtures/<resource>/`. Matching is on method, path, sorted
+  query parameters and the request body (GEO's esummary and figshare's search are
+  POSTs), not on substrings, so a changed request fails loudly.
 - **Recording.** `just record <resource>` refreshes one resource's fixtures against
   the live service; recording is a person's or agent's deliberate act, never part of a
   test run.
@@ -376,10 +444,10 @@ does.
 | GO, UBERON, NCBITaxon | ontology | biology | the `term` verbs; one shared adapter over EBI's Ontology Lookup Service (OLS) serves all three, and more ontologies are a resource file each |
 
 The `id` verbs work from the pinned Bioregistry snapshot (§7), which is catalog input
-rather than a resource. The first six rows come from the roster, with its fixtures and
-known pitfalls. The ontologies and the snapshot make the `id` and `term` families real in
-the first version, so the role model is
-proven on more than repositories. dbGaP, EGA, GDC, cBioPortal and OpenAlex follow as
+rather than a resource. The first six rows come from the roster, with its known
+pitfalls; their fixtures are recorded anew (§11). The ontologies and the snapshot make
+the `id` and `term` families real in the first version, so the role model is proven on
+more than repositories. dbGaP, EGA, GDC, cBioPortal and OpenAlex follow as
 ordinary additions: a resource file, an adapter, fixtures.
 
 ## 14. Other domains: a check on the contract
@@ -401,6 +469,7 @@ arrives with its own spec, which may extend this one but not change its verbs.
 
 - Writes to any external resource (submission, deposition); science's commons spec
   owns publishing.
+- Downloading bytes: the kernel's acquisition does it (§9).
 - A response cache.
 - A query language of quarry's own beyond the shared and domain filters and
   `--native`.
