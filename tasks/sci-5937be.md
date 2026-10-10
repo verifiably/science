@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: main
 created: 2026-10-02T01:00:04Z
-updated: 2026-10-10T11:31:17Z
+updated: 2026-10-10T11:43:20Z
 started: 2026-10-02T07:52:47Z
 depends: []
 tags: [halt, test-latency, testing]
@@ -79,3 +79,4 @@ Process: planned
 - 2026-10-03T10:49:30Z (main): sci-d92797 merged as 30b05a3; its test-fast runs: worktree 694 passed in 184 s (testmon new DB, full suite, load 16), main 396 passed in 165 s (config.py reselects most of the suite, load 16-29). verify: 2 of 3 runs, median 184.7 s, outstanding. Neither run is uncontended or incremental (ops-a0c1f5 filed: verify counts widened runs); a third run like these would record a breach that measures host load and reselection, not the remedy.
 - 2026-10-10T11:31:16Z (main): verify rerun 2026-10-10 on titan: not verified — test-fast outstanding (median 102.4 s, 2 runs, limit 90 s); still needs a third uncontended run, and the median is over the limit
 - 2026-10-10T11:31:16Z (main): halt override: attempted sci-a2c91b by ac414f83-8043-4a78-85f6-3816577b190d: LICENSE file and pyproject licence metadata only; touches no tests or code, cannot affect test-fast latency
+- 2026-10-10T11:43:20Z (main): verify starvation (halt suppresses the runs verify needs) reported to ops as ops-d48bd2
