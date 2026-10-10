@@ -1,16 +1,17 @@
 ---
 id: sci-ba7150
-title: "bio: a CLI and skills layer over common bioinformatics tools and resources"
+title: "quarry: domain layers (core, biology, …) over scientific resources, with one CLI and skills"
 status: doing
 priority: 2
 process: planned
-owner: main
+owner: quarry-design
 created: 2026-10-10T16:34:30Z
-updated: 2026-10-10T18:03:58Z
+updated: 2026-10-10T18:06:57Z
 started: 2026-10-10T17:12:51Z
 depends: []
 tags: []
 agent: claude-code/claude-opus-5-5
+spec: docs/specs/2026-10-10-quarry-domain-layers-design.md
 ---
 
 Agents currently work out each bio resource themselves (GEO E-utilities, ENA portal, BioStudies, EGA, dbGaP, GDC, cBioPortal, Zenodo/figshare, PubMed), which produces inconsistent clients and reinvented workarounds. A new project would build a `bio` CLI plus skills: one simpler, more robust and consistent interface agents call instead of hand-rolling requests. Evidence from the myeloma dataset survey (mm-159cb7, 2026-10-10): ENA wildcard queries containing a hyphen, period or space silently return 0, so 22 of 38 cell-line terms never ran; BioStudies phrase queries expand via ontology with no off switch, and its search snippets omit organism; figshare returns publisher supplements as separate 'dataset' items; Zenodo refuses page sizes above 25 when unauthenticated; GEO needed a restructured client (esummary cross-refs, SuperSeries-only brief text) to drop a 1.5–6 h harvest to ~10 min; ENA returned HTTP 500 even on its count endpoint during a re-harvest. Scope questions: which resources first, what it owns (query grammar, pagination and truncation guards, rate limits and retries, canonical accession forms, recorded-response test fixtures), and how it relates to the existing projects' tooling.
@@ -38,3 +39,5 @@ Agents currently work out each bio resource themselves (GEO E-utilities, ENA por
 - 2026-10-10T18:03:57Z (main): resumed
   provenance: {"harness_session":"claude-code:812ecacd-3a65-4c38-8af4-57938f12afc5","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-10T18:03:57Z (main): Decision (user): the project is named quarry.
+- 2026-10-10T18:04:02Z (quarry-design): resumed
+  provenance: {"harness_session":"claude-code:812ecacd-3a65-4c38-8af4-57938f12afc5","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
