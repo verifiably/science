@@ -1,6 +1,6 @@
 # quarry: domain layers over scientific resources, with one CLI and skills
 
-Status: draft 2026-10-10, for review. Task `sci-ba7150`.
+Status: approved 2026-10-10 (human review round 4). Foundation implemented and merged; the remaining first-version milestones are tracked as `quarry-3f4c3b` and `quarry-06c10c`. Task `sci-ba7150` remains the broader goal.
 
 Sources: the evidence on `sci-ba7150` (the myeloma dataset survey, `mm-159cb7`); the
 survey's clients in the multiple-myeloma roster (`roster/http.py`, `roster/sources/`);

@@ -6,9 +6,9 @@ priority: 2
 process: planned
 owner: quarry-design
 created: 2026-10-10T16:34:30Z
-updated: 2026-10-10T19:54:06Z
+updated: 2026-10-10T21:53:04Z
 started: 2026-10-10T17:12:51Z
-depends: []
+depends: [quarry-3f4c3b, quarry-06c10c]
 tags: []
 agent: claude-code/claude-opus-5-5
 spec: docs/specs/2026-10-10-quarry-domain-layers-design.md
@@ -101,3 +101,12 @@ Agents currently work out each bio resource themselves (GEO E-utilities, ENA por
 - 2026-10-10T19:54:05Z (quarry-design): Plan round 2 disposition: all 5 folded. P1: the recorder scrubs a key in every spelling (as is, percent- and form-encoded) and sets credential params in recorded Location URLs to REDACTED; a test echoes a key with + / = in body and Location. P2: same-origin hops re-set key_param; every redirect hop waits on the throttle and is traced redacted (tests for query-only auth and hop timing); with_local skips any prefix that is a Bioregistry prefix or synonym in any case, and check reports a local prefix that did not register (is_local); ENA validates every field _row reads (PRJ accession, text fields, numeric tax_id) into upstream_failed.
 - 2026-10-10T19:54:06Z (quarry-design): parked (waiting on user, review): User reviews the revised plan (or runs plan review round 3) and picks an execution method; then the agent files the science acquire and roster-migration tasks and starts Task 1
   provenance: {"harness_session":"claude-code:812ecacd-3a65-4c38-8af4-57938f12afc5","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-10T19:57:10Z (quarry-design): review: plan round 3 — verdict: accept; findings: none; reviewer: codex
+- 2026-10-10T19:57:10Z (quarry-design): Plan round 3 verification at e7cb3e8: reviewed bc796bc against the five round-2 findings and connected callers. All 17 embedded HTTP test functions passed in isolation with mocked transports. ENA malformed fields passed 10 probes across fail-fast and allow_partial; a valid row and all 7 nullable optional fields passed. Five upstream canonical-name/alias case variants were refused without changing PMID resolution, while a distinct local figshare prefix checked clean. An additional three-hop record/replay probe with a key containing spaces, +, / and = verified all recorded key spellings were redacted, same-origin query/header credentials survived, foreign-origin credentials were stripped, every hop observed the throttle and emitted a redacted trace, and replay consumed all exchanges. No remaining findings in this scoped re-review. No live API calls, repository suite, ops registration or global assembly ran; plan/spec/code unchanged. Plan accepted for execution; subagent-driven execution fits its task split.
+- 2026-10-10T20:04:56Z (quarry-design): resumed
+  provenance: {"harness_session":"codex:01a12769-e196-7e72-829a-066a98c2baa4","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-10T20:05:48Z (quarry-design): Execution approved by user: subagent-driven foundation plan; resume existing design worktree, implement quarry in its foundation worktree, and prepare host-global assembly for separate approval.
+- 2026-10-10T20:41:47Z (quarry-design): Execution status: Tasks 1–4 independently reviewed and complete; ops registration ab844c8 merged and user-approved global delivery c836585 complete. Task 5 corrective round covers attached -C and typed config read failures. Task 6 carries mocked-proven redirect credential protections. No host pointers or detached work introduced.
+- 2026-10-10T21:31:05Z (quarry-design): review: impl round 1 — verdict: revise; findings: Important 5, Minor 2; reviewer: codex/gpt-6-astra
+- 2026-10-10T21:50:08Z (quarry-design): review: impl round 2 — verdict: accept; findings: none; reviewer: codex/gpt-6-astra
+- 2026-10-10T21:53:03Z (quarry-design): Foundation plan complete and merged into quarry main at6e846aa; main gate309 passed. The broader first-version goal remains open on quarry-3f4c3b (repositories/acquisition) and quarry-06c10c (terms/skills/live), now linked as dependencies. Deferred required-key validation tracked as quarry-e0f1c0. Acquisition and roster migration dependencies linked to repository milestone.

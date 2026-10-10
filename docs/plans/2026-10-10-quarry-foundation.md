@@ -1,6 +1,8 @@
 # quarry foundation Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+Status: executed 2026-10-10. Quarry foundation is merged locally; final scoped review accepted and the main gate passed 309 tests.
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Stand up the quarry project with its catalog, identifiers, HTTP runtime, search
 framework and CLI, proven end to end on one biology repository (ENA).
@@ -75,7 +77,7 @@ Filed when this plan is approved, not as tasks in it: the science task for
 **Interfaces:**
 - Produces: `quarry.cli.main` (the click root group, class `Cli`); `quarry.output.CONTEXT`, `output_options(command)`, `mode(ctx) -> str`, `emit(ctx, report: dict, text: str) -> None`, `fail(ctx, kind: str, detail: str) -> NoReturn`.
 
-- [ ] **Step 1: Create the directory, git and tasks**
+- [x] **Step 1: Create the directory, git and tasks**
 
 ```bash
 mkdir "$TREE/quarry" && cd "$TREE/quarry"
@@ -87,7 +89,7 @@ Main receives only the seed (the task records and `identity.toml`, the project's
 inputs, which ops reads from the main checkout in Task 2). Everything else is written in the
 foundation worktree from Step 4 on.
 
-- [ ] **Step 2: Write identity.toml**
+- [x] **Step 2: Write identity.toml**
 
 `identity.toml`:
 
@@ -110,7 +112,7 @@ authority = []
 subsystems = []
 ```
 
-- [ ] **Step 3: Seed main and create the foundation worktree**
+- [x] **Step 3: Seed main and create the foundation worktree**
 
 ```bash
 git add tasks identity.toml
@@ -124,7 +126,7 @@ cd .worktrees/foundation
 Expected: one commit on main; the worktree exists. Every later quarry step runs in
 `$TREE/quarry/.worktrees/foundation`, written `$WT` below.
 
-- [ ] **Step 4: Copy the front door from ops templates**
+- [x] **Step 4: Copy the front door from ops templates**
 
 ```bash
 cp "$TREE/ops/templates/justfile" justfile
@@ -137,7 +139,7 @@ git config core.hooksPath .githooks
 (cd "$TREE/ops" && python3 bin/vendored adopt --into "$WT" tt ops-check ops-docs)
 ```
 
-- [ ] **Step 5: Write pyproject.toml**
+- [x] **Step 5: Write pyproject.toml**
 
 ```toml
 [project]
@@ -165,7 +167,7 @@ testpaths = ["tests"]
 addopts = "-q"
 ```
 
-- [ ] **Step 6: Fill the justfile's commands**
+- [x] **Step 6: Fill the justfile's commands**
 
 Edit the template's placeholder lines, leaving every recipe below them as copied:
 
@@ -186,12 +188,12 @@ setup_cmd := "just work-link .venv && uv sync --group dev"
 Replace the template's comment above `fast_cmd` that says "With no affected-only
 mechanism..." with: `# fast_cmd is affected-only through pytest-testmon.`
 
-- [ ] **Step 7: Run setup**
+- [x] **Step 7: Run setup**
 
 Run: `just setup`
 Expected: exits 0; `.venv` exists (a link into WORK_ROOT storage on a dotfiles host).
 
-- [ ] **Step 8: Write the failing test**
+- [x] **Step 8: Write the failing test**
 
 `tests/__init__.py` is empty. `tests/test_cli_basics.py`:
 
@@ -222,12 +224,12 @@ def test_unknown_command_is_a_usage_error():
     assert out.stderr.splitlines()[-1] == "Run 'quarry --help'."
 ```
 
-- [ ] **Step 9: Run it to see it fail**
+- [x] **Step 9: Run it to see it fail**
 
 Run: `just test-one tests/test_cli_basics.py`
 Expected: FAIL with `No module named quarry.cli`.
 
-- [ ] **Step 10: Write output.py and cli.py**
+- [x] **Step 10: Write output.py and cli.py**
 
 `src/quarry/__init__.py`:
 
@@ -349,12 +351,12 @@ if __name__ == "__main__":
     main()
 ```
 
-- [ ] **Step 11: Run the tests**
+- [x] **Step 11: Run the tests**
 
 Run: `just test-one tests/test_cli_basics.py`
 Expected: 3 passed.
 
-- [ ] **Step 12: Fill the guides and commit in the worktree**
+- [x] **Step 12: Fill the guides and commit in the worktree**
 
 Fill the template placeholders in `AGENTS.md`:
 
@@ -384,7 +386,7 @@ Expected: `just check` exits 0; the commit hook passes; the commit is on `founda
 **Interfaces:**
 - Produces: the `[cli.quarry]` rows Task 9's conformance test compares with the live surface. Tasks 5 and 7 must build exactly these options, arguments and summaries.
 
-- [ ] **Step 1: Create an ops worktree**
+- [x] **Step 1: Create an ops worktree**
 
 ```bash
 cd "$TREE/ops"
@@ -394,7 +396,7 @@ git worktree lock --reason "on WORK_ROOT storage (host: $(uname -n))" .worktrees
 cd .worktrees/quarry-cli && just setup
 ```
 
-- [ ] **Step 2: Add the identity-mirror entry**
+- [x] **Step 2: Add the identity-mirror entry**
 
 Append to `identity-mirror.toml`, beside `[lit]`:
 
@@ -417,7 +419,7 @@ Expected: the diff adds quarry's `name` and `purpose` to its mirror table and on
 to the fragment, nothing else; `check` exits 0. `pull` reads quarry's `identity.toml` from its
 main checkout, which Task 1, Step 3 committed.
 
-- [ ] **Step 3: Add the CLI rows**
+- [x] **Step 3: Add the CLI rows**
 
 Append to `cli.toml` beside the other `[cli.*]` headers:
 
@@ -534,7 +536,7 @@ args = [
 ]
 ```
 
-- [ ] **Step 4: Validate and commit in ops**
+- [x] **Step 4: Validate and commit in ops**
 
 Run the ops recipes that validate the table and the mirror: `just check` in the ops
 worktree. Expected: exit 0. If the table validator rejects `verb` on a command whose name is
@@ -545,13 +547,13 @@ git add identity-mirror.toml cli.toml instructions/fragments/projects.md
 git commit -m "feat(cli): add quarry's rows and identity"
 ```
 
-- [ ] **Step 5: Merge into ops main (personal checkout)**
+- [x] **Step 5: Merge into ops main (personal checkout)**
 
 ```bash
 cd "$TREE/ops" && git merge --ff-only quarry-cli
 ```
 
-- [ ] **Step 6: Gate: deliver the Projects block (needs the user)**
+- [x] **Step 6: Gate: deliver the Projects block (needs the user)**
 
 The fragment is now on ops main, but nothing reads it until `just assemble` in lore delivers
 it into every agent session's global instructions: a live global surface. Stop and ask the
@@ -565,7 +567,7 @@ cd "$TREE/lore" && just assemble
 Then commit lore's artifact and provenance manifest as `just assemble` reports. Without
 approval, park this step and continue with Task 3: no later task depends on it.
 
-- [ ] **Step 7: Remove the ops worktree**
+- [x] **Step 7: Remove the ops worktree**
 
 ```bash
 cd "$TREE/ops"
@@ -584,7 +586,7 @@ git branch -d quarry-cli
 - Produces: `quarry.errors.QuarryError(kind: str, detail: str)` with `.kind`, `.detail`.
 - Produces: `quarry.catalog`: constants `ROLES`, `DATA_ROLES`, `ROUTE_KINDS`, `AUTH`, `CATALOG_ROOT`; dataclasses `Route`, `Pitfall`, `LocalPrefix`, `Resource` (method `owned_prefixes() -> tuple[str, ...]`), `Domain`, `Finding` (method `as_dict()`), `Catalog` (methods `lineage(domain_id) -> list[str]`, `effective_resources(domain_id) -> list[str]`, `search_set(domain_id) -> list[str]`, `domain_filters(domain_id) -> set[str]`, `owner(prefix) -> Resource | None`); `CatalogError(QuarryError)`; `load(root: Path = CATALOG_ROOT) -> Catalog`; `adapter_modules() -> list[str]`; `check(catalog: Catalog, registry: PrefixLookup, modules: list[str] | None = None) -> list[Finding]`, where `PrefixLookup` is any object with `canonical(prefix: str) -> str | None` `is_upstream(prefix: str) -> bool` and `is_local(prefix: str) -> bool`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `tests/test_catalog.py`:
 
@@ -771,12 +773,12 @@ The test catalog points `adapter` at the package `quarry.adapters` itself so the
 `missing_adapter` check has a real module to find; the shipped catalog names real adapter
 modules from Task 8 on.
 
-- [ ] **Step 2: Run them to see them fail**
+- [x] **Step 2: Run them to see them fail**
 
 Run: `just test-one tests/test_catalog.py`
 Expected: FAIL with `cannot import name 'catalog' from 'quarry'`.
 
-- [ ] **Step 3: Write errors.py and catalog.py**
+- [x] **Step 3: Write errors.py and catalog.py**
 
 `src/quarry/errors.py`:
 
@@ -1148,7 +1150,7 @@ def _cycles(catalog: Catalog, start: str) -> bool:
     return False
 ```
 
-- [ ] **Step 4: Write the shipped domain files**
+- [x] **Step 4: Write the shipped domain files**
 
 `src/quarry/catalog/domains/core.toml`:
 
@@ -1175,12 +1177,12 @@ beliefs_contract_version = 1           # the version this domain was written aga
 HGNC = "hgnc"
 ```
 
-- [ ] **Step 5: Run the tests**
+- [x] **Step 5: Run the tests**
 
 Run: `just test-one tests/test_catalog.py`
 Expected: all pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 just test-fast
@@ -1198,7 +1200,7 @@ git commit -m "feat(catalog): load and check resources and domains"
 - Consumes: `quarry.catalog.Catalog`, `Resource.local_prefixes`, `CATALOG_ROOT`, `Finding`; `quarry.errors.QuarryError`.
 - Produces: `quarry.ids`: `REGISTRY_PATH`; `Scheme(prefix, name, pattern: re.Pattern | None, uri_format: str | None)`; `Curie(prefix: str, local: str)` with `__str__`; `Registry` with `load(path=REGISTRY_PATH) -> Registry` (classmethod), `with_local(catalog) -> Registry`, `canonical(prefix) -> str | None`, `is_upstream(prefix) -> bool`, `is_local(prefix) -> bool`, `scheme(prefix) -> Scheme`, `version: str`; `parse(text, registry) -> Curie`; `check_ids(texts, registry) -> list[Finding]`; `normalize(text, registry, owned: Iterable[str]) -> Curie`; `resolve(curie, registry) -> list[str]`.
 
-- [ ] **Step 1: Write the vendoring script**
+- [x] **Step 1: Write the vendoring script**
 
 `tools/vendor_bioregistry.py`:
 
@@ -1250,7 +1252,7 @@ bioregistry-vendor version:
     {{tt}} bioregistry-vendor -- uv run --no-project --with "bioregistry=={{version}}" python tools/vendor_bioregistry.py
 ```
 
-- [ ] **Step 2: Vendor the current release**
+- [x] **Step 2: Vendor the current release**
 
 Find the latest release: `uv pip index versions bioregistry` (or the PyPI page) and use its
 newest non-pre-release version, then:
@@ -1260,7 +1262,7 @@ Expected: `bioregistry <version>: N prefixes` with N above 1500; `bioregistry.js
 `SOURCES.toml` exist. If `get_synonyms` is missing on that version's `Resource`, the run
 fails with AttributeError: stop and report it rather than reading private fields.
 
-- [ ] **Step 3: Write the failing tests**
+- [x] **Step 3: Write the failing tests**
 
 `tests/test_ids.py`:
 
@@ -1363,12 +1365,12 @@ def test_the_shipped_catalog_checks_clean_against_the_snapshot():
     assert catalog.check(cat, REG.with_local(cat)) == []
 ```
 
-- [ ] **Step 4: Run them to see them fail**
+- [x] **Step 4: Run them to see them fail**
 
 Run: `just test-one tests/test_ids.py`
 Expected: FAIL with `cannot import name 'ids' from 'quarry'`.
 
-- [ ] **Step 5: Write ids.py**
+- [x] **Step 5: Write ids.py**
 
 `src/quarry/ids.py`:
 
@@ -1493,14 +1495,14 @@ def resolve(curie: Curie, registry: Registry) -> list[str]:
     return [uri.replace("$1", curie.local)] if uri else []
 ```
 
-- [ ] **Step 6: Run the tests**
+- [x] **Step 6: Run the tests**
 
 Run: `just test-one tests/test_ids.py`
 Expected: all pass. If `ncbitaxon`'s pattern does not match `21885717`, replace it in
 `test_bare_accession_ambiguity_names_candidates` with another owned-looking prefix from the
 snapshot whose pattern is all digits (`grep -n '"pattern": "\^\\\\d+\$"' src/quarry/catalog/bioregistry.json`).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 just test-fast
@@ -1518,7 +1520,7 @@ git commit -m "feat(ids): CURIEs against a pinned Bioregistry snapshot"
 - Consumes: `quarry.catalog.load`, `check`, `ROLES`, `ROUTE_KINDS`, `DATA_ROLES`, `CatalogError`, `Finding`; `quarry.ids.Registry`, `parse`, `check_ids`, `normalize`, `resolve`; `quarry.output.emit`, `fail`, `output_options`.
 - Produces: `quarry.cli.hoist_globals(args: list[str]) -> list[str]`; `quarry.lens.CONFIG_NAME`, `find_config(start: Path) -> Path | None`, `resolve_domain(flag: str | None, environ: Mapping[str, str], config: Path | None, cwd: Path, catalog: Catalog) -> str`; `quarry.context.CATALOG_ROOT` (module global tests monkeypatch), `Env(catalog, registry)`, `open_env() -> Env`, `make_client(trace: bool)` (defined in Task 6); `quarry.cli.State(config: Path | None, trace: bool)` on `ctx.obj`; `quarry.cli.reports_errors` decorator. The test fixture `make_catalog(resources: dict[str, str], biology: list[str], search: list[str]) -> Path` (in `tests/conftest.py`), which Tasks 7 and 8 reuse.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `tests/conftest.py`:
 
@@ -1711,12 +1713,12 @@ def test_root_config_option_sets_the_domain(tmp_path):
     assert json.loads(invoke("--json", "resources", "list", env={"QUARRY_DOMAIN": "biology"}).stdout)["domain"] == "biology"
 ```
 
-- [ ] **Step 2: Run them to see them fail**
+- [x] **Step 2: Run them to see them fail**
 
 Run: `just test-one tests/test_lens.py tests/test_cli_catalog.py`
 Expected: FAIL with `cannot import name 'lens' from 'quarry'`.
 
-- [ ] **Step 3: Write lens.py and context.py**
+- [x] **Step 3: Write lens.py and context.py**
 
 `src/quarry/lens.py`:
 
@@ -1808,7 +1810,7 @@ def open_env() -> Env:
     return env
 ```
 
-- [ ] **Step 4: Add the root options and commands to cli.py**
+- [x] **Step 4: Add the root options and commands to cli.py**
 
 Replace the root `main` definition in `src/quarry/cli.py` and add the commands below it
 (keep `Cli` and `help_command` as they are; add these imports at the top):
@@ -2099,12 +2101,12 @@ def test_output_flags_on_a_group():
 `invoke` runs `main` through `CliRunner`, which calls `Cli.main(args=...)`, so these tests
 exercise the hoist exactly as the binary does.
 
-- [ ] **Step 5: Run the tests**
+- [x] **Step 5: Run the tests**
 
 Run: `just test-one tests/test_lens.py tests/test_cli_catalog.py tests/test_cli_basics.py`
 Expected: all pass.
 
-- [ ] **Step 6: Add `quarry check` to the gate and commit**
+- [x] **Step 6: Add `quarry check` to the gate and commit**
 
 In the justfile: `check_cmd := "python3 tools/ops-check && python3 tools/ops-docs check && uv run quarry check && tasks check"`.
 
@@ -2124,7 +2126,7 @@ git commit -m "feat(cli): domain lens, catalog and id commands"
 - Consumes: `quarry.catalog.Route`, `Catalog`; `quarry.errors.QuarryError`.
 - Produces: `quarry.http`: `REDACTED = "REDACTED"`, `MAX_ATTEMPTS = 5`, `WAIT_BUDGET = 60.0`, `MAX_REDIRECTS = 5`, `SystemClock`, `Throttle(clock)` with `wait(service: str, key: str | None, interval: float)` and `.clock`, `PROCESS_THROTTLE` (the one throttle every client in a process shares by default), `UpstreamError(QuarryError)` (kind `upstream_failed`), `Client(*, transport=None, throttle=None, trace=None, environ=None)` with `request(route, method, url, *, params=None, json=None, data=None) -> httpx.Response`, `close()`, context-manager methods. `quarry.testing`: `KEPT_HEADERS = ("content-type", "retry-after", "location")`, `VirtualClock`, `replay_client(transport) -> Client`, `secret_params(catalog) -> frozenset[str]`, `exchange_key(request, secret_params) -> dict`, `exchange(method, url, params=None, *, status=200, body="", content_type="application/json", headers=None, json_body=None, form=None) -> dict`, `ReplayTransport(exchanges: list[dict], secret_params=frozenset())` (each recording answers once, in order), `ReplayTransport.from_files(paths, secret_params)`, `RecordingTransport(secret_params, secrets, inner=None)` with `exchanges` and `save(path)`. `quarry.context.make_client(trace: bool) -> Client`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `tests/test_http.py`:
 
@@ -2353,12 +2355,12 @@ def test_exchange_key_shape():
                                                   "query": [["a", "1"], ["b", "2"]], "body": None}
 ```
 
-- [ ] **Step 2: Run them to see them fail**
+- [x] **Step 2: Run them to see them fail**
 
 Run: `just test-one tests/test_http.py`
 Expected: FAIL with `No module named 'quarry.http'`.
 
-- [ ] **Step 3: Write http.py**
+- [x] **Step 3: Write http.py**
 
 `src/quarry/http.py`:
 
@@ -2528,7 +2530,7 @@ class Client:
         raise AssertionError("unreachable: the last attempt returns or raises")
 ```
 
-- [ ] **Step 4: Write testing.py**
+- [x] **Step 4: Write testing.py**
 
 `src/quarry/testing.py`:
 
@@ -2669,12 +2671,12 @@ def make_client(trace: bool) -> Client:
     return Client(trace=(lambda line: print(line, file=sys.stderr)) if trace else None)
 ```
 
-- [ ] **Step 5: Run the tests**
+- [x] **Step 5: Run the tests**
 
 Run: `just test-one tests/test_http.py`
 Expected: all pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 just test-fast
@@ -2692,7 +2694,7 @@ git commit -m "feat(http): shared throttle, bounded retries, origin-bound creden
 - Consumes: `Catalog`, `DATA_ROLES`, `Resource`; `ids.parse`, `Curie`; `http.Client`; `context.open_env`, `make_client`; `cli.reports_errors`, `state`.
 - Produces: `quarry.query`: `Query(phrases=(), filters={}, since=None, until=None, limit=None, exact=False, native=None)` (raises `ValueError` on an invalid combination), `parse_when(text: str, today: date) -> date`, `WHEN` (a click ParamType named `when`). `quarry.results`: `Result(id, resource, kind, title, date=None, summary=None, xrefs=(), publication=None, domain_fields={})` with `as_dict()`; `Coverage(resource, native, match, total, returned, complete, error=None)` with `as_dict()`. `quarry.search`: `completeness(*, total: int | None, returned: int, limit: int | None, short_page: bool) -> str`; `run(*, catalog, client, query, resource_ids, domain, allow_partial, make=adapters.base.make) -> dict`. `quarry.adapters.base`: `Adapter` protocol (`resource`, `match`, `filters`, `search(client, query) -> tuple[Coverage, list[Result]]`, `show(client, curie) -> Result`), `make(resource) -> Adapter`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `tests/fake_adapter.py`:
 
@@ -2915,12 +2917,12 @@ def test_show_refusals(catalog, curie, kind):
     assert out.exit_code == 1 and json.loads(out.stderr)["error"]["kind"] == kind
 ```
 
-- [ ] **Step 2: Run them to see them fail**
+- [x] **Step 2: Run them to see them fail**
 
 Run: `just test-one tests/test_query.py tests/test_search.py`
 Expected: FAIL with `No module named 'quarry.query'`.
 
-- [ ] **Step 3: Write query.py, results.py, search.py and adapters/base.py**
+- [x] **Step 3: Write query.py, results.py, search.py and adapters/base.py**
 
 `src/quarry/query.py`:
 
@@ -3132,7 +3134,7 @@ def run(*, catalog: Catalog, client: Client, query: Query, resource_ids: list[st
             "results": [r.as_dict() for r in results], "warnings": warnings}
 ```
 
-- [ ] **Step 4: Add `search` and `show` to cli.py**
+- [x] **Step 4: Add `search` and `show` to cli.py**
 
 ```python
 from quarry import search as search_mod
@@ -3208,12 +3210,12 @@ The usage checks run before `open_env()`, so a usage error never waits on the ca
 `UsageError` raised inside `reports_errors` propagates past it (it is not a `QuarryError`)
 to `Cli.main`, which exits 2.
 
-- [ ] **Step 5: Run the tests**
+- [x] **Step 5: Run the tests**
 
 Run: `just test-one tests/test_query.py tests/test_search.py`
 Expected: all pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 just test-fast
@@ -3231,7 +3233,7 @@ git commit -m "feat(search): shared query, coverage and the search and show comm
 - Consumes: `Query`, `Result`, `Coverage`, `completeness`, `Client.request`, `Curie`, `QuarryError`, `testing.ReplayTransport`, `RecordingTransport`, `exchange`, `secret_params`, `context.make_client`.
 - Produces: `quarry.adapters.ena`: `compile_query(query: Query) -> str`, class `Ena` (`match = "exact"`, `filters = frozenset({"organism"})`), `make(resource) -> Ena`. Plan 2's adapters follow this module's shape.
 
-- [ ] **Step 1: Write the resource file and list it in biology**
+- [x] **Step 1: Write the resource file and list it in biology**
 
 `src/quarry/catalog/resources/ena.toml`:
 
@@ -3268,7 +3270,7 @@ evidence = "mm-159cb7: HTTP 500 on the count endpoint during a re-harvest"
 
 In `src/quarry/catalog/domains/biology.toml`: `resources = ["ena"]` and `search_default = ["ena"]`.
 
-- [ ] **Step 2: Write the failing compile tests**
+- [x] **Step 2: Write the failing compile tests**
 
 `tests/test_ena.py` (first part; Step 7 appends the replay tests):
 
@@ -3324,13 +3326,13 @@ def test_quotes_and_wildcards_are_refused(phrase):
     assert caught.value.kind == "unsupported_filter"
 ```
 
-- [ ] **Step 3: Run them to see them fail**
+- [x] **Step 3: Run them to see them fail**
 
 Run: `just test-one tests/test_ena.py`
 Expected: FAIL with `No module named 'quarry.adapters.ena'`; also `just check` now reports
 `missing_adapter` for `quarry.adapters.ena`.
 
-- [ ] **Step 4: Write the adapter**
+- [x] **Step 4: Write the adapter**
 
 `src/quarry/adapters/ena.py`:
 
@@ -3467,12 +3469,12 @@ def make(resource: Resource) -> Ena:
     return Ena(resource)
 ```
 
-- [ ] **Step 5: Run the compile tests**
+- [x] **Step 5: Run the compile tests**
 
 Run: `just test-one tests/test_ena.py`
 Expected: 5 passed. `uv run quarry check` prints nothing.
 
-- [ ] **Step 6: Record the live fixtures**
+- [x] **Step 6: Record the live fixtures**
 
 `tests/recordings/__init__.py` is empty. `tests/recordings/__main__.py`:
 
@@ -3552,7 +3554,7 @@ Expected: three lines `recorded ena/<name>: N exchanges` (2, 2 and 3); three fil
 if the window returned none, widen `MYELOMA`'s dates in `tests/recordings/ena.py` and record
 again. Fixtures are recorded once here and committed.
 
-- [ ] **Step 7: Append the replay tests**
+- [x] **Step 7: Append the replay tests**
 
 Append to `tests/test_ena.py`:
 
@@ -3671,12 +3673,12 @@ def test_cli_search_through_replay(monkeypatch):
     assert report["coverage"][0]["complete"] == "total"
 ```
 
-- [ ] **Step 8: Run the tests**
+- [x] **Step 8: Run the tests**
 
 Run: `just test-one tests/test_ena.py`
 Expected: all pass.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 just check && just test-fast
@@ -3693,7 +3695,7 @@ git commit -m "feat(ena): the first adapter, with recorded exchanges and the lis
 **Interfaces:**
 - Consumes: Task 2's `[cli.quarry]` rows on ops main; every command from Tasks 5 and 7.
 
-- [ ] **Step 1: Adopt the table**
+- [x] **Step 1: Adopt the table**
 
 ```bash
 (cd "$TREE/ops" && python3 bin/vendored adopt --into "$WT" cli.toml cli_surface.py)
@@ -3701,7 +3703,7 @@ git commit -m "feat(ena): the first adapter, with recorded exchanges and the lis
 
 Expected: `tools/cli.toml` holds `[cli.quarry]`.
 
-- [ ] **Step 2: Write the conformance test**
+- [x] **Step 2: Write the conformance test**
 
 `tests/test_cli_surface.py`:
 
@@ -3805,7 +3807,7 @@ def test_json_is_honoured_by_every_leaf_command(monkeypatch):
         assert isinstance(json.loads(result.stdout), dict), (path, result.stdout)
 ```
 
-- [ ] **Step 3: Run it**
+- [x] **Step 3: Run it**
 
 Run: `just test-one tests/test_cli_surface.py`
 Expected: all pass. A `test_surface_equals_table` failure prints the rows missing from
@@ -3813,7 +3815,7 @@ either side: fix the code to match the table (the table is the authority), or, w
 table is wrong, fix it in ops first (a worktree, a commit, a merge, as Task 2) and rerun
 Step 1.
 
-- [ ] **Step 4: Document and gate**
+- [x] **Step 4: Document and gate**
 
 In `AGENTS.md` Layout, add: `src/quarry/catalog/` (resources, domains, the Bioregistry
 snapshot); `src/quarry/adapters/` (one module per resource); `tests/recordings/` (what
@@ -3828,15 +3830,84 @@ just docs && just gate
 
 Expected: `just gate` (check, then the full suite) exits 0.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tools tests/test_cli_surface.py AGENTS.md README.md
 git commit -m "test(cli): conform to the shared CLI table"
 ```
 
-- [ ] **Step 6: Finish the branch**
+- [x] **Step 6: Finish the branch**
 
 Use superpowers:finishing-a-development-branch. quarry is a personal-profile repository, so
 the local merge of `foundation` into `main` is the default; a GitHub remote and its first
 push are outside this plan and need the user.
+
+
+## Execution result
+
+All nine tasks completed under subagent-driven execution. Quarry main contains implementation
+commit `6e846aa`; `just gate` on main passed 309 tests. Ops registration and CLI authority
+landed as `ab844c8`. The user separately approved global delivery, committed in lore as
+`c836585`. No remote, push or pull request was created.
+
+A regular wheel installation passed offline catalog, version, resource-listing and identifier
+smoke checks. Bioregistry 0.15.3 is pinned with 2,679 prefixes and source/hash metadata.
+The recorded ENA scenarios returned 33 myeloma studies and 44 RPMI-8226 studies. The two
+observed transient HTTP 500s are retained and exercised in replay fixtures.
+
+The snippets above are the reviewed implementation argument, not the current API authority.
+Execution corrected boundary defects through test-first regressions and independent reviews.
+The current adapter contract adds pure `prepare(query)`, returning an execution callable;
+all selected adapters prepare before any HTTP. Direct `search(client, query)` composes both
+stages. The fast gate runs the whole small suite because testmon did not track CLI subprocess
+source changes reliably.
+
+The broader first version remains open: `quarry-3f4c3b` owns repositories/acquisition,
+`quarry-06c10c` owns terms/skills/live checks. The consuming tasks are `sci-a17882`
+(science acquire) and `mm-13aac8` (roster migration). Required-key enforcement before private
+route adoption is tracked as `quarry-e0f1c0`.
+
+### Execution rulings
+
+- Ruling: Task 6 scrubs credential spellings across displayed redirect URLs, including echoes outside key_param and header-only keys — spec §9 requires no credential in trace/errors — if wrong, harmless text in a URL may be over-redacted.
+- Ruling: Task 6 retries every 5xx plus 408/429 — spec §9 is broader than the plan snippet — if wrong, permanent server errors incur bounded retries.
+- Ruling: Tasks 4/7 use ambiguous_id for bare accessions outside normalize; change the planned not_a_curie tests — the approved spec §7 is binding — if wrong, consumers may prefer the more specific error kind.
+- Ruling: Tasks 8/9 build replay CLI requests from the recorder MYELOMA scenario and refuse empty show-first recording clearly — widening a live fixture window must keep strict replay aligned — if wrong, tests share a scenario defect, while independent compile tests still cover syntax.
+- Ruling: Tasks 6/7 prove wrong-body rejection before consuming the exchange and observe that refused searches send no request — existing planned assertions cannot catch their named regressions — if wrong, added test instrumentation may need adjustment.
+- Ruling: Tasks 5/7 retain the CLI module guard after all commands — module execution must register the same surface as imports — if wrong, no product behavior changes beyond correct registration.
+- Ruling: Every implementation commit runs test-fast and every worktree removal audits host pointers/ignored files and harvests timings — global execution instructions override abbreviated plan steps — if wrong, additional gate time only.
+- Ruling: Task 6 keeps RecordingTransport.save(exchanges, path) and matching-key consumption order — Task 8 uses that signature, and spec requires exact request matching rather than strict ordering among different keys — if wrong, a later consumer expecting instance save or global order needs adaptation.
+- Ruling: Task 1 describes not-yet-created catalog/fixture directories as planned plain text instead of adding placeholder files — the guide checker requires marked paths to exist and later tasks create them — if wrong, temporary guides have fewer clickable paths until Task9.
+- Ruling: Run the full current suite through test-fast instead of relying on testmon selection with uninstrumented CLI subprocesses — the small foundation suite needs reliable source coverage; subprocess instrumentation adds unnecessary machinery — if wrong, commit verification costs more time as the suite grows.
+- Ruling: Task 2 seeds mirror name/purpose from committed quarry identity before ops-projects pull — current pull validates those fields before reading identity, so the abbreviated bootstrap cannot run — if wrong, pull still normalizes the same identity values; no tool code changes.
+- Ruling: Task 2 marks shared since/until options role=bound — current CLI schema requires a role and existing search commands use bound — if wrong, only table semantic metadata needs correction; parser surface is unchanged.
+- Ruling: Task 3 validates every pitfall as a TOML table before reading its keys — malformed catalog data must fail with CatalogError instead of a Python TypeError — if wrong, previously accepted invalid entries are refused earlier.
+- Ruling: Catalog checks refuse noncanonical local-prefix declarations instead of silently rewriting ownership — explicit lowercase canonical configuration keeps Registry and Catalog routing consistent — if wrong, existing mixed-case local catalog entries need a one-time lowercase edit.
+- Ruling: Task 6 refuses foreign redirect targets that contain the actual credential in any covered literal/encoded spelling, in addition to removing declared auth locations — a mocked probe proved an echoed key is otherwise sent to the foreign origin — if wrong, a credential-bearing cross-origin redirect fails explicitly instead of completing.
+- Ruling: Task 5 hoists attached -Cdir as well as separated -C dir while preserving -- — Click already accepts this spelling at root and global placement must be consistent — if wrong, only tokens before -- that start with -C are treated as global options.
+- Ruling: Task 5 translates config decode/read failures to config_invalid at the input boundary — invalid encoding and I/O failures must produce the promised JSON error — if wrong, callers see a typed error instead of the underlying Python exception.
+- Ruling: Task 6 keeps the approved 60-second Retry-After ceiling per requested delay, not as a cumulative operation timeout — the reviewed focus and tests constrain each delay; no total retry policy was specified — if wrong, up to four accepted 60-second delays may accumulate before the fifth attempt.
+- Ruling: Task 7 makes global hoisting respect local option values, including native strings that resemble root flags — a focused probe proved values are currently moved out of --native, violating unchanged native-query passthrough — if wrong, the scanner consumes a value token as data rather than interpreting it as a second option.
+- Ruling: Task 6 preserves encoded request paths in replay keys instead of decoded url.path — percent-escaped separators can address a different endpoint and exact matching must distinguish them — if wrong, equivalent alternate path spellings require distinct recordings.
+- Ruling: Task 7 translates out-of-range relative dates to ValueError in parse_when — overflow is invalid user input and must follow the existing exit-2 usage contract — if wrong, callers receive a value error instead of a raw overflow.
+- Ruling: Task 7 preserves organism-option presence and refuses empty or blank values before catalog/network work — an empty shell expansion must not broaden a search or bypass native exclusivity — if wrong, blank organism searches now require a valid value.
+- Ruling: Task 7 retains the native input and native matching label in failed partial coverage — quarry did not compile the query and the known input is the reproduction handle — if wrong, failure reports include a query that may have failed before reaching the service.
+- Ruling: Final fix converts malformed response decoding at the shared HTTP boundary to a safe UpstreamError, retaining bounded retries for known request failures — normal/partial CLI errors must remain typed — if wrong, an invalid encoded response is retried within the existing attempt limit.
+- Ruling: Final fix removes untrusted response excerpts and record values from parser diagnostics — those values can echo a credential; field/type context suffices — if wrong, diagnosis needs trace/fixtures rather than an error-body excerpt.
+- Ruling: Final fix handles ordinary JSON credential escaping in recorder request/response bodies — parsing a recorded body must not recover a submitted key — if wrong, redaction may replace matching scientific text as well as credential echoes.
+- Ruling: Final fix validates nonblank filter values in the shared Query boundary, reusing it from CLI — identical library and CLI requests must not silently broaden search — if wrong, blank filter values are refused instead of interpreted by an adapter.
+- Ruling: Adapters gain a pure prepare(query) stage returning a callable that executes the compiled query; direct search(client, query) composes preparation and execution — every resource-specific static refusal must happen before any selected adapter sends, without duplicate compilation rules — if wrong, downstream adapters must implement this explicit preparation contract.
+- Ruling: Remaining repositories/files/acquisition/terms/skills stay in subsequent milestone plans — the approved foundation scope explicitly separates them — if wrong, those capabilities require later implementation work.
+- Ruling: ENA run/sample/experiment metadata is deferred beyond this study-based foundation — the recorded route is result=study despite wider insdc.sra namespace ownership — if wrong, users of other SRA record types currently receive not_found until coverage expands.
+- Ruling: Cross-process and simultaneous multithreaded scheduling remain outside this sequential foundation; process-shared throttle is used by sequential clients — the spec excludes cross-process coordination and current execution/examples are sequential — if wrong, concurrent library callers can violate the rate allowance and need synchronization before use.
+- Ruling: Non-default-port replay identity retains the documented current limitation — current routes use default ports and that shortcut was accepted — if wrong, a new non-default-port route needs key changes before recording.
+- Ruling: Ops registration and global delivery stand on their separate review/approval/commit evidence — re-auditing those repositories is outside the quarry branch review — if wrong, their owners must remedy an external integration defect.
+- Ruling: Kernel writes, byte downloads, publishing, caching and MCP remain excluded — the approved design places them elsewhere or out of scope — if wrong, users need the named consuming tools or a later scope decision.
+
+### Deferred minor findings
+
+- Task 1: minor (deferred): uv emits nonfatal cross-filesystem hardlink warnings during installs; runtime tests emit none.
+- Task 9: minor (deferred): help-subcommand conformance compares stdout but does not independently assert exit0/empty stderr.
+- Final: minor (deferred): required-key routes are not refused locally when the environment key is absent; no shipped route uses required authentication. Fix before adopting the first required-key route.
+- Final: minor (deferred): help-subcommand status/stderr assertion remains deferred; no current help failure demonstrated.
