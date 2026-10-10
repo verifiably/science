@@ -6,7 +6,7 @@ priority: 2
 process: planned
 owner: quarry-design
 created: 2026-10-10T16:34:30Z
-updated: 2026-10-10T19:11:21Z
+updated: 2026-10-10T19:11:22Z
 started: 2026-10-10T17:12:51Z
 depends: []
 tags: []
@@ -67,3 +67,5 @@ Agents currently work out each bio resource themselves (GEO E-utilities, ENA por
 - 2026-10-10T19:01:19Z (quarry-design): resumed
   provenance: {"harness_session":"claude-code:812ecacd-3a65-4c38-8af4-57938f12afc5","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-10T19:11:21Z (quarry-design): Plan 1 of 3 drafted: docs/plans/2026-10-10-quarry-foundation.md (foundation + ENA), steps sci-005df0..sci-6da492. Plans 2 (GEO, BioStudies, Zenodo, figshare, PubMed; files --acquisition) and 3 (OLS terms; skills; live checks) follow. Spec amended: catalog inside the package; key-variable exception as a comment beside [cli.quarry] (ops-1aa74e).
+- 2026-10-10T19:11:22Z (quarry-design): parked (waiting on user, review): User reviews the plan at .worktrees/quarry-design/docs/plans/2026-10-10-quarry-foundation.md and picks an execution method; then the agent files the science acquire and roster-migration tasks and starts Task 1
+  provenance: {"harness_session":"claude-code:812ecacd-3a65-4c38-8af4-57938f12afc5","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
