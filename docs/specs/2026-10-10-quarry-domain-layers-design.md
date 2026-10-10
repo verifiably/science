@@ -95,8 +95,9 @@ one, and a `format` role is added when a command needs one.
 | `local-tool` | sra-tools, edirect |
 
 A route declares what the adapter needs to use it well: its base URL, its rate (minimum
-interval between requests), its authentication (none, optional key, required key) and
-the variable that holds the key, its page-size cap, and whether it reports a total.
+interval between requests), the service whose allowance the rate draws on, its
+authentication (none, optional key, required key) and the variable that holds the key,
+its page-size cap, and whether it reports a total.
 
 ### 4.3 Roles decide the verbs
 
@@ -155,6 +156,7 @@ adapter = "quarry.adapters.ena"     # several resources may name one service ada
 kind = "rest"
 url = "https://www.ebi.ac.uk/ena/portal/api"
 min_interval = 0.5
+service = "ebi-ena"                    # routes naming one service share one throttle (§9)
 auth = "none"
 reports_total = true
 
@@ -231,7 +233,7 @@ otherwise. It finds:
   | `pmid:n` | `pubmed:n` | synonym |
   | BioStudies `E-GEOD-n` | `arrayexpress:E-GEOD-n`, with cross-reference `geo:GSEn` | `biostudies` covers `S-…` accessions only |
   | Zenodo record | `zenodo.record:n` | `zenodo` is a synonym |
-  | figshare item | `figshare:n` | a `local_prefix`: Bioregistry has none |
+  | figshare item | `figshare:n`, with a publisher supplement's paper DOI as a `doi:` cross-reference | a `local_prefix`: Bioregistry has none. The roster used the paper DOI as a group's id; quarry keeps each item under its own id, so `show` and `files` resolve it, and grouping supplements under their paper stays the consumer's step |
 
 ## 8. Command surface
 
@@ -278,8 +280,11 @@ configuration; that file describes a world, not a workspace.
 ### 8.2 Filters and queries
 
 - **Shared filters** apply to every data-holding resource: the terms, `--since`,
-  `--until` and `-n`. Each term is a phrase. `-n` caps each resource's listing, not the
-  merged results; results are merged in the order of the search set.
+  `--until` and `-n`. Each term is a phrase, and the phrases combine with OR, as the
+  roster's queries do: `search myeloma plasmacytoma` finds records matching either.
+  Filters combine with AND, with each other and with the terms. `-n` caps each
+  resource's listing, not the merged results; results are merged in the order of the
+  search set.
 - **Domain filters** are declared by a domain (biology: `--organism`, which takes a
   taxon name or `ncbitaxon:` CURIE).
 - **Compilation.** Each adapter compiles the filters into its resource's native query,
@@ -292,8 +297,11 @@ configuration; that file describes a world, not a workspace.
 - **Refusal.** An adapter that cannot express a filter refuses (`unsupported_filter`,
   naming the resource and filter) rather than drop it. Under `--exact`, BioStudies
   refuses, so a biology search with `--exact` needs `--in` without it.
-- **`--native Q`** passes one resource's own query unchanged. It requires exactly one
-  `--in`.
+- **`--native Q`** passes one resource's own query unchanged, in place of compiled
+  terms and filters. It requires exactly one `--in`, and it refuses terms, domain
+  filters and `--exact` beside it (a usage error, exit 2). `--since`, `--until` and
+  `-n` are refused too, since the native query carries its own bounds; only paging is
+  quarry's.
 
 ### 8.3 Output and completeness
 
@@ -331,12 +339,21 @@ configuration; that file describes a world, not a workspace.
 - **One HTTP client**, new and on httpx (as lit uses). It keeps what the roster's
   urllib `Http` learned (per-source intervals, a User-Agent, retries on 429 and 5xx)
   and adds what it lacked:
-  - a per-route minimum interval taken from the catalog, shared across a process;
+  - one throttle per service and key, shared across a process: routes naming the
+    same `service` draw on one allowance, so GEO and PubMed, both on NCBI
+    E-utilities (`service = "ncbi-eutils"`), never exceed it together. Two quarry
+    processes on one host do not coordinate; a harvest that needs more than one runs
+    them in sequence;
   - a User-Agent naming quarry and its version;
   - retries with backoff on 408, 429, 5xx and transport errors, honouring
     `Retry-After`;
   - a log of every request, printed to stderr under `--trace` (`QUARRY_TRACE`
     mirrors it).
+- **Redaction.** A route declares where its credential travels (`key_param`, such as
+  E-utilities' `api_key` query parameter, or `key_header`). The client replaces that
+  value with `REDACTED` in every trace line, error detail and recorded fixture, and
+  fixture matching ignores it. A credential therefore never reaches a log, a committed
+  file or an error object.
 - **Keys.** A route names its key variable (`key_env`, for example `NCBI_API_KEY`)
   and its keyed interval (`keyed_min_interval`). When the variable is set, the key is
   sent and the keyed interval applies. Key variables keep each service's own names, so
@@ -350,21 +367,25 @@ configuration; that file describes a world, not a workspace.
   dataset with its act report in one transaction. `files <curie> --acquisition`
   prints the request that operation takes, as one JSON value:
   - `title`: the record's title;
-  - `locator`: `accession:<local id>` (`accession:GSE24080`). The kernel's accession
-    grammar carries no prefix, so the CURIE travels beside it in a `source` field.
-    The kernel's request has no such field; the namespace question below decides
-    where the CURIE lands;
+  - `locator`: `accession:<canonical CURIE>` (`accession:geo:GSE24080`). The
+    kernel's locator check splits at the first colon only, so the whole CURIE is the
+    remainder, and `figshare:123` and `zenodo.record:123` stay distinct;
   - `resources`: one per file (after `--file`), each a unique name, its URL, and
     `expected` as a sha256 digest when the resource publishes one. Resources that
     publish only MD5 (GEO) leave `expected` unset, since the kernel's instrument
     checks sha256.
 
+  The kernel retrieves over http and https only. An adapter gives each file's
+  documented HTTPS location (GEO and ENA serve their FTP trees over HTTPS as well).
+  When a file has none, `--acquisition` fails with `unsupported_transport`, naming
+  the file, rather than emit a request the kernel would refuse. Plain `files` still
+  lists every location the resource gives.
+
   Retrieval bounds (timeout, byte ceiling) are the consuming command's to set, not
   quarry's. Several files make one dataset, not one record per file. science exposes no command
   for acquisition yet. A `science acquire` command that takes this request is a
   science task, filed when this plan lands, and it is a dependency of the end-to-end
-  path but not of quarry's first version. Whether the kernel's accession locator
-  should carry a namespace is a question for beliefs, filed at the same time.
+  path but not of quarry's first version.
 
 ## 10. Skills
 
@@ -417,6 +438,11 @@ does.
 - **Recording.** `just record <resource>` refreshes one resource's fixtures against
   the live service; recording is a person's or agent's deliberate act, never part of a
   test run.
+- **Redaction.** A test sets a sentinel key, runs authenticated requests under
+  `--trace` and through recording, and asserts the sentinel appears in no trace line,
+  fixture or error object.
+- **Shared throttle.** A test interleaves GEO and PubMed calls on a fake clock and
+  asserts the combined rate stays within the E-utilities allowance.
 - **Pitfalls.** Each catalog pitfall has a test that reproduces its trigger from a
   fixture and asserts the handling: the ENA hyphenated term, the Zenodo page cap, the
   figshare short page, an incomplete ENA listing.
@@ -439,7 +465,7 @@ does.
 | ENA | repository | biology | exact-equality compilation; the truncation guard |
 | BioStudies | repository | biology | organism from facets; the `E-GEOD-` to `geo:` mapping |
 | Zenodo | repository | core | the page cap |
-| figshare | repository | core | short-page completeness; supplements grouped by `resource_doi` |
+| figshare | repository | core | short-page completeness; publisher supplements carry their paper's DOI |
 | PubMed | literature-index | core | the roster's review search |
 | GO, UBERON, NCBITaxon | ontology | biology | the `term` verbs; one shared adapter over EBI's Ontology Lookup Service (OLS) serves all three, and more ontologies are a resource file each |
 

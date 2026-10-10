@@ -6,7 +6,7 @@ priority: 2
 process: planned
 owner: quarry-design
 created: 2026-10-10T16:34:30Z
-updated: 2026-10-10T18:14:13Z
+updated: 2026-10-10T18:24:09Z
 started: 2026-10-10T17:12:51Z
 depends: []
 tags: []
@@ -45,3 +45,8 @@ Agents currently work out each bio resource themselves (GEO E-utilities, ENA por
 - 2026-10-10T18:14:07Z (quarry-design): Round 1 disposition: all 17 folded. Largest change, verified in beliefs (holdings/acquire.py, guide writes-operations §Acquiring data): quarry drops fetch; files --acquisition emits the kernel acquisition request; science acquire and the accession-namespace question are follow-ups filed when the plan lands.
 - 2026-10-10T18:14:13Z (quarry-design): parked (waiting on user, review): User reviews the spec at .worktrees/quarry-design/docs/specs/2026-10-10-quarry-domain-layers-design.md (or runs an external review round); then the agent folds findings, and on approval writes the implementation plan
   provenance: {"harness_session":"claude-code:812ecacd-3a65-4c38-8af4-57938f12afc5","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-10T18:21:04Z (quarry-design): review: spec round 2 — verdict: revise; findings: P1 3, P2 3; reviewer: codex
+- 2026-10-10T18:21:25Z (quarry-design): Spec round 2 findings: P1 preserve the full CURIE in the acquisition locator (the current kernel permits colons in its remainder) and remove the unsupported source field; P1 define resolvable figshare grouping or keep native item IDs with paper-DOI grouping metadata; P1 redact credentials before request tracing and fixture recording/matching. P2 specify multi-term Boolean composition and native-query/filter exclusivity; P2 require supported HTTP(S) URLs or an explicit refusal when emitting acquisition requests; P2 share throttling by upstream service/credential scope across GEO and PubMed routes. Reviewed the full spec, the roster adapters and tests, beliefs request/locator validators, ops CLI conventions, and upstream documentation. Spec and code unchanged; review only.
+- 2026-10-10T18:23:12Z (quarry-design): resumed
+  provenance: {"harness_session":"claude-code:812ecacd-3a65-4c38-8af4-57938f12afc5","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-10T18:24:09Z (quarry-design): Round 2 disposition: all 6 folded. Verified in beliefs: facets.py:52-60 and acquire.py:90 split the locator at the first colon (source.py's stricter accession rule governs citation sources, not facets), so the locator is accession:<CURIE> and the beliefs namespace follow-up is withdrawn; records.py:159 refuses non-http(s) URLs, so --acquisition refuses unsupported_transport. Also: OR between phrases, --native exclusive with terms/filters/bounds, per-service shared throttle, credential redaction with a sentinel test, figshare items keep native ids.
