@@ -292,8 +292,10 @@ configuration; that file describes a world, not a workspace.
   GEO's become `[All Fields]` phrases with `[ORGN]`.
 - **Matching.** Each coverage entry says how the resource matched the terms:
   `"match": "exact"` (ENA's equality clauses) or `"expanded"` (BioStudies expands
-  phrases through an ontology and has no off switch). `--exact` requires exact
-  matching everywhere.
+  phrases through an ontology and has no off switch), or `"native"` when `--native` sent the
+  resource's own syntax, which quarry did not compile and cannot vouch for. `--exact`
+  requires exact matching everywhere. Shared phrases are literal: a character a resource
+  reads as syntax (ENA's `*` wildcard, a double quote) is refused there, not passed on.
 - **Refusal.** An adapter that cannot express a filter refuses (`unsupported_filter`,
   naming the resource and filter) rather than drop it. Under `--exact`, BioStudies
   refuses, so a biology search with `--exact` needs `--in` without it.

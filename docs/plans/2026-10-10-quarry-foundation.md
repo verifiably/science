@@ -39,8 +39,8 @@ Filed when this plan is approved, not as tasks in it: the science task for
   `dirname "$(tasks root sci-ba7150 | python3 -c 'import json,sys; print(json.load(sys.stdin)["root"])')"`.
 - The new repository is `$TREE/quarry`. Every path in a task below is relative to it unless
   the task names ops (`$TREE/ops`) or lore (`$TREE/lore`).
-- After Task 1, all quarry work happens in the worktree `$TREE/quarry/.worktrees/foundation`
-  (created in Task 1, Step 12). Task 2 also works in an ops worktree, `$TREE/ops/.worktrees/quarry-cli`.
+- From Task 1, Step 3 on, all quarry work happens in the worktree `$TREE/quarry/.worktrees/foundation`
+  (`$WT`); main holds only the seed commit until the branch is finished. Task 2 also works in an ops worktree, `$TREE/ops/.worktrees/quarry-cli`.
 
 ## Global Constraints
 
@@ -59,11 +59,11 @@ Filed when this plan is approved, not as tasks in it: the science task for
 
 ## Review Focus
 
-1. A search phrase containing a double quote: ENA's query syntax cannot carry it, so the adapter refuses with `unsupported_filter` instead of sending a broken query. Pinned in Task 8.
+1. A search phrase containing a double quote or `*`: ENA's syntax cannot carry the first and reads the second as a wildcard, so the adapter refuses with `unsupported_filter` instead of sending a broken or wildcard query. Pinned in Task 8.
 2. A search that matches nothing: ENA answers its search endpoint with an empty body. The result has zero rows and `complete: total`, with no JSON decode error. Pinned in Task 8.
 3. A CURIE typed with an uppercase prefix or a synonym (`GEO:GSE1`, `PMID:123`) prints in canonical form (`geo:GSE1`, `pubmed:123`). Pinned in Task 4.
 4. `--since` later than `--until`: a usage error (exit 2), not an empty search. Pinned in Task 7.
-5. A `Retry-After` of an hour: the client waits at most 60 s per retry rather than hanging. Pinned in Task 6.
+5. A `Retry-After` of an hour, or as an HTTP date: the client honours either form, and a delay beyond its 60 s budget fails at once with the delay named, rather than hanging or retrying early. Pinned in Task 6.
 
 ---
 
@@ -83,21 +83,13 @@ git init -b main
 tasks init --prefix quarry
 ```
 
-- [ ] **Step 2: Copy the front door from ops templates**
+Main receives only the seed (the task records and `identity.toml`, the project's registration
+inputs, which ops reads from the main checkout in Task 2). Everything else is written in the
+foundation worktree from Step 4 on.
 
-```bash
-cp "$TREE/ops/templates/justfile" justfile
-cp "$TREE/ops/templates/identity.toml" identity.toml
-cp "$TREE/ops/templates/README.md" README.md
-cp "$TREE/ops/templates/AGENTS.md" AGENTS.md
-mkdir .githooks && cp "$TREE/ops/templates/githooks/"* .githooks/
-cp "$TREE/ops/templates/gitignore" .gitignore
-printf '.venv/\n__pycache__/\n.testmondata\n' >> .gitignore
-git config core.hooksPath .githooks
-(cd "$TREE/ops" && python3 bin/vendored adopt --into "$TREE/quarry" tt ops-check ops-docs)
-```
+- [ ] **Step 2: Write identity.toml**
 
-- [ ] **Step 3: Fill identity.toml**
+`identity.toml`:
 
 ```toml
 # What this project is. `tools/ops-docs write` renders it into the identity region of
@@ -118,7 +110,34 @@ authority = []
 subsystems = []
 ```
 
-- [ ] **Step 4: Write pyproject.toml**
+- [ ] **Step 3: Seed main and create the foundation worktree**
+
+```bash
+git add tasks identity.toml
+git commit -m "chore: start quarry"
+work-link --ensure .worktrees
+git worktree add -b foundation .worktrees/foundation
+git worktree lock --reason "on WORK_ROOT storage (host: $(uname -n))" .worktrees/foundation
+cd .worktrees/foundation
+```
+
+Expected: one commit on main; the worktree exists. Every later quarry step runs in
+`$TREE/quarry/.worktrees/foundation`, written `$WT` below.
+
+- [ ] **Step 4: Copy the front door from ops templates**
+
+```bash
+cp "$TREE/ops/templates/justfile" justfile
+cp "$TREE/ops/templates/README.md" README.md
+cp "$TREE/ops/templates/AGENTS.md" AGENTS.md
+mkdir .githooks && cp "$TREE/ops/templates/githooks/"* .githooks/
+cp "$TREE/ops/templates/gitignore" .gitignore
+printf '.venv/\n__pycache__/\n.testmondata\n' >> .gitignore
+git config core.hooksPath .githooks
+(cd "$TREE/ops" && python3 bin/vendored adopt --into "$WT" tt ops-check ops-docs)
+```
+
+- [ ] **Step 5: Write pyproject.toml**
 
 ```toml
 [project]
@@ -146,7 +165,7 @@ testpaths = ["tests"]
 addopts = "-q"
 ```
 
-- [ ] **Step 5: Fill the justfile's commands**
+- [ ] **Step 6: Fill the justfile's commands**
 
 Edit the template's placeholder lines, leaving every recipe below them as copied:
 
@@ -167,12 +186,12 @@ setup_cmd := "just work-link .venv && uv sync --group dev"
 Replace the template's comment above `fast_cmd` that says "With no affected-only
 mechanism..." with: `# fast_cmd is affected-only through pytest-testmon.`
 
-- [ ] **Step 6: Run setup**
+- [ ] **Step 7: Run setup**
 
 Run: `just setup`
 Expected: exits 0; `.venv` exists (a link into WORK_ROOT storage on a dotfiles host).
 
-- [ ] **Step 7: Write the failing test**
+- [ ] **Step 8: Write the failing test**
 
 `tests/__init__.py` is empty. `tests/test_cli_basics.py`:
 
@@ -203,12 +222,12 @@ def test_unknown_command_is_a_usage_error():
     assert out.stderr.splitlines()[-1] == "Run 'quarry --help'."
 ```
 
-- [ ] **Step 8: Run it to see it fail**
+- [ ] **Step 9: Run it to see it fail**
 
 Run: `just test-one tests/test_cli_basics.py`
 Expected: FAIL with `No module named quarry.cli`.
 
-- [ ] **Step 9: Write output.py and cli.py**
+- [ ] **Step 10: Write output.py and cli.py**
 
 `src/quarry/__init__.py`:
 
@@ -330,12 +349,12 @@ if __name__ == "__main__":
     main()
 ```
 
-- [ ] **Step 10: Run the tests**
+- [ ] **Step 11: Run the tests**
 
 Run: `just test-one tests/test_cli_basics.py`
 Expected: 3 passed.
 
-- [ ] **Step 11: Fill the guides and commit on main**
+- [ ] **Step 12: Fill the guides and commit in the worktree**
 
 Fill the template placeholders in `AGENTS.md`:
 
@@ -350,28 +369,17 @@ Delete the README's status placeholder only if the template asks for it. Then:
 just docs
 just check
 git add -A
-git commit -m "chore: create quarry with its front door and root command"
+git commit -m "chore: add quarry's front door and root command"
 ```
 
-Expected: `just check` exits 0; the commit hook passes.
-
-- [ ] **Step 12: Create the foundation worktree**
-
-```bash
-work-link --ensure .worktrees
-git worktree add -b foundation .worktrees/foundation
-git worktree lock --reason "on WORK_ROOT storage (host: $(uname -n))" .worktrees/foundation
-cd .worktrees/foundation && just setup && just test-fast
-```
-
-Expected: setup exits 0; 3 passed. Every later quarry step runs in this worktree.
+Expected: `just check` exits 0; the commit hook passes; the commit is on `foundation`, not main.
 
 ### Task 2: Register quarry in ops and add its CLI rows
 
 **Files:**
 - Modify: `$TREE/ops/identity-mirror.toml` (add `[quarry]`)
 - Modify: `$TREE/ops/cli.toml` (add `[cli.quarry]` and its command rows)
-- Generated by ops' `just projects`: `$TREE/ops/instructions/fragments/projects.md`
+- Generated by `ops-projects pull` in the ops worktree: the mirror's `name`/`purpose` for quarry and `$TREE/ops/instructions/fragments/projects.md`
 
 **Interfaces:**
 - Produces: the `[cli.quarry]` rows Task 9's conformance test compares with the live surface. Tasks 5 and 7 must build exactly these options, arguments and summaries.
@@ -396,7 +404,18 @@ profiles = ["personal"]
 path = "quarry"
 ```
 
-Run `ops-projects check` and read its diff: it should add only quarry's `name` and `purpose`.
+Then generate what the mirror and the Projects fragment need, in this worktree, and read the
+diff before going on:
+
+```bash
+python3 bin/ops-projects pull
+git diff identity-mirror.toml instructions/fragments/projects.md
+python3 bin/ops-projects check
+```
+
+Expected: the diff adds quarry's `name` and `purpose` to its mirror table and one quarry line
+to the fragment, nothing else; `check` exits 0. `pull` reads quarry's `identity.toml` from its
+main checkout, which Task 1, Step 3 committed.
 
 - [ ] **Step 3: Add the CLI rows**
 
@@ -522,7 +541,7 @@ worktree. Expected: exit 0. If the table validator rejects `verb` on a command w
 not that verb, remove that `verb` key and rerun.
 
 ```bash
-git add identity-mirror.toml cli.toml
+git add identity-mirror.toml cli.toml instructions/fragments/projects.md
 git commit -m "feat(cli): add quarry's rows and identity"
 ```
 
@@ -532,15 +551,14 @@ git commit -m "feat(cli): add quarry's rows and identity"
 cd "$TREE/ops" && git merge --ff-only quarry-cli
 ```
 
-- [ ] **Step 6: Gate: regenerate the global projects block (needs the user)**
+- [ ] **Step 6: Gate: deliver the Projects block (needs the user)**
 
-`just projects` in ops writes `instructions/fragments/projects.md`, and `just assemble` in
-lore delivers it into every agent session's global instructions: a live global surface.
-Stop and ask the user before running them, naming exactly this change (one line adding
-`quarry` to the Projects list). On approval:
+The fragment is now on ops main, but nothing reads it until `just assemble` in lore delivers
+it into every agent session's global instructions: a live global surface. Stop and ask the
+user before running it, naming exactly this change (one line adding `quarry` to the Projects
+list). On approval:
 
 ```bash
-cd "$TREE/ops" && just projects && git add instructions/fragments/projects.md && git commit -m "chore(projects): add quarry"
 cd "$TREE/lore" && just assemble
 ```
 
@@ -564,7 +582,7 @@ git branch -d quarry-cli
 
 **Interfaces:**
 - Produces: `quarry.errors.QuarryError(kind: str, detail: str)` with `.kind`, `.detail`.
-- Produces: `quarry.catalog`: constants `ROLES`, `DATA_ROLES`, `ROUTE_KINDS`, `AUTH`, `CATALOG_ROOT`; dataclasses `Route`, `Pitfall`, `LocalPrefix`, `Resource` (method `owned_prefixes() -> tuple[str, ...]`), `Domain`, `Finding` (method `as_dict()`), `Catalog` (methods `lineage(domain_id) -> list[str]`, `effective_resources(domain_id) -> list[str]`, `search_set(domain_id) -> list[str]`, `domain_filters(domain_id) -> set[str]`, `owner(prefix) -> Resource | None`); `CatalogError(QuarryError)`; `load(root: Path = CATALOG_ROOT) -> Catalog`; `adapter_modules() -> list[str]`; `check(catalog: Catalog, registry: PrefixLookup, modules: list[str] | None = None) -> list[Finding]`, where `PrefixLookup` is any object with `canonical(prefix: str) -> str | None`.
+- Produces: `quarry.catalog`: constants `ROLES`, `DATA_ROLES`, `ROUTE_KINDS`, `AUTH`, `CATALOG_ROOT`; dataclasses `Route`, `Pitfall`, `LocalPrefix`, `Resource` (method `owned_prefixes() -> tuple[str, ...]`), `Domain`, `Finding` (method `as_dict()`), `Catalog` (methods `lineage(domain_id) -> list[str]`, `effective_resources(domain_id) -> list[str]`, `search_set(domain_id) -> list[str]`, `domain_filters(domain_id) -> set[str]`, `owner(prefix) -> Resource | None`); `CatalogError(QuarryError)`; `load(root: Path = CATALOG_ROOT) -> Catalog`; `adapter_modules() -> list[str]`; `check(catalog: Catalog, registry: PrefixLookup, modules: list[str] | None = None) -> list[Finding]`, where `PrefixLookup` is any object with `canonical(prefix: str) -> str | None` and `is_upstream(prefix: str) -> bool`.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -587,6 +605,9 @@ class Lookup:
     def canonical(self, prefix):
         p = prefix.lower()
         return "pubmed" if p == "pmid" else (p if p in self.CANONICAL else None)
+
+    def is_upstream(self, prefix):
+        return prefix in self.CANONICAL
 
 
 ENA = """
@@ -808,6 +829,8 @@ class CatalogError(QuarryError):
 
 class PrefixLookup(Protocol):
     def canonical(self, prefix: str) -> str | None: ...
+
+    def is_upstream(self, prefix: str) -> bool: ...   # in Bioregistry itself, not a local prefix
 
 
 @dataclass(frozen=True)
@@ -1068,10 +1091,10 @@ def check(catalog: Catalog, registry: PrefixLookup, modules: list[str] | None = 
         if not _adapter_exists(r.adapter):
             add("missing_adapter", where, f"no module {r.adapter!r}")
         for p in r.prefixes:
-            if registry.canonical(p) != p:
+            if not registry.is_upstream(p) or registry.canonical(p) != p:
                 add("unknown_prefix", where, f"{p!r} is not a canonical Bioregistry prefix")
         for p in r.local_prefixes:
-            if registry.canonical(p) is not None:
+            if registry.is_upstream(p):
                 add("local_prefix_in_bioregistry", where, f"{p!r} is in Bioregistry; list it under prefixes")
         for p in r.owned_prefixes():
             if p in owners:
@@ -1167,7 +1190,7 @@ git commit -m "feat(catalog): load and check resources and domains"
 
 **Interfaces:**
 - Consumes: `quarry.catalog.Catalog`, `Resource.local_prefixes`, `CATALOG_ROOT`, `Finding`; `quarry.errors.QuarryError`.
-- Produces: `quarry.ids`: `REGISTRY_PATH`; `Scheme(prefix, name, pattern: re.Pattern | None, uri_format: str | None)`; `Curie(prefix: str, local: str)` with `__str__`; `Registry` with `load(path=REGISTRY_PATH) -> Registry` (classmethod), `with_local(catalog) -> Registry`, `canonical(prefix) -> str | None`, `scheme(prefix) -> Scheme`, `version: str`; `parse(text, registry) -> Curie`; `check_ids(texts, registry) -> list[Finding]`; `normalize(text, registry, owned: Iterable[str]) -> Curie`; `resolve(curie, registry) -> list[str]`.
+- Produces: `quarry.ids`: `REGISTRY_PATH`; `Scheme(prefix, name, pattern: re.Pattern | None, uri_format: str | None)`; `Curie(prefix: str, local: str)` with `__str__`; `Registry` with `load(path=REGISTRY_PATH) -> Registry` (classmethod), `with_local(catalog) -> Registry`, `canonical(prefix) -> str | None`, `is_upstream(prefix) -> bool`, `scheme(prefix) -> Scheme`, `version: str`; `parse(text, registry) -> Curie`; `check_ids(texts, registry) -> list[Finding]`; `normalize(text, registry, owned: Iterable[str]) -> Curie`; `resolve(curie, registry) -> list[str]`.
 
 - [ ] **Step 1: Write the vendoring script**
 
@@ -1309,9 +1332,13 @@ def test_local_prefixes_join_the_registry():
     fig = Resource(id="figshare", name="figshare", roles=("repository",), adapter="quarry.adapters",
                    routes=(route,), local_prefixes={"figshare": LocalPrefix(r"^\d+$", "https://figshare.com/articles/$1",
                                                                             "Bioregistry has no figshare prefix")})
-    reg = REG.with_local(Catalog({"figshare": fig}, {}))
+    cat = Catalog({"figshare": fig}, {})
+    reg = REG.with_local(cat)
     assert str(ids.parse("FIGSHARE:34254439", reg)) == "figshare:34254439"
     assert ids.resolve(ids.parse("figshare:1", reg), reg) == ["https://figshare.com/articles/1"]
+    assert reg.is_upstream("geo") and not reg.is_upstream("figshare")
+    # a valid local prefix checks clean against the merged registry it joined
+    assert catalog.check(cat, reg, modules=[]) == []
 
 
 def test_the_shipped_catalog_checks_clean_against_the_snapshot():
@@ -1364,10 +1391,12 @@ class Curie:
 
 
 class Registry:
-    def __init__(self, version: str, schemes: dict[str, Scheme], lookup: dict[str, str]):
+    def __init__(self, version: str, schemes: dict[str, Scheme], lookup: dict[str, str],
+                 local: frozenset[str] = frozenset()):
         self.version = version
         self._schemes = schemes
         self._lookup = lookup
+        self._local = local
 
     @classmethod
     def load(cls, path: Path = REGISTRY_PATH) -> Registry:
@@ -1383,15 +1412,21 @@ class Registry:
         return cls(doc["version"], schemes, lookup)
 
     def with_local(self, catalog: Catalog) -> Registry:
-        schemes, lookup = dict(self._schemes), dict(self._lookup)
+        schemes, lookup, added = dict(self._schemes), dict(self._lookup), set()
         for resource in catalog.resources.values():
             for prefix, local in resource.local_prefixes.items():
+                if prefix in self._schemes:
+                    continue        # already upstream: check() reports it; never shadow Bioregistry
                 schemes[prefix] = Scheme(prefix, resource.name, re.compile(local.pattern), local.uri_format)
                 lookup[prefix.lower()] = prefix
-        return Registry(self.version, schemes, lookup)
+                added.add(prefix)
+        return Registry(self.version, schemes, lookup, self._local | added)
 
     def canonical(self, prefix: str) -> str | None:
         return self._lookup.get(prefix.lower())
+
+    def is_upstream(self, prefix: str) -> bool:
+        return prefix in self._schemes and prefix not in self._local
 
     def scheme(self, prefix: str) -> Scheme:
         return self._schemes[prefix]
@@ -1460,7 +1495,7 @@ git commit -m "feat(ids): CURIEs against a pinned Bioregistry snapshot"
 
 **Interfaces:**
 - Consumes: `quarry.catalog.load`, `check`, `ROLES`, `ROUTE_KINDS`, `DATA_ROLES`, `CatalogError`, `Finding`; `quarry.ids.Registry`, `parse`, `check_ids`, `normalize`, `resolve`; `quarry.output.emit`, `fail`, `output_options`.
-- Produces: `quarry.lens.CONFIG_NAME`, `find_config(start: Path) -> Path | None`, `resolve_domain(flag: str | None, environ: Mapping[str, str], config: Path | None, cwd: Path, catalog: Catalog) -> str`; `quarry.context.CATALOG_ROOT` (module global tests monkeypatch), `Env(catalog, registry)`, `open_env() -> Env`, `make_client(trace: bool)` (defined in Task 6); `quarry.cli.State(config: Path | None, trace: bool)` on `ctx.obj`; `quarry.cli.reports_errors` decorator. The test fixture `make_catalog(resources: dict[str, str], biology: list[str], search: list[str]) -> Path` (in `tests/conftest.py`), which Tasks 7 and 8 reuse.
+- Produces: `quarry.cli.hoist_globals(args: list[str]) -> list[str]`; `quarry.lens.CONFIG_NAME`, `find_config(start: Path) -> Path | None`, `resolve_domain(flag: str | None, environ: Mapping[str, str], config: Path | None, cwd: Path, catalog: Catalog) -> str`; `quarry.context.CATALOG_ROOT` (module global tests monkeypatch), `Env(catalog, registry)`, `open_env() -> Env`, `make_client(trace: bool)` (defined in Task 6); `quarry.cli.State(config: Path | None, trace: bool)` on `ctx.obj`; `quarry.cli.reports_errors` decorator. The test fixture `make_catalog(resources: dict[str, str], biology: list[str], search: list[str]) -> Path` (in `tests/conftest.py`), which Tasks 7 and 8 reuse.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -1943,6 +1978,106 @@ The argument names (`ids`, `id`, `curie`, `resource`) are the names the conforma
 (Task 2) give them: `cli_surface.click_rows` reads each parameter's name. That is why the
 module is imported as `idmod`.
 
+Then make the global options work in every position the conventions allow (`<name> [global
+options] <command> [options]`, with global options "accepted before the command and after
+it"). `-C`, `--config` and `--trace` are root options only, so their rows stay at the root of
+the table; `Cli.main` moves them to the front of the arguments before click parses. Replace
+the `Cli` class from Task 1 with:
+
+```python
+GLOBAL_VALUED = frozenset({"-C", "--config"})
+GLOBAL_FLAGS = frozenset({"--trace"})
+
+
+def hoist_globals(args: list[str]) -> list[str]:
+    """Move root-only global options to the front, wherever they were written. `--` ends the
+    options: nothing after it moves."""
+    front, rest, i = [], [], 0
+    while i < len(args):
+        word = args[i]
+        if word == "--":
+            rest += args[i:]
+            break
+        if word in GLOBAL_FLAGS or word.split("=", 1)[0] == "--config" and "=" in word:
+            front.append(word)
+        elif word in GLOBAL_VALUED:
+            front += args[i:i + 2]
+            i += 1
+        else:
+            rest.append(word)
+        i += 1
+    return front + rest
+
+
+class Cli(click.Group):
+    """Global options are accepted before and after the command; a usage error prints one line
+    naming the problem and one pointing at --help (the CLI vocabulary's exit-code contract)."""
+
+    def main(self, args=None, **kwargs):
+        kwargs.setdefault("prog_name", "quarry")
+        kwargs.pop("standalone_mode", None)
+        args = hoist_globals(list(sys.argv[1:] if args is None else args))
+        try:
+            rv = super().main(args, standalone_mode=False, **kwargs)
+        except click.UsageError as error:
+            prog = error.ctx.command_path if error.ctx else kwargs["prog_name"]
+            click.echo(f"{prog}: {error.format_message()}", err=True)
+            click.echo(f"Run '{kwargs['prog_name']} --help'.", err=True)
+            sys.exit(2)
+        except click.ClickException as error:
+            error.show()
+            sys.exit(error.exit_code)
+        except click.Abort:
+            click.echo("Aborted!", err=True)
+            sys.exit(1)
+        sys.exit(rv or 0)
+```
+
+`--json` and `--pretty` are accepted on the groups too: decorate `domains`, `resources` and
+`id_group` with `@output_options` (after `@main.group(...)`), as every leaf already is.
+
+Append to `tests/test_cli_catalog.py`:
+
+```python
+import os
+
+import pytest
+
+from quarry.cli import hoist_globals
+
+
+def test_hoist_globals():
+    assert hoist_globals(["resources", "list", "--config", "q.toml", "-C", "d", "--trace"]) == \
+        ["--config", "q.toml", "-C", "d", "--trace", "resources", "list"]
+    assert hoist_globals(["search", "--config=q.toml", "x"]) == ["--config=q.toml", "search", "x"]
+    assert hoist_globals(["search", "--", "-C", "x"]) == ["search", "--", "-C", "x"]
+
+
+@pytest.mark.parametrize("place", ["root", "group", "leaf"])
+def test_config_in_every_position(tmp_path, place):
+    cfg = tmp_path / "q.toml"
+    cfg.write_text('domain = "biology"\n')
+    args = {"root": ["--config", str(cfg), "resources", "list"],
+            "group": ["resources", "--config", str(cfg), "list"],
+            "leaf": ["resources", "list", "--config", str(cfg)]}[place]
+    out = invoke("--json", *args)
+    assert out.exit_code == 0 and json.loads(out.stdout)["domain"] == "biology"
+
+
+def test_chdir_after_the_command(tmp_path, monkeypatch):
+    monkeypatch.chdir(os.getcwd())                     # restored after the test
+    (tmp_path / "quarry.toml").write_text('domain = "biology"\n')
+    out = invoke("--json", "resources", "list", "-C", str(tmp_path))
+    assert json.loads(out.stdout)["domain"] == "biology"
+
+
+def test_output_flags_on_a_group():
+    assert json.loads(invoke("domains", "--json", "list").stdout)["domains"]
+```
+
+`invoke` runs `main` through `CliRunner`, which calls `Cli.main(args=...)`, so these tests
+exercise the hoist exactly as the binary does.
+
 - [ ] **Step 5: Run the tests**
 
 Run: `just test-one tests/test_lens.py tests/test_cli_catalog.py tests/test_cli_basics.py`
@@ -1966,21 +2101,24 @@ git commit -m "feat(cli): domain lens, catalog and id commands"
 
 **Interfaces:**
 - Consumes: `quarry.catalog.Route`, `Catalog`; `quarry.errors.QuarryError`.
-- Produces: `quarry.http`: `REDACTED = "REDACTED"`, `MAX_ATTEMPTS = 5`, `RETRY_CAP = 60.0`, `SystemClock`, `UpstreamError(QuarryError)` (kind `upstream_failed`), `Client(*, transport=None, clock=None, trace=None, environ=None)` with `request(route, method, url, *, params=None, json=None, data=None) -> httpx.Response`, `close()`, context-manager methods. `quarry.testing`: `secret_params(catalog) -> frozenset[str]`, `exchange_key(request, secret_params) -> dict`, `exchange(method, url, params=None, *, status=200, body="", content_type="application/json", json_body=None, form=None) -> dict`, `ReplayTransport(exchanges: list[dict], secret_params=frozenset())`, `ReplayTransport.from_files(paths, secret_params)`, `RecordingTransport(secret_params, secrets, inner=None)` with `exchanges` and `save(path)`. `quarry.context.make_client(trace: bool) -> Client`.
+- Produces: `quarry.http`: `REDACTED = "REDACTED"`, `MAX_ATTEMPTS = 5`, `WAIT_BUDGET = 60.0`, `MAX_REDIRECTS = 5`, `SystemClock`, `Throttle(clock)` with `wait(service: str, key: str | None, interval: float)` and `.clock`, `PROCESS_THROTTLE` (the one throttle every client in a process shares by default), `UpstreamError(QuarryError)` (kind `upstream_failed`), `Client(*, transport=None, throttle=None, trace=None, environ=None)` with `request(route, method, url, *, params=None, json=None, data=None) -> httpx.Response`, `close()`, context-manager methods. `quarry.testing`: `KEPT_HEADERS = ("content-type", "retry-after", "location")`, `VirtualClock`, `replay_client(transport) -> Client`, `secret_params(catalog) -> frozenset[str]`, `exchange_key(request, secret_params) -> dict`, `exchange(method, url, params=None, *, status=200, body="", content_type="application/json", headers=None, json_body=None, form=None) -> dict`, `ReplayTransport(exchanges: list[dict], secret_params=frozenset())` (each recording answers once, in order), `ReplayTransport.from_files(paths, secret_params)`, `RecordingTransport(secret_params, secrets, inner=None)` with `exchanges` and `save(path)`. `quarry.context.make_client(trace: bool) -> Client`.
 
 - [ ] **Step 1: Write the failing tests**
 
 `tests/test_http.py`:
 
 ```python
-"""The shared client: throttling per service and key, retries, redaction (spec §9)."""
+"""The shared client: one throttle per service and key across the process, retries within a
+wait budget, credentials that never leave their origin or reach a log (spec §9)."""
+import email.utils
 import json
+from datetime import datetime, timedelta, timezone
 
 import httpx
 import pytest
 
 from quarry.catalog import Route
-from quarry.http import Client, UpstreamError
+from quarry.http import Client, Throttle, UpstreamError
 from quarry.testing import RecordingTransport, ReplayTransport, exchange, exchange_key
 
 
@@ -2002,71 +2140,88 @@ def route(service="eutils", interval=0.34, **kw):
                  auth=kw.pop("auth", "none"), reports_total=True, **kw)
 
 
+def keyed(**kw):
+    return route(auth="optional-key", key_env="TEST_KEY", keyed_min_interval=0.1, **kw)
+
+
 def mock(handler):
     return httpx.MockTransport(handler)
 
 
-def test_one_throttle_per_service_across_routes():
+def client(handler, clock=None, **kw):
+    return Client(transport=mock(handler), throttle=Throttle(clock or FakeClock()), **kw)
+
+
+def test_one_throttle_per_service_across_routes_and_clients():
     clock, times = FakeClock(), []
-    client = Client(transport=mock(lambda r: (times.append(clock.t), httpx.Response(200))[1]), clock=clock)
-    geo, pubmed, other = route(), route(), route(service="ebi-ena")
-    for r in (geo, pubmed, geo, pubmed):
-        client.request(r, "GET", "esearch.fcgi")
+    throttle = Throttle(clock)
+
+    def ok(request):
+        times.append(clock.t)
+        return httpx.Response(200)
+    first, second = Client(transport=mock(ok), throttle=throttle), Client(transport=mock(ok), throttle=throttle)
+    geo, pubmed = route(), route()
+    for c, r in ((first, geo), (second, pubmed), (first, pubmed), (second, geo)):
+        c.request(r, "GET", "esearch.fcgi")
     assert all(b - a >= 0.34 - 1e-9 for a, b in zip(times, times[1:]))
     before = clock.t
-    client.request(other, "GET", "x")                      # another service waits on nothing
+    first.request(route(service="ebi-ena"), "GET", "x")        # another service waits on nothing
     assert clock.t == before
 
 
+def test_clients_share_the_process_throttle_by_default():
+    a, b = Client(transport=mock(lambda r: httpx.Response(200))), Client(transport=mock(lambda r: httpx.Response(200)))
+    assert a._throttle is b._throttle
+
+
 def test_keyed_interval_and_key_parameter():
-    seen = []
-    clock = FakeClock()
-    keyed = route(auth="optional-key", key_env="TEST_KEY", key_param="api_key", keyed_min_interval=0.1)
-    client = Client(transport=mock(lambda r: (seen.append(r.url), httpx.Response(200))[1]), clock=clock,
-                    environ={"TEST_KEY": "k1"})
-    client.request(keyed, "GET", "a")
-    client.request(keyed, "GET", "a")
+    seen, clock = [], FakeClock()
+    c = client(lambda r: (seen.append(r.url), httpx.Response(200))[1], clock, environ={"TEST_KEY": "k1"})
+    c.request(keyed(key_param="api_key"), "GET", "a")
+    c.request(keyed(key_param="api_key"), "GET", "a")
     assert seen[0].params["api_key"] == "k1" and clock.slept == [pytest.approx(0.1)]
 
 
 def test_empty_key_variable_is_unset():
     seen = []
-    keyed = route(auth="optional-key", key_env="TEST_KEY", key_param="api_key", keyed_min_interval=0.1)
-    client = Client(transport=mock(lambda r: (seen.append(r.url), httpx.Response(200))[1]), clock=FakeClock(),
-                    environ={"TEST_KEY": ""})
-    client.request(keyed, "GET", "a")
+    client(lambda r: (seen.append(r.url), httpx.Response(200))[1], environ={"TEST_KEY": ""}).request(
+        keyed(key_param="api_key"), "GET", "a")
     assert "api_key" not in seen[0].params
 
 
 def statuses(*codes, headers=None):
     codes = list(codes)
-
-    def handler(request):
-        return httpx.Response(codes.pop(0), headers=headers or {})
-    return handler
+    return lambda request: httpx.Response(codes.pop(0), headers=headers or {})
 
 
 def test_retries_transient_statuses_with_backoff():
     clock = FakeClock()
-    client = Client(transport=mock(statuses(503, 429, 200)), clock=clock)
-    assert client.request(route(interval=0), "GET", "x").status_code == 200
+    assert client(statuses(503, 429, 200), clock).request(route(interval=0), "GET", "x").status_code == 200
     assert clock.slept == [1, 2]
 
 
-def test_retry_after_is_honoured_and_capped():
+def test_retry_after_seconds_and_http_date():
     clock = FakeClock()
-    Client(transport=mock(statuses(429, 200, headers={"Retry-After": "3"})), clock=clock).request(route(interval=0), "GET", "x")
+    client(statuses(429, 200, headers={"Retry-After": "3"}), clock).request(route(interval=0), "GET", "x")
     assert clock.slept == [3]
+    when = email.utils.format_datetime(datetime.now(timezone.utc) + timedelta(seconds=20), usegmt=True)
     clock = FakeClock()
-    Client(transport=mock(statuses(429, 200, headers={"Retry-After": "3600"})), clock=clock).request(route(interval=0), "GET", "x")
-    assert clock.slept == [60.0]                           # Review Focus 5
+    client(statuses(503, 200, headers={"Retry-After": when}), clock).request(route(interval=0), "GET", "x")
+    assert 15 <= clock.slept[0] <= 21
+
+
+def test_retry_after_beyond_the_budget_fails_without_retrying_early():    # Review Focus 5
+    clock = FakeClock()
+    with pytest.raises(UpstreamError, match="asked to wait 3600 s"):
+        client(statuses(429, 200, headers={"Retry-After": "3600"}), clock).request(route(interval=0), "GET", "x")
+    assert clock.slept == []
 
 
 def test_client_errors_fail_at_once_and_exhaustion_fails():
     with pytest.raises(UpstreamError, match="HTTP 404"):
-        Client(transport=mock(statuses(404)), clock=FakeClock()).request(route(), "GET", "x")
+        client(statuses(404)).request(route(), "GET", "x")
     with pytest.raises(UpstreamError, match="HTTP 503"):
-        Client(transport=mock(statuses(*[503] * 5)), clock=FakeClock()).request(route(interval=0), "GET", "x")
+        client(statuses(*[503] * 5)).request(route(interval=0), "GET", "x")
 
 
 def test_transport_errors_retry_then_fail():
@@ -2074,38 +2229,69 @@ def test_transport_errors_retry_then_fail():
         raise httpx.ConnectError("refused", request=request)
     clock = FakeClock()
     with pytest.raises(UpstreamError, match="ConnectError after 5 attempts"):
-        Client(transport=mock(down), clock=clock).request(route(interval=0), "GET", "x")
+        client(down, clock).request(route(interval=0), "GET", "x")
     assert clock.slept == [1, 2, 4, 8]
 
 
+def test_redirects_keep_credentials_on_their_origin_only():
+    sentinel, seen = "SENTINEL-7f3a", []
+
+    def hop(request):
+        seen.append(request)
+        if request.url.host == "eutils.example" and request.url.path.endswith("/start"):
+            return httpx.Response(302, headers={"Location": "https://eutils.example/entrez/moved"})
+        if request.url.path.endswith("/moved"):
+            return httpx.Response(302, headers={"Location": f"https://elsewhere.example/x?api_key={sentinel}"})
+        return httpx.Response(200)
+    c = client(hop, environ={"TEST_KEY": sentinel})
+    c.request(keyed(key_param="api_key", key_header="X-Api-Key"), "GET", "start")
+    same, other = seen[1], seen[2]
+    assert same.headers["X-Api-Key"] == sentinel                       # same origin keeps it
+    assert other.url.host == "elsewhere.example"
+    assert sentinel not in str(other.url) and "X-Api-Key" not in other.headers
+
+
+def test_a_redirected_post_fails():
+    with pytest.raises(UpstreamError, match="redirected"):
+        client(lambda r: httpx.Response(307, headers={"Location": "https://eutils.example/y"})).request(
+            route(), "POST", "x", data={"a": "1"})
+
+
 def test_the_credential_never_leaks():
-    sentinel = "SENTINEL-7f3a"
-    keyed = route(auth="optional-key", key_env="TEST_KEY", key_param="api_key", keyed_min_interval=0.1)
-    lines = []
+    sentinel, lines = "SENTINEL-7f3a", []
 
     def echo(request):
         return httpx.Response(500 if request.url.path.endswith("fail") else 200, text=f"echo {request.url}")
     recorder = RecordingTransport(frozenset({"api_key"}), [sentinel], inner=mock(echo))
-    client = Client(transport=recorder, clock=FakeClock(), trace=lines.append, environ={"TEST_KEY": sentinel})
-    client.request(keyed, "GET", "ok", params={"term": "x"})
+    c = Client(transport=recorder, throttle=Throttle(FakeClock()), trace=lines.append, environ={"TEST_KEY": sentinel})
+    c.request(keyed(key_param="api_key"), "GET", "ok", params={"term": "x"})
     with pytest.raises(UpstreamError) as caught:
-        client.request(keyed, "GET", "fail")
+        c.request(keyed(key_param="api_key"), "GET", "fail")
     recorded = json.dumps(recorder.exchanges)
     assert sentinel not in "\n".join(lines) and sentinel not in caught.value.detail and sentinel not in recorded
     assert "REDACTED" in "\n".join(lines)
 
 
+def test_replay_answers_in_recorded_order_with_headers():
+    first = exchange("GET", "https://eutils.example/entrez/x", status=503, headers={"retry-after": "1"})
+    second = exchange("GET", "https://eutils.example/entrez/x", body='{"ok": true}')
+    clock = FakeClock()
+    c = Client(transport=ReplayTransport([first, second]), throttle=Throttle(clock))
+    assert c.request(route(interval=0), "GET", "x").json() == {"ok": True} and clock.slept == [1]
+    with pytest.raises(LookupError, match="no recorded exchange"):
+        c.request(route(interval=0), "GET", "x")                       # each recording answers once
+
+
 def test_replay_matches_method_url_sorted_query_and_body_but_not_the_key():
     ex = exchange("POST", "https://eutils.example/entrez/esummary.fcgi", {"db": "gds", "retmode": "json"},
                   form={"id": "1,2"}, body='{"ok": true}')
-    replay = ReplayTransport([ex], frozenset({"api_key"}))
-    client = httpx.Client(transport=replay)
-    hit = client.post("https://eutils.example/entrez/esummary.fcgi",
-                      params={"retmode": "json", "db": "gds", "api_key": "secret"}, data={"id": "1,2"})
+    http = httpx.Client(transport=ReplayTransport([ex], frozenset({"api_key"})))
+    hit = http.post("https://eutils.example/entrez/esummary.fcgi",
+                    params={"retmode": "json", "db": "gds", "api_key": "secret"}, data={"id": "1,2"})
     assert hit.json() == {"ok": True}
     with pytest.raises(LookupError, match="no recorded exchange"):
-        client.post("https://eutils.example/entrez/esummary.fcgi", params={"db": "gds", "retmode": "json"},
-                    data={"id": "3"})
+        http.post("https://eutils.example/entrez/esummary.fcgi", params={"db": "gds", "retmode": "json"},
+                  data={"id": "3"})
 
 
 def test_exchange_key_shape():
@@ -2124,15 +2310,18 @@ Expected: FAIL with `No module named 'quarry.http'`.
 `src/quarry/http.py`:
 
 ```python
-"""The one HTTP client (spec §9): a throttle per service and key shared across the process,
-retries with backoff that honour Retry-After, and a credential that never reaches a trace
-line or an error detail."""
+"""The one HTTP client (spec §9). A throttle per service and key is shared by every client in
+the process; retries back off and honour Retry-After within a wait budget; redirects are
+followed for GET only, and a credential never leaves its origin or reaches a trace line or an
+error detail."""
 from __future__ import annotations
 
+import email.utils
 import importlib.metadata
 import os
 import time
 from collections.abc import Callable, Mapping
+from datetime import datetime, timezone
 
 import httpx
 
@@ -2142,7 +2331,8 @@ from quarry.errors import QuarryError
 REDACTED = "REDACTED"
 RETRY_STATUS = frozenset({408, 429, 500, 502, 503, 504})
 MAX_ATTEMPTS = 5
-RETRY_CAP = 60.0
+WAIT_BUDGET = 60.0
+MAX_REDIRECTS = 5
 TIMEOUT = 60.0
 
 
@@ -2151,29 +2341,57 @@ class SystemClock:
     sleep = staticmethod(time.sleep)
 
 
+class Throttle:
+    """The minimum interval between requests to one service under one key."""
+
+    def __init__(self, clock):
+        self.clock = clock
+        self._last: dict[tuple[str, str | None], float] = {}
+
+    def wait(self, service: str, key: str | None, interval: float) -> None:
+        last = self._last.get((service, key))
+        if last is not None:
+            gap = interval - (self.clock.monotonic() - last)
+            if gap > 0:
+                self.clock.sleep(gap)
+        self._last[(service, key)] = self.clock.monotonic()
+
+
+PROCESS_THROTTLE = Throttle(SystemClock())
+
+
 class UpstreamError(QuarryError):
     def __init__(self, detail: str):
         super().__init__("upstream_failed", detail)
 
 
 def _retry_after(response: httpx.Response) -> float | None:
-    value = response.headers.get("Retry-After", "")
-    try:
-        return min(float(value), RETRY_CAP)
-    except ValueError:
+    """Retry-After as seconds (RFC 9110 §10.2.3: delay-seconds or an HTTP-date), or None."""
+    value = response.headers.get("Retry-After", "").strip()
+    if not value:
         return None
+    if value.isdigit():
+        return float(value)
+    try:
+        when = email.utils.parsedate_to_datetime(value)
+    except (TypeError, ValueError):
+        return None
+    return max(0.0, (when - datetime.now(timezone.utc)).total_seconds())
+
+
+def _origin(url: httpx.URL) -> tuple[str, str, int | None]:
+    return (url.scheme, url.host, url.port)
 
 
 class Client:
-    def __init__(self, *, transport: httpx.BaseTransport | None = None, clock=None,
+    def __init__(self, *, transport: httpx.BaseTransport | None = None, throttle: Throttle | None = None,
                  trace: Callable[[str], None] | None = None, environ: Mapping[str, str] | None = None):
         version = importlib.metadata.version("quarry")
-        self._http = httpx.Client(transport=transport, timeout=TIMEOUT, follow_redirects=True,
+        self._http = httpx.Client(transport=transport, timeout=TIMEOUT, follow_redirects=False,
                                   headers={"User-Agent": f"quarry/{version} (+https://github.com/khughitt/quarry)"})
-        self._clock = clock or SystemClock()
+        self._throttle = throttle or PROCESS_THROTTLE
         self._trace = trace
         self._environ = os.environ if environ is None else environ
-        self._last: dict[tuple[str, str | None], float] = {}
 
     def __enter__(self) -> Client:
         return self
@@ -2187,16 +2405,6 @@ class Client:
     def _key(self, route: Route) -> str | None:
         return (self._environ.get(route.key_env) or None) if route.key_env else None
 
-    def _wait(self, route: Route, key: str | None) -> None:
-        interval = route.keyed_min_interval if key and route.keyed_min_interval is not None else route.min_interval
-        slot = (route.service, key)
-        last = self._last.get(slot)
-        if last is not None:
-            gap = interval - (self._clock.monotonic() - last)
-            if gap > 0:
-                self._clock.sleep(gap)
-        self._last[slot] = self._clock.monotonic()
-
     def _shown(self, url: httpx.URL, route: Route) -> str:
         if route.key_param and route.key_param in url.params:
             url = url.copy_set_param(route.key_param, REDACTED)
@@ -2205,6 +2413,23 @@ class Client:
     def _log(self, line: str) -> None:
         if self._trace is not None:
             self._trace(line)
+
+    def _send(self, route: Route, request: httpx.Request, shown: str, credentials: dict[str, str]) -> httpx.Response:
+        """Send, following GET redirects. Each hop is a fresh request: it carries the credential
+        headers only on the original origin, and a hop elsewhere loses the key parameter too."""
+        origin = _origin(request.url)
+        for _ in range(MAX_REDIRECTS + 1):
+            response = self._http.send(request)
+            if not response.is_redirect:
+                return response
+            if request.method != "GET":
+                raise UpstreamError(f"{request.method} {shown}: redirected; quarry follows redirects for GET only")
+            target = request.url.join(response.headers["Location"])
+            same = _origin(target) == origin
+            if not same and route.key_param:
+                target = target.copy_remove_param(route.key_param)
+            request = self._http.build_request("GET", target, headers=credentials if same else {})
+        raise UpstreamError(f"{shown}: more than {MAX_REDIRECTS} redirects")
 
     def request(self, route: Route, method: str, url: str, *, params: Mapping | None = None,
                 json: object = None, data: Mapping | None = None) -> httpx.Response:
@@ -2217,23 +2442,30 @@ class Client:
             if route.key_header:
                 headers[route.key_header] = key
         full = url if url.startswith(("http://", "https://")) else f"{route.url.rstrip('/')}/{url.lstrip('/')}"
-        shown_base = self._shown(httpx.URL(full, params=params), route)
+        shown = self._shown(httpx.URL(full, params=params), route)
+        interval = route.keyed_min_interval if key and route.keyed_min_interval is not None else route.min_interval
+        sleep = self._throttle.clock.sleep
         for attempt in range(1, MAX_ATTEMPTS + 1):
-            self._wait(route, key)
+            self._throttle.wait(route.service, key, interval)
+            request = self._http.build_request(method, full, params=params, json=json, data=data, headers=headers)
             try:
-                response = self._http.request(method, full, params=params, json=json, data=data, headers=headers)
+                response = self._send(route, request, shown, headers)
             except httpx.TransportError as error:
-                self._log(f"{method} {shown_base} -> {type(error).__name__}")
+                self._log(f"{method} {shown} -> {type(error).__name__}")
                 if attempt == MAX_ATTEMPTS:
-                    raise UpstreamError(f"{method} {shown_base}: {type(error).__name__} after {attempt} attempts") from None
-                self._clock.sleep(2 ** (attempt - 1))
+                    raise UpstreamError(f"{method} {shown}: {type(error).__name__} after {attempt} attempts") from None
+                sleep(2 ** (attempt - 1))
                 continue
-            self._log(f"{method} {shown_base} -> {response.status_code}")
+            self._log(f"{method} {shown} -> {response.status_code}")
             if response.status_code in RETRY_STATUS and attempt < MAX_ATTEMPTS:
-                self._clock.sleep(_retry_after(response) or 2 ** (attempt - 1))
+                delay = _retry_after(response)
+                if delay is not None and delay > WAIT_BUDGET:
+                    raise UpstreamError(f"{method} {shown}: HTTP {response.status_code}, asked to wait "
+                                        f"{delay:.0f} s, beyond the {WAIT_BUDGET:.0f} s budget")
+                sleep(delay if delay is not None else 2 ** (attempt - 1))
                 continue
             if response.status_code >= 400:
-                raise UpstreamError(f"{method} {shown_base}: HTTP {response.status_code}")
+                raise UpstreamError(f"{method} {shown}: HTTP {response.status_code}")
             return response
         raise AssertionError("unreachable: the last attempt returns or raises")
 ```
@@ -2243,9 +2475,10 @@ class Client:
 `src/quarry/testing.py`:
 
 ```python
-"""Recorded exchanges for tests (spec §12): a request key of method, URL, sorted query and
-body, with credential parameters left out; a replaying transport that refuses any request it
-has no recording for; and a recording transport that scrubs credentials before saving."""
+"""Recorded exchanges for tests (spec §12). A request key of method, URL, sorted query and
+body, with credential parameters left out; a replaying transport that answers each recording
+once, in recorded order, and refuses any request it has none left for; and a recording
+transport that scrubs credentials before saving."""
 from __future__ import annotations
 
 import json
@@ -2255,7 +2488,27 @@ from pathlib import Path
 import httpx
 
 from quarry.catalog import Catalog
-from quarry.http import REDACTED
+from quarry.http import REDACTED, Client, Throttle
+
+KEPT_HEADERS = ("content-type", "retry-after", "location")
+
+
+class VirtualClock:
+    """A clock that advances when slept on, without sleeping: replays wait for nothing."""
+
+    def __init__(self):
+        self.t = 0.0
+
+    def monotonic(self) -> float:
+        return self.t
+
+    def sleep(self, seconds: float) -> None:
+        self.t += seconds
+
+
+def replay_client(transport: httpx.BaseTransport) -> Client:
+    """A client for tests: its own throttle on a virtual clock, never the process throttle."""
+    return Client(transport=transport, throttle=Throttle(VirtualClock()))
 
 
 def secret_params(catalog: Catalog) -> frozenset[str]:
@@ -2270,16 +2523,18 @@ def exchange_key(request: httpx.Request, secrets: frozenset[str]) -> dict:
 
 
 def exchange(method: str, url: str, params: dict | None = None, *, status: int = 200, body: str = "",
-             content_type: str = "application/json", json_body: object = None, form: dict | None = None) -> dict:
-    """A hand-made exchange, keyed exactly as a live request with these arguments would be."""
+             content_type: str = "application/json", headers: dict | None = None, json_body: object = None,
+             form: dict | None = None) -> dict:
+    """A hand-made exchange, keyed exactly as a live request with these arguments would be.
+    `body` is the response body; `json_body` and `form` are the request's."""
     request = httpx.Request(method, url, params=params, json=json_body, data=form)
     return {"request": exchange_key(request, frozenset()),
-            "response": {"status": status, "content_type": content_type, "body": body}}
+            "response": {"status": status, "headers": {"content-type": content_type, **(headers or {})}, "body": body}}
 
 
 class ReplayTransport(httpx.BaseTransport):
     def __init__(self, exchanges: list[dict], secrets: frozenset[str] = frozenset()):
-        self.exchanges = exchanges
+        self.pending = list(exchanges)
         self.secrets = secrets
 
     @classmethod
@@ -2288,12 +2543,12 @@ class ReplayTransport(httpx.BaseTransport):
 
     def handle_request(self, request: httpx.Request) -> httpx.Response:
         key = exchange_key(request, self.secrets)
-        for ex in self.exchanges:
+        for index, ex in enumerate(self.pending):
             if ex["request"] == key:
+                del self.pending[index]
                 r = ex["response"]
-                return httpx.Response(r["status"], headers={"content-type": r["content_type"]},
-                                      content=r["body"].encode(), request=request)
-        raise LookupError(f"no recorded exchange for {json.dumps(key)}")
+                return httpx.Response(r["status"], headers=r["headers"], content=r["body"].encode(), request=request)
+        raise LookupError(f"no recorded exchange left for {json.dumps(key)}")
 
 
 class RecordingTransport(httpx.BaseTransport):
@@ -2314,14 +2569,23 @@ class RecordingTransport(httpx.BaseTransport):
         self.exchanges.append({
             "request": exchange_key(request, self.secrets),
             "response": {"status": response.status_code,
-                         "content_type": response.headers.get("content-type", ""),
+                         "headers": {h: self._scrub(response.headers[h]) for h in KEPT_HEADERS if h in response.headers},
                          "body": self._scrub(content.decode(errors="replace"))},
         })
         return httpx.Response(response.status_code, headers=response.headers, content=content, request=request)
 
-    def save(self, path: Path) -> None:
-        path.write_text(json.dumps(self.exchanges, indent=1, sort_keys=True) + "\n")
+    def take(self) -> list[dict]:
+        """The exchanges recorded since the last take, for one scenario's file."""
+        taken, self.exchanges = self.exchanges, []
+        return taken
+
+    @staticmethod
+    def save(exchanges: list[dict], path: Path) -> None:
+        path.write_text(json.dumps(exchanges, indent=1, sort_keys=True) + "\n")
 ```
+
+The `exchange_key` URL omits a non-default port, which no catalog route uses; a route that
+needs one adds `url.port` to the key in the same change.
 
 Add to `src/quarry/context.py`:
 
@@ -2332,7 +2596,7 @@ from quarry.http import Client
 
 
 def make_client(trace: bool) -> Client:
-    """The process's one client. Tests monkeypatch this to inject a ReplayTransport."""
+    """A client on the process throttle. Tests monkeypatch this to inject a ReplayTransport."""
     return Client(trace=(lambda line: print(line, file=sys.stderr)) if trace else None)
 ```
 
@@ -2346,7 +2610,7 @@ Expected: all pass.
 ```bash
 just test-fast
 git add src/quarry/http.py src/quarry/testing.py src/quarry/context.py tests/test_http.py
-git commit -m "feat(http): shared throttle, retries, redaction and recorded exchanges"
+git commit -m "feat(http): shared throttle, bounded retries, origin-bound credentials and recorded exchanges"
 ```
 
 ### Task 7: The search framework and the search and show commands
@@ -2383,7 +2647,8 @@ class Fake:
         rows = [Result(id=f"geo:GSE{i}", resource=self.resource.id, kind="dataset", title=f"row {i}") for i in (1, 2, 3)]
         rows = rows[: query.limit] if query.limit else rows
         native = query.native or " OR ".join(query.phrases)
-        return (Coverage(self.resource.id, native, self.match, 3, len(rows),
+        match = "native" if query.native is not None else self.match
+        return (Coverage(self.resource.id, native, match, 3, len(rows),
                          completeness(total=3, returned=len(rows), limit=query.limit, short_page=False)), rows)
 
     def show(self, client, curie):
@@ -2567,6 +2832,7 @@ def test_usage_errors_exit_two(catalog, args):
 def test_native_with_limit(catalog):
     report = json.loads(invoke("search", "--domain", "biology", "--in", "alpha", "--native", "q", "-n", "1").stdout)
     assert report["coverage"][0]["native"] == "q" and report["coverage"][0]["complete"] == "limited"
+    assert report["coverage"][0]["match"] == "native"
 
 
 def test_show_routes_by_prefix_owner(catalog):
@@ -2690,7 +2956,7 @@ class Result:
 class Coverage:
     resource: str
     native: str | None
-    match: str                          # exact | expanded
+    match: str                          # exact | expanded | native (sent as written, not compiled)
     total: int | None
     returned: int
     complete: str                       # total | short-page | limited | failed
@@ -2954,7 +3220,7 @@ from quarry.errors import QuarryError
 from quarry.http import Client
 from quarry.ids import Curie
 from quarry.query import Query
-from quarry.testing import ReplayTransport, exchange
+from quarry.testing import ReplayTransport, exchange, replay_client
 
 FX = Path(__file__).parent / "fixtures" / "ena"
 CAT = catalog_mod.load()
@@ -2982,9 +3248,10 @@ def test_organism_by_name_and_native_passthrough():
     assert ena.compile_query(Query(native='study_title="a*"')) == 'study_title="a*"'
 
 
-def test_a_double_quote_is_refused():                          # Review Focus 1
+@pytest.mark.parametrize("phrase", ['the "MM" cohort', "ARP1*"])   # Review Focus 1
+def test_quotes_and_wildcards_are_refused(phrase):
     with pytest.raises(QuarryError) as caught:
-        ena.compile_query(Query(phrases=('the "MM" cohort',)))
+        ena.compile_query(Query(phrases=(phrase,)))
     assert caught.value.kind == "unsupported_filter"
 ```
 
@@ -3009,7 +3276,7 @@ import re
 
 from quarry.catalog import Resource
 from quarry.errors import QuarryError
-from quarry.http import Client
+from quarry.http import Client, UpstreamError
 from quarry.ids import Curie
 from quarry.query import Query
 from quarry.results import Coverage, Result
@@ -3023,8 +3290,11 @@ SHOW_FIELD = {"bioproject": "study_accession", "insdc.sra": "secondary_study_acc
 
 
 def _quote(text: str) -> str:
-    if '"' in text:
-        raise QuarryError("unsupported_filter", f"ENA's query syntax cannot carry a double quote: {text!r}")
+    """Shared phrases are literal. ENA reads `*` as a wildcard and cannot carry a double quote,
+    and documents no escape for either, so both are refused; --native sends ENA syntax as is."""
+    for char, what in (('"', "a double quote"), ("*", "`*`, ENA's wildcard")):
+        if char in text:
+            raise QuarryError("unsupported_filter", f"an ENA phrase cannot contain {what}: {text!r}; use --native")
     return f'"{text}"'
 
 
@@ -3059,8 +3329,24 @@ def _row(d: dict) -> Result:
                   domain_fields={"biology": biology} if biology else {})
 
 
+def _count(text: str) -> int:
+    """The count endpoint answers `count\\n<n>`."""
+    words = text.split()
+    if len(words) != 2 or words[0] != "count" or not words[1].isdigit():
+        raise UpstreamError(f"ena count: expected 'count <n>', got {text[:80]!r}")
+    return int(words[1])
+
+
 def _rows(text: str) -> list[dict]:
-    return json.loads(text) if text.strip() else []   # no matches: ENA answers an empty body
+    if not text.strip():
+        return []                                      # no matches: ENA answers an empty body
+    try:
+        data = json.loads(text)
+    except ValueError:
+        raise UpstreamError(f"ena search: not JSON: {text[:80]!r}") from None
+    if type(data) is not list or any(type(d) is not dict or "study_accession" not in d for d in data):
+        raise UpstreamError("ena search: expected a list of studies with study_accession")
+    return data
 
 
 class Ena:
@@ -3073,13 +3359,13 @@ class Ena:
 
     def search(self, client: Client, query: Query) -> tuple[Coverage, list[Result]]:
         q = compile_query(query)
-        counted = client.request(self.route, "GET", "count", params={"result": "study", "query": q}).text
-        total = int(counted.split()[-1])
+        total = _count(client.request(self.route, "GET", "count", params={"result": "study", "query": q}).text)
         listing = client.request(self.route, "GET", "search", params={
             "result": "study", "query": q, "fields": FIELDS, "format": "json", "limit": query.limit or 0}).text
         rows = [_row(d) for d in _rows(listing)]
         complete = completeness(total=total, returned=len(rows), limit=query.limit, short_page=False)
-        return Coverage(self.resource.id, q, self.match, total, len(rows), complete), rows
+        match = "native" if query.native is not None else self.match
+        return Coverage(self.resource.id, q, match, total, len(rows), complete), rows
 
     def show(self, client: Client, curie: Curie) -> Result:
         field = SHOW_FIELD[curie.prefix]
@@ -3125,12 +3411,14 @@ def main(resource_id: str) -> None:
     out = Path(__file__).parents[1] / "fixtures" / resource_id
     out.mkdir(parents=True, exist_ok=True)
     values = [os.environ[r.key_env] for r in resource.routes if r.key_env and os.environ.get(r.key_env)]
-    for name, scenario in scenarios.items():
-        recorder = RecordingTransport(secret_params(cat), values)
-        with Client(transport=recorder) as client:
-            scenario(base.make(resource), client)
-        recorder.save(out / f"{name}.json")
-        print(f"recorded {resource_id}/{name}: {len(recorder.exchanges)} exchanges", file=sys.stderr)
+    recorder = RecordingTransport(secret_params(cat), values)
+    adapter = base.make(resource)
+    with Client(transport=recorder) as client:          # one client: one throttle across scenarios
+        for name, scenario in scenarios.items():
+            scenario(adapter, client)
+            taken = recorder.take()
+            RecordingTransport.save(taken, out / f"{name}.json")
+            print(f"recorded {resource_id}/{name}: {len(taken)} exchanges", file=sys.stderr)
 
 
 if __name__ == "__main__":
@@ -3187,7 +3475,7 @@ from tests.recordings.ena import HYPHEN, MYELOMA
 
 
 def replay(*names):
-    return Client(transport=ReplayTransport.from_files([FX / f"{n}.json" for n in names]))
+    return replay_client(ReplayTransport.from_files([FX / f"{n}.json" for n in names]))
 
 
 def test_recorded_search_is_complete_and_canonical():
@@ -3215,7 +3503,7 @@ def test_recorded_show():
 
 def synthetic(total, listing, limit=0, query=Query(phrases=("x",))):
     q = ena.compile_query(query)
-    return Client(transport=ReplayTransport([
+    return replay_client(ReplayTransport([
         exchange("GET", f"{BASE}/count", {"result": "study", "query": q}, body=f"count\n{total}\n",
                  content_type="text/plain"),
         exchange("GET", f"{BASE}/search", {"result": "study", "query": q, "fields": ena.FIELDS, "format": "json",
@@ -3238,6 +3526,30 @@ def test_no_matches_is_an_empty_complete_answer():             # Review Focus 2
     with synthetic(0, "") as client:
         cov, rows = ENA.search(client, Query(phrases=("x",)))
     assert (rows, cov.complete, cov.total) == ([], "total", 0)
+
+
+@pytest.mark.parametrize("count, listing", [
+    ("<html>busy</html>", "[]"),
+    ("count\n2\n", "<html>busy</html>"),
+    ("count\n1\n", '{"error": "x"}'),
+])
+def test_malformed_answers_are_upstream_errors(count, listing):
+    q = ena.compile_query(Query(phrases=("x",)))
+    transport = ReplayTransport([
+        exchange("GET", f"{BASE}/count", {"result": "study", "query": q}, body=count, content_type="text/html"),
+        exchange("GET", f"{BASE}/search", {"result": "study", "query": q, "fields": ena.FIELDS, "format": "json",
+                                           "limit": 0}, body=listing, content_type="text/html"),
+    ])
+    with replay_client(transport) as client, pytest.raises(QuarryError) as caught:
+        ENA.search(client, Query(phrases=("x",)))
+    assert caught.value.kind == "upstream_failed"
+
+
+def test_native_coverage_says_native():
+    query = Query(native='study_title="ARP1*"')
+    with synthetic(1, json.dumps([STUDY]), query=query) as client:
+        cov, _ = ENA.search(client, query)
+    assert cov.match == "native" and cov.native == 'study_title="ARP1*"'
 
 
 def test_limit_reports_limited():
@@ -3288,7 +3600,7 @@ git commit -m "feat(ena): the first adapter, with recorded exchanges and the lis
 - [ ] **Step 1: Adopt the table**
 
 ```bash
-(cd "$TREE/ops" && python3 bin/vendored adopt --into "$TREE/quarry/.worktrees/foundation" cli.toml cli_surface.py)
+(cd "$TREE/ops" && python3 bin/vendored adopt --into "$WT" cli.toml cli_surface.py)
 ```
 
 Expected: `tools/cli.toml` holds `[cli.quarry]`.
@@ -3313,8 +3625,7 @@ from click.testing import CliRunner
 
 from quarry import context
 from quarry.cli import main
-from quarry.http import Client
-from quarry.testing import ReplayTransport
+from quarry.testing import ReplayTransport, replay_client
 
 ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location("cli_surface", ROOT / "tools" / "cli_surface.py")
@@ -3372,8 +3683,8 @@ def _leaf_rows():
 
 def test_json_is_honoured_by_every_leaf_command(monkeypatch):
     fx = ROOT / "tests" / "fixtures" / "ena"
-    monkeypatch.setattr(context, "make_client", lambda trace: Client(
-        transport=ReplayTransport.from_files([fx / "search-myeloma.json", fx / "show-first.json"])))
+    monkeypatch.setattr(context, "make_client", lambda trace: replay_client(
+        ReplayTransport.from_files([fx / "search-myeloma.json", fx / "show-first.json"])))
     first = json.loads((fx / "show-first.json").read_text())[-1]["request"]["query"]
     shown = next(v for k, v in first if k == "query").split('"')[1]
     invocations = {
