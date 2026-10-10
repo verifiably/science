@@ -6,7 +6,7 @@ priority: 2
 process: planned
 owner: quarry-design
 created: 2026-10-10T16:34:30Z
-updated: 2026-10-10T18:24:10Z
+updated: 2026-10-10T18:51:56Z
 started: 2026-10-10T17:12:51Z
 depends: []
 tags: []
@@ -52,3 +52,8 @@ Agents currently work out each bio resource themselves (GEO E-utilities, ENA por
 - 2026-10-10T18:24:09Z (quarry-design): Round 2 disposition: all 6 folded. Verified in beliefs: facets.py:52-60 and acquire.py:90 split the locator at the first colon (source.py's stricter accession rule governs citation sources, not facets), so the locator is accession:<CURIE> and the beliefs namespace follow-up is withdrawn; records.py:159 refuses non-http(s) URLs, so --acquisition refuses unsupported_transport. Also: OR between phrases, --native exclusive with terms/filters/bounds, per-service shared throttle, credential redaction with a sentinel test, figshare items keep native ids.
 - 2026-10-10T18:24:10Z (quarry-design): parked (waiting on user, review): User reviews the revised spec at .worktrees/quarry-design/docs/specs/2026-10-10-quarry-domain-layers-design.md (or runs review round 3); then the agent folds findings, and on approval writes the implementation plan
   provenance: {"harness_session":"claude-code:812ecacd-3a65-4c38-8af4-57938f12afc5","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-10T18:40:05Z (quarry-design): review: spec round 3 — verdict: revise; findings: P2 2; reviewer: codex
+- 2026-10-10T18:40:25Z (quarry-design): Round 3 details: the previous P1 findings are addressed. P2 at spec lines 300-304: retain -n with --native because result limits such as PubMed retmax and ENA limit are request/paging parameters, not expressions in the native query string; otherwise bounded native searches cannot be requested. Keep native terms/filter exclusivity and use complete=limited when the client stops early. P2 at line 236: retain the parent-paper relationship explicitly, rather than only as a flat doi: xref. Existing figshare fixture item 34254439 has doi=10.1371/journal.pone.0360063.t007 and resource_doi=10.1371/journal.pone.0360063; a consumer needs a named paper reference to distinguish those roles reliably when grouping. Full revised spec and supporting kernel validators/roster fixture reviewed; spec and implementation unchanged.
+- 2026-10-10T18:51:55Z (quarry-design): resumed
+  provenance: {"harness_session":"claude-code:812ecacd-3a65-4c38-8af4-57938f12afc5","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-10T18:51:55Z (quarry-design): Round 3 disposition: both folded. -n allowed with --native (applied through paging, complete: limited; --since/--until still refused there). Result rows gain a publication field (one parent paper CURIE) kept apart from xrefs; pitfall test on figshare:34254439's two DOIs.

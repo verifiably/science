@@ -233,7 +233,7 @@ otherwise. It finds:
   | `pmid:n` | `pubmed:n` | synonym |
   | BioStudies `E-GEOD-n` | `arrayexpress:E-GEOD-n`, with cross-reference `geo:GSEn` | `biostudies` covers `S-…` accessions only |
   | Zenodo record | `zenodo.record:n` | `zenodo` is a synonym |
-  | figshare item | `figshare:n`, with a publisher supplement's paper DOI as a `doi:` cross-reference | a `local_prefix`: Bioregistry has none. The roster used the paper DOI as a group's id; quarry keeps each item under its own id, so `show` and `files` resolve it, and grouping supplements under their paper stays the consumer's step |
+  | figshare item | `figshare:n`; a publisher supplement's paper DOI goes in `publication` (§8.3), and the item's own DOI in `xrefs` | a `local_prefix`: Bioregistry has none. The roster used the paper DOI as a group's id; quarry keeps each item under its own id, so `show` and `files` resolve it, and grouping supplements under their paper stays the consumer's step |
 
 ## 8. Command surface
 
@@ -299,9 +299,10 @@ configuration; that file describes a world, not a workspace.
   refuses, so a biology search with `--exact` needs `--in` without it.
 - **`--native Q`** passes one resource's own query unchanged, in place of compiled
   terms and filters. It requires exactly one `--in`, and it refuses terms, domain
-  filters and `--exact` beside it (a usage error, exit 2). `--since`, `--until` and
-  `-n` are refused too, since the native query carries its own bounds; only paging is
-  quarry's.
+  filters and `--exact` beside it (a usage error, exit 2). `--since` and `--until`
+  are refused too, since dates belong in the native query. `-n` stays allowed: result
+  limits are request parameters separate from the query (E-utilities' `retmax`, ENA's
+  `limit`), so quarry applies it through paging and reports `"complete": "limited"`.
 
 ### 8.3 Output and completeness
 
@@ -313,7 +314,7 @@ configuration; that file describes a world, not a workspace.
                "match": "exact", "total": 412, "returned": 412, "complete": "total"}],
  "results": [{"id": "bioproject:PRJNA…", "resource": "ena", "kind": "dataset",
               "title": "…", "date": "2021-03-04", "summary": "…",
-              "xrefs": ["geo:GSE…", "pubmed:…"],
+              "xrefs": ["geo:GSE…"], "publication": "pubmed:…",
               "domain_fields": {"biology": {"organism": "Homo sapiens", "taxon": "ncbitaxon:9606"}}}],
  "warnings": []}
 ```
@@ -330,6 +331,13 @@ configuration; that file describes a world, not a workspace.
   since the conventions allow no result beside an error.
 - **Reproducibility.** `native` is the query actually sent, so a harvest can be
   rerun.
+- **Publication.** `publication` is the one paper a record belongs to (a figshare
+  supplement's parent paper, a GEO series' citation), as a CURIE, or absent. It is
+  kept apart from `xrefs` because one record can carry several DOIs: the figshare item
+  `figshare:34254439` has its own DOI (ending `.t007`) and its paper's, and consumers
+  group by the second. Every other cross-reference stays in `xrefs`. When a resource
+  names several papers, the first is `publication` and the rest go to `xrefs`, with a
+  warning.
 - **Kinds.** `kind` is `dataset`, `record` or `publication`. The fields every domain
   shares are fixed. Domain-specific fields sit under `domain_fields.<domain>`, so a
   consumer of `core` fields never meets a biology field it does not expect.
@@ -445,7 +453,9 @@ does.
   asserts the combined rate stays within the E-utilities allowance.
 - **Pitfalls.** Each catalog pitfall has a test that reproduces its trigger from a
   fixture and asserts the handling: the ENA hyphenated term, the Zenodo page cap, the
-  figshare short page, an incomplete ENA listing.
+  figshare short page, an incomplete ENA listing, and the two-DOI figshare item
+  (`figshare:34254439`), whose parent DOI must land in `publication` and its own in
+  `xrefs`.
 - **Conformance.** The conformance test from ops checks the parser surface against
   `cli.toml`.
 - **Live checks.** `just live` runs one small query per route against the real
