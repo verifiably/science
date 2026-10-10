@@ -26,8 +26,8 @@ fast_cmd := "cd python && uv run pytest --testmon " + xdist
 test_cmd := "cd python && uv run pytest " + xdist
 one_cmd := "cd python && uv run pytest"
 # No formatter, linter, or typechecker is configured for this repository yet, so the
-# seconds-long gate is the task-record check alone.
-check_cmd := "python3 tools/ops-check && tasks check"
+# seconds-long gate is the guide checks (ops-check, ops-docs) and the task-record check.
+check_cmd := "python3 tools/ops-check && python3 tools/ops-docs check && tasks check"
 
 # Only passive docs and task records: python/tests/fixtures/*.md are command inputs.
 docs_paths := "README.md AGENTS.md docs/*.md tasks/*.md"
@@ -56,6 +56,12 @@ check:
     {{tt}} check -- sh -c '{{check_cmd}}'
 
 gate: check test
+
+# Regenerate the identity and family regions in README.md and AGENTS.md from
+# identity.toml and tools/family.toml. The only thing that edits those regions; `check`
+# refuses a commit while they are out of date.
+docs:
+    {{tt}} docs -- python3 tools/ops-docs write
 
 # What the pre-commit hook runs: `check`'s command under its own hook target.
 hook-pre-commit:
