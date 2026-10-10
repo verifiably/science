@@ -4,9 +4,9 @@ title: "quarry: domain layers (core, biology, …) over scientific resources, wi
 status: doing
 priority: 2
 process: planned
-owner: quarry-design
+owner: main
 created: 2026-10-10T16:34:30Z
-updated: 2026-10-10T21:53:04Z
+updated: 2026-10-10T21:57:16Z
 started: 2026-10-10T17:12:51Z
 depends: [quarry-3f4c3b, quarry-06c10c]
 tags: []
@@ -110,3 +110,7 @@ Agents currently work out each bio resource themselves (GEO E-utilities, ENA por
 - 2026-10-10T21:31:05Z (quarry-design): review: impl round 1 — verdict: revise; findings: Important 5, Minor 2; reviewer: codex/gpt-6-astra
 - 2026-10-10T21:50:08Z (quarry-design): review: impl round 2 — verdict: accept; findings: none; reviewer: codex/gpt-6-astra
 - 2026-10-10T21:53:03Z (quarry-design): Foundation plan complete and merged into quarry main at6e846aa; main gate309 passed. The broader first-version goal remains open on quarry-3f4c3b (repositories/acquisition) and quarry-06c10c (terms/skills/live), now linked as dependencies. Deferred required-key validation tracked as quarry-e0f1c0. Acquisition and roster migration dependencies linked to repository milestone.
+- 2026-10-10T21:57:10Z (main): resumed
+  provenance: {"harness_session":"codex:01a12769-e196-7e72-829a-066a98c2baa4","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-10T21:57:16Z (main): parked (waiting on agent, dependency): Agent drafts and reviews the repositories/acquisition plan under quarry-3f4c3b, then the terms/skills plan under quarry-06c10c; close this broader first-version goal only after those milestones land. The foundation plan is complete and merged.
+  provenance: {"harness_session":"codex:01a12769-e196-7e72-829a-066a98c2baa4","harness_session_source":"CODEX_THREAD_ID"}
