@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: main
 created: 2026-10-02T01:00:04Z
-updated: 2026-10-10T11:43:20Z
+updated: 2026-10-10T11:45:05Z
 started: 2026-10-02T07:52:47Z
 depends: []
 tags: [halt, test-latency, testing]
@@ -80,3 +80,8 @@ Process: planned
 - 2026-10-10T11:31:16Z (main): verify rerun 2026-10-10 on titan: not verified — test-fast outstanding (median 102.4 s, 2 runs, limit 90 s); still needs a third uncontended run, and the median is over the limit
 - 2026-10-10T11:31:16Z (main): halt override: attempted sci-a2c91b by ac414f83-8043-4a78-85f6-3816577b190d: LICENSE file and pyproject licence metadata only; touches no tests or code, cannot affect test-fast latency
 - 2026-10-10T11:43:20Z (main): verify starvation (halt suppresses the runs verify needs) reported to ops as ops-d48bd2
+- 2026-10-10T11:45:03Z (main): resumed
+  provenance: {"harness_session":"claude-code:ac414f83-8043-4a78-85f6-3816577b190d","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-10T11:45:03Z (main): park text corrected 2026-10-10: sci-97727a (the named breach follow-up) landed 2026-10-02 as 776eb75; ops-a0c1f5 (tt v4) now keeps widened runs out of verify. verify --dry-run: 2 uncontended incremental runs, median 102.4 s, widened 0; whether those runs predate 776eb75 is not visible in verify's output
+- 2026-10-10T11:45:03Z (main): parked (waiting on agent): agent reruns tt-latency verify sci-5937be --after 2026-10-02T12:58:24Z on titan once a third uncontended incremental test-fast run from real work exists; exit 0 -> tasks done with the verify output; a breach -> profile an incremental test-fast run on an idle host and file the next follow-up (sci-97727a is already done)
+  provenance: {"harness_session":"claude-code:ac414f83-8043-4a78-85f6-3816577b190d","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
