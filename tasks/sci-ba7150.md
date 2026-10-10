@@ -6,7 +6,7 @@ priority: 2
 process: planned
 owner: quarry-design
 created: 2026-10-10T16:34:30Z
-updated: 2026-10-10T18:24:09Z
+updated: 2026-10-10T18:24:10Z
 started: 2026-10-10T17:12:51Z
 depends: []
 tags: []
@@ -50,3 +50,5 @@ Agents currently work out each bio resource themselves (GEO E-utilities, ENA por
 - 2026-10-10T18:23:12Z (quarry-design): resumed
   provenance: {"harness_session":"claude-code:812ecacd-3a65-4c38-8af4-57938f12afc5","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-10T18:24:09Z (quarry-design): Round 2 disposition: all 6 folded. Verified in beliefs: facets.py:52-60 and acquire.py:90 split the locator at the first colon (source.py's stricter accession rule governs citation sources, not facets), so the locator is accession:<CURIE> and the beliefs namespace follow-up is withdrawn; records.py:159 refuses non-http(s) URLs, so --acquisition refuses unsupported_transport. Also: OR between phrases, --native exclusive with terms/filters/bounds, per-service shared throttle, credential redaction with a sentinel test, figshare items keep native ids.
+- 2026-10-10T18:24:10Z (quarry-design): parked (waiting on user, review): User reviews the revised spec at .worktrees/quarry-design/docs/specs/2026-10-10-quarry-domain-layers-design.md (or runs review round 3); then the agent folds findings, and on approval writes the implementation plan
+  provenance: {"harness_session":"claude-code:812ecacd-3a65-4c38-8af4-57938f12afc5","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
