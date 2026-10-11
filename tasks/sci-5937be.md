@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: main
 created: 2026-10-02T01:00:04Z
-updated: 2026-10-10T11:46:37Z
+updated: 2026-10-10T21:17:14Z
 started: 2026-10-02T07:52:47Z
 depends: []
 tags: [halt, test-latency, testing]
@@ -86,3 +86,13 @@ Process: planned
 - 2026-10-10T11:45:03Z (main): parked (waiting on agent): agent reruns tt-latency verify sci-5937be --after 2026-10-02T12:58:24Z on titan once a third uncontended incremental test-fast run from real work exists; exit 0 -> tasks done with the verify output; a breach -> profile an incremental test-fast run on an idle host and file the next follow-up (sci-97727a is already done)
   provenance: {"harness_session":"claude-code:ac414f83-8043-4a78-85f6-3816577b190d","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-10T11:46:37Z (main): halt override: attempted sci-fdacb1 by f9d782b7-b57a-4662-be5f-eb7f97c62796: README/AGENTS docs, identity.toml and ops-docs in check_cmd; touches no tests or package code, cannot affect test-fast latency
+- 2026-10-10T17:12:51Z (main): halt override: attempted sci-ba7150 by 812ecacd-3a65-4c38-8af4-57938f12afc5: design-only work on an unrelated idea; the test-latency halt concerns test-fast runtime, which a spec does not touch
+- 2026-10-10T20:06:15Z (quarry-design): halt override: attempted sci-005df0 by 01a12769-e196-7e72-829a-066a98c2baa4: User explicitly approved quarry foundation execution; this step creates a separate project and changes no science runtime or tests.
+- 2026-10-10T20:17:46Z (quarry-design): halt override: attempted sci-83af57 by 01a12769-e196-7e72-829a-066a98c2baa4: Approved quarry foundation plan: separate-project registration and CLI table, no science runtime or tests changed.
+- 2026-10-10T20:23:40Z (quarry-design): halt override: attempted sci-8bec52 by 01a12769-e196-7e72-829a-066a98c2baa4: Approved quarry foundation task executes in separate quarry repository, with no science runtime or test changes.
+- 2026-10-10T20:30:02Z (quarry-design): halt override: attempted sci-4ee89c by 01a12769-e196-7e72-829a-066a98c2baa4: Approved quarry foundation task changes only separate quarry project, no science runtime or tests.
+- 2026-10-10T20:36:41Z (quarry-design): halt override: attempted sci-10a4ac by 01a12769-e196-7e72-829a-066a98c2baa4: Approved quarry foundation execution in separate quarry project; science runtime and tests unchanged.
+- 2026-10-10T20:43:34Z (quarry-design): halt override: attempted sci-882f28 by 01a12769-e196-7e72-829a-066a98c2baa4: Approved quarry foundation runtime task is isolated in quarry; no science runtime or tests change.
+- 2026-10-10T20:56:44Z (quarry-design): halt override: attempted sci-a7cd0d by 01a12769-e196-7e72-829a-066a98c2baa4: Approved quarry foundation search task changes only isolated quarry code, no science runtime or tests.
+- 2026-10-10T21:08:22Z (quarry-design): halt override: attempted sci-a4d363 by 01a12769-e196-7e72-829a-066a98c2baa4: Approved quarry foundation ENA adapter task affects isolated quarry code and fixtures, no science runtime or tests.
+- 2026-10-10T21:17:14Z (quarry-design): halt override: attempted sci-6da492 by 01a12769-e196-7e72-829a-066a98c2baa4: Approved quarry foundation conformance/docs task changes only separate quarry code, no science runtime or tests.
