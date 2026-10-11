@@ -296,9 +296,19 @@ configuration; that file describes a world, not a workspace.
   resource's own syntax, which quarry did not compile and cannot vouch for. `--exact`
   requires exact matching everywhere. Shared phrases are literal: a character a resource
   reads as syntax (ENA's `*` wildcard, a double quote) is refused there, not passed on.
-- **Refusal.** An adapter that cannot express a filter refuses (`unsupported_filter`,
-  naming the resource and filter) rather than drop it. Under `--exact`, BioStudies
-  refuses, so a biology search with `--exact` needs `--in` without it.
+- **Refusal and skipping.** An adapter never drops a filter it cannot express. What
+  happens instead depends on how the resource entered the search set:
+  - A resource named with `--in` refuses (`unsupported_filter`, naming the resource
+    and the filter), and the search fails before any request.
+  - A resource that is in the set only through a `search_default` (the domain's own or
+    one it `includes`) is left out of the search. Its coverage row says
+    `"complete": "skipped"` and names the filter or matching mode it cannot express,
+    and the report adds a warning. So `search myeloma --organism "Homo sapiens"` on
+    biology searches GEO, ENA and BioStudies and reports Zenodo and figshare as skipped,
+    and under `--exact` BioStudies is skipped the same way.
+  - A search whose whole set is skipped fails with `unsupported_filter`, naming every
+    resource, rather than print an empty result.
+  Skips are decided statically, before any request, like every other refusal.
 - **`--native Q`** passes one resource's own query unchanged, in place of compiled
   terms and filters. It requires exactly one `--in`, and it refuses terms, domain
   filters and `--exact` beside it (a usage error, exit 2). `--since` and `--until`
@@ -326,6 +336,9 @@ configuration; that file describes a world, not a workspace.
   (figshare). A listing shorter than the reported total is a failure, not a result.
 - **`-n`.** A search with `-n` stops early by request; its coverage says
   `"complete": "limited"`.
+- **Skipped.** A default-set resource that cannot express the query's filters or
+  matching mode is not searched; its coverage says `"complete": "skipped"` with the
+  reason, and has no `native`, `total` or `returned` (§8.2).
 - **Failures.** When one resource fails, the command fails with that resource's error
   object, and no results are printed. `--allow-partial` instead completes with exit 0,
   marks the resource `"complete": "failed"` in coverage with its error, and adds a
@@ -383,8 +396,8 @@ configuration; that file describes a world, not a workspace.
     remainder, and `figshare:123` and `zenodo.record:123` stay distinct;
   - `resources`: one per file (after `--file`), each a unique name, its URL, and
     `expected` as a sha256 digest when the resource publishes one. Resources that
-    publish only MD5 (GEO) leave `expected` unset, since the kernel's instrument
-    checks sha256.
+    publish only MD5 (ENA, Zenodo, figshare) or no checksum (GEO, BioStudies) leave
+    `expected` unset, since the kernel's instrument checks sha256.
 
   The kernel retrieves over http and https only. An adapter gives each file's
   documented HTTPS location (GEO and ENA serve their FTP trees over HTTPS as well).
