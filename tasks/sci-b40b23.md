@@ -7,7 +7,7 @@ size: m
 complexity: mid
 process: direct
 created: 2026-10-11T20:43:00Z
-updated: 2026-10-11T20:43:00Z
+updated: 2026-10-11T20:45:01Z
 depends: []
 tags: [harness, probe]
 agent: claude-code
@@ -24,3 +24,7 @@ Expected evidence, written before the run: the same records docs/records/2026-09
 Also record: which prompts and context the agent needed beyond the command prompts, where it stalled, token and wall-time cost, and the model used. Pin the model.
 
 Done: a record under docs/records/ with the expected evidence stated first and the outcome against it; a note on the ops goal with the recommendation (what the harness must supply that pi plus science did not).
+
+## Notes
+
+- 2026-10-11T20:45:01Z (main): Goal: ops-3f5aa6 (a science harness on pi). Report the done note there.
