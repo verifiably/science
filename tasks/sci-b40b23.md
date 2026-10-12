@@ -8,7 +8,7 @@ complexity: mid
 process: direct
 owner: spike/pi-probe
 created: 2026-10-11T20:43:00Z
-updated: 2026-10-12T10:17:41Z
+updated: 2026-10-12T10:17:44Z
 started: 2026-10-12T09:20:41Z
 completed: 2026-10-12T09:40:25Z
 depends: []
@@ -42,3 +42,4 @@ Done: a record under docs/records/ with the expected evidence stated first and t
 - 2026-10-12T09:40:25Z (spike/pi-probe): Record docs/records/2026-10-12-pi-attended-probe.md: unmodified pi 1.1.0 cannot open science mcp serve (MCP 2025-11-25 vs 2026-07-28, pi#10416); with a disclosed shim and --tools mcp__science__*, a claude-sonnet-5-5 pi agent carried mm30 to NoBelief(no-directional-outcome) over 16 records equal to the 2026-09-23 walk. Recommendation noted on ops-3f5aa6; follow-ups sci-bef251, sci-a45f10, hq-501726. Halt sci-5937be overridden at start: no code or tests changed.
   provenance: {"harness_session":"claude-code:91abcaaa-5133-43c8-bf6e-7a5eb3f45d28","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-12T10:17:41Z (main): review: impl round 1 — verdict: revise; findings: important 2, minor 2; reviewer: codex
+- 2026-10-12T10:17:44Z (main): Review evidence: successful session has three user messages (initial brief plus two attended replies), not three answers; correct the record's status and section 4.2 and the ops goal note. The moved shim and brief are in .work/pi-probe-ctl/, whereas sections 2 and 3.2 still point into .work/pi-probe/. Verified cost across both attempts is 0.2136942 USD and 370617 tokens. Follow-up sci-bef251 now notes output-content access; autonomy-9e8a43 now depends on both science surface fixes. No model calls or test suite rerun.
