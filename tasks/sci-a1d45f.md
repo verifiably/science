@@ -7,7 +7,7 @@ size: l
 complexity: high
 process: planned
 created: 2026-10-12T12:10:24Z
-updated: 2026-10-12T12:10:25Z
+updated: 2026-10-12T15:59:11Z
 depends: [beliefs-7a56ef]
 tags: []
 source: autonomy-250f4d
@@ -23,3 +23,7 @@ The surface slice the autonomy envelope (sub-project 6) needs; design it here. S
 - CLI handle mode: VERIFIABLY_ENDPOINT + VERIFIABLY_TOKEN_FILE route every declared command through the handle with no host config; handle-incomplete and handle-mode refusals; mcp bridge (row E19).
 - heads [--resolve] and log --chain --after [--through] with the versioned log.v1 contract (chain identity, holdings act kind and location, fulfills, consumer tag, txid, registered paths, settlement registration and committed) (row E18).
 - The basis computation: file digests of the installed beliefs, science and verifiably-* closure, plus policy, packs and contracts.
+
+## Notes
+
+- 2026-10-12T15:59:11Z (main): the envelope spec is merged on autonomy main: docs/specs/2026-10-12-envelope-design.md (§4 lists this slice's asks, §12 its rows)
