@@ -8,7 +8,7 @@ complexity: mid
 process: direct
 owner: spike/pi-probe
 created: 2026-10-11T20:43:00Z
-updated: 2026-10-12T09:24:42Z
+updated: 2026-10-12T09:27:00Z
 started: 2026-10-12T09:20:41Z
 depends: []
 tags: [harness, probe]
@@ -35,3 +35,4 @@ Done: a record under docs/records/ with the expected evidence stated first and t
 - 2026-10-12T09:20:41Z (main): halt override: started past sci-5937be by 91abcaaa-5133-43c8-bf6e-7a5eb3f45d28: user asked for this spike; it writes a record, adds no tests, and halt verify needs a third uncontended run (2 so far)
 - 2026-10-12T09:24:42Z (spike/pi-probe): resumed
   provenance: {"harness_session":"claude-code:91abcaaa-5133-43c8-bf6e-7a5eb3f45d28","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-12T09:27:00Z (spike/pi-probe): probe finding 1: pi 1.1.0 cannot open science mcp serve unmodified — pi's bundled MCP SDK speaks up to 2025-11-25 (initialize handshake), science serves only 2026-07-28 (stateless, _meta required); pi mcp list fails 'Request _meta is required'. hq-57132d's 'MCP stdio yes' held because its probe server spoke the older protocol. Upstream searched: earendil-works/pi#10416 'Support Stateless MCP (2026-07-28)' open, no maintainer reply; 1.1.0 is latest on npm; @modelcontextprotocol/sdk 1.32.1 also tops out at 2025-11-25. Continuing with a throwaway protocol shim in .work/pi-probe (disclosed in the record) so the agent-capability half is still answered.
