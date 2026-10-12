@@ -1,15 +1,16 @@
 ---
 id: sci-b40b23
 title: "Attended pi probe: a pi agent runs the mm30 path (next, run, verify, assess) over science mcp serve in a disposable world"
-status: doing
+status: done
 priority: 2
 size: m
 complexity: mid
 process: direct
 owner: spike/pi-probe
 created: 2026-10-11T20:43:00Z
-updated: 2026-10-12T09:27:00Z
+updated: 2026-10-12T09:40:25Z
 started: 2026-10-12T09:20:41Z
+completed: 2026-10-12T09:40:25Z
 depends: []
 tags: [harness, probe]
 agent: claude-code
@@ -36,3 +37,7 @@ Done: a record under docs/records/ with the expected evidence stated first and t
 - 2026-10-12T09:24:42Z (spike/pi-probe): resumed
   provenance: {"harness_session":"claude-code:91abcaaa-5133-43c8-bf6e-7a5eb3f45d28","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-12T09:27:00Z (spike/pi-probe): probe finding 1: pi 1.1.0 cannot open science mcp serve unmodified — pi's bundled MCP SDK speaks up to 2025-11-25 (initialize handshake), science serves only 2026-07-28 (stateless, _meta required); pi mcp list fails 'Request _meta is required'. hq-57132d's 'MCP stdio yes' held because its probe server spoke the older protocol. Upstream searched: earendil-works/pi#10416 'Support Stateless MCP (2026-07-28)' open, no maintainer reply; 1.1.0 is latest on npm; @modelcontextprotocol/sdk 1.32.1 also tops out at 2025-11-25. Continuing with a throwaway protocol shim in .work/pi-probe (disclosed in the record) so the agent-capability half is still answered.
+- 2026-10-12T09:40:25Z (spike/pi-probe): done
+  provenance: {"harness_session":"claude-code:91abcaaa-5133-43c8-bf6e-7a5eb3f45d28","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-12T09:40:25Z (spike/pi-probe): Record docs/records/2026-10-12-pi-attended-probe.md: unmodified pi 1.1.0 cannot open science mcp serve (MCP 2025-11-25 vs 2026-07-28, pi#10416); with a disclosed shim and --tools mcp__science__*, a claude-sonnet-5-5 pi agent carried mm30 to NoBelief(no-directional-outcome) over 16 records equal to the 2026-09-23 walk. Recommendation noted on ops-3f5aa6; follow-ups sci-bef251, sci-a45f10, hq-501726. Halt sci-5937be overridden at start: no code or tests changed.
+  provenance: {"harness_session":"claude-code:91abcaaa-5133-43c8-bf6e-7a5eb3f45d28","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
