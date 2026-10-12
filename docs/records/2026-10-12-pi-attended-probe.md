@@ -5,7 +5,7 @@
 before the run (`2e3b674`). Unmodified, pi 1.1.0 cannot open science's MCP server
 (F1, a probe failure). With a disclosed protocol shim and a corrected tool allowlist, the
 agent carried the path to the expected evidence, `NoBelief(no-directional-outcome)` over
-16 governed records, asking the attended person three times and writing around nothing
+16 governed records, with two replies from the attended person after the brief and nothing written around
 (§4, §5). The recommendation is §6.
 **Scope:** `sci-b40b23`, one piece of the ops goal `ops-3f5aa6` (a science harness on pi).
 A spike: its output is this record and a recommendation, not kept code. The question is
@@ -79,7 +79,7 @@ Written before the run.
   TypeScript MCP SDK's latest (1.32.1) also tops out at 2025-11-25. This is a probe
   failure by §1's rule, recorded as the unmodified outcome.
 - **The shim, so the rest of the question can be answered:** a throwaway stdio proxy
-  (`.work/pi-probe/mcp-shim.py`, about 60 lines) between pi and science. It answers
+  (`.work/pi-probe-ctl/mcp-shim.py`, about 60 lines) between pi and science. It answers
   `initialize` from science's `server/discover`, drops `notifications/initialized`,
   answers `ping`, and adds the 2026-07-28 `_meta` to every request it forwards; replies
   pass through unchanged, and every frame is logged. With it, `pi mcp list` shows the
@@ -114,7 +114,7 @@ Written before the run. Each is marked in §5.
 
 ### 3.2 The brief
 
-The first and only unprompted message, verbatim in `.work/pi-probe/brief.md`. It names
+The first and only unprompted message, verbatim in `.work/pi-probe-ctl/brief.md`. It names
 the question (does PHF19 expression rise from NDMM to PD in multiple myeloma), the files
 by name, the workflow entrypoint and its two targets, and the analysis plan: the
 method, assumptions and falsification sentences of the 2026-09-23 walk's spec, and
@@ -182,12 +182,12 @@ nothing to stderr.
 | 13 | `belief` | nothing minted; `NoBelief(no-directional-outcome)` |
 | 14 | `next` | nothing minted; the proposition classified `admitted` |
 
-The attended person's three answers, all from the §3.3 key: (1) "Use layer
-causal_effect, polarity positive", confirming the claim and estimand terms the agent had
-listed (subject, predicate, object, levels, measure, additive scale, reference 0);
-(2) the two rule identities, confirming identification observational, no conditioning,
-no applicability, alpha 0.05; (3) none further: the agent ran `spec` through `next`
-without stopping.
+The attended person replied twice after the brief, both times from the §3.3 key:
+(1) "Use layer causal_effect, polarity positive", confirming the claim and estimand terms
+the agent had listed (subject, predicate, object, levels, measure, additive scale,
+reference 0); (2) the two rule identities, confirming identification observational, no
+conditioning, no applicability, alpha 0.05. After the second reply the agent ran `spec`
+through `next` without stopping.
 
 The agent's closing report stated the belief and the record ids, said it could not see
 the assessment's outcome or the run's statistics because no tool returned them, called
