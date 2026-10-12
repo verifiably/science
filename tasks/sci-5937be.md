@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: main
 created: 2026-10-02T01:00:04Z
-updated: 2026-10-10T21:17:14Z
+updated: 2026-10-12T09:20:41Z
 started: 2026-10-02T07:52:47Z
 depends: []
 tags: [halt, test-latency, testing]
@@ -96,3 +96,4 @@ Process: planned
 - 2026-10-10T20:56:44Z (quarry-design): halt override: attempted sci-a7cd0d by 01a12769-e196-7e72-829a-066a98c2baa4: Approved quarry foundation search task changes only isolated quarry code, no science runtime or tests.
 - 2026-10-10T21:08:22Z (quarry-design): halt override: attempted sci-a4d363 by 01a12769-e196-7e72-829a-066a98c2baa4: Approved quarry foundation ENA adapter task affects isolated quarry code and fixtures, no science runtime or tests.
 - 2026-10-10T21:17:14Z (quarry-design): halt override: attempted sci-6da492 by 01a12769-e196-7e72-829a-066a98c2baa4: Approved quarry foundation conformance/docs task changes only separate quarry code, no science runtime or tests.
+- 2026-10-12T09:20:41Z (main): halt override: attempted sci-b40b23 by 91abcaaa-5133-43c8-bf6e-7a5eb3f45d28: user asked for this spike; it writes a record, adds no tests, and halt verify needs a third uncontended run (2 so far)
