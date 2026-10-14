@@ -5,8 +5,9 @@ status: idea
 priority: 2
 reviewed: true
 created: 2026-10-09T22:29:07Z
-updated: 2026-10-14T09:31:56Z
+updated: 2026-10-14T09:32:23Z
 depends: [mm-2c4a7a]
+parent: sci-d1e874
 tags: [command-framework]
 agent: claude-code/claude-fable-5-1
 ---
