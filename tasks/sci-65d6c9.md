@@ -4,7 +4,7 @@ title: "Science commons milestone 3: preservation (Zenodo, fetch policy, host co
 status: shelved
 priority: 2
 created: 2026-10-01T02:21:10Z
-updated: 2026-10-14T08:59:33Z
+updated: 2026-10-14T08:59:34Z
 depends: []
 tags: [commons]
 source: sci-fe8522
@@ -17,3 +17,4 @@ Spec §12 milestone 3: the Zenodo transport, fetch policy beyond records-only, h
 ## Notes
 
 - 2026-10-14T08:59:33Z (main): shelved: Science commons milestone 1 closes (sci-9104fb, 1b, after sci-13050a 1a): commons spec §12 scopes milestones 2-4 then; begin with the §4.10 transport-seam commit experiment
+- 2026-10-14T08:59:33Z (main): scope: shelved; spec §12 defers scoping milestones 2-4 until milestone 1 closes, and 1a (sci-13050a) is an unstarted todo with 1b (sci-9104fb) after it; the §4.10 transport-seam commit hypothesis belongs to this milestone by spec
