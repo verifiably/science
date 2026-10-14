@@ -5,7 +5,7 @@ status: idea
 priority: 3
 reviewed: true
 created: 2026-10-11T11:09:43Z
-updated: 2026-10-14T09:32:42Z
+updated: 2026-10-14T09:58:11Z
 depends: [sci-76de75]
 parent: sci-f6c61b
 tags: []
@@ -31,3 +31,4 @@ interim: multiple-myeloma keeps its files in its gitignored `data/references/`, 
 ## Notes
 
 - 2026-10-14T09:32:42Z (main): scope: briefed; kernel source records carry identifiers only and holdings attest dataset resources, lit leaves PDFs to Paperpile and quarry downloads nothing, so where reference bytes live and what a record cites is open; parented under goal sci-f6c61b with research sci-76de75, which this waits on; interim stays multiple-myeloma's gitignored data/references/ (mm-0a147a); brief: docs/notes/2026-10-14-reference-files-brief.md
+- 2026-10-14T09:58:11Z (main): scope: brief revised after review (2026-10-14): a citation is source address plus content digest, the manifest only a location lookup; holding is separated from empirical standing (dataset without locator carries no facet); research sci-76de75 narrowed to the source-to-bytes relationship and retrieval interface
