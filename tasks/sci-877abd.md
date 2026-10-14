@@ -1,11 +1,10 @@
 ---
 id: sci-877abd
 title: Separate context and skills from user commands and interaction machinery
-status: idea
+status: dropped
 priority: 2
-reviewed: true
 created: 2026-10-09T23:03:08Z
-updated: 2026-10-14T09:32:53Z
+updated: 2026-10-14T09:40:47Z
 depends: []
 tags: []
 source: "mindful:thought:f8e2cd302278b9f9e78bbebab8cd4390"
@@ -21,3 +20,7 @@ Split, simplify, or recreate science along one seam: context and skills (knowled
 ## Notes
 
 - 2026-10-14T09:32:53Z (main): scope: question; the command framework §2.2 and the lore/flows/crew/autonomy split already draw this seam and science's skills/ is empty; one question for the user under ## Open questions, lean drop as realized
+- 2026-10-14T09:40:47Z (main): dropped
+  provenance: {"harness_session":"claude-code:3fff4012-8ce2-40b2-92a3-480c6bf4c10b","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-14T09:40:47Z (main): Dropped at the user's ruling 2026-10-14: the seam is already drawn — command framework §2.2 (commands are deterministic handlers plus prompts; orchestration-only units are skills) and lore/flows/crew/autonomy own context, skills and interaction machinery
+  provenance: {"harness_session":"claude-code:3fff4012-8ce2-40b2-92a3-480c6bf4c10b","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
