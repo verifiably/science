@@ -3,8 +3,9 @@ id: sci-b9f9d4
 title: "Convention for a project's reference files (article, book and supplement PDFs)"
 status: idea
 priority: 3
+reviewed: true
 created: 2026-10-11T11:09:43Z
-updated: 2026-10-14T09:32:41Z
+updated: 2026-10-14T09:32:42Z
 depends: [sci-76de75]
 parent: sci-f6c61b
 tags: []
@@ -26,3 +27,7 @@ questions:
 - Where do the bytes live (Dropbox, WORK_ROOT storage), and what does a record cite?
 
 interim: multiple-myeloma keeps its files in its gitignored `data/references/`, listed on the task that uses them (mm-0a147a).
+
+## Notes
+
+- 2026-10-14T09:32:42Z (main): scope: briefed; kernel source records carry identifiers only and holdings attest dataset resources, lit leaves PDFs to Paperpile and quarry downloads nothing, so where reference bytes live and what a record cites is open; parented under goal sci-f6c61b with research sci-76de75, which this waits on; interim stays multiple-myeloma's gitignored data/references/ (mm-0a147a); brief: docs/notes/2026-10-14-reference-files-brief.md
