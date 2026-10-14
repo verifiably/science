@@ -4,8 +4,8 @@ title: "Convention for a project's reference files (article, book and supplement
 status: idea
 priority: 3
 created: 2026-10-11T11:09:43Z
-updated: 2026-10-14T09:32:40Z
-depends: []
+updated: 2026-10-14T09:32:41Z
+depends: [sci-76de75]
 parent: sci-f6c61b
 tags: []
 source: "mm:2026-10-11-reference-files"
