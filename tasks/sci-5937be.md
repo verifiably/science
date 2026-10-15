@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: scratch/latency-probe
 created: 2026-10-02T01:00:04Z
-updated: 2026-10-15T12:06:25Z
+updated: 2026-10-15T13:29:49Z
 started: 2026-10-02T07:52:47Z
 depends: [atoms-257797, nodes-d01f25]
 tags: [halt, test-latency, testing]
@@ -116,3 +116,4 @@ Process: planned
 - 2026-10-15T12:06:24Z (main): 2026-10-15 remedies: atoms-257797 (cert cache, on atoms main 10:59:49Z) and sci-89f5fe (leaked serve_forever thread spun one xdist worker ~5x, the ~40 s long pole of central-change runs; merged bdc2bc6 12:03:43Z). After both: plain full suite 694 in 56.7 s (16 workers, load ~10); post-merge test-fast on main 312 tests in 81.3 s (load 6-10). Remaining structure: a config.py change selects 395 tests carrying 98% of suite cost, and testmon tracing costs 1.6-1.8x plain (full suite 82-97 s under testmon vs 57 s plain). C YAML loader would take ~14% off under testmon but changes nodes' tier-1 acceptance both ways: nodes-d01f25, parked for a user decision. Judged runs after 10:59:49Z: 14.1 s, 81.3 s (101 s and 124 s set aside as contended); one more uncontended run makes the median <= 81.3 s.
 - 2026-10-15T12:06:25Z (main): parked (waiting on agent, dependency): after the next real sci test-fast that tt records as uncontended and unwidened (any sci task may start with --force --reason 'its test-fast run is the halt's third verify run'), the agent runs tt-latency verify sci-5937be --after 2026-10-15T10:59:49Z on titan; exit 0 -> tasks done with its output; otherwise profile that run
   provenance: {"harness_session":"claude-code:68ab2ddc-9049-44b2-91f0-59dfdd878c6c","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-15T13:29:49Z (main): 2026-10-15 13:26Z: nodes-d01f25 merged in nodes (a2b68bc: libyaml frontmatter parsing, nodes spec 3.0). Science full suite at 16 workers after it: under testmon (scratch DB) 67.6 s and 67.0 s (load 2-11; this morning 82-85 s at load 5-15), plain 47.2 s (56.7 s before). The halt still waits on one uncontended, unwidened real test-fast run; its park's next step stands.
