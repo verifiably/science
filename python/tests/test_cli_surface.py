@@ -6,6 +6,7 @@ import io
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -24,18 +25,31 @@ def run(*args):
     return subprocess.run([sys.executable, "-m", "science.cli", *args], capture_output=True, text=True)
 
 
+def invoke(capsys, *args):
+    """`main` in-process: help and usage errors leave through argparse's SystemExit.
+    A spawned interpreter costs about a second under a loaded xdist run, so only
+    test_version pays for one, to keep the module entry point covered."""
+    capsys.readouterr()
+    try:
+        code = main(list(args))
+    except SystemExit as exit:
+        code = exit.code
+    out = capsys.readouterr()
+    return SimpleNamespace(returncode=code, stdout=out.out, stderr=out.err)
+
+
 def test_surface_equals_table():
     live = cli_surface.argparse_rows(build_parser(production_tree()))
     assert cli_surface.diff(live, cli_surface.table_rows(TABLE, "science")) == []
 
 
 @pytest.mark.parametrize("path", [()] + COMMANDS, ids=lambda p: " ".join(p) or "root")
-def test_help_on_every_command(path):
+def test_help_on_every_command(path, capsys):
     for flag in ("--help", "-h"):
-        out = run(*path, flag)
+        out = invoke(capsys, *path, flag)
         assert (out.returncode, out.stderr) == (0, "") and out.stdout, (path, flag)
     if path:
-        assert run("help", *path).stdout == run(*path, "--help").stdout
+        assert invoke(capsys, "help", *path).stdout == invoke(capsys, *path, "--help").stdout
 
 
 def test_version():
@@ -45,8 +59,8 @@ def test_version():
 
 
 @pytest.mark.parametrize("args", [["bogus"], ["status", "--bogus"], ["mcp"], ["help", "bogus"]])
-def test_usage_error_exits_two(args):
-    out = run(*args)
+def test_usage_error_exits_two(args, capsys):
+    out = invoke(capsys, *args)
     assert out.returncode == 2 and out.stdout == "" and out.stderr.strip()
     assert len(out.stderr.strip().splitlines()) <= 2
 
@@ -63,5 +77,5 @@ def test_enum_baselines_cover_every_enum_row(certified_work, monkeypatch, capsys
     for (path, _), argv in baselines.items():
         assert main(argv) == 0, argv
         bad = list(argv); bad[len(path)] = "__not_in_set__"
-        out = run(*bad)
+        out = invoke(capsys, *bad)
         assert out.returncode == 2 and "mode" in out.stderr and "__not_in_set__" in out.stderr, bad
