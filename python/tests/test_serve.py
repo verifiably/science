@@ -264,6 +264,7 @@ def test_cli_write_routes_to_the_configured_socket(certified_work, short_tmp, ca
         assert _via_service(ns, MINT_CLAIM, {"slug": "named"}) == 0
         assert "proposition:named" in capsys.readouterr().out
     finally:
+        server.shutdown()
         server.server_close()
     assert not (short_tmp / "ops" / "service.sock").exists()
 

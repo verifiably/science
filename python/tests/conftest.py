@@ -2,6 +2,7 @@ import os
 import shutil
 import subprocess
 import tempfile
+import threading
 import uuid
 from contextlib import contextmanager
 from pathlib import Path
@@ -16,6 +17,20 @@ MAIN_ROOT = Path(subprocess.run(
     ["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
     cwd=REPO_ROOT, check=True, capture_output=True, text=True,
 ).stdout.strip()).parent
+
+
+@pytest.fixture(autouse=True)
+def _no_thread_left_running():
+    """A thread a test starts ends with it. A `serve_forever` left polling a closed
+    socket (`server_close()` without `shutdown()`) slowed every later test on its
+    worker about fivefold."""
+    before = set(threading.enumerate())
+    yield
+    started = [thread for thread in threading.enumerate() if thread not in before]
+    for thread in started:
+        thread.join(timeout=1)
+    alive = [thread.name for thread in started if thread.is_alive()]
+    assert not alive, f"threads still running after the test: {alive}"
 
 
 @contextmanager
