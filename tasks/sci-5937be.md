@@ -6,9 +6,9 @@ priority: 0
 size: m
 complexity: high
 process: planned
-owner: main
+owner: scratch/latency-probe
 created: 2026-10-02T01:00:04Z
-updated: 2026-10-15T11:03:00Z
+updated: 2026-10-15T11:03:23Z
 started: 2026-10-02T07:52:47Z
 depends: [atoms-257797]
 tags: [halt, test-latency, testing]
@@ -110,3 +110,5 @@ Process: planned
 - 2026-10-15T11:01:44Z (main): resumed
   provenance: {"harness_session":"claude-code:68ab2ddc-9049-44b2-91f0-59dfdd878c6c","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-15T11:03:00Z (main): atoms-257797 merged to atoms main (efed1c6, not yet pushed): WAL certification once per volume per process. Measured on this suite at -n 8: certifications 6912 → 8, cert 414.5 → 0.5 worker-s, wall 202 → 124 s, 694 passed both runs
+- 2026-10-15T11:03:23Z (scratch/latency-probe): resumed
+  provenance: {"harness_session":"claude-code:68ab2ddc-9049-44b2-91f0-59dfdd878c6c","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
