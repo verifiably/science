@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: scratch/latency-probe
 created: 2026-10-02T01:00:04Z
-updated: 2026-10-15T11:03:23Z
+updated: 2026-10-15T11:37:39Z
 started: 2026-10-02T07:52:47Z
 depends: [atoms-257797]
 tags: [halt, test-latency, testing]
@@ -112,3 +112,4 @@ Process: planned
 - 2026-10-15T11:03:00Z (main): atoms-257797 merged to atoms main (efed1c6, not yet pushed): WAL certification once per volume per process. Measured on this suite at -n 8: certifications 6912 → 8, cert 414.5 → 0.5 worker-s, wall 202 → 124 s, 694 passed both runs
 - 2026-10-15T11:03:23Z (scratch/latency-probe): resumed
   provenance: {"harness_session":"claude-code:68ab2ddc-9049-44b2-91f0-59dfdd878c6c","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-15T11:37:39Z (fix/serve-thread-leak): 2026-10-15 post-atoms: verify has 2 judged runs (14.1 s, 32 tests; 101.2 s, 395 tests from a config.py change at load 13-17). Config selection at 16 workers pinned is bimodal, ~70 s or ~110 s; the slow mode is one worker whose serve_forever thread leaked by test_serve::test_cli_write_routes_to_the_configured_socket spins and slows it ~5x (world build 14 s -> 77 s). Fix filed as sci-89f5fe. C YAML loader for nodes frontmatter: ~14% off one heavy test, lost in noise suite-wide; not pursued yet.
