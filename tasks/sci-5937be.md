@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: main
 created: 2026-10-02T01:00:04Z
-updated: 2026-10-15T08:45:13Z
+updated: 2026-10-15T08:45:14Z
 started: 2026-10-02T07:52:47Z
 depends: [atoms-257797]
 tags: [halt, test-latency, testing]
@@ -105,3 +105,5 @@ Process: planned
 - 2026-10-15T08:45:10Z (main): 2026-10-15: sci-d2ae2f merged (9078941): test_cli_surface in-process, module serial 57.8 s -> 4.3 s, ~6% of suite worker time. Flaky timing test under load filed as sci-26ba4d.
 - 2026-10-15T08:45:11Z (main): testmon tracing cost, A/B 2026-10-15 (3 heavy modules, 8 workers, load ~10, scratch TESTMON_DATAFILE): plain 29-32 s, --testmon 47 s (+55%), COVERAGE_CORE=sysmon 35 s but rejected: sysmon recorded 2-3 files per test against 13-17 (dynamic contexts unsupported), so selection would miss affected tests. A fresh-DB test-fast took 188 s vs 92 s plain.
 - 2026-10-15T08:45:11Z (main): verify --dry-run now says met (median 5.6 s) on 203.1 s (full reselect), 1.7 s (empty) and 5.6 s (one rerun test): not evidence of a representative incremental run, so the halt stays open (gap reported as ops-c1b084). Estimate: a central-module change selects ~half the suite; at 92 s plain full suite x 1.55 testmon, that is ~70 s under load, near the 90 s limit. atoms-257797 (37% of worker time) is the lever that gives margin.
+- 2026-10-15T08:45:13Z (main): parked (waiting on agent, dependency): agent drafts the atoms-257797 spec in the atoms repo (cache WAL certification per volume per process; settle the remount question), user reviews; after it lands, one real incremental test-fast on a central module in sci, then tt-latency verify sci-5937be --after <atoms merge ts> on titan
+  provenance: {"harness_session":"claude-code:16bb464b-a654-47f6-8366-99c2a9b2a602","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
