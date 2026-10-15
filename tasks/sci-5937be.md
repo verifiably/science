@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: main
 created: 2026-10-02T01:00:04Z
-updated: 2026-10-15T08:45:14Z
+updated: 2026-10-15T11:01:44Z
 started: 2026-10-02T07:52:47Z
 depends: [atoms-257797]
 tags: [halt, test-latency, testing]
@@ -107,3 +107,5 @@ Process: planned
 - 2026-10-15T08:45:11Z (main): verify --dry-run now says met (median 5.6 s) on 203.1 s (full reselect), 1.7 s (empty) and 5.6 s (one rerun test): not evidence of a representative incremental run, so the halt stays open (gap reported as ops-c1b084). Estimate: a central-module change selects ~half the suite; at 92 s plain full suite x 1.55 testmon, that is ~70 s under load, near the 90 s limit. atoms-257797 (37% of worker time) is the lever that gives margin.
 - 2026-10-15T08:45:13Z (main): parked (waiting on agent, dependency): agent drafts the atoms-257797 spec in the atoms repo (cache WAL certification per volume per process; settle the remount question), user reviews; after it lands, one real incremental test-fast on a central module in sci, then tt-latency verify sci-5937be --after <atoms merge ts> on titan
   provenance: {"harness_session":"claude-code:16bb464b-a654-47f6-8366-99c2a9b2a602","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-15T11:01:44Z (main): resumed
+  provenance: {"harness_session":"claude-code:68ab2ddc-9049-44b2-91f0-59dfdd878c6c","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
