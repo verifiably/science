@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: main
 created: 2026-10-02T01:00:04Z
-updated: 2026-10-15T08:32:37Z
+updated: 2026-10-15T08:45:10Z
 started: 2026-10-02T07:52:47Z
 depends: []
 tags: [halt, test-latency, testing]
@@ -102,3 +102,4 @@ Process: planned
 - 2026-10-15T08:32:35Z (main): verify state 2026-10-15 (titan): its 2 judged runs are 203.1 s (2026-10-02, full reselect after beliefs moved; tt v3 did not mark it widened) and 1.7 s (2026-10-03, empty selection), median 102.4 s. Every other post-remedy test-fast run was a full suite (new worktree DB or reselect); main's .testmondata dates from 2026-10-03. No post-remedy incremental evidence exists either way.
 - 2026-10-15T08:32:35Z (main): profile 2026-10-15 (titan, load 12-16, 16 workers, via just test-one + a timing plugin): full suite 694 passed in 92.4 s; 1252 worker-s, of which atoms WAL certification 468 s (37%; 3298 binds, 6596 child pythons), python -m science.cli in test_cli_surface 80 s (106 spawns, ~1 s each under load), snakemake 48 s. A basic fixture world builds in ~1 s (certification ~half); the shared-contract world with evidence in ~7.5-13 s (certification ~30%). Biggest lever remains atoms-257797 (todo, planned).
 - 2026-10-15T08:32:36Z (main): selection shape: central modules (config, refusal, schema, loader, session, dispatch, canonical) each select 270-400 of 694 tests; pre-remedy incremental runs selected 150-400 tests. At today's full-suite 92 s under load, a half-suite selection would land near 50-60 s, under the 90 s limit, but that is an estimate, not a recorded run.
+- 2026-10-15T08:45:10Z (main): 2026-10-15: sci-d2ae2f merged (9078941): test_cli_surface in-process, module serial 57.8 s -> 4.3 s, ~6% of suite worker time. Flaky timing test under load filed as sci-26ba4d.
