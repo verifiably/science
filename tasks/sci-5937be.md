@@ -8,9 +8,9 @@ complexity: high
 process: planned
 owner: main
 created: 2026-10-02T01:00:04Z
-updated: 2026-10-15T08:45:12Z
+updated: 2026-10-15T08:45:13Z
 started: 2026-10-02T07:52:47Z
-depends: []
+depends: [atoms-257797]
 tags: [halt, test-latency, testing]
 source: "tt-latency:titan:2026-10-02T01:00:03Z"
 spec: docs/specs/2026-10-02-world-fixture-snapshots-design.md
