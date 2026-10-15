@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: main
 created: 2026-10-02T01:00:04Z
-updated: 2026-10-15T08:24:37Z
+updated: 2026-10-15T08:32:35Z
 started: 2026-10-02T07:52:47Z
 depends: []
 tags: [halt, test-latency, testing]
@@ -99,3 +99,4 @@ Process: planned
 - 2026-10-12T09:20:41Z (main): halt override: attempted sci-b40b23 by 91abcaaa-5133-43c8-bf6e-7a5eb3f45d28: user asked for this spike; it writes a record, adds no tests, and halt verify needs a third uncontended run (2 so far)
 - 2026-10-15T08:24:37Z (main): resumed
   provenance: {"harness_session":"claude-code:16bb464b-a654-47f6-8366-99c2a9b2a602","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-15T08:32:35Z (main): verify state 2026-10-15 (titan): its 2 judged runs are 203.1 s (2026-10-02, full reselect after beliefs moved; tt v3 did not mark it widened) and 1.7 s (2026-10-03, empty selection), median 102.4 s. Every other post-remedy test-fast run was a full suite (new worktree DB or reselect); main's .testmondata dates from 2026-10-03. No post-remedy incremental evidence exists either way.
