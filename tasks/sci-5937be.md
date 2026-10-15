@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: scratch/latency-probe
 created: 2026-10-02T01:00:04Z
-updated: 2026-10-15T12:06:24Z
+updated: 2026-10-15T12:06:25Z
 started: 2026-10-02T07:52:47Z
 depends: [atoms-257797, nodes-d01f25]
 tags: [halt, test-latency, testing]
@@ -114,3 +114,5 @@ Process: planned
   provenance: {"harness_session":"claude-code:68ab2ddc-9049-44b2-91f0-59dfdd878c6c","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-15T11:37:39Z (fix/serve-thread-leak): 2026-10-15 post-atoms: verify has 2 judged runs (14.1 s, 32 tests; 101.2 s, 395 tests from a config.py change at load 13-17). Config selection at 16 workers pinned is bimodal, ~70 s or ~110 s; the slow mode is one worker whose serve_forever thread leaked by test_serve::test_cli_write_routes_to_the_configured_socket spins and slows it ~5x (world build 14 s -> 77 s). Fix filed as sci-89f5fe. C YAML loader for nodes frontmatter: ~14% off one heavy test, lost in noise suite-wide; not pursued yet.
 - 2026-10-15T12:06:24Z (main): 2026-10-15 remedies: atoms-257797 (cert cache, on atoms main 10:59:49Z) and sci-89f5fe (leaked serve_forever thread spun one xdist worker ~5x, the ~40 s long pole of central-change runs; merged bdc2bc6 12:03:43Z). After both: plain full suite 694 in 56.7 s (16 workers, load ~10); post-merge test-fast on main 312 tests in 81.3 s (load 6-10). Remaining structure: a config.py change selects 395 tests carrying 98% of suite cost, and testmon tracing costs 1.6-1.8x plain (full suite 82-97 s under testmon vs 57 s plain). C YAML loader would take ~14% off under testmon but changes nodes' tier-1 acceptance both ways: nodes-d01f25, parked for a user decision. Judged runs after 10:59:49Z: 14.1 s, 81.3 s (101 s and 124 s set aside as contended); one more uncontended run makes the median <= 81.3 s.
+- 2026-10-15T12:06:25Z (main): parked (waiting on agent, dependency): after the next real sci test-fast that tt records as uncontended and unwidened (any sci task may start with --force --reason 'its test-fast run is the halt's third verify run'), the agent runs tt-latency verify sci-5937be --after 2026-10-15T10:59:49Z on titan; exit 0 -> tasks done with its output; otherwise profile that run
+  provenance: {"harness_session":"claude-code:68ab2ddc-9049-44b2-91f0-59dfdd878c6c","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
