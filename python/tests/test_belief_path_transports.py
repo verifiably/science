@@ -105,6 +105,7 @@ def test_cli_write_routes_through_the_service_and_refuses_with_the_json_line(wor
         assert main(["dataset", "--config", str(cfg_path), "--path", str(data), "--title", "m",
                      "--invocation-id", "R" * 8]) == 3  # and replays that refusal
     finally:
+        server.shutdown()
         server.server_close()
 
 
