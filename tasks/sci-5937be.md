@@ -8,9 +8,9 @@ complexity: high
 process: planned
 owner: scratch/latency-probe
 created: 2026-10-02T01:00:04Z
-updated: 2026-10-15T11:37:39Z
+updated: 2026-10-15T12:00:51Z
 started: 2026-10-02T07:52:47Z
-depends: [atoms-257797]
+depends: [atoms-257797, nodes-d01f25]
 tags: [halt, test-latency, testing]
 source: "tt-latency:titan:2026-10-02T01:00:03Z"
 spec: docs/specs/2026-10-02-world-fixture-snapshots-design.md
