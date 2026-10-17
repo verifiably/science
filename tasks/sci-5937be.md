@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: scratch/latency-probe
 created: 2026-10-02T01:00:04Z
-updated: 2026-10-15T13:29:49Z
+updated: 2026-10-17T00:46:07Z
 started: 2026-10-02T07:52:47Z
 depends: [atoms-257797, nodes-d01f25]
 tags: [halt, test-latency, testing]
@@ -117,3 +117,4 @@ Process: planned
 - 2026-10-15T12:06:25Z (main): parked (waiting on agent, dependency): after the next real sci test-fast that tt records as uncontended and unwidened (any sci task may start with --force --reason 'its test-fast run is the halt's third verify run'), the agent runs tt-latency verify sci-5937be --after 2026-10-15T10:59:49Z on titan; exit 0 -> tasks done with its output; otherwise profile that run
   provenance: {"harness_session":"claude-code:68ab2ddc-9049-44b2-91f0-59dfdd878c6c","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-15T13:29:49Z (main): 2026-10-15 13:26Z: nodes-d01f25 merged in nodes (a2b68bc: libyaml frontmatter parsing, nodes spec 3.0). Science full suite at 16 workers after it: under testmon (scratch DB) 67.6 s and 67.0 s (load 2-11; this morning 82-85 s at load 5-15), plain 47.2 s (56.7 s before). The halt still waits on one uncontended, unwidened real test-fast run; its park's next step stands.
+- 2026-10-17T00:46:07Z (main): halt override: attempted sci-bd518f by c6863573-34c2-470d-b394-259f7cc75503: its test-fast run is the halt's third verify run
