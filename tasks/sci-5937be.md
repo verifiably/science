@@ -1,15 +1,16 @@
 ---
 id: sci-5937be
 title: "Test latency over limit: test-fast 93.984 s against 90 s"
-status: doing
+status: done
 priority: 0
 size: m
 complexity: high
 process: planned
 owner: main
 created: 2026-10-02T01:00:04Z
-updated: 2026-10-17T00:48:40Z
+updated: 2026-10-17T00:48:41Z
 started: 2026-10-02T07:52:47Z
+completed: 2026-10-17T00:48:41Z
 depends: [atoms-257797, nodes-d01f25]
 tags: [halt, test-latency, testing]
 source: "tt-latency:titan:2026-10-02T01:00:03Z"
@@ -120,4 +121,8 @@ Process: planned
 - 2026-10-17T00:46:07Z (main): halt override: attempted sci-bd518f by c6863573-34c2-470d-b394-259f7cc75503: its test-fast run is the halt's third verify run
 - 2026-10-17T00:48:08Z (main): verified: titan after 2026-10-15T10:59:49Z: test-fast median 14.065 s, limit 90 s, 3 runs
 - 2026-10-17T00:48:40Z (main): resumed
+  provenance: {"harness_session":"claude-code:c6863573-34c2-470d-b394-259f7cc75503","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-17T00:48:41Z (main): done
+  provenance: {"harness_session":"claude-code:c6863573-34c2-470d-b394-259f7cc75503","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-17T00:48:41Z (main): Latency obligation met. tt-latency verify sci-5937be --after 2026-10-15T10:59:49Z exited 0 on titan: 'titan test-fast met (median 14.1 s, 3 runs, 1 widened, limit 90 s); verified: every obligation is met'. Run during sci-bd518f, whose test-fast run was offered as the third verify run per this task's park.
   provenance: {"harness_session":"claude-code:c6863573-34c2-470d-b394-259f7cc75503","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
