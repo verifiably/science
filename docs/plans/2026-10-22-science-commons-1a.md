@@ -33,8 +33,9 @@ registry, which is rebuildable from the ledger's sharing lines.
 
 **Review history:** revision 1 (`ca6d5d8`) reviewed 2026-10-22 by codex/gpt-6-astra
 (revise: 7 P1, 4 P2) and claude-code/claude-fable-5-1 (revise: 2 Critical, 8 Important,
-13 Minor). This is revision 2; the "Deviations" section records every departure from
-the spec's letter with its reason.
+13 Minor). Revision 2 (`fb4e3fa`) reviewed by claude-code/claude-fable-5-1 (revise:
+0 Critical, 6 Important, 12 Minor). This is revision 3; the "Deviations" section records
+every departure from the spec's letter with its reason.
 
 ## Global Constraints
 
@@ -107,17 +108,25 @@ the spec's letter with its reason.
    kernel records `expected` without enforcing it (`holdings/records.py:303-331`); a
    mismatch found after that act could not be refused under the write contract. 1a
    therefore uses look's retrieval step directly, compares, then writes the store
-   observation. The URL observation record is deferred: Task 13 files the follow-up and
-   amends spec §5 step 4.
+   observation. *Rejected alternative:* keep `look` as act 1 and `write` as act 2 only on
+   a match, returning the URL observation's record block alone on a mismatch. It is
+   framework-compatible, but the invocation then closes `done` and its report is one
+   `[holdings-observation]` block whose rendering (`uid, id, kind, title`) cannot show the
+   mismatch; a person would read success. The URL observation record is deferred: Task 13
+   files the follow-up (trigger: a write report that can carry a finding beside minted
+   records) and amends spec §5 step 4.
 5. **`bound` joins the sharing transitions.** Framework §4.4 names `fetched, admitted,
    mounted, retired`; a provider binding is registry state with no kernel counterpart, so
    its ledger evidence is a `bound` line whose registry counterpart is the binding. Task 13
    amends framework §4.4.
-6. **Configured read mounts that are not publications count as Own.** Spec §9 names only
-   the write root under Own; a root the operator lists by hand in `corpus_roots` is the
-   installation's own corpus, learned from no location. Without this rule every existing
-   multi-corpus belief read would change (`test_mount_citations.py:171-182`). Task 13
-   adds the sentence to spec §9.
+6. **Configured read mounts that carry no publication marker count as Own.** Spec §9
+   names only the write root under Own; a root the operator lists by hand in
+   `corpus_roots` and that is not a publication is the installation's own corpus, learned
+   from no location. A hand-listed root that *does* carry a marker is a carrier like any
+   adopted one (its carried records take the Carried branch; its own records need a pin).
+   Without this rule every existing multi-corpus belief read would change
+   (`test_mount_citations.py:171-182`; `build_shared_contract_world` admits a `Fresh`
+   corpus with no marker). Task 13 adds the sentence to spec §9.
 7. **`show` reports, `adopt` reconciles.** Spec §10 says the registry is reconciled "at
    the next `adopt` or `show`"; `show` is read-only and reports the discrepancy as a
    Finding.
@@ -125,6 +134,14 @@ the spec's letter with its reason.
    exposes assessments, runs and verifications after the policy filter but no
    independence certification; `show` reports the verification picture and says
    independence is not exposed. Spec §5 step 2 note in Task 13.
+9. **An unsourced or world-mismatched candidate is downloaded, not `fetched`.** Spec §10
+   says a refusal "leaves the candidate `fetched`". Every registry write must follow its
+   ledger line, and a pin's source is part of that evidence, so `adopt` resolves the
+   source **before** the `fetched` door and refuses `pin-unsourced`/`world-mismatch`
+   with the copy kept on disk under `roots/<corpus_id>` and no pin and no line; the
+   next `adopt` reuses the copy. `provider-inspect` and `provider-bind` write only
+   scratch and the transport cache under `operations_root` (Deviation 2: "records
+   nothing" is about records).
 
 ## Review Focus
 
@@ -232,18 +249,22 @@ class SharingRegistry:
 
 def apply_line(registry: SharingRegistry, line: SharingLine) -> bool: ...
     # idempotent: "bound" ensures the binding (world, location, confirmed=True, bound_since=line.at);
-    # "fetched" ensures a pin (state fetched, source parsed, fetch from the line) when none exists;
-    # "admitted"/"mounted"/"retired" raise the pin's state to the line's when lower (STATE_ORDER);
+    # "fetched"/"admitted"/"mounted"/"retired": when no pin exists, create it from the line (every field is
+    # on the line) at the line's state; otherwise raise the state to the line's when lower (STATE_ORDER) and
+    # set the source from the line when the pin has none and the line names one (a source is never cleared);
     # returns True when it wrote.
 def replay(registry: SharingRegistry, operations_root: Path) -> tuple[SharingLine, ...]: ...
-    # every sharing line of every session ledger under <operations_root>/sessions, in (session dir name,
-    # ledger order), applied through apply_line; returns the lines that wrote. The registry is rebuildable
-    # from the ledger (spec §7.4), and every sharing command calls this first (Tasks 7, 8).
+    # every sharing line of every session ledger under <operations_root>/sessions (session ids are random
+    # hex, so directory order is not time order), sorted by (line.at, session id, ledger position), applied
+    # through apply_line; returns the lines that wrote. The registry is rebuildable from the ledger (spec
+    # §7.4), and every sharing command calls this first (Tasks 7, 8).
 ```
 
   Layout: `pins/<corpus_id>.json`, `providers/<world>.json`, both JSON with sorted keys and
   `"version": 1`; `follows/` reserved; `roots/<corpus_id>/`; `scratch/<token>/`. A file
   that fails to parse or validate raises `SharingRegistryMalformed("pins/<name>", reason)`.
+  A `root` that does not exist yet reads as no pins and no bindings; the first write
+  creates it.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -258,13 +279,20 @@ def test_origin_confirmed_needs_a_confirmed_binding_to_the_markers_world(tmp_pat
 @pytest.mark.parametrize("damage", ["{", '{"version": 1, "corpus_id": "short"}', '{"version": 2}'])
 def test_malformed_pin_names_its_file(tmp_path, damage): ...
 def test_write_is_atomic_and_leaves_no_temp_file(tmp_path): ...
+def test_an_absent_root_reads_as_empty(tmp_path):
+    assert SharingRegistry(tmp_path / "none").pins() == () and SharingRegistry(tmp_path / "none").bindings() == {}
 def test_apply_line_is_idempotent_and_never_lowers_a_state(tmp_path):
     assert apply_line(registry, LINE_FETCHED) and not apply_line(registry, LINE_FETCHED)
     assert apply_line(registry, LINE_MOUNTED) and registry.pin(CID).state == "mounted"
     assert not apply_line(registry, LINE_ADMITTED) and registry.pin(CID).state == "mounted"
-def test_replay_applies_every_sessions_lines_in_order(tmp_path, fake_ledgers):
-    # fake_ledgers: two session directories whose ledgers (written through the kernel's LedgerWriter) hold
-    # a bound line and a fetched+admitted+mounted sequence
+def test_a_state_line_without_a_pin_creates_it(tmp_path):
+    assert apply_line(registry, LINE_ADMITTED) and registry.pin(CID) == Pin(..., state="admitted", source=PinSource("provider", L1), ...)
+def test_a_rebuilt_registry_keeps_the_source(tmp_path):
+    for line in (LINE_FETCHED_SOURCED, LINE_ADMITTED, LINE_MOUNTED): apply_line(registry, line)
+    assert registry.pin(CID).source == PinSource("provider", L1) and registry.pin(CID).origin_confirmed({W: BINDING})
+def test_replay_applies_lines_in_time_order_across_sessions(tmp_path, fake_ledgers):
+    # fake_ledgers: two session directories (ids chosen so directory order inverts time order) whose ledgers,
+    # written through the kernel's LedgerWriter, hold a bound line and a fetched+admitted+mounted sequence
     written = replay(registry, operations_root)
     assert [l.transition for l in written] == ["bound", "fetched", "admitted", "mounted"]
     assert registry.bindings()[W].locations == (L1,) and registry.pin(CID).state == "mounted"
@@ -307,9 +335,11 @@ git commit -m "feat(sharing): the sharing registry: pins, provider bindings, ado
   `ScienceConfig.accept: tuple[str, ...] = ()`,
   `ScienceConfig.fetch: FetchPolicy = FetchPolicy("records-only", 0)` with
   `@dataclass(frozen=True) class FetchPolicy: policy: Literal["records-only", "fetch"];
-  max_bytes: int`. `load_config` unions `SharingRegistry(sharing_root).mounted_roots()`
-  into `WorldConfig.corpus_roots` (deduplicated by resolved path, sorted) before building
-  `WorldConfig`; `write_root`/`read_contracts` validation runs over the union.
+  max_bytes: int`. `load_config` decides `write_root` over the **configured**
+  `corpus_roots` first (the existing rule at `config.py:156-164`: the sole configured root
+  when there is one), then unions `SharingRegistry(sharing_root).mounted_roots()` into
+  `WorldConfig.corpus_roots` (deduplicated by resolved path, sorted) and checks that
+  `write_root` is in the union; `read_contracts` validation runs over the union.
   `helpers/commons.py` starts with `write_minimal_config(work, **overrides) -> Path`
   (wraps `write_config` with `extra` for `accept`, `fetch`, `sharing_root`) and
   `refused(call) -> Refusal` (`pytest.raises(Refused)` returning `.refusal`).
@@ -322,6 +352,9 @@ def test_accept_must_be_world_ids(tmp_path): ...                      # "abc" ->
 def test_fetch_table_validates_policy_and_bound(tmp_path): ...        # {"policy": "maybe"}, max_bytes -1, extra key
 def test_mounted_registry_roots_join_corpus_roots(tmp_path, certified_work): ...
 def test_a_fetched_pin_is_not_mounted(tmp_path, certified_work): ...  # state "fetched" root absent from corpus_roots
+def test_a_single_configured_root_stays_the_write_root_after_a_mount_joins(tmp_path, certified_work):
+    cfg = load_config(write_minimal_config(tmp_path, sharing_root="sharing"))   # one corpus_roots entry, no write_root key
+    assert cfg.write_root == configured_root and len(cfg.world.corpus_roots) == 2
 def test_a_mounted_root_missing_on_disk_refuses_naming_the_pin(tmp_path): ...   # Review Focus 1
 def test_a_malformed_registry_refuses_naming_the_entry(tmp_path): ...  # "pins/x.json" in message
 ```
@@ -368,7 +401,9 @@ git commit -m "feat(config): sharing_root, accept and fetch keys; mounts union t
 ```python
 GIT_PASSTHROUGH = ("PATH", "HOME", "USER", "LANG", "LC_ALL", "SSH_AUTH_SOCK", "XDG_CONFIG_HOME", "XDG_CACHE_HOME")
 def production_git_env(author: str) -> dict[str, str]: ...
-    # the GIT_PASSTHROUGH keys present in os.environ, every os.environ key starting with "GIT_", plus
+    # the GIT_PASSTHROUGH keys present in os.environ, every os.environ key starting with "GIT_" except the
+    # repository-pointing GIT_DIR, GIT_WORK_TREE and GIT_INDEX_FILE (a hook exports them and they would aim
+    # the transport's commands at the hook's repository), plus
     # GIT_TERMINAL_PROMPT="0" and GIT_AUTHOR_NAME/EMAIL, GIT_COMMITTER_NAME/EMAIL derived from `author`
     # (name = author, email = "<author>@science.invalid"): git's own credential helpers and config stay
     # reachable (spec §8), and a missing credential fails instead of prompting.
@@ -417,9 +452,11 @@ def test_fetch_corpus_materializes_the_root_and_sibling(...)
 def test_fetch_corpus_of_an_absent_corpus_names_the_location(...)
 def test_production_env_keeps_gits_own_configuration_and_never_prompts(monkeypatch):
     monkeypatch.setenv("GIT_SSH_COMMAND", "ssh -i key"); monkeypatch.setenv("SECRET_TOKEN", "x"); monkeypatch.setenv("SSH_AUTH_SOCK", "/s")
+    monkeypatch.setenv("GIT_DIR", "/hook/.git"); monkeypatch.setenv("GIT_INDEX_FILE", "/hook/index")
     env = production_git_env("science abc")
     assert env["GIT_SSH_COMMAND"] == "ssh -i key" and env["SSH_AUTH_SOCK"] == "/s" and env["GIT_TERMINAL_PROMPT"] == "0"
     assert "SECRET_TOKEN" not in env and "GIT_CONFIG_GLOBAL" not in env and env["GIT_AUTHOR_NAME"] == "science abc"
+    assert "GIT_DIR" not in env and "GIT_INDEX_FILE" not in env
 def test_test_env_isolates_git_from_the_host(tmp_path, remote):
     captured = {}; monkeypatch.setattr(transport_git.subprocess, "run", capture(captured))
     GitTransport(tmp_path / "c", author="t", env=GIT_ENV).listing(dest, CID)
@@ -450,7 +487,7 @@ git commit -m "feat(transport): git transport: idempotent push, remote listing, 
 ### Task 4: The `sharing` write class, its invocation path and pin blocks
 
 **Files:**
-- Modify: `python/src/science/schema.py:17,136-161`; `python/src/science/dispatch.py:171-184,228-292,408-440`;
+- Modify: `python/src/science/schema.py:17,136-161`; `python/src/science/dispatch.py:113-119,171-184,228-292,408-440`;
   `python/src/science/report.py`; `python/src/science/render.py:32-50`; `python/src/science/refusal.py:9-14`;
   `python/src/science/sharing.py` (`replay`, if deferred in Task 1)
 - Create: `python/tests/fixtures/commands/share-probe/command.toml`
@@ -466,8 +503,12 @@ git commit -m "feat(transport): git transport: idempotent push, remote listing, 
 - Produces:
   - `WRITE_CLASS_KINDS` gains `"sharing"`; `_parse_write_class` accepts the bare word.
   - `Dispatcher._required` maps `sharing` to `RequiredCapabilities.sharing()`.
+  - `Dispatcher.invoke` routes `sharing` to `_invoke_sharing` beside the `session` branch
+    (`dispatch.py:113-119`).
   - `Dispatcher._invoke_sharing(decl, canonical, iid)`: claim, scoped writer, handler
-    `(ctx, writer, **inputs)`; a `Refused` from the handler closes
+    `(ctx, writer, **inputs)`; the kernel exceptions `_invoke_write` catches
+    (`dispatch.py:247-250`) are normalised through `_kernel_refusal` the same way; a
+    `Refused` from the handler closes
     `{"refusal": envelope}` **whether or not sharing lines were written** (sharing lines
     are evidence of state the handler left behind by design, spec §10: "a refusal at this
     stage leaves the candidate fetched"); `invocation_acts(iid)` must be empty, else
@@ -544,16 +585,21 @@ LOC_A, LOC_B = "https://remote.test/a", "https://remote.test/b"
 
 @dataclass(frozen=True)
 class Installations:
-    a: ScienceConfig; b: ScienceConfig; remotes: Path          # snapshot-storable: ScienceConfig, ScienceConfig, Path
+    a: ScienceConfig; b: ScienceConfig; remotes: Path
     def data_a_path(self) -> Path: ...                          # <remotes parent>/data/a.txt holding DATA_A
+    @classmethod
+    def of(cls, value: dict) -> "Installations": ...            # from a snapshot value {"a": cfg, "b": cfg, "remotes": path}
+    # `helpers.snapshot.check_value` admits only ScienceConfig, Path, str, int, bool, None and containers
+    # (snapshot.py:12,38-55): every builder below returns that dict, and each pytest fixture wraps it with `of`.
 
 def build_installation(work: Path, name: str) -> ScienceConfig
     # world root work/<name>/world, write root work/<name>/corpus pinned to PROFILE_V3/PINS_V3 (coordination v3,
     # domains biology), store work/<name>/store, operations work/<name>/ops, sharing_root work/<name>/sharing,
     # accept=(), fetch=FetchPolicy("fetch", 0); the holdings reducer installed; a project <name> carrying QUERY_1A.
-def build_fresh(work: Path) -> Installations
+def build_fresh(work: Path, *, epoch: bool = True) -> dict
     # A with evidence: dataset (DATA_A), spec on proposition:p1 over it (SPEC_FIELDS), run (mint_fixture_run),
-    # assessment; publish_session_epoch(a). B empty. Remotes under work/remotes. Snapshot "commons-1a-fresh".
+    # assessment; publish_session_epoch(a) when `epoch`. B empty. Remotes under work/remotes.
+    # Snapshots "commons-1a-fresh" and (epoch=False) "commons-1a-fresh-no-epoch" (fixture `fresh_no_epoch`).
 def write_commons_config(cfg: ScienceConfig) -> Path
     # the launcher TOML with every key, including corpus_roots (all configured roots), write_root,
     # sharing_root, accept and [fetch]; unlike helpers.world.write_config_for.
@@ -576,7 +622,10 @@ def test_a_holds_the_reproducible_evidence_and_a_current_epoch(fresh):
     assert ctx.held_path(ids["dataset"]).read_bytes() == DATA_A
     epoch_currency(ctx.world, ctx.session_ids())
 def test_b_is_empty_with_fetch_policy_and_a_sharing_root(fresh):
-    assert fresh.b.fetch == FetchPolicy("fetch", 0) and fresh.b.sharing_root.is_dir() is False  # created on first write
+    assert fresh.b.fetch == FetchPolicy("fetch", 0) and not fresh.b.sharing_root.exists()   # created on first write
+    assert SharingRegistry(fresh.b.sharing_root).pins() == ()
+def test_the_fixture_value_is_snapshot_storable(fresh_value):
+    check_value(fresh_value)   # helpers.snapshot.check_value over the builder's dict
 def test_reopen_round_trips_the_sharing_keys(fresh):
     cfg = reopen(fresh.b); assert cfg.sharing_root == fresh.b.sharing_root and cfg.fetch == fresh.b.fetch
 ```
@@ -638,24 +687,36 @@ git commit -m "test(commons): two installations pinned to coordination v3, A wit
     else resolve `target`, parse `to`, `writer.publish(… staging_profile=ctx.config.profile …)`.
     A `GitTransportFault` is caught and raised as `KernelRefusalValue(TransportFault(reason=
     "transport-fault", detail=str(fault)))` (a frozen value with `.reason` and `.detail`;
-    the kernel's attempt stays unfinished with its mark); `PublishRefused` →
-    `KernelRefusalValue(PublishRefusedValue(reason=outcome, detail=event_token))`;
-    `PublishUnresolved` likewise with `reason`. Report: `(record_block(binding),)` read
+    the kernel's attempt stays unfinished with its mark); a `PublishRefused` value →
+    `KernelRefusalValue(PublishRefusedValue(reason=outcome.outcome, detail=outcome.event_token))`;
+    `PublishUnresolved` likewise with its `reason`; a raised `PublicationRefused` (a
+    `WriteRefused`, `errors.py:1191`, e.g. `publish-unfinished` with `tokens`) is caught
+    and raised as `KernelRefusalValue(PublishRefusedValue(reason=e.reason, detail=str(e)))`
+    so the refusal's `data.reason` names it. Report: `(record_block(binding),)` read
     from `ctx.write_view()` at `binding_address(view, destination)`; the marker uid and
     corpus id are the binding's fields. **Limitation stated in `prompt.md`:** the kernel
     resumes an attempt only under its intent's actor (`publish.py:852`), so `--resume`
     works within the service session that began the attempt; a later session finds the
     pair blocked `publish-unfinished` (question raised on `beliefs-f24fe9`).
   - `publish-preview` declaration: `write_class = "read-only"`, inputs `target`, `to`.
-    Report: `Heading`, `KeyVals("selection", per-kind counts + records)`,
+    Handler: `publication_preview(ctx.world, ctx.coordination(), view,
+    own_pins=load_manifest(ctx.config.write_root).profile)` (the kernel's `derive_pins`
+    takes the written root's `CorpusPins`, `publish_request.py:80`); `ctx.world` is the
+    read door's `World`, which suffices (`publish.py:328-347` reads only config, epoch,
+    world view, captured manifests and the registry). `EpochUnknown` → the existing
+    `no-epoch` refusal. Report: `Heading`, `KeyVals("selection", per-kind counts + records)`,
     `KeyVals("closure", complete, missing)`, `KeyVals("attribution", address →
     "<origin corpus> <origin marker>")` or `Text("attribution: every selected record is
     this world's own")`, `KeyVals("inputs the destination will not carry", dataset →
     "bytes held|not held; redistribution unknown")`.
-  - `helpers/commons.py`: `build_published(work) -> Installations` (`build_fresh`, then
-    under `with_remotes`, `open_rig(a, ("publish",))` publishes `target="a"` to `LOC_A`);
+  - `helpers/commons.py`: `build_published(work) -> dict` (`build_fresh`, then under
+    `with_remotes`, `open_rig(a, ("publish",))` publishes `target="a"` to `LOC_A`);
     snapshot `"commons-1a-published"`; `a_identity` gains `corpus_id`, `marker`, `artifact`
-    read from the binding in A's write root.
+    read from the binding in A's write root; `transport_with(installations, **seams) ->
+    GitTransport` (cache under a tmp dir, `GIT_ENV`, the remotes' `remote_for`, seams set);
+    `binding_ref(text) -> str` (the `[publication-binding]` block's record id);
+    `publication.transport_for` is replaced for one test by assignment and restored in a
+    `finally`, like `with_remotes` does.
   - CLI rows for `publish` (`--target`, `--to`, `--resume`) and `publish-preview`
     (`--target`, `--to`); adapters regenerated.
 
@@ -801,38 +862,57 @@ git commit -m "feat(sharing): provider-inspect reads a publication's world; prov
   (ledgers `admitted`). Existing: `require_publication_layout`, `ReadView.opened_at`,
   `ctx.world.registry().admissions`, `ctx.world.status`.
 - Produces: declaration `write_class = "sharing"`, inputs `location`, `corpus_id`.
-  Handler, in this order:
+  Handler, in this order; every registry write follows the line that is its evidence, and
+  every line after `fetched` carries the pin's source:
   1. validate inputs and `sharing_root`; `replay(registry, operations_root)`; a pin for
      `corpus_id` in state `admitted` or `mounted` → `invalid-input` "already adopted".
-  2. **reconcile** (§10): every pin in state `fetched` or `admitted` **with a source**
-     whose corpus the kernel registry lists admitted → `record_sharing(mounted)` then
-     write the pin `mounted`.
-  3. fetch into `root = registry.root_for(corpus_id)` unless a `fetched` pin and that
-     directory already exist (reuse the fetched candidate, spec §10); `line =
-     writer.restore(root, …, evidence "fetched")`; write pin `fetched` with `source=None`.
+  2. **reconcile** (§10): every pin in state `fetched` or `admitted` whose corpus the
+     kernel registry lists admitted → `record_sharing(mounted, source)` then write the pin
+     `mounted` (every pin has a source: step 5).
+  3. **download**: `root = registry.root_for(corpus_id)`. When a `fetched` pin and that
+     directory exist, reuse both and skip steps 3–5 (the invocation's blocks are then
+     `admitted`, `mounted`). When the directory exists without a pin (a refused candidate
+     of an earlier attempt, Deviation 9), reuse the copy. Else `fetch_corpus` into it.
+     `evaluate_copy(root, CorpusSubject(corpus_id), observers)`; a verdict other than
+     `"validated"` → `invalid-input` naming it (the copy is deleted). `fields =
+     marker_fields(marker_of(root))`.
   4. **source**: `binding_for_location(location)`; none → `pin-unsourced` (message names
-     the claimed world and the remedies `provider-bind` and `follow`; data `{"world": …}`);
-     `binding.world != fields.world` → `world-mismatch`. Else write the pin `fetched` with
-     `source=PinSource("provider", location)` **now**, so a later recovery never mounts an
-     unsourced pin.
-  5. **layout**: `require_publication_layout(records)`; `PublicationArrivalRefused` →
-     `Refused(Refusal("kernel-refused", str(e), {"kind": …, "reason": e.reason}))`.
-  6. **conflict**: shared addresses with any live root (write root, configured roots,
+     `fields.world` and the remedies `provider-bind` and `follow`; data `{"world": …}`);
+     `binding.world != fields.world` → `world-mismatch`. Both leave the copy on disk, no
+     pin, no line (Deviation 9). Else `source = PinSource("provider", location)`.
+  5. `line = writer.restore(root, CorpusSubject(corpus_id), observers, evidence=…"fetched",
+     source…)`; write pin `fetched` from the line.
+  6. **layout**: `require_publication_layout(records)`; `PublicationArrivalRefused` →
+     `Refused(Refusal("kernel-refused", str(e), {"kind": …, "reason": e.reason}))`; the
+     pin stays `fetched`.
+  7. **conflict**: shared addresses with any live root (write root, configured roots,
      mounted registry roots, pins admitted this invocation) → `adopt-conflict` with data
      `{"addresses": [...], "corpus": <live corpus id>, "reason": "overlap is milestone 1b
-     (beliefs-81367e)"}`.
-  7. `writer.admit_publication(root, observers, evidence "admitted")` → write pin
-     `admitted`; `writer.record_sharing(… "mounted" …)` → write pin `mounted`.
-  8. report: the pin blocks of this invocation's lines.
+     (beliefs-81367e)"}`; the pin stays `fetched`.
+  8. `writer.admit_publication(root, observers, evidence "admitted", source)` → write pin
+     `admitted`; `writer.record_sharing(… "mounted", source …)` → write pin `mounted`.
+  9. report: the pin blocks of this invocation's lines.
   `helpers/commons.py`: `build_adopted(work)` (`build_bound` then B adopts; snapshot
-  `"commons-1a-adopted"`); `build_reopened(work) -> Installations` whose `b` is
-  `reopen(adopted.b)` with `publish_session_epoch(b)` run (snapshot `"commons-1a-reopened"`).
+  `"commons-1a-adopted"`); `build_reopened(work) -> dict` whose `b` is `reopen(adopted.b)`
+  with `publish_session_epoch(b)` run (snapshot `"commons-1a-reopened"`);
+  `build_conflicting(work) -> dict` (`build_bound`, then A publishes `target="a"` a second
+  time to `LOC_A2 = "https://remote.test/a2"`: a new corpus id holding the same addresses,
+  and B binds `LOC_A2` to A's world; the fixture `conflicting_publication` yields its
+  corpus id; snapshot `"commons-1a-conflicting"`).
 
 - [ ] **Step 1: Write the failing tests**
 
 ```python
-def test_adopt_unsourced_leaves_the_candidate_fetched_and_names_the_remedies(published): ...
-def test_adopt_after_bind_admits_and_marks_mounted(bound): ...        # transitions fetched, admitted, mounted; pin source set; kernel live
+def test_adopt_unsourced_keeps_the_copy_writes_no_pin_and_names_the_remedies(published):
+    refusal = refused(lambda: rig.invoke("adopt", {...}))
+    assert refusal.code == "pin-unsourced" and refusal.data == {"world": WORLD_A} and "provider-bind" in refusal.message
+    assert registry.pin(CID_A) is None and registry.root_for(CID_A).is_dir() and not ctx_b.world.status(CID_A).known
+def test_adopt_after_bind_admits_and_marks_mounted(bound): ...        # transitions fetched, admitted, mounted; every line carries the source; kernel live
+def test_adopt_reuses_a_downloaded_copy_without_fetching_again(published, monkeypatch):
+    ...refused unsourced adopt, then provider-bind, then monkeypatch GitTransport.fetch_corpus to fail; adopt succeeds...
+def test_a_registry_rebuilt_from_the_ledger_alone_matches_the_live_one(adopted):
+    rebuilt = SharingRegistry(tmp_path / "rebuilt"); replay(rebuilt, adopted.b.operations_root)
+    assert rebuilt.pin(CID_A) == registry.pin(CID_A) and rebuilt.bindings() == registry.bindings()
 def test_the_adopted_root_is_a_corpus_root_at_the_next_open(adopted):
     cfg = reopen(adopted.b)
     assert SharingRegistry(adopted.b.sharing_root).root_for(CID_A) in cfg.world.corpus_roots
@@ -845,8 +925,6 @@ def test_a_crash_after_admission_before_the_pin_write_recovers_with_its_source(b
     # write_pin raises on the "admitted" write only; the kernel shows admitted; the pin is "fetched" with a source
     ...; replay + the next adopt's reconcile → pin "mounted", source preserved
 def test_a_crash_between_the_mounted_line_and_the_pin_write_is_repaired_by_replay(bound, monkeypatch): ...
-def test_recovery_never_mounts_a_pin_without_a_source(bound):
-    registry.write_pin(replace(pin_fetched_unsourced)); ...adopt another corpus...; assert registry.pin(X).state == "fetched"
 ```
 
 - [ ] **Step 2: Run the tests to verify they fail**
@@ -882,7 +960,7 @@ git commit -m "feat(sharing): adopt fetches, verifies, sources, checks layout an
   `beliefs.holdings.boundary.write`, `StoreLocator`, `url_locator`,
   `beliefs.holdings.transport.retrieve(location, bounds, seam, scratch) -> Retrieved |
   NotAttempted | Failed`, `RetrievalBounds(timeout_seconds, max_bytes, max_redirects)`,
-  `url_seam()`, `refuse_scratch_root`; `writer.holdings_context(instrument=INSTRUMENT)`,
+  `url_seam()`; `writer.holdings_context(instrument=INSTRUMENT)`,
   `writer.store_id`; `ctx.config.fetch`. Pattern: `commands/dataset.py:105-113`.
 - Produces: declaration `write_class = "mints:holdings-observation"`, `[write.routes]
   holdings-observation = "holdings"`, inputs `dataset` (required), `source` (required: an
@@ -892,7 +970,8 @@ git commit -m "feat(sharing): adopt fetches, verifies, sources, checks layout an
   2. `ctx.cited(dataset)`; one resource (else `invalid-input` naming `sci-d1e874`);
      declared `digest` and `name`.
   3. path: read bytes. URL: `retrieve(url_locator(source), RetrievalBounds(timeout_seconds=60,
-     max_bytes=policy.max_bytes or 1 << 31, max_redirects=5), url_seam(), scratch)` with
+     max_bytes=policy.max_bytes or sys.maxsize, max_redirects=5), url_seam(), scratch)` (0
+     means no bound, spec §7.4) with
      `scratch = operations_root / "scratch" / "fetch" / iid`; `NotAttempted`/`Failed` →
      `invalid-input` with the reason; bytes read from `retrieved.path`, which is unlinked
      in every exit.
@@ -963,12 +1042,12 @@ class Carrier:                 # a session mount that is a publication
 @dataclass(frozen=True)
 class AcceptanceInputs:
     own_corpus: str
-    own_roots: frozenset[str]                       # corpus ids of the write root and every configured (hand-listed) root
+    own_roots: frozenset[str]                       # the write root and every configured (hand-listed) root that holds no marker
     verifiers: frozenset[str]                       # own world ∪ config.accept
     pins: Mapping[str, Pin]                         # mounted pins by corpus id
     bindings: Mapping[str, ProviderBinding]
     own_bindings: frozenset[tuple[str, str, str]]   # (corpus_id, marker, artifact) from the write root
-    carriers: Mapping[str, Carrier]                 # every mounted publication (registry roots), by corpus id
+    carriers: Mapping[str, Carrier]                 # every session mount holding a marker (registry roots and hand-listed), by corpus id
 
 def acceptance_inputs(ctx: ReadContext) -> AcceptanceInputs: ...
 def counts(inputs: AcceptanceInputs, corpus_id: str, address: str) -> bool: ...
@@ -978,9 +1057,9 @@ def explain(context: AcceptanceContext, inputs: AcceptanceInputs) -> tuple[tuple
 ```
 
   `counts` is **first applicable branch decides**, spec §9 item 2:
-  1. `corpus_id in inputs.own_roots` → **Own**, True (write root, and hand-listed
-     configured roots: Deviation 6).
-  2. `carrier = carriers.get(corpus_id)`; none → False (a mounted root with no marker is
+  1. `corpus_id in inputs.own_roots` → **Own**, True (the write root, and hand-listed
+     configured roots holding no marker: Deviation 6).
+  2. `carrier = carriers.get(corpus_id)`; none → False (a registry root with no marker is
      not a publication and not ours).
   3. `address in carrier.attributions` → **Carried** decides: `(origin, origin_marker) =
      carrier.attributions[address]`; True iff `origin in pins` and
@@ -991,7 +1070,9 @@ def explain(context: AcceptanceContext, inputs: AcceptanceInputs) -> tuple[tuple
   4. `(corpus_id, carrier.marker, pins[corpus_id].artifact) in own_bindings` → **Own**,
      True (our own publication adopted back; a marker merely claiming our world id never
      reaches here because it has no binding).
-  5. **Carrier's own**: `carrier.world in verifiers and pins[corpus_id].origin_confirmed(bindings)`.
+  5. **Carrier's own**: `corpus_id in pins and carrier.world in verifiers and
+     pins[corpus_id].origin_confirmed(bindings)` (a hand-listed root carrying a marker has
+     no pin and fails here: its carried records took branch 3).
   `statement`: canonical JSON (`sort_keys=True`, `separators=(",", ":")`) of
   `{"policy": "science.accept.v1", "verifiers": sorted, "own_roots": sorted, "pins": [{corpus,
   world, marker, source, confirmed, state}] sorted by corpus, "own_bindings": sorted,
@@ -1006,7 +1087,11 @@ def explain(context: AcceptanceContext, inputs: AcceptanceInputs) -> tuple[tuple
 - [ ] **Step 1: Write the failing tests**
 
 ```python
-def test_own_write_root_and_configured_roots_count_under_an_empty_policy(): ...
+def test_own_write_root_and_markerless_configured_roots_count_under_an_empty_policy(): ...
+def test_a_hand_listed_root_carrying_a_marker_is_a_carrier_not_own():
+    # a configured root with a marker but no pin: its own records fail branch 5; a carried record takes branch 3
+    assert not counts(INPUTS_HAND_LISTED_PUBLICATION, CID_H, H_OWN_ASSESSMENT)
+    assert counts(replace(INPUTS_HAND_LISTED_PUBLICATION, verifiers=..., pins=...pin of A...), CID_H, A_DATASET)
 def test_a_carriers_own_record_counts_only_when_accepted_and_origin_confirmed(): ...
 def test_a_carried_record_is_decided_by_its_origin_even_in_an_accepted_confirmed_carrier():
     # INPUTS_ACCEPT_B: B origin-confirmed and accepted; A unaccepted. B carries A's assessment.
@@ -1065,11 +1150,18 @@ git commit -m "feat(belief): compute the accept policy from pins, bindings and c
   the second is `counts(inputs, corpus_id, <an assessment address of the corpus>)` or
   `n/a` when the corpus holds none; `KeyVals("evidence", per assessment the corpus holds:
   "<assessment>: verifications <n total> from worlds <…>, <k> count under the policy")`
-  computed from `ctx.gather_inputs(<its proposition>)` (verifications whose target is the
-  assessment, each attributed to its holding corpus's world through `carriers`/own roots);
+  computed from `inputs = ctx.gather_inputs(<its proposition>)`: `k` is the count of
+  `inputs.verifications` targeting the assessment (the kernel returns them after the
+  filter, `evaluation.py:556-558`), and `n` is `k` plus the `verification:` addresses in
+  `inputs.acceptance.excluded` targeting it, each attributed to its holding corpus's world
+  through `carriers`/own roots;
   `Text("independence: not exposed by the kernel's inputs (Deviation 8)")`; a `Finding`
   when the kernel shows admitted and the registry does not show `mounted` ("registry lags
   the kernel: `adopt` reconciles it"). No pin → `invalid-input`.
+  `helpers/commons.py`: `build_verified(work) -> dict` (`build_reopened`, then B runs
+  `fetch` from `data_a_path()` and `verify` on A's assessment with `science.commands.run.POLICY`
+  set to `MINIMAL_POLICY` for the build when `host_prerequisites()` is not None, as
+  `test_mount_citations._confine` does; snapshot `"commons-1a-verified"`, fixture `verified`).
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -1080,7 +1172,7 @@ def test_show_distinguishes_accepted_evidence_from_confirmed_origin(reopened):
     assert "confirmation: origin-confirmed" in unaccepted and "world accepted: no" in unaccepted and "0 count under the policy" in unaccepted
     accepted = read_rig(replace(reopened.b, accept=(WORLD_A,)), "show").invoke(...).text
     assert "world accepted: yes" in accepted and "counts as evidence: yes" in accepted
-def test_show_lists_bs_verification_of_as_assessment_once_minted(reopened_verified): ...   # "verifications 1 from worlds <WORLD_B>"
+def test_show_lists_bs_verification_of_as_assessment_once_minted(verified): ...   # "verifications 1 from worlds <WORLD_B>, 1 count under the policy"
 def test_show_reports_a_registry_that_lags_the_kernel(adopted): ...
 def test_show_of_an_unknown_pin_refuses(adopted): ...
 ```
@@ -1122,9 +1214,9 @@ def test_b_reproduces_one_assessment_after_fetching_the_bytes(reopened):
     rig.invoke("fetch", {"dataset": ids["dataset"], "source": str(reopened.data_a_path())})
     text = rig.invoke("verify", {"assessment": ids["assessment"], "code": str(code), "entrypoint": entrypoint}).text
     assert "[verification]" in text
-def test_b_derives_without_redeclaring_and_the_lineage_reaches_as_dataset(reopened):
+def test_b_derives_without_redeclaring_and_the_lineage_reaches_as_dataset(verified):   # bytes already fetched
     spec_b = ...invoke("spec", dict(WORKING_FIELDS, target=ids["proposition"], dataset=ids["dataset"]))   # one changed input
-    run_b = mint_fixture_run(reopened.b, spec_b, ids["dataset"], fixture_bundle(work))
+    run_b = mint_fixture_run(verified.b, spec_b, ids["dataset"], fixture_bundle(work))
     assessment_b = ...invoke("assess", {"run": run_b})
     assert assessment_b != ids["assessment"]
     assert ReadContext.open(reopened.b).cited(ids["dataset"]).corpus_id == CID_A
@@ -1144,7 +1236,7 @@ def test_publish_retried_after_a_partial_push_converges(fresh): ...   # the §12
 Run: `just test-one tests/test_commons_1a.py -v`
 Expected: FAIL at the first missing fixture or helper (`derived`, `closure_input_addresses`).
 
-- [ ] **Step 3: Add the `derived` fixture and `closure_input_addresses` to `helpers/commons.py`; make the tests pass**
+- [ ] **Step 3: Add the `derived` fixture (`build_derived`: `build_verified` plus the spec, run and assessment above; snapshot `"commons-1a-derived"`) and `closure_input_addresses(closure) -> frozenset[str]` to `helpers/commons.py`; make the tests pass**
 
 - [ ] **Step 4: Run the tests and the fast check**
 
@@ -1181,8 +1273,9 @@ git commit -m "test(commons): the 1a walk end to end: reproduce, derive, attribu
 - Framework §4.4: `bound` joins the sharing transitions, its registry counterpart the
   provider binding (Deviation 5).
 - `tools/cli.toml:6` (via ops): replace `just vendor-cli` with the `vendored adopt` route.
+- Spec §10 note for Deviation 9 (an unsourced candidate is downloaded, not `fetched`).
 - File the follow-up: `tasks add "fetch: record the URL observation through look once a
-  post-act digest mismatch has a framework answer" --status idea --tag commons`.
+  write report can carry a finding beside minted records" --status idea --tag commons`.
 
 - [ ] **Step 2: Run the full gate**
 
@@ -1219,6 +1312,18 @@ Task 6; I2 → binding-only; I3 → `KernelRefusalValue` and `_invoke_sharing`'s
 rule; I4 → Deviations 2 and 5; I5 → the dependency list; I6 → ledger-first; I7 → branch
 rule and marker match; I8 → `write_commons_config`; M1–M12 folded into Tasks 3, 4, 5, 6,
 7, 8, 9, 10, 11; M13 declined (spec §10's `fetched` state is the restored copy).
+Revision-2 review: I1 → the source rides on every line after `fetched`, `apply_line`
+sets it, `adopt` resolves it before the door (Deviation 9), rebuild test; I2 → `replay`
+orders by `at`, a state line without a pin creates it; I3 → builders return dicts,
+`Installations.of`; I4 → `write_root` decided over the configured roots first; I5 →
+Deviation 6 narrowed to markerless roots, hand-listed publications are carriers; I6 →
+alternative recorded and rejected in Deviation 4, follow-up trigger rewritten; M1–M2 →
+`PublicationRefused` caught, `outcome.outcome`; M3 → `own_pins`, `no-epoch`; M4 → invoke
+switch and kernel normalisation; M5 → `GIT_DIR`/`GIT_WORK_TREE`/`GIT_INDEX_FILE` excluded;
+M6–M7 → `transport_with`, `binding_ref`, `fresh_no_epoch`, `build_conflicting`,
+`build_verified`, derive test starts from `verified`; M8 → `sys.maxsize`,
+`refuse_scratch_root` dropped; M9 → total = kept + excluded; M10 → absent root reads
+empty; M11 → reuse skips the door; M12 → Deviation 9's last sentence.
 
 **Type consistency.** `Pin`, `PinSource`, `ProviderBinding`, `SharingRegistry`, `replay`
 (Task 1) used by Tasks 2, 7, 8, 10, 11; `PinBlock`/`pin_block` (Task 4) by Tasks 7, 8;
