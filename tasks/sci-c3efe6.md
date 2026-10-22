@@ -7,8 +7,8 @@ size: l
 complexity: high
 process: direct
 created: 2026-10-22T22:56:07Z
-updated: 2026-10-22T22:56:23Z
-depends: [sci-eef41f, sci-a695dd]
+updated: 2026-10-22T22:56:24Z
+depends: [sci-eef41f, sci-a695dd, sci-9b67a2]
 parent: sci-13050a
 tags: [commons]
 agent: claude-code/claude-fable-5-1
