@@ -94,3 +94,12 @@ def fresh_no_epoch(certified_worker_work):
     snap = snapshot(certified_worker_work, "commons-1a-fresh-no-epoch", build_fresh_no_epoch)
     snap.restore()
     return Installations.of(snap.value)
+
+
+@pytest.fixture
+def published(certified_worker_work):
+    from helpers.commons import Installations, build_published
+    from helpers.snapshot import snapshot
+    snap = snapshot(certified_worker_work, "commons-1a-published", build_published)
+    snap.restore()
+    return Installations.of(snap.value)

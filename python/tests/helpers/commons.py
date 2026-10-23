@@ -38,6 +38,7 @@ from helpers.world import (
 from science.config import FetchPolicy, ReadContext, ScienceConfig, load_config
 from science.contracts import load_contract_document
 from science.dispatch import Dispatcher
+from science.publication import binding_fields
 from science.refusal import Refusal, Refused
 from science.sharing import SharingRegistry
 from test_config import write_config
@@ -258,7 +259,8 @@ def read_rig(cfg: ScienceConfig, *names: str) -> Dispatcher:
 
 
 def a_identity(a: ScienceConfig) -> dict[str, str]:
-    """A's evidence refs (proposition, dataset, spec, run, assessment) and its world id."""
+    """A's evidence refs (proposition, dataset, spec, run, assessment) and its world id; once A has published,
+    also the publication's `corpus_id`, `marker` and `artifact`, read from the binding in A's write root."""
     view = ReadContext.open(a).write_view()
 
     def only(kind: str) -> str:
@@ -266,8 +268,14 @@ def a_identity(a: ScienceConfig) -> dict[str, str]:
         return ref
     dataset = _list_address(DATA_A, "data.txt")
     assert view.holds(dataset), f"A holds no dataset {dataset}"
-    return {"proposition": only("proposition"), "dataset": dataset, "spec": only("analysis-spec"),
-            "run": only("run"), "assessment": only("assessment"), "world": a.world.world_id}
+    ids = {"proposition": only("proposition"), "dataset": dataset, "spec": only("analysis-spec"),
+           "run": only("run"), "assessment": only("assessment"), "world": a.world.world_id}
+    bindings = [node for node in view.iter_stored() if node.kind == "publication-binding"]
+    assert len(bindings) <= 1, f"A holds {len(bindings)} publication bindings; a_identity reads one"
+    if bindings:
+        binding = binding_fields(bindings[0])
+        ids.update(corpus_id=binding.corpus_id, marker=binding.marker, artifact=binding.artifact)
+    return ids
 
 
 @contextmanager
@@ -282,3 +290,31 @@ def with_remotes(installations: Installations) -> Iterator[None]:
         yield
     finally:
         publication.REMOTE_FOR, publication.GIT_ENV = saved
+
+
+def build_published(work: Path) -> dict:
+    """`build_fresh`, then A publishes its project `a` to LOC_A over the remotes' bare repositories."""
+    value = build_fresh(work)
+    with with_remotes(Installations.of(value)), open_rig(value["a"], ("publish",)) as (d, _):
+        d.invoke("publish", {"target": "a", "to": LOC_A})
+    return value
+
+
+def transport_with(installations: Installations, **seams: object):
+    """A git transport over the installations' bare repositories, under the isolated git environment, with its
+    cache in a fresh directory under the work tree (removed with it) and each named test seam set."""
+    from science.transport_git import GitTransport
+    cache = installations.remotes.parent / "transport-cache" / secrets.token_hex(8)
+    transport = GitTransport(cache, author="test", remote_for=Remotes(installations.remotes).remote_for,
+                             env=GIT_ENV)
+    for name, value in seams.items():
+        if not hasattr(GitTransport, name):
+            raise AttributeError(f"GitTransport has no test seam {name!r}")
+        setattr(transport, name, value)
+    return transport
+
+
+def binding_ref(text: str) -> str:
+    """The record id of the `[publication-binding]` block in a command's report."""
+    (line,) = [line for line in text.splitlines() if line.startswith("[publication-binding] ")]
+    return line.split()[1]

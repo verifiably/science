@@ -1,0 +1,17 @@
+schema_version = 1
+name = "publish-preview"
+purpose = "Show what publishing a project's view would freeze, without writing anything."
+write_class = "read-only"
+output_budget = 8192
+
+[inputs.target]
+type = "string"
+required = true
+doc = "The project whose view would be published: its name, or its coord:<project> address."
+[inputs.to]
+type = "string"
+required = true
+doc = "The destination: an absolute directory path on this host, or an https:// git remote URL."
+
+[reads]
+families = ["coordination", "corpus-stored", "epoch", "registry", "holdings"]
