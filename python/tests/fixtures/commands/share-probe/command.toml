@@ -1,0 +1,9 @@
+schema_version = 1
+name = "share-probe"
+purpose = "Synthetic sharing exemplar: records one bound line through the kernel door."
+write_class = "sharing"
+output_budget = 4096
+[inputs.corpus_id]
+type = "string"
+required = true
+doc = "Corpus id the probe's line names."

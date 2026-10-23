@@ -8,28 +8,14 @@ import tempfile
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal, Protocol
+from typing import Literal
+
+from beliefs.session.ledger import SharingLine, open_ledger_reader
 
 _VERSION = 1
 _ID_RE = re.compile(r"[0-9a-f]{32}")
 STATE_ORDER = ("fetched", "admitted", "mounted", "retired")
 _SOURCE_KINDS = ("provider", "catalog")
-
-
-class SharingLine(Protocol):
-    """Structural shape of the kernel's ledger sharing line (beliefs-f24fe9)."""
-
-    invocation: str
-    corpus: str
-    marker: str
-    artifact: str
-    world: str
-    view: str
-    source: str
-    location: str
-    verdict: str
-    transition: str
-    at: str
 
 
 @dataclass(frozen=True)
@@ -267,7 +253,15 @@ def apply_line(registry: SharingRegistry, line: SharingLine) -> bool:
 
 
 def replay(registry: SharingRegistry, operations_root: Path) -> tuple[SharingLine, ...]:
-    """Rebuild the registry from every session ledger's sharing lines (spec §7.4)."""
-    raise NotImplementedError(
-        "replay needs LedgerReader sharing lines from kernel task beliefs-f24fe9"
-    )
+    """Rebuild the registry from every session ledger's sharing lines (spec §7.4):
+    every line under `<operations_root>/sessions`, in (at, session id, ledger
+    position) order, folded through `apply_line`. Returns the lines that wrote."""
+    sessions = Path(operations_root) / "sessions"
+    ordered: list[tuple[str, str, int, SharingLine]] = []
+    if sessions.is_dir():
+        for directory in sorted(entry for entry in sessions.iterdir() if entry.is_dir()):
+            reader = open_ledger_reader(operations_root, directory.name)
+            ordered.extend((line.at, directory.name, position, line)
+                           for position, line in enumerate(reader.sharing()))
+    ordered.sort(key=lambda each: each[:3])
+    return tuple(line for *_, line in ordered if apply_line(registry, line))

@@ -316,3 +316,17 @@ def test_session_takes_no_routes(tmp_path):
         load_declaration(write_command(tmp_path, "status", toml),
                          kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)
     assert caught.value.field == "write.routes"
+
+
+def test_sharing_is_a_write_class(tmp_path):
+    from science.schema import WRITE_CLASS_KINDS
+
+    assert "sharing" in WRITE_CLASS_KINDS
+    toml = GOOD.replace('write_class = "read-only"', 'write_class = "sharing"')
+    declaration = load_declaration(write_command(tmp_path, "status", toml),
+                                   kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)
+    assert declaration.write_class.kind == "sharing"
+    with pytest.raises(DeclarationError) as caught:
+        load_declaration(write_command(tmp_path / "routed", "status", toml + '\n[write.routes]\nnote = "corpus-write"\n'),
+                         kind_acts=KIND_ACTS, contract_kinds=CONTRACT_KINDS)
+    assert caught.value.field == "write.routes"

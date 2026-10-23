@@ -1,11 +1,11 @@
 """The sharing registry: pins, provider bindings, adopted roots, ledger replay."""
 from __future__ import annotations
 
-import dataclasses
 import os
 from pathlib import Path
 
 import pytest
+from beliefs.session.ledger import LedgerWriter, SharingLine, ledger_path
 
 from science.sharing import (
     FetchRecord,
@@ -29,26 +29,9 @@ LATER = "2026-10-22T11:00:00Z"
 BINDING = ProviderBinding(W, (L1,), AT, True)
 
 
-@dataclasses.dataclass(frozen=True)
-class Line:
-    """Structurally a kernel SharingLine."""
-
-    invocation: str
-    corpus: str
-    marker: str
-    artifact: str
-    world: str
-    view: str
-    source: str
-    location: str
-    verdict: str
-    transition: str
-    at: str
-
-
 def line(transition: str, *, source: str = "", at: str = AT, corpus: str = CID,
-         location: str = L1) -> Line:
-    return Line("i" * 32, corpus, "m1", "art1", W, "view1", source, location, "ok", transition, at)
+         location: str = L1) -> SharingLine:
+    return SharingLine("i" * 32, corpus, "m1", "art1", W, "view1", source, location, "ok", transition, at)
 
 
 def make_pin(corpus_id: str = CID, *, state: str = "fetched", source=None, world: str = W) -> Pin:
@@ -193,22 +176,62 @@ def test_a_source_is_set_late_but_never_cleared(tmp_path):
     assert registry.pin(CID).source == PinSource("catalog", "art1")
 
 
+VIEW = f"coord:{'1' * 32}@{'2' * 32}"
+
+
+def _sharing(invocation: str, transition: str, at: str) -> dict:
+    return {
+        "line": "sharing", "invocation": invocation, "corpus": CID, "marker": "5" * 32,
+        "artifact": "6" * 64, "world": W, "view": VIEW, "source": f"provider:{L1}",
+        "location": L1, "verdict": "validated", "transition": transition, "at": at,
+    }
+
+
+def _write_session(operations_root: Path, session_id: str, *invocations) -> None:
+    """One closed session ledger written through the kernel's own ledger writer, which
+    validates every line; each invocation is (id, [(transition, at), ...])."""
+    path = ledger_path(operations_root, session_id)
+    path.parent.mkdir(parents=True)
+    writer = LedgerWriter(path)
+    try:
+        writer.append({
+            "line": "session-open", "session": session_id, "actor": f"session:{session_id}", "world": "e" * 32,
+            "permit": {"kinds": [], "act_families": ["lifecycle", "registry"], "ungoverned": False},
+            "at": "2026-10-22T09:00:00Z",
+        })
+        for invocation, steps in invocations:
+            writer.append({"line": "invocation-open", "invocation": invocation, "command": "adopt",
+                           "input_digest": "f" * 64, "at": "2026-10-22T09:00:00Z"})
+            for transition, at in steps:
+                writer.append(_sharing(invocation, transition, at))
+            writer.append({"line": "invocation-close", "invocation": invocation, "outcome": {"done": []}})
+        writer.append({"line": "session-close", "at": "2026-10-22T13:00:00Z"})
+    finally:
+        writer.close()
+
+
 @pytest.fixture
 def operations_root(tmp_path: Path) -> Path:
-    # Minimal stand-in until Task 4 rebuilds it through the kernel door: two session
-    # directories whose ids make directory order the inverse of time order.
+    # Two sessions whose ids make directory order the inverse of time order, and a
+    # tie on `at` inside the later one that only ledger position breaks.
     root = tmp_path / "operations"
-    (root / "sessions" / ("1" * 32)).mkdir(parents=True)
-    (root / "sessions" / ("2" * 32)).mkdir(parents=True)
+    _write_session(root, "1" * 32, ("late", [("admitted", "2026-10-22T12:00:00Z"),
+                                             ("mounted", "2026-10-22T12:00:00Z")]))
+    _write_session(root, "2" * 32, ("early", [("bound", "2026-10-22T10:00:00Z"),
+                                              ("fetched", "2026-10-22T11:00:00Z")]))
     return root
 
 
-@pytest.mark.xfail(
-    strict=True, raises=NotImplementedError,
-    reason="needs LedgerReader sharing lines from beliefs-f24fe9; Task 4 rebuilds the fixture",
-)
 def test_replay_applies_lines_in_time_order_across_sessions(tmp_path, operations_root):
     registry = SharingRegistry(tmp_path / "sharing")
     written = replay(registry, operations_root)
     assert [l.transition for l in written] == ["bound", "fetched", "admitted", "mounted"]
     assert registry.bindings()[W].locations == (L1,) and registry.pin(CID).state == "mounted"
+    assert registry.pin(CID).source == PinSource("provider", L1)
+    assert replay(registry, operations_root) == ()
+
+
+def test_replay_of_no_sessions_writes_nothing(tmp_path):
+    registry = SharingRegistry(tmp_path / "sharing")
+    assert replay(registry, tmp_path / "operations") == ()
+    assert registry.pins() == () and registry.bindings() == {}
