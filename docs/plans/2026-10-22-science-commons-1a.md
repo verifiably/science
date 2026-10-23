@@ -41,8 +41,10 @@ rewritten). Revision 5 (`00b391d`) **accepted** by codex/gpt-6-astra (round 6, n
 findings) and **approved by Keith 2026-10-22**; the "Deviations" section records every
 departure from the spec's letter with its reason, each ruled on in rounds 4 and 5.
 
-**Status:** approved 2026-10-22; execution pending (Setup runs the full-suite baseline,
-then Task 1; Tasks 4–8 wait on `beliefs-f24fe9`).
+**Status:** approved 2026-10-22; executing. Tasks 1–3 landed 2026-10-22. `beliefs-f24fe9`
+merged at beliefs `b923277` on 2026-10-23, and the Interfaces blocks of Tasks 4, 6, 7 and 8
+now name the built doors (the Kernel dependency constraint's rule: Interfaces and code
+change together, the design does not).
 
 ## Global Constraints
 
@@ -520,12 +522,18 @@ git commit -m "feat(transport): git transport: idempotent push, remote listing, 
 - Test: `python/tests/test_dispatch_sharing.py`, extend `python/tests/test_schema.py`, `python/tests/test_report.py`
 
 **Interfaces:**
-- Consumes (kernel, `beliefs-f24fe9`; names assumed): `RequiredCapabilities.sharing()`;
-  `ScopedWriter.record_sharing(evidence: SharingEvidence) -> SharingLine` (a line with no
-  kernel act: `bound`, `mounted`); `WriterSession.invocation_sharing(iid) ->
-  tuple[SharingLine, ...]`; `LedgerReader.invocation(iid).sharing`.
-  `SharingEvidence(corpus, marker, artifact, world, view, source, location, verdict,
-  transition)`.
+- Consumes (kernel, `beliefs-f24fe9`, built at beliefs `b923277`; writer-session design
+  "Sharing and publish doors amendment — 2026-10-23"): `RequiredCapabilities.sharing()`;
+  `ScopedWriter.record_sharing(evidence: SharingEvidence, *, transition: str, verdict: str)
+  -> SharingLine` (admits only `bound` and `mounted`, requires the `lifecycle` and
+  `registry` families); `WriterSession.invocation_sharing(iid) -> tuple[SharingLine, ...]`;
+  `LedgerReader.sharing()` and `LedgerReader.invocation(iid).sharing`.
+  `beliefs.session.ledger.SharingEvidence(corpus, marker, artifact, world, view, source,
+  location)` (the seven facts known before an act) and `SharingLine` (adds `invocation`,
+  `verdict`, `transition`, `at`). The kernel validates every field: `corpus`, `marker`,
+  `world` 32 hex, `artifact` 64 hex, `view` a revision-pinned view address, `location`
+  and `verdict` non-empty. Task 1's structural `SharingLine` stand-in in `sharing.py` is
+  replaced by the kernel's class, and `replay` reads `LedgerReader.sharing()`.
 - Produces:
   - `WRITE_CLASS_KINDS` gains `"sharing"`; `_parse_write_class` accepts the bare word.
   - `Dispatcher._required` maps `sharing` to `RequiredCapabilities.sharing()`.
@@ -549,7 +557,8 @@ git commit -m "feat(transport): git transport: idempotent push, remote listing, 
     `takes effect at the next session open`.
   - `refusal.CODES` gains `pin-unsourced`, `world-mismatch`, `adopt-conflict`.
   - `share-probe` fixture: `write_class = "sharing"`, input `corpus_id`; its test handler
-    calls `writer.record_sharing(SharingEvidence(…transition "bound"…))` and returns
+    calls `writer.record_sharing(SharingEvidence(…), transition="bound", verdict=…)` with
+    field values the kernel accepts, and returns
     `(pin_block(line),)` — a line the door records with no copy to restore.
 
 - [ ] **Step 1: Write the failing tests**
@@ -702,16 +711,22 @@ git commit -m "test(commons): two installations pinned to coordination v3, A wit
 - Test: `python/tests/test_cmd_publish.py`
 
 **Interfaces:**
-- Consumes (kernel, `beliefs-f24fe9`; names assumed):
+- Consumes (kernel, `beliefs-f24fe9`, built at beliefs `b923277`):
   `ScopedWriter.publish(*, view: CoordinationAddress, destination: Destination,
-  operations_root: Path, staging_profile: ProfileSpec, transport: Transport | None)
+  operations_root: Path, staging_profile: ProfileSpec, transport: Transport | None = None)
   -> Published | PublishRefused | PublishUnresolved`;
   `ScopedWriter.resume_publish(*, event_token: str, operations_root, staging_profile,
-  transport)`; both ledger the write-root records (binding, act report) as act lines and
-  nothing from the publication corpus; `beliefs.publish.publication_preview(world,
-  resolver, view, *, own_profile) -> PublicationPreview(view, selected, closure_missing,
-  pins, attributions, contributing)`. Existing: `science.coordination.resolve_project_ref`,
-  `beliefs.publish.pending_publishes`, `beliefs.session.KernelRefusalValue`.
+  transport=None)`; both ledger the write-root records (binding, act report) as act lines and
+  nothing from the publication corpus, and both need a session opened with a world
+  configuration (science's `open_session` goes through the kernel factory, which passes
+  it); `beliefs.publish.publication_preview(world, resolver, view, *, own_pins: CorpusPins)
+  -> PublicationPreview(view, epoch, world_id, selected, contributing, pins, attributions,
+  records)`, which **raises** `PublicationRefused` exactly where `publish` refuses at step 0
+  (`view-unresolved`, `divergent-view`, `selection-incomplete`, `empty-selection`,
+  `closure-incomplete` with `refs`) rather than returning a missing-closure field.
+  Existing: `science.coordination.resolve_project_ref`, `beliefs.publish.pending_publishes`
+  (still takes a `CorpusWriter`, opened under `RequiredCapabilities.none()`),
+  `beliefs.session.KernelRefusalValue`.
 - Produces:
   - `science/publication.py`: `parse_destination(text) -> Destination` (absolute path →
     local; `https://…` → remote; else `invalid-input`); module seams `REMOTE_FOR =
@@ -746,8 +761,10 @@ git commit -m "test(commons): two installations pinned to coordination v3, A wit
     takes the written root's `CorpusPins`, `publish_request.py:80`); `ctx.world` is the
     read door's `World`, which suffices (`publish.py:328-347` reads only config, epoch,
     world view, captured manifests and the registry). `EpochUnknown` → the existing
-    `no-epoch` refusal. Report: `Heading`, `KeyVals("selection", per-kind counts + records)`,
-    `KeyVals("closure", complete, missing)`, `KeyVals("attribution", address →
+    `no-epoch` refusal; a raised `PublicationRefused` → `kernel-refused` with `data.reason`
+    its reason (for `closure-incomplete` the message names the missing refs). Report:
+    `Heading`, `KeyVals("selection", per-kind counts + records)`,
+    `KeyVals("closure", "complete")`, `KeyVals("attribution", address →
     "<origin corpus> <origin marker>")` or `Text("attribution: every selected record is
     this world's own")`, `KeyVals("inputs the destination will not carry", dataset →
     "bytes held|not held; redistribution unknown")`.
@@ -840,8 +857,9 @@ git commit -m "feat(publish): publish a view to a local or git destination, resu
     reader's own world id → `invalid-input` "a provider is another world"); `sharing_root`
     configured; `replay(registry, operations_root)`; `inspect(...)` into
     `registry.scratch(iid)`; `world != fields.world` → `world-mismatch` (data `claimed`,
-    `given`); else `line = writer.record_sharing(SharingEvidence(… transition "bound",
-    source "provider:<location>", location, verdict …))`, **then**
+    `given`); else `line = writer.record_sharing(SharingEvidence(corpus, marker, artifact,
+    world, view, source="provider:<location>", location), transition="bound",
+    verdict=<the inspection verdict>)`, **then**
     `registry.write_binding(ProviderBinding(world, (location,), line.at, True))`; delete
     scratch; report `(pin_block(line),)`.
   - `helpers/commons.py`: `build_bound(work) -> Installations` (`build_published`, then
@@ -897,12 +915,17 @@ git commit -m "feat(sharing): provider-inspect reads a publication's world; prov
 - Test: `python/tests/test_cmd_adopt.py`
 
 **Interfaces:**
-- Consumes (kernel doors assumed): `ScopedWriter.restore(copy: Path, subject, observers,
-  *, evidence) -> SharingLine` (runs `restore_root` under the scoped authority and
-  ledgers `fetched` with the report's outcome as `verdict`);
+- Consumes (kernel doors, built at beliefs `b923277`): `ScopedWriter.restore_root(root:
+  Path, subject: CorpusSubject, observers: ObserverSet, *, evidence: SharingEvidence) ->
+  SharingLine` (runs `beliefs.root.restore_root` under the scoped authority and ledgers
+  `fetched` with the report's outcome as `verdict`; its first parameter is `root`);
   `ScopedWriter.admit_publication(root: Path, observers, *, evidence) -> SharingLine`
-  (ledgers `admitted`). Existing: `require_publication_layout`, `ReadView.opened_at`,
-  `ctx.world.registry().admissions`, `ctx.world.status`.
+  (ledgers `admitted`). Before any effect either door refuses, as a `WriteRefused` with
+  no line: `SharingEvidenceDisagrees(field, claimed, found)` on the first disagreeing
+  evidence field; `PublicationReadingRefused("capture-damaged", corpus)` for a copy
+  holding an unparseable record; and the restore door checks the publication layout
+  (`require_publication_layout`) before its act, refusing `PublicationArrivalRefused`.
+  Existing: `ReadView.opened_at`, `ctx.world.registry().admissions`, `ctx.world.status`.
 - Produces: declaration `write_class = "sharing"`, inputs `location`, `corpus_id`.
   Handler, in this order; every registry write follows the line that is its evidence, and
   every line after `fetched` carries the pin's source:
@@ -929,17 +952,22 @@ git commit -m "feat(sharing): provider-inspect reads a publication's world; prov
      `binding.world != fields.world` → `world-mismatch`. Both delete the copy: no pin, no
      line (Deviation 9). Else `source = PinSource("provider", location)`: the bytes under
      `root` came from `location` in this invocation, so the source is earned.
-  6. `line = writer.restore(root, CorpusSubject(corpus_id), observers, evidence=…"fetched",
-     source, location…)`; write pin `fetched` from the line.
-  7. **layout**: `require_publication_layout(records)`; `PublicationArrivalRefused` →
-     `Refused(Refusal("kernel-refused", str(e), {"kind": …, "reason": e.reason}))`; the
-     pin stays `fetched`.
+  6. `line = writer.restore_root(root, CorpusSubject(corpus_id), observers,
+     evidence=SharingEvidence(…, source, location))`; write pin `fetched` from the line.
+  7. **layout and evidence** are the restore door's: a `WriteRefused` it raises before any
+     line (`PublicationArrivalRefused`, `SharingEvidenceDisagrees`,
+     `PublicationReadingRefused`) → the copy is deleted, no pin, and
+     `Refused(Refusal("kernel-refused", str(e), {"kind": …, "reason": e.reason}))`
+     (Deviation 9's rule: nothing survives a refusal before `fetched`). A reused `fetched`
+     pin passed these at its own restore.
   8. **conflict**: shared addresses with any live root (write root, configured roots,
      mounted registry roots, pins admitted this invocation) → `adopt-conflict` with data
      `{"addresses": [...], "corpus": <live corpus id>, "reason": "overlap is milestone 1b
      (beliefs-81367e)"}`; the pin stays `fetched`.
-  9. `writer.admit_publication(root, observers, evidence "admitted", source)` → write pin
-     `admitted`; `writer.record_sharing(… "mounted", source …)` → write pin `mounted`.
+  9. `writer.admit_publication(root, observers, evidence=SharingEvidence(…, source, …))` →
+     write pin `admitted` (a `WriteRefused` the door raises before its line → `kernel-refused`,
+     the pin stays `fetched`); `writer.record_sharing(SharingEvidence(…, source, …),
+     transition="mounted", verdict=…)` → write pin `mounted`.
   10. report: the pin blocks of this invocation's lines.
   `helpers/commons.py`: `build_adopted(work)` (`build_bound` then B adopts; snapshot
   `"commons-1a-adopted"`); `build_reopened(work) -> dict` whose `b` is `reopen(adopted.b)`
