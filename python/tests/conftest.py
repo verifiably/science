@@ -133,6 +133,16 @@ def reopened(certified_worker_work):
 
 
 @pytest.fixture
+def verified(certified_worker_work):
+    """`reopened`, once B has fetched A's dataset and both vocabulary lists and verified A's assessment."""
+    from helpers.commons import Installations, build_verified
+    from helpers.snapshot import snapshot
+    snap = snapshot(certified_worker_work, "commons-1a-verified", build_verified)
+    snap.restore()
+    return Installations.of(snap.value)
+
+
+@pytest.fixture
 def conflicting_publication(certified_worker_work):
     """`(installations, corpus_id)`: the bound installations once A has published a second time to `LOC_A2` and
     B has bound it, and that second publication's corpus id. Its own snapshot, so it carries its installations

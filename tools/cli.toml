@@ -1616,6 +1616,16 @@ options = [
 ]
 
 [[cli.science.commands]]
+path = ["show"]
+summary = "Show one pin: its state, source, kernel status, acceptance and verification picture"
+options = [
+  { shared = "config", value = "path" },
+  { names = ["--invocation-id"], value = "string" },
+  { names = ["--continue"], value = "string" },
+  { names = ["--corpus-id"], value = "string", required = true },
+]
+
+[[cli.science.commands]]
 path = ["build"]
 summary = "Build the world from its corpora"
 

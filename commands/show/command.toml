@@ -1,0 +1,13 @@
+schema_version = 1
+name = "show"
+purpose = "Show one pin: its state, source, kernel status, acceptance and verification picture."
+write_class = "read-only"
+output_budget = 8192
+
+[inputs.corpus_id]
+type = "string"
+required = true
+doc = "The pinned publication's corpus id, 32 lowercase hex digits."
+
+[reads]
+families = ["registry", "corpus-stored"]

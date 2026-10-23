@@ -29,9 +29,11 @@ from helpers.world import (
     _install_holdings_reducer,
     _list_address,
     _minted_ref,
+    concept_list_address,
     fixture_bundle,
     fixture_contract_document,
     hold_fixture_dataset,
+    level_list_address,
     mint_fixture_run,
     open_rig,
 )
@@ -362,6 +364,31 @@ def build_reopened(work: Path) -> dict:
     b = reopen(value["b"])
     publish_session_epoch(b)
     return {**value, "b": b}
+
+
+def build_verified(work: Path) -> dict:
+    """`build_reopened`, then B fetches the bytes of three datasets A's mount declares (A's dataset from
+    `data_dir()/a.txt`, the concept and level lists from `concepts.txt` and `levels.txt`), citing each from the
+    mount and declaring none, and verifies A's assessment. The run policy is the minimal one for the build when
+    the host cannot confine, as `test_mount_citations._confine` sets it."""
+    import science.commands.run as run_module
+    from beliefs.confinement import host_prerequisites
+    from beliefs.recipe import MINIMAL_POLICY
+    value = build_reopened(work)
+    installations = Installations.of(value)
+    ids = a_identity(installations.a)
+    data = installations.data_dir()
+    code, entrypoint, _ = fixture_bundle(work / "a")  # the bundle A's run was minted from
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        if host_prerequisites() is not None:
+            monkeypatch.setattr(run_module, "POLICY", MINIMAL_POLICY)
+        with open_rig(installations.b, ("fetch", "verify")) as (d, _):
+            for dataset, source in ((ids["dataset"], installations.data_a_path()),
+                                    (concept_list_address(), data / "concepts.txt"),
+                                    (level_list_address(), data / "levels.txt")):
+                d.invoke("fetch", {"dataset": dataset, "source": str(source)})
+            d.invoke("verify", {"assessment": ids["assessment"], "code": str(code), "entrypoint": entrypoint})
+    return value
 
 
 LOC_A2 = "https://remote.test/a2"
