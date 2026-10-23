@@ -13,6 +13,7 @@ from science.sharing import (
     PinSource,
     ProviderBinding,
     SharingRegistry,
+    SharingLedgerUnreadable,
     SharingRegistryMalformed,
     apply_line,
     replay,
@@ -234,4 +235,27 @@ def test_replay_applies_lines_in_time_order_across_sessions(tmp_path, operations
 def test_replay_of_no_sessions_writes_nothing(tmp_path):
     registry = SharingRegistry(tmp_path / "sharing")
     assert replay(registry, tmp_path / "operations") == ()
+    assert registry.pins() == () and registry.bindings() == {}
+
+
+@pytest.mark.parametrize("ledger", [None, b""], ids=["missing", "empty"])
+def test_replay_skips_a_session_whose_creation_was_interrupted(tmp_path, operations_root, ledger):
+    # No ledger file, or one the session-open line never reached: the kernel reads
+    # both as interrupted creation, and neither can hold a sharing line.
+    interrupted = ledger_path(operations_root, "0" * 32)
+    interrupted.parent.mkdir(parents=True)
+    if ledger is not None:
+        interrupted.write_bytes(ledger)
+    registry = SharingRegistry(tmp_path / "sharing")
+    assert [l.transition for l in replay(registry, operations_root)] == ["bound", "fetched", "admitted", "mounted"]
+
+
+def test_replay_refuses_an_unreadable_ledger_naming_its_session(tmp_path, operations_root):
+    damaged = ledger_path(operations_root, "0" * 32)
+    damaged.parent.mkdir(parents=True)
+    damaged.write_bytes(b'{"line": "act"}\n')
+    registry = SharingRegistry(tmp_path / "sharing")
+    with pytest.raises(SharingLedgerUnreadable) as caught:
+        replay(registry, operations_root)
+    assert caught.value.session_id == "0" * 32 and "0" * 32 in str(caught.value)
     assert registry.pins() == () and registry.bindings() == {}

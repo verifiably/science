@@ -10,7 +10,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-from beliefs.session.ledger import SharingLine, open_ledger_reader
+from beliefs.session.ledger import (
+    LedgerEmpty,
+    LedgerMissing,
+    LedgerReader,
+    LedgerUnreadable,
+    SharingLine,
+    read_ledger_evidence,
+)
 
 _VERSION = 1
 _ID_RE = re.compile(r"[0-9a-f]{32}")
@@ -78,6 +85,16 @@ class SharingRegistryMalformed(Exception):
         super().__init__(f"{entry}: {reason}")
         self.entry = entry
         self.reason = reason
+
+
+class SharingLedgerUnreadable(Exception):
+    """A session ledger replay cannot read: its sharing lines may be lost, so the
+    registry is not rebuilt without them."""
+
+    def __init__(self, session_id: str, error: str) -> None:
+        super().__init__(f"session {session_id}: ledger unreadable: {error}")
+        self.session_id = session_id
+        self.error = error
 
 
 def _require(condition: bool, reason: str) -> None:
@@ -255,13 +272,23 @@ def apply_line(registry: SharingRegistry, line: SharingLine) -> bool:
 def replay(registry: SharingRegistry, operations_root: Path) -> tuple[SharingLine, ...]:
     """Rebuild the registry from every session ledger's sharing lines (spec §7.4):
     every line under `<operations_root>/sessions`, in (at, session id, ledger
-    position) order, folded through `apply_line`. Returns the lines that wrote."""
+    position) order, folded through `apply_line`. Returns the lines that wrote.
+
+    A session whose creation was interrupted (no ledger, or an empty one) holds no
+    line by construction and is skipped, as the kernel's reconciliation treats it;
+    an unreadable ledger refuses, since its lines would be lost."""
     sessions = Path(operations_root) / "sessions"
     ordered: list[tuple[str, str, int, SharingLine]] = []
     if sessions.is_dir():
         for directory in sorted(entry for entry in sessions.iterdir() if entry.is_dir()):
-            reader = open_ledger_reader(operations_root, directory.name)
+            evidence = read_ledger_evidence(operations_root, directory.name)
+            if isinstance(evidence, (LedgerMissing, LedgerEmpty)):
+                continue
+            if isinstance(evidence, LedgerUnreadable):
+                raise SharingLedgerUnreadable(evidence.session_id, evidence.error)
+            if not isinstance(evidence, LedgerReader):  # fail closed on a new evidence shape
+                raise TypeError(f"unknown ledger evidence from the kernel: {evidence!r}")
             ordered.extend((line.at, directory.name, position, line)
-                           for position, line in enumerate(reader.sharing()))
+                           for position, line in enumerate(evidence.sharing()))
     ordered.sort(key=lambda each: each[:3])
     return tuple(line for *_, line in ordered if apply_line(registry, line))
