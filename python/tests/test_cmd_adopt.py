@@ -2,6 +2,7 @@
 its layout and conflicts, then admits and mounts it. Every registry write follows the sharing line that is its
 evidence, and nothing survives a refusal before `fetched`."""
 import pytest
+from beliefs.corpus import ReadView
 from beliefs.session.ledger import LedgerReader, read_ledger_evidence
 from beliefs.session.writer import ScopedWriter
 from helpers.commons import (
@@ -10,16 +11,19 @@ from helpers.commons import (
     LOC_B,
     Installations,
     a_identity,
+    binding_ref,
     build_bound,
     publish_again,
     refused,
     reopen,
+    transport_with,
     with_remotes,
 )
 from helpers.snapshot import snapshot
 from helpers.world import hold_fixture_dataset, open_rig
 
 from science.config import ReadContext
+from science.publication import binding_fields, marker_fields, marker_of
 from science.sharing import PinSource, SharingRegistry, replay
 from science.world_belief import publish_session_epoch
 
@@ -163,16 +167,22 @@ def test_the_adopted_root_is_a_corpus_root_at_the_next_open(adopted):
     assert ReadContext.open(cfg).cited(ids["proposition"]).corpus_id == ids["corpus_id"]
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "the kernel's selection-incomplete names covered corpora without a carrier; an epoch built before reopen "
-    "covers only the mounted corpora, so the adopted corpus is uncovered and publish succeeds"))
-def test_publish_before_reopen_refuses_selection_incomplete_naming_the_adopted_corpus(adopted):
+def test_publish_before_reopen_freezes_only_bs_own_view(adopted):
+    # Before reopen B's session does not mount the adopted corpus, so B's epoch does not cover it: the kernel's
+    # selection is complete over the covered corpora, and B's publication carries B's own records alone.
     cid = a_identity(adopted.a)["corpus_id"]
-    hold_fixture_dataset(adopted.b, "b.txt", b"gene\tvalue\n", "expression")  # B's selection is not empty
-    publish_session_epoch(adopted.b)  # over the corpora B's session mounts, which do not include the adopted one
-    with with_remotes(adopted), open_rig(adopted.b, ("publish",)) as (d, _):
-        r = refused(lambda: d.invoke("publish", {"target": "b", "to": LOC_B}))
-    assert r.code == "kernel-refused" and r.data["reason"] == "selection-incomplete" and cid in r.message
+    own = hold_fixture_dataset(adopted.b, "b.txt", b"gene\tvalue\n", "expression")  # B's selection is not empty
+    publish_session_epoch(adopted.b)
+    with with_remotes(adopted), open_rig(adopted.b, ("publish",)) as (d, ctx):
+        text = d.invoke("publish", {"target": "b", "to": LOC_B}).text
+        binding = binding_fields(ctx.write_view().get(binding_ref(text)))
+    into = adopted.remotes.parent / "fetched-b"
+    root, _ = transport_with(adopted).fetch_corpus(binding.destination, binding.corpus_id, into)
+    fields = marker_fields(marker_of(root))
+    adopted_root = SharingRegistry(adopted.b.sharing_root).root_for(cid)
+    a_addresses = {node.id for node in ReadView.opened_at(adopted_root).iter_stored()}
+    assert fields.selection == {own} and not fields.selection & a_addresses
+    assert fields.attributions == {}
 
 
 def test_adopt_a_second_time_refuses_already_adopted(adopted):

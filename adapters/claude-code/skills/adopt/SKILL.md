@@ -27,9 +27,9 @@ is deleted and nothing is recorded. A copy that shares an address with a
 corpus this world already holds refuses `adopt-conflict` with the shared
 addresses, and stays `fetched`. A clean copy is admitted to the world and
 marked mounted. The output is one `[pin]` block per sharing step this run
-took (`fetched`, `admitted`, `mounted`). The mount takes effect when the
-session next opens; until then the corpus is live but unmounted, so
-`publish` refuses `selection-incomplete` naming it: reopen first. A run
-interrupted after admission is completed by the next `adopt` of the same
-corpus; adopting a mounted corpus again refuses as already adopted.
+took (`fetched`, `admitted`, `mounted`). The mount takes effect at the
+next session open; reopen (and capture an epoch) to read and cite the
+adopted records. A run interrupted after admission is completed by the
+next `adopt` of the same corpus; adopting a mounted corpus again refuses
+as already adopted.
 Adopting needs `sharing_root` configured.
