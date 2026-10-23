@@ -6,13 +6,21 @@ below are plain `AcceptanceInputs`; the last test reads B with A's publication a
 from __future__ import annotations
 
 import json
+import shutil
 from dataclasses import replace
 
+import pytest
 from beliefs.belief import AcceptancePolicy
 from beliefs.identity import v1
+from beliefs.root import metadata_root_for
+from beliefs.world import WorldConfig
+from helpers.commons import a_identity
 
-from science.acceptance import AcceptanceInputs, Carrier, counts, statement
-from science.sharing import FetchRecord, Pin, PinSource, ProviderBinding
+from science.acceptance import AcceptanceInputs, Carrier, acceptance_inputs, counts, statement
+from science.commands.next import classify
+from science.config import ReadContext, corpus_id_at
+from science.refusal import Refused
+from science.sharing import FetchRecord, Pin, PinSource, ProviderBinding, SharingRegistry
 
 W_SELF, W_A, W_B, W_H = "1" * 32, "a" * 32, "b" * 32, "c" * 32
 CID_SELF, CID_LOCAL, CID_A, CID_B, CID_H, CID_BACK, CID_FAKE = (f"{n}" * 32 for n in "0123456")
@@ -103,6 +111,37 @@ def test_a_carried_record_is_decided_by_its_origin_even_in_an_accepted_confirmed
     assert not counts(replace(INPUTS_ACCEPT_A_AND_PIN_A, carriers={CID_B: CARRIER_B}), CID_B, A_ASSESSMENT)
 
 
+def test_a_pinned_carriers_record_outside_its_selection_never_counts():
+    accepted = replace(INPUTS_ACCEPT_B, verifiers=frozenset({W_SELF, W_B}))
+    assert counts(accepted, CID_B, B_OWN_ASSESSMENT)
+    assert not counts(accepted, CID_B, "assessment:unselected")
+    # Branch 4 alike: our own publication adopted back vouches only for what its marker selects.
+    assert not counts(INPUTS_ADOPTED_BACK, CID_BACK, "assessment:unselected")
+
+
+def test_a_carrier_whose_marker_is_not_the_pinned_marker_never_counts_as_its_own():
+    forged = replace(INPUTS_ACCEPT_B, carriers={CID_A: CARRIER_A, CID_B: replace(CARRIER_B, marker="marker-forged")})
+    assert not counts(forged, CID_B, B_OWN_ASSESSMENT)
+    back = replace(INPUTS_ADOPTED_BACK, carriers={CID_A: CARRIER_A,
+                                                  CID_BACK: replace(CARRIER_BACK, marker="marker-forged")},
+                   own_bindings=frozenset({(CID_BACK, "marker-forged", "artifact-back")}))
+    assert not counts(back, CID_BACK, OWN_ASSESSMENT)
+
+
+def test_an_attribution_naming_an_intermediary_never_counts():
+    """B attributes X to A, but A holds X only as a record it carries from C: the named origin must hold it as its
+    own, as `counts(A, X)` would require."""
+    cid_c, carried = "7" * 32, "assessment:c1"
+    a_carrying = replace(CARRIER_A, selection=CARRIER_A.selection | {carried},
+                         attributions={carried: (cid_c, "marker-c")})
+    b_naming_a = replace(CARRIER_B, selection=CARRIER_B.selection | {carried},
+                         attributions={**CARRIER_B.attributions, carried: (CID_A, MARKER_A)})
+    inputs = replace(INPUTS_ACCEPT_A_AND_PIN_A, carriers={CID_A: a_carrying, CID_B: b_naming_a})
+    assert not counts(inputs, CID_A, carried)
+    assert not counts(inputs, CID_B, carried)
+    assert counts(inputs, CID_B, A_ASSESSMENT)
+
+
 def test_a_forged_attribution_to_a_record_the_origin_does_not_hold_never_counts():
     # carrier B attributes "assessment:invented" to (CID_A, MARKER_A); A's selection lacks it
     assert not counts(INPUTS_ACCEPT_A_AND_PIN_A, CID_B, "assessment:invented")
@@ -175,8 +214,6 @@ def test_statement_is_canonical_json_and_encodes():
 
 def test_accept_naming_an_unpinned_world_changes_nothing(reopened):
     """Review Focus 5: belief answers, the context carries the policy, nothing extra is excluded."""
-    from helpers.commons import a_identity
-    from science.config import ReadContext
     proposition, unpinned = a_identity(reopened.a)["proposition"], "e" * 32
     answer = ReadContext.open(reopened.b).evaluate(proposition)
     widened = ReadContext.open(replace(reopened.b, accept=(unpinned,))).evaluate(proposition)
@@ -188,10 +225,39 @@ def test_accept_naming_an_unpinned_world_changes_nothing(reopened):
 
 def test_next_counts_only_the_assessments_the_policy_accepts(reopened):
     """`next` reads the policy as belief does: an excluded assessment leaves its proposition unassessed."""
-    from helpers.commons import a_identity
-    from science.commands.next import classify
-    from science.config import ReadContext
     ids = a_identity(reopened.a)
     assert classify(ReadContext.open(reopened.b), ids["proposition"]) in ("ready", "not-ready")
     accepted = replace(reopened.b, accept=(ids["world"],))
     assert classify(ReadContext.open(accepted), ids["proposition"]) == "assessed-not-admitted"
+
+
+def _with_extra_root(cfg, root):
+    return replace(cfg, world=WorldConfig(cfg.world.world_root, cfg.world.world_id,
+                                          tuple(sorted((*cfg.world.corpus_roots, root)))))
+
+
+def _copy_corpus(source, target):
+    """A byte copy of the corpus at `source`, with its metadata sibling: one corpus id at two roots."""
+    shutil.copytree(source, target)
+    if metadata_root_for(source).exists():
+        shutil.copytree(metadata_root_for(source), metadata_root_for(target))
+
+
+def test_a_hand_listed_root_claiming_the_adopted_corpus_id_refuses(reopened):
+    cid = a_identity(reopened.a)["corpus_id"]
+    adopted = SharingRegistry(reopened.b.sharing_root).root_for(cid).resolve()
+    claimant = reopened.b.world.world_root.parent / "claimant" / cid
+    _copy_corpus(adopted, claimant)
+    with pytest.raises(Refused) as caught:
+        acceptance_inputs(ReadContext.open(_with_extra_root(reopened.b, claimant)))
+    refusal = caught.value.refusal
+    assert refusal.code == "invalid-input"
+    assert cid in refusal.message and str(adopted) in refusal.message and str(claimant) in refusal.message
+
+
+def test_two_markerless_unpinned_roots_sharing_an_id_stay_own(reopened):
+    own = reopened.b.write_root
+    twin = reopened.b.world.world_root.parent / "twin" / "corpus"
+    _copy_corpus(own, twin)
+    inputs = acceptance_inputs(ReadContext.open(_with_extra_root(reopened.b, twin)))
+    assert corpus_id_at(own) in inputs.own_roots

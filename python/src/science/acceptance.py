@@ -41,7 +41,7 @@ class AcceptanceInputs:
     pins: Mapping[str, Pin]  # mounted pins by corpus id
     bindings: Mapping[str, ProviderBinding]
     own_bindings: frozenset[tuple[str, str, str]]  # (corpus_id, marker, artifact) from the write root
-    carriers: Mapping[str, Carrier]  # every session mount holding a marker, by corpus id
+    carriers: Mapping[str, Carrier]  # every configured mount holding a marker, by corpus id
 
 
 def _carrier(mount) -> Carrier | None:
@@ -60,6 +60,23 @@ def _carrier(mount) -> Carrier | None:
     return Carrier(mount.corpus_id, fields.world, fields.uid, fields.selection, dict(fields.attributions))
 
 
+def _refuse_claimed_duplicates(found, registry_roots: set) -> None:
+    """Two configured roots with one corpus id are a duplicate carrier, which a read context keeps so `status`
+    can report it. The kernel names a record by `(corpus_id, address)` alone, so the policy cannot tell which
+    root it came from: when either root holds a marker or is a pinned registry root, one could take the other's
+    standing, and the read refuses. Two markerless, unpinned roots are both Own whichever holds the record."""
+    by_id: dict[str, list] = {}
+    for mount, carrier in found:
+        by_id.setdefault(mount.corpus_id, []).append((mount, carrier))
+    for corpus_id, held in sorted(by_id.items()):
+        if len(held) > 1 and any(carrier is not None or mount.root in registry_roots for mount, carrier in held):
+            roots = ", ".join(str(mount.root) for mount, _ in held)
+            raise Refused(Refusal("invalid-input",
+                                  f"corpus {corpus_id} is carried by more than one configured root ({roots}) and "
+                                  "one of them is a publication or an adopted root; the accept policy cannot tell "
+                                  "which root a record came from, so remove the duplicate from corpus_roots"))
+
+
 def acceptance_inputs(ctx) -> AcceptanceInputs:
     """The policy's inputs for a read context. Every configured mount is read: with coordination on that is the
     session, and with it off a corpus-local read of a non-write root is still decided here. A root under the
@@ -71,7 +88,9 @@ def acceptance_inputs(ctx) -> AcceptanceInputs:
     registry_roots = (set() if registry is None
                       else {registry.root_for(pin.corpus_id).resolve() for pin in registry.pins()})
     mounts = ctx.mounts()
-    carriers = {carrier.corpus_id: carrier for carrier in map(_carrier, mounts) if carrier is not None}
+    found = [(mount, _carrier(mount)) for mount in mounts]
+    _refuse_claimed_duplicates(found, registry_roots)
+    carriers = {carrier.corpus_id: carrier for _, carrier in found if carrier is not None}
     (write,) = (mount for mount in mounts if mount.root == config.write_root)
     own_roots = {write.corpus_id} | {mount.corpus_id for mount in mounts
                                      if mount.root not in registry_roots and mount.corpus_id not in carriers}
@@ -91,11 +110,13 @@ def acceptance_inputs(ctx) -> AcceptanceInputs:
 
 def _origin_holds(inputs: AcceptanceInputs, origin: str, origin_marker: str, address: str) -> bool:
     """The Carried branch: the origin publication is pinned at the attributed marker, origin-confirmed, of an
-    accepted world, mounted, and its own marker selects the record."""
+    accepted world, mounted, and its own marker selects the record as its own: an origin that itself carries the
+    record is an intermediary, and an honest marker names the first origin (spec §4.8)."""
     pin = inputs.pins.get(origin)
     carrier = inputs.carriers.get(origin)
     return (pin is not None and pin.marker == origin_marker and pin.origin_confirmed(inputs.bindings)
-            and pin.world in inputs.verifiers and carrier is not None and address in carrier.selection)
+            and pin.world in inputs.verifiers and carrier is not None and address in carrier.selection
+            and address not in carrier.attributions)
 
 
 def counts(inputs: AcceptanceInputs, corpus_id: str, address: str) -> bool:
@@ -110,6 +131,8 @@ def counts(inputs: AcceptanceInputs, corpus_id: str, address: str) -> bool:
     pin = inputs.pins.get(corpus_id)
     if pin is None:
         return False  # a hand-listed publication: its own records need a pin
+    if address not in carrier.selection or carrier.marker != pin.marker:
+        return False  # not the pinned publication's record: the pin vouches for its marker's selection only
     if (corpus_id, carrier.marker, pin.artifact) in inputs.own_bindings:
         return True  # Own: our publication adopted back
     return carrier.world in inputs.verifiers and pin.origin_confirmed(inputs.bindings)  # Carrier's own
