@@ -54,11 +54,12 @@ def handle(ctx, writer, *, path, title, locator=None, facets=None) -> Report:
                 "world record, and a second would be a duplicate location")
     view = ctx.write_view()
     relative = f"{digest.removeprefix('sha256:')}/{source.name}"
+    location = StoreLocator(writer.store_id, relative)
     standing = tuple(
         stored.holdings_observation_value(node)
         for node in view.iter_stored()
         if node.kind == "holdings-observation"
-        and stored.holdings_observation_value(node).location.relative_path == relative
+        and stored.holdings_observation_value(node).location == location
     )
     # The record is built and validated BEFORE the first act: a facet the
     # profile does not know, or a payload it refuses, must leave no bytes in
@@ -103,7 +104,7 @@ def handle(ctx, writer, *, path, title, locator=None, facets=None) -> Report:
             _refuse(f"locator refused: {reason}")
     # --- first act: the holdings write ---------------------------------------
     holdings = writer.holdings_context(instrument=INSTRUMENT)
-    published = write(holdings, StoreLocator(writer.store_id, relative), content, expected=digest,
+    published = write(holdings, location, content, expected=digest,
                       standing=standing)
     node = writer.add(proposed)
     outcome = published.record.outcome

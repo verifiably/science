@@ -799,3 +799,26 @@ def walk_belief_path_portable(work: Path) -> tuple[ScienceConfig, str]:
 def walk_belief_path_confined(work: Path) -> tuple[ScienceConfig, str]:
     """`walk_belief_path` confined, as a snapshot builder."""
     return walk_belief_path(work, confined=True)
+
+
+def record_url_observation(write_root: Path, store_root: Path, profile, content: bytes, url: str,
+                           scratch: Path, monkeypatch) -> None:
+    """Mint a found URL observation of `content` at `url` in `write_root`, as `look` would after a download;
+    `retrieve` is replaced, so nothing touches the network."""
+    from hashlib import sha256
+    from beliefs.holdings import boundary
+    from beliefs.holdings.records import url_locator
+    from beliefs.holdings.transport import RetrievalBounds, Retrieved, url_seam
+    from beliefs.root import holdings_seam
+    scratch.mkdir(parents=True, exist_ok=True)
+    downloaded = scratch / "retrieved"
+    downloaded.write_bytes(content)
+    digest = "sha256:" + sha256(content).hexdigest()
+    act = boundary.ActContext(write_root, store_root, "fixture", "fixture/look.v1", FIXTURE_AUTHORITY,
+                              holdings_seam(), profile=profile)
+    with monkeypatch.context() as patch:
+        patch.setattr(boundary, "retrieve", lambda *a, **k: Retrieved(digest, len(content), downloaded))
+        looked = boundary.look(act, url_locator(url), bounds=RetrievalBounds(10, 1024, 1), seam=url_seam(),
+                               scratch=scratch)
+    assert type(looked) is boundary.PublishedLook
+    looked.retrieved.path.unlink()

@@ -5,7 +5,7 @@ from hashlib import sha256
 
 import pytest
 from helpers.commons import DATA_A, a_identity, read_rig, refused
-from helpers.world import open_rig
+from helpers.world import open_rig, record_url_observation
 
 import science.commands.fetch as fetch_module
 from science.config import FetchPolicy, ReadContext
@@ -107,3 +107,29 @@ def test_fetch_never_redeclares_the_dataset(reopened, fetching):
     corpus_id = a_identity(reopened.a)["corpus_id"]
     invoke(str(reopened.data_a_path()))
     assert ReadContext.open(cfg).cited(dataset).corpus_id == corpus_id
+
+
+def test_fetch_after_a_url_observation_in_the_write_root_holds_the_bytes(reopened, fetching, monkeypatch):
+    """A URL observation has no store path; the observations a store write supersedes are chosen by the whole
+    store locator, so it neither crashes the selection nor is superseded (sci-f5903e)."""
+    invoke, dataset, cfg = fetching
+    record_url_observation(cfg.write_root, cfg.store_root, cfg.profile, DATA_A, "https://data.test/previous.txt",
+                           cfg.operations_root / "scratch" / "url-look", monkeypatch)
+    invoke(str(reopened.data_a_path()))
+    assert ReadContext.open(cfg).held_path(dataset).read_bytes() == DATA_A
+
+
+def test_fetch_leaves_another_stores_observation_of_the_same_path_standing(reopened, fetching):
+    """An observation of the same relative path in another store is not this write's to supersede (sci-f5903e)."""
+    from beliefs.holdings.boundary import ActContext, write
+    from beliefs.holdings.records import StoreLocator
+    from beliefs.root import holdings_seam, init_store_root
+    from helpers.world import FIXTURE_AUTHORITY
+    invoke, dataset, cfg = fetching
+    other_root = cfg.store_root.with_name("other-store")
+    other_store = init_store_root(other_root, authority=FIXTURE_AUTHORITY)
+    act = ActContext(cfg.write_root, other_root, "fixture", "fixture/hold.v1", FIXTURE_AUTHORITY, holdings_seam(),
+                     profile=cfg.profile)
+    write(act, StoreLocator(other_store, f"{DECLARED.removeprefix('sha256:')}/data.txt"), DATA_A, expected=DECLARED)
+    invoke(str(reopened.data_a_path()))
+    assert ReadContext.open(cfg).held_path(dataset).read_bytes() == DATA_A

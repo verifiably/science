@@ -136,3 +136,17 @@ def test_bytes_held_with_no_record_are_re_held_superseding_the_earlier_observati
                    if n.kind == "holdings-observation"
                    and stored.holdings_observation_value(n).location.relative_path == relative]
     assert len(at_location) == 2 and any(o.supersedes for o in at_location)
+
+
+def test_a_url_observation_in_the_write_root_does_not_block_holding_bytes(rig, tmp_path, monkeypatch):
+    """`dataset` chooses the observations its store write supersedes by the whole store locator; a URL observation
+    has no store path and is not one of them (sci-f5903e)."""
+    from helpers.world import record_url_observation
+    d, ctx = rig
+    content = b"gene\tv\nPHF19\t1\n"
+    (root,) = ctx.config.world.corpus_roots
+    record_url_observation(root, ctx.config.store_root, ctx.config.profile, content, "https://data.test/m.txt",
+                           tmp_path / "look", monkeypatch)
+    data = tmp_path / "matrix.txt"
+    data.write_bytes(content)
+    assert "[dataset] dataset:sha256:" in d.invoke("dataset", {"path": str(data), "title": "expression"}).text

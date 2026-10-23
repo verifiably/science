@@ -63,15 +63,16 @@ def handle(ctx, writer, *, dataset, source) -> Report:
         _refuse(f"the bytes from {source} are {len(content)} bytes, over [fetch] max_bytes {policy.max_bytes}")
     relative = f"{digest.removeprefix('sha256:')}/{name}"
     view = ctx.write_view()
+    location = StoreLocator(writer.store_id, relative)
     standing = tuple(
         stored.holdings_observation_value(node)
         for node in view.iter_stored()
         if node.kind == "holdings-observation"
-        and stored.holdings_observation_value(node).location.relative_path == relative
+        and stored.holdings_observation_value(node).location == location
     )
     # --- the one act: the holdings write -------------------------------------
     holdings = writer.holdings_context(instrument=INSTRUMENT)
-    published = write(holdings, StoreLocator(writer.store_id, relative), content, expected=digest,
+    published = write(holdings, location, content, expected=digest,
                       standing=standing)
     (node,) = [n for n in ctx.write_view().iter_stored()
                if n.kind == "holdings-observation" and stored.holdings_observation_value(n) == published.record]
