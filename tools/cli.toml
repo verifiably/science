@@ -1605,6 +1605,17 @@ options = [
 ]
 
 [[cli.science.commands]]
+path = ["fetch"]
+summary = "Hold a mounted dataset's bytes from a local path or an https URL, after checking the declared digest"
+options = [
+  { shared = "config", value = "path" },
+  { names = ["--invocation-id"], value = "string" },
+  { names = ["--continue"], value = "string" },
+  { names = ["--dataset"], value = "string", required = true },
+  { names = ["--source"], value = "string", required = true },
+]
+
+[[cli.science.commands]]
 path = ["build"]
 summary = "Build the world from its corpora"
 
