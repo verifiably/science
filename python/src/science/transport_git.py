@@ -7,6 +7,7 @@ while no repository-location override can aim it at another repository."""
 from __future__ import annotations
 
 import os
+import stat
 import subprocess
 from collections.abc import Callable, Mapping
 from hashlib import sha256
@@ -68,7 +69,7 @@ class GitTransport:
         repo = self._sync(destination)
         corpus_id = next(iter(files)).split("/")[0].removesuffix(_HEAD_SUFFIX)
         for attempt in (1, 2):
-            if self._stage(repo, files) is False:
+            if self._stage(destination, repo, files) is False:
                 return None
             self._run(repo, "commit", "-q", "-m", f"publish {corpus_id}")
             pushed = self._run(repo, "push", "-q", "origin", f"HEAD:refs/heads/{self._branch}", check=False)
@@ -104,7 +105,10 @@ class GitTransport:
     # -- local clone ---------------------------------------------------------------------------------------
 
     def _run(self, repo: Path, *args: str, check: bool = True, text: bool = True) -> subprocess.CompletedProcess:
-        done = subprocess.run([self._git, "-C", str(repo), *args], env=self._env, capture_output=True, text=text)
+        # core.symlinks=false: a symlink entry in the remote's tree is checked out as a plain file holding the link
+        # text, so no checkout or reset of the cache clone ever plants a link that a later write would follow
+        done = subprocess.run([self._git, "-c", "core.symlinks=false", "-C", str(repo), *args], env=self._env,
+                              capture_output=True, text=text)
         if check and done.returncode != 0:
             raise GitTransportFault(f"git {args[0]} failed: {self._message(done)}")
         return done
@@ -142,16 +146,42 @@ class GitTransport:
         probe = self._run(repo, "rev-parse", "--verify", "--quiet", f"refs/remotes/origin/{self._branch}", check=False)
         return probe.returncode == 0
 
-    def _stage(self, repo: Path, files: Mapping[str, Path]) -> bool:
+    def _stage(self, destination: Destination, repo: Path, files: Mapping[str, Path]) -> bool:
         """Copy and stage the named files; False when the index then equals HEAD (nothing to commit)."""
         for copied, (name, source) in enumerate(files.items(), start=1):
-            target = repo / name
+            target = self._target(destination, repo, name)
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(Path(source).read_bytes())
             if copied == self.fail_after_files:
                 raise GitTransportFault("injected failure before commit")
         self._run(repo, "add", "-A", "--", *files)
         return self._run(repo, "diff", "--cached", "--quiet", check=False).returncode != 0
+
+    @staticmethod
+    def _target(destination: Destination, repo: Path, name: str) -> Path:
+        """The cache path a name is written to, checked before anything is created or written: no component is
+        `..`, `.` or empty, none that exists is a symlink, every existing parent is a directory and an existing
+        target a regular file, and the path resolves inside the clone."""
+        parts = name.split("/")
+        if any(part in ("", ".", "..") for part in parts):
+            raise GitTransportFault(f"{destination.locator}: refused to stage {name!r}: not a plain relative path")
+        path = repo
+        for depth, part in enumerate(parts, start=1):
+            path = path / part
+            try:
+                mode = path.lstat().st_mode
+            except FileNotFoundError:
+                break
+            if stat.S_ISLNK(mode):
+                raise GitTransportFault(f"{destination.locator}: refused to stage {name!r}: {path} is a symlink")
+            if depth < len(parts) and not stat.S_ISDIR(mode):
+                raise GitTransportFault(f"{destination.locator}: refused to stage {name!r}: {path} is not a directory")
+            if depth == len(parts) and not stat.S_ISREG(mode):
+                raise GitTransportFault(f"{destination.locator}: refused to stage {name!r}: {path} is not a file")
+        target = repo / name
+        if not target.resolve().is_relative_to(repo.resolve()):
+            raise GitTransportFault(f"{destination.locator}: refused to stage {name!r}: it resolves outside {repo}")
+        return target
 
     # -- remote reads --------------------------------------------------------------------------------------
 

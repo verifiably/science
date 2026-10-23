@@ -88,14 +88,14 @@ def test_a_rejected_push_is_retried_once_after_a_fetch(tmp_path, remotes, bare, 
     stage = transport._stage
     rivals = []
 
-    def stage_after_a_concurrent_commit(repo, named):
+    def stage_after_a_concurrent_commit(destination, repo, named):
         if not rivals:  # the remote moves between this cache's fetch and its push
             subprocess.run(["git", "clone", "-q", str(bare), str(rival)], env=GIT_ENV, check=True, capture_output=True)
             (rival / "other.txt").write_text("x")
             for args in (["add", "-A"], ["commit", "-qm", "rival"], ["push", "-q", "origin", "HEAD:refs/heads/main"]):
                 subprocess.run(["git", "-C", str(rival), *args], env=GIT_ENV, check=True, capture_output=True)
             rivals.append(1)
-        return stage(repo, named)
+        return stage(destination, repo, named)
 
     transport._stage = stage_after_a_concurrent_commit
     assert transport.push(DEST, files) is None
@@ -242,3 +242,45 @@ def test_a_hostile_remote_path_is_refused_and_writes_nothing_outside(tmp_path, r
     with pytest.raises(GitTransportFault, match="https://remote.test/a"):
         transport.listing(DEST, CID)
     assert list(into.iterdir()) == [] and list((tmp_path / "work").iterdir()) == [into]
+
+
+def plant_tree(bare: Path, entries: list[tuple[str, str, bytes]]) -> None:
+    """Commit on the bare remote's `main` a root tree of `(mode, name, blob bytes)` entries; mode `120000` makes a
+    symlink entry whose blob is the link text."""
+    def git(*args: str, data: bytes | None = None) -> str:
+        return subprocess.run(["git", "-C", str(bare), *args], env=GIT_ENV, input=data, check=True,
+                              capture_output=True).stdout.strip().decode()
+
+    lines = [f"{mode} blob {git('hash-object', '-w', '--stdin', data=blob)}\t{name}" for mode, name, blob in entries]
+    tree = git("mktree", data=("\n".join(lines) + "\n").encode())
+    git("update-ref", "refs/heads/main", git("commit-tree", tree, "-m", "hostile"))
+
+
+def test_a_push_onto_symlinks_in_a_hostile_remote_tree_writes_nothing_outside_the_cache(tmp_path, remotes, bare,
+                                                                                        files):
+    outside_dir, outside_file = tmp_path / "outside-dir", tmp_path / "outside.txt"
+    outside_dir.mkdir()
+    outside_file.write_bytes(b"keep")
+    plant_tree(bare, [("120000", CID, str(outside_dir).encode()),
+                      ("120000", f"{CID}.head-artifact.v1", str(outside_file).encode())])
+    with pytest.raises(GitTransportFault, match="https://remote.test/a"):
+        make(tmp_path, remotes, bare).push(DEST, files)
+    assert outside_file.read_bytes() == b"keep"
+    assert list(outside_dir.iterdir()) == []
+
+
+def test_a_symlink_in_the_cache_tree_refuses_staging(tmp_path, remotes, bare, files):
+    outside_file = tmp_path / "outside.txt"
+    outside_file.write_bytes(b"keep")
+    transport = make(tmp_path, remotes, bare)
+    stage = transport._stage
+
+    def stage_onto_a_planted_symlink(destination, repo, named):
+        (repo / f"{CID}.head-artifact.v1").symlink_to(outside_file)
+        return stage(destination, repo, named)
+
+    transport._stage = stage_onto_a_planted_symlink
+    with pytest.raises(GitTransportFault, match=f"https://remote.test/a.*{CID}.head-artifact.v1"):
+        transport.push(DEST, files)
+    assert outside_file.read_bytes() == b"keep"
+    assert commit_count(bare) == 0
