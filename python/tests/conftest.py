@@ -67,3 +67,30 @@ def short_tmp():
         yield root
     finally:
         shutil.rmtree(root)
+
+
+# The commons 1a fixture chain (plan Task 5 onward): each builder's dict is snapshot-cached per worker and
+# restored per test; `fresh_value` is the raw dict, the others wrap it with `Installations.of`. Later tasks add
+# their snapshots (`published`, `bound`, ...) beside these.
+@pytest.fixture
+def fresh_value(certified_worker_work):
+    from helpers.commons import build_fresh
+    from helpers.snapshot import snapshot
+    snap = snapshot(certified_worker_work, "commons-1a-fresh", build_fresh)
+    snap.restore()
+    return snap.value
+
+
+@pytest.fixture
+def fresh(fresh_value):
+    from helpers.commons import Installations
+    return Installations.of(fresh_value)
+
+
+@pytest.fixture
+def fresh_no_epoch(certified_worker_work):
+    from helpers.commons import Installations, build_fresh_no_epoch
+    from helpers.snapshot import snapshot
+    snap = snapshot(certified_worker_work, "commons-1a-fresh-no-epoch", build_fresh_no_epoch)
+    snap.restore()
+    return Installations.of(snap.value)

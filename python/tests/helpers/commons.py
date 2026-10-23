@@ -131,6 +131,8 @@ class Installations:
         return self.remotes.parent / "data"
 
     def data_a_path(self) -> Path:
+        """The source of A's dataset bytes. The dataset is declared under the name `data.txt` (the shared
+        FIXTURE_SNAKEFILE reads `inputs/data.txt`); `a.txt` only carries its bytes."""
         return self.data_dir() / "a.txt"
 
     @classmethod

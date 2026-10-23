@@ -7,17 +7,14 @@ from beliefs.world.registry import load_manifest
 from helpers.commons import (
     DATA_A,
     GIT_ENV,
-    Installations,
     Remotes,
     a_identity,
-    build_fresh,
-    build_fresh_no_epoch,
     read_rig,
     refused,
     reopen,
     with_remotes,
 )
-from helpers.snapshot import check_value, snapshot
+from helpers.snapshot import check_value
 from helpers.world import CONCEPTS, LEVELS, PINS_V3, concept_list_address
 import science.publication as publication
 from science.config import FetchPolicy, ReadContext
@@ -25,25 +22,6 @@ from science.sharing import SharingRegistry
 from science.world_belief import epoch_currency
 
 V3_PIN = PINS_V3.domains["coordination"]
-
-
-@pytest.fixture
-def fresh_value(certified_worker_work):
-    snap = snapshot(certified_worker_work, "commons-1a-fresh", build_fresh)
-    snap.restore()
-    return snap.value
-
-
-@pytest.fixture
-def fresh(fresh_value):
-    return Installations.of(fresh_value)
-
-
-@pytest.fixture
-def fresh_no_epoch(certified_worker_work):
-    snap = snapshot(certified_worker_work, "commons-1a-fresh-no-epoch", build_fresh_no_epoch)
-    snap.restore()
-    return Installations.of(snap.value)
 
 
 def test_both_installations_pin_coordination_v3_and_the_same_contract(fresh):
