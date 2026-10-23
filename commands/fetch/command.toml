@@ -1,0 +1,21 @@
+schema_version = 1
+name = "fetch"
+purpose = "Hold a mounted dataset's bytes from a local path or an https URL, after checking the declared digest."
+write_class = "mints:holdings-observation"
+output_budget = 2048
+
+[write.routes]
+holdings-observation = "holdings"
+
+[inputs.dataset]
+type = "string"
+required = true
+doc = "The dataset's address, declared in a corpus this session mounts."
+
+[inputs.source]
+type = "string"
+required = true
+doc = "Where the bytes are: an absolute path on this host or an https:// URL."
+
+[reads]
+families = ["corpus-stored", "holdings"]

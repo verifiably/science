@@ -39,6 +39,22 @@ PINS = CorpusPins(
         for namespace, identity in PROFILE.activated_contracts.items()
     },
 )
+# Coordination v3, whose markers carry attribution entries: the commons fixture's two
+# installations compile it (with the test contract on top), the shipped fixtures above
+# stay on v2. Their manifests' base and coordination pins are these.
+COORDINATION_V3 = 3
+PROFILE_V3 = compile_profile(
+    shipped_base_contract(),
+    [shipped_domain_contract(namespace) for namespace in DOMAINS],
+    coordination=shipped_coordination(COORDINATION_V3),
+)
+PINS_V3 = CorpusPins(
+    science_contract="science:" + PROFILE_V3.base_contract_identity,
+    domains={
+        namespace: f"{namespace}:{identity}"
+        for namespace, identity in PROFILE_V3.activated_contracts.items()
+    },
+)
 BARE_PROFILE = compile_profile(
     shipped_base_contract(), [shipped_domain_contract(namespace) for namespace in DOMAINS]
 )

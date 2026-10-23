@@ -1,0 +1,14 @@
+schema_version = 1
+name = "provider-inspect"
+purpose = "Show the world a publication at a provider's location claims, verifying it and recording nothing."
+write_class = "read-only"
+output_budget = 2048
+
+[inputs.location]
+type = "string"
+required = true
+doc = "The provider's location: the https:// git remote the publication was published to."
+[inputs.corpus_id]
+type = "string"
+required = true
+doc = "The publication's corpus id, 32 lowercase hex digits."

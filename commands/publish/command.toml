@@ -1,0 +1,21 @@
+schema_version = 1
+name = "publish"
+purpose = "Publish a project's view to a local directory or a git remote, or resume a stranded attempt."
+write_class = "publishes"
+output_budget = 4096
+
+[inputs.target]
+type = "string"
+required = true
+doc = "The project whose view is published: its name, or its coord:<project> address."
+[inputs.to]
+type = "string"
+required = true
+doc = "The destination: an absolute directory path on this host, or an https:// git remote URL."
+[inputs.resume]
+type = "string"
+required = false
+doc = "The event token of an unfinished attempt to continue, as the publish-unfinished refusal names it."
+
+[reads]
+families = ["coordination", "corpus-stored"]

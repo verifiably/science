@@ -6,17 +6,28 @@ import threading
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 
+from beliefs.errors import AddressMapConflict, BuildContended, CitationContractMismatch, WriteRefused
+from beliefs.permit import PermitExceeded
+from beliefs.session import KernelRefusalValue
+
 from science.canonical import canonicalize, input_digest
 from science.cursor import ReadCursor, WriteCursor, decode, encode
 from science.refusal import INVOCATION_ID_RE, Refusal, Refused, mint_token
 from science.render import render_page, report_digest
-from science.report import Report, SelectionBlock, serialize_block
+from science.report import Report, SelectionBlock, pin_block, serialize_block
 from science.schema import Declaration
 
 
+# Every kernel refusal a write handler may raise; each write class closes them
+# through `Dispatcher._kernel_refusal`, the one normalization path.
+KERNEL_REFUSALS = (PermitExceeded, KernelRefusalValue, WriteRefused,
+                   CitationContractMismatch, AddressMapConflict, BuildContended)
+
+
 class HandlerContractViolation(RuntimeError):
-    """A write handler raised a surface refusal after it had already acted, or a
-    session handler broke its one-selection contract.
+    """A write handler raised a surface refusal after it had already acted, a
+    session handler broke its one-selection contract, or a sharing handler acted
+    on a corpus.
 
     Validation precedes the first act (belief-path design §6.3). The acts
     committed are truth, so the invocation closes `done` with them; the
@@ -116,6 +127,8 @@ class Dispatcher:
                         "invalid-input", "no write takes `project`; a write binds to the session's selection"))
                 if decl.write_class.kind == "session":
                     return self._invoke_session(decl, canonical, iid)
+                if decl.write_class.kind == "sharing":
+                    return self._invoke_sharing(decl, canonical, iid)
                 return self._invoke_write(decl, canonical, iid)
             report = self._handlers[decl.name](self._read_context(decl, project), **canonical)
             return Outcome(self._render(decl, canonical, report, (0, 0)), iid)
@@ -181,14 +194,13 @@ class Dispatcher:
                 return RequiredCapabilities.for_kinds(write_class.kinds, write_class.routes)
             case "publishes":
                 return RequiredCapabilities.publishes()
+            case "sharing":
+                return RequiredCapabilities.sharing()
         raise AssertionError(write_class.kind)
 
     @staticmethod
     def _kernel_refusal(error) -> Refusal:
         """The one normalization path for every kernel refusal shape."""
-        from beliefs.permit import PermitExceeded
-        from beliefs.session import KernelRefusalValue
-
         if isinstance(error, PermitExceeded):
             return Refusal(
                 "permit-exceeded",
@@ -226,12 +238,7 @@ class Dispatcher:
         return claim
 
     def _invoke_write(self, decl: Declaration, canonical: Mapping[str, object], iid: str) -> Outcome:
-        from beliefs.errors import AddressMapConflict, BuildContended, CitationContractMismatch, WriteRefused
-        from beliefs.permit import PermitExceeded
-        from beliefs.session import (
-            ClaimDone,
-            KernelRefusalValue,
-        )
+        from beliefs.session import ClaimDone
 
         from science.render import audit_write_report
 
@@ -251,20 +258,16 @@ class Dispatcher:
                 return Outcome(self._replay_outcome(decl, claim.outcome, iid, (0, 0)), iid)
             try:
                 report = self._handlers[decl.name](self._context(), writer, **canonical)
-            except (PermitExceeded, KernelRefusalValue, WriteRefused,
-                    CitationContractMismatch, AddressMapConflict, BuildContended) as caught:
+            except KERNEL_REFUSALS as caught:
                 return self._close_refused(iid, self._kernel_refusal(caught))
             except Refused as caught:
                 acted = self._session.invocation_acts(iid)
                 if not acted:
                     return self._close_refused(iid, caught.refusal)
-                minted = frozenset(tuple(pair) for act in acted for pair in act.record_ids)
-                self._session.close_invocation(
-                    iid, {"done": [list(pair) for pair in sorted(minted)]}
-                )
-                raise HandlerContractViolation(
+                raise self._close_acted(
+                    iid, acted,
                     f"{decl.name} refused {caught.refusal.code!r} after {len(acted)} act(s); "
-                    "a write handler validates before its first act"
+                    "a write handler validates before its first act",
                 ) from caught
             minted = frozenset(
                 tuple(pair)
@@ -291,6 +294,69 @@ class Dispatcher:
                 self._render_write(decl.output_budget, canonical_report, iid, (0, 0)), iid
             )
 
+    def _close_acted(self, iid: str, acted, message: str) -> HandlerContractViolation:
+        """An invocation whose handler broke its contract after acting: the acts
+        committed, so it closes `done` with their pairs, and the handler is the
+        defect `message` names."""
+        minted = frozenset(tuple(pair) for act in acted for pair in act.record_ids)
+        self._session.close_invocation(iid, {"done": [list(pair) for pair in sorted(minted)]})
+        return HandlerContractViolation(message)
+
+    def _invoke_sharing(self, decl: Declaration, canonical: Mapping[str, object], iid: str) -> Outcome:
+        """A `sharing`-class invocation (commons 1a): a scoped writer whose doors
+        ledger sharing lines, and a pin report rebuilt from those lines.
+
+        Unlike an act, a sharing line may precede a refusal: it is evidence of
+        state the handler leaves behind by design (commons spec §10, "a refusal
+        at this stage leaves the candidate fetched"), so a refusal closes
+        refused whether or not lines were written. An act is never this class's
+        to make."""
+        from beliefs.session import ClaimDone
+
+        from science.render import audit_sharing_report
+
+        if self._session is None:
+            raise Refused(Refusal("permit-exceeded", "no writer session on this surface"), iid)
+        required = self._required(decl)
+        try:
+            writer = self._session.scoped(required, iid)
+        except PermitExceeded as caught:
+            raise Refused(self._kernel_refusal(caught), iid) from None
+        with self._lock:
+            claim = self._claim(decl, canonical, iid)
+            if isinstance(claim, ClaimDone):
+                return Outcome(self._replay_outcome(decl, claim.outcome, iid, (0, 0)), iid)
+            try:
+                report = self._handlers[decl.name](self._context(), writer, **canonical)
+            except (*KERNEL_REFUSALS, Refused) as caught:
+                acted = self._session.invocation_acts(iid)
+                if acted:
+                    message = self._sharing_acted(decl, f"refused {caught}", acted)
+                    raise self._close_acted(iid, acted, message) from caught
+                refusal = caught.refusal if isinstance(caught, Refused) else self._kernel_refusal(caught)
+                return self._close_refused(iid, refusal)
+            acted = self._session.invocation_acts(iid)
+            if acted:
+                raise self._close_acted(iid, acted, self._sharing_acted(decl, "returned", acted))
+            lines = self._session.invocation_sharing(iid)
+            try:
+                audit_sharing_report(report, lines)
+            finally:
+                # Close first in every case, as a write does: the lines are
+                # truth whether or not the report survives its audit.
+                self._session.close_invocation(iid, {"done": []})
+            return Outcome(self._render_write(decl.output_budget, self._pin_report(lines), iid, (0, 0)), iid)
+
+    @staticmethod
+    def _sharing_acted(decl: Declaration, why: str, acted) -> str:
+        return f"{decl.name} {why} after {len(acted)} act(s); a sharing handler records sharing lines, never acts"
+
+    @staticmethod
+    def _pin_report(lines) -> Report:
+        """The canonical sharing report: one pin block per ledger sharing line of
+        the invocation, in ledger order."""
+        return tuple(pin_block(line) for line in lines)
+
     def _select(self, iid: str, address):
         # The ledger line first, the endpoint's state after it: a line that did
         # not append changed nothing, and a line that did is live even if this
@@ -303,7 +369,7 @@ class Dispatcher:
         """A `session`-class invocation (coordination design §4.1): the write
         protocol's claim, open and close, a port instead of a writer, and one
         selection block rebuilt from the ledger as its report."""
-        from beliefs.errors import SessionProtocolError, WriteRefused
+        from beliefs.errors import SessionProtocolError
         from beliefs.session import ClaimDone
 
         from science.render import audit_session_report
@@ -401,7 +467,10 @@ class Dispatcher:
             raise Refused(
                 Refusal(refusal["code"], refusal["message"], refusal.get("data", {})), iid
             )
-        report = self._minted_report(outcome["done"])
+        if decl.write_class.kind == "sharing":
+            report = self._pin_report(self._session.invocation_sharing(iid))
+        else:
+            report = self._minted_report(outcome["done"])
         return self._render_write(decl.output_budget, report, iid, position)
 
     def _continue_write(self, command: str, cursor: WriteCursor, iid: str) -> Outcome:
@@ -432,6 +501,8 @@ class Dispatcher:
                 raise HandlerContractViolation(
                     f"{command} closed done with no selection line for {cursor.invocation_id}")
             report = self._selection_report(record.selection)
+        elif decl.write_class.kind == "sharing":
+            report = self._pin_report(record.sharing)
         else:
             report = self._minted_report(record.outcome["done"])
         if report_digest(report) != cursor.report_digest:
