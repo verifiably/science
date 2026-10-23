@@ -1,15 +1,17 @@
 ---
 id: sci-f31dfa
 title: "Task 4: The `sharing` write class, its invocation path and pin blocks"
-status: doing
+status: done
 priority: 1
 size: m
 complexity: high
 process: direct
 owner: commons-1a
 created: 2026-10-22T22:56:01Z
-updated: 2026-10-23T14:24:22Z
+updated: 2026-10-23T14:24:23Z
 started: 2026-10-23T14:04:16Z
+completed: 2026-10-23T14:24:23Z
+closed: 2026-10-23T14:24:23Z
 depends: [beliefs-f24fe9]
 parent: sci-13050a
 tags: [commons]
@@ -24,3 +26,7 @@ step: "Task 4: The `sharing` write class, its invocation path and pin blocks"
   provenance: {"harness_session":"claude-code:3f86999b-18ce-4e01-807b-04081adc501d","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-23T14:19:31Z (commons-1a): review: impl round 1 — verdict: revise; findings: Important 2, Minor 5; reviewer: claude-code/claude-opus-5-5
 - 2026-10-23T14:24:22Z (commons-1a): review: impl round 2 — verdict: accept; findings: none; reviewer: claude-code/claude-sonnet-5-5
+- 2026-10-23T14:24:23Z (commons-1a): done
+  provenance: {"harness_session":"claude-code:3f86999b-18ce-4e01-807b-04081adc501d","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-23T14:24:23Z (commons-1a): sharing write class landed at 7b9767a, review fixes 57dac26; replay live
+  provenance: {"harness_session":"claude-code:3f86999b-18ce-4e01-807b-04081adc501d","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
