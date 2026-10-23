@@ -206,3 +206,39 @@ def test_test_env_isolates_git_from_the_host(tmp_path, remotes, bare, monkeypatc
     make(tmp_path, remotes, bare).listing(DEST, CID)
     assert captured
     assert all(e["GIT_CONFIG_GLOBAL"] == "/dev/null" and e["GIT_CONFIG_NOSYSTEM"] == "1" for e in captured)
+
+
+def test_a_deleted_remote_branch_is_not_served_from_a_stale_tracking_ref(tmp_path, remotes, bare, files):
+    transport = make(tmp_path, remotes, bare)
+    transport.push(DEST, files)
+    subprocess.run(["git", "-C", str(bare), "update-ref", "-d", "refs/heads/main"], env=GIT_ENV, check=True)
+    assert commit_count(bare) == 0
+    assert transport.listing(DEST, CID) == {}
+    assert transport.push(DEST, files) is None
+    assert commit_count(bare) == 1
+    assert transport.listing(DEST, CID) == local_listing(files)
+
+
+def test_a_hostile_remote_path_is_refused_and_writes_nothing_outside(tmp_path, remotes, bare):
+    def git(*args, data=None):
+        return subprocess.run(["git", "-C", str(bare), *args], env=GIT_ENV, input=data, check=True,
+                              capture_output=True).stdout.strip().decode()
+
+    blob = git("hash-object", "-w", "--stdin", data=b"evil")
+    inner = git("hash-object", "--literally", "-t", "tree", "-w", "--stdin",
+                data=b"100644 x\0" + bytes.fromhex(blob))
+    cid_tree = git("hash-object", "--literally", "-t", "tree", "-w", "--stdin",
+                   data=b"40000 ..\0" + bytes.fromhex(inner))
+    root = git("hash-object", "--literally", "-t", "tree", "-w", "--stdin",
+               data=b"100644 " + f"{CID}.head-artifact.v1".encode() + b"\0" + bytes.fromhex(blob)
+               + b"40000 " + CID.encode() + b"\0" + bytes.fromhex(cid_tree))
+    commit = git("commit-tree", root, "-m", "hostile")
+    git("update-ref", "refs/heads/main", commit)
+    transport = make(tmp_path, remotes, bare)
+    into = tmp_path / "work" / "into"
+    into.mkdir(parents=True)
+    with pytest.raises(GitTransportFault, match="https://remote.test/a"):
+        transport.fetch_corpus(DEST, CID, into)
+    with pytest.raises(GitTransportFault, match="https://remote.test/a"):
+        transport.listing(DEST, CID)
+    assert list(into.iterdir()) == [] and list((tmp_path / "work").iterdir()) == [into]

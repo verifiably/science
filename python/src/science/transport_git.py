@@ -83,11 +83,11 @@ class GitTransport:
 
     def listing(self, destination: Destination, corpus_id: str) -> dict[str, str]:
         repo = self._sync(destination)
-        return {name: sha256(self._blob(repo, name)).hexdigest() for name in self._names(repo, corpus_id)}
+        return {name: sha256(self._blob(repo, name)).hexdigest() for name in self._names(repo, destination, corpus_id)}
 
     def fetch_corpus(self, destination: Destination, corpus_id: str, into: Path) -> tuple[Path, bytes]:
         repo = self._sync(destination)
-        names = self._names(repo, corpus_id)
+        names = self._names(repo, destination, corpus_id)
         sibling = f"{corpus_id}{_HEAD_SUFFIX}"
         if sibling not in names or len(names) == 1:
             raise GitTransportFault(f"{destination.locator}: corpus {corpus_id} is absent")
@@ -95,6 +95,8 @@ class GitTransport:
         for name in names:
             if name != sibling:
                 target = Path(into) / name
+                if not target.resolve().is_relative_to(Path(into).resolve()):
+                    raise GitTransportFault(f"{destination.locator}: {name!r} escapes the destination")
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_bytes(self._blob(repo, name))
         return root, self._blob(repo, sibling)
@@ -122,11 +124,14 @@ class GitTransport:
             self._run(repo, "remote", "add", "origin", remote)
         else:
             self._run(repo, "remote", "set-url", "origin", remote)
-        fetched = self._run(repo, "fetch", "-q", "origin", check=False)
+        fetched = self._run(repo, "fetch", "-q", "--prune", "origin", check=False)
         if fetched.returncode != 0:
             raise GitTransportFault(f"{destination.locator}: unreachable: {self._message(fetched)}")
+        # --prune: a branch the remote no longer has must not survive as a stale remote-tracking ref
         if self._has_branch(repo):
-            self._run(repo, "reset", "-q", "--hard", f"origin/{self._branch}")
+            reset = self._run(repo, "reset", "-q", "--hard", f"origin/{self._branch}", check=False)
+            if reset.returncode != 0:
+                raise GitTransportFault(f"{destination.locator}: remote tree refused: {self._message(reset)}")
         elif self._run(repo, "rev-parse", "--verify", "--quiet", "HEAD", check=False).returncode == 0:
             # the remote has no branch: a commit left by an earlier failed push is discarded, not trusted
             self._run(repo, "update-ref", "-d", "HEAD")
@@ -150,11 +155,16 @@ class GitTransport:
 
     # -- remote reads --------------------------------------------------------------------------------------
 
-    def _names(self, repo: Path, corpus_id: str) -> list[str]:
+    def _names(self, repo: Path, destination: Destination, corpus_id: str) -> list[str]:
+        """The remote's names in the corpus namespace; a name the remote could use to escape it refuses."""
         if not self._has_branch(repo):
             return []
         tree = self._run(repo, "ls-tree", "-r", "--name-only", "-z", f"origin/{self._branch}")
-        return [name for name in tree.stdout.split("\0") if name and _in_namespace(name, corpus_id)]
+        names = [name for name in tree.stdout.split("\0") if name and _in_namespace(name, corpus_id)]
+        for name in names:
+            if any(part in ("", ".", "..") for part in name.split("/")):
+                raise GitTransportFault(f"{destination.locator}: hostile remote path {name!r}")
+        return names
 
     def _blob(self, repo: Path, name: str) -> bytes:
         return self._run(repo, "cat-file", "blob", f"origin/{self._branch}:{name}", text=False).stdout
