@@ -34,8 +34,10 @@ registry, which is rebuildable from the ledger's sharing lines.
 **Review history:** revision 1 (`ca6d5d8`) reviewed 2026-10-22 by codex/gpt-6-astra
 (revise: 7 P1, 4 P2) and claude-code/claude-fable-5-1 (revise: 2 Critical, 8 Important,
 13 Minor). Revision 2 (`fb4e3fa`) reviewed by claude-code/claude-fable-5-1 (revise:
-0 Critical, 6 Important, 12 Minor). This is revision 3; the "Deviations" section records
-every departure from the spec's letter with its reason.
+0 Critical, 6 Important, 12 Minor). Revision 3 (`739d2f1`) reviewed by codex/gpt-6-astra
+(revise: 2 P1, 4 P2; Deviations 1–8 accepted, 9 rejected as specified). This is revision
+4; the "Deviations" section records every departure from the spec's letter with its
+reason.
 
 ## Global Constraints
 
@@ -134,14 +136,17 @@ every departure from the spec's letter with its reason.
    exposes assessments, runs and verifications after the policy filter but no
    independence certification; `show` reports the verification picture and says
    independence is not exposed. Spec §5 step 2 note in Task 13.
-9. **An unsourced or world-mismatched candidate is downloaded, not `fetched`.** Spec §10
-   says a refusal "leaves the candidate `fetched`". Every registry write must follow its
-   ledger line, and a pin's source is part of that evidence, so `adopt` resolves the
-   source **before** the `fetched` door and refuses `pin-unsourced`/`world-mismatch`
-   with the copy kept on disk under `roots/<corpus_id>` and no pin and no line; the
-   next `adopt` reuses the copy. `provider-inspect` and `provider-bind` write only
-   scratch and the transport cache under `operations_root` (Deviation 2: "records
-   nothing" is about records).
+9. **An unsourced or world-mismatched candidate is downloaded, not `fetched`, and is
+   discarded.** Spec §10 says a refusal "leaves the candidate `fetched`". Every registry
+   write must follow its ledger line, and a pin's source is part of that evidence, so
+   `adopt` resolves the source **before** the `fetched` door and refuses
+   `pin-unsourced`/`world-mismatch` with the copy **deleted**, no pin and no line. A
+   retained copy keyed by corpus id could later be given a provider source from a
+   location that was never shown to hold those bytes (round-4 finding 1), so nothing
+   survives a refusal; the next `adopt` fetches again. A `fetched` pin is reused only
+   when the `location` argument equals its `fetch.location`. `provider-inspect` and
+   `provider-bind` write only scratch and the transport cache under `operations_root`
+   (Deviation 2: "records nothing" is about records).
 
 ## Review Focus
 
@@ -399,14 +404,18 @@ git commit -m "feat(config): sharing_root, accept and fetch keys; mounts union t
 - Produces:
 
 ```python
-GIT_PASSTHROUGH = ("PATH", "HOME", "USER", "LANG", "LC_ALL", "SSH_AUTH_SOCK", "XDG_CONFIG_HOME", "XDG_CACHE_HOME")
+GIT_PASSTHROUGH = ("PATH", "HOME", "USER", "LANG", "LC_ALL", "SSH_AUTH_SOCK", "XDG_CONFIG_HOME", "XDG_CACHE_HOME",
+                   # git's authentication and configuration variables, by name (an allowlist: a repository- or
+                   # object-location override such as GIT_DIR, GIT_WORK_TREE, GIT_INDEX_FILE, GIT_OBJECT_DIRECTORY,
+                   # GIT_ALTERNATE_OBJECT_DIRECTORIES, GIT_COMMON_DIR or GIT_NAMESPACE would aim the transport's
+                   # commands or its object writes at another repository, and is never passed)
+                   "GIT_SSH", "GIT_SSH_COMMAND", "GIT_ASKPASS", "GIT_PROXY_COMMAND", "GIT_CONFIG_GLOBAL",
+                   "GIT_CONFIG_SYSTEM", "GIT_CONFIG_NOSYSTEM", "GIT_CONFIG_COUNT", "GIT_SSL_CAINFO", "GIT_SSL_CAPATH")
 def production_git_env(author: str) -> dict[str, str]: ...
-    # the GIT_PASSTHROUGH keys present in os.environ, every os.environ key starting with "GIT_" except the
-    # repository-pointing GIT_DIR, GIT_WORK_TREE and GIT_INDEX_FILE (a hook exports them and they would aim
-    # the transport's commands at the hook's repository), plus
-    # GIT_TERMINAL_PROMPT="0" and GIT_AUTHOR_NAME/EMAIL, GIT_COMMITTER_NAME/EMAIL derived from `author`
-    # (name = author, email = "<author>@science.invalid"): git's own credential helpers and config stay
-    # reachable (spec §8), and a missing credential fails instead of prompting.
+    # the GIT_PASSTHROUGH keys present in os.environ, plus GIT_CONFIG_KEY_<n>/GIT_CONFIG_VALUE_<n> for n below
+    # GIT_CONFIG_COUNT, plus GIT_TERMINAL_PROMPT="0" and GIT_AUTHOR_NAME/EMAIL, GIT_COMMITTER_NAME/EMAIL derived
+    # from `author` (name = author, email = "<author>@science.invalid"): git's own credential helpers and config
+    # stay reachable (spec §8), a missing credential fails instead of prompting, and no other variable crosses.
 def identity_remote(destination: Destination) -> str: ...        # the locator itself
 class GitTransportFault(Exception): ...                           # transient: the act or handler sees it
 class GitTransport:
@@ -452,11 +461,17 @@ def test_fetch_corpus_materializes_the_root_and_sibling(...)
 def test_fetch_corpus_of_an_absent_corpus_names_the_location(...)
 def test_production_env_keeps_gits_own_configuration_and_never_prompts(monkeypatch):
     monkeypatch.setenv("GIT_SSH_COMMAND", "ssh -i key"); monkeypatch.setenv("SECRET_TOKEN", "x"); monkeypatch.setenv("SSH_AUTH_SOCK", "/s")
-    monkeypatch.setenv("GIT_DIR", "/hook/.git"); monkeypatch.setenv("GIT_INDEX_FILE", "/hook/index")
+    for key in ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_OBJECT_DIRECTORY", "GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_COMMON_DIR"):
+        monkeypatch.setenv(key, "/elsewhere")
     env = production_git_env("science abc")
     assert env["GIT_SSH_COMMAND"] == "ssh -i key" and env["SSH_AUTH_SOCK"] == "/s" and env["GIT_TERMINAL_PROMPT"] == "0"
     assert "SECRET_TOKEN" not in env and "GIT_CONFIG_GLOBAL" not in env and env["GIT_AUTHOR_NAME"] == "science abc"
-    assert "GIT_DIR" not in env and "GIT_INDEX_FILE" not in env
+    assert not any(key in env for key in ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_OBJECT_DIRECTORY", "GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_COMMON_DIR"))
+def test_an_injected_object_directory_never_reaches_the_transports_git(tmp_path, remote, monkeypatch):
+    other = tmp_path / "other.git"; subprocess.run(["git", "init", "--bare", str(other)], check=True, env=GIT_ENV)
+    monkeypatch.setenv("GIT_OBJECT_DIRECTORY", str(other / "objects"))
+    GitTransport(tmp_path / "c", author="t").push(dest, files)          # env=None: production_git_env
+    assert not any((other / "objects").rglob("*")) or sorted(p.name for p in (other / "objects").iterdir()) == ["info", "pack"]
 def test_test_env_isolates_git_from_the_host(tmp_path, remote):
     captured = {}; monkeypatch.setattr(transport_git.subprocess, "run", capture(captured))
     GitTransport(tmp_path / "c", author="t", env=GIT_ENV).listing(dest, CID)
@@ -592,14 +607,22 @@ class Installations:
     # `helpers.snapshot.check_value` admits only ScienceConfig, Path, str, int, bool, None and containers
     # (snapshot.py:12,38-55): every builder below returns that dict, and each pytest fixture wraps it with `of`.
 
-def build_installation(work: Path, name: str) -> ScienceConfig
-    # world root work/<name>/world, write root work/<name>/corpus pinned to PROFILE_V3/PINS_V3 (coordination v3,
-    # domains biology), store work/<name>/store, operations work/<name>/ops, sharing_root work/<name>/sharing,
-    # accept=(), fetch=FetchPolicy("fetch", 0); the holdings reducer installed; a project <name> carrying QUERY_1A.
+def build_installation(work: Path, name: str, *, hold_vocabulary: bool) -> ScienceConfig
+    # world root work/<name>/world, write root work/<name>/corpus, store work/<name>/store, operations
+    # work/<name>/ops, sharing_root work/<name>/sharing, accept=(), fetch=FetchPolicy("fetch", 0); the holdings
+    # reducer installed; a project <name> carrying QUERY_1A.
+    # Profile: the shipped base and biology packs plus the fixture's corpus-local test contract
+    # (`fixture_contract_document(work)`: the estimand, level and typed-proposition vocabulary SPEC_FIELDS
+    # needs, which the shipped biology pack does not declare), compiled with coordination v3, as
+    # `build_fixture_world_with_contract` does with v2; both installations compile the same document, so their
+    # pins agree and B's citations of A's records decode (mount-citations decision 2). The contract's vocabulary
+    # list records (concept and level lists, held as datasets) are held in A only (`hold_vocabulary=True`); B
+    # names the document in `contracts` but holds no list records, so adopting A introduces no shared address.
 def build_fresh(work: Path, *, epoch: bool = True) -> dict
     # A with evidence: dataset (DATA_A), spec on proposition:p1 over it (SPEC_FIELDS), run (mint_fixture_run),
     # assessment; publish_session_epoch(a) when `epoch`. B empty. Remotes under work/remotes.
     # Snapshots "commons-1a-fresh" and (epoch=False) "commons-1a-fresh-no-epoch" (fixture `fresh_no_epoch`).
+    # The published view (QUERY_1A) also selects A's vocabulary datasets, so B reads the lists from the mount.
 def write_commons_config(cfg: ScienceConfig) -> Path
     # the launcher TOML with every key, including corpus_roots (all configured roots), write_root,
     # sharing_root, accept and [fetch]; unlike helpers.world.write_config_for.
@@ -613,9 +636,12 @@ def with_remotes(installations: Installations):          # context manager: sets
 - [ ] **Step 1: Write the failing tests**
 
 ```python
-def test_both_installations_pin_coordination_v3(fresh):
+def test_both_installations_pin_coordination_v3_and_the_same_contract(fresh):
     for cfg in (fresh.a, fresh.b):
         assert load_manifest(cfg.write_root).profile.domains["coordination"] == V3_PIN
+    assert load_manifest(fresh.a.write_root).profile == load_manifest(fresh.b.write_root).profile
+def test_only_a_holds_the_vocabulary_lists(fresh):
+    assert ReadContext.open(fresh.a).cited(concept_list_address()) and refused(lambda: ReadContext.open(fresh.b).cited(concept_list_address())).code == "invalid-input"
 def test_a_holds_the_reproducible_evidence_and_a_current_epoch(fresh):
     ids = a_identity(fresh.a); ctx = ReadContext.open(fresh.a)
     for ref in ids.values(): assert ctx.cited(ref) if ref.startswith(("proposition", "dataset", "analysis-spec", "run", "assessment")) else True
@@ -864,34 +890,41 @@ git commit -m "feat(sharing): provider-inspect reads a publication's world; prov
 - Produces: declaration `write_class = "sharing"`, inputs `location`, `corpus_id`.
   Handler, in this order; every registry write follows the line that is its evidence, and
   every line after `fetched` carries the pin's source:
-  1. validate inputs and `sharing_root`; `replay(registry, operations_root)`; a pin for
-     `corpus_id` in state `admitted` or `mounted` → `invalid-input` "already adopted".
-  2. **reconcile** (§10): every pin in state `fetched` or `admitted` whose corpus the
-     kernel registry lists admitted → `record_sharing(mounted, source)` then write the pin
-     `mounted` (every pin has a source: step 5).
-  3. **download**: `root = registry.root_for(corpus_id)`. When a `fetched` pin and that
-     directory exist, reuse both and skip steps 3–5 (the invocation's blocks are then
-     `admitted`, `mounted`). When the directory exists without a pin (a refused candidate
-     of an earlier attempt, Deviation 9), reuse the copy. Else `fetch_corpus` into it.
-     `evaluate_copy(root, CorpusSubject(corpus_id), observers)`; a verdict other than
-     `"validated"` → `invalid-input` naming it (the copy is deleted). `fields =
-     marker_fields(marker_of(root))`.
-  4. **source**: `binding_for_location(location)`; none → `pin-unsourced` (message names
+  1. validate inputs and `sharing_root`; `replay(registry, operations_root)`.
+  2. **reconcile** (§10), before any duplicate check: every pin in state `fetched` or
+     `admitted` whose corpus the kernel registry lists admitted →
+     `record_sharing(mounted, source)` then write the pin `mounted`; remember which
+     corpus ids this step mounted.
+  3. **target state**: the target's pin is now `mounted` and step 2 mounted it → the
+     invocation is the recovery: report that `mounted` block and return, admitting nothing.
+     `mounted` before this invocation → `invalid-input` "already adopted". `admitted` yet
+     not in the kernel registry cannot happen (the line follows the act); treat it as
+     `fetched`.
+  4. **download**: `root = registry.root_for(corpus_id)`. A `fetched` pin whose
+     `fetch.location == location` and whose directory exists → reuse both, skip to step 7
+     (blocks `admitted`, `mounted`); a `fetched` pin with another location →
+     `invalid-input` naming the pinned location. Otherwise delete any stale directory and
+     `fetch_corpus` into it (`GitTransportFault` → `invalid-input` naming the location,
+     nothing written). `evaluate_copy(root, CorpusSubject(corpus_id), observers)`; a
+     verdict other than `"validated"` → `invalid-input` naming it (the copy is deleted).
+     `fields = marker_fields(marker_of(root))`.
+  5. **source**: `binding_for_location(location)`; none → `pin-unsourced` (message names
      `fields.world` and the remedies `provider-bind` and `follow`; data `{"world": …}`);
-     `binding.world != fields.world` → `world-mismatch`. Both leave the copy on disk, no
-     pin, no line (Deviation 9). Else `source = PinSource("provider", location)`.
-  5. `line = writer.restore(root, CorpusSubject(corpus_id), observers, evidence=…"fetched",
-     source…)`; write pin `fetched` from the line.
-  6. **layout**: `require_publication_layout(records)`; `PublicationArrivalRefused` →
+     `binding.world != fields.world` → `world-mismatch`. Both delete the copy: no pin, no
+     line (Deviation 9). Else `source = PinSource("provider", location)`: the bytes under
+     `root` came from `location` in this invocation, so the source is earned.
+  6. `line = writer.restore(root, CorpusSubject(corpus_id), observers, evidence=…"fetched",
+     source, location…)`; write pin `fetched` from the line.
+  7. **layout**: `require_publication_layout(records)`; `PublicationArrivalRefused` →
      `Refused(Refusal("kernel-refused", str(e), {"kind": …, "reason": e.reason}))`; the
      pin stays `fetched`.
-  7. **conflict**: shared addresses with any live root (write root, configured roots,
+  8. **conflict**: shared addresses with any live root (write root, configured roots,
      mounted registry roots, pins admitted this invocation) → `adopt-conflict` with data
      `{"addresses": [...], "corpus": <live corpus id>, "reason": "overlap is milestone 1b
      (beliefs-81367e)"}`; the pin stays `fetched`.
-  8. `writer.admit_publication(root, observers, evidence "admitted", source)` → write pin
+  9. `writer.admit_publication(root, observers, evidence "admitted", source)` → write pin
      `admitted`; `writer.record_sharing(… "mounted", source …)` → write pin `mounted`.
-  9. report: the pin blocks of this invocation's lines.
+  10. report: the pin blocks of this invocation's lines.
   `helpers/commons.py`: `build_adopted(work)` (`build_bound` then B adopts; snapshot
   `"commons-1a-adopted"`); `build_reopened(work) -> dict` whose `b` is `reopen(adopted.b)`
   with `publish_session_epoch(b)` run (snapshot `"commons-1a-reopened"`);
@@ -903,13 +936,21 @@ git commit -m "feat(sharing): provider-inspect reads a publication's world; prov
 - [ ] **Step 1: Write the failing tests**
 
 ```python
-def test_adopt_unsourced_keeps_the_copy_writes_no_pin_and_names_the_remedies(published):
+def test_adopt_unsourced_discards_the_copy_writes_no_pin_and_names_the_remedies(published):
     refusal = refused(lambda: rig.invoke("adopt", {...}))
     assert refusal.code == "pin-unsourced" and refusal.data == {"world": WORLD_A} and "provider-bind" in refusal.message
-    assert registry.pin(CID_A) is None and registry.root_for(CID_A).is_dir() and not ctx_b.world.status(CID_A).known
+    assert registry.pin(CID_A) is None and not registry.root_for(CID_A).exists() and not ctx_b.world.status(CID_A).known
 def test_adopt_after_bind_admits_and_marks_mounted(bound): ...        # transitions fetched, admitted, mounted; every line carries the source; kernel live
-def test_adopt_reuses_a_downloaded_copy_without_fetching_again(published, monkeypatch):
-    ...refused unsourced adopt, then provider-bind, then monkeypatch GitTransport.fetch_corpus to fail; adopt succeeds...
+def test_a_retry_at_a_bound_location_that_does_not_hold_the_candidate_refuses_naming_it(published):
+    # round-4 finding 1: the candidate claims world A; LOC_B is bound to A (provider-bind with A's world id on
+    # a corpus A also published there) but LOC_B does not hold CID_A; after the unsourced refusal at LOC_A,
+    # adopt at LOC_B must fetch again and fail, never inherit the copy
+    refused(lambda: rig.invoke("adopt", {"location": LOC_A, "corpus_id": CID_A}))
+    refusal = refused(lambda: rig.invoke("adopt", {"location": LOC_B_BOUND_TO_A, "corpus_id": CID_A}))
+    assert refusal.code == "invalid-input" and LOC_B_BOUND_TO_A in refusal.message and registry.pin(CID_A) is None
+def test_a_fetched_pin_is_reused_only_at_its_own_location(bound_fetched_only):
+    assert refused(lambda: rig.invoke("adopt", {"location": LOC_OTHER, "corpus_id": CID_A})).code == "invalid-input"
+    assert [l.split()[2] for l in rig.invoke("adopt", {"location": LOC_A, "corpus_id": CID_A}).text.splitlines() if l.startswith("[pin]")] == ["admitted", "mounted"]
 def test_a_registry_rebuilt_from_the_ledger_alone_matches_the_live_one(adopted):
     rebuilt = SharingRegistry(tmp_path / "rebuilt"); replay(rebuilt, adopted.b.operations_root)
     assert rebuilt.pin(CID_A) == registry.pin(CID_A) and rebuilt.bindings() == registry.bindings()
@@ -923,7 +964,11 @@ def test_adopt_of_a_conflicting_candidate_refuses_before_admission(bound, confli
 def test_adopt_of_an_absent_corpus_writes_nothing(bound): ...          # Review Focus 2
 def test_a_crash_after_admission_before_the_pin_write_recovers_with_its_source(bound, monkeypatch):
     # write_pin raises on the "admitted" write only; the kernel shows admitted; the pin is "fetched" with a source
-    ...; replay + the next adopt's reconcile → pin "mounted", source preserved
+    monkeypatch.undo()
+    text = rig.invoke("adopt", {"location": LOC_A, "corpus_id": CID_A}).text        # round-4 finding 2: the same target recovers
+    assert [l.split()[2] for l in text.splitlines() if l.startswith("[pin]")] == ["mounted"]
+    assert registry.pin(CID_A).state == "mounted" and registry.pin(CID_A).source == PinSource("provider", LOC_A)
+    assert refused(lambda: rig.invoke("adopt", {"location": LOC_A, "corpus_id": CID_A})).code == "invalid-input"   # now already adopted
 def test_a_crash_between_the_mounted_line_and_the_pin_write_is_repaired_by_replay(bound, monkeypatch): ...
 ```
 
@@ -1067,9 +1112,10 @@ def explain(context: AcceptanceContext, inputs: AcceptanceInputs) -> tuple[tuple
      and `pins[origin].world in verifiers` and `origin in carriers` and `address in
      carriers[origin].selection` (the authenticated origin publication actually holds the
      record); else False, whatever the carrier's own standing.
-  4. `(corpus_id, carrier.marker, pins[corpus_id].artifact) in own_bindings` → **Own**,
-     True (our own publication adopted back; a marker merely claiming our world id never
-     reaches here because it has no binding).
+  4. `corpus_id in pins and (corpus_id, carrier.marker, pins[corpus_id].artifact) in
+     own_bindings` → **Own**, True (our own publication adopted back; a marker merely
+     claiming our world id never reaches here because it has no binding; a hand-listed
+     publication has no pin and falls through).
   5. **Carrier's own**: `corpus_id in pins and carrier.world in verifiers and
      pins[corpus_id].origin_confirmed(bindings)` (a hand-listed root carrying a marker has
      no pin and fails here: its carried records took branch 3).
@@ -1149,12 +1195,15 @@ git commit -m "feat(belief): compute the accept policy from pins, bindings and c
   `KeyVals("acceptance", ("world accepted", yes|no), ("counts as evidence", yes|no))` where
   the second is `counts(inputs, corpus_id, <an assessment address of the corpus>)` or
   `n/a` when the corpus holds none; `KeyVals("evidence", per assessment the corpus holds:
-  "<assessment>: verifications <n total> from worlds <…>, <k> count under the policy")`
-  computed from `inputs = ctx.gather_inputs(<its proposition>)`: `k` is the count of
-  `inputs.verifications` targeting the assessment (the kernel returns them after the
-  filter, `evaluation.py:556-558`), and `n` is `k` plus the `verification:` addresses in
-  `inputs.acceptance.excluded` targeting it, each attributed to its holding corpus's world
-  through `carriers`/own roots;
+  "<assessment>: counts <yes|no>; verifications <n> from worlds <…>, <k> count under the
+  policy")` computed from the **records**, not from `gather_inputs`: enumerate every
+  `verification` record across `ctx.session_mounts()` whose `verifies` relation targets the
+  assessment (`n`), attribute each to its holding corpus's world through `carriers`/own
+  roots, and count those for which `counts(inputs, holding corpus, verification address)`
+  is True (`k`). The kernel's `EvaluationInputs.verifications` is not the inventory: it
+  drops a verification whose target assessment left the selection
+  (`evaluation.py:567`, `_verification_selected`), so an accepted verification of an
+  excluded assessment would vanish from it;
   `Text("independence: not exposed by the kernel's inputs (Deviation 8)")`; a `Finding`
   when the kernel shows admitted and the registry does not show `mounted` ("registry lags
   the kernel: `adopt` reconciles it"). No pin → `invalid-input`.
@@ -1172,7 +1221,10 @@ def test_show_distinguishes_accepted_evidence_from_confirmed_origin(reopened):
     assert "confirmation: origin-confirmed" in unaccepted and "world accepted: no" in unaccepted and "0 count under the policy" in unaccepted
     accepted = read_rig(replace(reopened.b, accept=(WORLD_A,)), "show").invoke(...).text
     assert "world accepted: yes" in accepted and "counts as evidence: yes" in accepted
-def test_show_lists_bs_verification_of_as_assessment_once_minted(verified): ...   # "verifications 1 from worlds <WORLD_B>, 1 count under the policy"
+def test_show_lists_bs_verification_of_as_assessment_once_minted(verified):
+    # accept=(): A's assessment does not count, B's own verification of it does; both facts show
+    text = read_rig(verified.b, "show").invoke("show", {"corpus_id": CID_A}).text
+    assert f"{ids['assessment']}: counts no; verifications 1 from worlds {WORLD_B}, 1 count under the policy" in text
 def test_show_reports_a_registry_that_lags_the_kernel(adopted): ...
 def test_show_of_an_unknown_pin_refuses(adopted): ...
 ```
@@ -1324,6 +1376,15 @@ M6–M7 → `transport_with`, `binding_ref`, `fresh_no_epoch`, `build_conflictin
 `build_verified`, derive test starts from `verified`; M8 → `sys.maxsize`,
 `refuse_scratch_root` dropped; M9 → total = kept + excluded; M10 → absent root reads
 empty; M11 → reuse skips the door; M12 → Deviation 9's last sentence.
+Round 4 (codex): 1 → a refused candidate is discarded and a `fetched` pin is reused only
+at its own location (Deviation 9 rewritten, Task 8 steps 4–5, two new tests); 2 →
+reconcile precedes the duplicate check and a recovered target returns its `mounted`
+block (Task 8 steps 2–3, recovery test extended); 3 → both installations compile the
+fixture's test contract under v3, A alone holds the vocabulary lists (Task 5); 4 →
+branch 4 guards on pin membership (Task 10); 5 → `show`'s inventory enumerates
+verification records and applies `counts` per record (Task 11); 6 → `GIT_*` passthrough
+is an allowlist of authentication and configuration variables, with an injected object
+directory test (Task 3).
 
 **Type consistency.** `Pin`, `PinSource`, `ProviderBinding`, `SharingRegistry`, `replay`
 (Task 1) used by Tasks 2, 7, 8, 10, 11; `PinBlock`/`pin_block` (Task 4) by Tasks 7, 8;
