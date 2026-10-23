@@ -112,3 +112,33 @@ def bound(certified_worker_work):
     snap = snapshot(certified_worker_work, "commons-1a-bound", build_bound)
     snap.restore()
     return Installations.of(snap.value)
+
+
+@pytest.fixture
+def adopted(certified_worker_work):
+    from helpers.commons import Installations, build_adopted
+    from helpers.snapshot import snapshot
+    snap = snapshot(certified_worker_work, "commons-1a-adopted", build_adopted)
+    snap.restore()
+    return Installations.of(snap.value)
+
+
+@pytest.fixture
+def reopened(certified_worker_work):
+    from helpers.commons import Installations, build_reopened
+    from helpers.snapshot import snapshot
+    snap = snapshot(certified_worker_work, "commons-1a-reopened", build_reopened)
+    snap.restore()
+    return Installations.of(snap.value)
+
+
+@pytest.fixture
+def conflicting_publication(certified_worker_work):
+    """`(installations, corpus_id)`: the bound installations once A has published a second time to `LOC_A2` and
+    B has bound it, and that second publication's corpus id. Its own snapshot, so it carries its installations
+    rather than sharing `bound`'s."""
+    from helpers.commons import Installations, build_conflicting
+    from helpers.snapshot import snapshot
+    snap = snapshot(certified_worker_work, "commons-1a-conflicting", build_conflicting)
+    snap.restore()
+    return Installations.of(snap.value["installations"]), snap.value["corpus_id"]

@@ -258,9 +258,10 @@ def read_rig(cfg: ScienceConfig, *names: str) -> Dispatcher:
     return Dispatcher(decls, resolve_handlers(decls), ReadContext.open(cfg))
 
 
-def a_identity(a: ScienceConfig) -> dict[str, str]:
+def a_identity(a: ScienceConfig, *, binding_destination: str | None = None) -> dict[str, str]:
     """A's evidence refs (proposition, dataset, spec, run, assessment) and its world id; once A has published,
-    also the publication's `corpus_id`, `marker` and `artifact`, read from the binding in A's write root."""
+    also the publication's `corpus_id`, `marker` and `artifact`, read from the binding in A's write root (the one
+    to `binding_destination` when A has published to more than one)."""
     view = ReadContext.open(a).write_view()
 
     def only(kind: str) -> str:
@@ -271,6 +272,8 @@ def a_identity(a: ScienceConfig) -> dict[str, str]:
     ids = {"proposition": only("proposition"), "dataset": dataset, "spec": only("analysis-spec"),
            "run": only("run"), "assessment": only("assessment"), "world": a.world.world_id}
     bindings = [node for node in view.iter_stored() if node.kind == "publication-binding"]
+    if binding_destination is not None:
+        bindings = [node for node in bindings if binding_fields(node).destination.locator == binding_destination]
     assert len(bindings) <= 1, f"A holds {len(bindings)} publication bindings; a_identity reads one"
     if bindings:
         binding = binding_fields(bindings[0])
@@ -329,3 +332,49 @@ def binding_ref(text: str) -> str:
     """The record id of the `[publication-binding]` block in a command's report."""
     (line,) = [line for line in text.splitlines() if line.startswith("[publication-binding] ")]
     return line.split()[1]
+
+
+def publish_again(installations: Installations, location: str) -> str:
+    """A publishes its project `a` a second time, to `location`: a new corpus id holding the same addresses.
+    The first publication's binding drifted A's write root, so A publishes an epoch first. Returns that corpus
+    id."""
+    from science.world_belief import publish_session_epoch
+    publish_session_epoch(installations.a)
+    with with_remotes(installations), open_rig(installations.a, ("publish",)) as (d, ctx):
+        text = d.invoke("publish", {"target": "a", "to": location}).text
+        return binding_fields(ctx.write_view().get(binding_ref(text))).corpus_id
+
+
+def build_adopted(work: Path) -> dict:
+    """`build_bound`, then B adopts A's publication from LOC_A: B's pin is `mounted`; B's configuration is the
+    one it opened with, so the adopted root mounts at B's next open (`reopen`)."""
+    value = build_bound(work)
+    installations = Installations.of(value)
+    with with_remotes(installations), open_rig(installations.b, ("adopt",)) as (d, _):
+        d.invoke("adopt", {"location": LOC_A, "corpus_id": a_identity(installations.a)["corpus_id"]})
+    return value
+
+
+def build_reopened(work: Path) -> dict:
+    """`build_adopted`, then B reopened (its adopted root mounted) with an epoch published over it."""
+    from science.world_belief import publish_session_epoch
+    value = build_adopted(work)
+    b = reopen(value["b"])
+    publish_session_epoch(b)
+    return {**value, "b": b}
+
+
+LOC_A2 = "https://remote.test/a2"
+
+
+def build_conflicting(work: Path) -> dict:
+    """`build_bound`, then A publishes its project `a` a second time, to LOC_A2 (a new corpus id holding the same
+    addresses), and B binds LOC_A2 to A's world. `installations` is the `Installations` value; `corpus_id` the
+    second publication's."""
+    value = build_bound(work)
+    installations = Installations.of(value)
+    corpus_id = publish_again(installations, LOC_A2)
+    with with_remotes(installations), open_rig(installations.b, ("provider-bind",)) as (d, _):
+        d.invoke("provider-bind",
+                 {"location": LOC_A2, "corpus_id": corpus_id, "world": installations.a.world.world_id})
+    return {"installations": value, "corpus_id": corpus_id}

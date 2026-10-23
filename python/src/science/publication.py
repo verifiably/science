@@ -141,7 +141,7 @@ def require_id(text: str, name: str) -> None:
 
 @dataclass(frozen=True)
 class Inspection:
-    """A publication fetched from a provider's location into scratch and evaluated there, granting nothing."""
+    """A publication fetched from a provider's location and evaluated where it landed, granting nothing."""
     root: Path
     sibling: bytes
     verdict: str
@@ -149,24 +149,28 @@ class Inspection:
     artifact: str
 
 
-def inspect(config, destination: Destination, corpus_id: str, scratch: Path) -> Inspection:
-    """Fetch corpus `corpus_id` from `destination` into `scratch` (which must not exist yet), evaluate the copy
-    against its own head artifact with `evaluate_copy`, and read its marker. Every way the location fails to hold
-    a validated publication of that corpus refuses `invalid-input` naming the location. The caller deletes
-    `scratch`."""
-    locator = destination.locator
+def provider_transport(config, destination: Destination) -> Transport:
+    """The transport a provider's location is fetched through. 1a's one provider transport is git, so a local
+    directory refuses `invalid-input` naming the location."""
     transport = transport_for(config, destination)
     if transport is None:
-        # 1a's one provider transport is git: a local directory is no provider location.
         raise Refused(Refusal("invalid-input",
-                              f"location {locator!r}: a provider location is an https:// git remote"))
+                              f"location {destination.locator!r}: a provider location is an https:// git remote"))
+    return transport
+
+
+def download(transport: Transport, destination: Destination, corpus_id: str, into: Path) -> Inspection:
+    """Fetch corpus `corpus_id` from `destination` into `into` (its root is `into/<corpus_id>`), evaluate the copy
+    against its own head artifact with `evaluate_copy`, granting nothing, and read its marker. Every way the
+    location fails to hold a validated publication of that corpus refuses `invalid-input` naming the location.
+    The caller deletes the copy."""
+    locator = destination.locator
 
     def refuse(why: str, **data: str) -> Refused:
         return Refused(Refusal("invalid-input", f"location {locator}: {why}", {"location": locator, **data}))
 
-    scratch.mkdir(parents=True)
     try:
-        root, sibling = transport.fetch_corpus(destination, corpus_id, scratch)
+        root, sibling = transport.fetch_corpus(destination, corpus_id, into)
     except GitTransportFault as fault:
         raise refuse(str(fault)) from None
     try:
@@ -181,3 +185,10 @@ def inspect(config, destination: Destination, corpus_id: str, scratch: Path) -> 
     except PublicationArrivalRefused as caught:
         raise refuse(f"corpus {corpus_id} is not a publication: {caught}") from None
     return Inspection(root, sibling, verdict, marker_fields(marker), artifact_identity(sibling))
+
+
+def inspect(config, destination: Destination, corpus_id: str, scratch: Path) -> Inspection:
+    """`download` into `scratch`, which must not exist yet. The caller deletes `scratch`."""
+    transport = provider_transport(config, destination)
+    scratch.mkdir(parents=True)
+    return download(transport, destination, corpus_id, scratch)

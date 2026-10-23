@@ -1,0 +1,14 @@
+schema_version = 1
+name = "adopt"
+purpose = "Fetch, verify and admit a publication from a bound provider's location, and mount it at the next open."
+write_class = "sharing"
+output_budget = 2048
+
+[inputs.location]
+type = "string"
+required = true
+doc = "The provider's location: the https:// git remote the publication was published to, bound with provider-bind."
+[inputs.corpus_id]
+type = "string"
+required = true
+doc = "The publication's corpus id at that location, 32 lowercase hex digits."

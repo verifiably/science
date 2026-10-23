@@ -231,6 +231,11 @@ class SharingRegistry:
     def root_for(self, corpus_id: str) -> Path:
         return self._root / "roots" / corpus_id
 
+    def head_artifact_for(self, corpus_id: str) -> Path:
+        """The head artifact an adopted root was fetched with, beside it as a container lays the two out: the
+        observer a reused `fetched` copy is admitted against."""
+        return self._root / "roots" / f"{corpus_id}.head-artifact.v1"
+
     def scratch(self, token: str) -> Path:
         return self._root / "scratch" / token
 

@@ -1594,6 +1594,17 @@ options = [
 ]
 
 [[cli.science.commands]]
+path = ["adopt"]
+summary = "Fetch, verify and admit a publication from a bound provider's location, and mount it at the next open"
+options = [
+  { shared = "config", value = "path" },
+  { names = ["--invocation-id"], value = "string" },
+  { names = ["--continue"], value = "string" },
+  { names = ["--location"], value = "string", required = true },
+  { names = ["--corpus-id"], value = "string", required = true },
+]
+
+[[cli.science.commands]]
 path = ["build"]
 summary = "Build the world from its corpora"
 
