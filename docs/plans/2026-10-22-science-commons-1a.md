@@ -37,8 +37,12 @@ registry, which is rebuildable from the ledger's sharing lines.
 0 Critical, 6 Important, 12 Minor). Revision 3 (`739d2f1`) reviewed by codex/gpt-6-astra
 (revise: 2 P1, 4 P2; Deviations 1–8 accepted, 9 rejected as specified). Revision 4
 (`11ed432`) reviewed by codex/gpt-6-astra (revise: 0 P1, 2 P2; Deviation 9 accepted as
-rewritten). This is revision 5; the "Deviations" section records every departure from the
-spec's letter with its reason.
+rewritten). Revision 5 (`00b391d`) **accepted** by codex/gpt-6-astra (round 6, no
+findings) and **approved by Keith 2026-10-22**; the "Deviations" section records every
+departure from the spec's letter with its reason, each ruled on in rounds 4 and 5.
+
+**Status:** approved 2026-10-22; execution pending (Setup runs the full-suite baseline,
+then Task 1; Tasks 4–8 wait on `beliefs-f24fe9`).
 
 ## Global Constraints
 
