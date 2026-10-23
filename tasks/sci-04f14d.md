@@ -1,17 +1,15 @@
 ---
 id: sci-04f14d
 title: "Task 8: `adopt`"
-status: done
+status: todo
 priority: 1
 size: m
 complexity: high
 process: direct
 owner: commons-1a
 created: 2026-10-22T22:56:03Z
-updated: 2026-10-23T16:03:37Z
+updated: 2026-10-23T17:39:39Z
 started: 2026-10-23T15:30:43Z
-completed: 2026-10-23T16:03:37Z
-closed: 2026-10-23T16:03:37Z
 depends: [beliefs-f24fe9, sci-9650a1]
 parent: sci-13050a
 tags: [commons]
