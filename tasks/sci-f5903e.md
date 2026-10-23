@@ -8,7 +8,7 @@ complexity: low
 process: direct
 owner: main
 created: 2026-10-23T18:37:32Z
-updated: 2026-10-23T18:37:34Z
+updated: 2026-10-23T18:44:08Z
 started: 2026-10-23T18:37:34Z
 depends: []
 tags: [commons]
@@ -23,3 +23,4 @@ fetch.py and dataset.py build the 'standing' observations a new holdings write s
 - 2026-10-23T18:37:33Z (main): concerns: sci-13050a defect — fetch (and dataset, whose pattern it copied) selects superseded holdings observations by relative path alone: URL observations crash it, other stores' observations are wrongly superseded
 - 2026-10-23T18:37:34Z (main): started
   provenance: {"harness_session":"claude-code:f3d948a6-1f74-4fd1-8fd0-6c6e2e0d81e1","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-23T18:44:08Z (main): baseline: just test in .worktrees/holdings-standing at 8d4d720, 855 passed; RED 3 failed (2 AttributeError on UrlLocator, 1 MalformedRecord), GREEN test_cmd_fetch+test_cmd_dataset 19 passed, just test-fast 858 passed
