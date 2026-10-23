@@ -1,17 +1,15 @@
 ---
 id: sci-0fe333
 title: "Task 3: The git transport"
-status: done
+status: todo
 priority: 1
 size: m
 complexity: mid
 process: direct
 owner: commons-1a
 created: 2026-10-22T22:56:00Z
-updated: 2026-10-23T01:04:51Z
+updated: 2026-10-23T17:39:37Z
 started: 2026-10-23T00:56:52Z
-completed: 2026-10-23T01:04:51Z
-closed: 2026-10-23T01:04:51Z
 depends: []
 parent: sci-13050a
 tags: [commons]
