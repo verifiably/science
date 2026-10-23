@@ -8,7 +8,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
-from typing import NoReturn
+from typing import Literal, NoReturn
 
 from beliefs.contract.domain import DomainContract
 from beliefs.corpus import ReadView
@@ -26,13 +26,24 @@ from beliefs.world.registry import load_manifest
 
 from science.refusal import Refusal, Refused
 from science.contracts import OperatorPlan, load_contract_document
+from science.sharing import SharingRegistry, SharingRegistryMalformed
 
 _WORLD_ID_RE = re.compile(r"[0-9a-f]{32}")
 _KEYS = (
     "world_root", "world_id", "corpus_roots", "operations_root", "domains", "contracts",
     "store_root", "coordination",
 )
-_OPTIONAL_KEYS = ("service_socket", "default_project", "write_root", "read_contracts")
+_OPTIONAL_KEYS = (
+    "service_socket", "default_project", "write_root", "read_contracts",
+    "sharing_root", "accept", "fetch",
+)
+_FETCH_POLICIES = ("records-only", "fetch")
+
+
+@dataclass(frozen=True)
+class FetchPolicy:
+    policy: Literal["records-only", "fetch"]
+    max_bytes: int
 
 
 @dataclass(frozen=True)
@@ -54,6 +65,11 @@ class ScienceConfig:
     # which the writer activates, then the `read_contracts` documents, which it
     # never does.
     available_contracts: tuple[DomainContract, ...] = ()
+    # The sharing registry's root, whose mounted pins join the corpus roots, and
+    # what this installation accepts and may fetch from published corpora.
+    sharing_root: Path | None = None
+    accept: tuple[str, ...] = ()
+    fetch: FetchPolicy = FetchPolicy("records-only", 0)
 
 
 def _refuse(message: str) -> NoReturn:
@@ -73,6 +89,21 @@ def _project_address(value: object):
         _refuse("config default_project must be a project address, coord:<project>; "
                 "a name is content and may change")
     return address
+
+
+def _fetch_policy(value: object) -> FetchPolicy:
+    if type(value) is not dict:
+        _refuse("config fetch must be a table")
+    extra = sorted(set(value) - {"policy", "max_bytes"})
+    if extra or "policy" not in value:
+        _refuse(f"config fetch takes exactly policy and optionally max_bytes; "
+                f"missing policy: {'policy' not in value}, unknown {extra}")
+    if value["policy"] not in _FETCH_POLICIES:
+        _refuse(f"config fetch policy must be one of {list(_FETCH_POLICIES)}")
+    max_bytes = value.get("max_bytes", 0)
+    if type(max_bytes) is not int or max_bytes < 0:
+        _refuse("config fetch max_bytes must be an integer, 0 or more")
+    return FetchPolicy(value["policy"], max_bytes)
 
 
 def load_config(path: Path) -> ScienceConfig:
@@ -108,6 +139,14 @@ def load_config(path: Path) -> ScienceConfig:
     read_contracts = raw.get("read_contracts", [])
     if type(read_contracts) is not list or any(type(value) is not str for value in read_contracts):
         _refuse("config read_contracts must be a list of strings")
+    if "sharing_root" in raw and type(raw["sharing_root"]) is not str:
+        _refuse("config sharing_root must be a string")
+    accept = raw.get("accept", [])
+    if type(accept) is not list or any(
+        type(value) is not str or not _WORLD_ID_RE.fullmatch(value) for value in accept
+    ):
+        _refuse("config accept must be a list of world ids, 32 lowercase hex characters each")
+    fetch = _fetch_policy(raw["fetch"]) if "fetch" in raw else FetchPolicy("records-only", 0)
     if type(raw["store_root"]) is not str:
         _refuse("config store_root must be a string")
     coordination = raw["coordination"]
@@ -162,6 +201,19 @@ def load_config(path: Path) -> ScienceConfig:
     else:
         _refuse(f"config names {len(corpus_roots)} corpus_roots and no write_root; "
                 "name the one the session writes")
+    sharing_root = located(raw["sharing_root"]) if "sharing_root" in raw else None
+    if sharing_root is not None:
+        # The write root is decided over the configured roots above; mounts only add reads.
+        try:
+            mounted = SharingRegistry(sharing_root).mounted_roots()
+        except SharingRegistryMalformed as caught:
+            _refuse(f"sharing registry entry {caught.entry} is malformed: {caught.reason}")
+        for root in mounted:
+            if not (root / "corpus.yaml").is_file():
+                _refuse(f"mounted pin for corpus {root.name} has no corpus at {root}")
+        corpus_roots = tuple(sorted({*corpus_roots, *(root.resolve() for root in mounted)}))
+        if write_root not in corpus_roots:
+            _refuse(f"config write_root {write_root} is not one of the corpus roots")
     operations_root = located(raw["operations_root"])
     # The socket defaults beside the operations root. AF_UNIX caps the path at
     # 107 bytes and a worktree checkout's operations root already exceeds it,
@@ -187,6 +239,9 @@ def load_config(path: Path) -> ScienceConfig:
         plans=plans,
         default_project=default_project,
         available_contracts=tuple(contract for contract, _ in local + readable),
+        sharing_root=sharing_root,
+        accept=tuple(accept),
+        fetch=fetch,
     )
 
 
