@@ -35,9 +35,10 @@ registry, which is rebuildable from the ledger's sharing lines.
 (revise: 7 P1, 4 P2) and claude-code/claude-fable-5-1 (revise: 2 Critical, 8 Important,
 13 Minor). Revision 2 (`fb4e3fa`) reviewed by claude-code/claude-fable-5-1 (revise:
 0 Critical, 6 Important, 12 Minor). Revision 3 (`739d2f1`) reviewed by codex/gpt-6-astra
-(revise: 2 P1, 4 P2; Deviations 1–8 accepted, 9 rejected as specified). This is revision
-4; the "Deviations" section records every departure from the spec's letter with its
-reason.
+(revise: 2 P1, 4 P2; Deviations 1–8 accepted, 9 rejected as specified). Revision 4
+(`11ed432`) reviewed by codex/gpt-6-astra (revise: 0 P1, 2 P2; Deviation 9 accepted as
+rewritten). This is revision 5; the "Deviations" section records every departure from the
+spec's letter with its reason.
 
 ## Global Constraints
 
@@ -468,10 +469,16 @@ def test_production_env_keeps_gits_own_configuration_and_never_prompts(monkeypat
     assert "SECRET_TOKEN" not in env and "GIT_CONFIG_GLOBAL" not in env and env["GIT_AUTHOR_NAME"] == "science abc"
     assert not any(key in env for key in ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_OBJECT_DIRECTORY", "GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_COMMON_DIR"))
 def test_an_injected_object_directory_never_reaches_the_transports_git(tmp_path, remote, monkeypatch):
+    # env=None exercises production_git_env's filtering, but over a test-owned environment: os.environ is
+    # replaced wholesale with GIT_ENV plus the injected variable, so the host's HOME, config, hooks and
+    # credential helpers are never consulted (the subprocess-environment rule)
     other = tmp_path / "other.git"; subprocess.run(["git", "init", "--bare", str(other)], check=True, env=GIT_ENV)
-    monkeypatch.setenv("GIT_OBJECT_DIRECTORY", str(other / "objects"))
-    GitTransport(tmp_path / "c", author="t").push(dest, files)          # env=None: production_git_env
-    assert not any((other / "objects").rglob("*")) or sorted(p.name for p in (other / "objects").iterdir()) == ["info", "pack"]
+    monkeypatch.setattr(transport_git.os, "environ", {**GIT_ENV, "GIT_OBJECT_DIRECTORY": str(other / "objects")})
+    env = production_git_env("t")
+    assert env["HOME"] == GIT_ENV["HOME"] and env["GIT_CONFIG_GLOBAL"] == "/dev/null" and "GIT_OBJECT_DIRECTORY" not in env
+    GitTransport(tmp_path / "c", author="t", remote_for=lambda d: str(bare)).push(dest, files)   # env=None
+    assert commit_count(bare) == 1
+    assert sorted(p.name for p in (other / "objects").iterdir()) == ["info", "pack"] and not any((other / "objects" / "pack").iterdir())
 def test_test_env_isolates_git_from_the_host(tmp_path, remote):
     captured = {}; monkeypatch.setattr(transport_git.subprocess, "run", capture(captured))
     GitTransport(tmp_path / "c", author="t", env=GIT_ENV).listing(dest, CID)
@@ -602,6 +609,7 @@ LOC_A, LOC_B = "https://remote.test/a", "https://remote.test/b"
 class Installations:
     a: ScienceConfig; b: ScienceConfig; remotes: Path
     def data_a_path(self) -> Path: ...                          # <remotes parent>/data/a.txt holding DATA_A
+    def data_dir(self) -> Path: ...                             # <remotes parent>/data: a.txt, concepts.txt, levels.txt
     @classmethod
     def of(cls, value: dict) -> "Installations": ...            # from a snapshot value {"a": cfg, "b": cfg, "remotes": path}
     # `helpers.snapshot.check_value` admits only ScienceConfig, Path, str, int, bool, None and containers
@@ -622,7 +630,11 @@ def build_fresh(work: Path, *, epoch: bool = True) -> dict
     # A with evidence: dataset (DATA_A), spec on proposition:p1 over it (SPEC_FIELDS), run (mint_fixture_run),
     # assessment; publish_session_epoch(a) when `epoch`. B empty. Remotes under work/remotes.
     # Snapshots "commons-1a-fresh" and (epoch=False) "commons-1a-fresh-no-epoch" (fixture `fresh_no_epoch`).
-    # The published view (QUERY_1A) also selects A's vocabulary datasets, so B reads the lists from the mount.
+    # The published view (QUERY_1A) also selects A's vocabulary datasets, so B reads their declarations from the
+    # mount; their bytes are another matter: `science.vocabulary.snapshot` resolves a list from the bytes held in
+    # the reader's own store, so B must `fetch` each vocabulary dataset before it can author a spec (Task 11's
+    # `build_verified` does; Task 12's derive test relies on it). `data_dir()` holds `a.txt` (DATA_A),
+    # `concepts.txt` (CONCEPTS) and `levels.txt` (LEVELS) for those fetches.
 def write_commons_config(cfg: ScienceConfig) -> Path
     # the launcher TOML with every key, including corpus_roots (all configured roots), write_root,
     # sharing_root, accept and [fetch]; unlike helpers.world.write_config_for.
@@ -1208,9 +1220,14 @@ git commit -m "feat(belief): compute the accept policy from pins, bindings and c
   when the kernel shows admitted and the registry does not show `mounted` ("registry lags
   the kernel: `adopt` reconciles it"). No pin → `invalid-input`.
   `helpers/commons.py`: `build_verified(work) -> dict` (`build_reopened`, then B runs
-  `fetch` from `data_a_path()` and `verify` on A's assessment with `science.commands.run.POLICY`
-  set to `MINIMAL_POLICY` for the build when `host_prerequisites()` is not None, as
-  `test_mount_citations._confine` does; snapshot `"commons-1a-verified"`, fixture `verified`).
+  `fetch` three times: A's dataset from `data_dir()/a.txt`, and the two vocabulary datasets
+  (`concept_list_address()`, `level_list_address()`) from `concepts.txt` and `levels.txt`,
+  each cited from the mount and never redeclared; then `verify` on A's assessment with
+  `science.commands.run.POLICY` set to `MINIMAL_POLICY` for the build when
+  `host_prerequisites()` is not None, as `test_mount_citations._confine` does; snapshot
+  `"commons-1a-verified"`, fixture `verified`). After it, B resolves the vocabulary:
+  `ReadContext.open(verified.b).snapshot()` carries both lists, which is what Task 12's
+  `spec` over `WORKING_FIELDS` needs (round-5 finding 1).
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -1221,6 +1238,12 @@ def test_show_distinguishes_accepted_evidence_from_confirmed_origin(reopened):
     assert "confirmation: origin-confirmed" in unaccepted and "world accepted: no" in unaccepted and "0 count under the policy" in unaccepted
     accepted = read_rig(replace(reopened.b, accept=(WORLD_A,)), "show").invoke(...).text
     assert "world accepted: yes" in accepted and "counts as evidence: yes" in accepted
+def test_b_resolves_the_vocabulary_from_fetched_bytes_without_redeclaring(verified):
+    ctx = ReadContext.open(verified.b)
+    assert ctx.cited(concept_list_address()).corpus_id == CID_A and ctx.cited(level_list_address()).corpus_id == CID_A
+    assert ctx.held_path(level_list_address()).read_bytes() == LEVELS
+    spec_b = _minted_ref(open_rig_invoke(verified.b, "spec", dict(WORKING_FIELDS, target=ids["proposition"], dataset=ids["dataset"])), "analysis-spec")
+    assert ReadContext.open(verified.b).own(spec_b)
 def test_show_lists_bs_verification_of_as_assessment_once_minted(verified):
     # accept=(): A's assessment does not count, B's own verification of it does; both facts show
     text = read_rig(verified.b, "show").invoke("show", {"corpus_id": CID_A}).text
@@ -1385,6 +1408,12 @@ branch 4 guards on pin membership (Task 10); 5 → `show`'s inventory enumerates
 verification records and applies `counts` per record (Task 11); 6 → `GIT_*` passthrough
 is an allowlist of authentication and configuration variables, with an injected object
 directory test (Task 3).
+Round 5 (codex): 1 → `build_verified` fetches the two vocabulary datasets' bytes beside
+A's data, the fixture serves them from `data_dir()`, and a test shows B resolving the
+vocabulary and minting the changed spec without redeclaring (Tasks 5, 11); 2 → the
+injected-object-directory test replaces `os.environ` with a test-owned environment and
+keeps `env=None`, so production filtering is exercised without the host's configuration
+(Task 3).
 
 **Type consistency.** `Pin`, `PinSource`, `ProviderBinding`, `SharingRegistry`, `replay`
 (Task 1) used by Tasks 2, 7, 8, 10, 11; `PinBlock`/`pin_block` (Task 4) by Tasks 7, 8;
