@@ -1,13 +1,15 @@
 ---
 id: sci-f5903e
 title: "Holdings writes select superseded observations by the full store locator, not the relative path alone"
-status: todo
+status: doing
 priority: 2
 size: xs
 complexity: low
 process: direct
+owner: main
 created: 2026-10-23T18:37:32Z
-updated: 2026-10-23T18:37:33Z
+updated: 2026-10-23T18:37:34Z
+started: 2026-10-23T18:37:34Z
 depends: []
 tags: [commons]
 source: sci-13050a
@@ -19,3 +21,5 @@ fetch.py and dataset.py build the 'standing' observations a new holdings write s
 ## Notes
 
 - 2026-10-23T18:37:33Z (main): concerns: sci-13050a defect — fetch (and dataset, whose pattern it copied) selects superseded holdings observations by relative path alone: URL observations crash it, other stores' observations are wrongly superseded
+- 2026-10-23T18:37:34Z (main): started
+  provenance: {"harness_session":"claude-code:f3d948a6-1f74-4fd1-8fd0-6c6e2e0d81e1","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
