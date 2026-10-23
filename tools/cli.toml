@@ -1571,6 +1571,29 @@ options = [
 ]
 
 [[cli.science.commands]]
+path = ["provider-inspect"]
+summary = "Show the world a publication at a provider's location claims, verifying it and recording nothing"
+options = [
+  { shared = "config", value = "path" },
+  { names = ["--invocation-id"], value = "string" },
+  { names = ["--continue"], value = "string" },
+  { names = ["--location"], value = "string", required = true },
+  { names = ["--corpus-id"], value = "string", required = true },
+]
+
+[[cli.science.commands]]
+path = ["provider-bind"]
+summary = "Bind a provider's location to the world its publication claims, when the given world id matches"
+options = [
+  { shared = "config", value = "path" },
+  { names = ["--invocation-id"], value = "string" },
+  { names = ["--continue"], value = "string" },
+  { names = ["--location"], value = "string", required = true },
+  { names = ["--corpus-id"], value = "string", required = true },
+  { names = ["--world"], value = "string", required = true },
+]
+
+[[cli.science.commands]]
 path = ["build"]
 summary = "Build the world from its corpora"
 

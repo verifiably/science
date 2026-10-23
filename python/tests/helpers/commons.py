@@ -300,6 +300,17 @@ def build_published(work: Path) -> dict:
     return value
 
 
+def build_bound(work: Path) -> dict:
+    """`build_published`, then B binds LOC_A to A's world with `provider-bind`, passing the world id A's marker
+    claims."""
+    value = build_published(work)
+    installations = Installations.of(value)
+    ids = a_identity(installations.a)
+    with with_remotes(installations), open_rig(installations.b, ("provider-bind",)) as (d, _):
+        d.invoke("provider-bind", {"location": LOC_A, "corpus_id": ids["corpus_id"], "world": ids["world"]})
+    return value
+
+
 def transport_with(installations: Installations, **seams: object):
     """A git transport over the installations' bare repositories, under the isolated git environment, with its
     cache in a fresh directory under the work tree (removed with it) and each named test seam set."""

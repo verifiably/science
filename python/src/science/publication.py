@@ -1,11 +1,13 @@
 """Publishing a view to a destination: destination parsing, the transport choice, and the fields of the two
-publication records (the marker a publication corpus carries, the binding the publishing write root holds).
+publication records (the marker a publication corpus carries, the binding the publishing write root holds), and
+the inspection of a publication at a provider's location.
 
 `REMOTE_FOR` maps a destination to the git remote its transport pushes to, and `GIT_ENV` is the environment that
 transport's git runs under (`None`: the production one). Both are module seams: `transport_for` reads them at
 call time, so a test that reassigns them reaches every transport built after."""
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from hashlib import sha256
@@ -13,15 +15,18 @@ from pathlib import Path
 
 from beliefs import stored
 from beliefs.corpus import ReadView
-from beliefs.errors import MalformedRecord, SelectionRefused
+from beliefs.errors import MalformedRecord, ObserverCarrierInvalid, PublicationArrivalRefused, SelectionRefused
 from beliefs.intents.publish import Destination
 from beliefs.publication import BINDING_KIND, MARKER_KIND
 from beliefs.publication_arrival import require_publication_layout
+from beliefs.root import evaluate_copy
 from beliefs.transport import Transport
+from beliefs.world.anchors import CorpusSubject
+from beliefs.world.verify import ArtifactCarrier, ObserverSet
 from nodes.core.node import Node
 
 from science.refusal import Refusal, Refused
-from science.transport_git import GitTransport, identity_remote
+from science.transport_git import GitTransport, GitTransportFault, identity_remote
 from science.world_belief import REMEDY
 
 REMOTE_FOR = identity_remote
@@ -123,3 +128,56 @@ def binding_fields(node: Node) -> BindingFields:
     facet = node.facets[stored.COORDINATION_FACET]
     return BindingFields(corpus_id=facet["corpus_id"], marker=facet["marker"], artifact=facet["artifact"],
                          destination=Destination.from_projection(facet["destination"]))
+
+
+_ID_RE = re.compile(r"[0-9a-f]{32}")
+
+
+def require_id(text: str, name: str) -> None:
+    """A corpus or world id input: 32 lowercase hex digits, or `invalid-input` naming the input."""
+    if _ID_RE.fullmatch(text) is None:
+        raise Refused(Refusal("invalid-input", f"{name} {text!r} is not 32 lowercase hex digits"))
+
+
+@dataclass(frozen=True)
+class Inspection:
+    """A publication fetched from a provider's location into scratch and evaluated there, granting nothing."""
+    root: Path
+    sibling: bytes
+    verdict: str
+    fields: MarkerFields
+    artifact: str
+
+
+def inspect(config, destination: Destination, corpus_id: str, scratch: Path) -> Inspection:
+    """Fetch corpus `corpus_id` from `destination` into `scratch` (which must not exist yet), evaluate the copy
+    against its own head artifact with `evaluate_copy`, and read its marker. Every way the location fails to hold
+    a validated publication of that corpus refuses `invalid-input` naming the location. The caller deletes
+    `scratch`."""
+    locator = destination.locator
+    transport = transport_for(config, destination)
+    if transport is None:
+        # 1a's one provider transport is git: a local directory is no provider location.
+        raise Refused(Refusal("invalid-input",
+                              f"location {locator!r}: a provider location is an https:// git remote"))
+
+    def refuse(why: str, **data: str) -> Refused:
+        return Refused(Refusal("invalid-input", f"location {locator}: {why}", {"location": locator, **data}))
+
+    scratch.mkdir(parents=True)
+    try:
+        root, sibling = transport.fetch_corpus(destination, corpus_id, scratch)
+    except GitTransportFault as fault:
+        raise refuse(str(fault)) from None
+    try:
+        observers = ObserverSet((ArtifactCarrier.from_bytes(sibling),))
+    except ObserverCarrierInvalid as caught:
+        raise refuse(f"corpus {corpus_id}: {caught}") from None
+    verdict = evaluate_copy(root, CorpusSubject(corpus_id), observers)
+    if verdict != "validated":
+        raise refuse(f"corpus {corpus_id} evaluates {verdict}, not validated", verdict=verdict)
+    try:
+        marker = marker_of(root)
+    except PublicationArrivalRefused as caught:
+        raise refuse(f"corpus {corpus_id} is not a publication: {caught}") from None
+    return Inspection(root, sibling, verdict, marker_fields(marker), artifact_identity(sibling))

@@ -1,0 +1,18 @@
+schema_version = 1
+name = "provider-bind"
+purpose = "Bind a provider's location to the world its publication claims, when the given world id matches."
+write_class = "sharing"
+output_budget = 2048
+
+[inputs.location]
+type = "string"
+required = true
+doc = "The provider's location: the https:// git remote the publication was published to."
+[inputs.corpus_id]
+type = "string"
+required = true
+doc = "A publication's corpus id at that location, 32 lowercase hex digits."
+[inputs.world]
+type = "string"
+required = true
+doc = "The world id you confirm the location speaks for, as provider-inspect reports it."

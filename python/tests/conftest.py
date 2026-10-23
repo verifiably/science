@@ -103,3 +103,12 @@ def published(certified_worker_work):
     snap = snapshot(certified_worker_work, "commons-1a-published", build_published)
     snap.restore()
     return Installations.of(snap.value)
+
+
+@pytest.fixture
+def bound(certified_worker_work):
+    from helpers.commons import Installations, build_bound
+    from helpers.snapshot import snapshot
+    snap = snapshot(certified_worker_work, "commons-1a-bound", build_bound)
+    snap.restore()
+    return Installations.of(snap.value)
