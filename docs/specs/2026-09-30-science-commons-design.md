@@ -5,6 +5,9 @@
 independent rounds per revision cycle, the external reviewer's accept at round
 8). Milestone tasks filed; the framework amendments §11 names are made in
 `2026-08-31-command-framework-design.md` §3.3, §4.4 and §9.1. Task `sci-fe8522`.
+Amended 2026-10-22 where milestone 1a's implementation departs from this
+document's letter (`docs/plans/2026-10-22-science-commons-1a.md`, Deviations
+1–12); each amendment is marked in place.
 **Scope:** how published science is shared, found, trusted, reproduced,
 changed and preserved across installations of verifiably, and what a
 *commons* is in that model. The kernel has ruled that publishing mints an
@@ -92,7 +95,7 @@ lacks.
 | term | meaning |
 |---|---|
 | **publication** | an immutable corpus minted by `publish(view, destination)`, identified by its `corpus_id` and head artifact, carrying one `publication` marker (layer §6.1). Its revisions chain by `supersedes`. |
-| **location** | a remote destination URL under the holdings `url` canonicalization (publication records decision 9), or a local path. A publication may be held at several locations; its identity is its verified contents, never a location. |
+| **location** | a remote destination URL under the holdings `url` canonicalization (publication records decision 9), or a local path. A publication may be held at several locations; its identity is its verified contents, never a location. *Amended 2026-10-22 (milestone 1a plan, Deviation 11):* in milestone 1 a provider's location is an `https://` git remote; `provider-inspect`, `provider-bind` and `adopt` refuse a local path `invalid-input`, since milestone 1 is over git (§12) and `adopt` fetches only through the git transport. `publish` still takes a local directory. A location is recorded in its canonical form (`Destination.locator`). |
 | **container** | what a location names: a directory-shaped remote holding `<corpus_id>/` roots and their `<corpus_id>.head-artifact.v1` siblings (`transport_files`), plus this design's side artifacts (§7). |
 | **side artifact** | a file science places in a container beside the corpora: a catalog or a provider list. Identified by its artifact identity. Not a world record, not a publication, never selected by a view, invisible to the kernel's `listing` check (§7). |
 | **pin** | `(corpus_id, marker uid, head artifact identity)` plus its **source** (where the reader learned it), its **fetch record** (§4.5), and a `keep` flag the reader sets, **before adopting a successor**, to hold that revision when the successor arrives (§10); retirement is irreversible, so a need discovered later cannot be met by re-adoption. A pin is what the reader holds or intends to hold. |
@@ -198,6 +201,16 @@ Five layers, from what is verified to what is merely claimed:
    argument, since the surface has no prompt. This is the authentication
    the design has today, and it is explicitly the host's account controls
    standing in for a key.
+
+   *Amended 2026-10-22 (milestone 1a plan, Deviation 2):* the two forms are
+   two commands. The no-`--world` form is `provider-inspect --location
+   <location> --corpus-id <corpus_id>`, a read-only command: it records
+   nothing, so it needs no door and no grant, and it evaluates its scratch
+   copy with the kernel's `evaluate_copy`, which is `restore_root`'s
+   evaluation granting nothing. `provider-bind` is the `sharing`-class
+   command and requires `--world`: every line a `sharing` invocation writes
+   must have a registry counterpart, and an inspection has none. Both delete
+   their scratch copy.
 4. **Pinned content.** A publication the reader has pinned may be fetched
    from any location (§4.5). Identity is the verified contents. A pin is
    **origin-confirmed** when its source is a location bound to the marker's
@@ -393,6 +406,15 @@ declarations follow the framework's write classes, extended as §11 says.
    questions, says whether the pin is origin-confirmed or recommended,
    whether the world is accepted, and what the verification and
    independence picture is under the user's accept policy.
+
+   *Amended 2026-10-22 (milestone 1a plan, Deviation 8):* milestone 1a's
+   `show --corpus-id <corpus_id>` reports the verification picture without
+   independence. For each assessment the pinned corpus holds it says whether
+   the assessment counts under the policy, how many verification records
+   across the session's corpora name it, from which worlds, and how many of
+   them count. It says that independence is not exposed: the kernel's belief
+   inputs (`EvaluationInputs`) carry assessments, runs and verifications
+   after the policy filter but no independence certification.
 3. **Hold.** `adopt <location> <corpus_id>` fetches, verifies and admits a
    publication (`restore_root`, then `admit_publication`), records the pin
    with its source and fetch record, and marks it **mounted** in the sharing
@@ -401,7 +423,21 @@ declarations follow the framework's write classes, extended as §11 says.
    `adopt` says so; the epoch that covers the new corpus is captured at that
    open. Until then the corpus is live and uncovered, so `publish` refuses
    `selection-incomplete` naming it; `adopt`'s report says this too, and the
-   remedy is to reopen. A pin needs a source: a bound provider for that location, or a
+   remedy is to reopen.
+
+   *Amended 2026-10-22 (milestone 1a plan, Deviation 10):* the previous two
+   sentences assumed kernel behaviour that does not hold. The kernel's
+   selection completeness covers only the corpora an epoch covers, and an
+   epoch built before the reopen does not cover the adopted corpus, so a
+   `publish` before the reopen succeeds and freezes only the reader's own
+   view (test `test_publish_before_reopen_freezes_only_bs_own_view`). Nothing
+   refuses; the remedy is to reopen and run `epoch` to read and cite the
+   adopted records. `adopt`'s `mounted` pin block says the mount takes
+   effect at the next session open, and its prompt names the epoch. Whether
+   a live admitted corpus outside every epoch is the intended kernel state
+   is `beliefs-79d2ce`.
+
+   A pin needs a source: a bound provider for that location, or a
    followed catalog naming the corpus. Neither present, `adopt` refuses
    `pin-unsourced` naming the world the marker claims and the two remedies,
    `provider bind` and `follow`. `adopt` of a successor also runs §10's
@@ -437,11 +473,39 @@ declarations follow the framework's write classes, extended as §11 says.
    datasets, and the assessment, run, spec and proposition they name, over
    the session's mounts, not the write root alone; and the kernel admits an
    assessment whose run observed a mount's dataset (`beliefs-9ce6e4`).
+
+   *Amended 2026-10-22 (milestone 1a plan, Deviation 4):* milestone 1a's
+   `fetch --dataset <address> --source <path or https URL>` does not compose
+   `look`. `look` mints a URL observation before the digest can be compared,
+   and the kernel records `expected` without enforcing it, so a mismatch found
+   after that act could not be refused under the write contract. `fetch`
+   therefore retrieves a URL through the holdings transport's `retrieve`
+   (look's retrieval step, bounded by `[fetch] max_bytes`), or reads an
+   absolute path, compares the bytes with the dataset's one declared digest,
+   refuses a mismatch `invalid-input` naming both digests with nothing
+   written, and only then writes the bytes to the user's store through the
+   holdings `write`, which records the store's holdings observation. It
+   refuses under `[fetch] policy = "records-only"`. The URL observation
+   itself is deferred until a write report can carry a finding beside the
+   records it minted (`sci-9afbc8`). Rejected: `look` as the first act and
+   `write` as the second only on a match, which is framework-compatible but
+   closes a mismatch `done` with one observation block that cannot show the
+   mismatch, so a person would read success.
 5. **Share.** `publish <view> --to <destination>` with a dry run that shows
    the selection, the closure, the attribution entries (§4.8), and the
    inputs the destination will not carry. Returning a reproduction to its
    publisher is the publisher adopting the user's publication (layer §6.5);
    nothing here shortcuts that.
+
+   *Amended 2026-10-22 (milestone 1a plan, Deviation 1):* the dry run is a
+   read-only sibling command, `publish-preview --target <project> --to
+   <destination>`, not a `publish` flag. A write report carries only the
+   record blocks its invocation minted (framework §7.4), so a dry-run
+   `publish`, which mints nothing, could render nothing. `publish-preview`
+   runs the kernel's own selection step and writes nothing; it reports the
+   selection, the closure status, the attribution entries, and each selected
+   dataset as an input the destination will not carry, with whether its
+   bytes are held and its redistribution status as `unknown`.
 
 ## 6. The commons's path
 
@@ -557,6 +621,11 @@ ledger evidence is the pin it wrote or changed: corpus id, marker uid,
 artifact identity, source, location, the verification verdict, and the
 mounted or retired transition.
 
+*Amended 2026-10-22 (milestone 1a plan, Deviation 5):* a provider binding is
+registry state too, so `provider-bind` writes a `bound` line whose registry
+counterpart is the binding; framework §4.4's amendment of the same date adds
+`bound` to the sharing transitions.
+
 This is a framework §9.1 amendment: one key, and mounts derived from
 registry state rather than listed by hand. Its rationale is the framework's
 own: configuration is untrusted input validated at session open, and the
@@ -624,6 +693,31 @@ evaluated, and to every kind that lifecycle reads:
    origin-confirmed pin names the same head artifact identity, and its
    carried records count exactly when the Carried branch independently
    authenticates their origin.
+
+   *Amended 2026-10-22 (milestone 1a plan, Deviation 6):* a configured read
+   root the operator lists by hand in `corpus_roots` that carries no
+   publication marker takes the **Own** branch: it is the installation's own
+   corpus, learned from no location. Without this every existing
+   multi-corpus belief read would change. A hand-listed root that does carry
+   a marker is a carrier like an adopted one: its carried records take the
+   Carried branch, and its own records count only through a pin. A root
+   under the sharing registry is never Own, whatever its pin's state.
+
+   *Amended 2026-10-22 (milestone 1a plan, Deviation 12):* the branches are
+   stricter than the letter above. **Carried** also requires that the origin
+   publication is mounted and that its own marker selects the record as its
+   own, not as an attribution of its own: §4.8 copies the first origin
+   forward, so an honest marker never names an intermediary. The origin's
+   pin must be at the attributed marker uid. **Own** for an adopted-back
+   publication, and **Carrier's own**, require that the record is in the
+   carrier's marker selection and that the carrier's marker is the pinned
+   marker: a pin vouches for its marker's selection only. Two configured
+   roots with one corpus id, where either carries a marker or is a root the
+   sharing registry pins, refuse belief reads and `show` `invalid-input`,
+   because the kernel names a record by `(corpus_id, address)` alone and the
+   policy could not tell which root it came from. Tying a carrier's copy to the
+   origin's content identity per address is deferred to milestone 1b
+   (`sci-4a3543`).
 3. The rule applies to every record kind that can change what belief reads:
    assessments, verifications, superseding verifications, and the
    correction records — retractions and their successors — whose standing
@@ -690,6 +784,33 @@ as it was, usable. Only a clean candidate is admitted, then marked
 admission; the sharing registry never claims a state the kernel does not
 show.
 
+*Amended 2026-10-22 (milestone 1a plan, Deviation 9):* a candidate that is
+unsourced or world-mismatched is downloaded, not `fetched`, and is
+discarded. Every registry write follows the ledger line that is its
+evidence, and a pin's source is part of that evidence, so `adopt` evaluates
+the downloaded copy's chain against its head artifact (granting nothing),
+reads its marker under the kernel's publication layout, and resolves its
+source **before** the `fetched` door. A refusal there (`invalid-input`,
+`pin-unsourced` or `world-mismatch`) deletes the copy and writes no pin and
+no line; the next `adopt` downloads again. A retained copy keyed by corpus
+id could later be given a provider source from a location that was never
+shown to hold those bytes, so nothing survives. A `fetched` pin is reused
+only by an `adopt` whose location equals the pin's fetch location; any
+other location refuses `invalid-input` naming the one to use.
+
+*Amended 2026-10-22 (milestone 1a plan, Deviation 3):* in milestone 1a the
+conflict rule refuses any shared address, whatever its content: `adopt`
+refuses `adopt-conflict` naming the shared addresses and the live corpus,
+and the candidate stays `fetched`. The kernel's world index raises
+`duplicate-location` for one address in two corpora whatever the content,
+so an overlapping admission would break the reader's next epoch.
+`beliefs-81367e` (milestone 1b, §4.7) lifts this.
+
+*Amended 2026-10-22 (milestone 1a plan, Deviation 7):* `show` is read-only:
+it reports a registry that lags the kernel as a finding saying that `adopt`
+reconciles it, and writes nothing. `adopt` alone reconciles, before its
+already-adopted and conflict checks.
+
 When the candidate is a successor:
 
 1. The predecessor stays held and addressable. What was shared cannot be
@@ -736,6 +857,16 @@ When the candidate is a successor:
    mounted, which §4.7's requirement 1 makes legal for the records it
    shares with its successor; the records the successor dropped remain
    readable from it.
+
+   *Amended 2026-10-22 (milestone 1a plan, Deviation 10):* the reason given
+   for keeping a required predecessor mounted is wrong. The kernel's
+   selection completeness covers only the corpora an epoch covers, so an
+   admitted corpus absent from the mounts is uncovered by every epoch and
+   no publish refuses on its account (§5 step 3's amendment;
+   `beliefs-79d2ce` asks whether that is the intended kernel state). The
+   conclusion stands for another reason: a required predecessor stays
+   mounted so that its records stay readable and citable, which an admitted
+   but unmounted corpus's records are not.
 4. A dependency-required predecessor is reported by `show`, so the reader
    knows why a retired-in-intent revision is still mounted.
 5. **Exit rule for a conflict.** When a `fetched` successor holds an
@@ -766,6 +897,22 @@ review, with the milestone part that needs it:
 | whether the marker should carry a workspace locator, or the catalog's `execution` claim suffices (§5 step 4) | open, asked at 1a |
 | key-bound provider identity: signed head artifacts (§4.4) | 4 |
 | view publication, so topics and themes can be shared (projects §8.1 defers it) | 4 |
+
+*Amended 2026-10-22 (milestone 1a plan).* Where the rows stand at milestone
+1a: the `assesses`-edge row is answered by the kernel's mount-citations
+design (`beliefs` `docs/superpowers/specs/2026-10-01-mount-citations-design.md`)
+decision 2: `beliefs-9ce6e4` covers an `assesses` edge to a mount's
+proposition and a verification whose target assessment lives in a mount, and
+no sibling task was filed. The workspace-locator question is
+`beliefs-6d6bb6`, still open. Milestone 1a also needed session doors for the
+publish act and the sharing acts, with their ledger evidence, which this
+table did not name; `beliefs-f24fe9` added them. Whether an admitted corpus
+absent from a session's mounts should stay uncovered by every epoch is
+`beliefs-79d2ce` (§5 step 3's amendment). Milestone 1a's implementation
+plan is `docs/plans/2026-10-22-science-commons-1a.md`, whose Deviations
+section records each departure from this document with its reason. It
+built `publish`, `publish-preview`, `provider-inspect`, `provider-bind`,
+`adopt`, `fetch` and `show`; `follow` and `find` are milestone 2's.
 
 Framework amendments, made in the framework document before milestone 1a's
 plan:
@@ -817,6 +964,17 @@ publishes a reproducible view to its own remote. Decisive cases:
   with `accept = [A]` includes them;
 - **transport:** a `publish` retried after a partial push converges on the
   same remote content and commits nothing new when the files are present.
+
+*Amended 2026-10-22 (milestone 1a plan).* In the 1a fixture *B*'s
+verification of *A*'s assessment is same-environment, so the decisive
+belief case is shown on the belief's inputs and context: under
+`accept = []` *A*'s assessment is excluded and named in the context, and
+under `accept = [A]` it is included. Belief answers no belief
+(`no-eligible-assessment`) both ways, since the kernel admits only
+clean-environment passes; a verdict that changes with the policy needs a
+clean-environment verification (`sci-b979ce`). Overlap in 1a refuses
+`adopt-conflict` (§10's Deviation 3 amendment), so 1b's cases wait on
+`beliefs-81367e`.
 
 *1b, overlap and retirement.* *A* binds *B*, adopts *B*'s publication; *A*
 publishes an update that drops one record; *B* adopts the update. Decisive

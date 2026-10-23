@@ -44,7 +44,7 @@ departure from the spec's letter with its reason, each ruled on in rounds 4 and 
 **Status:** approved 2026-10-22; executing. Tasks 1–3 landed 2026-10-22. `beliefs-f24fe9`
 merged at beliefs `b923277` on 2026-10-23, and the Interfaces blocks of Tasks 4, 6, 7 and 8
 now name the built doors (the Kernel dependency constraint's rule: Interfaces and code
-change together, the design does not).
+change together, the design does not). Tasks 4–13 landed 2026-10-23.
 
 ## Global Constraints
 
@@ -122,8 +122,8 @@ change together, the design does not).
    framework-compatible, but the invocation then closes `done` and its report is one
    `[holdings-observation]` block whose rendering (`uid, id, kind, title`) cannot show the
    mismatch; a person would read success. The URL observation record is deferred: Task 13
-   files the follow-up (trigger: a write report that can carry a finding beside minted
-   records) and amends spec §5 step 4.
+   files the follow-up, `sci-9afbc8` (trigger: a write report that can carry a finding
+   beside minted records), and amends spec §5 step 4.
 5. **`bound` joins the sharing transitions.** Framework §4.4 names `fetched, admitted,
    mounted, retired`; a provider binding is registry state with no kernel counterpart, so
    its ledger evidence is a `bound` line whose registry counterpart is the binding. Task 13
@@ -151,9 +151,42 @@ change together, the design does not).
    retained copy keyed by corpus id could later be given a provider source from a
    location that was never shown to hold those bytes (round-4 finding 1), so nothing
    survives a refusal; the next `adopt` fetches again. A `fetched` pin is reused only
-   when the `location` argument equals its `fetch.location`. `provider-inspect` and
-   `provider-bind` write only scratch and the transport cache under `operations_root`
-   (Deviation 2: "records nothing" is about records).
+   when the `location` argument equals its `fetch.location`. The provider commands'
+   downloads are not `fetched` either: `provider-inspect` writes only scratch under
+   `operations_root/scratch/inspect` and the transport cache under
+   `operations_root/transport` (Deviation 2: "records nothing" is about records), and
+   `provider-bind` writes the same transport cache, scratch under `sharing_root`
+   (`SharingRegistry.scratch(invocation_id)`), and its `bound` line and binding
+   (Deviation 5). Both delete their scratch copy; neither writes a pin.
+10. **`publish` before the reopen succeeds.** Spec §5 step 3 ("Until then the corpus is
+    live and uncovered, so `publish` refuses `selection-incomplete` naming it; `adopt`'s
+    report says this too") and §10 point 3 ("the kernel counts it live, and every later
+    publish would refuse `selection-incomplete` naming it") assumed kernel behaviour that
+    does not hold. The kernel's selection completeness covers only the corpora the epoch
+    covers, and an epoch built before the reopen does not cover the adopted corpus, so
+    *B*'s publish succeeds and freezes only *B*'s own view
+    (`test_publish_before_reopen_freezes_only_bs_own_view`). Science accepts the kernel's
+    behaviour; whether it is intended is `beliefs-79d2ce`. Task 13 amends both places: the
+    remedy becomes "reopen and run `epoch` to read and cite the adopted records", and §10
+    point 3 keeps its conclusion (a required predecessor stays mounted) for the reason
+    that holds, that its records stay readable and citable.
+11. **Provider locations are git remotes in 1a.** Spec §3 defines a location as "a remote
+    destination URL … or a local path". `provider-inspect`, `provider-bind` and `adopt`
+    refuse a local-path location `invalid-input`
+    (`publication.provider_transport`), because milestone 1 is over git (§12) and `adopt`
+    fetches only through the git transport. `publish` still takes a local directory.
+    Locations are recorded in their canonical form (`Destination.locator`). Task 13 adds
+    a 1a note to spec §3.
+12. **The accept policy's branches are stricter than §9's letter.** Branch 3 (Carried)
+    also requires that the named origin is mounted, pinned at the attributed marker, and
+    holds the address as its own, not as an attribution of its own: §4.8 copies the first
+    origin forward, so an honest marker never names an intermediary. Branches 4 and 5
+    (own adopted back, carrier's own) require the address in the carrier's marker
+    selection and the carrier's marker to be the pinned marker. Two configured roots
+    sharing a corpus id, where either carries a marker or is a root the sharing registry
+    pins, refuse belief reads and `show` `invalid-input`: the kernel names a record by
+    `(corpus_id, address)` alone, so the policy cannot tell which root a record came from.
+    Content identity per address is deferred to 1b (`sci-4a3543`). Task 13 amends spec §9.
 
 ## Review Focus
 

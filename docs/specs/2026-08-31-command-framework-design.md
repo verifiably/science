@@ -354,6 +354,20 @@ from these entries. `epoch` remains unreachable, and `lifecycle`'s other
 acts (`adopt_manifest`, `init_*`, `replicate_root`, `fork_*`) remain
 launcher- and operator-time.
 
+**Amended 2026-10-22 (science commons milestone 1a plan, Deviation 5).**
+`bound` joins the sharing transitions, which are now `bound`, `fetched`,
+`admitted`, `mounted` and `retired`. A provider binding is sharing-registry
+state with no kernel counterpart, so `provider-bind`, which declares the
+`sharing` class, ledgers a `bound` line whose evidence is the publication it
+inspected (`corpus_id`, marker uid, head artifact identity, the world its
+marker claims and its view), the bound location as both source and
+location, and the inspection's verification verdict. The line's registry
+counterpart is the provider binding in the sharing registry, written after
+the line and rebuilt from it by replay; a binding has no kernel admission
+record or lifecycle status. The kernel's scoped writer records `bound` and
+`mounted` lines directly (`record_sharing`); `fetched` and `admitted` are
+ledgered only by the `restore_root` and `admit_publication` doors.
+
 ## 5. Writer sessions in `beliefs`
 
 ### 5.1 Opening a session
