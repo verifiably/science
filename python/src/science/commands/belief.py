@@ -1,8 +1,10 @@
-"""belief: evaluate science.belief.v1 over one proposition (§4.7)."""
+"""belief: evaluate science.belief.v1 over one proposition (§4.7), under the reader's accept policy, which the
+report explains (commons spec §9)."""
 from __future__ import annotations
 
 from beliefs.belief import Belief, NoBelief
 
+from science.acceptance import acceptance_inputs, explain
 from science.report import Heading, KeyVals, Report
 
 
@@ -17,4 +19,7 @@ def handle(ctx, *, proposition) -> Report:
         pairs = (("kind", "NoBelief"), ("reason", answer.reason), ("detail", answer.detail))
     else:
         pairs = (("kind", "Refused"), ("reason", answer.reason))
-    return (Heading(f"Belief: {proposition}"), KeyVals("answer", pairs))
+    report = (Heading(f"Belief: {proposition}"), KeyVals("answer", pairs))
+    if answer.acceptance is None:
+        return report
+    return (*report, KeyVals("acceptance", explain(answer.acceptance, acceptance_inputs(ctx))))

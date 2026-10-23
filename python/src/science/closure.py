@@ -1,9 +1,10 @@
 """Belief evaluation in one call (design §4.7, §5.5): the availability and
 supplied context the evaluator does not compute itself, built from the
-world, then `evaluate_over` under the shipped policy."""
+world, then `evaluate_over` under the shipped policy and the reader's accept
+policy (commons spec §9)."""
 from __future__ import annotations
 
-from beliefs.belief import Availability, SuppliedContext
+from beliefs.belief import AcceptancePolicy, Availability, SuppliedContext
 from beliefs.corpus import ReadView, lineage_snapshot
 from beliefs.evaluation import EvaluationInputs, evaluate_over, gather
 from beliefs.policy import BELIEF_V1, BELIEF_V1_FIXTURES, BELIEF_V1_RULE, PolicyBinding
@@ -35,10 +36,13 @@ def supplied_context(view: ReadView, *, corpus_id: str, pins, epoch_identity: st
     )
 
 
-def gather_inputs(view, proposition, *, context, profile: ProfileSpec, resolution: ResolutionSnapshot) -> EvaluationInputs:
-    return gather(view, proposition, context=context, profile=profile, resolution=resolution, binding=BINDING)
+def gather_inputs(view, proposition, *, context, profile: ProfileSpec, resolution: ResolutionSnapshot,
+                  acceptance: AcceptancePolicy | None = None) -> EvaluationInputs:
+    return gather(view, proposition, context=context, profile=profile, resolution=resolution, binding=BINDING,
+                  acceptance=acceptance)
 
 
-def evaluate(view, proposition, *, observations, context, profile, resolution):
+def evaluate(view, proposition, *, observations, context, profile, resolution,
+             acceptance: AcceptancePolicy | None = None):
     return evaluate_over(view, proposition, availability=availability(observations), context=context,
-                         profile=profile, resolution=resolution, binding=BINDING)
+                         profile=profile, resolution=resolution, binding=BINDING, acceptance=acceptance)

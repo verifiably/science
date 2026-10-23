@@ -6,6 +6,7 @@ from beliefs.admission import Admitted, admit
 from beliefs.dataset import Held, admission_state
 from beliefs.errors import InputOutsideCorpus
 
+from science.acceptance import acceptance_inputs, counts
 from science.coordination import live_selection, selected_project
 from science.holdings import dataset_at
 from science.refusal import Refusal, Refused
@@ -22,8 +23,11 @@ def _targeting_specs(mounts, proposition):
             for spec in (stored.analysis_spec_value(node, profile=mount.profile),) if spec.target == proposition]
 
 
-def _assessed(mounts, proposition) -> bool:
-    return any(node.kind == "assessment"
+def _assessed(ctx, mounts, proposition) -> bool:
+    """Whether an assessment the reader's accept policy counts assesses `proposition`: an assessment belief
+    never reads leaves the proposition as unassessed as it finds it (commons spec §9)."""
+    inputs = acceptance_inputs(ctx)
+    return any(node.kind == "assessment" and counts(inputs, mount.corpus_id, node.id)
                and stored.assessment_value(node, profile=mount.profile).proposition == proposition
                for mount in mounts for node in mount.view.iter_stored())
 
@@ -49,7 +53,7 @@ def _classify(ctx, proposition: str) -> tuple[str, str | None]:
     over the proposition's own corpus."""
     holder = ctx.mount_holding(proposition)  # refuses a proposition no mount holds, or two do
     mounts = ctx.session_mounts() if ctx.has_read_mounts() else (holder,)
-    if not _assessed(mounts, proposition):
+    if not _assessed(ctx, mounts, proposition):
         everywhere = ctx.mounts()
         held = any(_inputs_held(ctx, everywhere, spec) for spec in _targeting_specs(mounts, proposition))
         return ("ready" if held else "not-ready"), None

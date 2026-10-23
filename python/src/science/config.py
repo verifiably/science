@@ -578,24 +578,30 @@ class ReadContext:
                                 node_corpus=node_corpus)
 
     def gather_inputs(self, proposition: str):
+        """The proposition's belief inputs, every record selected by the reader's accept policy (commons §9)."""
+        from science.acceptance import policy
         from science.closure import gather_inputs
         mount = self.mount_holding(proposition)
         if self.has_read_mounts():
             current, observations, context = self._world_inputs
             return gather_inputs(current.view, proposition, context=context, profile=mount.profile,
-                                 resolution=self.snapshot(mount.profile, observations=observations))
+                                 resolution=self.snapshot(mount.profile, observations=observations),
+                                 acceptance=policy(self))
         observations = self.observations()
         return gather_inputs(mount.view, proposition, context=self._context(mount, observations, proposition),
-                             profile=mount.profile, resolution=self.snapshot(mount.profile))
+                             profile=mount.profile, resolution=self.snapshot(mount.profile), acceptance=policy(self))
 
     def evaluate(self, proposition: str):
+        """The proposition's belief under the reader's accept policy, whose context the answer carries."""
+        from science.acceptance import policy
         from science.closure import evaluate
         mount = self.mount_holding(proposition)
         if self.has_read_mounts():
             current, observations, context = self._world_inputs
             return evaluate(current.view, proposition, observations=observations, context=context,
-                            profile=mount.profile, resolution=self.snapshot(mount.profile, observations=observations))
+                            profile=mount.profile, resolution=self.snapshot(mount.profile, observations=observations),
+                            acceptance=policy(self))
         observations = self.observations()
         return evaluate(mount.view, proposition, observations=observations,
                         context=self._context(mount, observations, proposition),
-                        profile=mount.profile, resolution=self.snapshot(mount.profile))
+                        profile=mount.profile, resolution=self.snapshot(mount.profile), acceptance=policy(self))
