@@ -26,6 +26,7 @@ from helpers.world import (
     OBSERVED,
     SPEC_FIELDS,
     STORE_IDS,
+    WORKING_FIELDS,
     _install_holdings_reducer,
     _list_address,
     _minted_ref,
@@ -388,6 +389,50 @@ def build_verified(work: Path) -> dict:
                                     (level_list_address(), data / "levels.txt")):
                 d.invoke("fetch", {"dataset": dataset, "source": str(source)})
             d.invoke("verify", {"assessment": ids["assessment"], "code": str(code), "entrypoint": entrypoint})
+    return value
+
+
+def closure_input_addresses(closure) -> frozenset[str]:
+    """The dataset addresses a decoded run closure's recipe names as its inputs."""
+    return frozenset(item.dataset for item in closure.recipe.inputs)
+
+
+def derive_changed_analysis(installations: Installations) -> dict[str, str]:
+    """B's changed analysis over A's mounted records, declaring none of them: a `spec` on A's proposition over
+    A's dataset with one changed input (WORKING_FIELDS' method), a run of it from B's own copy of the fixture
+    bundle (minted under MINIMAL_POLICY, as `mint_fixture_run` does), and its assessment. B must hold the
+    dataset's bytes (`build_verified` fetched them). Returns the spec, run and assessment refs."""
+    b = installations.b
+    ids = a_identity(installations.a)
+    with open_rig(b, ("spec",)) as (d, _):
+        spec = _minted_ref(d.invoke("spec", dict(WORKING_FIELDS, target=ids["proposition"],
+                                                 dataset=ids["dataset"])).text, "analysis-spec")
+    run = mint_fixture_run(b, spec, ids["dataset"], fixture_bundle(installations.remotes.parent / "b"))
+    with open_rig(b, ("assess",)) as (d, _):
+        assessment = _minted_ref(d.invoke("assess", {"run": run}).text, "assessment")
+    return {"spec": spec, "run": run, "assessment": assessment}
+
+
+def b_derivation(b: ScienceConfig) -> dict[str, str]:
+    """The spec, run and assessment `derive_changed_analysis` minted, read from B's write root: its one spec and
+    one assessment, and the run that assessment names (B's write root also holds the replay its `verify` ran)."""
+    from beliefs import stored
+    from beliefs.runrecord import run_ref
+    view = ReadContext.open(b).write_view()
+
+    def only(kind: str):
+        (node,) = [node for node in view.iter_stored() if node.kind == kind]
+        return node
+    assessment = only("assessment")
+    return {"spec": only("analysis-spec").id, "assessment": assessment.id,
+            "run": run_ref(stored.assessment_value(assessment, profile=b.profile).run)}
+
+
+def build_derived(work: Path) -> dict:
+    """`build_verified`, then B derives its changed analysis over A's mounted records
+    (`derive_changed_analysis`)."""
+    value = build_verified(work)
+    derive_changed_analysis(Installations.of(value))
     return value
 
 
