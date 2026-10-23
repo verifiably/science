@@ -58,14 +58,6 @@ def test_mounted_roots_are_exactly_the_mounted_pins(tmp_path):
     assert registry.scratch("tok") == tmp_path / "scratch" / "tok"
 
 
-def test_binding_for_location_matches_a_bound_location_only(tmp_path):
-    registry = SharingRegistry(tmp_path)
-    registry.write_binding(BINDING)
-    assert registry.binding_for_location(L1) == BINDING
-    assert registry.binding_for_location(L2) is None
-    assert registry.binding_for_location(L1 + "/x") is None
-
-
 def test_write_binding_merges_locations_for_one_world(tmp_path):
     registry = SharingRegistry(tmp_path)
     registry.write_binding(ProviderBinding(W, (L1,), AT, True))

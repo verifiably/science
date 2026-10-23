@@ -213,9 +213,6 @@ class SharingRegistry:
     def bindings(self) -> dict[str, ProviderBinding]:
         return {b.world: b for b in self._read_all("providers", _binding_from)}
 
-    def binding_for_location(self, location: str) -> ProviderBinding | None:
-        return next((b for b in self.bindings().values() if location in b.locations), None)
-
     def write_binding(self, binding: ProviderBinding) -> None:
         existing = self.bindings().get(binding.world)
         if existing is not None:

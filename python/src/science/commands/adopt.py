@@ -139,21 +139,24 @@ def _fetch(writer, transport, destination, registry: SharingRegistry, corpus_id:
 
 
 def _source(registry: SharingRegistry, locator: str, world: str) -> PinSource:
-    """The bytes came from `locator` in this invocation, so a binding of `locator` to the world the marker claims
-    earns the pin its source."""
-    binding = registry.binding_for_location(locator)
-    if binding is None:
+    """The bytes came from `locator` in this invocation, so a binding of the world the marker claims that holds
+    `locator` earns the pin its source. A location may be bound to several worlds: only the claimed world's binding
+    is consulted, and the others name the refusal when it holds no such binding."""
+    bindings = registry.bindings()
+    binding = bindings.get(world)
+    if binding is not None and locator in binding.locations:
+        return PinSource("provider", locator)
+    bound = sorted(b.world for b in bindings.values() if locator in b.locations)
+    if not bound:
         raise Refused(Refusal(
             "pin-unsourced",
             f"the publication at {locator} claims world {world}, and nothing sources it: bind the location to that "
             "world with `provider-bind`, or `follow` a catalog that names the corpus",
             {"world": world}))
-    if binding.world != world:
-        raise Refused(Refusal(
-            "world-mismatch",
-            f"the publication at {locator} claims world {world}; the location is bound to world {binding.world}",
-            {"claimed": world, "bound": binding.world}))
-    return PinSource("provider", locator)
+    raise Refused(Refusal(
+        "world-mismatch",
+        f"the publication at {locator} claims world {world}; the location is bound to world(s) {', '.join(bound)}",
+        {"claimed": world, "bound": bound}))
 
 
 def _discard(registry: SharingRegistry, corpus_id: str) -> None:

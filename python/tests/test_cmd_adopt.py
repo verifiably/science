@@ -24,11 +24,12 @@ from helpers.world import hold_fixture_dataset, open_rig
 
 from science.config import ReadContext
 from science.publication import binding_fields, marker_fields, marker_of
-from science.sharing import PinSource, SharingRegistry, replay
+from science.sharing import PinSource, ProviderBinding, SharingRegistry, replay
 from science.world_belief import publish_session_epoch
 
 LOC_OTHER = "https://remote.test/other"
 NOT_A_CORPUS = "0" * 32
+WORLD_FIRST = "0" * 32  # a world id that sorts before any world a fixture installation generates
 
 
 def _adopt(installations, location: str, corpus_id: str):
@@ -113,6 +114,29 @@ def test_adopt_after_bind_admits_and_marks_mounted(bound):
     assert pin.state == "mounted" and pin.source == PinSource("provider", LOC_A) and pin.fetch.location == LOC_A
     status = ReadContext.open(bound.b).world.status(cid)
     assert status.known and status.live
+
+
+def test_a_location_bound_to_two_worlds_sources_the_publication_by_its_own_worlds_binding(bound):
+    ids = a_identity(bound.a)
+    cid = ids["corpus_id"]
+    registry = SharingRegistry(bound.b.sharing_root)
+    assert WORLD_FIRST < ids["world"]
+    registry.write_binding(ProviderBinding(WORLD_FIRST, (LOC_A,), "2026-10-22T10:00:00Z", True))
+    assert _states(_adopt(bound, LOC_A, cid).text) == ["fetched", "admitted", "mounted"]
+    pin = registry.pin(cid)
+    assert pin.state == "mounted" and pin.source == PinSource("provider", LOC_A) and pin.fetch.location == LOC_A
+
+
+def test_a_location_bound_only_to_another_world_refuses_world_mismatch_naming_it(published):
+    ids = a_identity(published.a)
+    cid = ids["corpus_id"]
+    registry = SharingRegistry(published.b.sharing_root)
+    registry.write_binding(ProviderBinding(WORLD_FIRST, (LOC_A,), "2026-10-22T10:00:00Z", True))
+    refusal = refused(lambda: _adopt(published, LOC_A, cid))
+    assert refusal.code == "world-mismatch" and refusal.data == {"claimed": ids["world"], "bound": [WORLD_FIRST]}
+    assert WORLD_FIRST in refusal.message and ids["world"] in refusal.message
+    assert registry.pin(cid) is None and _no_copy(registry, cid) and not _known(published.b, cid)
+    assert _sharing_lines(published.b) == []
 
 
 def test_adopt_at_a_non_canonical_spelling_records_the_canonical_location(bound):

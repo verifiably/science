@@ -76,8 +76,9 @@ def test_bind_with_the_claimed_world_records_the_line_then_the_binding(published
     text = _bind(published, {"location": LOC_A, "corpus_id": cid, "world": world}).text
     assert f"[pin] {cid} bound" in text
     registry = SharingRegistry(published.b.sharing_root)
-    binding = registry.binding_for_location(LOC_A)
-    assert binding.confirmed and binding.world == world and binding.locations == (LOC_A,)
+    assert list(registry.bindings()) == [world]
+    binding = registry.bindings()[world]
+    assert binding.confirmed and binding.locations == (LOC_A,)
     # The line is the binding's evidence: a replay over B's ledgers finds the registry already holding it.
     assert replay(registry, published.b.operations_root) == ()
     assert _no_scratch_under(published.b.sharing_root / "scratch")
@@ -134,13 +135,13 @@ def test_a_crash_between_the_line_and_the_binding_is_repaired_by_replay(publishe
         _bind(published, {"location": LOC_A, "corpus_id": cid, "world": world})
     monkeypatch.undo()
     registry = SharingRegistry(published.b.sharing_root)
-    assert registry.binding_for_location(LOC_A) is None
+    assert registry.bindings() == {}
     (line,) = replay(registry, published.b.operations_root)
     assert line.transition == "bound" and line.world == world
-    binding = registry.binding_for_location(LOC_A)
-    assert binding.world == world and binding.confirmed and binding.bound_since == line.at
+    binding = registry.bindings()[world]
+    assert binding.locations == (LOC_A,) and binding.confirmed and binding.bound_since == line.at
 
 
 def test_the_bound_fixture_holds_a_confirmed_binding_of_a_location_to_a_world(bound):
-    binding = SharingRegistry(bound.b.sharing_root).binding_for_location(LOC_A)
-    assert binding.world == bound.a.world.world_id and binding.confirmed
+    binding = SharingRegistry(bound.b.sharing_root).bindings()[bound.a.world.world_id]
+    assert LOC_A in binding.locations and binding.confirmed
