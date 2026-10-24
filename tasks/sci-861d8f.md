@@ -4,8 +4,8 @@ title: "Third program candidate: breast cancer workspace as the second reused-pu
 status: idea
 priority: 2
 created: 2026-10-18T20:28:57Z
-updated: 2026-10-24T10:46:04Z
-depends: []
+updated: 2026-10-24T10:46:23Z
+depends: [sci-1fd5e5]
 parent: sci-8f15d4
 tags: []
 agent: claude-code
