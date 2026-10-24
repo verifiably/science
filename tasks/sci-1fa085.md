@@ -4,7 +4,7 @@ title: Integrate causal identification and return one analysis result with prove
 status: idea
 priority: 2
 created: 2026-10-24T02:16:33Z
-updated: 2026-10-24T02:16:33Z
+updated: 2026-10-24T10:04:49Z
 depends: [sci-4e0f7f, sci-33eb94, sci-87c165]
 parent: sci-35af80
 tags: []
@@ -21,3 +21,7 @@ Required outcome distinctions: an estimand identified by the supported method (w
 One real question must proceed from identification to a supported analysis and interpretable returned result. Fitted artifacts remain reads inputs; simulated/generated outputs and model diagnostics do not automatically become empirical observations or admitted evidence. The example records estimates, uncertainty, diagnostics and any admission/refusal with provenance. Stop and file a semantic prerequisite when the kernel cannot represent the required contract.
 
 Where to start: sci-4e0f7f's reviewed design; sci-33eb94; sci-87c165; beliefs-d6060a; beliefs-72b6f6; DAGitty's manual (https://www.dagitty.net/manual-3.x.pdf) and Shpitser/Pearl's identification results (https://jmlr.csail.mit.edu/papers/v9/shpitser08a.html). These are starting points, not a selected dependency. This remains an idea until the design settles the integration scope.
+
+## References
+
+- brief (input, required, kind=brief): docs/notes/2026-10-24-causal-analysis-workflow-brief.md — scope boundaries, open questions and existing follow-ups
