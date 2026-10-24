@@ -7,7 +7,7 @@ size: s
 complexity: mid
 process: direct
 created: 2026-10-23T18:45:08Z
-updated: 2026-10-24T11:33:54Z
+updated: 2026-10-24T11:33:56Z
 depends: []
 tags: [commons]
 source: sci-13050a
@@ -26,3 +26,7 @@ Where: python/src/science/config.py (ReadContext), acceptance.py, closure.py, co
 
 - commons (input, required, kind=spec): docs/specs/2026-09-30-science-commons-design.md — governing identity, transport, acceptance and recovery contract
 - review-ledger (context, kind=ledger): tasks/files/sci-13050a/sdd-ledger-commons-1a.md — original findings and retained rulings
+
+## Notes
+
+- 2026-10-24T11:33:56Z (main): scope: rescoped; checked at 99111f7 against ReadContext, acceptance, closure, belief/next/show and adopt plus the commons review ledger; established the existing per-invocation cache pattern and explicit current policy callers; bounded snapshot/report/reconcile tests; priority 2 unchanged; small, mid, direct.
