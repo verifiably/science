@@ -2,12 +2,12 @@
 id: sci-0d00d2
 title: "Second-project milestone: health over mm30, measurement plan and record"
 status: todo
-priority: 2
+priority: 1
 size: m
 complexity: high
 process: planned
 created: 2026-09-23T11:40:35Z
-updated: 2026-10-14T08:56:20Z
+updated: 2026-10-24T00:46:40Z
 depends: [sci-b1c777, beliefs-fe7149, beliefs-c08725, sci-c5528e, sci-923d3a, beliefs-9ce6e4, sci-dc0381]
 tags: [projects]
 agent: claude-code/claude-fable-5-1
