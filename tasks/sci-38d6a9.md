@@ -6,9 +6,9 @@ priority: 2
 size: s
 complexity: mid
 process: direct
-owner: main
+owner: docs/38d6a9-newcomer-readme
 created: 2026-10-24T18:10:19Z
-updated: 2026-10-24T18:10:59Z
+updated: 2026-10-24T18:11:00Z
 started: 2026-10-24T18:10:59Z
 depends: []
 tags: [docs]
@@ -21,4 +21,6 @@ Follow-on to the second guided tour's finding (vdocs-e4318e; atoms-dd5a5e and th
 ## Notes
 
 - 2026-10-24T18:10:59Z (main): started
+  provenance: {"harness_session":"claude-code:0e2eed92-cf40-40a1-aac6-b06ac9f3c1ce","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-24T18:11:00Z (docs/38d6a9-newcomer-readme): resumed
   provenance: {"harness_session":"claude-code:0e2eed92-cf40-40a1-aac6-b06ac9f3c1ce","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
