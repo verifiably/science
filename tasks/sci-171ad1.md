@@ -4,8 +4,8 @@ title: next exposes uncertainties that could change the current causal answer
 status: idea
 priority: 2
 created: 2026-10-24T01:46:17Z
-updated: 2026-10-24T10:55:54Z
-depends: [sci-33eb94, sci-1fa085]
+updated: 2026-10-24T10:55:56Z
+depends: [sci-33eb94, sci-1fa085, sci-35af80]
 tags: []
 agent: claude-code/claude-opus-5-5
 ---
