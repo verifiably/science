@@ -3,8 +3,10 @@ id: sci-434b9c
 title: Show how plausible graph alternatives change a causal answer
 status: idea
 priority: 2
+reviewed: true
+reviewed_at: 2026-10-24T10:04:57Z
 created: 2026-10-24T02:18:13Z
-updated: 2026-10-24T10:04:56Z
+updated: 2026-10-24T10:04:57Z
 depends: [sci-35af80]
 tags: []
 source: sci-35af80
@@ -20,3 +22,7 @@ Acceptance direction: at least one example whose identification or valid adjustm
 ## References
 
 - brief (input, required, kind=brief): docs/notes/2026-10-24-causal-analysis-workflow-brief.md — scope boundaries, open questions and existing follow-ups
+
+## Notes
+
+- 2026-10-24T10:04:57Z (main): scope: briefed; checked science 6d936f3 and sci-35af80's milestone boundaries; structural alternatives remain follow-on work waiting for that workflow's completed example, outside its closure criteria; brief: docs/notes/2026-10-24-causal-analysis-workflow-brief.md
