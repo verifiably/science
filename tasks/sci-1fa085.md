@@ -3,8 +3,10 @@ id: sci-1fa085
 title: Integrate causal identification and return one analysis result with provenance
 status: idea
 priority: 2
+reviewed: true
+reviewed_at: 2026-10-24T10:04:52Z
 created: 2026-10-24T02:16:33Z
-updated: 2026-10-24T10:04:51Z
+updated: 2026-10-24T10:04:52Z
 depends: [sci-4e0f7f, sci-33eb94, sci-87c165]
 parent: sci-35af80
 tags: []
@@ -25,3 +27,7 @@ Where to start: sci-4e0f7f's reviewed design; sci-33eb94; sci-87c165; beliefs-d6
 ## References
 
 - brief (input, required, kind=brief): docs/notes/2026-10-24-causal-analysis-workflow-brief.md — scope boundaries, open questions and existing follow-ups
+
+## Notes
+
+- 2026-10-24T10:04:52Z (main): scope: briefed; checked science 6d936f3 and existing design/semantic research; no causal backend or persisted graph/query/result contract is selected yet. Reuse sci-4e0f7f, preserving component dependencies and independent correctness/round-trip checks; brief: docs/notes/2026-10-24-causal-analysis-workflow-brief.md
