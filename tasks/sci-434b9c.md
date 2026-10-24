@@ -4,7 +4,7 @@ title: Show how plausible graph alternatives change a causal answer
 status: idea
 priority: 2
 created: 2026-10-24T02:18:13Z
-updated: 2026-10-24T10:04:54Z
+updated: 2026-10-24T10:04:56Z
 depends: [sci-35af80]
 tags: []
 source: sci-35af80
