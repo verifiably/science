@@ -5,7 +5,7 @@ name = "science"
 aliases = []
 purpose = "The daily surface of verifiably: the layer people and agents use"
 abstract = """
-Harness-neutral commands and skills over the beliefs kernel, served as a CLI and over MCP, with generated harness adapters (Claude Code first), the derived work queue and publish. It owns no kinds and no storage: every durable thing is a governed record in a beliefs corpus, and every write is a kernel act.
+The commands a researcher or a coding agent runs in place of a folder of scripts and result tables: state a question as a typed claim, hold the data, declare the analysis, run it sealed, verify it from scratch, and read what the checked results add up to. Each write is a record in a beliefs corpus, checked by the kernel, so the work stays traceable whoever did it. A CLI and an MCP server.
 """
 authority = ["docs/specs/2026-08-31-command-framework-design.md"]
 subsystems = []
