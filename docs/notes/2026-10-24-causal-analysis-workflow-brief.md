@@ -8,7 +8,8 @@ Answer one real causal question from an authored graph through identification,
 analysis and interpretation, with reproducible inputs and returned results.
 Composite presentation (sci-33eb94), scope comparison (sci-87c165) and tool
 integration (sci-1fa085) are parts of that first milestone. Structural sensitivity
-(sci-434b9c) and model criticism (sci-37f0c3) build on it later.
+(sci-434b9c), model criticism (sci-37f0c3) and question-directed research
+candidates (sci-171ad1) build on it later.
 
 ## 2. Current behaviour and evidence
 
@@ -18,6 +19,13 @@ Checked science at `6d936f3`. `tools/cli.toml` declares `spec`, `run`, `assess` 
 `python/src/science/commands/next.py` classifies propositions into five readiness classes without
 reading composites. No science handler reads `read_composite`, `commensurable`
 or `co_scoped`. The typed-spec command landed in `7babc47`.
+
+Follow-on pass at `8e8e3f6`: `next.py` still sorts by readiness class and
+proposition identity; it accepts a limit, not a target causal question or
+estimand. `python/tests/test_cmd_next.py` and `test_cmd_next_selection.py`
+cover readiness and selected-proposition behaviour. The historical context's
+unassessed-edge query was a session proposal, not an approved design; it does
+not settle how question relevance should affect the existing classes.
 
 The built beliefs designs, read through `tasks doc beliefs-d6060a composites`
 and `tasks doc beliefs-d6060a estimand`, place composite presentation and scope
@@ -59,6 +67,14 @@ milestone. Preserve the selected ideas' detailed acceptance cases.
   prerequisite: the captured milestone deliberately bounds the first example
   and leaves richer semantics and policy changes to their owners.
 
+For the later `next` design, lean toward qualitative, question-directed reasons
+alongside explicit readiness information. Merely counting unassessed edges
+does not explain their consequence for an answer. Quantitative information-gain
+ranking would need a justified probability model and utility target; none is
+established here. Science explains candidates; autonomy owns execution
+priorities and scheduling. Decide the precise presentation after the worked
+example, without inventing assessment targets for unrepresentable assumptions.
+
 ## 5. Unanswered questions
 
 - What semantic prerequisites does the first observed-data DAG actually need?
@@ -76,6 +92,12 @@ milestone. Preserve the selected ideas' detailed acceptance cases.
 - Which graph alternatives and diagnostic methods are useful after the first
   result? **sci-434b9c** and **sci-37f0c3** are re-scoped after sci-35af80,
   retaining diagnostic computation/storage separately from claim admission.
+- Which unresolved relations, confounders, measurement/scope assumptions or
+  structural alternatives could change the current answer, and how should
+  their reasons appear alongside readiness classes? **sci-171ad1**, after the
+  completed first workflow, frames that later design. Preserve unknown versus
+  absent relations and unsupported representations; sensitivity results from
+  sci-434b9c can supply consequences later without gating the initial view.
 
 ## 6. Proposed decomposition
 
@@ -87,7 +109,9 @@ milestone. Preserve the selected ideas' detailed acceptance cases.
   the reviewed design, then the normal implementation-plan review. It wakes
   **sci-33eb94**, **sci-87c165** and **sci-1fa085** with the approved revision;
   each waits directly on that design. Integration retains its component waits.
-- Keep **sci-434b9c** and **sci-37f0c3** as reviewed follow-on ideas waiting on
+- Keep **sci-434b9c**, **sci-37f0c3** and **sci-171ad1** as reviewed follow-on ideas waiting on
   **sci-35af80**. Its closure automatically readmits them; the completed
-  example is the evidence for their next scope pass. **sci-171ad1** is related
-  context, outside this five-member pass. No new goal or research task is needed.
+  example is the evidence for their next scope pass. sci-171ad1 also retains
+  its existing sci-33eb94 and sci-1fa085 component waits. It was processed in
+  a subsequent singleton pass; the other five ideas' dispositions are unchanged.
+  No new goal or research task is needed.
