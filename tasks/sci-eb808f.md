@@ -7,7 +7,7 @@ size: m
 complexity: mid
 process: direct
 created: 2026-10-23T18:45:05Z
-updated: 2026-10-24T11:33:32Z
+updated: 2026-10-24T11:33:33Z
 depends: []
 tags: [commons]
 source: sci-13050a
@@ -26,3 +26,7 @@ Where: python/src/science/transport_git.py; its public callers in publication.py
 
 - commons (input, required, kind=spec): docs/specs/2026-09-30-science-commons-design.md — governing identity, transport, acceptance and recovery contract
 - review-ledger (context, kind=ledger): tasks/files/sci-13050a/sdd-ledger-commons-1a.md — original findings and retained rulings
+
+## Notes
+
+- 2026-10-24T11:33:33Z (main): scope: rescoped; checked at 99111f7 against transport_git.py, commons spec §8 and the sci-13050a ledger; recorded the existing 9160284 symlink protection, bounded bare-cache conversion and immutable-read/cache-serialization checks; priority 2 unchanged; medium, mid, direct.
