@@ -7,7 +7,7 @@ size: s
 complexity: mid
 process: direct
 created: 2026-10-23T17:10:07Z
-updated: 2026-10-24T10:22:09Z
+updated: 2026-10-24T10:22:10Z
 depends: []
 parent: sci-6b6014
 tags: [commons]
@@ -34,3 +34,7 @@ test_commons_1a's belief case asserts inclusion and exclusion of A's assessment 
 ## References
 
 - brief (input, required, kind=brief): docs/notes/2026-10-24-commons-1a-follow-ups-brief.md — evidence, boundaries and wake conditions for the commons follow-ups
+
+## Notes
+
+- 2026-10-24T10:22:10Z (main): scope: scoped; at 846772e the portable commons run uses MINIMAL_POLICY, while test_belief_path establishes a real confined run/replay pattern. Settled a confined two-installation acceptance-verdict check, preserving portable coverage and requiring an actual confined pass; priority 2, size s, complexity mid, process direct; brief: docs/notes/2026-10-24-commons-1a-follow-ups-brief.md
