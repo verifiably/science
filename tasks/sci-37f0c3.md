@@ -3,8 +3,10 @@ id: sci-37f0c3
 title: Derive and check a causal model's testable implications without automatic belief admission
 status: idea
 priority: 2
+reviewed: true
+reviewed_at: 2026-10-24T10:05:04Z
 created: 2026-10-24T02:18:14Z
-updated: 2026-10-24T10:05:02Z
+updated: 2026-10-24T10:05:04Z
 depends: [sci-35af80, beliefs-d6060a]
 tags: []
 source: sci-35af80
@@ -22,3 +24,7 @@ Expected scoping example: a model with an observable implication, an observed di
 ## References
 
 - brief (input, required, kind=brief): docs/notes/2026-10-24-causal-analysis-workflow-brief.md — scope boundaries, open questions and existing follow-ups
+
+## Notes
+
+- 2026-10-24T10:05:04Z (main): scope: briefed; checked science 6d936f3, the composite limitations and beliefs-d6060a's existing diagnostic/admission research; retain waits on that research and sci-35af80, keeping diagnostic computation/storage distinct from admitted model claims; brief: docs/notes/2026-10-24-causal-analysis-workflow-brief.md
