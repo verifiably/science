@@ -4,7 +4,7 @@ title: Derive and check a causal model's testable implications without automatic
 status: idea
 priority: 2
 created: 2026-10-24T02:18:14Z
-updated: 2026-10-24T10:04:59Z
+updated: 2026-10-24T10:05:01Z
 depends: [sci-35af80, beliefs-d6060a]
 tags: []
 source: sci-35af80
