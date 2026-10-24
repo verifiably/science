@@ -3,8 +3,10 @@ id: sci-33eb94
 title: "Composites on the daily surface: author, read and summarise dag composites"
 status: idea
 priority: 2
+reviewed: true
+reviewed_at: 2026-10-24T10:04:42Z
 created: 2026-10-24T01:46:14Z
-updated: 2026-10-24T10:04:40Z
+updated: 2026-10-24T10:04:42Z
 depends: [sci-4e0f7f]
 parent: sci-35af80
 tags: []
@@ -22,3 +24,7 @@ Show evidence coverage, identification, scope and unresolved assumptions separat
 ## References
 
 - brief (input, required, kind=brief): docs/notes/2026-10-24-causal-analysis-workflow-brief.md — scope boundaries, open questions and existing follow-ups
+
+## Notes
+
+- 2026-10-24T10:04:42Z (main): scope: briefed; checked science 6d936f3, the command surface and built composite design; preserve author/read and structural-evidence acceptance cases, then scope implementation after sci-4e0f7f's approved workflow design; brief: docs/notes/2026-10-24-causal-analysis-workflow-brief.md
