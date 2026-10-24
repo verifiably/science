@@ -4,7 +4,7 @@ title: next exposes uncertainties that could change the current causal answer
 status: idea
 priority: 2
 created: 2026-10-24T01:46:17Z
-updated: 2026-10-24T02:17:40Z
+updated: 2026-10-24T10:55:54Z
 depends: [sci-33eb94, sci-1fa085]
 tags: []
 agent: claude-code/claude-opus-5-5
@@ -16,4 +16,10 @@ Scope for a later design: make the target question/estimand explicit and expose 
 
 Ownership: science derives and explains candidate research actions and the facts supporting them; autonomy owns execution priorities and scheduling. Decide how that split fits next's existing readiness classes. Use transparent qualitative reasons first; do not call a score expected information gain without a justified probability model and utility target. Evidence of absence, absent evidence and an unsupported representation remain distinct.
 
-Where to start: sci-33eb94, sci-1fa085, the completed first workflow sci-35af80, and beliefs-d6060a. Structural sensitivity can later supply consequences of alternative assumptions. This is a follow-on idea outside the first workflow's acceptance criteria and does not wait for a weighted-belief policy.
+Where to start: sci-33eb94, sci-1fa085, the first workflow sci-35af80 once it completes, and beliefs-d6060a. Structural sensitivity can later supply consequences of alternative assumptions. This is a follow-on idea outside the first workflow's acceptance criteria and does not wait for a weighted-belief policy.
+
+Scope handoff: [ref:brief] records the observed readiness-only classifier, alternatives and open presentation/ownership decisions. Keep this idea outside sci-35af80's children and closure criteria; wait for its completed example as well as the existing composite and integration components, then frame the later design against that evidence. No new research task or quantitative priority model is needed in this pass.
+
+## References
+
+- brief (input, required, kind=brief): docs/notes/2026-10-24-causal-analysis-workflow-brief.md — current next behaviour, follow-on boundary and unresolved design questions
