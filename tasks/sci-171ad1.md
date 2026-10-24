@@ -3,8 +3,10 @@ id: sci-171ad1
 title: next exposes uncertainties that could change the current causal answer
 status: idea
 priority: 2
+reviewed: true
+reviewed_at: 2026-10-24T10:56:14Z
 created: 2026-10-24T01:46:17Z
-updated: 2026-10-24T10:55:56Z
+updated: 2026-10-24T10:56:14Z
 depends: [sci-33eb94, sci-1fa085, sci-35af80]
 tags: []
 agent: claude-code/claude-opus-5-5
@@ -23,3 +25,7 @@ Scope handoff: [ref:brief] records the observed readiness-only classifier, alter
 ## References
 
 - brief (input, required, kind=brief): docs/notes/2026-10-24-causal-analysis-workflow-brief.md — current next behaviour, follow-on boundary and unresolved design questions
+
+## Notes
+
+- 2026-10-24T10:56:14Z (main): scope: briefed; checked science 8e8e3f6 next handler, readiness/selection tests, command inputs and the recovered models context. No target-question query or justified information-gain model exists in this surface; preserved the original scope and ownership split, clarified that sci-35af80 is still open, and recorded its completion as an additional wait while retaining component dependencies. Reused the existing workflow brief and semantic research; no new task or milestone child; brief: docs/notes/2026-10-24-causal-analysis-workflow-brief.md
