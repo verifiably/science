@@ -4,7 +4,7 @@ title: "Composites on the daily surface: author, read and summarise dag composit
 status: idea
 priority: 2
 created: 2026-10-24T01:46:14Z
-updated: 2026-10-24T10:04:39Z
+updated: 2026-10-24T10:04:40Z
 depends: [sci-4e0f7f]
 parent: sci-35af80
 tags: []
