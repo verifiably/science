@@ -4,7 +4,7 @@ title: Integrate causal identification and return one analysis result with prove
 status: idea
 priority: 2
 created: 2026-10-24T02:16:33Z
-updated: 2026-10-24T10:04:49Z
+updated: 2026-10-24T10:04:51Z
 depends: [sci-4e0f7f, sci-33eb94, sci-87c165]
 parent: sci-35af80
 tags: []
