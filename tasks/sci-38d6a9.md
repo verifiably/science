@@ -8,7 +8,7 @@ complexity: mid
 process: direct
 owner: docs/38d6a9-newcomer-readme
 created: 2026-10-24T18:10:19Z
-updated: 2026-10-24T18:11:00Z
+updated: 2026-10-24T18:24:13Z
 started: 2026-10-24T18:10:59Z
 depends: []
 tags: [docs]
@@ -24,3 +24,4 @@ Follow-on to the second guided tour's finding (vdocs-e4318e; atoms-dd5a5e and th
   provenance: {"harness_session":"claude-code:0e2eed92-cf40-40a1-aac6-b06ac9f3c1ce","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-24T18:11:00Z (docs/38d6a9-newcomer-readme): resumed
   provenance: {"harness_session":"claude-code:0e2eed92-cf40-40a1-aac6-b06ac9f3c1ce","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-24T18:24:13Z (docs/38d6a9-newcomer-readme): baseline 2026-10-24 (just test, worktree .worktrees/38d6a9-newcomer-readme at 10144da): 858 passed, 106.07 s
