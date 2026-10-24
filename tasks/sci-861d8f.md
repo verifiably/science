@@ -3,8 +3,10 @@ id: sci-861d8f
 title: "Third program candidate: breast cancer workspace as the second reused-public-data program"
 status: idea
 priority: 2
+reviewed: true
+reviewed_at: 2026-10-24T10:46:26Z
 created: 2026-10-18T20:28:57Z
-updated: 2026-10-24T10:46:25Z
+updated: 2026-10-24T10:46:26Z
 depends: [sci-1fd5e5, sci-0d00d2]
 parent: sci-8f15d4
 tags: []
@@ -16,3 +18,7 @@ Keith, 2026-10-18. A second program over reused public cohorts is what forces th
 ## References
 
 - brief (input, required, kind=brief): docs/notes/2026-10-24-exposure-reservation-reuse-brief.md — context and questions for this work
+
+## Notes
+
+- 2026-10-24T10:46:26Z (main): scope: briefed; projects design sections 9.1–9.3 and open sci-0d00d2 retain health first; new cohort program remains a candidate. Preserved original body and unverified data/exposure claims; recorded waits on sci-1fd5e5 and sci-0d00d2 rather than launching a workspace; brief: docs/notes/2026-10-24-exposure-reservation-reuse-brief.md
