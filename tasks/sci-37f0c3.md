@@ -4,7 +4,7 @@ title: Derive and check a causal model's testable implications without automatic
 status: idea
 priority: 2
 created: 2026-10-24T02:18:14Z
-updated: 2026-10-24T02:19:40Z
+updated: 2026-10-24T10:04:59Z
 depends: [sci-35af80, beliefs-d6060a]
 tags: []
 source: sci-35af80
@@ -18,3 +18,7 @@ Scope to decide after sci-35af80: for the supported graph semantics and measured
 Preserve diagnostic inputs and results through existing governed run/artifact routes. Keep unsupported diagnostics explicit and do not require a generic model-confidence carrier. If making an admitted claim about a composite requires new semantics, identify that separate beliefs work rather than routing the diagnostic into empirical belief automatically. Simulation or fitted outputs used to validate a procedure remain distinct from observations that could support a scientific claim.
 
 Expected scoping example: a model with an observable implication, an observed discrepancy, and a result that reports the discrepancy and its assumptions without strengthening belief merely because the check ran. Where to start: beliefs-d6060a's distinction between diagnostics and higher-order claims; sci-1fa085; DAGitty manual section 5.6 (https://www.dagitty.net/manual-3.x.pdf). This follow-on is outside the first workflow's closure criteria.
+
+## References
+
+- brief (input, required, kind=brief): docs/notes/2026-10-24-causal-analysis-workflow-brief.md — scope boundaries, open questions and existing follow-ups
