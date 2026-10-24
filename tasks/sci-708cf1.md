@@ -2,13 +2,12 @@
 id: sci-708cf1
 title: Documentation review
 status: todo
-priority: 3
+priority: 1
 size: s
 complexity: low
 process: direct
-defer: 2026-11-21
 created: 2026-10-24T12:49:50Z
-updated: 2026-10-24T12:49:53Z
+updated: 2026-10-24T18:56:24Z
 depends: []
 tags: [docs]
 source: curate-docs
