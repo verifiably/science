@@ -3,8 +3,10 @@ id: sci-b5c2e9
 title: "Prior exposure and validation reservation as records, not a markdown ledger"
 status: idea
 priority: 2
+reviewed: true
+reviewed_at: 2026-10-24T10:46:22Z
 created: 2026-10-18T19:19:53Z
-updated: 2026-10-24T10:46:20Z
+updated: 2026-10-24T10:46:22Z
 depends: [sci-1fd5e5]
 parent: sci-8f15d4
 tags: []
@@ -16,3 +18,7 @@ Filed 2026-10-18 from the multiple-myeloma program. Its protocol keeps two piece
 ## References
 
 - brief (input, required, kind=brief): docs/notes/2026-10-24-exposure-reservation-reuse-brief.md — context and questions for this work
+
+## Notes
+
+- 2026-10-24T10:46:22Z (main): scope: briefed; checked science d94ab77 command inventory and dataset writer; record representation remains undecided. Preserved original body and historical ledger count, reused existing aggregation/overlap owners, and recorded wait on sci-1fd5e5 for the distinct exposure-event/assignment write-read inventory; brief: docs/notes/2026-10-24-exposure-reservation-reuse-brief.md
