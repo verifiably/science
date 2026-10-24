@@ -4,8 +4,8 @@ title: "Prior exposure and validation reservation as records, not a markdown led
 status: idea
 priority: 2
 created: 2026-10-18T19:19:53Z
-updated: 2026-10-24T10:46:02Z
-depends: []
+updated: 2026-10-24T10:46:20Z
+depends: [sci-1fd5e5]
 parent: sci-8f15d4
 tags: []
 agent: claude-code
