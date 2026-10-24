@@ -7,7 +7,7 @@ size: m
 complexity: high
 process: planned
 created: 2026-10-24T02:16:32Z
-updated: 2026-10-24T02:16:32Z
+updated: 2026-10-24T02:18:16Z
 depends: [beliefs-d6060a]
 parent: sci-35af80
 tags: []
@@ -25,7 +25,7 @@ Acceptance design: distinguish evidence for a total effect from evidence for a d
 
 Expected result: [ref:design], reviewed before implementation planning, with an exact worked-example acceptance procedure and ownership/dependency decisions. After approval, scope the existing component ideas and file only missing execution and integration work; each implementation plan retains its review gate. Keep weighted-belief research, structural sensitivity, general model criticism and priority policy outside this first milestone.
 
-Ideas it wakes: on completion, add the design findings with tasks note --no-reviewed to sci-33eb94, sci-87c165 and the causal-tool integration idea under sci-35af80, and name the approved design revision.
+Ideas it wakes: on completion, add the design findings with tasks note --no-reviewed to sci-33eb94, sci-87c165 and sci-1fa085, and name the approved design revision.
 
 ## References
 
