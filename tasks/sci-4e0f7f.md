@@ -7,7 +7,7 @@ size: m
 complexity: high
 process: planned
 created: 2026-10-24T02:16:32Z
-updated: 2026-10-24T02:18:16Z
+updated: 2026-10-24T10:05:22Z
 depends: [beliefs-d6060a]
 parent: sci-35af80
 tags: []
@@ -31,3 +31,4 @@ Ideas it wakes: on completion, add the design findings with tasks note --no-revi
 
 - commands (input, required, kind=spec): docs/specs/2026-08-31-command-framework-design.md — command construction and kernel writes
 - design (output, kind=spec): docs/specs/causal-analysis-workflow-design.md — first workflow and worked-example acceptance
+- brief (input, required, kind=brief): docs/notes/2026-10-24-causal-analysis-workflow-brief.md — scope boundaries and questions the workflow design must settle
