@@ -50,8 +50,17 @@ analysis through exactly that path. The command surface, from `tools/cli.toml`:
   `show`.
 - The world: `status`, `build`, `epoch`, `serve`, `mcp`, `adapters`.
 
+Every command that opens the world (all but `build` and `adapters`) reads one
+configuration file, named by `--config` or the `SCIENCE_CONFIG` environment variable,
+and refuses when neither is given; nothing is discovered from the working directory.
+The file names the world, its corpus roots, the operations and store
+roots and the activated domains: §9.1 of the
+[command framework design](docs/specs/2026-08-31-command-framework-design.md) lists its
+keys, and §3.1 of the [mm30 record](docs/records/2026-09-23-mm30-through-the-commands.md)
+creates a world and writes one. With that file,
+
 ```sh
-uv run science status
+uv run science status --config <path to science.toml>
 ```
 
 prints the world: corpora and their lifecycle status, the current epoch, and record
