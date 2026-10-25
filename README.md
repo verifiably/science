@@ -45,6 +45,9 @@ analysis through exactly that path. The command surface, from `tools/cli.toml`:
   `next`.
 - Coordination: `project`, `question`, `hypothesis`, `task`, `decide`, `revise`,
   `reuse`, `project-select`, `projects`, `project-show`.
+- Sharing, between worlds (the [commons design](docs/specs/2026-09-30-science-commons-design.md)):
+  `publish`, `publish-preview`, `provider-inspect`, `provider-bind`, `adopt`, `fetch`,
+  `show`.
 - The world: `status`, `build`, `epoch`, `serve`, `mcp`, `adapters`.
 
 ```sh
