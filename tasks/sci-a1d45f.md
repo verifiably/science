@@ -7,7 +7,7 @@ size: l
 complexity: high
 process: planned
 created: 2026-10-12T12:10:24Z
-updated: 2026-10-15T13:02:19Z
+updated: 2026-10-25T23:09:26Z
 depends: [beliefs-7a56ef]
 tags: []
 source: autonomy-250f4d
@@ -28,3 +28,4 @@ The surface slice the autonomy envelope (sub-project 6) needs; design it here. S
 
 - 2026-10-12T15:59:11Z (main): the envelope spec is merged on autonomy main: docs/specs/2026-10-12-envelope-design.md (§4 lists this slice's asks, §12 its rows)
 - 2026-10-15T13:02:19Z (main): Envelope amendment of 2026-10-15 (autonomy-a41de4, decisions 5 and 12) adds to this slice: the endpoint seals on SIGTERM, taken by the control thread (sigwait or signalfd), first trigger wins, seal cause 'term'; it runs in its own session; stdin /dev/null, stdout and stderr to <run dir>/endpoint.log; seal.json written atomically (temp, fsync, rename). Row E20's SIGSTOP and group-stop cases exercise it.
+- 2026-10-25T23:09:26Z (main): From autonomy's authorization contract (autonomy docs/specs/2026-10-25-authorization-contract-design.md §12 row A4, §13 item 1): when E19 lands, add its surface-side arm. A run at coordination whose actor receives an authorization answer of yes over stdio and then runs a declared command minting proposition is refused before the body runs and again at the act (permit-exceeded, governing §5.2); a publish-class command is refused the same way at every unattended tier; the answer appears in no run record. Negative: mints:{proposition: corpus-write} admits the proposition and still refuses publish.
