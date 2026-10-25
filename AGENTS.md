@@ -24,8 +24,8 @@ the environment on first use, with `beliefs` as an editable path dependency.
 - Tests: `just test-one <pytest args>` runs the test at hand: a path relative to `python/`,
   `tests/test_file.py::test_name`, or `-k "a and b"`; at least one argument is required.
   `just test-fast` is the inner loop (pytest-testmon selects affected tests from its
-  dependency data); run it before committing. `just test` runs the suite, about 80
-  seconds on 8 workers. All test recipes run under ops' `host-budget run`, which sizes
+  dependency data); run it before committing. `just test` runs the suite.
+  All test recipes run under ops' `host-budget run`, which sizes
   `-n auto` to the host's budget. `just check` runs the seconds-long gate;
   `just gate` runs both. All test recipes run in a worktree as they are. Every recipe
   records its run through `tools/tt`, the timing wrapper vendored from the ops
@@ -39,8 +39,6 @@ the environment on first use, with `beliefs` as an editable path dependency.
   for future CI-covered push refs and uses testmon's dependency selection. Run `just test`
   yourself only when hooks are not installed, the fast target does not cover the affected
   behavior, or you are asked to.
-- Before removing a worktree, run `tt-report` (in the ops repository) so its fallback
-  test-timing log is harvested.
 
 ## Layout
 

@@ -16,8 +16,7 @@ Part of **verifiably**: verifiably builds understanding of the world from small,
 
 ## Install
 
-`verifiably-science` is not yet published. From a checkout, with `beliefs` checked out
-beside it as an editable path dependency:
+From a checkout, with `beliefs` checked out beside it as an editable path dependency:
 
 ```sh
 cd python && uv sync
