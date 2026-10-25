@@ -48,7 +48,14 @@ the environment on first use, with `beliefs` as an editable path dependency.
 
 ## Rules
 
-- Every durable thing is a governed record in a `beliefs` corpus, and every write is a
-  kernel act through the permit-bound writer endpoint: no storage of its own here.
+- Every scientific record is a governed record in a `beliefs` corpus, written as a kernel
+  act through the permit-bound writer endpoint; science keeps no record storage of its
+  own. Two write classes leave evidence in the `beliefs` session ledger instead of a
+  corpus: `session` (`project-select`'s selection line) and `sharing` (`provider-bind`
+  and `adopt`'s sharing lines). The sharing registry under `sharing_root`
+  (`science.sharing`) is the one science-owned state: its pins and provider bindings
+  are a projection of those lines, written only by sharing commands after the line
+  each projects and rebuildable from the ledger by `replay`; the adopted corpora beside
+  them are `beliefs` corpora the kernel restores.
 - A new command is a row in `tools/cli.toml` first; the conformance test asserts the
   live parser surface equals it.
