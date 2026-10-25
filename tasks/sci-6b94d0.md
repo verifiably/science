@@ -1,13 +1,15 @@
 ---
 id: sci-6b94d0
 title: README status example must name its required configuration
-status: todo
+status: doing
 priority: 3
 size: xs
 complexity: low
 process: direct
+owner: main
 created: 2026-10-25T16:10:40Z
-updated: 2026-10-25T16:10:40Z
+updated: 2026-10-25T16:38:23Z
+started: 2026-10-25T16:38:23Z
 depends: []
 tags: [docs]
 source: sci-708cf1
@@ -21,3 +23,5 @@ curate-docs finding F2 at df22dd1 (review sci-708cf1). README.md presents uv run
 
 - 2026-10-25T16:10:40Z (add): created
   provenance: {"harness_session":"codex:01a173cd-4c79-7471-99bd-ef2e7f4689d4","harness_session_source":"CODEX_THREAD_ID","origin":"agent"}
+- 2026-10-25T16:38:23Z (main): started
+  provenance: {"harness_session":"claude-code:3a1909a3-739d-4c3b-94a7-6da33a326219","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
