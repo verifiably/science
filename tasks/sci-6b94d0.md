@@ -1,15 +1,17 @@
 ---
 id: sci-6b94d0
 title: README status example must name its required configuration
-status: doing
+status: done
 priority: 3
 size: xs
 complexity: low
 process: direct
 owner: docs/guide-accuracy
 created: 2026-10-25T16:10:40Z
-updated: 2026-10-25T16:38:31Z
+updated: 2026-10-25T16:44:01Z
 started: 2026-10-25T16:38:23Z
+completed: 2026-10-25T16:44:01Z
+closed: 2026-10-25T16:44:01Z
 depends: []
 tags: [docs]
 source: sci-708cf1
@@ -26,4 +28,8 @@ curate-docs finding F2 at df22dd1 (review sci-708cf1). README.md presents uv run
 - 2026-10-25T16:38:23Z (main): started
   provenance: {"harness_session":"claude-code:3a1909a3-739d-4c3b-94a7-6da33a326219","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-25T16:38:31Z (docs/guide-accuracy): resumed
+  provenance: {"harness_session":"claude-code:3a1909a3-739d-4c3b-94a7-6da33a326219","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-25T16:44:01Z (docs/guide-accuracy): done
+  provenance: {"harness_session":"claude-code:3a1909a3-739d-4c3b-94a7-6da33a326219","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-25T16:44:01Z (docs/guide-accuracy): README status example passes --config and states the --config/SCIENCE_CONFIG requirement (no cwd discovery; build and adapters exempt), pointing to framework design §9.1 and the mm30 record §3.1; checked against resolve_config_path and cli.py (16ca62d)
   provenance: {"harness_session":"claude-code:3a1909a3-739d-4c3b-94a7-6da33a326219","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
