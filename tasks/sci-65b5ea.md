@@ -7,7 +7,7 @@ size: xs
 complexity: low
 process: direct
 created: 2026-09-30T14:40:23Z
-updated: 2026-09-30T14:40:24Z
+updated: 2026-10-26T23:17:18Z
 depends: [sci-f95f8b]
 parent: sci-c5528e
 tags: [projects]
@@ -25,3 +25,4 @@ Use just test-one for the affected tests and just test-fast before commit. This 
 ## Notes
 
 - 2026-09-30T14:40:23Z (coordination-part2): Pre-close review follow-up from sci-f95f8b: deferred coverage minors.
+- 2026-10-26T23:17:18Z (main): also take the deferred minor from sci-dce3b2's review: test_project_not_resolvable_carries_its_tips_in_the_refusal (test_dispatch_refusals.py) raises ProjectNotResolvable synthetically; add a real-path case that diverges the selected project (as test_cmd_projects.py's _diverge does) and mints a question, asserting {kind: ProjectNotResolvable, tips}
