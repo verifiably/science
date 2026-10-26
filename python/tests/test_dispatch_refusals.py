@@ -149,3 +149,25 @@ def test_project_not_resolvable_carries_its_tips_in_the_refusal(certified_work, 
         session.close()
     expected = {"kind": "ProjectNotResolvable", "tips": sorted(tips)} if tips else {"kind": "ProjectNotResolvable"}
     assert [(r.code, r.data) for r in refusals] == [("kernel-refused", expected)] * 2
+
+
+def test_minting_under_a_diverged_selected_project_refuses_with_its_tips(certified_work, monkeypatch):
+    """The same refusal on the real path: the kernel's mint resolves the
+    selected project and finds it divergent. Two tips cannot arise in one root
+    (coordination §4.3), so the resolver is stubbed to report them for the
+    project, as test_cmd_projects.py's `_diverge` does."""
+    from beliefs.coordination import CoordinationRefused
+    from beliefs.corpus import CoordinationResolver
+    from helpers.world import QUERY, coordination_rig, mint_project
+
+    tips = ("b" * 32, "a" * 32)
+    with coordination_rig(certified_work, ("project", "question")) as (d, _):
+        health = mint_project(d, "health")
+        d._selection = health
+        resolve = CoordinationResolver.resolve
+        monkeypatch.setattr(CoordinationResolver, "resolve", lambda self, address: (
+            CoordinationRefused("divergent-view", tips) if address == health else resolve(self, address)))
+        with pytest.raises(Refused) as caught:
+            d.invoke("question", {"name": "q", "query": QUERY})
+    assert caught.value.refusal.code == "kernel-refused"
+    assert caught.value.refusal.data == {"kind": "ProjectNotResolvable", "tips": sorted(tips)}

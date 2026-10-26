@@ -238,3 +238,25 @@ def test_a_kernel_refusal_after_selecting_is_a_defect_and_replays(rig):
     assert d.selection == health
     assert len(_lines(cfg, session, "select")) == 1
     assert "name: health\n" in d.invoke("pick", {"address": str(health)}, invocation_id="W" * 8).text
+
+
+@pytest.mark.parametrize("selects", [False, True], ids=["before-select", "after-select"])
+def test_an_unexpected_failure_leaves_the_invocation_open_and_its_retry_outcome_unknown(rig, selects):
+    d, session, cfg = rig
+    health, cancer = mint_project(d, "health"), mint_project(d, "cancer")
+    d.invoke("pick", {"address": str(health)})
+
+    def crashing(ctx, port, *, address=None):
+        if selects:
+            port.select(_address(address))
+        raise RuntimeError("handler crashed")
+
+    d._handlers["pick"] = crashing
+    with pytest.raises(RuntimeError):
+        d.invoke("pick", {"address": str(cancer)}, invocation_id="U" * 8)
+    assert not [line for line in _lines(cfg, session, "invocation-close") if line["invocation"] == "U" * 8]
+    with pytest.raises(Refused) as caught:
+        d.invoke("pick", {"address": str(cancer)}, invocation_id="U" * 8)
+    assert caught.value.refusal.code == "outcome-unknown"
+    assert d.selection == (cancer if selects else health)
+    assert len(_lines(cfg, session, "select")) == (2 if selects else 1)

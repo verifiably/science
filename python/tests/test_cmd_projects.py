@@ -109,15 +109,27 @@ def test_a_project_with_no_records_says_so(certified_work):
 
 
 def test_project_binds_this_show_only(certified_work):
-    """P8 at the dispatcher: the field shows another project and the
-    endpoint's selection is unchanged afterwards."""
+    """P8 at the dispatcher: the field shows another project, each read holds
+    only its own project's records, and the endpoint's selection is unchanged
+    afterwards."""
     with coordination_rig(certified_work, NAMES) as (d, _):
         health, cancer = mint_project(d, "health"), mint_project(d, "cancer")
+        d.invoke("project-select", {"target": "cancer"})
+        cancer_task = _task(d, "stage the cohort")
+        d.invoke("question", {"name": "Does stage predict relapse?", "query": QUERY})
         d.invoke("project-select", {"target": "health"})
-        assert d.invoke("project-show", {}, project="cancer").text.startswith("## Project: cancer\n")
-        assert d.invoke("project-show", {}, project=str(cancer)).text.startswith("## Project: cancer\n")
+        health_task = _task(d, "hold the matrix")
+        d.invoke("decide", {"name": "Use the coarse query", "body": "No vocabulary yet."})
+        cancer_reads = [d.invoke("project-show", {}, project=named).text for named in ("cancer", str(cancer))]
         assert d.selection == health
-        assert d.invoke("project-show", {}).text.startswith("## Project: health\n")
+        health_read = d.invoke("project-show", {}).text
+    for text in cancer_reads:
+        assert text.startswith("## Project: cancer\n")
+        assert cancer_task in text and ": Does stage predict relapse?\n" in text
+        assert health_task not in text and "Use the coarse query" not in text
+    assert health_read.startswith("## Project: health\n")
+    assert health_task in health_read and ": Use the coarse query\n" in health_read
+    assert cancer_task not in health_read and "Does stage predict relapse?" not in health_read
 
 
 def test_nothing_selected_and_nothing_named_refuses(certified_work):
