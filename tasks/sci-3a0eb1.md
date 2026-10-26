@@ -6,9 +6,9 @@ priority: 3
 size: xs
 complexity: low
 process: direct
-owner: main
+owner: coordination-closeout
 created: 2026-09-24T14:26:54Z
-updated: 2026-10-26T23:28:12Z
+updated: 2026-10-26T23:28:19Z
 started: 2026-10-26T23:28:12Z
 depends: []
 parent: sci-c5528e
@@ -22,4 +22,6 @@ Deferred Minor findings from the 2026-09-24 reviews of coordination part 1: revi
 
 - 2026-10-26T23:17:21Z (main): item 2 (divergent-view refusal built twice) is done by sci-dce3b2: science.coordination.refuse_coordination now backs resolve_one, selected_project and revise
 - 2026-10-26T23:28:12Z (main): started
+  provenance: {"harness_session":"claude-code:c826b605-87ec-4aa8-8aea-62a46a0d13b8","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-26T23:28:19Z (coordination-closeout): resumed
   provenance: {"harness_session":"claude-code:c826b605-87ec-4aa8-8aea-62a46a0d13b8","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
