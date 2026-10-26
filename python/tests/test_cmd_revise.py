@@ -137,3 +137,23 @@ def test_repair_names_every_tip_and_takes_every_field(certified_work, monkeypatc
     ((kind, address, predecessors, content),) = writer.calls
     assert kind == "project" and predecessors == sorted([real.uid, twin.uid])
     assert content["name"] == "x" and content["author"] == writer.actor
+
+
+def test_repair_on_one_standing_tip_still_takes_every_field(certified_work):
+    """`repair` means one content rule however many tips stand: a caller cannot
+    see the tip count at write time, so a repair that a concurrent repair beat
+    neither silently carries content over nor refuses valid full content."""
+    import science.commands.revise as revise_module
+    with coordination_rig(certified_work, NAMES) as (d, ctx):
+        project = mint_project(d)
+        (tip,) = ctx.coordination().tips(project)
+        writer = _RecordingWriter()
+        writer.node = tip.node
+        with pytest.raises(Refused) as partial:
+            revise_module.handle(ctx, writer, address=str(project), name="x", repair=True)
+        assert partial.value.refusal.code == "invalid-input"
+        assert "missing body, query" in partial.value.refusal.message
+        assert writer.calls == []
+        revise_module.handle(ctx, writer, address=str(project), name="x", body="", query=QUERY, repair=True)
+    ((kind, _, predecessors, _),) = writer.calls
+    assert kind == "project" and predecessors == [tip.node.uid]

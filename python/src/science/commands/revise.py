@@ -1,7 +1,7 @@
 """revise: a whole new revision naming its predecessors (spec §3.6)."""
 from __future__ import annotations
 
-from science.coordination import (content_of, now, parse_address, parse_query_text, refuse_coordination,
+from science.coordination import (content_of, now, parse_query_text, parse_unpinned, refuse_coordination,
                                  standing_tips)
 from science.refusal import Refusal, Refused
 from science.report import Report, record_block
@@ -21,7 +21,7 @@ def handle(ctx, writer, *, address, name=None, body=None, query=None, status=Non
            clear_depends=None, repair=None) -> Report:
     # Canonicalization supplies each bool's declared `false`; the handler
     # default is None because the loader requires it of every optional input.
-    parsed = parse_address(address, subordinate=address.count("/") == 1)
+    parsed = parse_unpinned(address)
     if clear_depends and depends is not None:
         _refuse("give `depends` or `clear_depends`, not both")
     if clear_depends:

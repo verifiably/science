@@ -5,25 +5,26 @@ import pytest
 from helpers.world import QUERY, coordination_rig, mint_project
 from science.refusal import Refused
 
-NAMES = ("project", "question", "task", "decide", "reuse")
+NAMES = ("project", "question", "hypothesis", "task", "decide", "reuse")
 LOCAL = re.compile(r"\[(\w+)\] \w+:([0-9a-f]{32})\.([0-9a-f]{32})\.([0-9a-f]{32})")
 
 
-def test_reuse_copies_the_query_into_the_current_project_and_leaves_the_source(certified_work):
-    """P4."""
+@pytest.mark.parametrize("kind", ["question", "hypothesis"])
+def test_reuse_copies_the_query_into_the_current_project_and_leaves_the_source(certified_work, kind):
+    """P4, for each reusable kind."""
     from beliefs.coordination import CoordinationAddress
     with coordination_rig(certified_work, NAMES) as (d, ctx):
         myeloma, health = mint_project(d, "multiple-myeloma"), mint_project(d, "health")
         d._selection = myeloma
-        kind, project, local, revision = LOCAL.search(
-            d.invoke("question", {"name": "PHF19 and stage", "query": QUERY, "body": "why"}).text).groups()
+        minted, project, local, revision = LOCAL.search(
+            d.invoke(kind, {"name": "PHF19 and stage", "query": QUERY, "body": "why"}).text).groups()
         source = CoordinationAddress(project, local)
         before = ctx.coordination().resolve(source)
         d._selection = health
         copied = LOCAL.search(d.invoke("reuse", {"source": str(source)}).text).groups()
         after = ctx.coordination().resolve(source)
         copy = ctx.coordination().resolve(CoordinationAddress(copied[1], copied[2]))
-    assert copied[0] == "question" and copied[1] == health.project
+    assert minted == copied[0] == kind and copied[1] == health.project
     assert copy.facets["coordination"]["query"] == before.facets["coordination"]["query"]
     assert copy.title == "PHF19 and stage"
     assert copy.body.startswith(f"Same query as {source}@{revision}.\n\nwhy")

@@ -235,6 +235,12 @@ divergence.
 **Amended 2026-10-26:** the refusal's `data` is
 `{kind: "CoordinationRefused", reason: "divergent-view", tips: […]}` (§4.3).
 
+**Amended 2026-10-26 (part 1 minors):** the content rule holds however many tips
+stand: `repair` on an address with one standing tip still takes every field and
+names that tip as the one predecessor. A caller cannot see the tip count at write
+time, so a repair that a concurrent repair beat neither carries content over
+silently nor refuses the full content it gives.
+
 ### 3.7 `project-select`
 
 ```toml
@@ -622,26 +628,21 @@ a question. An integer names the shipped coordination contract
 `compile_profile(base, domains + contracts, coordination=shipped_coordination(v))`,
 passed to `open_attended_session` as both `profile` and `coordination` — the kernel
 requires the two to agree in compiled identity (`require_profile_compatible`), so
-they are the same `ProfileSpec`. The corpus must pin it: a corpus adopted without
-the coordination contract refuses at session open under `require_pins_agree`, and
-the loader's refusal says the configuration asks for coordination the corpus does
-not pin. `false` opens a session without coordination, for a corpus adopted before
-it; every coordination-class command then refuses `kernel-refused`
-(`CoordinationUnavailable`) at its act, as today, and `project-select`, `projects`,
-`project-show`, a `--project` on any read, and a `default_project` key each refuse
-`invalid-input` naming the `coordination = false` setting, since there is no
-resolver to ask. The read context builds a
+they are the same `ProfileSpec`. The corpus must pin it, and both failures refuse
+`invalid-input` at session open, naming the root: a corpus adopted without the
+coordination contract says the configuration asks for coordination the corpus does
+not pin and names `coordination = false`; a corpus pinning another version names
+the contract it pins and says to set `coordination` to that version. `false` opens a
+session without coordination, for a corpus adopted before it. Then only `project`
+reaches its act, refusing `kernel-refused` (`CoordinationUnavailable`); `question`,
+`hypothesis`, `task`, `decide` and `reuse` refuse `no-current-project` first, since no
+project can be selected without coordination; and `revise`, `project-select`,
+`projects`, `project-show`, a `--project` on any read, and a `default_project` key
+each refuse `invalid-input` naming the `coordination = false` setting before any act,
+since there is no resolver to ask. The read context builds a
 `CoordinationResolver` when coordination is on. With one configured root — the only
 shape the kernel's session opens today — that root is mounted under the session's
 profile.
-
-**Amended 2026-09-24:** with `coordination = false`, `revise` refuses
-`invalid-input` from the read side, naming the setting, before any act. Of the
-mints, only `project` reaches its act and refuses `kernel-refused`
-(`CoordinationUnavailable`); `question`, `hypothesis`, `task`, `decide` and `reuse`
-refuse `no-current-project` first, since no project can be selected without
-coordination. A corpus that does not pin the configured coordination contract
-refuses `invalid-input` at session open, naming the root and `coordination = false`.
 
 **Every mount under its own manifest's profile.** The resolver checks each mount's
 manifest pins against the profile it is given (`CoordinationResolver.__init__`), and
