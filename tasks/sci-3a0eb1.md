@@ -8,7 +8,7 @@ complexity: low
 process: direct
 owner: coordination-closeout
 created: 2026-09-24T14:26:54Z
-updated: 2026-10-26T23:30:20Z
+updated: 2026-10-26T23:34:43Z
 started: 2026-10-26T23:28:12Z
 depends: []
 parent: sci-c5528e
@@ -26,3 +26,4 @@ Deferred Minor findings from the 2026-09-24 reviews of coordination part 1: revi
 - 2026-10-26T23:28:19Z (coordination-closeout): resumed
   provenance: {"harness_session":"claude-code:c826b605-87ec-4aa8-8aea-62a46a0d13b8","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-26T23:30:20Z (coordination-closeout): baseline: just test in .worktrees/coordination-closeout, 860 passed
+- 2026-10-26T23:34:43Z (coordination-closeout): item 4 ruling: repair on one standing tip keeps the every-field rule (spec §3.6 amendment 2026-10-26). Why: a caller cannot see the tip count at write time, so a repair a concurrent repair beat must not silently carry content over or refuse valid full content. Rejected: carry over on one tip, refuse repair on one tip.
