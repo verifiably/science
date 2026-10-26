@@ -124,7 +124,8 @@ def test_a_duplicate_citation_from_the_writer_is_a_named_kernel_refusal(certifie
 @pytest.mark.parametrize("tips", [("b" * 32, "a" * 32), ()], ids=["divergent", "unknown"])
 def test_project_not_resolvable_carries_its_tips_in_the_refusal(certified_work, tips):
     """Coordination spec §4.3: a client reconciles a diverged project from the
-    tips the kernel named; a project with none carries no `tips` key."""
+    tips the kernel named; a project with none carries no `tips` key. A replay
+    returns the same data from the closed invocation."""
     from beliefs.errors import ProjectNotResolvable
     from science.session import open_session
     from science.config import ReadContext
@@ -139,10 +140,12 @@ def test_project_not_resolvable_carries_its_tips_in_the_refusal(certified_work, 
     session = open_session(cfg)
     try:
         d = Dispatcher((minting,), {"minting": handler}, ReadContext.open(cfg), session=session)
-        with pytest.raises(Refused) as caught:
-            d.invoke("minting", {})
+        refusals = []
+        for _ in range(2):
+            with pytest.raises(Refused) as caught:
+                d.invoke("minting", {}, invocation_id="P" * 8)
+            refusals.append(caught.value.refusal)
     finally:
         session.close()
-    assert caught.value.refusal.code == "kernel-refused"
-    assert caught.value.refusal.data == ({"kind": "ProjectNotResolvable", "tips": sorted(tips)} if tips
-                                         else {"kind": "ProjectNotResolvable"})
+    expected = {"kind": "ProjectNotResolvable", "tips": sorted(tips)} if tips else {"kind": "ProjectNotResolvable"}
+    assert [(r.code, r.data) for r in refusals] == [("kernel-refused", expected)] * 2
