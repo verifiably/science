@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: main
 created: 2026-09-23T11:40:35Z
-updated: 2026-10-26T23:17:32Z
+updated: 2026-10-26T23:17:35Z
 started: 2026-09-24T09:49:50Z
 depends: []
 tags: [projects]
@@ -47,4 +47,6 @@ The belief path design (dogfood-commands branch, docs/specs/2026-09-09-belief-pa
 - 2026-10-01T21:17:59Z (main): park is stale: beliefs-cc0aea, beliefs-1148ad, beliefs-1af3fd are all done (checked 2026-10-01); Part 2 (sci-f95f8b) is plannable
 - 2026-10-26T23:09:50Z (main): park note is stale: part 2 (sci-f95f8b) and its beliefs dependencies (cc0aea, 1148ad, 1af3fd) are done; the open children are the minors sci-dce3b2, sci-3a0eb1, sci-65b5ea, sci-6ffb7f, and closing this unblocks the P1 milestone sci-0d00d2
 - 2026-10-26T23:17:32Z (main): resumed
+  provenance: {"harness_session":"claude-code:a32b916e-4ed3-4533-b453-d38ede488b81","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-26T23:17:35Z (main): parked (waiting on agent): Agent finishes the open children sci-3a0eb1, sci-65b5ea and sci-6ffb7f (sci-dce3b2 done 2026-10-26; part 2 and its beliefs dependencies are done), then closes this goal so sci-0d00d2 becomes ready
   provenance: {"harness_session":"claude-code:a32b916e-4ed3-4533-b453-d38ede488b81","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
