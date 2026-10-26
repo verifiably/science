@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: main
 created: 2026-09-23T11:40:35Z
-updated: 2026-10-01T21:17:59Z
+updated: 2026-10-26T23:09:50Z
 started: 2026-09-24T09:49:50Z
 depends: []
 tags: [projects]
@@ -45,3 +45,4 @@ The belief path design (dogfood-commands branch, docs/specs/2026-09-09-belief-pa
   provenance: {"harness_session":"claude-code:9d2d64bd-cdd3-4a14-add8-aa234fa311c0","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-09-30T14:28:30Z (coordination-part2): Part 2 (sci-f95f8b) implemented and reviewed on branch coordination-part2; ops CLI source published in 6178374 and all CLI copies verified. Part 3 (sci-923d3a) is next and unblocked; beliefs-fe7149 is done. Science branch awaits integration.
 - 2026-10-01T21:17:59Z (main): park is stale: beliefs-cc0aea, beliefs-1148ad, beliefs-1af3fd are all done (checked 2026-10-01); Part 2 (sci-f95f8b) is plannable
+- 2026-10-26T23:09:50Z (main): park note is stale: part 2 (sci-f95f8b) and its beliefs dependencies (cc0aea, 1148ad, 1af3fd) are done; the open children are the minors sci-dce3b2, sci-3a0eb1, sci-65b5ea, sci-6ffb7f, and closing this unblocks the P1 milestone sci-0d00d2
