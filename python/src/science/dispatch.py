@@ -6,7 +6,8 @@ import threading
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 
-from beliefs.errors import AddressMapConflict, BuildContended, CitationContractMismatch, WriteRefused
+from beliefs.errors import (AddressMapConflict, BuildContended, CitationContractMismatch, ProjectNotResolvable,
+                            WriteRefused)
 from beliefs.permit import PermitExceeded
 from beliefs.session import KernelRefusalValue
 
@@ -218,7 +219,11 @@ class Dispatcher:
                 data["detail"] = detail
                 message = f"{message}: {detail}"
             return Refusal("kernel-refused", message, data)
-        return Refusal("kernel-refused", str(error), {"kind": type(error).__name__})
+        data = {"kind": type(error).__name__}
+        # A diverged project's tips are what a client reconciles it from (spec §4.3).
+        if isinstance(error, ProjectNotResolvable) and error.tips:
+            data["tips"] = list(error.tips)
+        return Refusal("kernel-refused", str(error), data)
 
     def _claim(self, decl: Declaration, canonical: Mapping[str, object], iid: str):
         """Claim `iid` for this command and payload: `ClaimDone` to replay or

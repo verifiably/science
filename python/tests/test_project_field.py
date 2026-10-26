@@ -139,7 +139,7 @@ def test_a_divergent_selection_refuses_with_every_tip(certified_work, monkeypatc
         monkeypatch.setattr(CoordinationResolver, "resolve",
                             lambda self, address: CoordinationRefused("divergent-view", tips))
         refusal = _refused(lambda: selected_project(replace(ctx, selection=health)), "kernel-refused")
-    assert refusal.data == {"kind": "divergent-view", "tips": sorted(tips)}
+    assert refusal.data == {"kind": "CoordinationRefused", "reason": "divergent-view", "tips": sorted(tips)}
 
 
 def test_the_cli_offers_project_on_selects_commands_only():

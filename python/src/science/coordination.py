@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import NoReturn
 
 import yaml
 
@@ -82,12 +83,20 @@ def resolve_one(ctx, address):
     if resolved is None:
         _refuse(f"{address} names no coordination record in the configured corpora")
     if isinstance(resolved, CoordinationRefused):
-        raise Refused(Refusal(
-            "kernel-refused",
-            f"{address} has {len(resolved.tips)} standing tips; revise it with `repair` to reconcile them",
-            {"kind": resolved.reason, "tips": list(resolved.tips)},
-        ))
+        refuse_coordination(address, resolved.reason, resolved.tips)
     return resolved
+
+
+def refuse_coordination(address, reason: str, tips, *,
+                        remedy: str = "revise it with `repair` to reconcile them") -> NoReturn:
+    """Refuse a coordination resolution as every kernel refusal arrives: the
+    kernel's class in `data.kind`, its reason code (`divergent-view`) in
+    `data.reason`, and every standing tip (spec §4.3)."""
+    raise Refused(Refusal(
+        "kernel-refused",
+        f"{address} has {len(tips)} standing tips; {remedy}",
+        {"kind": "CoordinationRefused", "reason": reason, "tips": sorted(tips)},
+    ))
 
 
 def tip_nodes(resolver, resolved) -> tuple:
@@ -157,12 +166,9 @@ def selected_project(ctx):
         return None
     resolved = ctx.coordination().resolve(ctx.selection)
     if isinstance(resolved, CoordinationRefused):
-        raise Refused(Refusal(
-            "kernel-refused",
-            f"{ctx.selection} has {len(resolved.tips)} standing tips; reconcile them with `revise --repair`, "
-            "or clear the selection with `project-select --clear`",
-            {"kind": resolved.reason, "tips": list(resolved.tips)},
-        ))
+        refuse_coordination(ctx.selection, resolved.reason, resolved.tips,
+                            remedy="reconcile them with `revise --repair`, "
+                                   "or clear the selection with `project-select --clear`")
     if resolved is None or resolved.kind != "project":
         raise Refused(Refusal("unknown-project", f"{ctx.selection} names no standing project"))
     return resolved
