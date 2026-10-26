@@ -24,6 +24,7 @@ def _relative_config(work: Path, *, build=build_fixture_world, contracts=(), ext
         f"contracts = {list(contracts)!r}\n"
         'store_root = "store"\n'
         "coordination = 2\n"
+        + ("" if "service_socket" in extra else f'service_socket = "{cfg.service_socket}"\n')
         + extra
     )
     return path

@@ -21,7 +21,9 @@ def _config(work: Path, *, corpus_roots=("corpus",), extra: str = "") -> Path:
         f"domains = {list(DOMAINS)!r}\n"
         'contracts = ["testing.yaml"]\n'
         'store_root = "store"\n'
-        "coordination = 2\n" + extra
+        "coordination = 2\n"
+        + ("" if "service_socket" in extra else f'service_socket = "{cfg.service_socket}"\n')
+        + extra
     )
     return path
 

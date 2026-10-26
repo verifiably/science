@@ -12,6 +12,7 @@ from science.dispatch import Dispatcher
 from science.findings import report_findings
 from science.refusal import Refused, envelope
 from science.schema import Declaration
+from science.stop import stop_signals_held
 
 PROTOCOL_VERSION = "2026-07-28"
 MAX_REQUEST_BYTES = 1_048_576
@@ -384,55 +385,59 @@ def serve(config_path: Path, stdin=None, stdout=None, stderr=None, project=None)
     # cannot open over (write-root pins the writer's profile does not match, an
     # unmountable read mount, a root without a readable manifest) refuses here;
     # that is a launcher misconfiguration and propagates, never a command refusal.
-    session = open_session(config, project=selection)
-    server, serving = None, False
-    try:
-        report_findings(session.findings, reported_by=session.session_id,
-                        stream=sys.stderr if stderr is None else stderr)
-        dispatcher = Dispatcher(
-            declarations,
-            resolve_handlers(declarations),
-            read_context,
-            session=session,
-            selection=selection,
-        )
-        # One live session per world (projects design §5.1a): CLI writes and, in
-        # part 2, the selection query reach this session over the same socket
-        # `science serve` would bind, and a second launcher refuses on it.
-        server = service_server(dispatcher, config.service_socket, on_close=lambda: None)
-        threading.Thread(target=server.serve_forever, daemon=True).start()
-        serving = True
-        while True:
-            frame = _read_frame(stdin)
-            if frame is _END_OF_INPUT:
-                return
-            if frame is _OVERSIZED_FRAME:
-                response = _rpc_error(None, -32600, "Request exceeds maximum size")
-            elif not frame.strip():
-                continue
-            else:
-                try:
-                    line = frame.decode("utf-8", errors="strict")
-                    request = json.loads(
-                        line,
-                        object_pairs_hook=_object_without_duplicates,
-                        parse_constant=_reject_nonfinite_number,
-                    )
-                except (UnicodeDecodeError, ValueError, RecursionError):
-                    response = _rpc_error(None, -32700, "Parse error")
-                else:
-                    response = handle_request(request, dispatcher, declarations)
-            if response is None:
-                continue
-            stdout.write(json.dumps(response, separators=(",", ":")) + "\n")
-            stdout.flush()
-    finally:
+    session = server = None
+    serving = False
+    with stop_signals_held() as release:
         try:
-            if server is not None:
-                try:
-                    if serving:
-                        server.shutdown()  # blocks until serve_forever returns, so only once it runs
-                finally:
-                    server.server_close()
+            session = open_session(config, project=selection)
+            report_findings(session.findings, reported_by=session.session_id,
+                            stream=sys.stderr if stderr is None else stderr)
+            dispatcher = Dispatcher(
+                declarations,
+                resolve_handlers(declarations),
+                read_context,
+                session=session,
+                selection=selection,
+            )
+            # One live session per world (projects design §5.1a): CLI writes and, in
+            # part 2, the selection query reach this session over the same socket
+            # `science serve` would bind, and a second launcher refuses on it.
+            server = service_server(dispatcher, config.service_socket, on_close=lambda: None)
+            threading.Thread(target=server.serve_forever, daemon=True).start()
+            serving = True
+            release()  # the finally below now owns the session, the socket and the serving thread
+            while True:
+                frame = _read_frame(stdin)
+                if frame is _END_OF_INPUT:
+                    return
+                if frame is _OVERSIZED_FRAME:
+                    response = _rpc_error(None, -32600, "Request exceeds maximum size")
+                elif not frame.strip():
+                    continue
+                else:
+                    try:
+                        line = frame.decode("utf-8", errors="strict")
+                        request = json.loads(
+                            line,
+                            object_pairs_hook=_object_without_duplicates,
+                            parse_constant=_reject_nonfinite_number,
+                        )
+                    except (UnicodeDecodeError, ValueError, RecursionError):
+                        response = _rpc_error(None, -32700, "Parse error")
+                    else:
+                        response = handle_request(request, dispatcher, declarations)
+                if response is None:
+                    continue
+                stdout.write(json.dumps(response, separators=(",", ":")) + "\n")
+                stdout.flush()
         finally:
-            session.close()  # the ledger's session-close line, crash or EOF alike
+            try:
+                if server is not None:
+                    try:
+                        if serving:
+                            server.shutdown()  # blocks until serve_forever returns, so only once it runs
+                    finally:
+                        server.server_close()
+            finally:
+                if session is not None:
+                    session.close()  # the ledger's session-close line, crash or EOF alike

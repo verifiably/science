@@ -5,6 +5,7 @@ import json
 import os
 import socketserver
 import sys
+import threading
 from pathlib import Path
 
 from science.config import ReadContext, ScienceConfig
@@ -77,32 +78,45 @@ def service_server(dispatcher, socket_path: Path, on_close):
     class Handler(socketserver.StreamRequestHandler):
         def handle(self) -> None:
             for line in self.rfile:
+                if not self.server.begin_request():
+                    self.wfile.write(json.dumps({"ok": False, "refusal": envelope(Refusal(
+                        "permit-exceeded", "the launcher is closing its session; this request did not run",
+                    ))}).encode() + b"\n")
+                    return
                 try:
-                    request = json.loads(line)
-                    if isinstance(request, dict) and set(request) == {"query"}:
-                        reply = _answer_query(dispatcher, request["query"])
-                    else:
-                        command, inputs, invocation_id, cursor, project = _validated(request)
-                        out = dispatcher.invoke(command, inputs, invocation_id=invocation_id,
-                                                cursor=cursor, project=project)
-                        reply = {"ok": True, "text": out.text,
-                                 "invocation_id": out.invocation_id}
-                except json.JSONDecodeError as caught:
-                    reply = {"ok": False, "refusal": envelope(
-                        Refusal("invalid-input", f"request is not JSON: {caught}"))}
-                except Refused as caught:
-                    reply = {"ok": False, "refusal": envelope(caught.refusal)}
-                    if caught.invocation_id is not None:
-                        reply["invocation_id"] = caught.invocation_id
-                self.wfile.write(json.dumps(reply).encode() + b"\n")
+                    self._answer(line)
+                finally:
+                    self.server.end_request()
+
+        def _answer(self, line: bytes) -> None:
+            try:
+                request = json.loads(line)
+                if isinstance(request, dict) and set(request) == {"query"}:
+                    reply = _answer_query(dispatcher, request["query"])
+                else:
+                    command, inputs, invocation_id, cursor, project = _validated(request)
+                    out = dispatcher.invoke(command, inputs, invocation_id=invocation_id,
+                                            cursor=cursor, project=project)
+                    reply = {"ok": True, "text": out.text,
+                             "invocation_id": out.invocation_id}
+            except json.JSONDecodeError as caught:
+                reply = {"ok": False, "refusal": envelope(
+                    Refusal("invalid-input", f"request is not JSON: {caught}"))}
+            except Refused as caught:
+                reply = {"ok": False, "refusal": envelope(caught.refusal)}
+                if caught.invocation_id is not None:
+                    reply["invocation_id"] = caught.invocation_id
+            self.wfile.write(json.dumps(reply).encode() + b"\n")
 
     class Server(socketserver.ThreadingUnixStreamServer):
         # Without this, `server_close` joins every handler thread, and a
         # handler blocks in its read loop for as long as its client holds
         # the connection open. One idle client would then wedge shutdown
-        # indefinitely. Killing an in-flight write at shutdown is already
-        # a designed-for state: the invocation stays claimed and unclosed,
-        # so a retry replays as `outcome-unknown` (spec §5.2).
+        # indefinitely. Close drains only the requests being answered
+        # (`server_close`); an idle reader dies with the process. A write the
+        # process dies inside is a designed-for state: the invocation stays
+        # claimed and unclosed, so a retry replays as `outcome-unknown`
+        # (spec §5.2).
         daemon_threads = True
         # None until `server_bind` succeeds. `TCPServer.__init__` calls
         # `server_close` on a `server_bind` failure (a lost bind race — something
@@ -111,6 +125,30 @@ def service_server(dispatcher, socket_path: Path, on_close):
         # default lets that early `server_close` see "nothing bound" instead of
         # raising `AttributeError` and masking the original `OSError`.
         bound_ident: tuple[int, int] | None = None
+
+        def __init__(self, *args, **kwargs) -> None:
+            # Requests a handler is answering, and whether close has begun:
+            # close waits for the first to drain before `on_close` closes the
+            # session, so an in-flight write finishes, replies and closes its
+            # invocation, and a request arriving after close begins is refused
+            # without running. Set before `super().__init__`, whose bind
+            # failure path calls `server_close`.
+            self._requests = threading.Condition()
+            self._answering = 0
+            self._closing = False
+            super().__init__(*args, **kwargs)
+
+        def begin_request(self) -> bool:
+            with self._requests:
+                if self._closing:
+                    return False
+                self._answering += 1
+                return True
+
+        def end_request(self) -> None:
+            with self._requests:
+                self._answering -= 1
+                self._requests.notify_all()
 
         def server_bind(self) -> None:
             super().server_bind()
@@ -131,6 +169,9 @@ def service_server(dispatcher, socket_path: Path, on_close):
                     except FileNotFoundError:
                         pass
                 super().server_close()
+                with self._requests:
+                    self._closing = True
+                    self._requests.wait_for(lambda: self._answering == 0)
             finally:
                 on_close()
 

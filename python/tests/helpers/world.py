@@ -1,3 +1,4 @@
+import hashlib
 import json
 import secrets
 from contextlib import contextmanager
@@ -71,6 +72,14 @@ def fixture_source_node(slug: str):
     return stored.source_node(title=slug, identifiers={"doi": "10.1234/" + slug})
 
 
+def short_socket(work: Path) -> Path:
+    """The service socket a fixture world under `work` binds unless a test
+    names one. AF_UNIX caps a socket path at 107 bytes and the certified work
+    root takes most of that, so the socket lives under /tmp, named for `work`;
+    the certified-work fixtures remove it with the directory."""
+    return Path("/tmp") / f"sci-sock-{hashlib.sha256(str(work).encode()).hexdigest()[:16]}.sock"
+
+
 def build_fixture_world(work: Path) -> ScienceConfig:
     corpus_root = work / "corpus"
     config = WorldConfig(work / "world", secrets.token_hex(16), (corpus_root,))
@@ -88,7 +97,7 @@ def build_fixture_world(work: Path) -> ScienceConfig:
         world=config,
         operations_root=work / "ops",
         profile=PROFILE,
-        service_socket=work / "ops" / "service.sock",
+        service_socket=short_socket(work),
         store_root=store_root,
         coordination=COORDINATION,
         write_root=corpus_root,
@@ -109,7 +118,7 @@ def build_world_without_coordination(work: Path) -> ScienceConfig:
     open_world(config, authority=FIXTURE_AUTHORITY).admit(corpus_root, provenance=Fresh())
     STORE_IDS[work] = init_store_root(work / "store", authority=FIXTURE_AUTHORITY)
     return ScienceConfig(world=config, operations_root=work / "ops", profile=BARE_PROFILE,
-                         service_socket=work / "ops" / "service.sock", store_root=work / "store",
+                         service_socket=short_socket(work), store_root=work / "store",
                          coordination=None, write_root=corpus_root)
 
 
@@ -125,11 +134,12 @@ def write_cli_config(
     work: Path, operations_root: Path | None = None, service_socket: Path | None = None
 ) -> Path:
     """`operations_root` overrides where the session ledger lives and, absent
-    `service_socket`, the socket beside it. Tests that bind a socket need a
-    short path: the AF_UNIX limit is 107 bytes and the certified work root
-    eats most of that."""
+    `service_socket`, the socket beside it; with neither, the socket is the
+    world's `short_socket`."""
     cfg = build_fixture_world(work)
     ops = cfg.operations_root if operations_root is None else operations_root
+    if service_socket is None and operations_root is None:
+        service_socket = cfg.service_socket
     socket_line = "" if service_socket is None else f'service_socket = "{service_socket}"\n'
     path = work / "science.toml"
     path.write_text(f'''\
@@ -148,11 +158,11 @@ coordination = {COORDINATION}
 def write_config_for(cfg: ScienceConfig, service_socket: Path | None = None) -> Path:
     """The launcher TOML for a world `build_fixture_world_with_contract` built:
     every key the loader requires, the test contract document it compiled, and
-    `service_socket` when given (the AF_UNIX limit wants a short path)."""
+    `service_socket`, by default the world's."""
     work = cfg.world.world_root.parent
     contract = work / "testing.yaml"
     assert contract.is_file(), "write_config_for needs the contract world's document"
-    socket_line = "" if service_socket is None else f'service_socket = "{service_socket}"\n'
+    socket_line = f'service_socket = "{cfg.service_socket if service_socket is None else service_socket}"\n'
     path = work / "science.toml"
     path.write_text(f'''\
 world_root = "{cfg.world.world_root}"
@@ -287,7 +297,7 @@ def build_fixture_world_with_contract(work: Path, *, hold_concepts: bool = True,
     world.admit(corpus_root, provenance=Fresh())
     _install_holdings_reducer(world)
     cfg = ScienceConfig(world=config, operations_root=work / "ops", profile=profile,
-                        service_socket=work / "ops" / "service.sock", store_root=work / "store",
+                        service_socket=short_socket(work), store_root=work / "store",
                         coordination=COORDINATION, write_root=corpus_root,
                         plans=(plan,), available_contracts=(contract,))
     if hold_concepts:
@@ -327,7 +337,7 @@ def build_two_corpus_world(work: Path) -> ScienceConfig:
     STORE_IDS[work] = init_store_root(work / "store", authority=FIXTURE_AUTHORITY)
     _install_holdings_reducer(world)
     cfg = ScienceConfig(world=config, operations_root=work / "ops", profile=writer_profile,
-                        service_socket=work / "ops" / "service.sock", store_root=work / "store",
+                        service_socket=short_socket(work), store_root=work / "store",
                         coordination=COORDINATION, write_root=corpus_root, plans=(testing_plan,),
                         available_contracts=(testing, archive))
     archived = archive_config(cfg)
@@ -621,6 +631,7 @@ contracts = ["testing.yaml"]
 read_contracts = ["archive.yaml"]
 store_root = "store"
 coordination = {COORDINATION}
+service_socket = "{cfg.service_socket}"
 ''')
     return path
 
@@ -652,7 +663,7 @@ def build_shared_contract_world(work: Path) -> ScienceConfig:
     STORE_IDS[work] = init_store_root(work / "store", authority=FIXTURE_AUTHORITY)
     _install_holdings_reducer(world)
     cfg = ScienceConfig(world=config, operations_root=work / "ops", profile=writer_profile,
-                        service_socket=work / "ops" / "service.sock", store_root=work / "store",
+                        service_socket=short_socket(work), store_root=work / "store",
                         coordination=COORDINATION, write_root=corpus_root, plans=(plan,),
                         available_contracts=(testing,))
     mounted = mount_config(cfg)
@@ -692,6 +703,7 @@ domains = {list(DOMAINS)!r}
 contracts = ["testing.yaml"]
 store_root = "store"
 coordination = {COORDINATION}
+service_socket = "{cfg.service_socket}"
 ''')
     return path
 

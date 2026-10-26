@@ -9,6 +9,8 @@ from pathlib import Path
 
 import pytest
 
+from helpers.world import short_socket
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 # The main checkout, which a worktree's own root is not: a worktree under .worktrees/
 # resolves onto a volume whose mount options fail atoms' durability allowlist, so the
@@ -42,6 +44,7 @@ def _certified_dir():
         yield work
     finally:
         shutil.rmtree(work, ignore_errors=True)  # metadata siblings live inside work
+        short_socket(work).unlink(missing_ok=True)  # left only by a launcher that never closed
 
 
 @pytest.fixture()

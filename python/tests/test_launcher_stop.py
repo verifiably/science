@@ -95,3 +95,40 @@ def test_a_launcher_with_sighup_ignored_survives_a_sighup(certified_work, short_
         if child.poll() is None:
             child.kill()
         child.communicate()  # reaps the child and closes its pipes
+
+
+@pytest.mark.parametrize("window", ["opening-the-session", "after-the-bind"])
+@pytest.mark.parametrize("launcher", sorted(LAUNCHERS))
+def test_a_stop_signal_in_a_startup_window_still_cleans_up(certified_work, short_tmp, monkeypatch, launcher, window):
+    """A stop signal that lands while the session is opening, or after the
+    socket is bound but before the launcher's cleanup owns it, still leaves no
+    socket and closes the session. The signal is sent from inside the window,
+    in-process: the handler only runs in the main thread, as here."""
+    import os
+    import threading
+
+    import science.serve as serve_module
+    import science.session as session_module
+    from science.cli import main
+    from science.config import load_config
+
+    assert threading.current_thread() is threading.main_thread()
+    sock = short_tmp / "service.sock"
+    config_path = write_cli_config(certified_work, service_socket=sock)
+    operations_root = load_config(config_path).operations_root
+    module, name = (session_module, "open_session") if window == "opening-the-session" else (
+        serve_module, "service_server")
+    real = getattr(module, name)
+
+    def signalled(*args, **kwargs):
+        made = real(*args, **kwargs)
+        os.kill(os.getpid(), signal.SIGTERM)
+        return made
+
+    monkeypatch.setattr(module, name, signalled)
+    with pytest.raises(SystemExit) as caught:
+        main([*LAUNCHERS[launcher], "--config", str(config_path)])
+    assert caught.value.code == 128 + signal.SIGTERM
+    assert not sock.exists()
+    (ledger,) = (operations_root / "sessions").glob("*/ledger.v1")
+    assert json.loads(ledger.read_text().splitlines()[-1])["line"] == "session-close"

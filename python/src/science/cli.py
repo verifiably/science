@@ -3,11 +3,9 @@ from __future__ import annotations
 
 import argparse
 import json
-import signal
 import socket
 import sys
 import time
-from contextlib import contextmanager
 from pathlib import Path
 
 from science.config import ReadContext, load_config, resolve_config_path
@@ -15,6 +13,7 @@ from science.dispatch import Dispatcher
 from science.loader import production_tree, resolve_handlers
 from science.refusal import INVOCATION_ID_RE, Refusal, Refused, envelope, mint_token
 from science.schema import Declaration
+from science.stop import stop_signals_exit, stop_signals_held
 
 EXIT_OK, EXIT_INTERNAL, EXIT_USAGE, EXIT_REFUSED = 0, 1, 2, 3
 
@@ -217,49 +216,12 @@ def main(argv: list[str] | None = None) -> int:
 
 # The ordinary ways a long-running launcher is stopped: an MCP client or a
 # service manager sends SIGTERM, a closed terminal sends SIGHUP.
-_STOP_SIGNALS = (signal.SIGTERM, signal.SIGHUP)
-
-
-@contextmanager
-def _stop_signals_exit():
-    """Turn a stop signal into `SystemExit` in the main thread, so the
-    launcher's `finally` blocks run: the socket it bound is unlinked and its
-    session ledgers `session-close`. The default action kills the process
-    without either, and the next launcher then refuses on the stale socket.
-
-    Installed here, at the CLI entry, because `signal.signal` works only from
-    the main thread and tests run `serve` functions from worker threads. The
-    first stop signal restores the previous handlers, so a second one while
-    cleanup runs stops the process the old way.
-
-    A signal already ignored (`SIG_IGN`) — as SIGHUP is when a launcher is
-    started under `nohup` — is left ignored rather than overridden: a
-    launcher that used to survive its terminal closing must keep surviving
-    it."""
-    def stop(signum, frame):
-        for number, handler in previous.items():
-            signal.signal(number, handler)
-        raise SystemExit(128 + signum)
-
-    previous: dict[int, object] = {}
-    for number in _STOP_SIGNALS:
-        current = signal.getsignal(number)
-        if current is signal.SIG_IGN:
-            continue
-        previous[number] = signal.signal(number, stop)
-    try:
-        yield
-    finally:
-        for number, handler in previous.items():
-            signal.signal(number, handler)
-
-
 def _framework_verb(namespace) -> int:
     declarations = production_tree()
     if namespace.command == "mcp":
         from science.mcp import serve
 
-        with _stop_signals_exit():
+        with stop_signals_exit():
             serve(resolve_config_path(namespace.config), project=namespace.project)
         return EXIT_OK
     if namespace.command == "build":
@@ -273,12 +235,15 @@ def _framework_verb(namespace) -> int:
         from science.serve import serve as build_server
 
         config = load_config(resolve_config_path(namespace.config))
-        with _stop_signals_exit():
-            server = build_server(config, config.service_socket, project=namespace.project)
+        server = None
+        with stop_signals_exit(), stop_signals_held() as release:
             try:
+                server = build_server(config, config.service_socket, project=namespace.project)
+                release()
                 server.serve_forever()
             finally:
-                server.server_close()
+                if server is not None:
+                    server.server_close()
         return EXIT_OK
     if namespace.command == "adapters":
         from science.adapters import build_adapter

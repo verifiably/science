@@ -336,3 +336,55 @@ def test_lost_bind_race_raises_the_bind_error_and_still_closes_once(short_tmp):
         assert sock_path.exists()  # the foreign socket's file survives
     finally:
         foreign.close()
+
+
+def test_close_waits_for_an_in_flight_write_and_refuses_what_arrives_after(certified_work, short_tmp, capsys):
+    """A write in flight when the launcher closes finishes, replies and closes
+    in the ledger before the session does; a request on a connection still open
+    after close begins is refused, never a `SessionClosed` traceback."""
+    from helpers.synthetic import mint_claim_handler, synthetic_decls_and_handlers
+    cfg = build_fixture_world(certified_work)
+    decls, handlers = synthetic_decls_and_handlers()
+    entered, release = threading.Event(), threading.Event()
+
+    def held(ctx, writer, *, slug):
+        entered.set()
+        assert release.wait(timeout=30)
+        return mint_claim_handler(ctx, writer, slug=slug)
+
+    handlers["mint-claim"] = held
+    sock_path = short_tmp / "service.sock"
+    server = _running(cfg, sock_path, declarations=decls, handlers=handlers)
+    replies = []
+    writing = threading.Thread(target=lambda: replies.append(_ask(sock_path, {
+        "command": "mint-claim", "inputs": {"slug": "late"}, "invocation_id": "F" * 8, "cursor": None})))
+    writing.start()
+    closing = threading.Thread(target=lambda: (server.shutdown(), server.server_close()))
+    try:
+        assert entered.wait(timeout=30)
+        with socket.socket(socket.AF_UNIX) as idle:
+            idle.connect(str(sock_path))
+            closing.start()
+            closing.join(timeout=0.5)
+            assert closing.is_alive(), "close returned while a write was still in flight"
+            release.set()
+            closing.join(timeout=30)
+            assert not closing.is_alive()
+            idle.sendall(json.dumps({"query": "selection"}).encode() + b"\n")
+            refused = json.loads(idle.makefile().readline())
+    finally:
+        release.set()
+        writing.join(timeout=30)
+        if not closing.is_alive() and closing.ident is None:
+            server.shutdown()
+            server.server_close()
+        closing.join(timeout=30)
+    assert replies[0]["ok"] and "proposition:late" in replies[0]["text"]
+    assert not refused["ok"] and refused["refusal"]["code"] == "permit-exceeded"
+    assert "closing" in refused["refusal"]["message"]
+    (ledger,) = (cfg.operations_root / "sessions").glob("*/ledger.v1")
+    lines = [json.loads(line) for line in ledger.read_text().splitlines()]
+    closes = [n for n, line in enumerate(lines)
+              if line["line"] == "invocation-close" and line["invocation"] == "F" * 8]
+    assert closes and lines[-1]["line"] == "session-close" and closes[0] < len(lines) - 1
+    assert "Traceback" not in capsys.readouterr().err
