@@ -102,8 +102,8 @@ def test_reuse_of_a_source_with_several_standing_tips_refuses_naming_them(certif
         with pytest.raises(Refused) as caught:
             d.invoke("reuse", {"source": f"coord:{project}/{local}"})
     assert caught.value.refusal.code == "kernel-refused"
-    assert caught.value.refusal.data["kind"] == "divergent-view"
-    assert caught.value.refusal.data["tips"] == sorted(tips)
+    assert caught.value.refusal.data == {"kind": "CoordinationRefused", "reason": "divergent-view",
+                                         "tips": sorted(tips)}
 
 
 def test_reuse_of_a_malformed_address_refuses_with_the_parse_error(certified_work):

@@ -119,3 +119,33 @@ def test_a_duplicate_citation_from_the_writer_is_a_named_kernel_refusal(certifie
         session.close()
     assert caught.value.refusal.code == "kernel-refused"
     assert caught.value.refusal.data["kind"] == "AddressMapConflict"
+
+
+@pytest.mark.parametrize("tips", [("b" * 32, "a" * 32), ()], ids=["divergent", "unknown"])
+def test_project_not_resolvable_carries_its_tips_in_the_refusal(certified_work, tips):
+    """Coordination spec §4.3: a client reconciles a diverged project from the
+    tips the kernel named; a project with none carries no `tips` key. A replay
+    returns the same data from the closed invocation."""
+    from beliefs.errors import ProjectNotResolvable
+    from science.session import open_session
+    from science.config import ReadContext
+    minting = Declaration("minting", "fixture",
+                          WriteClass("mints", ("proposition",), {"proposition": "corpus-write"}),
+                          MIN_OUTPUT_BUDGET, (), (), Path("."))
+
+    def handler(ctx, writer):
+        raise ProjectNotResolvable("the selected project does not resolve", tips=tips)
+
+    cfg = build_fixture_world(certified_work)
+    session = open_session(cfg)
+    try:
+        d = Dispatcher((minting,), {"minting": handler}, ReadContext.open(cfg), session=session)
+        refusals = []
+        for _ in range(2):
+            with pytest.raises(Refused) as caught:
+                d.invoke("minting", {}, invocation_id="P" * 8)
+            refusals.append(caught.value.refusal)
+    finally:
+        session.close()
+    expected = {"kind": "ProjectNotResolvable", "tips": sorted(tips)} if tips else {"kind": "ProjectNotResolvable"}
+    assert [(r.code, r.data) for r in refusals] == [("kernel-refused", expected)] * 2

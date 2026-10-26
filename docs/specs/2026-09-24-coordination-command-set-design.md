@@ -232,6 +232,9 @@ must then be given, since there is no one tip to carry over from. This is
 coordination §4.4's repair, made explicit so that no revision silently resolves a
 divergence.
 
+**Amended 2026-10-26:** the refusal's `data` is
+`{kind: "CoordinationRefused", reason: "divergent-view", tips: […]}` (§4.3).
+
 ### 3.7 `project-select`
 
 ```toml
@@ -375,6 +378,15 @@ every read row" is read as every `selects` row — `next` and `project-show`.
 `divergent-view`, `ProjectNotResolvable` and every other kernel refusal keep
 arriving as `kernel-refused`, with the kernel's kind and detail (`sci-23e773`) in
 `data`.
+
+**Amended 2026-10-26 (`sci-dce3b2`):** `data.kind` carries one vocabulary, the
+kernel's class name, and a reason code moves to `data.reason`, as `SelectionRefused`
+and `RunRefused` already arrive. A divergent address refuses
+`{kind: "CoordinationRefused", reason: "divergent-view", tips: […]}` wherever science
+meets it (§3.5, §3.6, §3.7, §5.2, §7), so a client switches on `kind` and then
+`reason`. `ProjectNotResolvable` carries the kernel's `tips` in `data.tips` when it
+names any, the tips a client reconciles a diverged project from; one naming none
+arrives as `{kind: "ProjectNotResolvable"}`.
 
 ### 4.4 The preamble
 

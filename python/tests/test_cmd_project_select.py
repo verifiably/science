@@ -95,7 +95,7 @@ def test_a_divergent_project_refuses_with_every_tip_and_selects_nothing(certifie
             lambda self, address: CoordinationRefused("divergent-view", tips)
             if address == health else resolve(self, address))
         refusal = _refused(lambda: d.invoke("project-select", {"target": str(health)}), "kernel-refused")
-        assert refusal.data == {"kind": "divergent-view", "tips": sorted(tips)}
+        assert refusal.data == {"kind": "CoordinationRefused", "reason": "divergent-view", "tips": sorted(tips)}
         assert d.selection == cancer
 
 

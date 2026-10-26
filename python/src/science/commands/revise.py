@@ -1,7 +1,8 @@
 """revise: a whole new revision naming its predecessors (spec §3.6)."""
 from __future__ import annotations
 
-from science.coordination import content_of, now, parse_address, parse_query_text, standing_tips
+from science.coordination import (content_of, now, parse_address, parse_query_text, refuse_coordination,
+                                 standing_tips)
 from science.refusal import Refusal, Refused
 from science.report import Report, record_block
 
@@ -42,11 +43,7 @@ def handle(ctx, writer, *, address, name=None, body=None, query=None, status=Non
     if "depends" in given:
         given["depends"] = list(given["depends"])
     if len(tips) > 1 and not repair:
-        raise Refused(Refusal(
-            "kernel-refused",
-            f"{address} has {len(tips)} standing tips; revise it with `repair` to reconcile them",
-            {"kind": "divergent-view", "tips": sorted(tip.node.uid for tip in tips)},
-        ))
+        refuse_coordination(address, "divergent-view", [tip.node.uid for tip in tips])
     if repair:
         missing = sorted(({"name", "body"} | _FIELDS[kind]) - set(given))
         if missing:

@@ -111,8 +111,8 @@ def test_divergence_refuses_without_repair(certified_work, monkeypatch):
         with pytest.raises(Refused) as caught:
             d.invoke("revise", {"address": str(project), "name": "x"})
     assert caught.value.refusal.code == "kernel-refused"
-    assert caught.value.refusal.data["kind"] == "divergent-view"
-    assert caught.value.refusal.data["tips"] == sorted([real.uid, twin.uid])
+    assert caught.value.refusal.data == {"kind": "CoordinationRefused", "reason": "divergent-view",
+                                         "tips": sorted([real.uid, twin.uid])}
 
 
 def test_repair_names_every_tip_and_takes_every_field(certified_work, monkeypatch):
