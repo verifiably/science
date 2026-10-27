@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: second-project-milestone
 created: 2026-09-23T11:40:35Z
-updated: 2026-10-27T12:55:34Z
+updated: 2026-10-27T12:55:35Z
 started: 2026-10-27T00:22:44Z
 depends: [sci-b1c777, beliefs-fe7149, beliefs-c08725, sci-c5528e, sci-923d3a, beliefs-9ce6e4, sci-dc0381, sci-7079e3]
 tags: [projects]
@@ -244,3 +244,4 @@ The milestone of docs/specs/2026-09-23-projects-corpora-and-workspaces-design.md
 - 2026-10-27T12:55:31Z (second-project-milestone): detached: rehearsal-rb-run1-stdout.txt: layout gate refused host paths; portable derivative attached as rehearsal-rb-run1-stdout-portable.txt, raw bytes kept at $WORK_ROOT/science/sci-0d00d2/rb-run1-stdout.txt
 - 2026-10-27T12:55:33Z (second-project-milestone): attached: rehearsal-rb-run1-stdout-portable.txt (2528 bytes): portable derivative of rehearsal-rb-run1-stdout.txt (host paths replaced by placeholders); raw bytes retained at $WORK_ROOT/science/sci-0d00d2/rb-run1-stdout.txt, sha256 88f26837f1fcb4f5
 - 2026-10-27T12:55:34Z (second-project-milestone): detached: rehearsal-rb-run2-stdout.txt: layout gate refused host paths; portable derivative attached as rehearsal-rb-run2-stdout-portable.txt, raw bytes kept at $WORK_ROOT/science/sci-0d00d2/rb-run2-stdout.txt
+- 2026-10-27T12:55:35Z (second-project-milestone): attached: rehearsal-rb-run2-stdout-portable.txt (816 bytes): portable derivative of rehearsal-rb-run2-stdout.txt (host paths replaced by placeholders); raw bytes retained at $WORK_ROOT/science/sci-0d00d2/rb-run2-stdout.txt, sha256 e05b1f4930fecf07

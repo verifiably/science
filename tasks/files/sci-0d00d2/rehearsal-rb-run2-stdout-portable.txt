@@ -1,0 +1,9 @@
+resuming <task dir>/state/rb/runs/20261027T123647Z
+resume: W1.claim proposition:concept-disease-stage-affects-protein-ezh2 verified
+resume: W1.spec analysis-spec:5132014c5feecd52d09c801c220074bae2fd7677ec009b1a0228186602763036 verified
+resume: W2.project.cancer coord:4a2941df30e4a4f3b59e814202657224 verified
+resume: W2.project.health coord:52b5cbdaa4bbd3697e25a7088555d1ea verified
+resume: W2.project.multiple-myeloma coord:e0f1029c7c06f9c189e352939fb4df6e verified
+resume: W2.project.multiple-myeloma-findings coord:634e09f6e19d21ffcd2258b02fcfc6f0 verified
+uncertain write W3.question.evidence-bound-terms: run `<wt>/python/.venv/bin/python <task dir>/driver/walk.py <task dir>/state/rb --check W3.question.evidence-bound-terms` and rerun with --reconcile W3.question.evidence-bound-terms=<identity|none>
+exit 3
