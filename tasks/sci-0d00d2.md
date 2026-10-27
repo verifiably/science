@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: second-project-milestone
 created: 2026-09-23T11:40:35Z
-updated: 2026-10-27T12:52:02Z
+updated: 2026-10-27T12:52:04Z
 started: 2026-10-27T00:22:44Z
 depends: [sci-b1c777, beliefs-fe7149, beliefs-c08725, sci-c5528e, sci-923d3a, beliefs-9ce6e4, sci-dc0381, sci-7079e3]
 tags: [projects]
@@ -141,3 +141,4 @@ The milestone of docs/specs/2026-09-23-projects-corpora-and-workspaces-design.md
 - 2026-10-27T12:51:59Z (second-project-milestone): attached: live-arms-unrelated-projects.txt (394 bytes): live arms: unrelated/projects.txt
 - 2026-10-27T12:52:00Z (second-project-milestone): attached: live-arms-unrelated-select.txt (96 bytes): live arms: unrelated/select.txt
 - 2026-10-27T12:52:02Z (second-project-milestone): attached: live-arms-unrelated-serve.stderr (0 bytes): live arms: unrelated/serve.stderr
+- 2026-10-27T12:52:04Z (second-project-milestone): attached: live-arms-unrelated-status.txt (549 bytes): live arms: unrelated/status.txt
