@@ -1,0 +1,5 @@
+arm workspace: <mm checkout>
+arm unrelated: <tmp>/sci-0d00d2-decoy-7i32fpw9
+arm mcp: <wt>/python
+{'a_workspace_equals_unrelated': {'status.txt': True, 'projects.txt': True, 'next.txt': True}, 'b_arms_next_equal_walk_next_health': {'workspace': True, 'unrelated': True}, 'c_mcp': {'next_cli_equals_next_health': True, 'next_project_mm_equals_next_multiple_myeloma': True, 'projects_marks_health_selected': True}, 'all_equal': True}
+exit 0
