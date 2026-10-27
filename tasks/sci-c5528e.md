@@ -1,15 +1,17 @@
 ---
 id: sci-c5528e
 title: "Coordination command set: design spec (second half of sub-project 4)"
-status: doing
+status: done
 priority: 1
 size: l
 complexity: high
 process: planned
 owner: coordination-closeout
 created: 2026-09-23T11:40:35Z
-updated: 2026-10-27T00:14:58Z
+updated: 2026-10-27T00:15:06Z
 started: 2026-09-24T09:49:50Z
+completed: 2026-10-27T00:15:06Z
+closed: 2026-10-27T00:15:06Z
 depends: []
 tags: [projects]
 agent: claude-code/claude-fable-5-1
@@ -51,4 +53,8 @@ The belief path design (dogfood-commands branch, docs/specs/2026-09-09-belief-pa
 - 2026-10-26T23:17:35Z (main): parked (waiting on agent): Agent finishes the open children sci-3a0eb1, sci-65b5ea and sci-6ffb7f (sci-dce3b2 done 2026-10-26; part 2 and its beliefs dependencies are done), then closes this goal so sci-0d00d2 becomes ready
   provenance: {"harness_session":"claude-code:a32b916e-4ed3-4533-b453-d38ede488b81","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-27T00:14:58Z (coordination-closeout): resumed
+  provenance: {"harness_session":"claude-code:c826b605-87ec-4aa8-8aea-62a46a0d13b8","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-27T00:15:06Z (coordination-closeout): done
+  provenance: {"harness_session":"claude-code:c826b605-87ec-4aa8-8aea-62a46a0d13b8","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-27T00:15:06Z (coordination-closeout): Coordination command set complete: parts 1-3 and every follow-up child done (last: sci-3a0eb1, sci-65b5ea, sci-6ffb7f on branch coordination-closeout); sci-0d00d2 is unblocked
   provenance: {"harness_session":"claude-code:c826b605-87ec-4aa8-8aea-62a46a0d13b8","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
