@@ -1,0 +1,10 @@
+world_root = "worlds/aec951bc6becacced13df8f7ae6f8abf/world"
+world_id = "aec951bc6becacced13df8f7ae6f8abf"
+corpus_roots = ["worlds/aec951bc6becacced13df8f7ae6f8abf/corpora/mm30",
+                "worlds/aec951bc6becacced13df8f7ae6f8abf/corpora/working"]
+write_root = "worlds/aec951bc6becacced13df8f7ae6f8abf/corpora/working"
+operations_root = "worlds/aec951bc6becacced13df8f7ae6f8abf/ops"
+store_root = "worlds/aec951bc6becacced13df8f7ae6f8abf/store"
+domains = ["biology"]
+contracts = [{ document = "contracts/mm30/mm30.yaml", predecessors = ["contracts/mm30/mm30-cut22.yaml", "contracts/mm30/mm30-cut31.yaml"] }]
+coordination = 2
