@@ -1,15 +1,17 @@
 ---
 id: sci-6ffb7f
 title: Launcher lifecycle edges at stop and shutdown
-status: doing
+status: done
 priority: 3
 size: s
 complexity: mid
 process: direct
 owner: coordination-closeout
 created: 2026-09-24T14:26:54Z
-updated: 2026-10-27T00:14:46Z
+updated: 2026-10-27T00:14:56Z
 started: 2026-10-26T23:37:02Z
+completed: 2026-10-27T00:14:56Z
+closed: 2026-10-27T00:14:56Z
 depends: []
 parent: sci-c5528e
 tags: [command-framework]
@@ -26,3 +28,7 @@ Edges left by coordination part 1's socket and stop-signal work (cli.py _stop_si
 - 2026-10-27T00:01:44Z (coordination-closeout): review: impl round 1 — verdict: revise; findings: Important 1, Minor 4; reviewer: claude-code/claude-opus-5-5
 - 2026-10-27T00:11:29Z (coordination-closeout): review: impl round 2 — verdict: accept; findings: Minor 3; reviewer: claude-code/claude-opus-5-5
 - 2026-10-27T00:14:46Z (coordination-closeout): Ruling: round 2 Minor B (a few-bytecode unheld window between mcp serve's EOF return and its cleanup hold) is minor (deferred). Why: the MCP stdio order is close stdin, wait, then SIGTERM, so a first signal inside that window is not reachable in practice, and closing it needs a re-hold API. Cost if wrong: a stale socket and unclosed session on that exact timing, which the next launcher reports as an existing socket. Round 2 Minors A and C fixed in the following commit.
+- 2026-10-27T00:14:56Z (coordination-closeout): done
+  provenance: {"harness_session":"claude-code:c826b605-87ec-4aa8-8aea-62a46a0d13b8","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-27T00:14:56Z (coordination-closeout): Stop signals held across launcher startup and cleanup (science.stop); service close drains in-flight requests and refuses later ones permit-exceeded; fixtures default to a short /tmp socket. fbeb32a, 8699394, 191c14a; impl review round 1 revise (Important 1 fixed), round 2 accept; just test 874 passed
+  provenance: {"harness_session":"claude-code:c826b605-87ec-4aa8-8aea-62a46a0d13b8","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
