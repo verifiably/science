@@ -1,0 +1,34 @@
+resuming <task dir>/state/ra/runs/20261027T123311Z
+resume: W1.claim proposition:concept-disease-stage-affects-protein-ezh2 verified
+resume: W1.spec analysis-spec:5132014c5feecd52d09c801c220074bae2fd7677ec009b1a0228186602763036 verified
+resume: W2.project.cancer coord:a19390d59d571f95647ac3d1405c0a99 verified
+resume: W2.project.health coord:e49df48658fc8672a05b02349f89b8b4 verified
+resume: W2.project.multiple-myeloma coord:412ba81bf73043703a1702b95b5956f5 verified
+resume: W2.project.multiple-myeloma-findings coord:94001ad547fbe8a4ed0f37ba17219a06 verified
+--- resume.select project-select [ok] 0.29s invocation 41a2f31e9ef487ab93148e46343fdc72
+--- W3.question.health question [ok] 0.28s invocation 9aa009240e4bab74582df0504dd4532d
+    coord:e49df48658fc8672a05b02349f89b8b4/0fa4f6ccdbeb2602cbd6cd438cfd46ef
+--- W3.select.cancer project-select [ok] 0.32s invocation dd4da8df85196b66d279c680aba2bbb0
+--- W3.reuse reuse [ok] 0.26s invocation 7a83e5688fc31ab66d45c2827eafe716
+    coord:a19390d59d571f95647ac3d1405c0a99/1485f2d8eed755b875179e769868a1ed
+--- W3.select.multiple-myeloma project-select [ok] 0.34s invocation 0de4722ed79b4ec0387bf3dedeef6485
+--- W3.question.evidence-bound-terms question [ok] 0.22s invocation ed43ca23e5ec5f16d49b0acbba018a0d
+    coord:412ba81bf73043703a1702b95b5956f5/850858e2aa175a8d9e8073073529e729
+--- E4 epoch [built] 1.97s 75ee5e755821f0746a240f1c6099cc40cab4595c0c0200b33297ffe1d57b7f66
+--- E5 epoch [current] 1.12s 75ee5e755821f0746a240f1c6099cc40cab4595c0c0200b33297ffe1d57b7f66
+--- R2.multiple-myeloma.select project-select [ok] 0.30s invocation b5fc9ec4c5ac89ad3fb89ec446b82bfa
+--- R2.multiple-myeloma next [ok] 1.82s invocation e266d46d637719cdf41a2e16ceca6068
+--- R2.cancer.select project-select [ok] 0.30s invocation eeeaa9f7cc589bc666453e056143c2c6
+--- R2.cancer next [ok] 1.83s invocation 2559ff4e30a8bbf7e478c21e21b5cf12
+--- R2.health.select project-select [ok] 0.30s invocation f60f93e198b6db894c4508b37a935566
+--- R2.health next [ok] 1.83s invocation 94281e64c8caa2d0e6052c39105c725b
+--- R2.unselected.select project-select [ok] 0.01s invocation 25bf3a5c42054ac87cde472d364318e5
+--- R2.unselected next [ok] 1.40s invocation 44b3f0aa65f2e56733c31e3f69ca82cf
+--- R3.question.health view coord:e49df48658fc8672a05b02349f89b8b4/0fa4f6ccdbeb2602cbd6cd438cfd46ef: 9 selected, equivalent True, complete True
+--- R3.reuse view coord:a19390d59d571f95647ac3d1405c0a99/1485f2d8eed755b875179e769868a1ed: 9 selected, equivalent True, complete True
+--- R3.question.evidence-bound-terms view coord:412ba81bf73043703a1702b95b5956f5/850858e2aa175a8d9e8073073529e729: 7 selected, equivalent True, complete True
+--- R4 publish-preview [REFUSED] 0.55s invocation be6f71bfb27b21818ff0ba78726872db
+--- R5 belief [ok] 1.16s invocation 440a0ed39665cd78838cc0040471d838
+--- S1 status [ok] 0.19s invocation 93b313082552c41da026001d4e31f273
+walk complete: <task dir>/state/ra/runs/20261027T123311Z
+exit 0
