@@ -183,8 +183,10 @@ def test_a_stop_signal_during_mcp_serves_eof_drain_lets_the_write_finish(certifi
             release.set()
 
     def stopper():
-        assert entered.wait(timeout=STARTUP_SECONDS)
-        os.close(write_end)  # EOF: mcp serve begins its cleanup and drains the write
+        try:
+            assert entered.wait(timeout=STARTUP_SECONDS)
+        finally:
+            os.close(write_end)  # EOF: mcp serve begins its cleanup and drains the write
         deadline = time.monotonic() + STOP_SECONDS
         while not servers[0]._closing:  # the drain has begun
             assert time.monotonic() < deadline
@@ -234,3 +236,22 @@ def test_a_held_stop_signal_raises_at_release_unless_an_error_ends_the_hold(ends
             raise RuntimeError("the launcher's own failure")
     if ends == "normally":
         assert caught.value.code == 128 + signal.SIGTERM
+
+
+def test_a_held_cleanup_reports_the_startup_error_over_a_stop_deferred_at_startup():
+    """`mcp serve`'s shape: a stop deferred while starting, a startup failure,
+    then cleanup under its own hold. The failure is what ends the launcher."""
+    import os
+    import threading
+
+    from science.stop import stop_signals_exit, stop_signals_held
+
+    assert threading.current_thread() is threading.main_thread()
+    with pytest.raises(RuntimeError), stop_signals_exit(), stop_signals_held():
+        try:
+            os.kill(os.getpid(), signal.SIGTERM)
+            time.sleep(0.05)
+            raise RuntimeError("the session did not open")
+        finally:
+            with stop_signals_held():
+                pass

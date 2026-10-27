@@ -4,6 +4,7 @@ owns that cleanup."""
 from __future__ import annotations
 
 import signal
+import sys
 import threading
 from contextlib import contextmanager
 
@@ -85,4 +86,9 @@ def stop_signals_held():
     except BaseException:
         _hold["active"], _hold["pending"] = False, None
         raise
+    if sys.exc_info()[1] is not None:
+        # A hold inside a `finally` that an exception is unwinding through:
+        # that exception, not the deferred stop, is what ends the launcher.
+        _hold["active"], _hold["pending"] = False, None
+        return
     release()
