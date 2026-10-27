@@ -721,7 +721,10 @@ Its criteria, all observable:
 
 The milestone leaves a record in `docs/plans/`, in the reproduction record's
 discipline: predictions before, findings classified after, and every
-refusal filed to its owning lane. Its findings size the coordination
+refusal filed to its owning lane. *Amended 2026-10-26:* the record lands in
+`docs/records/`, where this repository's measurement records live
+(`docs/specs/2026-10-26-second-project-milestone-design.md` §4.5, accepted at
+its review round 1). Its findings size the coordination
 command set and decide whether §7's fence needs a `beliefs` request.
 
 ### 9.3 What follows it
