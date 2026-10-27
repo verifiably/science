@@ -8,7 +8,7 @@ complexity: mid
 process: direct
 owner: coordination-closeout
 created: 2026-09-24T14:26:54Z
-updated: 2026-10-27T00:11:29Z
+updated: 2026-10-27T00:14:46Z
 started: 2026-10-26T23:37:02Z
 depends: []
 parent: sci-c5528e
@@ -25,3 +25,4 @@ Edges left by coordination part 1's socket and stop-signal work (cli.py _stop_si
 - 2026-10-26T23:51:58Z (coordination-closeout): implemented in fbeb32a on coordination-closeout (just test 870 passed, just check rc 0); impl review dispatched to a fresh reviewer over 42604b7..fbeb32a
 - 2026-10-27T00:01:44Z (coordination-closeout): review: impl round 1 — verdict: revise; findings: Important 1, Minor 4; reviewer: claude-code/claude-opus-5-5
 - 2026-10-27T00:11:29Z (coordination-closeout): review: impl round 2 — verdict: accept; findings: Minor 3; reviewer: claude-code/claude-opus-5-5
+- 2026-10-27T00:14:46Z (coordination-closeout): Ruling: round 2 Minor B (a few-bytecode unheld window between mcp serve's EOF return and its cleanup hold) is minor (deferred). Why: the MCP stdio order is close stdin, wait, then SIGTERM, so a first signal inside that window is not reachable in practice, and closing it needs a re-hold API. Cost if wrong: a stale socket and unclosed session on that exact timing, which the next launcher reports as an existing socket. Round 2 Minors A and C fixed in the following commit.
