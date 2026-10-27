@@ -1,0 +1,73 @@
+replica 6f10ffd595655edb9150170c63242c16: {'world_id': '6f10ffd595655edb9150170c63242c16', 'home': '<replicas>/r3/worlds/6f10ffd595655edb9150170c63242c16', 'corpus_id': '8b5d0c802677ee445e2b9d91ebf5d6a7', 'store_id': '05b6c1225e710bb1559f36e8333f3f29', 'restore': {'corpus': 'validated', 'store': 'validated'}, 'arrival': 'validated', 'admission': {'kind': 'replica-of', 'parent_corpus_id': '8b5d0c802677ee445e2b9d91ebf5d6a7'}, 'live_world_files': 99, 'live_world_unchanged': True}
+$ <task dir>/driver/genesis.py <task dir>/state/r3 <replicas>/r3 6f10ffd595655edb9150170c63242c16 <beliefs> <replicas>/r3/worlds/6f10ffd595655edb9150170c63242c16/corpora/mm30
+chain: mm30:4af7c4212d482ae60f429526ff5a8a6d4c335f70351a2687cd2062ffdedf437c
+pin: science:52a4399342235225fbf23526050cf64ff0436d9b72bc54e30fc0c2cb7193b220
+pin: biology:24bcec4370cfcff3077414798c02525814d4aeaaf84430ab378838df7345d53b
+pin: mm30:4af7c4212d482ae60f429526ff5a8a6d4c335f70351a2687cd2062ffdedf437c
+pin: coordination:b23866284ae160f7e7322cbb3c63adcbc84f5f894e6f30f5468c76dc8434993d
+working corpus: 5a6a882eb10edd3184465bd79af40db4
+$ <task dir>/driver/declare.py <task dir>/state/r3
+cohort: dataset:sha256:e565a18845914ff4fd1656f1a45f303f723a78f32c758d1fadb1854f899a7dd3
+annotation: dataset:sha256:22bc74180538f1c53fd1e336f3c056c96eae712c5d752ab016cc2baab8967b81
+$ <task dir>/driver/terms.py <task dir>/state/r3
+f846932bf6aa900d04d1b6d8321133ed5528ddc53a870a65631ce1702980dda9  multiple-myeloma.yaml
+f846932bf6aa900d04d1b6d8321133ed5528ddc53a870a65631ce1702980dda9  cancer.yaml
+4f302404747b43094e4fa33628acca57f42b34754b80899314644b3a819c211c  health.yaml
+1d009c2f4f50ae16eafa8a2ff43e651f455e7b95d09ddfb1b6525772b25fbdfb  multiple-myeloma-findings.yaml
+7f9301c031a3ca142207cddcfbe88fee54144decfc1de59851d7f5cd227aea98  evidence-bound-terms.yaml
+55e05cb7191693ad8a908d67342d9b8bf423e290350c51c124c7f6fa595a2694  health-question.yaml
+$ <task dir>/driver/walk.py <task dir>/state/r3
+new run <task dir>/state/r3/runs/20261027T122639Z
+--- S0 status [ok] 0.50s invocation 42473a89939ce43656d25bcc1f25bc90
+--- E1 epoch [built] 7.35s f7be7a17eade0e0355c59215e4c0e11b1e582ca48cfa820866a69637f84649ee
+--- W1.claim claim [ok] 1.05s invocation 0a977c263f2464ae6952c51391fe6445
+    proposition:concept-disease-stage-affects-protein-ezh2
+--- W1.spec spec [ok] 1.93s invocation 2c32fc5aba95f4c6e150114dcb51c604
+    analysis-spec:5132014c5feecd52d09c801c220074bae2fd7677ec009b1a0228186602763036
+--- E2 epoch [built] 7.69s d6b5311090bf5740c1a6d357811af6fc18dc1c05b82a83cfbb66295a9e3845b8
+--- W2.project.multiple-myeloma project [ok] 1.28s invocation 61fce5b13c403a1be268deea6de8baa8
+    coord:5cd610f49903fba71bd98fbc1506b900
+--- W2.project.cancer project [ok] 0.84s invocation d39b1bcfd0bf16e3615dd919f6384a12
+    coord:b935ebbf4bf53cff5e77a4d1122e3e2d
+--- W2.project.health project [ok] 1.24s invocation 2889cb1560ce2a5a49c643c702db21ff
+    coord:50bf5480a5ca48dae9c9a0e384ab9616
+--- W2.project.multiple-myeloma-findings project [ok] 1.01s invocation 32339019a57ff2756624e588a0c445d2
+    coord:4081faa9f849ae139ad9f9e1e781da15
+--- R0.next-stale next [ok] 6.48s invocation 457cd0be5f904753f3cfba16580155b0
+--- E3 epoch [built] 8.03s 58abe94e8afc142354298752f64de9ad08dc59383834f577a907ab2da346f944
+--- R1.multiple-myeloma view coord:5cd610f49903fba71bd98fbc1506b900: 8 selected, equivalent True, complete True
+--- R1.cancer view coord:b935ebbf4bf53cff5e77a4d1122e3e2d: 8 selected, equivalent True, complete True
+--- R1.health view coord:50bf5480a5ca48dae9c9a0e384ab9616: 11 selected, equivalent True, complete True
+--- R1.multiple-myeloma-findings view coord:4081faa9f849ae139ad9f9e1e781da15: 4 selected, equivalent True, complete True
+--- W3.select.health project-select [ok] 1.92s invocation 3f769ea330d8481b20b85dddbb194256
+--- W3.question.health question [ok] 1.03s invocation 63c6285a359572263cb90309ef159013
+    coord:50bf5480a5ca48dae9c9a0e384ab9616/57b4f0a00983ce08ef0ab18eb5ca34f1
+--- W3.select.cancer project-select [ok] 1.46s invocation de20bdea31acbd13450d375e3cc2ca66
+--- W3.reuse reuse [ok] 0.69s invocation 84c664b1c26bd9b81fe3cd463eb1a53e
+    coord:b935ebbf4bf53cff5e77a4d1122e3e2d/ea58796421af45fc520ecbca6ff0cc66
+--- W3.select.multiple-myeloma project-select [ok] 1.02s invocation c8f270ce5cf7fec9d6f0b1a163cacc4c
+--- W3.question.evidence-bound-terms question [ok] 0.57s invocation 40d80e26ee3f6ed83ebe005e45db3126
+    coord:5cd610f49903fba71bd98fbc1506b900/8120a32cfdc87cb7254b5f27a9c4f408
+--- E4 epoch [built] 10.66s accf615c12ee393e2024fbbff9f1844405236874b8899aacbc5be5b423719b01
+--- E5 epoch [current] 5.15s accf615c12ee393e2024fbbff9f1844405236874b8899aacbc5be5b423719b01
+--- R2.multiple-myeloma.select project-select [ok] 1.52s invocation 8dfb5e35b84e273636b1a629ffa150ca
+--- R2.multiple-myeloma next [ok] 8.70s invocation c2c1d56f0319c1d13644d09cbc03c62c
+--- R2.cancer.select project-select [ok] 1.28s invocation 35f0d05d8cb2dfc2f21b7be901f67208
+--- R2.cancer next [ok] 7.81s invocation 2f2ff07daa1d733a8d43d32064cb0897
+--- R2.health.select project-select [ok] 0.80s invocation 3839334da34b45e14ca6ad2a16c1771f
+--- R2.health next [ok] 7.27s invocation 50a055138a90016ef4c1206b93aa9b4c
+--- R2.unselected.select project-select [ok] 0.04s invocation 0e99ce3e9abe9432dd551b7fffa36c47
+--- R2.unselected next [ok] 4.21s invocation 650ae7e86e09e10a4cfe293c313dd173
+--- R3.question.health view coord:50bf5480a5ca48dae9c9a0e384ab9616/57b4f0a00983ce08ef0ab18eb5ca34f1: 9 selected, equivalent True, complete True
+--- R3.reuse view coord:b935ebbf4bf53cff5e77a4d1122e3e2d/ea58796421af45fc520ecbca6ff0cc66: 9 selected, equivalent True, complete True
+--- R3.question.evidence-bound-terms view coord:5cd610f49903fba71bd98fbc1506b900/8120a32cfdc87cb7254b5f27a9c4f408: 7 selected, equivalent True, complete True
+--- R4 publish-preview [REFUSED] 2.55s invocation ce2ee3295d51e7bf2ef3e2119f6646b9
+--- R5 belief [ok] 7.07s invocation 2de58af1295f50699c8857817a3b6764
+--- S1 status [ok] 1.40s invocation 5fe3bf3261132160afcff07f0f9ccffe
+walk complete: <task dir>/state/r3/runs/20261027T122639Z
+$ <task dir>/driver/arms.py <task dir>/state/r3 <task dir>/state/r3/runs/20261027T122639Z
+arm workspace: <mm checkout>
+arm unrelated: <tmp>/sci-0d00d2-decoy-9pqqb3me
+arm mcp: <wt>/python
+{'a_workspace_equals_unrelated': {'status.txt': True, 'projects.txt': True, 'next.txt': True}, 'b_arms_next_equal_walk_next_health': {'workspace': True, 'unrelated': True}, 'c_mcp': {'next_cli_equals_next_health': True, 'next_project_mm_equals_next_multiple_myeloma': True, 'projects_marks_health_selected': True}, 'all_equal': True}
+rc=0
