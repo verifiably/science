@@ -1,17 +1,20 @@
 ---
 id: sci-0d00d2
 title: "Second-project milestone: health over mm30, measurement plan and record"
-status: doing
+status: done
 priority: 1
 size: m
 complexity: high
 process: planned
 owner: second-project-milestone
 created: 2026-09-23T11:40:35Z
-updated: 2026-10-27T13:12:54Z
+updated: 2026-10-27T13:12:56Z
 started: 2026-10-27T00:22:44Z
+completed: 2026-10-27T13:12:56Z
+closed: 2026-10-27T13:12:56Z
 depends: [sci-b1c777, beliefs-fe7149, beliefs-c08725, sci-c5528e, sci-923d3a, beliefs-9ce6e4, sci-dc0381, sci-7079e3]
 tags: [projects]
+model: claude-opus-5-5
 agent: claude-code/claude-fable-5-1
 spec: docs/specs/2026-10-26-second-project-milestone-design.md
 plan: docs/plans/2026-10-26-second-project-milestone.md
@@ -264,4 +267,8 @@ The milestone of docs/specs/2026-09-23-projects-corpora-and-workspaces-design.md
 - 2026-10-27T13:11:37Z (second-project-milestone): retained: {"host":"titan","kind":"evidence","path":"$WORK_ROOT/science/sci-0d00d2/evidence-raw","state":"kept","verification":"verified","purpose":"Raw bytes of the 31 attachments the layout gate refused (attached as -portable derivatives) and of the plan ledger; the only verbatim copies","next_owner":"task:sci-036920","cleanup_trigger":"the project ops-check admits ledger-backed attachments carrying host values (then attach the raw bytes), or sci-036920 starts: recheck","manifest":"$WORK_ROOT/science/sci-0d00d2/evidence-raw/MANIFEST.sha256","sha256":"560cc7ab37a3b6c9166f1ee6e972069f7ad3561b81f7dbb1772f3ef7f4f131c8"}
 - 2026-10-27T13:11:39Z (second-project-milestone): retained: {"host":"titan","kind":"worktree","path":".worktrees/second-project-milestone","state":"kept","verification":"verified","purpose":"The task branch, reviewed (final review accepted after one corrective round); merged locally into main and removed within this session turn","next_owner":"session:claude-code:8b479072-91d3-4b9c-b77c-d178525b6574","cleanup_trigger":"After the local merge into main, run the removal checks and remove the worktree"}
 - 2026-10-27T13:12:54Z (second-project-milestone): resumed
+  provenance: {"harness_session":"claude-code:8b479072-91d3-4b9c-b77c-d178525b6574","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-27T13:12:56Z (second-project-milestone): done
+  provenance: {"harness_session":"claude-code:8b479072-91d3-4b9c-b77c-d178525b6574","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-27T13:12:56Z (second-project-milestone): second-project milestone run and recorded (docs/records/2026-10-26-second-project-milestone.md): criteria 1, 2, 6, 7 met; 3, 4 partly met; 5 unmet (attribution refusal of the relocated replica); 14 findings filed; beliefs-7c98bc and beliefs-655c10 noted
   provenance: {"harness_session":"claude-code:8b479072-91d3-4b9c-b77c-d178525b6574","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
