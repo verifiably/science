@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: second-project-milestone
 created: 2026-09-23T11:40:35Z
-updated: 2026-10-27T12:54:44Z
+updated: 2026-10-27T12:54:46Z
 started: 2026-10-27T00:22:44Z
 depends: [sci-b1c777, beliefs-fe7149, beliefs-c08725, sci-c5528e, sci-923d3a, beliefs-9ce6e4, sci-dc0381, sci-7079e3]
 tags: [projects]
@@ -205,3 +205,4 @@ The milestone of docs/specs/2026-09-23-projects-corpora-and-workspaces-design.md
 - 2026-10-27T12:54:42Z (second-project-milestone): attached: live-invariants-stdout-portable.txt (370 bytes): portable derivative of live-invariants-stdout.txt (host paths replaced by placeholders); raw bytes retained at $WORK_ROOT/science/sci-0d00d2/live-invariants-stdout.txt, sha256 9a0adf034771e601
 - 2026-10-27T12:54:43Z (second-project-milestone): detached: live-invariants-vs-r3.json: layout gate refused host paths; portable derivative attached as live-invariants-vs-r3-portable.json, raw bytes kept at $WORK_ROOT/science/sci-0d00d2/state/live/runs/20261027T124235Z/invariants-vs-r3.json
 - 2026-10-27T12:54:44Z (second-project-milestone): attached: live-invariants-vs-r3-portable.json (370 bytes): portable derivative of live-invariants-vs-r3.json (host paths replaced by placeholders); raw bytes retained at $WORK_ROOT/science/sci-0d00d2/state/live/runs/20261027T124235Z/invariants-vs-r3.json, sha256 f3965c7a16dc2c65
+- 2026-10-27T12:54:46Z (second-project-milestone): detached: live-walk-attempt0-stdout.txt: layout gate refused host paths; portable derivative attached as live-walk-attempt0-stdout-portable.txt, raw bytes kept at $WORK_ROOT/science/sci-0d00d2/live-walk-attempt0-stdout.txt
