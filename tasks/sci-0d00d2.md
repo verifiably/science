@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: second-project-milestone
 created: 2026-09-23T11:40:35Z
-updated: 2026-10-27T12:51:41Z
+updated: 2026-10-27T12:51:43Z
 started: 2026-10-27T00:22:44Z
 depends: [sci-b1c777, beliefs-fe7149, beliefs-c08725, sci-c5528e, sci-923d3a, beliefs-9ce6e4, sci-dc0381, sci-7079e3]
 tags: [projects]
@@ -125,3 +125,4 @@ The milestone of docs/specs/2026-09-23-projects-corpora-and-workspaces-design.md
 - 2026-10-27T12:51:39Z (second-project-milestone): attached: live-resolved-MANIFEST (520 bytes): live run: resolved query MANIFEST (spec address substituted)
 - 2026-10-27T12:51:40Z (second-project-milestone): attached: live-resolved-cancer.yaml (16090 bytes): live run: resolved query cancer.yaml (spec address substituted)
 - 2026-10-27T12:51:41Z (second-project-milestone): attached: live-resolved-evidence-bound-terms.yaml (422 bytes): live run: resolved query evidence-bound-terms.yaml (spec address substituted)
+- 2026-10-27T12:51:43Z (second-project-milestone): attached: live-resolved-health-question.yaml (605 bytes): live run: resolved query health-question.yaml (spec address substituted)
