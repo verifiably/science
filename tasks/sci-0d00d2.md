@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: second-project-milestone
 created: 2026-09-23T11:40:35Z
-updated: 2026-10-27T12:52:45Z
+updated: 2026-10-27T12:52:50Z
 started: 2026-10-27T00:22:44Z
 depends: [sci-b1c777, beliefs-fe7149, beliefs-c08725, sci-c5528e, sci-923d3a, beliefs-9ce6e4, sci-dc0381, sci-7079e3]
 tags: [projects]
@@ -176,3 +176,8 @@ The milestone of docs/specs/2026-09-23-projects-corpora-and-workspaces-design.md
 - 2026-10-27T12:52:42Z (second-project-milestone): attached: rehearsal-r2-progress.json (892 bytes): r2 journal: W1.claim attempt then stop
 - 2026-10-27T12:52:43Z (second-project-milestone): attached: rehearsal-ra-progress.json (11552 bytes): drill (a) journal: stop-after row, resume.select, completion
 - 2026-10-27T12:52:45Z (second-project-milestone): attached: rehearsal-ra-selections.json (9734 bytes): drill (a) completed run's selections
+- 2026-10-27T12:52:46Z (second-project-milestone): attached: rehearsal-ra-invariants-vs-r3.json (414 bytes): drill (a) invariants against r3
+- 2026-10-27T12:52:47Z (second-project-milestone): attached: rehearsal-ra-run1-stdout.txt (1922 bytes): drill (a) stopping run output
+- 2026-10-27T12:52:48Z (second-project-milestone): attached: rehearsal-ra-run2-stdout.txt (2972 bytes): drill (a) resumed run output
+- 2026-10-27T12:52:49Z (second-project-milestone): attached: rehearsal-rb-progress.json (11343 bytes): drill (b) journal: attempt, uncertain-write stop, reconcile, completion
+- 2026-10-27T12:52:50Z (second-project-milestone): attached: rehearsal-rb-selections.json (9734 bytes): drill (b) completed run's selections
