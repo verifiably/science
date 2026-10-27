@@ -67,9 +67,9 @@ def test_read_contracts_are_available_and_never_activated(certified_work):
     assert [plan.namespace for plan in cfg.plans] == ["testing"]
 
 
-def test_read_contracts_must_be_a_list_of_strings(certified_work):
+def test_read_contracts_must_be_a_list(certified_work):
     message = _refused(_config(certified_work, extra='read_contracts = "archive.yaml"\n'))
-    assert "read_contracts must be a list of strings" in message
+    assert "read_contracts must be a list" in message
 
 
 def test_a_document_in_both_lists_refuses(certified_work):

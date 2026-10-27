@@ -197,6 +197,100 @@ def test_contracts_compile_into_the_profile(tmp_path):
     assert plan.operator_for("affects", "concept", "concept") == "testing/affects-concept-concept"
 
 
+def _write_chain(tmp_path: Path) -> tuple[Path, Path, str]:
+    import yaml
+    from beliefs.contract.domain import parse_domain_contract
+    from beliefs.profile import shipped_base_contract
+    from test_contracts import DOCUMENT
+
+    v1_text = DOCUMENT % ("0" * 64)
+    base = shipped_base_contract()
+    genesis = parse_domain_contract(
+        yaml.safe_load(v1_text)["contract"], source="v1", base=base, predecessor=None
+    )
+    v2_text = v1_text.replace(
+        "  lineage: genesis\n", f'  lineage: {{successor: "{genesis.content_identity}"}}\n'
+    ).replace(
+        "  operators:\n    affects-concept-concept:",
+        "  operators:\n    regulates-concept-concept: {arity: 2, arg_sorts: [concept, concept], "
+        "sign_apt: true, layers: [causal], dimensions: []}\n    affects-concept-concept:",
+    ).replace(
+        "  operators:\n    - {predicate: affects",
+        "  operators:\n    - {predicate: regulates, subject: concept, object: concept, "
+        "operator: regulates-concept-concept}\n    - {predicate: affects",
+    )
+    successor = parse_domain_contract(
+        yaml.safe_load(v2_text)["contract"], source="v2", base=base, predecessor=genesis
+    )
+    v1, v2 = tmp_path / "v1.yaml", tmp_path / "v2.yaml"
+    v1.write_text(v1_text)
+    v2.write_text(v2_text)
+    return v1, v2, successor.content_identity
+
+
+def test_a_contract_chain_compiles_to_the_successor_identity(tmp_path):
+    v1, v2, expected = _write_chain(tmp_path)
+    cfg = load_config(write_config(tmp_path, contracts=f'[{{ document = "{v2}", predecessors = ["{v1}"] }}]'))
+    assert cfg.profile.activated_contracts["testing"] == expected
+    (plan,) = cfg.plans
+    assert plan.operator_for("regulates", "concept", "concept") == "testing/regulates-concept-concept"
+
+
+def test_a_chain_listed_newest_first_refuses_by_name(tmp_path):
+    v1, v2, _ = _write_chain(tmp_path)
+    refusal = assert_invalid_config(write_config(tmp_path, contracts=f'[{{ document = "{v1}", predecessors = ["{v2}"] }}]'))
+    assert "no predecessor was supplied" in refusal.message and str(v2) in refusal.message
+
+
+def test_a_successor_document_given_bare_refuses_by_name(tmp_path):
+    _, v2, _ = _write_chain(tmp_path)
+    refusal = assert_invalid_config(write_config(tmp_path, contracts=f'["{v2}"]'))
+    assert "no predecessor was supplied" in refusal.message
+
+
+def test_a_chain_whose_predecessor_does_not_match_refuses_by_name(tmp_path):
+    from test_contracts import DOCUMENT
+
+    _, v2, _ = _write_chain(tmp_path)
+    other = tmp_path / "other.yaml"
+    other.write_text(DOCUMENT % ("1" * 64))  # a different genesis of the same namespace
+    refusal = assert_invalid_config(write_config(tmp_path, contracts=f'[{{ document = "{v2}", predecessors = ["{other}"] }}]'))
+    assert "declares successor" in refusal.message
+
+
+def test_a_chain_table_missing_a_key_refuses_naming_it(tmp_path):
+    _, v2, _ = _write_chain(tmp_path)
+    refusal = assert_invalid_config(write_config(tmp_path, contracts=f'[{{ document = "{v2}" }}]'))
+    assert "predecessors" in refusal.message
+
+
+def test_a_chain_table_with_empty_predecessors_refuses_naming_the_key(tmp_path):
+    _, v2, _ = _write_chain(tmp_path)
+    refusal = assert_invalid_config(write_config(tmp_path, contracts=f'[{{ document = "{v2}", predecessors = [] }}]'))
+    assert "predecessors" in refusal.message
+
+
+def test_a_read_contracts_chain_is_available_to_mounts_only(tmp_path):
+    v1, v2, expected = _write_chain(tmp_path)
+    cfg = load_config(write_config(tmp_path, extra=f'read_contracts = [{{ document = "{v2}", predecessors = ["{v1}"] }}]\n'))
+    assert "testing" not in cfg.profile.activated_contracts
+    assert expected in {c.content_identity for c in cfg.available_contracts}
+
+
+def test_a_chain_and_its_genesis_in_the_other_list_are_two_identities(tmp_path):
+    v1, v2, expected = _write_chain(tmp_path)
+    cfg = load_config(write_config(tmp_path, contracts=f'[{{ document = "{v2}", predecessors = ["{v1}"] }}]',
+                                   extra=f'read_contracts = ["{v1}"]\n'))
+    assert cfg.profile.activated_contracts["testing"] == expected
+
+
+def test_the_same_chain_in_both_lists_refuses_on_identity(tmp_path):
+    v1, v2, _ = _write_chain(tmp_path)
+    refusal = assert_invalid_config(write_config(tmp_path, contracts=f'[{{ document = "{v2}", predecessors = ["{v1}"] }}]',
+                                                 extra=f'read_contracts = [{{ document = "{v2}", predecessors = ["{v1}"] }}]\n'))
+    assert "both contracts and read_contracts" in refusal.message
+
+
 def test_store_root_resolves_like_operations_root(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     cfg = load_config(write_config(tmp_path, store_root="held"))

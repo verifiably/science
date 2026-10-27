@@ -7,14 +7,14 @@ contracts a home (belief-path design ruling 5).
 """
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
 import yaml
 
 from beliefs.contract.domain import DomainContract, parse_domain_contract
-from beliefs.errors import MalformedContract
+from beliefs.errors import MalformedContract, SuccessionViolation
 
 from science.refusal import Refusal, Refused
 
@@ -96,7 +96,9 @@ def _plan(raw: object, domain: DomainContract) -> OperatorPlan:
     )
 
 
-def load_contract_document(path: Path, base) -> tuple[DomainContract, OperatorPlan | None]:
+def load_contract_document(
+    path: Path, base, *, predecessor: DomainContract | None = None
+) -> tuple[DomainContract, OperatorPlan | None]:
     if not path.is_file():
         _refuse(f"contract document not found: {path}")
     try:
@@ -116,9 +118,20 @@ def load_contract_document(path: Path, base) -> tuple[DomainContract, OperatorPl
         )
     try:
         contract = parse_domain_contract(
-            document["contract"], source=f"{path}: contract", base=base, predecessor=None
+            document["contract"], source=f"{path}: contract", base=base, predecessor=predecessor
         )
-    except MalformedContract as caught:
+    except (MalformedContract, SuccessionViolation) as caught:
         _refuse(f"contract document {path} does not parse: {caught}")
     plan = _plan(document["plan"], contract) if "plan" in document else None
     return contract, plan
+
+
+def load_contract_chain(
+    document: Path, predecessors: Sequence[Path], base
+) -> tuple[DomainContract, OperatorPlan | None]:
+    # A successor's identity exists only relative to its lineage, so the chain is
+    # parsed oldest first, each document checked against the one before it.
+    previous = None
+    for path in predecessors:
+        previous, _ = load_contract_document(path, base, predecessor=previous)
+    return load_contract_document(document, base, predecessor=previous)

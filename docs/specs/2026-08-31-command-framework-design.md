@@ -755,6 +755,11 @@ a mounted root whose manifest the kernel refuses, is `invalid-input` naming
 the entry. `accept` and `[fetch]` (science commons §7.4) are policy the person
 authors and are two further optional keys of this file, not registry state.
 
+**Amended 2026-10-26** (second-project milestone design §5.3): an entry of `contracts`
+or `read_contracts` is a path, or a table `{ document, predecessors }` naming a
+successor document and its predecessor documents oldest first; the loader parses the
+chain document by document and activates the last.
+
 ### 9.2 CLI
 
 `science`, stdlib `argparse`, zero dependencies. One subcommand per shipped

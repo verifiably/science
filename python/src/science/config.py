@@ -4,7 +4,7 @@ from __future__ import annotations
 import os
 import re
 import tomllib
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
@@ -25,7 +25,7 @@ from beliefs.world import WorldConfig
 from beliefs.world.registry import load_manifest
 
 from science.refusal import Refusal, Refused
-from science.contracts import OperatorPlan, load_contract_document
+from science.contracts import OperatorPlan, load_contract_chain, load_contract_document
 from science.sharing import SharingRegistry, SharingRegistryMalformed
 
 _WORLD_ID_RE = re.compile(r"[0-9a-f]{32}")
@@ -106,6 +106,39 @@ def _fetch_policy(value: object) -> FetchPolicy:
     return FetchPolicy(value["policy"], max_bytes)
 
 
+def _contract_entry_shape(raw: object, key: str) -> None:
+    # An entry is a genesis document's path, or a successor document with the
+    # predecessors its lineage compiles against, oldest first.
+    if type(raw) is not list:
+        _refuse(f"config {key} must be a list")
+    for entry in raw:
+        if type(entry) is str:
+            continue
+        if type(entry) is not dict or set(entry) - {"document", "predecessors"}:
+            _refuse(f"config {key} entry must be a path or a table with document and predecessors")
+        if type(entry.get("document")) is not str or not entry["document"]:
+            _refuse(f"config {key} entry table needs `document`, a path")
+        predecessors = entry.get("predecessors")
+        if type(predecessors) is not list or not predecessors or any(
+            type(value) is not str for value in predecessors
+        ):
+            _refuse(f"config {key} entry table needs `predecessors`, a non-empty list of paths "
+                    "oldest first")
+
+
+def _contract_entries(
+    raw: list, located: Callable[[str], Path], base
+) -> list[tuple[DomainContract, OperatorPlan | None]]:
+    return [
+        load_contract_document(located(entry), base)
+        if type(entry) is str
+        else load_contract_chain(
+            located(entry["document"]), [located(value) for value in entry["predecessors"]], base
+        )
+        for entry in raw
+    ]
+
+
 def load_config(path: Path) -> ScienceConfig:
     if not path.is_file():
         _refuse(f"config file not found: {path}")
@@ -132,13 +165,11 @@ def load_config(path: Path) -> ScienceConfig:
         type(value) is not str for value in raw["domains"]
     ):
         _refuse("config domains must be a list of strings")
-    if type(raw["contracts"]) is not list or any(type(value) is not str for value in raw["contracts"]):
-        _refuse("config contracts must be a list of strings")
+    _contract_entry_shape(raw["contracts"], "contracts")
     if "write_root" in raw and type(raw["write_root"]) is not str:
         _refuse("config write_root must be a string")
     read_contracts = raw.get("read_contracts", [])
-    if type(read_contracts) is not list or any(type(value) is not str for value in read_contracts):
-        _refuse("config read_contracts must be a list of strings")
+    _contract_entry_shape(read_contracts, "read_contracts")
     if "sharing_root" in raw and type(raw["sharing_root"]) is not str:
         _refuse("config sharing_root must be a string")
     accept = raw.get("accept", [])
@@ -175,8 +206,8 @@ def load_config(path: Path) -> ScienceConfig:
     except ProfileError as caught:
         _refuse(f"config domains do not compile: {caught}")
     base = shipped_base_contract()
-    local = [load_contract_document(located(value), base) for value in raw["contracts"]]
-    readable = [load_contract_document(located(value), base) for value in read_contracts]
+    local = _contract_entries(raw["contracts"], located, base)
+    readable = _contract_entries(read_contracts, located, base)
     activated = {contract.content_identity for contract, _ in local}
     both = sorted(contract.namespace for contract, _ in readable if contract.content_identity in activated)
     if both:
