@@ -1,0 +1,6 @@
+{"at": "2026-10-27T12:23:55.127285Z", "config": "<replicas>/r2/science.toml", "journal": "sci-0d00d2", "world_id": "80666ede7c14a733cfe291af8c83d248"}
+{"at": "2026-10-27T12:23:56.125273Z", "identity": null, "invocation_id": "4992d5c7e076a65f9306053e4a27b6f3", "key": "S0", "phase": "record", "refusal": null, "seconds": 0.043}
+{"at": "2026-10-27T12:23:56.127768Z", "key": "E1", "phase": "attempt"}
+{"after_interrupted_attempt": false, "at": "2026-10-27T12:23:57.905047Z", "identity": "ede55a4359852afd5e2f68aa43a0138426b7cea5edc6f68a1ea8f4ea6da2de66", "invocation_id": null, "key": "E1", "outcome": "built", "phase": "record", "seconds": 1.775}
+{"at": "2026-10-27T12:23:57.980308Z", "key": "W1.claim", "phase": "attempt"}
+{"at": "2026-10-27T12:23:58.148702Z", "key": "W1.claim", "phase": "stop", "reason": "{\"code\": -32603, \"message\": \"Internal error\"}"}
