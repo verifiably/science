@@ -6,9 +6,9 @@ priority: 1
 size: m
 complexity: high
 process: planned
-owner: main
+owner: second-project-milestone
 created: 2026-09-23T11:40:35Z
-updated: 2026-10-27T00:22:44Z
+updated: 2026-10-27T00:23:11Z
 started: 2026-10-27T00:22:44Z
 depends: [sci-b1c777, beliefs-fe7149, beliefs-c08725, sci-c5528e, sci-923d3a, beliefs-9ce6e4, sci-dc0381]
 tags: [projects]
@@ -24,4 +24,6 @@ The milestone of docs/specs/2026-09-23-projects-corpora-and-workspaces-design.md
 - 2026-10-09T22:29:07Z (main): criterion 1 prerequisite: SCIENCE_CONFIG is exported as /mnt/ssd/science/science.toml (dotfiles titan.env.zsh) but the file does not exist; the relocated world is at /mnt/ssd/science/worlds/aec951bc…/ (world, corpora/mm30, store). The multiple-myeloma program (mm-a32d58) holds its phase-1 datasets into this world after this milestone.
 - 2026-10-14T08:56:20Z (main): Measurement request from beliefs (2026-10-14): when recording epoch builds (mount-citations consumer spec limitation 1), tag each forced science epoch with the class of write that triggered it: coordination (project, question, hypothesis) or evidence. Limitation 2's coordination-write staleness is otherwise unmeasured, and beliefs-655c10 (a mapped-content witness that would exempt coordination-only drift) is shelved until this record shows whether coordination-only rebuilds cost enough to justify it. On completion, note beliefs-655c10 with the coordination-only rebuild count and cost.
 - 2026-10-27T00:22:44Z (main): started
+  provenance: {"harness_session":"claude-code:74a061f4-8320-41fa-a2a3-a3ce105dd286","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-27T00:23:11Z (second-project-milestone): resumed
   provenance: {"harness_session":"claude-code:74a061f4-8320-41fa-a2a3-a3ce105dd286","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
