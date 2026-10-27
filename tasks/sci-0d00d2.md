@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: second-project-milestone
 created: 2026-09-23T11:40:35Z
-updated: 2026-10-27T13:10:57Z
+updated: 2026-10-27T13:11:07Z
 started: 2026-10-27T00:22:44Z
 depends: [sci-b1c777, beliefs-fe7149, beliefs-c08725, sci-c5528e, sci-923d3a, beliefs-9ce6e4, sci-dc0381, sci-7079e3]
 tags: [projects]
@@ -258,3 +258,5 @@ The milestone of docs/specs/2026-09-23-projects-corpora-and-workspaces-design.md
 - 2026-10-27T13:06:19Z (second-project-milestone): attached: live-reuse-record.md (1460 bytes): the reuse's record under cancer in the live working corpus: its body names the source question's pinned address
 - 2026-10-27T13:10:37Z (second-project-milestone): review: impl round 4 — verdict: accept; findings: Minor 3; reviewer: claude-code/claude-opus-5-5
 - 2026-10-27T13:10:57Z (second-project-milestone): attached: plan-ledger-portable.md (15223 bytes): the plan's execution ledger (rulings, deferred minors, review rounds), portable derivative; raw bytes at $WORK_ROOT/science/sci-0d00d2/evidence-raw/plan-ledger-progress.md
+- 2026-10-27T13:11:07Z (second-project-milestone): Identify the current integration owner
+  provenance: {"harness_session":"claude-code:8b479072-91d3-4b9c-b77c-d178525b6574","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
