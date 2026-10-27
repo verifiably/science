@@ -340,8 +340,8 @@ def test_lost_bind_race_raises_the_bind_error_and_still_closes_once(short_tmp):
 
 def test_close_waits_for_an_in_flight_write_and_refuses_what_arrives_after(certified_work, short_tmp, capsys):
     """A write in flight when the launcher closes finishes, replies and closes
-    in the ledger before the session does; a request on a connection still open
-    after close begins is refused, never a `SessionClosed` traceback."""
+    in the ledger before the session does; a connection served before close
+    began is refused afterwards, never a `SessionClosed` traceback."""
     from helpers.synthetic import mint_claim_handler, synthetic_decls_and_handlers
     cfg = build_fixture_world(certified_work)
     decls, handlers = synthetic_decls_and_handlers()
@@ -364,6 +364,9 @@ def test_close_waits_for_an_in_flight_write_and_refuses_what_arrives_after(certi
         assert entered.wait(timeout=30)
         with socket.socket(socket.AF_UNIX) as idle:
             idle.connect(str(sock_path))
+            reader = idle.makefile()
+            idle.sendall(json.dumps({"query": "selection"}).encode() + b"\n")
+            assert json.loads(reader.readline()) == {"project": None}  # a handler owns the connection
             closing.start()
             closing.join(timeout=0.5)
             assert closing.is_alive(), "close returned while a write was still in flight"
@@ -371,7 +374,7 @@ def test_close_waits_for_an_in_flight_write_and_refuses_what_arrives_after(certi
             closing.join(timeout=30)
             assert not closing.is_alive()
             idle.sendall(json.dumps({"query": "selection"}).encode() + b"\n")
-            refused = json.loads(idle.makefile().readline())
+            refused = json.loads(reader.readline())
     finally:
         release.set()
         writing.join(timeout=30)

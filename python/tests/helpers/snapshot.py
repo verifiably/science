@@ -23,7 +23,9 @@ class WorldSnapshot:
     def restore(self) -> None:
         from beliefs.corpus import _forget_roots_under
         from beliefs.world.registry import _forget_worlds_under
-        sockets = [p for p in self.work.rglob("*") if stat.S_ISSOCK(p.lstat().st_mode)]
+        from helpers.world import short_socket
+        sockets = [p for p in (*self.work.rglob("*"), short_socket(self.work))
+                   if p.exists() and stat.S_ISSOCK(p.lstat().st_mode)]
         if sockets:
             raise RuntimeError(f"a live socket under the world blocks the restore: {sockets}")
         _forget_roots_under(self.work)

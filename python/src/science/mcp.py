@@ -431,13 +431,14 @@ def serve(config_path: Path, stdin=None, stdout=None, stderr=None, project=None)
                 stdout.write(json.dumps(response, separators=(",", ":")) + "\n")
                 stdout.flush()
         finally:
-            try:
-                if server is not None:
-                    try:
-                        if serving:
-                            server.shutdown()  # blocks until serve_forever returns, so only once it runs
-                    finally:
-                        server.server_close()
-            finally:
-                if session is not None:
-                    session.close()  # the ledger's session-close line, crash or EOF alike
+            with stop_signals_held():
+                try:
+                    if server is not None:
+                        try:
+                            if serving:
+                                server.shutdown()  # blocks until serve_forever returns, so only once it runs
+                        finally:
+                            server.server_close()
+                finally:
+                    if session is not None:
+                        session.close()  # the ledger's session-close line, crash or EOF alike

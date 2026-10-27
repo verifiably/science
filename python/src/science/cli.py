@@ -214,8 +214,6 @@ def main(argv: list[str] | None = None) -> int:
         return EXIT_INTERNAL
 
 
-# The ordinary ways a long-running launcher is stopped: an MCP client or a
-# service manager sends SIGTERM, a closed terminal sends SIGHUP.
 def _framework_verb(namespace) -> int:
     declarations = production_tree()
     if namespace.command == "mcp":
@@ -243,7 +241,8 @@ def _framework_verb(namespace) -> int:
                 server.serve_forever()
             finally:
                 if server is not None:
-                    server.server_close()
+                    with stop_signals_held():
+                        server.server_close()
         return EXIT_OK
     if namespace.command == "adapters":
         from science.adapters import build_adapter

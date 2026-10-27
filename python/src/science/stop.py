@@ -7,6 +7,8 @@ import signal
 import threading
 from contextlib import contextmanager
 
+# The ordinary ways a long-running launcher is stopped: an MCP client or a
+# service manager sends SIGTERM, a closed terminal sends SIGHUP.
 _STOP_SIGNALS = (signal.SIGTERM, signal.SIGHUP)
 
 # The main thread's hold: whether a stop signal is deferred, and the one that
@@ -57,7 +59,10 @@ def stop_signals_held():
     """Defer a stop signal until the caller's cleanup owns what it must clean:
     yields `release`, which the caller calls inside the `try` whose `finally`
     closes the session and socket, and which raises the deferred stop there.
-    Leaving the block releases too.
+    Leaving the block releases too; leaving it on an exception drops a
+    deferred stop instead, so the exception that ends the launcher is the one
+    reported. A launcher's cleanup holds as well, so a first stop signal
+    cannot cut short the drain or the session close it is waiting on.
 
     A stop signal raises at whatever line the main thread is on, so without a
     hold one landing while the session opens, or after the socket binds but
@@ -77,5 +82,7 @@ def stop_signals_held():
     _hold["active"] = True
     try:
         yield release
-    finally:
-        release()
+    except BaseException:
+        _hold["active"], _hold["pending"] = False, None
+        raise
+    release()

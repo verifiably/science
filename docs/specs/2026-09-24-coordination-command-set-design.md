@@ -476,11 +476,12 @@ either into an exit that runs this cleanup and closes the session.
 
 **Amended 2026-10-26:** a stop signal that lands while a launcher opens its session
 or binds its socket is held until the cleanup that closes both owns them, then
-stops it the same way. Closing waits for the socket requests being answered, so a
-write in flight finishes, replies and closes its invocation before the session
-closes; a request arriving on a still-open connection after close begins refuses
-`permit-exceeded` without running. A second stop signal still kills a launcher that
-a hung write holds open.
+stops it the same way; one that lands during that cleanup (`mcp serve` after stdin
+closes, the MCP stdio shutdown order) is held until the session has closed. Closing
+waits for the socket requests being answered, so a write in flight finishes,
+replies and closes its invocation before the session closes; a request arriving on
+a still-open connection after close begins refuses `permit-exceeded` without
+running. A second stop signal still kills a launcher that a hung write holds open.
 
 ### 5.4 Subordinate mints need a selection
 

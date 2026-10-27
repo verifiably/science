@@ -132,3 +132,105 @@ def test_a_stop_signal_in_a_startup_window_still_cleans_up(certified_work, short
     assert not sock.exists()
     (ledger,) = (operations_root / "sessions").glob("*/ledger.v1")
     assert json.loads(ledger.read_text().splitlines()[-1])["line"] == "session-close"
+
+
+def test_a_stop_signal_during_mcp_serves_eof_drain_lets_the_write_finish(certified_work, short_tmp, monkeypatch, capsys):
+    """An MCP client closes stdin, then sends SIGTERM (the MCP stdio shutdown
+    order) while a CLI write over the socket is still in flight: the drain
+    still completes, the write closes its invocation before the session closes,
+    and the launcher then exits on the deferred signal."""
+    import io
+    import os
+    import socket
+    import threading
+
+    import science.dispatch as dispatch_module
+    from helpers.world import QUERY
+    from science.mcp import serve
+    from science.stop import stop_signals_exit
+
+    assert threading.current_thread() is threading.main_thread()
+    sock = short_tmp / "service.sock"
+    config_path = write_cli_config(certified_work, service_socket=sock)
+    entered, release = threading.Event(), threading.Event()
+    invoke = dispatch_module.Dispatcher.invoke
+
+    def held(self, *args, **kwargs):
+        entered.set()
+        assert release.wait(timeout=30)
+        return invoke(self, *args, **kwargs)
+
+    monkeypatch.setattr(dispatch_module.Dispatcher, "invoke", held)
+    import science.serve as serve_module
+    servers, build = [], serve_module.service_server
+    monkeypatch.setattr(serve_module, "service_server",
+                        lambda *args, **kwargs: servers.append(build(*args, **kwargs)) or servers[-1])
+    read_end, write_end = os.pipe()
+    replies = []
+
+    def client():
+        try:
+            deadline = time.monotonic() + STARTUP_SECONDS
+            while not sock.exists():
+                assert time.monotonic() < deadline
+                time.sleep(0.05)
+            with socket.socket(socket.AF_UNIX) as s:
+                s.connect(str(sock))
+                s.sendall(json.dumps({"command": "project", "inputs": {"name": "health", "query": QUERY},
+                                      "invocation_id": "G" * 8, "cursor": None}).encode() + b"\n")
+                replies.append(json.loads(s.makefile().readline()))
+        finally:
+            release.set()
+
+    def stopper():
+        assert entered.wait(timeout=STARTUP_SECONDS)
+        os.close(write_end)  # EOF: mcp serve begins its cleanup and drains the write
+        deadline = time.monotonic() + STOP_SECONDS
+        while not servers[0]._closing:  # the drain has begun
+            assert time.monotonic() < deadline
+            time.sleep(0.01)
+        os.kill(os.getpid(), signal.SIGTERM)
+        time.sleep(0.3)
+        release.set()
+
+    threads = [threading.Thread(target=client), threading.Thread(target=stopper)]
+    for thread in threads:
+        thread.start()
+    try:
+        with pytest.raises(SystemExit) as caught, stop_signals_exit(), open(read_end, "rb") as stdin:
+            serve(config_path, stdin=stdin, stdout=io.StringIO(), stderr=io.StringIO())
+    finally:
+        release.set()
+        for thread in threads:
+            thread.join(timeout=30)
+    assert caught.value.code == 128 + signal.SIGTERM
+    assert replies and replies[0]["ok"], replies
+    (ledger,) = (load_operations_root(config_path) / "sessions").glob("*/ledger.v1")
+    lines = [json.loads(line) for line in ledger.read_text().splitlines()]
+    assert lines[-1]["line"] == "session-close"
+    assert any(line["line"] == "invocation-close" and line["invocation"] == "G" * 8 for line in lines)
+    assert "Traceback" not in capsys.readouterr().err
+    assert not sock.exists()
+
+
+def load_operations_root(config_path):
+    from science.config import load_config
+    return load_config(config_path).operations_root
+
+
+@pytest.mark.parametrize("ends", ["normally", "on-an-error"])
+def test_a_held_stop_signal_raises_at_release_unless_an_error_ends_the_hold(ends):
+    import os
+    import threading
+
+    from science.stop import stop_signals_exit, stop_signals_held
+
+    assert threading.current_thread() is threading.main_thread()
+    expected = SystemExit if ends == "normally" else RuntimeError
+    with pytest.raises(expected) as caught, stop_signals_exit(), stop_signals_held():
+        os.kill(os.getpid(), signal.SIGTERM)
+        time.sleep(0.05)  # the handler has run, and deferred the stop
+        if ends == "on-an-error":
+            raise RuntimeError("the launcher's own failure")
+    if ends == "normally":
+        assert caught.value.code == 128 + signal.SIGTERM
