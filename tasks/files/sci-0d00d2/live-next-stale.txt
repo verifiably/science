@@ -1,0 +1,5 @@
+## Next
+propositions:
+  proposition:concept-disease-stage-affects-protein-ezh2: not-ready: concept:disease-stage affects protein:EZH2
+  proposition:protein-phf19-affects-concept-overall-survival: not-ready: Higher PHF19 expression predicts shorter overall survival — inquiry 0001-prognosis's spine, minted here with no evidence.
+  proposition:concept-disease-stage-affects-protein-phf19: assessed-unevaluated (epoch-stale): concept:disease-stage affects protein:PHF19
