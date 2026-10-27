@@ -8,7 +8,7 @@ complexity: mid
 process: direct
 owner: fix/9a7ce2-own-publication
 created: 2026-10-27T15:49:59Z
-updated: 2026-10-27T19:03:45Z
+updated: 2026-10-27T19:03:47Z
 started: 2026-10-27T18:49:38Z
 depends: [beliefs-7c612b]
 tags: []
@@ -31,3 +31,4 @@ Implement the consumer integration from beliefs spec docs/superpowers/specs/2026
 - 2026-10-27T18:58:08Z (fix/9a7ce2-own-publication): RED proof: markerless restored replica failed preview under v2 (attribution-contract-unpinned) and v3 (attribution-source-invalid/marker-absent); after preview wiring, the same tests advanced to publish and failed with those reasons there. Classifier-precondition tests also failed before wiring. Existing remote fault/resume test passes with ReadContext.mounts forced to fail before resume, proving no reclassification. Fixture setup initially needed the documented replication destination parent; fixed the fixture, with no upstream change.
 - 2026-10-27T19:01:45Z (fix/9a7ce2-own-publication): Implementation 53c0764: both commands pass the existing Own classification, resume bypasses it, docs/prompts and generated adapters updated. GREEN: focused publication tests 21 passed in 45.84s; just check and commit hook passed. First fast run selected all 898: 897 passed, only test_generated_tree_matches_committed failed (stale generated prompts). Regenerated with uv run science adapters build; focused adapter test 1 passed, then just test-fast selected the prior failing case and passed 1/1. No runtime code changed after the 897 passing cases. Independent read-only whole-branch review dispatched against 210a783..53c0764; no live-world test or push.
 - 2026-10-27T19:03:45Z (fix/9a7ce2-own-publication): review: impl round 1 — verdict: accept; findings: none; reviewer: codex/gpt-6.1-sol
+- 2026-10-27T19:03:47Z (fix/9a7ce2-own-publication): attached: impl-round-1-report.md (2863 bytes): Full read-only whole-branch review of 210a783..53c0764; verified codex/gpt-6.1-sol; accept, no findings
