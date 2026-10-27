@@ -1,0 +1,16 @@
+version: science.view-query.v1
+clauses:
+- all:
+  - closure:
+      anchor: dataset:sha256:a6bf229ef0abd8e11f0b7f017cbdb6977395e23d83fb122fcf141f723ba1e448
+      predicates:
+      - observes
+      - produced_by
+      - assesses
+      - verifies
+      direction: both
+- all:
+  - addresses:
+    - analysis-spec:10e8bfce1aaad8a937a79bfba7cf523ac42b4240ec8b15e20e5b5f450d234714
+- all:
+  - references-term: concept:disease-stage
