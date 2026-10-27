@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: second-project-milestone
 created: 2026-09-23T11:40:35Z
-updated: 2026-10-27T12:50:52Z
+updated: 2026-10-27T12:50:53Z
 started: 2026-10-27T00:22:44Z
 depends: [sci-b1c777, beliefs-fe7149, beliefs-c08725, sci-c5528e, sci-923d3a, beliefs-9ce6e4, sci-dc0381, sci-7079e3]
 tags: [projects]
@@ -85,3 +85,4 @@ The milestone of docs/specs/2026-09-23-projects-corpora-and-workspaces-design.md
 - 2026-10-27T12:50:49Z (second-project-milestone): attached: driver-arms.py (4620 bytes): milestone driver arms.py, as drilled and run live
 - 2026-10-27T12:50:50Z (second-project-milestone): attached: driver-common.py (8510 bytes): milestone driver common.py, as drilled and run live
 - 2026-10-27T12:50:52Z (second-project-milestone): attached: driver-declare.py (6660 bytes): milestone driver declare.py, as drilled and run live
+- 2026-10-27T12:50:53Z (second-project-milestone): attached: driver-genesis.py (11678 bytes): milestone driver genesis.py, as drilled and run live
