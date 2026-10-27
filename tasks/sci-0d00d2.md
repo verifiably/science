@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: second-project-milestone
 created: 2026-09-23T11:40:35Z
-updated: 2026-10-27T12:52:15Z
+updated: 2026-10-27T12:52:22Z
 started: 2026-10-27T00:22:44Z
 depends: [sci-b1c777, beliefs-fe7149, beliefs-c08725, sci-c5528e, sci-923d3a, beliefs-9ce6e4, sci-dc0381, sci-7079e3]
 tags: [projects]
@@ -151,3 +151,9 @@ The milestone of docs/specs/2026-09-23-projects-corpora-and-workspaces-design.md
 - 2026-10-27T12:52:12Z (second-project-milestone): attached: live-genesis-stdout.txt (447 bytes): captured output: live-genesis-stdout.txt
 - 2026-10-27T12:52:14Z (second-project-milestone): attached: live-declare-stdout.txt (187 bytes): captured output: live-declare-stdout.txt
 - 2026-10-27T12:52:15Z (second-project-milestone): attached: live-terms-stdout.txt (520 bytes): captured output: live-terms-stdout.txt
+- 2026-10-27T12:52:16Z (second-project-milestone): attached: live-walk-stdout.txt (4158 bytes): captured output: live-walk-stdout.txt
+- 2026-10-27T12:52:17Z (second-project-milestone): attached: live-arms-stdout.txt (520 bytes): captured output: live-arms-stdout.txt
+- 2026-10-27T12:52:18Z (second-project-milestone): attached: live-invariants-stdout.txt (416 bytes): captured output: live-invariants-stdout.txt
+- 2026-10-27T12:52:19Z (second-project-milestone): attached: live-walk-attempt0-stdout.txt (150 bytes): captured output: live-walk-attempt0-stdout.txt
+- 2026-10-27T12:52:21Z (second-project-milestone): attached: rehearsal-r3-world.json (236 bytes): rehearsal r3 replica binding
+- 2026-10-27T12:52:22Z (second-project-milestone): attached: rehearsal-r3-declared.json (1063 bytes): rehearsal r3 declarations

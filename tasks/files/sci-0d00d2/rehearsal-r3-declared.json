@@ -1,0 +1,31 @@
+{
+  "annotation": "dataset:sha256:22bc74180538f1c53fd1e336f3c056c96eae712c5d752ab016cc2baab8967b81",
+  "annotation_resources": [
+    {
+      "bytes": 44507458,
+      "md5": "c03931958d4572148650d62eb6dec41a",
+      "name": "gencode.v36.annotation.gtf.gz",
+      "sha256": "81359865bab048361cbeaf91c9441aac4c700b63978e6691d579d78bf2322d30"
+    }
+  ],
+  "cohort": "dataset:sha256:e565a18845914ff4fd1656f1a45f303f723a78f32c758d1fadb1854f899a7dd3",
+  "cohort_resources": [
+    {
+      "bytes": 3172813,
+      "md5": "e18dc9b72619d6473e2274cf3823b395",
+      "name": "mm_counts.csv.gz",
+      "sha256": "f0f5a328068ad3bf9687e06e71f29c22aa87b72da40089c4ae2d2782f861024d"
+    },
+    {
+      "bytes": 7637,
+      "md5": "9201e47ffb0e3900b01fd96a913b56f6",
+      "name": "mm_metadata.csv",
+      "sha256": "12e7bd37ae94fe229323078144c0c9efe84140cac3143b0bad234ed2c3895094"
+    }
+  ],
+  "condition_values": {
+    "ndmm": "diagnostico",
+    "pd": "recidiva"
+  },
+  "counts_header_prefix": "gene_id,57239e96-bb3a-4244-9912-389a715d8e9a,205f2037-15ce-465d-98b0-18e4def58a0"
+}
