@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: second-project-milestone
 created: 2026-09-23T11:40:35Z
-updated: 2026-10-27T12:51:14Z
+updated: 2026-10-27T12:51:15Z
 started: 2026-10-27T00:22:44Z
 depends: [sci-b1c777, beliefs-fe7149, beliefs-c08725, sci-c5528e, sci-923d3a, beliefs-9ce6e4, sci-dc0381, sci-7079e3]
 tags: [projects]
@@ -103,3 +103,4 @@ The milestone of docs/specs/2026-09-23-projects-corpora-and-workspaces-design.md
 - 2026-10-27T12:51:11Z (second-project-milestone): attached: live-queries-MANIFEST (520 bytes): frozen query template MANIFEST (live state)
 - 2026-10-27T12:51:13Z (second-project-milestone): attached: live-queries-cancer.yaml (16090 bytes): frozen query template cancer.yaml (live state)
 - 2026-10-27T12:51:14Z (second-project-milestone): attached: live-queries-evidence-bound-terms.yaml (422 bytes): frozen query template evidence-bound-terms.yaml (live state)
+- 2026-10-27T12:51:15Z (second-project-milestone): attached: live-queries-health-question.yaml (549 bytes): frozen query template health-question.yaml (live state)

@@ -1,0 +1,17 @@
+version: science.view-query.v1
+clauses:
+- all:
+  - closure:
+      anchor: dataset:sha256:a6bf229ef0abd8e11f0b7f017cbdb6977395e23d83fb122fcf141f723ba1e448
+      predicates:
+      - observes
+      - produced_by
+      - assesses
+      - verifies
+      direction: both
+- all:
+  - addresses:
+    - proposition:concept-disease-stage-affects-protein-ezh2
+    - analysis-spec:<minted>
+    - dataset:sha256:e565a18845914ff4fd1656f1a45f303f723a78f32c758d1fadb1854f899a7dd3
+    - dataset:sha256:22bc74180538f1c53fd1e336f3c056c96eae712c5d752ab016cc2baab8967b81
