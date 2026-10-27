@@ -1,13 +1,15 @@
 ---
 id: sci-0808bd
 title: "Drivers: the walk, the selection reader, the launcher arms"
-status: todo
+status: doing
 priority: 1
 size: m
 complexity: high
 process: direct
+owner: second-project-milestone
 created: 2026-10-27T02:04:19Z
-updated: 2026-10-27T02:15:24Z
+updated: 2026-10-27T13:12:35Z
+started: 2026-10-27T13:12:35Z
 depends: []
 parent: sci-0d00d2
 tags: [projects]
@@ -21,3 +23,5 @@ step: "Task 4: Drivers: the walk, the selection reader, the launcher arms"
 
 - 2026-10-27T02:04:19Z (add): created
   provenance: {"harness_session":"claude-code:74a061f4-8320-41fa-a2a3-a3ce105dd286","harness_session_source":"CLAUDE_CODE_SESSION_ID","origin":"agent"}
+- 2026-10-27T13:12:35Z (second-project-milestone): started
+  provenance: {"harness_session":"claude-code:8b479072-91d3-4b9c-b77c-d178525b6574","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
