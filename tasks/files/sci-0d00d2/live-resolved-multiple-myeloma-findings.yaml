@@ -1,0 +1,16 @@
+version: science.view-query.v1
+clauses:
+- all:
+  - closure:
+      anchor: assessment:27bd9753ffa77bf6
+      predicates:
+      - assesses
+      - produced_by
+      - observes
+      - reads
+      - transforms
+      - produces
+      direction: out
+- all:
+  - addresses:
+    - analysis-spec:10e8bfce1aaad8a937a79bfba7cf523ac42b4240ec8b15e20e5b5f450d234714
