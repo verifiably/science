@@ -6,9 +6,9 @@ priority: 2
 size: s
 complexity: mid
 process: direct
-owner: main
+owner: fix/9a7ce2-own-publication
 created: 2026-10-27T15:49:59Z
-updated: 2026-10-27T18:49:38Z
+updated: 2026-10-27T18:50:17Z
 started: 2026-10-27T18:49:38Z
 depends: [beliefs-7c612b]
 tags: []
@@ -24,4 +24,6 @@ Implement the consumer integration from beliefs spec docs/superpowers/specs/2026
 - 2026-10-27T15:49:59Z (add): created
   provenance: {"harness_session":"codex:01a17dcb-2a5d-7101-9aa7-305b6690786c","harness_session_source":"CODEX_THREAD_ID","origin":"agent"}
 - 2026-10-27T18:49:38Z (main): started
+  provenance: {"harness_session":"codex:01a17eb1-eac2-7e50-9dca-09bb9c9cb87b","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-27T18:50:17Z (fix/9a7ce2-own-publication): resumed
   provenance: {"harness_session":"codex:01a17eb1-eac2-7e50-9dca-09bb9c9cb87b","harness_session_source":"CODEX_THREAD_ID"}
