@@ -1,0 +1,25 @@
+new run <task dir>/state/ra/runs/20261027T123311Z
+--- S0 status [ok] 0.04s invocation 37318d4f435713aba4379fc11f3d44c8
+--- E1 epoch [built] 1.64s a1d90c2ec5803c2dd29889e1ada290ce6be83242a94345594c0f792f7af82f4f
+--- W1.claim claim [ok] 0.31s invocation e1f88866e100087f8a859535f902b1b8
+    proposition:concept-disease-stage-affects-protein-ezh2
+--- W1.spec spec [ok] 0.33s invocation cdf20c80f72a828aac644e59349222f4
+    analysis-spec:5132014c5feecd52d09c801c220074bae2fd7677ec009b1a0228186602763036
+--- E2 epoch [built] 1.44s 3177293e429d42ca329abe0843d27debdd0c2f0c598f6da557ee920083e63f2e
+--- W2.project.multiple-myeloma project [ok] 0.22s invocation 8dd8e1e86a75daa3529ad59dc4ec9515
+    coord:412ba81bf73043703a1702b95b5956f5
+--- W2.project.cancer project [ok] 0.22s invocation 246d8bd690fc38610f8b9281c6a41a0e
+    coord:a19390d59d571f95647ac3d1405c0a99
+--- W2.project.health project [ok] 0.25s invocation 70c3abd8c066871c0198c60a6f51f477
+    coord:e49df48658fc8672a05b02349f89b8b4
+--- W2.project.multiple-myeloma-findings project [ok] 0.14s invocation 86b5b0b4e5e2c88c9de05e215452c9e7
+    coord:94001ad547fbe8a4ed0f37ba17219a06
+--- R0.next-stale next [ok] 1.16s invocation ec3355aaed816e9db3cb557433f3f0ab
+--- E3 epoch [built] 1.93s 3b1587c6ca6b9ffa385735900b6843ffa87eacc4a035769a9171ae3c785f0807
+--- R1.multiple-myeloma view coord:412ba81bf73043703a1702b95b5956f5: 8 selected, equivalent True, complete True
+--- R1.cancer view coord:a19390d59d571f95647ac3d1405c0a99: 8 selected, equivalent True, complete True
+--- R1.health view coord:e49df48658fc8672a05b02349f89b8b4: 11 selected, equivalent True, complete True
+--- R1.multiple-myeloma-findings view coord:94001ad547fbe8a4ed0f37ba17219a06: 4 selected, equivalent True, complete True
+--- W3.select.health project-select [ok] 0.30s invocation 5d09a522b69381c55af42a56c5cdd5e0
+stop-after W3.select.health: stopping with the server closed
+exit 0
