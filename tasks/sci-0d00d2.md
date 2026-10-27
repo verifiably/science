@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: second-project-milestone
 created: 2026-09-23T11:40:35Z
-updated: 2026-10-27T12:55:10Z
+updated: 2026-10-27T12:55:11Z
 started: 2026-10-27T00:22:44Z
 depends: [sci-b1c777, beliefs-fe7149, beliefs-c08725, sci-c5528e, sci-923d3a, beliefs-9ce6e4, sci-dc0381, sci-7079e3]
 tags: [projects]
@@ -225,3 +225,4 @@ The milestone of docs/specs/2026-09-23-projects-corpora-and-workspaces-design.md
 - 2026-10-27T12:55:07Z (second-project-milestone): attached: rehearsal-r3-stdout-portable.txt (6573 bytes): portable derivative of rehearsal-r3-stdout.txt (host paths replaced by placeholders); raw bytes retained at $WORK_ROOT/science/sci-0d00d2/r3-stdout.txt, sha256 4cc5d510e09ef84f
 - 2026-10-27T12:55:08Z (second-project-milestone): detached: rehearsal-r3-world.json: layout gate refused host paths; portable derivative attached as rehearsal-r3-world-portable.json, raw bytes kept at $WORK_ROOT/science/sci-0d00d2/state/r3/world.json
 - 2026-10-27T12:55:10Z (second-project-milestone): attached: rehearsal-r3-world-portable.json (174 bytes): portable derivative of rehearsal-r3-world.json (host paths replaced by placeholders); raw bytes retained at $WORK_ROOT/science/sci-0d00d2/state/r3/world.json, sha256 4cf337ffa985bb82
+- 2026-10-27T12:55:11Z (second-project-milestone): detached: rehearsal-ra-invariants-vs-r3.json: layout gate refused host paths; portable derivative attached as rehearsal-ra-invariants-vs-r3-portable.json, raw bytes kept at $WORK_ROOT/science/sci-0d00d2/state/ra/runs/20261027T123311Z/invariants-vs-r3.json
