@@ -1,0 +1,2 @@
+bash: line 1: <task dir>/../../.worktrees/second-project-milestone/python/.venv/bin/python: No such file or directory
+exit 127
