@@ -1,0 +1,39 @@
+replica 364c4921dd274467c0a65aa2c15c5a15: {'world_id': '364c4921dd274467c0a65aa2c15c5a15', 'home': '<replicas>/r1/worlds/364c4921dd274467c0a65aa2c15c5a15', 'corpus_id': '8b5d0c802677ee445e2b9d91ebf5d6a7', 'store_id': '05b6c1225e710bb1559f36e8333f3f29', 'restore': {'corpus': 'validated', 'store': 'validated'}, 'arrival': 'validated', 'admission': {'kind': 'replica-of', 'parent_corpus_id': '8b5d0c802677ee445e2b9d91ebf5d6a7'}, 'live_world_files': 99, 'live_world_unchanged': True}
+$ <task dir>/driver/genesis.py <task dir>/state/r1 <replicas>/r1 364c4921dd274467c0a65aa2c15c5a15 <beliefs> <replicas>/r1/worlds/364c4921dd274467c0a65aa2c15c5a15/corpora/mm30
+chain: mm30:4af7c4212d482ae60f429526ff5a8a6d4c335f70351a2687cd2062ffdedf437c
+pin: science:52a4399342235225fbf23526050cf64ff0436d9b72bc54e30fc0c2cb7193b220
+pin: biology:24bcec4370cfcff3077414798c02525814d4aeaaf84430ab378838df7345d53b
+pin: mm30:4af7c4212d482ae60f429526ff5a8a6d4c335f70351a2687cd2062ffdedf437c
+pin: coordination:b23866284ae160f7e7322cbb3c63adcbc84f5f894e6f30f5468c76dc8434993d
+working corpus: 77d50784ef2e83cab5e9d921b31b0865
+$ <task dir>/driver/declare.py <task dir>/state/r1
+Traceback (most recent call last):
+  File "<task dir>/driver/declare.py", line 136, in <module>
+    sys.exit(main(sys.argv))
+             ~~~~^^^^^^^^^^
+  File "<task dir>/driver/declare.py", line 122, in main
+    writer.add(candidate)
+    ~~~~~~~~~~^^^^^^^^^^^
+  File "<beliefs>/python/src/beliefs/corpus.py", line 2246, in add
+    self._refuse(node)
+    ~~~~~~~~~~~~^^^^^^
+  File "<beliefs>/python/src/beliefs/corpus.py", line 3680, in _refuse
+    self._refuse_cited(node, document_validated=document_validated, view=view, provenance=provenance)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<beliefs>/python/src/beliefs/corpus.py", line 3699, in _refuse_cited
+    self._refuse_facets(node, view=view, provenance=provenance)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<beliefs>/python/src/beliefs/corpus.py", line 3735, in _refuse_facets
+    self._refuse_facet_shapes(node)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "<beliefs>/python/src/beliefs/corpus.py", line 3726, in _refuse_facet_shapes
+    validate_payload(facet, payload, where=node.id)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<beliefs>/python/src/beliefs/facets.py", line 61, in validate_payload
+    raise _refuse(
+        where, facet.key, f"{name!r} uses scheme {prefix!r}; declared schemes are {', '.join(field.schemes)}"
+    )
+beliefs.errors.FacetPayloadRefused: dataset:sha256:e565a18845914ff4fd1656f1a45f303f723a78f32c758d1fadb1854f899a7dd3: facet 'empirical-observation' payload malformed: 'locator' uses scheme 'doi'; declared schemes are accession, url, instrument
+stop: declare.py exited 1
+stop: declare.py exited 1
+rc=1
