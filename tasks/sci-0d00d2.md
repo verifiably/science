@@ -8,9 +8,9 @@ complexity: high
 process: planned
 owner: second-project-milestone
 created: 2026-09-23T11:40:35Z
-updated: 2026-10-27T01:56:38Z
+updated: 2026-10-27T01:57:44Z
 started: 2026-10-27T00:22:44Z
-depends: [sci-b1c777, beliefs-fe7149, beliefs-c08725, sci-c5528e, sci-923d3a, beliefs-9ce6e4, sci-dc0381]
+depends: [sci-b1c777, beliefs-fe7149, beliefs-c08725, sci-c5528e, sci-923d3a, beliefs-9ce6e4, sci-dc0381, sci-7079e3]
 tags: [projects]
 agent: claude-code/claude-fable-5-1
 spec: docs/specs/2026-10-26-second-project-milestone-design.md
