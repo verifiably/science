@@ -1,0 +1,16 @@
+{"invocation_id":"e09492f0d4d03071703904dd926767eb"}
+## World status
+corpora:
+  4b1c238d06cf7fa18def5ea2554d4f16: known=True live=True present=True
+  8b5d0c802677ee445e2b9d91ebf5d6a7: known=True live=True present=True
+No current epoch.
+records in 4b1c238d06cf7fa18def5ea2554d4f16:
+records in 8b5d0c802677ee445e2b9d91ebf5d6a7:
+  analysis-spec: 1
+  assessment: 1
+  composite: 1
+  dataset: 5
+  holdings-observation: 5
+  proposition: 2
+  run: 2
+  verification: 1
