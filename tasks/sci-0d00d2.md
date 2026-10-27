@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: second-project-milestone
 created: 2026-09-23T11:40:35Z
-updated: 2026-10-27T02:04:13Z
+updated: 2026-10-27T02:04:41Z
 started: 2026-10-27T00:22:44Z
 depends: [sci-b1c777, beliefs-fe7149, beliefs-c08725, sci-c5528e, sci-923d3a, beliefs-9ce6e4, sci-dc0381, sci-7079e3]
 tags: [projects]
@@ -47,3 +47,4 @@ The milestone of docs/specs/2026-09-23-projects-corpora-and-workspaces-design.md
 - 2026-10-27T01:56:37Z (second-project-milestone): resumed
   provenance: {"harness_session":"claude-code:74a061f4-8320-41fa-a2a3-a3ce105dd286","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-27T01:56:38Z (second-project-milestone): review: spec round 2 — verdict: accept; findings: Minor 2; reviewer: codex/gpt-6-astra
+- 2026-10-27T02:04:41Z (second-project-milestone): plan drafted at 0858b10 (docs/plans/2026-10-26-second-project-milestone.md): 7 tasks; Task 1 is sci-7079e3 (dependency), Tasks 2-7 are children sci-f85386 sci-5fb694 sci-c77d83 sci-0808bd sci-083105 sci-ff54f2; self-review applied (both-lists tests split, address source fixed, overlap inventory in §1, final status for M6)
