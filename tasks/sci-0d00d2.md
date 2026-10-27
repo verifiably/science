@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: second-project-milestone
 created: 2026-09-23T11:40:35Z
-updated: 2026-10-27T00:29:27Z
+updated: 2026-10-27T00:29:28Z
 started: 2026-10-27T00:22:44Z
 depends: [sci-b1c777, beliefs-fe7149, beliefs-c08725, sci-c5528e, sci-923d3a, beliefs-9ce6e4, sci-dc0381]
 tags: [projects]
@@ -28,3 +28,5 @@ The milestone of docs/specs/2026-09-23-projects-corpora-and-workspaces-design.md
 - 2026-10-27T00:23:11Z (second-project-milestone): resumed
   provenance: {"harness_session":"claude-code:74a061f4-8320-41fa-a2a3-a3ce105dd286","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-27T00:29:27Z (second-project-milestone): brainstorm: world root has mm30 but no working corpus or science.toml; no science/beliefs command creates a corpus or mints a declared-unheld dataset (driver steps + gap finding); health proposition must be biology protein-protein; predecessor health/meta q0167 (p53/RP-MDM2) is the candidate first health question
+- 2026-10-27T00:29:28Z (second-project-milestone): parked (waiting on user, decision): user answers which health/meta question is the first health question (recommended: q0167, proposition protein:RPL11 regulates protein:MDM2, dataset declared by digest, unheld); then the agent lays out approaches and drafts the design spec in .worktrees/second-project-milestone
+  provenance: {"harness_session":"claude-code:74a061f4-8320-41fa-a2a3-a3ce105dd286","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
