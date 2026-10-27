@@ -1,0 +1,584 @@
+version: science.view-query.v1
+clauses:
+- all:
+  - closure:
+      anchor: dataset:sha256:a6bf229ef0abd8e11f0b7f017cbdb6977395e23d83fb122fcf141f723ba1e448
+      predicates:
+      - observes
+      - produced_by
+      - assesses
+      - verifies
+      direction: both
+- all:
+  - addresses:
+    - analysis-spec:10e8bfce1aaad8a937a79bfba7cf523ac42b4240ec8b15e20e5b5f450d234714
+- all:
+  - references-term: concept:1q-associated-architecture
+- all:
+  - references-term: concept:1q-gain
+- all:
+  - references-term: concept:1q21
+- all:
+  - references-term: concept:3d-genome
+- all:
+  - references-term: concept:8q-gain
+- all:
+  - references-term: concept:acquired-secondary-events
+- all:
+  - references-term: concept:age
+- all:
+  - references-term: concept:aged-niche-fitness-landscape
+- all:
+  - references-term: concept:aneuploidy
+- all:
+  - references-term: concept:anti-cd38-backbone
+- all:
+  - references-term: concept:ap1-chromatin-memory
+- all:
+  - references-term: concept:ap1-niche-arm
+- all:
+  - references-term: concept:ap1-null-candidate-arms
+- all:
+  - references-term: concept:ap1-stress-arm
+- all:
+  - references-term: concept:ap1-stress-niche-balance
+- all:
+  - references-term: concept:apparent-basin-depth
+- all:
+  - references-term: concept:attractor-landscape
+- all:
+  - references-term: concept:autophagy-compensation
+- all:
+  - references-term: concept:baseline-bcma-expression
+- all:
+  - references-term: concept:baseline-gprc5d-expression
+- all:
+  - references-term: concept:baseline-secondary-events
+- all:
+  - references-term: concept:baseline-subtype-architecture
+- all:
+  - references-term: concept:baseline-treatment
+- all:
+  - references-term: concept:basin-position
+- all:
+  - references-term: concept:bcl2-apobec-architecture
+- all:
+  - references-term: concept:bcl2-dependency-state
+- all:
+  - references-term: concept:bcl2-mcl1-ratio
+- all:
+  - references-term: concept:bcma-antigen-loss
+- all:
+  - references-term: concept:bcma-bispecific
+- all:
+  - references-term: concept:bcma-car-t
+- all:
+  - references-term: concept:belantamab-bvd-regimen
+- all:
+  - references-term: concept:benchmarking
+- all:
+  - references-term: concept:bh3-profiling
+- all:
+  - references-term: concept:biomarker
+- all:
+  - references-term: concept:biophysics
+- all:
+  - references-term: concept:biosynthetic-infrastructure
+- all:
+  - references-term: concept:bmsc-adhesion
+- all:
+  - references-term: concept:bone-marrow-niche
+- all:
+  - references-term: concept:bortezomib-regimen
+- all:
+  - references-term: concept:bridging-therapy
+- all:
+  - references-term: concept:bulk-deconvolution-proxy
+- all:
+  - references-term: concept:bulk-expression
+- all:
+  - references-term: concept:cal3-generic-prognostic-control
+- all:
+  - references-term: concept:cam-dr-resistance
+- all:
+  - references-term: concept:cancer-testis-antigens
+- all:
+  - references-term: concept:car-t-persistence-surrogates
+- all:
+  - references-term: concept:carfilzomib-regimen
+- all:
+  - references-term: concept:causal-dag
+- all:
+  - references-term: concept:cd138-selection
+- all:
+  - references-term: concept:cell-cycle
+- all:
+  - references-term: concept:cell-cycle-inhibitor-silencing
+- all:
+  - references-term: concept:cell-line-models
+- all:
+  - references-term: concept:cell-of-origin
+- all:
+  - references-term: concept:cell-state
+- all:
+  - references-term: concept:cell-state-composition
+- all:
+  - references-term: concept:cell-state-fitness
+- all:
+  - references-term: concept:cell-type-composition
+- all:
+  - references-term: concept:centrosome
+- all:
+  - references-term: concept:chr8p
+- all:
+  - references-term: concept:chromatin
+- all:
+  - references-term: concept:chromosomal-enrichment
+- all:
+  - references-term: concept:chromosomal-instability
+- all:
+  - references-term: concept:chromosome-territories
+- all:
+  - references-term: concept:clinical-immunology-covariates
+- all:
+  - references-term: concept:clinical-phenotype
+- all:
+  - references-term: concept:clinical-trials
+- all:
+  - references-term: concept:clonal-evolution
+- all:
+  - references-term: concept:clonal-hematopoiesis
+- all:
+  - references-term: concept:co-occurring-events
+- all:
+  - references-term: concept:comorbidities
+- all:
+  - references-term: concept:confounding
+- all:
+  - references-term: concept:copy-number-alteration
+- all:
+  - references-term: concept:corepressor
+- all:
+  - references-term: concept:covariance
+- all:
+  - references-term: concept:crab-criteria
+- all:
+  - references-term: concept:crbn-e3-ligase-function
+- all:
+  - references-term: concept:crbn-enhancer-methylation
+- all:
+  - references-term: concept:crbn-imid-predictive-estimand
+- all:
+  - references-term: concept:crbn-loss-of-function
+- all:
+  - references-term: concept:crbn-promoter
+- all:
+  - references-term: concept:cross-arm-predictive-estimand
+- all:
+  - references-term: concept:cross-platform-replication
+- all:
+  - references-term: concept:cta-chrxp-program
+- all:
+  - references-term: concept:cytogenetic-risk
+- all:
+  - references-term: concept:cytogenetics
+- all:
+  - references-term: concept:dataset-inclusion
+- all:
+  - references-term: concept:del-17p
+- all:
+  - references-term: concept:dis3-mutation
+- all:
+  - references-term: concept:disease-progression
+- all:
+  - references-term: concept:disease-severity-index
+- all:
+  - references-term: concept:disease-stage
+- all:
+  - references-term: concept:dnds-stability
+- all:
+  - references-term: concept:dnmt-inhibitor
+- all:
+  - references-term: concept:driver-mutation
+- all:
+  - references-term: concept:drug-sensitivity
+- all:
+  - references-term: concept:drug-toxicity
+- all:
+  - references-term: concept:duration-of-response
+- all:
+  - references-term: concept:dynamical-systems
+- all:
+  - references-term: concept:e2f-family
+- all:
+  - references-term: concept:eif4f-dependency
+- all:
+  - references-term: concept:eif4f-initiation-arm
+- all:
+  - references-term: concept:endeavor-cross-pi-predictive-estimand
+- all:
+  - references-term: concept:enhancer
+- all:
+  - references-term: concept:epigenome
+- all:
+  - references-term: concept:event-ordering
+- all:
+  - references-term: concept:evolutionary-state
+- all:
+  - references-term: concept:extramedullary-disease
+- all:
+  - references-term: concept:fda-cdx-immune-fitness-biomarker-absence
+- all:
+  - references-term: concept:fda-cdx-pi-biomarker-absence
+- all:
+  - references-term: concept:fda-clinical-hold
+- all:
+  - references-term: concept:first-relapse
+- all:
+  - references-term: concept:fitness-selection
+- all:
+  - references-term: concept:founding-event
+- all:
+  - references-term: concept:g2m-phase
+- all:
+  - references-term: concept:gain-1q-negative
+- all:
+  - references-term: concept:gdsc2-bortezomib-enrichment
+- all:
+  - references-term: concept:gene-dosage-effect
+- all:
+  - references-term: concept:gene-expression
+- all:
+  - references-term: concept:gene-ranking
+- all:
+  - references-term: concept:gene-signature
+- all:
+  - references-term: concept:germinal-center
+- all:
+  - references-term: concept:global-transcriptional-upregulation
+- all:
+  - references-term: concept:glycolysis
+- all:
+  - references-term: concept:gprc5d-antigen-loss
+- all:
+  - references-term: concept:gprc5d-bispecific
+- all:
+  - references-term: concept:h3k27me3
+- all:
+  - references-term: concept:hexosamine-pathway
+- all:
+  - references-term: concept:high-risk-relapse-identity
+- all:
+  - references-term: concept:hopfield-basin-energy
+- all:
+  - references-term: concept:hyperdiploidy
+- all:
+  - references-term: concept:hypoxia
+- all:
+  - references-term: concept:identifiability
+- all:
+  - references-term: concept:igh-translocation-lineage
+- all:
+  - references-term: concept:ikzf-bypass-mutation
+- all:
+  - references-term: concept:ikzf-degradation
+- all:
+  - references-term: concept:imid-comparator-evidence
+- all:
+  - references-term: concept:imid-refractoriness
+- all:
+  - references-term: concept:imid-regimen
+- all:
+  - references-term: concept:immune-escape
+- all:
+  - references-term: concept:immune-evasion
+- all:
+  - references-term: concept:immune-microenvironment-state
+- all:
+  - references-term: concept:immunotherapy
+- all:
+  - references-term: concept:infection
+- all:
+  - references-term: concept:interferon-signaling
+- all:
+  - references-term: concept:iss-stage
+- all:
+  - references-term: concept:ixazomib-regimen
+- all:
+  - references-term: concept:jnk-apoptosis-arm
+- all:
+  - references-term: concept:latent-evolutionary-state
+- all:
+  - references-term: concept:latent-variable
+- all:
+  - references-term: concept:line-of-therapy
+- all:
+  - references-term: concept:longitudinal-sampling
+- all:
+  - references-term: concept:maf-lineage-arm
+- all:
+  - references-term: concept:mapk-erk-readout
+- all:
+  - references-term: concept:mapk-signaling
+- all:
+  - references-term: concept:measured-expression
+- all:
+  - references-term: concept:mechanism
+- all:
+  - references-term: concept:meta-analysis-method
+- all:
+  - references-term: concept:midas-iberdomide-arm
+- all:
+  - references-term: concept:minimal-residual-disease
+- all:
+  - references-term: concept:mitochondrial-redox-program
+- all:
+  - references-term: concept:mitosis
+- all:
+  - references-term: concept:mitra-innate-pi-sensitivity-signature
+- all:
+  - references-term: concept:molecular-subtypes
+- all:
+  - references-term: concept:mrd-negativity
+- all:
+  - references-term: concept:mtor-signaling
+- all:
+  - references-term: concept:mulligan-innate-pi-sensitivity-signature
+- all:
+  - references-term: concept:mutation-landscape
+- all:
+  - references-term: concept:mutational-burden
+- all:
+  - references-term: concept:mxd-family
+- all:
+  - references-term: concept:myc-high-state
+- all:
+  - references-term: concept:myc-rearrangement
+- all:
+  - references-term: concept:natural-experiment
+- all:
+  - references-term: concept:neutral-drift
+- all:
+  - references-term: concept:nfkb-pathway-state
+- all:
+  - references-term: concept:niche-fit-clone
+- all:
+  - references-term: concept:nk-cell-fitness
+- all:
+  - references-term: concept:non-1q-architecture
+- all:
+  - references-term: concept:non-1q-driver
+- all:
+  - references-term: concept:non-pi-comparator
+- all:
+  - references-term: concept:nras-mutation
+- all:
+  - references-term: concept:nucleolar-stress
+- all:
+  - references-term: concept:null-hypothesis
+- all:
+  - references-term: concept:other-1q-drivers
+- all:
+  - references-term: concept:other-high-risk-lesions
+- all:
+  - references-term: concept:other-phf19-regulators
+- all:
+  - references-term: concept:overall-response-rate
+- all:
+  - references-term: concept:overall-survival
+- all:
+  - references-term: concept:p53-pathway
+- all:
+  - references-term: concept:patient-age
+- all:
+  - references-term: concept:patient-survival
+- all:
+  - references-term: concept:penta-refractory
+- all:
+  - references-term: concept:pentose-phosphate-pathway
+- all:
+  - references-term: concept:phase-3-trial
+- all:
+  - references-term: concept:pi-refractoriness
+- all:
+  - references-term: concept:placebo-vd-regimen
+- all:
+  - references-term: concept:plasma-cell
+- all:
+  - references-term: concept:plasma-cell-lineage-extension
+- all:
+  - references-term: concept:plasmablast-program-retention
+- all:
+  - references-term: concept:platform-heterogeneity
+- all:
+  - references-term: concept:platform-technology
+- all:
+  - references-term: concept:polycomb-epigenetic-architecture
+- all:
+  - references-term: concept:pomalidomide-dex-regimen
+- all:
+  - references-term: concept:population-genetics
+- all:
+  - references-term: concept:post-treatment-neutrality
+- all:
+  - references-term: concept:prc2-complex
+- all:
+  - references-term: concept:prc2-inhibition
+- all:
+  - references-term: concept:predictive-biomarker
+- all:
+  - references-term: concept:pretreatment-positive-selection
+- all:
+  - references-term: concept:primary-molecular-lineage
+- all:
+  - references-term: concept:prior-bcma-class-exposure
+- all:
+  - references-term: concept:prognosis
+- all:
+  - references-term: concept:progression-free-survival
+- all:
+  - references-term: concept:proliferation-rate
+- all:
+  - references-term: concept:proteasome-subunit-expression
+- all:
+  - references-term: concept:proteasome-subunit-upregulation
+- all:
+  - references-term: concept:proteostasis-survival-state
+- all:
+  - references-term: concept:quasi-potential
+- all:
+  - references-term: concept:randomized-controlled-trial
+- all:
+  - references-term: concept:ratchet-strength
+- all:
+  - references-term: concept:redox-gsta4-bin
+- all:
+  - references-term: concept:relapse
+- all:
+  - references-term: concept:relapse-subtype
+- all:
+  - references-term: concept:ribosomal-proteins
+- all:
+  - references-term: concept:ribosome
+- all:
+  - references-term: concept:ribosome-biogenesis
+- all:
+  - references-term: concept:ribosomopathy
+- all:
+  - references-term: concept:risk-stratification
+- all:
+  - references-term: concept:rna-polymerase-i
+- all:
+  - references-term: concept:rpl-family
+- all:
+  - references-term: concept:rps-family
+- all:
+  - references-term: concept:s-phase
+- all:
+  - references-term: concept:secondary-genomic-drivers
+- all:
+  - references-term: concept:shared-late-state-program
+- all:
+  - references-term: concept:signaling
+- all:
+  - references-term: concept:single-cell-immune-profiling
+- all:
+  - references-term: concept:snorna
+- all:
+  - references-term: concept:stage-treatment-selection
+- all:
+  - references-term: concept:state-commitment-entropy
+- all:
+  - references-term: concept:stdmetafor-ranking
+- all:
+  - references-term: concept:subclonal-architecture
+- all:
+  - references-term: concept:subclonal-resistance-timing
+- all:
+  - references-term: concept:subclone-bme-interaction-state
+- all:
+  - references-term: concept:subclones
+- all:
+  - references-term: concept:sumz-ranking
+- all:
+  - references-term: concept:super-enhancer
+- all:
+  - references-term: concept:suppressive-myeloid-skewing
+- all:
+  - references-term: concept:swog-s0777-predictive-estimand
+- all:
+  - references-term: concept:symptom-clusters
+- all:
+  - references-term: concept:symptoms
+- all:
+  - references-term: concept:t-11-14
+- all:
+  - references-term: concept:t-14-16
+- all:
+  - references-term: concept:t-4-14
+- all:
+  - references-term: concept:t-cell-engager-bispecific
+- all:
+  - references-term: concept:t-cell-exhaustion
+- all:
+  - references-term: concept:t-cell-fitness-state
+- all:
+  - references-term: concept:target-antigen-expression
+- all:
+  - references-term: concept:terminal-attractor
+- all:
+  - references-term: concept:therapy-resistance
+- all:
+  - references-term: concept:therapy-selection-pressure
+- all:
+  - references-term: concept:tp53-len-pressure-candidate
+- all:
+  - references-term: concept:transcription
+- all:
+  - references-term: concept:transcription-factor-regulation
+- all:
+  - references-term: concept:transcription-factors
+- all:
+  - references-term: concept:transcriptional-reprogramming
+- all:
+  - references-term: concept:transition-event
+- all:
+  - references-term: concept:translation-program
+- all:
+  - references-term: concept:treatment-benefit
+- all:
+  - references-term: concept:treatment-era
+- all:
+  - references-term: concept:treatment-perturbation
+- all:
+  - references-term: concept:treatment-regime-filter
+- all:
+  - references-term: concept:treatment-resistance
+- all:
+  - references-term: concept:treatment-response
+- all:
+  - references-term: concept:treg-infiltration
+- all:
+  - references-term: concept:triple-class-refractory
+- all:
+  - references-term: concept:tumor-burden
+- all:
+  - references-term: concept:tumor-heterogeneity
+- all:
+  - references-term: concept:tumor-microenvironment
+- all:
+  - references-term: concept:tumor-purity
+- all:
+  - references-term: concept:ubels-stlsig-pi-benefit-signature
+- all:
+  - references-term: concept:unfolded-protein-response
+- all:
+  - references-term: concept:unfolded-protein-response-capacity
+- all:
+  - references-term: concept:upregulation-mechanism
+- all:
+  - references-term: concept:venetoclax-dex-regimen
+- all:
+  - references-term: concept:venetoclax-vd-regimen
+- all:
+  - references-term: concept:within-hd-subcluster
