@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: second-project-milestone
 created: 2026-09-23T11:40:35Z
-updated: 2026-10-27T11:28:01Z
+updated: 2026-10-27T11:34:11Z
 started: 2026-10-27T00:22:44Z
 depends: [sci-b1c777, beliefs-fe7149, beliefs-c08725, sci-c5528e, sci-923d3a, beliefs-9ce6e4, sci-dc0381, sci-7079e3]
 tags: [projects]
@@ -68,3 +68,5 @@ The milestone of docs/specs/2026-09-23-projects-corpora-and-workspaces-design.md
 - 2026-10-27T11:27:59Z (second-project-milestone): plan approved for inline execution at round 3 (2d23624); revision 4 at f8dec96 marks it approved and carries the two minors: drill (a) compares invariants across replicas (selected addresses, equivalent, complete, next ids/classes/order), rehearsal and drill evidence attached and verified before cleanup. User asked that execution begin in a fresh session
 - 2026-10-27T11:28:01Z (second-project-milestone): parked (waiting on agent, session): a fresh session resumes in .worktrees/second-project-milestone (tasks start sci-0d00d2 there): run the worktree baseline (just test) and note the command and test count, then execute docs/plans/2026-10-26-second-project-milestone.md (approved at f8dec96) inline under executing-plans, Task 1 = sci-7079e3 first with an independent read-only review of its commit, driver reviews and the rehearsal before any live mutation
   provenance: {"harness_session":"claude-code:74a061f4-8320-41fa-a2a3-a3ce105dd286","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-27T11:34:11Z (second-project-milestone): resumed
+  provenance: {"harness_session":"claude-code:8b479072-91d3-4b9c-b77c-d178525b6574","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
