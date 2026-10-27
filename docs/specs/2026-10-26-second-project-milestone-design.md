@@ -1,7 +1,9 @@
 # Second-project milestone: health over mm30 — design
 
 **Date:** 2026-10-26
-**Status:** draft, revision 2 (review round 1 findings folded in), for review
+**Status:** accepted for planning at review round 2 (revision 2, `1f65730`); revision 3
+carries that round's two minor corrections (M3, M4). The proposed authority amendments
+of §8 are not approved by that acceptance.
 **Task:** `sci-0d00d2`
 **Authority:** `docs/specs/2026-09-23-projects-corpora-and-workspaces-design.md` §9.2
 (the seven criteria), §6.2 (the three queries), §7 (the single-home fence), §8.1 (the
@@ -471,14 +473,18 @@ the spec and the two datasets, not the proposition.
   and the records each selects; the prescribed form (285 term clauses) beside the
   evidence-bound form (R3); the records the coarse form omits (the composite). To
   `beliefs-7c98bc` and to the §8 amendment.
-- **M3 the fence.** Same-query mints (1), fresh questions (2), repairs needed (0
-  expected), and whether the source changed. To §7's decision; a request to `beliefs`
-  only if the count argues for one.
-- **M4 command latency.** End-to-end wall time of every write command in the walk, with
-  the number of read mounts each opens by the consumer spec's rule (one per `cited()`
-  call), so citing writes (`claim`, `spec`) sit beside coordination writes (`project`,
-  `question`, `reuse`). It is a latency, not an isolated mount cost; isolating that
-  needs direct timing inside `ReadContext.cited`, which is `sci-d92797`'s measurement.
+- **M3 the fence.** Reported as three separate counts, never summed: research
+  questions (1, the health question), same-query reuses (1), and measurement-only
+  questions (1, `evidence-bound terms`, which exists for M2 and is not usage); plus
+  repairs needed (0 expected) and whether the source changed. The reuse ratio is the
+  first two counts alone. To §7's decision; a request to `beliefs` only if the count
+  argues for one.
+- **M4 command latency.** End-to-end wall time of every write command in the walk, so
+  citing writes (`claim`, `spec`) sit beside coordination writes (`project`, `question`,
+  `reuse`). It is a latency, not a mount cost: the record does not infer a count of mount
+  openings from the code (the read context caches openings per context, and `claim`
+  reaches the vocabulary through the resolution snapshot rather than `cited()`), and
+  isolating the mount cost would need direct timing this milestone does not add.
 - **M5 the two closures.** Of the findings selection (R4's 5 records): the stored-edge
   closure (what `closure_missing` walks, expected complete) and the projection-derived
   closure (§8.1's rule: the run's spec facet, the spec's projection target and declared
@@ -531,7 +537,7 @@ P7 (projects design §10): the milestone record. The loader change carries its o
 
 ## 8. What this decides, and the amendments it proposes
 
-- §7's fence: one reuse against two fresh questions is not a pattern; no `beliefs`
+- §7's fence: one reuse against one research question is not a pattern; no `beliefs`
   request unless M3 says otherwise.
 - `beliefs-7c98bc` and `beliefs-655c10` receive their notes from M2 and M1.
 - **Proposed amendment to §6.2's term-clause rule** (not applied; the user's call after
