@@ -1,0 +1,82 @@
+Traceback (most recent call last):
+  File "<atoms>/python/src/atoms/coordinator/commands.py", line 1703, in _copy_root
+    dest_fd, _, _ = establish_root(backend, plan.dest_root, create=False)
+                    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<atoms>/python/src/atoms/fs/lock.py", line 91, in establish_root
+    fd = _guarded_open(backend, spelled)
+  File "<atoms>/python/src/atoms/fs/lock.py", line 68, in _guarded_open
+    return backend.open_root(path)
+           ~~~~~~~~~~~~~~~~~^^^^^^
+  File "<atoms>/python/src/atoms/fs/linux.py", line 104, in open_root
+    return sys_linux.openat2(
+           ~~~~~~~~~~~~~~~~~^
+        -100,  # AT_FDCWD
+        ^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+        sys_linux.RESOLVE_NO_SYMLINKS,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "<atoms>/python/src/atoms/fs/syscalls/linux.py", line 68, in openat2
+    _raise_errno()
+    ~~~~~~~~~~~~^^
+  File "<atoms>/python/src/atoms/fs/syscalls/linux.py", line 47, in _raise_errno
+    raise OSError(code, os.strerror(code))
+FileNotFoundError: [Errno 2] No such file or directory
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "<task dir>/driver/rehearsal.py", line 120, in <module>
+    sys.exit(main(sys.argv))
+             ~~~~^^^^^^^^^^
+  File "<task dir>/driver/rehearsal.py", line 104, in main
+    replica = replicate(home, world_id)
+  File "<task dir>/driver/rehearsal.py", line 59, in replicate
+    corpus_outcome = restore(LIVE_WORLD / "corpora" / "mm30", corpus_root, anchors.CorpusSubject(corpus_id),
+                             corpus_head)
+  File "<task dir>/driver/rehearsal.py", line 49, in restore
+    replicate_root(source, dest, authority=AUTHORITY)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<beliefs>/python/src/beliefs/root.py", line 507, in replicate_root
+    return _replicate_root_callback(
+        _PRODUCTION_BACKEND,
+    ...<4 lines>...
+        PRODUCTION_STORAGE,
+    )
+  File "<atoms>/python/src/atoms/coordinator/commands.py", line 1805, in replicate_root
+    return _copy_root(backend, plan)
+  File "<atoms>/python/src/atoms/coordinator/commands.py", line 1706, in _copy_root
+    return _fresh_copy(backend, plan)
+  File "<atoms>/python/src/atoms/coordinator/commands.py", line 1778, in _fresh_copy
+    with _claimed_destination_lease(backend, plan) as lease:
+         ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "<home>/.local/share/uv/python/cpython-3.13.12-linux-x86_64-gnu/lib/python3.13/contextlib.py", line 141, in __enter__
+    return next(self.gen)
+  File "<atoms>/python/src/atoms/coordinator/commands.py", line 1671, in _claimed_destination_lease
+    with _root_claimed_destination_lease(
+         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        backend, plan.dest_root, plan.dest_metadata_root, plan.storage
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ) as lease:
+    ^
+  File "<home>/.local/share/uv/python/cpython-3.13.12-linux-x86_64-gnu/lib/python3.13/contextlib.py", line 141, in __enter__
+    return next(self.gen)
+  File "<atoms>/python/src/atoms/coordinator/root.py", line 203, in _claimed_destination_lease
+    with lock, _leased_stack(lock, dest_root, storage) as lease:
+               ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<home>/.local/share/uv/python/cpython-3.13.12-linux-x86_64-gnu/lib/python3.13/contextlib.py", line 141, in __enter__
+    return next(self.gen)
+  File "<atoms>/python/src/atoms/coordinator/root.py", line 83, in _leased_stack
+    with bind_project_volume(
+         ~~~~~~~~~~~~~~~~~~~^
+        project_root, lock, allowlist=CERTIFIED_ALLOWLIST, storage=storage
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ) as binding, open_store(binding) as store:
+    ^
+  File "<atoms>/python/src/atoms/fs/binding.py", line 221, in bind_project_volume
+    raise CapabilityUnavailable(
+    ...<3 lines>...
+    )
+atoms.core.errors.CapabilityUnavailable: volume configuration is not on the supplied durability allowlist: ext4 ('async', 'barrier=1', 'commit=5', 'data=ordered') profile='flush-honoring-disk.v1'
+rc=1
