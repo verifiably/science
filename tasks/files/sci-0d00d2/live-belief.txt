@@ -1,0 +1,9 @@
+## Belief: proposition:concept-disease-stage-affects-protein-phf19
+answer:
+  kind: NoBelief
+  reason: no-directional-outcome
+  detail: 
+acceptance:
+  policy: science.accept.v1
+  verifiers: aec951bc6becacced13df8f7ae6f8abf
+  excluded: none
