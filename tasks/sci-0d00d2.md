@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: second-project-milestone
 created: 2026-09-23T11:40:35Z
-updated: 2026-10-27T12:52:50Z
+updated: 2026-10-27T12:52:55Z
 started: 2026-10-27T00:22:44Z
 depends: [sci-b1c777, beliefs-fe7149, beliefs-c08725, sci-c5528e, sci-923d3a, beliefs-9ce6e4, sci-dc0381, sci-7079e3]
 tags: [projects]
@@ -181,3 +181,7 @@ The milestone of docs/specs/2026-09-23-projects-corpora-and-workspaces-design.md
 - 2026-10-27T12:52:48Z (second-project-milestone): attached: rehearsal-ra-run2-stdout.txt (2972 bytes): drill (a) resumed run output
 - 2026-10-27T12:52:49Z (second-project-milestone): attached: rehearsal-rb-progress.json (11343 bytes): drill (b) journal: attempt, uncertain-write stop, reconcile, completion
 - 2026-10-27T12:52:50Z (second-project-milestone): attached: rehearsal-rb-selections.json (9734 bytes): drill (b) completed run's selections
+- 2026-10-27T12:52:52Z (second-project-milestone): attached: rehearsal-rb-invariants-vs-r3.json (414 bytes): drill (b) invariants against r3
+- 2026-10-27T12:52:53Z (second-project-milestone): attached: rehearsal-rb-run1-stdout.txt (2551 bytes): drill (b) run1 output
+- 2026-10-27T12:52:54Z (second-project-milestone): attached: rehearsal-rb-run2-stdout.txt (939 bytes): drill (b) run2 output
+- 2026-10-27T12:52:55Z (second-project-milestone): attached: rehearsal-rb-check-stdout.txt (117 bytes): drill (b) check output
