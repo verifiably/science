@@ -1,0 +1,6 @@
+## Projects
+projects:
+  coord:ef2b7fe9b5a8b6b35c8657b645ed0db2: cancer @8c32b809ce88431e05dd93ec7f7b41f9
+  coord:4dbcb70467a87cd727cc6303cbd697a2: health @e45271d5810b679f060926e0cb305f74 (selected)
+  coord:66ab99117a2bd1b491175d0d2c612ac2: multiple-myeloma @8ecd987ce58d5c07a9297af853bfcf8f
+  coord:04d558cc1eb479ea7fcf00c53430b00b: multiple-myeloma-findings @cb01728fe954597feab6ca9d33c30637
