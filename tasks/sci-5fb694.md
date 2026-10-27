@@ -1,20 +1,20 @@
 ---
 id: sci-5fb694
-title: Declare the two unheld datasets
+title: The frozen queries
 status: todo
 priority: 1
 size: s
 complexity: mid
 process: direct
 created: 2026-10-27T02:04:16Z
-updated: 2026-10-27T02:04:16Z
+updated: 2026-10-27T02:15:15Z
 depends: []
 parent: sci-0d00d2
 tags: [projects]
 agent: claude-code
 origin: agent
 plan: docs/plans/2026-10-26-second-project-milestone.md
-step: "Task 3: Declare the two unheld datasets"
+step: "Task 3: The frozen queries"
 ---
 
 ## Notes
