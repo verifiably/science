@@ -1,0 +1,32 @@
+new run <task dir>/state/rb/runs/20261027T123647Z
+--- S0 status [ok] 0.04s invocation 003cd6c82fb70c1184f2d200e760de27
+--- E1 epoch [built] 1.60s 277220c941026ab3c8a03e86a4549344dc594ad5aaedb67dcc377f575f7c95c4
+--- W1.claim claim [ok] 0.32s invocation ba72b61fc12f3ef09be4713a99aa093b
+    proposition:concept-disease-stage-affects-protein-ezh2
+--- W1.spec spec [ok] 0.33s invocation cf63c4c59aa0337a76abc0e23a6d1524
+    analysis-spec:5132014c5feecd52d09c801c220074bae2fd7677ec009b1a0228186602763036
+--- E2 epoch [built] 1.46s 48b6dd3d5fd7ba580941ac9ec47ab5b37db654145b173f859b3682fa167112dc
+--- W2.project.multiple-myeloma project [ok] 0.24s invocation cbab56b47021693514a2f60f70a7ca60
+    coord:e0f1029c7c06f9c189e352939fb4df6e
+--- W2.project.cancer project [ok] 0.23s invocation 6dc72751727517cc8fa893d88b818f7a
+    coord:4a2941df30e4a4f3b59e814202657224
+--- W2.project.health project [ok] 0.24s invocation e9b54c29cb9b3ad0830f0b2696f4a0b3
+    coord:52b5cbdaa4bbd3697e25a7088555d1ea
+--- W2.project.multiple-myeloma-findings project [ok] 0.14s invocation 077dc1d72a8b38b45c63b8f98434ba15
+    coord:634e09f6e19d21ffcd2258b02fcfc6f0
+--- R0.next-stale next [ok] 1.13s invocation 163994a4724ee4e6e17ab291462207ac
+--- E3 epoch [built] 1.94s ab80e80f5c43bd2b83cfceefcc9bdb7ee58b8238374b8d33c3171f52940f281b
+--- R1.multiple-myeloma view coord:e0f1029c7c06f9c189e352939fb4df6e: 8 selected, equivalent True, complete True
+--- R1.cancer view coord:4a2941df30e4a4f3b59e814202657224: 8 selected, equivalent True, complete True
+--- R1.health view coord:52b5cbdaa4bbd3697e25a7088555d1ea: 11 selected, equivalent True, complete True
+--- R1.multiple-myeloma-findings view coord:634e09f6e19d21ffcd2258b02fcfc6f0: 4 selected, equivalent True, complete True
+--- W3.select.health project-select [ok] 0.29s invocation 2777a1c3da806985439bb5da7bc73e56
+--- W3.question.health question [ok] 0.19s invocation 2c61804d67aa02ea0d7738fdc46d8930
+    coord:52b5cbdaa4bbd3697e25a7088555d1ea/4e0de0fad31396dc7f480b66e8fa5a38
+--- W3.select.cancer project-select [ok] 0.28s invocation 942fca2d87eb5476925d4ba3def879c1
+--- W3.reuse reuse [ok] 0.26s invocation 13c7fe0a2e2d00eb87ef64a57e67c8ef
+    coord:4a2941df30e4a4f3b59e814202657224/9dce3d05e59003a419f586f4ba48100c
+--- W3.select.multiple-myeloma project-select [ok] 0.31s invocation 34a40812417a614874df6ce9c5a906b4
+--- W3.question.evidence-bound-terms question [ok] 0.21s invocation d024c64de108f099a73ed070a8e3fb28
+crash-before-record W3.question.evidence-bound-terms: reply read, nothing journaled
+exit 1
