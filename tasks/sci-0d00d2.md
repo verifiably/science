@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: second-project-milestone
 created: 2026-09-23T11:40:35Z
-updated: 2026-10-27T12:54:28Z
+updated: 2026-10-27T12:54:29Z
 started: 2026-10-27T00:22:44Z
 depends: [sci-b1c777, beliefs-fe7149, beliefs-c08725, sci-c5528e, sci-923d3a, beliefs-9ce6e4, sci-dc0381, sci-7079e3]
 tags: [projects]
@@ -192,3 +192,4 @@ The milestone of docs/specs/2026-09-23-projects-corpora-and-workspaces-design.md
 - 2026-10-27T12:53:01Z (second-project-milestone): attached: rehearsal-rc-run1-stdout.txt (280 bytes): drill (c) first stopping run output
 - 2026-10-27T12:53:02Z (second-project-milestone): attached: rehearsal-rc-run2-stdout.txt (281 bytes): drill (c) second stopping run output
 - 2026-10-27T12:54:28Z (second-project-milestone): detached: driver-arms.py: layout gate refused host paths; portable derivative attached as driver-arms-portable.py, raw bytes kept at $WORK_ROOT/science/sci-0d00d2/driver/arms.py
+- 2026-10-27T12:54:29Z (second-project-milestone): attached: driver-arms-portable.py (4600 bytes): portable derivative of driver-arms.py (host paths replaced by placeholders); raw bytes retained at $WORK_ROOT/science/sci-0d00d2/driver/arms.py, sha256 e5e3133455a31bb6
