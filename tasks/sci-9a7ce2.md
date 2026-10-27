@@ -8,7 +8,7 @@ complexity: mid
 process: direct
 owner: fix/9a7ce2-own-publication
 created: 2026-10-27T15:49:59Z
-updated: 2026-10-27T19:04:10Z
+updated: 2026-10-27T19:04:23Z
 started: 2026-10-27T18:49:38Z
 depends: [beliefs-7c612b]
 tags: []
@@ -34,3 +34,4 @@ Implement the consumer integration from beliefs spec docs/superpowers/specs/2026
 - 2026-10-27T19:03:47Z (fix/9a7ce2-own-publication): attached: impl-round-1-report.md (2863 bytes): Full read-only whole-branch review of 210a783..53c0764; verified codex/gpt-6.1-sol; accept, no findings
 - 2026-10-27T19:04:08Z (fix/9a7ce2-own-publication): Ruling: preserve the existing ValueError on missing/duplicate write mounts (review declined-to-judge item 1). Why: sci-9a7ce2 and beliefs spec deb8d99 section 6 explicitly require the helper’s actual failure behavior, not a new refusal translation. Cost: malformed mount configurations still expose the unpacking error rather than a friendlier diagnostic. Revision: 53c0764. No corrective change.
 - 2026-10-27T19:04:10Z (fix/9a7ce2-own-publication): Ruling: authenticated authorship and live milestone success remain outside this integration (review declined-to-judge item 2). Why: the accepted design supplies an explicit publisher claim and sci-775e90 owns the live rerun. Cost: this integration does not prove authorship or criterion-5 success in the live world. Revision: 53c0764; kernel spec deb8d99. No deferred minor findings.
+- 2026-10-27T19:04:23Z (fix/9a7ce2-own-publication): retained: {"host":"titan","kind":"worktree","path":".worktrees/9a7ce2-own-publication","state":"kept","verification":"verified","purpose":"Reviewed implementation and full review attachment, pending immediate local integration and checked removal in this turn; ignored items are only regenerable pytest cache, testmon database and installed environment","next_owner":"session:codex:01a17eb1-eac2-7e50-9dca-09bb9c9cb87b","cleanup_trigger":"Successful local merge, merged-tree checks, tt-report and final ignored-file/host-pointer checks"}
