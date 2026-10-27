@@ -1,0 +1,49 @@
+new run <task dir>/state/live/runs/20261027T124235Z
+--- S0 status [ok] 0.04s invocation 880c27c5e842a1dc85b9d1ec49549b2b
+--- E1 epoch [built] 1.66s 53776e885678bbc906d7ff184aad67303c5c53b88642dcbf56eb81d539bf7ffb
+--- W1.claim claim [ok] 0.31s invocation bf74826267f9b93fe493c6bc7d22a1cc
+    proposition:concept-disease-stage-affects-protein-ezh2
+--- W1.spec spec [ok] 0.36s invocation 92d259d47d9a5806997ac55f0d7570a6
+    analysis-spec:5132014c5feecd52d09c801c220074bae2fd7677ec009b1a0228186602763036
+--- E2 epoch [built] 1.44s bda2592890ea1e6cfdd2f6967562a678894d0dc24eb3e2e005272d0e746fbb01
+--- W2.project.multiple-myeloma project [ok] 0.22s invocation 1069360895278f2262e7c71a9a84db8d
+    coord:66ab99117a2bd1b491175d0d2c612ac2
+--- W2.project.cancer project [ok] 0.23s invocation 5d3ce216eff1e6f9cb4f572daa3b0b7a
+    coord:ef2b7fe9b5a8b6b35c8657b645ed0db2
+--- W2.project.health project [ok] 0.23s invocation c3d2eacfbe2a53963e32af746e68a902
+    coord:4dbcb70467a87cd727cc6303cbd697a2
+--- W2.project.multiple-myeloma-findings project [ok] 0.15s invocation 02d6524ae76e4ca6a013aa2b2544b8a8
+    coord:04d558cc1eb479ea7fcf00c53430b00b
+--- R0.next-stale next [ok] 1.14s invocation f809b67e0a4ac8942c3e5b8e11ab3cca
+--- E3 epoch [built] 1.91s cd1f59f2bf868bd788583fa2a32b9bb057cd226643b56a01a56f94f4560857b7
+--- R1.multiple-myeloma view coord:66ab99117a2bd1b491175d0d2c612ac2: 8 selected, equivalent True, complete True
+--- R1.cancer view coord:ef2b7fe9b5a8b6b35c8657b645ed0db2: 8 selected, equivalent True, complete True
+--- R1.health view coord:4dbcb70467a87cd727cc6303cbd697a2: 11 selected, equivalent True, complete True
+--- R1.multiple-myeloma-findings view coord:04d558cc1eb479ea7fcf00c53430b00b: 4 selected, equivalent True, complete True
+--- W3.select.health project-select [ok] 0.29s invocation 8064dd27a0311a0ad272dc0ba48c0d18
+--- W3.question.health question [ok] 0.19s invocation 8f2ebf30344ff10960587728bd12acaf
+    coord:4dbcb70467a87cd727cc6303cbd697a2/3cffd9be7ceb0e8655d8ef19fb4590a6
+--- W3.select.cancer project-select [ok] 0.28s invocation fb819ac6adbff65ab9f64b049197e9bd
+--- W3.reuse reuse [ok] 0.25s invocation 7e634058e8929d3ebd31685588513029
+    coord:ef2b7fe9b5a8b6b35c8657b645ed0db2/f1cc8f85f03d6e7caf9ae55e1e772292
+--- W3.select.multiple-myeloma project-select [ok] 0.28s invocation 4f0754a3688325f1a8f0b0c38b386874
+--- W3.question.evidence-bound-terms question [ok] 0.20s invocation 2de91a8721001e7d64b03c510e10ebde
+    coord:66ab99117a2bd1b491175d0d2c612ac2/83ba85bda606da218a27f8d98ac62d1b
+--- E4 epoch [built] 1.94s a854308b9d585ca7c88f1126f2a67a4adeacbd45c135658724ab46b62412541f
+--- E5 epoch [current] 1.11s a854308b9d585ca7c88f1126f2a67a4adeacbd45c135658724ab46b62412541f
+--- R2.multiple-myeloma.select project-select [ok] 0.30s invocation 07db7eead3801d71c5def83a269c858f
+--- R2.multiple-myeloma next [ok] 1.80s invocation a11d1fef24f2428f45b5a1eec6fec8fc
+--- R2.cancer.select project-select [ok] 0.27s invocation 684aaee4d886ed6fa46e3497f00424e8
+--- R2.cancer next [ok] 1.78s invocation b219d20914f6f6a31390bbab0af30ba0
+--- R2.health.select project-select [ok] 0.30s invocation 674284b283c5a6818a6ec6b35c5cb111
+--- R2.health next [ok] 1.81s invocation 44ff2c3dc03a5a3a46df6e580b420a65
+--- R2.unselected.select project-select [ok] 0.01s invocation 4e7313daa2774f34c9941e3b236285a7
+--- R2.unselected next [ok] 1.34s invocation d7e65a8587baea442c05c3a15ed71adf
+--- R3.question.health view coord:4dbcb70467a87cd727cc6303cbd697a2/3cffd9be7ceb0e8655d8ef19fb4590a6: 9 selected, equivalent True, complete True
+--- R3.reuse view coord:ef2b7fe9b5a8b6b35c8657b645ed0db2/f1cc8f85f03d6e7caf9ae55e1e772292: 9 selected, equivalent True, complete True
+--- R3.question.evidence-bound-terms view coord:66ab99117a2bd1b491175d0d2c612ac2/83ba85bda606da218a27f8d98ac62d1b: 7 selected, equivalent True, complete True
+--- R4 publish-preview [REFUSED] 0.55s invocation 5ef3ec685f20ed3c1685718879a55935
+--- R5 belief [ok] 1.09s invocation ba114201e058f784f28397abee3f6382
+--- S1 status [ok] 0.15s invocation 23467dd56d51e3ca849b50c34de6ae48
+walk complete: <task dir>/state/live/runs/20261027T124235Z
+exit 0
