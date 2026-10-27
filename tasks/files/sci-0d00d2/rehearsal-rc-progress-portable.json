@@ -1,0 +1,3 @@
+{"at": "2026-10-27T12:34:25.477522Z", "config": "<replicas>/r3/science.toml", "journal": "sci-0d00d2", "world_id": "6f10ffd595655edb9150170c63242c16"}
+{"at": "2026-10-27T12:34:25.672890Z", "key": "W1.claim", "phase": "stop", "reason": "fail-before-write: W1.claim: proposition:concept-disease-stage-affects-protein-ezh2 already exists in this world"}
+{"at": "2026-10-27T12:34:26.378392Z", "key": "W1.claim", "phase": "stop", "reason": "fail-before-write: W1.claim: proposition:concept-disease-stage-affects-protein-ezh2 already exists in this world"}

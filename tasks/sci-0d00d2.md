@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: second-project-milestone
 created: 2026-09-23T11:40:35Z
-updated: 2026-10-27T12:55:39Z
+updated: 2026-10-27T12:55:40Z
 started: 2026-10-27T00:22:44Z
 depends: [sci-b1c777, beliefs-fe7149, beliefs-c08725, sci-c5528e, sci-923d3a, beliefs-9ce6e4, sci-dc0381, sci-7079e3]
 tags: [projects]
@@ -248,3 +248,4 @@ The milestone of docs/specs/2026-09-23-projects-corpora-and-workspaces-design.md
 - 2026-10-27T12:55:36Z (second-project-milestone): detached: rehearsal-rb-run3-stdout.txt: layout gate refused host paths; portable derivative attached as rehearsal-rb-run3-stdout-portable.txt, raw bytes kept at $WORK_ROOT/science/sci-0d00d2/rb-run3-stdout.txt
 - 2026-10-27T12:55:38Z (second-project-milestone): attached: rehearsal-rb-run3-stdout-portable.txt (2572 bytes): portable derivative of rehearsal-rb-run3-stdout.txt (host paths replaced by placeholders); raw bytes retained at $WORK_ROOT/science/sci-0d00d2/rb-run3-stdout.txt, sha256 c9eb3a39d4162660
 - 2026-10-27T12:55:39Z (second-project-milestone): detached: rehearsal-rc-progress.json: layout gate refused host paths; portable derivative attached as rehearsal-rc-progress-portable.json, raw bytes kept at $WORK_ROOT/science/sci-0d00d2/state/r3/runs/20261027T123425Z/progress.json
+- 2026-10-27T12:55:40Z (second-project-milestone): attached: rehearsal-rc-progress-portable.json (551 bytes): portable derivative of rehearsal-rc-progress.json (host paths replaced by placeholders); raw bytes retained at $WORK_ROOT/science/sci-0d00d2/state/r3/runs/20261027T123425Z/progress.json, sha256 63886570a7b245f7
