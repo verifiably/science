@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: second-project-milestone
 created: 2026-09-23T11:40:35Z
-updated: 2026-10-27T12:20:22Z
+updated: 2026-10-27T12:22:46Z
 started: 2026-10-27T00:22:44Z
 depends: [sci-b1c777, beliefs-fe7149, beliefs-c08725, sci-c5528e, sci-923d3a, beliefs-9ce6e4, sci-dc0381, sci-7079e3]
 tags: [projects]
@@ -75,3 +75,4 @@ The milestone of docs/specs/2026-09-23-projects-corpora-and-workspaces-design.md
 - 2026-10-27T11:59:32Z (second-project-milestone): drivers written under $WORK_ROOT/science/sci-0d00d2/driver (9 files); frozen for the independent driver review before any rehearsal; Task 1 (sci-7079e3) done at 316338a after review round 1
 - 2026-10-27T12:16:35Z (second-project-milestone): review: impl round 1 — verdict: revise; findings: Critical 1, Important 5, Minor 13; reviewer: claude-code/claude-opus-5-5
 - 2026-10-27T12:20:22Z (second-project-milestone): scratch: titan /mnt/ssd/Dropbox/science/.work/sci-0d00d2 (main checkout's gitignored measurement dir) — rehearsal replica worlds, disposable; owner this task. The first r1 attempt stopped in replicate_root: CapabilityUnavailable, /mnt/ssd3 (task dir volume) is not on atoms' durability allowlist; nothing of the live world changed (no file under the data root newer than 08:00)
+- 2026-10-27T12:22:46Z (second-project-milestone): rehearsal r1 (replica 364c4921…): genesis passed (chain mm30:4af7c421…, pins science 52a43993…, biology 24bcec43…, mm30 4af7c421…, coordination b2386628…; working corpus 77d50784…); declare refused at the first add, nothing written: FacetPayloadRefused, empirical-observation 'locator' uses scheme 'doi'; declared schemes are accession, url, instrument. Finding (design §4.1/§5.5 prescribe doi:10.5281/zenodo.22399365); driver now uses url:https://doi.org/10.5281/zenodo.22399365 and url:<GENCODE FTP URL>, and pre-validates facet payloads as the writer does. Rehearsal reruns as r2.
