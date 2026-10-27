@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: second-project-milestone
 created: 2026-09-23T11:40:35Z
-updated: 2026-10-27T12:51:10Z
+updated: 2026-10-27T12:51:11Z
 started: 2026-10-27T00:22:44Z
 depends: [sci-b1c777, beliefs-fe7149, beliefs-c08725, sci-c5528e, sci-923d3a, beliefs-9ce6e4, sci-dc0381, sci-7079e3]
 tags: [projects]
@@ -100,3 +100,4 @@ The milestone of docs/specs/2026-09-23-projects-corpora-and-workspaces-design.md
 - 2026-10-27T12:51:08Z (second-project-milestone): attached: live-declared.json (1063 bytes): the two declared datasets: addresses, resource bytes, md5, sha256, condition values
 - 2026-10-27T12:51:09Z (second-project-milestone): attached: live-declare-progress.json (487 bytes): live declaration attempts and adds
 - 2026-10-27T12:51:10Z (second-project-milestone): attached: live-preflight-status.txt (459 bytes): science status after genesis, before declarations
+- 2026-10-27T12:51:11Z (second-project-milestone): attached: live-queries-MANIFEST (520 bytes): frozen query template MANIFEST (live state)
