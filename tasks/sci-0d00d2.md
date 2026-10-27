@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: second-project-milestone
 created: 2026-09-23T11:40:35Z
-updated: 2026-10-27T00:49:26Z
+updated: 2026-10-27T00:49:31Z
 started: 2026-10-27T00:22:44Z
 depends: [sci-b1c777, beliefs-fe7149, beliefs-c08725, sci-c5528e, sci-923d3a, beliefs-9ce6e4, sci-dc0381]
 tags: [projects]
@@ -32,3 +32,4 @@ The milestone of docs/specs/2026-09-23-projects-corpora-and-workspaces-design.md
   provenance: {"harness_session":"claude-code:74a061f4-8320-41fa-a2a3-a3ce105dd286","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-27T00:49:26Z (second-project-milestone): resumed
   provenance: {"harness_session":"claude-code:74a061f4-8320-41fa-a2a3-a3ce105dd286","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-27T00:49:31Z (second-project-milestone): design review (pre-spec, reviewer codex gpt-6-astra, relayed by user): ground the health question in the live PHF19 records, not q0167's ungoverned TP53 result; RPL11->MDM2 would be a narrower subclaim; the unheld dataset needs an honest digest source; state selection predictions explicitly (cancer==mm; health and world add the proposition as not-ready; source preserved, copied query equal); measure beyond epochs: explicit address entries per view (beliefs-7c98bc), reuse count and repair burden (§7), citing-write cost, epoch classes (initial, coordination-only, evidence, unchanged reuse) for beliefs-655c10; include §9.1's read of multiple-myeloma and the overlap inventory
