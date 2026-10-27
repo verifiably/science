@@ -1,8 +1,8 @@
 # Second project over mm30: health, cancer and multiple-myeloma — record
 
 **Date:** 2026-10-27
-**Status:** predictions committed before the live run (this commit); the live run, its
-marks, findings and measurements follow in §3–§7.
+**Status:** run 2026-10-27; predictions committed before the live run (`e51e706`); criteria 1, 2, 6 and 7 met, 3 and 4 partly met, 5 unmet (§4.4). The live run, its
+marks, findings and measurements are §3–§7.
 **Scope:** the milestone of `docs/specs/2026-09-23-projects-corpora-and-workspaces-design.md`
 §9.2, as `docs/specs/2026-10-26-second-project-milestone-design.md` (the design) frames it
 and `docs/plans/2026-10-26-second-project-milestone.md` (the plan) runs it: one world root
@@ -839,3 +839,315 @@ proposition is a `multiple-myeloma` proposition (design C5).
 Should a live declared address differ from §1.2's, the downloaded bytes differed from the
 rehearsal's; that would itself be a finding, and the queries' `MANIFEST` would then
 differ in `health.yaml` and `health-question.yaml` only.
+
+## 3. The path
+
+Run 2026-10-27, 12:40–12:44Z, on the live world: genesis, the declarations and the frozen
+queries from the drivers as drilled (their sha256s compared before the first write), then
+one `science mcp serve` process for the walk (run `<task dir>/state/live/runs/20261027T124235Z`),
+then the arms. No step stopped: there was no resume and no reconcile. One earlier
+invocation of the walk failed at exit 127 on a mistyped interpreter path before any
+process or run directory existed.
+
+### 3.1 The recipes
+
+**Genesis** (`genesis.py`), every check before the first write: the world opens read-only
+under the given id (`open_world_read`) and holds no working corpus, `science.toml` or
+contracts; the four vocabulary addresses are read from the mm30 dataset records titled
+`mm30 … vocabulary`; the three contract documents are copied from `beliefs`
+`python/tools/reproduction/` without their `also:` line and with the four tokens replaced,
+into a temporary data root, where `load_contract_chain` and `load_config` must give the
+mm30 manifest's pins. Then, for real: the documents under `<data root>/contracts/mm30/`,
+`science.toml` (§1.1's erratum), and
+
+```python
+init_corpus_root(cfg.write_root, authority=AUTHORITY)
+open_corpus(cfg.write_root, authority=AUTHORITY, profile=cfg.profile).adopt_manifest(profile=CorpusPins(
+    science_contract="science:" + cfg.profile.base_contract_identity,
+    domains={ns: f"{ns}:{identity}" for ns, identity in cfg.profile.activated_contracts.items()},
+))
+open_world(cfg.world, authority=AUTHORITY).admit(cfg.write_root, provenance=Fresh())
+install_rule_binding(open_world(cfg.world, authority=AUTHORITY), holdings_rule_bundle())
+```
+
+with `AUTHORITY = Authority(WritePermit.full(), "sci-0d00d2-driver")`. Output: the working
+corpus `4b1c238d06cf7fa18def5ea2554d4f16`, pins science `52a43993…`, biology `24bcec43…`,
+mm30 `4af7c421…`, coordination `b2386628…`, and the holdings-reducer binding (rule
+`0a0ea45c…`, implementation `f03e496b…`).
+
+**Declaration** (`declare.py`): each input downloaded into an empty directory, its md5
+checked, digested and discarded; both nodes built, then both validated (the profile's
+document checks, the writer's facet-payload checks, and no record at either address)
+before either is added:
+
+```python
+stored.dataset_node(title=title,
+                    resources=[{"name": r["name"], "digest": "sha256:" + r["sha256"]} for r in resources],
+                    empirical_observation={"locator": locator, "attested_by": "sci-0d00d2-driver"},
+                    domain_facets=domain_facets)          # the cohort: {"biology/gene-axis": {"axis": "rows", "namespace": "Ensembl"}}
+open_corpus(cfg.write_root, authority=AUTHORITY, profile=cfg.profile).add(node)
+```
+
+**The selection read** (`selections.py`): the minted record resolved by its returned
+address (`resolve_one`), its stored query read back (`stored_query`), its projection
+hashed as `query_digest` does and compared with the input file's, and evaluated over the
+current epoch's world view through the kernel's read-only door:
+
+```python
+world = open_world_read(cfg.world)
+published = current_epoch(world)
+selection = evaluate_query(open_world_view(world, published), stored_query(tip))
+```
+
+**Rehearsal replication** (`rehearsal.py`), the `beliefs` relocation recipe with the live
+world as the source: `replicate_root` and `restore_root` of `corpora/mm30` and `store`
+against the live world's `anchors/*.head`, a fresh `init_world_root`, `admit_arrival` with
+`ReplicaOf(8b5d0c80…)`; the live world's file tree hashed before and after.
+
+**The placeholder** (journal key `Q1`): `health.yaml` and `health-question.yaml` carry
+`analysis-spec:<minted>` until W1.spec returns; the walk copies the templates to
+`queries-resolved/` and substitutes the spec's address. Journaled hashes: `health.yaml`
+raw `bbe86645…`, projection `e7824d0d…`; `health-question.yaml` raw `66d003d6…`,
+projection `10f605d3…`; both equal to the rehearsal's.
+
+### 3.2 The commands
+
+Every call one JSON-RPC `tools/call` frame (`walk.jsonl`); every epoch `science epoch` in
+a fresh process; seconds are end to end at the driver. The server wrote nothing to stderr.
+
+| key | command | invocation | minted or result | seconds |
+|---|---|---|---|---|
+| S0 | `status` | `880c27c5…` | read | 0.04 |
+| E1 | `science epoch` | — | `built` `53776e885678bbc9…` | 1.66 |
+| W1.claim | `claim` | `bf748262…` | `proposition:concept-disease-stage-affects-protein-ezh2` | 0.31 |
+| W1.spec | `spec` | `92d259d4…` | `analysis-spec:5132014c5feecd52d09c801c220074bae2fd7677ec00…` | 0.36 |
+| E2 | `science epoch` | — | `built` `bda2592890ea1e6c…` | 1.44 |
+| W2.project.multiple-myeloma | `project` | `10693608…` | `coord:66ab99117a2bd1b491175d0d2c612ac2` | 0.22 |
+| W2.project.cancer | `project` | `5d3ce216…` | `coord:ef2b7fe9b5a8b6b35c8657b645ed0db2` | 0.23 |
+| W2.project.health | `project` | `c3d2eacf…` | `coord:4dbcb70467a87cd727cc6303cbd697a2` | 0.23 |
+| W2.project.multiple-myeloma-findings | `project` | `02d6524a…` | `coord:04d558cc1eb479ea7fcf00c53430b00b` | 0.15 |
+| R0.next-stale | `next` | `f809b67e…` | read | 1.14 |
+| E3 | `science epoch` | — | `built` `cd1f59f2bf868bd7…` | 1.91 |
+| W3.select.health | `project-select` | `8064dd27…` | selected `health` | 0.29 |
+| W3.question.health | `question` | `8f2ebf30…` | `coord:4dbcb70467a87cd727cc6303cbd697a2/3cffd9be7ceb0e8655d…` | 0.19 |
+| W3.select.cancer | `project-select` | `fb819ac6…` | selected `cancer` | 0.28 |
+| W3.reuse | `reuse` | `7e634058…` | `coord:ef2b7fe9b5a8b6b35c8657b645ed0db2/f1cc8f85f03d6e7caf9…` | 0.25 |
+| W3.select.multiple-myeloma | `project-select` | `4f0754a3…` | selected `multiple-myeloma` | 0.28 |
+| W3.question.evidence-bound-terms | `question` | `2de91a87…` | `coord:66ab99117a2bd1b491175d0d2c612ac2/83ba85bda606da218a2…` | 0.20 |
+| E4 | `science epoch` | — | `built` `a854308b9d585ca7…` | 1.94 |
+| E5 | `science epoch` | — | `current` `a854308b9d585ca7…` | 1.11 |
+| R2.multiple-myeloma.select | `project-select` | `07db7eea…` | selected `multiple-myeloma` | 0.30 |
+| R2.multiple-myeloma | `next` | `a11d1fef…` | read | 1.80 |
+| R2.cancer.select | `project-select` | `684aaee4…` | selected `cancer` | 0.27 |
+| R2.cancer | `next` | `b219d209…` | read | 1.78 |
+| R2.health.select | `project-select` | `674284b2…` | selected `health` | 0.30 |
+| R2.health | `next` | `44ff2c3d…` | read | 1.80 |
+| R2.unselected.select | `project-select` | `4e7313da…` | selected `none` | 0.01 |
+| R2.unselected | `next` | `d7e65a85…` | read | 1.34 |
+| R4 | `publish-preview` | `5ef3ec68…` | refused `kernel-refused` | 0.55 |
+| R5 | `belief` | `ba114201…` | read | 1.09 |
+| S1 | `status` | `23467dd5…` | read | 0.15 |
+
+R1 and R3 are kernel reads (§3.1), not commands. The arms (`arms/`): three fresh servers,
+each with `project-select health` over MCP, then CLI reads in fresh processes.
+
+## 4. Predictions, marked
+
+### 4.1 The schedule
+
+| key | observed | mark |
+|---|---|---|
+| G | chain `4af7c421…`, the four pins of §2.1, working corpus `4b1c238d…`, the reducer installed (`genesis-progress.json`) | confirmed |
+| D | cohort `dataset:sha256:e565a188…`, annotation `dataset:sha256:22bc7418…`, equal to the rehearsal's (`declared.json`) | confirmed |
+| T | `queries/MANIFEST` equal to r3's | confirmed |
+| S0 | two corpora `known=True live=True present=True`; `No current epoch.`; working corpus `dataset: 2`; mm30 as C6 (`status-initial.txt`) | confirmed |
+| E1 | `built` `53776e88…` (`epochs.json`) | confirmed |
+| W1.claim | `proposition:concept-disease-stage-affects-protein-ezh2`; its record carries operator `mm30/affects-concept-molecular-entity`, args `concept:disease-stage`, `protein:EZH2`, polarity `positive` | confirmed |
+| W1.spec | `analysis-spec:5132014c…`, the rehearsal's identity | confirmed |
+| E2 | `built` `bda25928…` | confirmed |
+| W2 | four `project` records (§3.2) | confirmed |
+| R0 | **D** `epoch-stale`: **refuted**; it rendered. **R**: the EZH2 and PHF19 → overall-survival rows `not-ready`, the stage → PHF19 row `assessed-unevaluated (epoch-stale)` (`next-stale.txt`): confirmed | D refuted, R confirmed |
+| E3 | `built` `cd1f59f2…` | confirmed |
+| W3 | three mints; the copy's stored projection `10f605d3…` equals its source's; its body opens `Same query as coord:4dbcb704…/3cffd9be…@f9f210e5….`; the source's tip is still `f9f210e5…` (`selections.json`) | confirmed |
+| E4 | `built` `a854308b…` | confirmed |
+| E5 | `current` `a854308b…`, E4's identity | confirmed |
+| R4 | `refused [kernel-refused] attribution-contract-unpinned: 8b5d0c802677ee445e2b9d91ebf5d6a7` (`publish-preview.txt`) | confirmed |
+| R5 | `NoBelief`, `no-directional-outcome` (`belief.txt`) | confirmed |
+| S1 | working corpus analysis-spec 1, dataset 2, project 4, proposition 1, question 3; epoch `a854308b…` (`status-final.txt`) | confirmed |
+| C6 | `arms/compare.json`: workspace and unrelated byte-identical for `status`, `projects`, `next`; both `next` equal to R2's `health` | confirmed |
+| C7 | `arms/compare.json`: CLI `next` equal to R2's `health`; `next --project multiple-myeloma` equal to R2's `multiple-myeloma`; `projects` marks `health` `(selected)` | confirmed |
+
+### 4.2 The selections
+
+Every R1 and R3 row is `equivalent: true` and `complete: true`, with nothing absent and
+nothing unresolved (`selections.json`). Against §2.3:
+
+| view | observed | D | R |
+|---|---|---|---|
+| `multiple-myeloma` | PHF19, OS, EZH2, runs, A, V, S30 (8) | refuted: G is not selected | confirmed |
+| `cancer` | as `multiple-myeloma` | refuted, as above | confirmed |
+| `health` | `multiple-myeloma`'s plus S-EZH2, cohort, annotation (11) | refuted: no G | confirmed |
+| `multiple-myeloma-findings` | run `8b1a2401…`, PHF19, G, S30 (4) | refuted: no A | confirmed |
+| health question | EZH2, PHF19, runs, A, V, S-EZH2, cohort, annotation (9) | — | confirmed |
+| its copy under `cancer` | equal to the question's | confirmed | confirmed |
+| `evidence-bound terms` | PHF19, EZH2, runs, A, V, S30 (7) | refuted: no G | confirmed |
+
+Every D refutation has one cause: a `closure` clause selects what its anchor reaches and
+never the anchor (finding F8). The live sets also equal the rehearsal's by
+`invariants.py` (`invariants-vs-r3.json`), which compares the selected world records per view
+and the `next` ids, classes and order.
+
+### 4.3 The renderings
+
+The four R2 `propositions:` blocks are byte-identical to §2.4 (`next-*.txt`); each project's
+`selection:` block names that project, `complete: true`, `absent: none`, the world and
+both corpora's state digests; the unselected rendering has none. Confirmed.
+
+### 4.4 The criteria
+
+| criterion | verdict | evidence |
+|---|---|---|
+| 1 | **met** | G and S0: one world, mm30 relocated and the working corpus fresh, one session writing the working corpus and reading both (`status-initial.txt`, `status-final.txt`) |
+| 2 | **met** | R1: PHF19 and OS selected by `health`, `cancer` and `multiple-myeloma` at E3 |
+| 3 | **partly met** | the question under `health` reaches mm30 facts (its selection holds PHF19, the runs, A and V), its copy under `cancer` is one same-query act, the new proposition and its spec over a declared, unheld cohort exist; the fact `health` selects and `multiple-myeloma` does not is S-EZH2 and the two datasets, not the proposition (C5) |
+| 4 | **partly met** | each `next` renders exactly its selection's propositions in the fixed class order and equals the set this record stated before the run; the sets are not §9.2's expected ones, since `multiple-myeloma` and the whole world hold the EZH2 proposition alike |
+| 5 | **unmet** | the dry run refuses `attribution-contract-unpinned` (F12): neither a report nor `closure-incomplete`. §6 M5 computes the two closures the dry run could not report |
+| 6 | **met** | C6 arm |
+| 7 | **met** | C7 arm |
+
+## 5. Findings
+
+Classified `defect`, `design-gap`, `surface-gap` or `corpus-work`, each filed to its
+lane, origin `agent`, source `sci-0d00d2`.
+
+| # | finding | class | filed |
+|---|---|---|---|
+| F1 | science's launcher parsed every contract document as a genesis, so the successor contract mm30 pins could not be loaded and a successor document reached the person as `internal-error` | defect | `sci-7079e3`, fixed on this branch (`19738ca`, `316338a`) |
+| F2 | no command creates a corpus; genesis is a kernel-level step (§3.1) | surface-gap | `sci-326015` |
+| F3 | no command declares a dataset without holding it (§3.1) | surface-gap | `sci-20aee0` |
+| F4 | `spec` declares one input, `observes`; the annotation the analysis reads is named only in the method text | surface-gap | `sci-06c689` |
+| F5 | only a project can be previewed or published; the findings level had to be minted as a project | surface-gap | `sci-2a3f0a` |
+| F6 | no command renders a view's selection; every selection here was read by a driver through the kernel | surface-gap | `sci-8e2cd7` |
+| F7 | the coarse form leaves the composite outside every clause, and its term-clause rule makes the typing contract's vocabulary the project boundary (§7) | design-gap | `sci-538142` |
+| F8 | a `closure` clause never selects its anchor: the myeloma views omit GSE179929 and the findings level omits its own assessment | design-gap | `sci-c5872f` |
+| F9 | a health contract (estimands beyond myeloma's stages, a disease vocabulary) is what the health program's first real question needs | idea | `sci-036920` |
+| F10 | a kernel `RuleNotHeld` raised while reading holdings reaches the person as `internal-error` (rehearsal r2) | defect | `sci-0f110f` |
+| F11 | no command installs the holdings reducer; a relocated world serves no citing write until a kernel-level step installs it (C1a) | surface-gap | `sci-5ae0e6` |
+| F12 | a relocated replica of the world's own corpus is refused as a foreign publication | design-gap | `beliefs-7c612b` |
+| F13 | the stored-edge publication closure is narrower than the projection-derived closure of a findings view (M5) | design-gap | `beliefs-37d7ca` |
+| F14 | the reproduction driver's contract documents carry an `also:` key no consumer reads | idea | `beliefs-1ad2c9` |
+| F15 | the empirical-observation locator declares no `doi` scheme (§1.2) | design-gap | `beliefs-46b937` |
+
+Not filed, with reasons: the first rehearsal attempt's `CapabilityUnavailable` (atoms'
+durability allowlist does not admit the task directory's volume, a host fact the
+replicas were moved for, §1.3); Zenodo's HTTP 504 during one rehearsal download
+(transient); the spec's two-line TOML table (§1.1, this task's own design text); R0's
+rendering (a refuted prediction, not a refusal: `next` marks the stale row rather than
+refusing, which the consumer design's per-row classification allows).
+
+## 6. Measurements
+
+### M1 Epochs
+
+| epoch | trigger (from the schedule) | writes since the previous | outcome | live s | rehearsal r3 s |
+|---|---|---|---|---|---|
+| E1 | initial | the two declarations (kernel-level) | built | 1.66 | 7.35 |
+| E2 | evidence | `claim`, `spec` | built | 1.44 | 7.69 |
+| E3 | coordination-only | `project` ×4 | built | 1.91 | 8.03 |
+| E4 | coordination-only | `question`, `reuse`, `question` | built | 1.94 | 10.66 |
+| E5 | none | — | current | 1.11 | 5.15 |
+
+Two coordination-only rebuilds out of four builds, 1.91 s and 1.94 s live (8.03 s and
+10.66 s on the rehearsal replica, whose data root sits in a synced tree); each costs about
+what an evidence build costs. The rebuild is forced because any drift is `epoch-stale`
+(consumer limitation 2); R0 shows the stale row is still rendered. This is the count
+`beliefs-655c10` asked for.
+
+### M2 Explicit entries
+
+| view | `addresses` entries | term clauses | closure anchors | selected |
+|---|---|---|---|---|
+| `multiple-myeloma`, `cancer` | 1 (S30) | 285 | 1 (G) | 8 |
+| `health` | 5 (S30; EZH2, S-EZH2, cohort, annotation) | 285 | 1 | 11 |
+| `multiple-myeloma-findings` | 1 (S30) | 0 | 1 (A) | 4 |
+| health question and its copy | 4 | 0 | 1 | 9 |
+| `evidence-bound terms` | 1 | 1 (`concept:disease-stage`) | 1 | 7 |
+
+By clause, in `multiple-myeloma`: the closure from G reaches the two runs, A, V and PHF19
+(5); the address adds S30; the term clauses add OS (`concept:overall-survival`) and EZH2
+(`concept:disease-stage`). The evidence-bound form selects the same records less OS: the
+285-clause rule's whole extra reach in this world is one unevidenced proposition plus
+every proposition any future claim types under mm30 (the EZH2 case). The coarse form
+omits the composite (no `composes` predicate) and its own anchor (F8).
+
+Every `addresses` entry for S30 exists because a run reaches its spec only through a
+facet and a spec emits no relations; the four entries of the health clause exist because
+nothing connects a spec to its target and declared inputs before a run. Storing
+`executes`, `targets` and spec-input edges (`beliefs-7c98bc`) would retire the S30 entry
+from all five views that carry it and, with an EZH2 anchor, the health clause's three
+spec-side entries; anchors themselves would still need naming (F8).
+
+### M3 The fence
+
+Three separate counts: research questions **1** (the health question); same-query reuses
+**1** (its copy under `cancer`); measurement-only questions **1** (`evidence-bound
+terms`). Repairs needed **0**; the source did not change (its tip after the reuse is the
+revision it was minted at, `f9f210e5…`). The reuse ratio is 1 reuse to 1 research
+question.
+
+### M4 Command latency
+
+End to end at the driver, live: citing writes `claim` 0.31 s and `spec` 0.36 s;
+coordination writes `project` 0.15–0.23 s, `question` 0.19–0.20 s, `reuse` 0.25 s;
+`project-select` 0.01–0.30 s; reads `next` 1.14–1.80 s, `belief` 1.09 s,
+`publish-preview` 0.55 s. A latency, not a mount cost (design M4).
+
+### M5 The two closures of the findings selection
+
+The findings selection is run `8b1a2401…`, PHF19, G and S30 (4 records; the design
+expected 5 with A, F8). Its stored relations, read from the record files under
+`<world>/corpora/mm30/`: the run `observes` G; PHF19, G and S30 carry none. The
+assessment, not selected, `assesses` PHF19 and is `produced_by` the run; the verification
+`verifies` the assessment.
+
+- **Stored-edge closure** (what `closure_missing` walks): from the selection, the run
+  reaches G, which is selected. Complete, and it reaches nothing outside the selection.
+- **Projection-derived closure** (projects design §8.1: each run's spec facet, each
+  spec's projection target and declared inputs, each assessment's run): the run's spec
+  facet reaches S30; S30's target reaches PHF19 and its `observes` input reaches G; no
+  assessment is selected. Complete.
+- **What one reaches and the other does not:** S30 and PHF19 are reached by projection and
+  by no stored edge (they are in the selection by address and through A's closure). The
+  vocabulary datasets are reached by neither: the contract binds them, not the spec.
+
+Both closures are complete over this selection, so had the dry run reached its closure
+step it would have had nothing missing to report; it refused on attribution first (F12).
+The difference between the two rules is F13.
+
+### M6 The working corpus after the walk
+
+analysis-spec 1, dataset 2, project 4, proposition 1, question 3 (11 records). Session
+ledger `select` lines: 7 in the walk's session (three in W3, four in R2), one in each of
+the three arm sessions: 10. The walk's session ledger records 9 acts, one per mint.
+
+## 7. What this decides
+
+- **The fence (projects design §7).** One reuse against one research question is not a
+  pattern, and it needed no repair. No `beliefs` request is made.
+- **`beliefs-7c98bc`** is noted with M2's counts: the S30 `addresses` entry in five views
+  and the health clause's spec-side entries are what the edges would retire.
+- **`beliefs-655c10`** is noted with M1's: two coordination-only rebuilds in the schedule's
+  four builds, 1.91 s and 1.94 s live, each about an evidence build's cost.
+- **Proposed amendment to §6.2's term-clause rule** (design §8, not applied; the user's
+  call): a project's term clauses name the concepts its own evidence binds. M2's evidence
+  is that the prescribed rule's extra reach here is one unevidenced proposition plus any
+  future mm30-typed claim. F7 carries it.
+- **Proposed amendment to §9.2 criterion 5** (design §8, not applied): while `beliefs`
+  refuses a relocated replica (F12), the criterion names the attribution refusal as a
+  third outcome, or the dry run moves to a corpus admitted `fresh`.
+- **A third amendment this run argues for** (not applied): §6.2's coarse queries and
+  §8.1's findings level name their anchors, since a closure never selects its anchor
+  (F8).
+- **The health program's first real question** needs a contract with estimands beyond
+  myeloma's and a disease vocabulary (F9). The declared cohort is the mm program's to
+  hold or supersede under its own protocol (`mm-a32d58`).
