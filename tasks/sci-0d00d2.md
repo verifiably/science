@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: second-project-milestone
 created: 2026-09-23T11:40:35Z
-updated: 2026-10-27T01:48:50Z
+updated: 2026-10-27T01:56:37Z
 started: 2026-10-27T00:22:44Z
 depends: [sci-b1c777, beliefs-fe7149, beliefs-c08725, sci-c5528e, sci-923d3a, beliefs-9ce6e4, sci-dc0381]
 tags: [projects]
@@ -42,4 +42,6 @@ The milestone of docs/specs/2026-09-23-projects-corpora-and-workspaces-design.md
 - 2026-10-27T01:44:59Z (second-project-milestone): review: spec round 1 — verdict: revise; findings: P1 2, P2 4; reviewer: codex/gpt-6-astra
 - 2026-10-27T01:48:49Z (second-project-milestone): revision 2 at 1f65730: criterion 3 partly met and 5 unmet by prediction (C5, C7) with no acceptance condition relaxed; §6.2 term-clause amendment proposed and measured via an evidence-bound question; findings-level view as a project (surface gap); frozen epoch schedule E1-E5; annotation declared as a second dataset with the TPM rule, id mapping and condition mapping stated; C6 as two sequential launcher arms; scratch at WORK_ROOT task dir with attachments; docs/records amendment applied to the authority
 - 2026-10-27T01:48:50Z (second-project-milestone): parked (waiting on user, review): user reviews revision 2 at 1f65730 (git show 1f65730:docs/specs/2026-10-26-second-project-milestone-design.md in .worktrees/second-project-milestone); on acceptance the agent files the chain-loader task as a dependency and invokes writing-plans; on revise the agent amends as a new revision
+  provenance: {"harness_session":"claude-code:74a061f4-8320-41fa-a2a3-a3ce105dd286","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-27T01:56:37Z (second-project-milestone): resumed
   provenance: {"harness_session":"claude-code:74a061f4-8320-41fa-a2a3-a3ce105dd286","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
