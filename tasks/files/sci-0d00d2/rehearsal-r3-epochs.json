@@ -1,0 +1,61 @@
+[
+  {
+    "after_interrupted_attempt": false,
+    "key": "E1",
+    "outcome": "built",
+    "packaging_identity": "f7be7a17eade0e0355c59215e4c0e11b1e582ca48cfa820866a69637f84649ee",
+    "seconds": 7.349,
+    "trigger": "initial",
+    "writes_since_previous": [
+      "declarations"
+    ]
+  },
+  {
+    "after_interrupted_attempt": false,
+    "key": "E2",
+    "outcome": "built",
+    "packaging_identity": "d6b5311090bf5740c1a6d357811af6fc18dc1c05b82a83cfbb66295a9e3845b8",
+    "seconds": 7.692,
+    "trigger": "evidence",
+    "writes_since_previous": [
+      "W1.claim",
+      "W1.spec"
+    ]
+  },
+  {
+    "after_interrupted_attempt": false,
+    "key": "E3",
+    "outcome": "built",
+    "packaging_identity": "58abe94e8afc142354298752f64de9ad08dc59383834f577a907ab2da346f944",
+    "seconds": 8.03,
+    "trigger": "coordination-only",
+    "writes_since_previous": [
+      "W2.project.multiple-myeloma",
+      "W2.project.cancer",
+      "W2.project.health",
+      "W2.project.multiple-myeloma-findings"
+    ]
+  },
+  {
+    "after_interrupted_attempt": false,
+    "key": "E4",
+    "outcome": "built",
+    "packaging_identity": "accf615c12ee393e2024fbbff9f1844405236874b8899aacbc5be5b423719b01",
+    "seconds": 10.664,
+    "trigger": "coordination-only",
+    "writes_since_previous": [
+      "W3.question.health",
+      "W3.reuse",
+      "W3.question.evidence-bound-terms"
+    ]
+  },
+  {
+    "after_interrupted_attempt": false,
+    "key": "E5",
+    "outcome": "current",
+    "packaging_identity": "accf615c12ee393e2024fbbff9f1844405236874b8899aacbc5be5b423719b01",
+    "seconds": 5.149,
+    "trigger": "none",
+    "writes_since_previous": []
+  }
+]
