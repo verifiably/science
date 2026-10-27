@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: second-project-milestone
 created: 2026-09-23T11:40:35Z
-updated: 2026-10-27T12:52:55Z
+updated: 2026-10-27T12:54:28Z
 started: 2026-10-27T00:22:44Z
 depends: [sci-b1c777, beliefs-fe7149, beliefs-c08725, sci-c5528e, sci-923d3a, beliefs-9ce6e4, sci-dc0381, sci-7079e3]
 tags: [projects]
@@ -185,3 +185,10 @@ The milestone of docs/specs/2026-09-23-projects-corpora-and-workspaces-design.md
 - 2026-10-27T12:52:53Z (second-project-milestone): attached: rehearsal-rb-run1-stdout.txt (2551 bytes): drill (b) run1 output
 - 2026-10-27T12:52:54Z (second-project-milestone): attached: rehearsal-rb-run2-stdout.txt (939 bytes): drill (b) run2 output
 - 2026-10-27T12:52:55Z (second-project-milestone): attached: rehearsal-rb-check-stdout.txt (117 bytes): drill (b) check output
+- 2026-10-27T12:52:56Z (second-project-milestone): attached: rehearsal-rb-reconcile-stdout.txt (191 bytes): drill (b) reconcile output
+- 2026-10-27T12:52:57Z (second-project-milestone): attached: rehearsal-rb-run3-stdout.txt (2618 bytes): drill (b) run3 output
+- 2026-10-27T12:52:59Z (second-project-milestone): attached: rehearsal-rb-attempt0-run1-stdout.txt (220 bytes): drill (b) first attempt: no declared.json after Zenodo HTTP 504
+- 2026-10-27T12:53:00Z (second-project-milestone): attached: rehearsal-rc-progress.json (582 bytes): drill (c) journal: two fail-before-write stop rows, no attempt
+- 2026-10-27T12:53:01Z (second-project-milestone): attached: rehearsal-rc-run1-stdout.txt (280 bytes): drill (c) first stopping run output
+- 2026-10-27T12:53:02Z (second-project-milestone): attached: rehearsal-rc-run2-stdout.txt (281 bytes): drill (c) second stopping run output
+- 2026-10-27T12:54:28Z (second-project-milestone): detached: driver-arms.py: layout gate refused host paths; portable derivative attached as driver-arms-portable.py, raw bytes kept at $WORK_ROOT/science/sci-0d00d2/driver/arms.py
