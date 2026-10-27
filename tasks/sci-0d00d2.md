@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: second-project-milestone
 created: 2026-09-23T11:40:35Z
-updated: 2026-10-27T02:10:51Z
+updated: 2026-10-27T02:15:39Z
 started: 2026-10-27T00:22:44Z
 depends: [sci-b1c777, beliefs-fe7149, beliefs-c08725, sci-c5528e, sci-923d3a, beliefs-9ce6e4, sci-dc0381, sci-7079e3]
 tags: [projects]
@@ -53,3 +53,4 @@ The milestone of docs/specs/2026-09-23-projects-corpora-and-workspaces-design.md
 - 2026-10-27T02:10:50Z (second-project-milestone): resumed
   provenance: {"harness_session":"claude-code:74a061f4-8320-41fa-a2a3-a3ce105dd286","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-27T02:10:51Z (second-project-milestone): review: plan round 1 — verdict: revise; findings: P1 1, P2 4, Minor 1; reviewer: codex/gpt-6-astra
+- 2026-10-27T02:15:39Z (second-project-milestone): plan revision 2 at 1378cb1: drivers first (Tasks 2-4) under a live-run contract (fail-before-write, journal, resume, finally-cleanup, bounded reads), rehearsal on a kernel-replicated disposable world (Task 5) before the record freeze (Task 6) and the live run (Task 7, new child sci-903626); Task 1 fixture uses the declared concept sort and replaces both string gates; facet key biology/gene-axis with both nodes validated before either write; condition labels pinned diagnostico/recidiva from the published file; selections read back the minted view's stored query and record completeness; evidence attachment list completed
