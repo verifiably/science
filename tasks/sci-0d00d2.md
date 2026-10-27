@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: second-project-milestone
 created: 2026-09-23T11:40:35Z
-updated: 2026-10-27T12:50:50Z
+updated: 2026-10-27T12:50:52Z
 started: 2026-10-27T00:22:44Z
 depends: [sci-b1c777, beliefs-fe7149, beliefs-c08725, sci-c5528e, sci-923d3a, beliefs-9ce6e4, sci-dc0381, sci-7079e3]
 tags: [projects]
@@ -84,3 +84,4 @@ The milestone of docs/specs/2026-09-23-projects-corpora-and-workspaces-design.md
 - 2026-10-27T12:44:02Z (second-project-milestone): live run (Task 7): genesis on <data root> — chain mm30:4af7c421…, pins science 52a43993…, biology 24bcec43…, mm30 4af7c421…, coordination b2386628…, working corpus 4b1c238d06cf7fa18def5ea2554d4f16, holdings reducer installed (rule 0a0ea45c…, implementation f03e496b…); preflight status as predicted; declarations equal to the rehearsal's (cohort e565a188…, annotation 22bc7418…); queries MANIFEST equal to r3's. Walk run state/live/runs/20261027T124235Z, no resume, no reconcile (one earlier invocation failed at exit 127 on a mistyped interpreter path before any process or run directory existed): every call ok except R4 refused [kernel-refused] attribution-contract-unpinned: 8b5d0c80… (expected); epochs E1 initial built 1.66 s, E2 evidence built 1.44 s, E3 coordination-only built 1.91 s, E4 coordination-only built 1.94 s, E5 none current 1.11 s; selections 8/8/11/4 and 9/9/7, all equivalent and complete; arms/compare.json all_equal true; invariants equal r3's.
 - 2026-10-27T12:50:49Z (second-project-milestone): attached: driver-arms.py (4620 bytes): milestone driver arms.py, as drilled and run live
 - 2026-10-27T12:50:50Z (second-project-milestone): attached: driver-common.py (8510 bytes): milestone driver common.py, as drilled and run live
+- 2026-10-27T12:50:52Z (second-project-milestone): attached: driver-declare.py (6660 bytes): milestone driver declare.py, as drilled and run live
