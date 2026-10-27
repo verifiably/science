@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: second-project-milestone
 created: 2026-09-23T11:40:35Z
-updated: 2026-10-27T12:55:24Z
+updated: 2026-10-27T12:55:25Z
 started: 2026-10-27T00:22:44Z
 depends: [sci-b1c777, beliefs-fe7149, beliefs-c08725, sci-c5528e, sci-923d3a, beliefs-9ce6e4, sci-dc0381, sci-7079e3]
 tags: [projects]
@@ -236,3 +236,4 @@ The milestone of docs/specs/2026-09-23-projects-corpora-and-workspaces-design.md
 - 2026-10-27T12:55:21Z (second-project-milestone): detached: rehearsal-rb-attempt0-run1-stdout.txt: layout gate refused host paths; portable derivative attached as rehearsal-rb-attempt0-run1-stdout-portable.txt, raw bytes kept at $WORK_ROOT/science/sci-0d00d2/rb-attempt0-run1-stdout.txt
 - 2026-10-27T12:55:22Z (second-project-milestone): attached: rehearsal-rb-attempt0-run1-stdout-portable.txt (151 bytes): portable derivative of rehearsal-rb-attempt0-run1-stdout.txt (host paths replaced by placeholders); raw bytes retained at $WORK_ROOT/science/sci-0d00d2/rb-attempt0-run1-stdout.txt, sha256 41f777310df3bea2
 - 2026-10-27T12:55:24Z (second-project-milestone): detached: rehearsal-rb-invariants-vs-r3.json: layout gate refused host paths; portable derivative attached as rehearsal-rb-invariants-vs-r3-portable.json, raw bytes kept at $WORK_ROOT/science/sci-0d00d2/state/rb/runs/20261027T123647Z/invariants-vs-r3.json
+- 2026-10-27T12:55:25Z (second-project-milestone): attached: rehearsal-rb-invariants-vs-r3-portable.json (368 bytes): portable derivative of rehearsal-rb-invariants-vs-r3.json (host paths replaced by placeholders); raw bytes retained at $WORK_ROOT/science/sci-0d00d2/state/rb/runs/20261027T123647Z/invariants-vs-r3.json, sha256 6a6a52132e3e7b67
