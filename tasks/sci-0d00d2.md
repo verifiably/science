@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: second-project-milestone
 created: 2026-09-23T11:40:35Z
-updated: 2026-10-27T11:34:11Z
+updated: 2026-10-27T11:37:10Z
 started: 2026-10-27T00:22:44Z
 depends: [sci-b1c777, beliefs-fe7149, beliefs-c08725, sci-c5528e, sci-923d3a, beliefs-9ce6e4, sci-dc0381, sci-7079e3]
 tags: [projects]
@@ -70,3 +70,4 @@ The milestone of docs/specs/2026-09-23-projects-corpora-and-workspaces-design.md
   provenance: {"harness_session":"claude-code:74a061f4-8320-41fa-a2a3-a3ce105dd286","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-27T11:34:11Z (second-project-milestone): resumed
   provenance: {"harness_session":"claude-code:8b479072-91d3-4b9c-b77c-d178525b6574","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-27T11:37:10Z (second-project-milestone): baseline: just test in .worktrees/second-project-milestone at 0c62724 — 874 passed
