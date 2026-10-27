@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: second-project-milestone
 created: 2026-09-23T11:40:35Z
-updated: 2026-10-27T13:12:56Z
+updated: 2026-10-27T13:13:55Z
 started: 2026-10-27T00:22:44Z
 completed: 2026-10-27T13:12:56Z
 closed: 2026-10-27T13:12:56Z
@@ -272,3 +272,4 @@ The milestone of docs/specs/2026-09-23-projects-corpora-and-workspaces-design.md
   provenance: {"harness_session":"claude-code:8b479072-91d3-4b9c-b77c-d178525b6574","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-27T13:12:56Z (second-project-milestone): second-project milestone run and recorded (docs/records/2026-10-26-second-project-milestone.md): criteria 1, 2, 6, 7 met; 3, 4 partly met; 5 unmet (attribution refusal of the relocated replica); 14 findings filed; beliefs-7c98bc and beliefs-655c10 noted
   provenance: {"harness_session":"claude-code:8b479072-91d3-4b9c-b77c-d178525b6574","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-27T13:13:55Z (main): retained: {"host":"titan","kind":"worktree","path":".worktrees/second-project-milestone","state":"released","verification":"verified","purpose":"Removed after the fast-forward merge into main (313d8a4); ignored files were regenerable or preserved (plan ledger attached as plan-ledger-portable.md, raw in evidence-raw); tt-report run; no host pointer resolved into it","next_owner":"none","cleanup_trigger":"none"}
