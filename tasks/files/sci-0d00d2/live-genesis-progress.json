@@ -1,0 +1,61 @@
+{
+  "steps": {
+    "addresses": {
+      "at": "2026-10-27T12:40:54.690243Z",
+      "result": {
+        "CONCEPTS": "sha256:be3bf183a830c31d4f8acf46a309e01bd0476580d2d6db4079af3e3c7bd738d8",
+        "IDENTIFICATIONS": "sha256:79e307100a52bc03c0799780d4caeaf040f5ece71f938f6c2ae9bbd4d61bff36",
+        "LEVELS": "sha256:85b5e3477d98ec0191b0e54da86202ec8c0d4081c45e7ddac103a30f8feb12a8",
+        "MEASURES": "sha256:08027c2e5fdd6939d2392ebbb0b9002a5b0778a3f71c7a54cab994836ab88f0c"
+      }
+    },
+    "checked": {
+      "at": "2026-10-27T12:40:54.690317Z",
+      "result": {
+        "chain": "4af7c4212d482ae60f429526ff5a8a6d4c335f70351a2687cd2062ffdedf437c",
+        "pins": {
+          "biology": "24bcec4370cfcff3077414798c02525814d4aeaaf84430ab378838df7345d53b",
+          "coordination": "b23866284ae160f7e7322cbb3c63adcbc84f5f894e6f30f5468c76dc8434993d",
+          "mm30": "4af7c4212d482ae60f429526ff5a8a6d4c335f70351a2687cd2062ffdedf437c",
+          "science": "52a4399342235225fbf23526050cf64ff0436d9b72bc54e30fc0c2cb7193b220"
+        }
+      }
+    },
+    "config": {
+      "at": "2026-10-27T12:40:54.691136Z",
+      "result": "/mnt/ssd/science/science.toml"
+    },
+    "documents": {
+      "at": "2026-10-27T12:40:54.690955Z",
+      "result": [
+        "/mnt/ssd/science/contracts/mm30/mm30-cut22.yaml",
+        "/mnt/ssd/science/contracts/mm30/mm30-cut31.yaml",
+        "/mnt/ssd/science/contracts/mm30/mm30.yaml"
+      ]
+    },
+    "holdings_reducer": {
+      "at": "2026-10-27T12:40:54.980138Z",
+      "result": {
+        "binding": "RuleBinding(rule_identity='0a0ea45c739373abb5e92064281e883ee2c49d9935083538b0b68bc92d6f2a24', implementation_identity='f03e496b5524499b09f88d3c515bec580ec3059ff325e6bcdf638a4e2496c86f')",
+        "symbol": "reduce_holdings"
+      }
+    },
+    "working_corpus": {
+      "at": "2026-10-27T12:40:54.836130Z",
+      "result": {
+        "corpus_id": "4b1c238d06cf7fa18def5ea2554d4f16",
+        "pins": {
+          "biology": "24bcec4370cfcff3077414798c02525814d4aeaaf84430ab378838df7345d53b",
+          "coordination": "b23866284ae160f7e7322cbb3c63adcbc84f5f894e6f30f5468c76dc8434993d",
+          "mm30": "4af7c4212d482ae60f429526ff5a8a6d4c335f70351a2687cd2062ffdedf437c",
+          "science": "52a4399342235225fbf23526050cf64ff0436d9b72bc54e30fc0c2cb7193b220"
+        }
+      }
+    },
+    "working_corpus_attempt": {
+      "at": "2026-10-27T12:40:54.734447Z",
+      "result": "/mnt/ssd/science/worlds/aec951bc6becacced13df8f7ae6f8abf/corpora/working"
+    }
+  },
+  "world_id": "aec951bc6becacced13df8f7ae6f8abf"
+}
