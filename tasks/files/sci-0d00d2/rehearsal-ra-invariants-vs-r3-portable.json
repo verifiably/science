@@ -1,0 +1,18 @@
+{
+  "a": {
+    "identities_resolved": 9,
+    "run": "<task dir>/state/r3/runs/20261027T122639Z",
+    "selection_rows_checked": 7
+  },
+  "b": {
+    "identities_resolved": 9,
+    "run": "<task dir>/state/ra/runs/20261027T123311Z",
+    "selection_rows_checked": 7
+  },
+  "differences": {
+    "next": {},
+    "views": {}
+  },
+  "next_equal": true,
+  "views_equal": true
+}
