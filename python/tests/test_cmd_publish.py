@@ -2,6 +2,8 @@
 the kernel's session publish door; the preview is the same step 0, read-only."""
 import secrets
 
+import pytest
+
 from beliefs.intents.publish import Destination
 from beliefs.permit import RequiredCapabilities, scoped_authority
 from beliefs.publish import pending_publishes
@@ -19,6 +21,7 @@ from helpers.commons import (
 )
 from helpers.world import concept_list_address, level_list_address, open_rig
 import science.publication as publication
+from science.config import ReadContext
 from science.publication import binding_fields, marker_fields, marker_of
 from science.world_belief import publish_session_epoch
 
@@ -96,7 +99,7 @@ def test_publish_to_a_relative_path_is_invalid_input(fresh):
     assert r.code == "invalid-input" and "relative/dir" in r.message
 
 
-def test_a_transport_fault_closes_kernel_refused_and_a_fresh_attempt_is_blocked_until_resume(fresh):
+def test_a_transport_fault_closes_kernel_refused_and_a_fresh_attempt_is_blocked_until_resume(fresh, monkeypatch):
     saved = publication.transport_for
     try:
         with with_remotes(fresh), open_rig(fresh.a, ("publish",)) as (d, _):
@@ -110,6 +113,9 @@ def test_a_transport_fault_closes_kernel_refused_and_a_fresh_attempt_is_blocked_
             (token,) = _pending(fresh.a)
             assert token in r2.message
             fault.fail_after_push = False
+            def no_reclassification(self):
+                pytest.fail("resume recomputed ownership from current mounts")
+            monkeypatch.setattr(ReadContext, "mounts", no_reclassification)
             text = d.invoke("publish", {"target": "a", "to": LOC_A, "resume": token}, invocation_id="p3").text
     finally:
         publication.transport_for = saved

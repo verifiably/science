@@ -73,6 +73,14 @@ state science keeps itself is the sharing registry under the configured `sharing
 its pins and provider bindings are a projection of those sharing lines, written after
 each line and rebuilt from them, beside the adopted corpora the kernel restores there.
 
+`publish-preview` and new `publish` attempts use the same Own classification as
+belief acceptance: configured markerless roots, including restored replicas, are
+declared as this installation's own. Sharing-registry roots remain excluded even
+when hand-listed, and marker-bearing roots retain publication attribution. Both
+commands read every configured mount, refuse duplicate claimed carriers, and
+require exactly one write mount; input-read errors propagate. Resume uses the
+attempt's frozen selection and attributions without reclassifying ownership.
+
 ## Layout
 
 - `commands/` — one directory per command: its declaration and prompt.

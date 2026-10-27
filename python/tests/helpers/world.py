@@ -80,13 +80,14 @@ def short_socket(work: Path) -> Path:
     return Path("/tmp") / f"sci-sock-{hashlib.sha256(str(work).encode()).hexdigest()[:16]}.sock"
 
 
-def build_fixture_world(work: Path) -> ScienceConfig:
+def build_fixture_world(work: Path, *, coordination=COORDINATION) -> ScienceConfig:
+    profile, pins = {2: (PROFILE, PINS), 3: (PROFILE_V3, PINS_V3)}[coordination]
     corpus_root = work / "corpus"
     config = WorldConfig(work / "world", secrets.token_hex(16), (corpus_root,))
     init_world_root(config, authority=FIXTURE_AUTHORITY)
     init_corpus_root(corpus_root, authority=FIXTURE_AUTHORITY)
-    writer = open_corpus(corpus_root, authority=FIXTURE_AUTHORITY, profile=PROFILE)
-    writer.adopt_manifest(profile=PINS)
+    writer = open_corpus(corpus_root, authority=FIXTURE_AUTHORITY, profile=profile)
+    writer.adopt_manifest(profile=pins)
     world = open_world(config, authority=FIXTURE_AUTHORITY)
     world.admit(corpus_root, provenance=Fresh())
     writer.add(fixture_proposition_node("p1"))
@@ -96,10 +97,10 @@ def build_fixture_world(work: Path) -> ScienceConfig:
     return ScienceConfig(
         world=config,
         operations_root=work / "ops",
-        profile=PROFILE,
+        profile=profile,
         service_socket=short_socket(work),
         store_root=store_root,
-        coordination=COORDINATION,
+        coordination=coordination,
         write_root=corpus_root,
     )
 

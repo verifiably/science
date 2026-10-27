@@ -507,6 +507,22 @@ declarations follow the framework's write classes, extended as §11 says.
    dataset as an input the destination will not carry, with whether its
    bytes are held and its redistribution status as `unknown`.
 
+   *Amended 2026-10-27 (sci-9a7ce2, beliefs-7c612b):* `publish-preview` and
+   each new `publish` attempt pass §9's existing Own classification to the
+   kernel as `own_corpora`. Configured markerless roots, including restored
+   replicas, contribute no carried entries under coordination v3 and retain
+   the own-only marker shape under v2. Sharing-registry roots remain excluded
+   even when hand-listed; roots holding a publication marker retain their
+   attribution requirements. This is the publisher's ownership claim, not
+   authenticated authorship, and changes no registry provenance.
+
+   Both commands now construct the same acceptance inputs: every configured
+   mount is read, duplicate claimed carriers refuse, and exactly one mount
+   must match `write_root`. Missing or duplicate write mounts raise the
+   helper's existing `ValueError`; errors reading any configured mount
+   propagate without falling back to an empty declaration. Resume uses the
+   attempt's frozen selection and attributions and never recomputes ownership.
+
 ## 6. The commons's path
 
 Success is: curate a collection, explain inclusion decisions, preserve what I

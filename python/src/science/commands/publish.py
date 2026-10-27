@@ -7,6 +7,7 @@ from beliefs.publish import Published, PublishRefused, PublishUnresolved
 from beliefs.session import KernelRefusalValue
 
 from science import publication
+from science.acceptance import acceptance_inputs
 from science.coordination import resolve_project_ref
 from science.report import Report, record_block
 from science.transport_git import GitTransportFault
@@ -25,7 +26,8 @@ def _run(ctx, writer, *, target, to, resume):
     view = resolve_project_ref(ctx, target)
     destination = publication.parse_destination(to)
     return writer.publish(view=view, destination=destination, operations_root=config.operations_root,
-                          staging_profile=config.profile, transport=publication.transport_for(config, destination))
+                          staging_profile=config.profile, transport=publication.transport_for(config, destination),
+                          own_corpora=acceptance_inputs(ctx).own_roots)
 
 
 def _refused(reason: str, detail: str) -> KernelRefusalValue:

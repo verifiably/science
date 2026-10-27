@@ -7,6 +7,7 @@ from beliefs.errors import EpochUnknown, PublicationRefused, SelectionRefused
 from beliefs.publish import publication_preview
 from nodes.core.ids import NodeId
 
+from science.acceptance import acceptance_inputs
 from science.coordination import resolve_project_ref
 from science.publication import parse_destination, selection_detail
 from science.refusal import Refusal, Refused
@@ -18,7 +19,8 @@ def handle(ctx, *, target, to) -> Report:
     view = resolve_project_ref(ctx, target)
     destination = parse_destination(to)
     try:
-        preview = publication_preview(ctx.world, ctx.coordination(), view, own_pins=ctx.pins())
+        preview = publication_preview(ctx.world, ctx.coordination(), view, own_pins=ctx.pins(),
+                                      own_corpora=acceptance_inputs(ctx).own_roots)
     except EpochUnknown:
         raise Refused(Refusal("no-epoch", f"this world has published no epoch; {REMEDY}")) from None
     except SelectionRefused as refused:
@@ -35,7 +37,7 @@ def handle(ctx, *, target, to) -> Report:
         KeyVals("selection", selection),
         KeyVals("closure", (("status", "complete"),)),
     ]
-    # Empty or None alike: under a coordination v2 pin the kernel returns None only when no replica contributes.
+    # Own-only selections, including declared replicas, have no entries: None under v2, () under v3.
     if preview.attributions:
         report.append(KeyVals("attribution", tuple((address, f"{corpus} {marker}")
                                                    for address, corpus, marker in preview.attributions)))
