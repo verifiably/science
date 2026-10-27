@@ -1,0 +1,13 @@
+## Next
+selection:
+  project: coord:5cd610f49903fba71bd98fbc1506b900@a21b30f8d9597a70898fc19602fd3569
+  name: multiple-myeloma
+  complete: true
+  absent: none
+  world: 6f10ffd595655edb9150170c63242c16
+  corpus 5a6a882eb10edd3184465bd79af40db4: 464d6124bb8965cc70f087037082a243558366c6c498f9655916e0deb235b9e8
+  corpus 8b5d0c802677ee445e2b9d91ebf5d6a7: e474d55a78e0d5f580ce740d0ecc5728d95bea280e0c4d4f5272726339eae5f7
+propositions:
+  proposition:concept-disease-stage-affects-protein-ezh2: not-ready: concept:disease-stage affects protein:EZH2
+  proposition:protein-phf19-affects-concept-overall-survival: not-ready: Higher PHF19 expression predicts shorter overall survival — inquiry 0001-prognosis's spine, minted here with no evidence.
+  proposition:concept-disease-stage-affects-protein-phf19: admitted: concept:disease-stage affects protein:PHF19
