@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: second-project-milestone
 created: 2026-09-23T11:40:35Z
-updated: 2026-10-27T12:55:30Z
+updated: 2026-10-27T12:55:31Z
 started: 2026-10-27T00:22:44Z
 depends: [sci-b1c777, beliefs-fe7149, beliefs-c08725, sci-c5528e, sci-923d3a, beliefs-9ce6e4, sci-dc0381, sci-7079e3]
 tags: [projects]
@@ -241,3 +241,4 @@ The milestone of docs/specs/2026-09-23-projects-corpora-and-workspaces-design.md
 - 2026-10-27T12:55:28Z (second-project-milestone): attached: rehearsal-rb-progress-portable.json (11312 bytes): portable derivative of rehearsal-rb-progress.json (host paths replaced by placeholders); raw bytes retained at $WORK_ROOT/science/sci-0d00d2/state/rb/runs/20261027T123647Z/progress.json, sha256 7748c772dc4b36d4
 - 2026-10-27T12:55:29Z (second-project-milestone): detached: rehearsal-rb-reconcile-stdout.txt: layout gate refused host paths; portable derivative attached as rehearsal-rb-reconcile-stdout-portable.txt, raw bytes kept at $WORK_ROOT/science/sci-0d00d2/rb-reconcile-stdout.txt
 - 2026-10-27T12:55:30Z (second-project-milestone): attached: rehearsal-rb-reconcile-stdout-portable.txt (168 bytes): portable derivative of rehearsal-rb-reconcile-stdout.txt (host paths replaced by placeholders); raw bytes retained at $WORK_ROOT/science/sci-0d00d2/rb-reconcile-stdout.txt, sha256 3eded564979e87f3
+- 2026-10-27T12:55:31Z (second-project-milestone): detached: rehearsal-rb-run1-stdout.txt: layout gate refused host paths; portable derivative attached as rehearsal-rb-run1-stdout-portable.txt, raw bytes kept at $WORK_ROOT/science/sci-0d00d2/rb-run1-stdout.txt
