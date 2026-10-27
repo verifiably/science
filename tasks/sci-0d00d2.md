@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: second-project-milestone
 created: 2026-09-23T11:40:35Z
-updated: 2026-10-27T11:12:26Z
+updated: 2026-10-27T11:16:07Z
 started: 2026-10-27T00:22:44Z
 depends: [sci-b1c777, beliefs-fe7149, beliefs-c08725, sci-c5528e, sci-923d3a, beliefs-9ce6e4, sci-dc0381, sci-7079e3]
 tags: [projects]
@@ -59,3 +59,4 @@ The milestone of docs/specs/2026-09-23-projects-corpora-and-workspaces-design.md
 - 2026-10-27T11:12:25Z (second-project-milestone): resumed
   provenance: {"harness_session":"claude-code:74a061f4-8320-41fa-a2a3-a3ce105dd286","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-27T11:12:26Z (second-project-milestone): review: plan round 2 — verdict: revise; findings: P1 2, P2 1; reviewer: codex/gpt-6-astra
+- 2026-10-27T11:16:07Z (second-project-milestone): plan revision 3 at 2d23624: per-attempt state directories (state/<name>: world.json, journals, declared.json, immutable query templates, runs/ with queries-resolved/), journals bound to world id and config; two-phase journal (attempt/record) with unique keys per mutation, stop-and-reconcile (exit 3, --reconcile KEY=identity|none) for uncertain writes, selection re-issued on resume, content verification per key; three drills (stop between select and mint, crash before record, fresh journal against a completed world which now stops at W1.claim); query equality by projection digest (query_digest's serialization) with raw hashes kept for integrity
