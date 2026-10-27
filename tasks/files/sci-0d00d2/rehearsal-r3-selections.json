@@ -1,0 +1,197 @@
+[
+  {
+    "absent": [],
+    "address": "coord:5cd610f49903fba71bd98fbc1506b900",
+    "complete": true,
+    "contributing": [
+      "5a6a882eb10edd3184465bd79af40db4",
+      "8b5d0c802677ee445e2b9d91ebf5d6a7"
+    ],
+    "epoch": "58abe94e8afc142354298752f64de9ad08dc59383834f577a907ab2da346f944",
+    "equivalent": true,
+    "input_projection_sha256": "a7f420115fd54519194fb25d0d88d36a8ea26741fe99c4673bbabeb5d4abc1db",
+    "key": "R1.multiple-myeloma",
+    "name": "multiple-myeloma",
+    "raw_input_sha256": "f846932bf6aa900d04d1b6d8321133ed5528ddc53a870a65631ce1702980dda9",
+    "revision": "a21b30f8d9597a70898fc19602fd3569",
+    "selected": [
+      "analysis-spec:10e8bfce1aaad8a937a79bfba7cf523ac42b4240ec8b15e20e5b5f450d234714",
+      "assessment:27bd9753ffa77bf6",
+      "proposition:concept-disease-stage-affects-protein-ezh2",
+      "proposition:concept-disease-stage-affects-protein-phf19",
+      "proposition:protein-phf19-affects-concept-overall-survival",
+      "run:616f2685e4e3aaaa83f84560ec3b1fd391207c9425b6572a3b78bfe658555809",
+      "run:8b1a24011fb81744fe952ef5ef9fa7da7f6500cbeb0284063e3f6abe839b819b",
+      "verification:353bd0698f70bd52c4ac3b4cd681c87dad9987fff9b2d311a77a6e97a0bd24fd"
+    ],
+    "stored_projection_sha256": "a7f420115fd54519194fb25d0d88d36a8ea26741fe99c4673bbabeb5d4abc1db",
+    "unresolved": []
+  },
+  {
+    "absent": [],
+    "address": "coord:b935ebbf4bf53cff5e77a4d1122e3e2d",
+    "complete": true,
+    "contributing": [
+      "5a6a882eb10edd3184465bd79af40db4",
+      "8b5d0c802677ee445e2b9d91ebf5d6a7"
+    ],
+    "epoch": "58abe94e8afc142354298752f64de9ad08dc59383834f577a907ab2da346f944",
+    "equivalent": true,
+    "input_projection_sha256": "a7f420115fd54519194fb25d0d88d36a8ea26741fe99c4673bbabeb5d4abc1db",
+    "key": "R1.cancer",
+    "name": "cancer",
+    "raw_input_sha256": "f846932bf6aa900d04d1b6d8321133ed5528ddc53a870a65631ce1702980dda9",
+    "revision": "cddbcc5b69a10920c16ff952361b4801",
+    "selected": [
+      "analysis-spec:10e8bfce1aaad8a937a79bfba7cf523ac42b4240ec8b15e20e5b5f450d234714",
+      "assessment:27bd9753ffa77bf6",
+      "proposition:concept-disease-stage-affects-protein-ezh2",
+      "proposition:concept-disease-stage-affects-protein-phf19",
+      "proposition:protein-phf19-affects-concept-overall-survival",
+      "run:616f2685e4e3aaaa83f84560ec3b1fd391207c9425b6572a3b78bfe658555809",
+      "run:8b1a24011fb81744fe952ef5ef9fa7da7f6500cbeb0284063e3f6abe839b819b",
+      "verification:353bd0698f70bd52c4ac3b4cd681c87dad9987fff9b2d311a77a6e97a0bd24fd"
+    ],
+    "stored_projection_sha256": "a7f420115fd54519194fb25d0d88d36a8ea26741fe99c4673bbabeb5d4abc1db",
+    "unresolved": []
+  },
+  {
+    "absent": [],
+    "address": "coord:50bf5480a5ca48dae9c9a0e384ab9616",
+    "complete": true,
+    "contributing": [
+      "5a6a882eb10edd3184465bd79af40db4",
+      "8b5d0c802677ee445e2b9d91ebf5d6a7"
+    ],
+    "epoch": "58abe94e8afc142354298752f64de9ad08dc59383834f577a907ab2da346f944",
+    "equivalent": true,
+    "input_projection_sha256": "e7824d0d4f4be248f6cd937551c88086f5513cec5a786826fcde30e815293326",
+    "key": "R1.health",
+    "name": "health",
+    "raw_input_sha256": "bbe86645a1a27da08dbd25738755a7986e184d4ef0374ab231172caf1765f5ed",
+    "revision": "a0a88926bd9ee8b582aa732677f92b31",
+    "selected": [
+      "analysis-spec:10e8bfce1aaad8a937a79bfba7cf523ac42b4240ec8b15e20e5b5f450d234714",
+      "analysis-spec:5132014c5feecd52d09c801c220074bae2fd7677ec009b1a0228186602763036",
+      "assessment:27bd9753ffa77bf6",
+      "dataset:sha256:22bc74180538f1c53fd1e336f3c056c96eae712c5d752ab016cc2baab8967b81",
+      "dataset:sha256:e565a18845914ff4fd1656f1a45f303f723a78f32c758d1fadb1854f899a7dd3",
+      "proposition:concept-disease-stage-affects-protein-ezh2",
+      "proposition:concept-disease-stage-affects-protein-phf19",
+      "proposition:protein-phf19-affects-concept-overall-survival",
+      "run:616f2685e4e3aaaa83f84560ec3b1fd391207c9425b6572a3b78bfe658555809",
+      "run:8b1a24011fb81744fe952ef5ef9fa7da7f6500cbeb0284063e3f6abe839b819b",
+      "verification:353bd0698f70bd52c4ac3b4cd681c87dad9987fff9b2d311a77a6e97a0bd24fd"
+    ],
+    "stored_projection_sha256": "e7824d0d4f4be248f6cd937551c88086f5513cec5a786826fcde30e815293326",
+    "unresolved": []
+  },
+  {
+    "absent": [],
+    "address": "coord:4081faa9f849ae139ad9f9e1e781da15",
+    "complete": true,
+    "contributing": [
+      "8b5d0c802677ee445e2b9d91ebf5d6a7"
+    ],
+    "epoch": "58abe94e8afc142354298752f64de9ad08dc59383834f577a907ab2da346f944",
+    "equivalent": true,
+    "input_projection_sha256": "02a9932ecd6b65a041ae2b68a0bf23c138ea649b28656d227898d38719c6c4f7",
+    "key": "R1.multiple-myeloma-findings",
+    "name": "multiple-myeloma-findings",
+    "raw_input_sha256": "1d009c2f4f50ae16eafa8a2ff43e651f455e7b95d09ddfb1b6525772b25fbdfb",
+    "revision": "0e3eaaa70173c47841864829c3633390",
+    "selected": [
+      "analysis-spec:10e8bfce1aaad8a937a79bfba7cf523ac42b4240ec8b15e20e5b5f450d234714",
+      "dataset:sha256:a6bf229ef0abd8e11f0b7f017cbdb6977395e23d83fb122fcf141f723ba1e448",
+      "proposition:concept-disease-stage-affects-protein-phf19",
+      "run:8b1a24011fb81744fe952ef5ef9fa7da7f6500cbeb0284063e3f6abe839b819b"
+    ],
+    "stored_projection_sha256": "02a9932ecd6b65a041ae2b68a0bf23c138ea649b28656d227898d38719c6c4f7",
+    "unresolved": []
+  },
+  {
+    "absent": [],
+    "address": "coord:50bf5480a5ca48dae9c9a0e384ab9616/57b4f0a00983ce08ef0ab18eb5ca34f1",
+    "complete": true,
+    "contributing": [
+      "5a6a882eb10edd3184465bd79af40db4",
+      "8b5d0c802677ee445e2b9d91ebf5d6a7"
+    ],
+    "epoch": "accf615c12ee393e2024fbbff9f1844405236874b8899aacbc5be5b423719b01",
+    "equivalent": true,
+    "input_projection_sha256": "10f605d33f9105949ea41a21a6520d429d254f89cb5318f937303dc947beeb62",
+    "key": "R3.question.health",
+    "name": "Does disease stage drive the PRC2 catalytic core (EZH2) where it drives PHF19?",
+    "raw_input_sha256": "66d003d64884645f147b9bf9c77aec1765fc21c3f33efb84a2625bbc6499166e",
+    "revision": "26dc94d795211235bb482cca8454ca5b",
+    "selected": [
+      "analysis-spec:5132014c5feecd52d09c801c220074bae2fd7677ec009b1a0228186602763036",
+      "assessment:27bd9753ffa77bf6",
+      "dataset:sha256:22bc74180538f1c53fd1e336f3c056c96eae712c5d752ab016cc2baab8967b81",
+      "dataset:sha256:e565a18845914ff4fd1656f1a45f303f723a78f32c758d1fadb1854f899a7dd3",
+      "proposition:concept-disease-stage-affects-protein-ezh2",
+      "proposition:concept-disease-stage-affects-protein-phf19",
+      "run:616f2685e4e3aaaa83f84560ec3b1fd391207c9425b6572a3b78bfe658555809",
+      "run:8b1a24011fb81744fe952ef5ef9fa7da7f6500cbeb0284063e3f6abe839b819b",
+      "verification:353bd0698f70bd52c4ac3b4cd681c87dad9987fff9b2d311a77a6e97a0bd24fd"
+    ],
+    "stored_projection_sha256": "10f605d33f9105949ea41a21a6520d429d254f89cb5318f937303dc947beeb62",
+    "unresolved": []
+  },
+  {
+    "absent": [],
+    "address": "coord:b935ebbf4bf53cff5e77a4d1122e3e2d/ea58796421af45fc520ecbca6ff0cc66",
+    "complete": true,
+    "contributing": [
+      "5a6a882eb10edd3184465bd79af40db4",
+      "8b5d0c802677ee445e2b9d91ebf5d6a7"
+    ],
+    "epoch": "accf615c12ee393e2024fbbff9f1844405236874b8899aacbc5be5b423719b01",
+    "equivalent": true,
+    "input_projection_sha256": "10f605d33f9105949ea41a21a6520d429d254f89cb5318f937303dc947beeb62",
+    "key": "R3.reuse",
+    "name": "Does disease stage drive the PRC2 catalytic core (EZH2) where it drives PHF19?",
+    "raw_input_sha256": "66d003d64884645f147b9bf9c77aec1765fc21c3f33efb84a2625bbc6499166e",
+    "revision": "26b0594b243f11145bbbdd20ac4df8b4",
+    "selected": [
+      "analysis-spec:5132014c5feecd52d09c801c220074bae2fd7677ec009b1a0228186602763036",
+      "assessment:27bd9753ffa77bf6",
+      "dataset:sha256:22bc74180538f1c53fd1e336f3c056c96eae712c5d752ab016cc2baab8967b81",
+      "dataset:sha256:e565a18845914ff4fd1656f1a45f303f723a78f32c758d1fadb1854f899a7dd3",
+      "proposition:concept-disease-stage-affects-protein-ezh2",
+      "proposition:concept-disease-stage-affects-protein-phf19",
+      "run:616f2685e4e3aaaa83f84560ec3b1fd391207c9425b6572a3b78bfe658555809",
+      "run:8b1a24011fb81744fe952ef5ef9fa7da7f6500cbeb0284063e3f6abe839b819b",
+      "verification:353bd0698f70bd52c4ac3b4cd681c87dad9987fff9b2d311a77a6e97a0bd24fd"
+    ],
+    "stored_projection_sha256": "10f605d33f9105949ea41a21a6520d429d254f89cb5318f937303dc947beeb62",
+    "unresolved": []
+  },
+  {
+    "absent": [],
+    "address": "coord:5cd610f49903fba71bd98fbc1506b900/8120a32cfdc87cb7254b5f27a9c4f408",
+    "complete": true,
+    "contributing": [
+      "5a6a882eb10edd3184465bd79af40db4",
+      "8b5d0c802677ee445e2b9d91ebf5d6a7"
+    ],
+    "epoch": "accf615c12ee393e2024fbbff9f1844405236874b8899aacbc5be5b423719b01",
+    "equivalent": true,
+    "input_projection_sha256": "31c8ff33f4fae5be08cb6437c03565c87bdeb7e59a55c90faf0f464bd0ba6174",
+    "key": "R3.question.evidence-bound-terms",
+    "name": "evidence-bound terms",
+    "raw_input_sha256": "7f9301c031a3ca142207cddcfbe88fee54144decfc1de59851d7f5cd227aea98",
+    "revision": "845c91c8e8372855ebebf18c1abb2356",
+    "selected": [
+      "analysis-spec:10e8bfce1aaad8a937a79bfba7cf523ac42b4240ec8b15e20e5b5f450d234714",
+      "assessment:27bd9753ffa77bf6",
+      "proposition:concept-disease-stage-affects-protein-ezh2",
+      "proposition:concept-disease-stage-affects-protein-phf19",
+      "run:616f2685e4e3aaaa83f84560ec3b1fd391207c9425b6572a3b78bfe658555809",
+      "run:8b1a24011fb81744fe952ef5ef9fa7da7f6500cbeb0284063e3f6abe839b819b",
+      "verification:353bd0698f70bd52c4ac3b4cd681c87dad9987fff9b2d311a77a6e97a0bd24fd"
+    ],
+    "stored_projection_sha256": "31c8ff33f4fae5be08cb6437c03565c87bdeb7e59a55c90faf0f464bd0ba6174",
+    "unresolved": []
+  }
+]

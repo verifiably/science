@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: second-project-milestone
 created: 2026-09-23T11:40:35Z
-updated: 2026-10-27T12:52:25Z
+updated: 2026-10-27T12:52:27Z
 started: 2026-10-27T00:22:44Z
 depends: [sci-b1c777, beliefs-fe7149, beliefs-c08725, sci-c5528e, sci-923d3a, beliefs-9ce6e4, sci-dc0381, sci-7079e3]
 tags: [projects]
@@ -160,3 +160,4 @@ The milestone of docs/specs/2026-09-23-projects-corpora-and-workspaces-design.md
 - 2026-10-27T12:52:23Z (second-project-milestone): attached: rehearsal-r3-queries-MANIFEST (520 bytes): rehearsal r3 frozen query manifest
 - 2026-10-27T12:52:24Z (second-project-milestone): attached: rehearsal-r3-progress.json (11261 bytes): rehearsal r3 run 20261027T122639Z: progress.json
 - 2026-10-27T12:52:25Z (second-project-milestone): attached: rehearsal-r3-epochs.json (1641 bytes): rehearsal r3 run 20261027T122639Z: epochs.json
+- 2026-10-27T12:52:27Z (second-project-milestone): attached: rehearsal-r3-selections.json (9734 bytes): rehearsal r3 run 20261027T122639Z: selections.json
