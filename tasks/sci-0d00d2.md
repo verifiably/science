@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: second-project-milestone
 created: 2026-09-23T11:40:35Z
-updated: 2026-10-27T12:54:51Z
+updated: 2026-10-27T12:54:52Z
 started: 2026-10-27T00:22:44Z
 depends: [sci-b1c777, beliefs-fe7149, beliefs-c08725, sci-c5528e, sci-923d3a, beliefs-9ce6e4, sci-dc0381, sci-7079e3]
 tags: [projects]
@@ -210,3 +210,4 @@ The milestone of docs/specs/2026-09-23-projects-corpora-and-workspaces-design.md
 - 2026-10-27T12:54:48Z (second-project-milestone): detached: live-walk-stdout.txt: layout gate refused host paths; portable derivative attached as live-walk-stdout-portable.txt, raw bytes kept at $WORK_ROOT/science/sci-0d00d2/live-walk-stdout.txt
 - 2026-10-27T12:54:49Z (second-project-milestone): attached: live-walk-stdout-portable.txt (4112 bytes): portable derivative of live-walk-stdout.txt (host paths replaced by placeholders); raw bytes retained at $WORK_ROOT/science/sci-0d00d2/live-walk-stdout.txt, sha256 f95b014f31d7eadf
 - 2026-10-27T12:54:51Z (second-project-milestone): detached: live-walk.jsonl: layout gate refused host paths; portable derivative attached as live-walk-portable.jsonl, raw bytes kept at $WORK_ROOT/science/sci-0d00d2/state/live/runs/20261027T124235Z/walk.jsonl
+- 2026-10-27T12:54:52Z (second-project-milestone): attached: live-walk-portable.jsonl (71652 bytes): portable derivative of live-walk.jsonl (host paths replaced by placeholders); raw bytes retained at $WORK_ROOT/science/sci-0d00d2/state/live/runs/20261027T124235Z/walk.jsonl, sha256 1f81acdcfacdc077
