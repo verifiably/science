@@ -12,6 +12,8 @@ opened as one session; `health`, `cancer`, `multiple-myeloma` and a findings-lev
 `cancer`, and one measurement-only question. A measurement: its one code change is the
 contract-chain loader (`sci-7079e3`, the plan's Task 1); everything else runs through the
 commands, with two kernel-level driver steps the design names (genesis, declaration).
+Genesis also installed the holdings-reducer rule in the live world, a persistent rule
+binding the design did not foresee (§1.1 C1a, F11).
 
 Paths: `<data root>` is the directory `SCIENCE_CONFIG` names a file in; `<world>` is
 `<data root>/worlds/aec951bc6becacced13df8f7ae6f8abf`; `<task dir>` is the task's
@@ -94,6 +96,11 @@ was hashed before and after each replication and did not change. The replicas li
 the main checkout's gitignored `.work/sci-0d00d2/`, because the kernel's durability
 allowlist refuses the task directory's volume (the first r1 attempt, refused in
 `replicate_root` before any replica existed).
+
+The plan names the attempts `rehearsal-1`, `rehearsal-a` and `rehearsal-b`; here they are
+r3 (after the failed r1 and r2), ra and rb. The names are short because a replica's
+default service socket, `<replica data root>/worlds/<id>/ops/service.sock`, must fit
+AF_UNIX's 107-byte limit and §5.2's config names no `service_socket`.
 
 - **r1** (`364c4921…`): genesis complete (chain and pins as §5.2); declaration refused
   the `doi:` locator (above).
@@ -968,7 +975,7 @@ each with `project-select health` over MCP, then CLI reads in fresh processes.
 | W2 | four `project` records (§3.2) | confirmed |
 | R0 | **D** `epoch-stale`: **refuted**; it rendered. **R**: the EZH2 and PHF19 → overall-survival rows `not-ready`, the stage → PHF19 row `assessed-unevaluated (epoch-stale)` (`next-stale.txt`): confirmed | D refuted, R confirmed |
 | E3 | `built` `cd1f59f2…` | confirmed |
-| W3 | three mints; the copy's stored projection `10f605d3…` equals its source's; its body opens `Same query as coord:4dbcb704…/3cffd9be…@f9f210e5….`; the source's tip is still `f9f210e5…` (`selections.json`) | confirmed |
+| W3 | three mints; the copy's stored projection `10f605d3…` equals its source's; its body opens `Same query as coord:4dbcb704…/3cffd9be…@f9f210e5….` (the copy's record, attached as `live-reuse-record.md`); the source's tip is still `f9f210e5…` (`selections.json`) | confirmed |
 | E4 | `built` `a854308b…` | confirmed |
 | E5 | `current` `a854308b…`, E4's identity | confirmed |
 | R4 | `refused [kernel-refused] attribution-contract-unpinned: 8b5d0c802677ee445e2b9d91ebf5d6a7` (`publish-preview.txt`) | confirmed |
@@ -1049,18 +1056,24 @@ refusing, which the consumer design's per-row classification allows).
 
 ### M1 Epochs
 
-| epoch | trigger (from the schedule) | writes since the previous | outcome | live s | rehearsal r3 s |
-|---|---|---|---|---|---|
-| E1 | initial | the two declarations (kernel-level) | built | 1.66 | 7.35 |
-| E2 | evidence | `claim`, `spec` | built | 1.44 | 7.69 |
-| E3 | coordination-only | `project` ×4 | built | 1.91 | 8.03 |
-| E4 | coordination-only | `question`, `reuse`, `question` | built | 1.94 | 10.66 |
-| E5 | none | — | current | 1.11 | 5.15 |
+| epoch | trigger (from the schedule) | writes since the previous | outcome | live s | ra s | rb s | r3 s |
+|---|---|---|---|---|---|---|---|
+| E1 | initial | the two declarations (kernel-level) | built | 1.66 | 1.64 | 1.60 | 7.35 |
+| E2 | evidence | `claim`, `spec` | built | 1.44 | 1.44 | 1.46 | 7.69 |
+| E3 | coordination-only | `project` ×4 | built | 1.91 | 1.93 | 1.94 | 8.03 |
+| E4 | coordination-only | `question`, `reuse`, `question` | built | 1.94 | 1.97 | 2.07 | 10.66 |
+| E5 | none | — | current | 1.11 | 1.12 | 1.14 | 5.15 |
 
-Two coordination-only rebuilds out of four builds, 1.91 s and 1.94 s live (8.03 s and
-10.66 s on the rehearsal replica, whose data root sits in a synced tree); each costs about
-what an evidence build costs. The rebuild is forced because any drift is `epoch-stale`
-(consumer limitation 2); R0 shows the stale row is still rendered. This is the count
+Two coordination-only rebuilds out of four builds per world. The live world and the two
+drill replicas agree to within about 0.1 s. r3 was four to five times slower throughout
+for a reason this run did not establish; ra and rb, whose data roots sat in the same
+directory as r3's, ran at live speed. E5, which builds nothing, gives the fixed cost of a
+run of `science epoch`, about 1.1 s. Above that floor a coordination-only build costs about
+0.8 s (E3, E4) and the evidence build about 0.3 s (E2). This is one build per class per
+world, and the world grows across the schedule (E3 and E4 cover more records than E2), so
+the trigger class and the world's size are confounded and the difference is not a cost
+per class. The rebuilds are forced because any drift is `epoch-stale` (consumer
+limitation 2); R0 shows that the stale row is still rendered. These are the counts
 `beliefs-655c10` asked for.
 
 ### M2 Explicit entries
@@ -1084,8 +1097,10 @@ Every `addresses` entry for S30 exists because a run reaches its spec only throu
 facet and a spec emits no relations; the four entries of the health clause exist because
 nothing connects a spec to its target and declared inputs before a run. Storing
 `executes`, `targets` and spec-input edges (`beliefs-7c98bc`) would retire the S30 entry
-from all five views that carry it and, with an EZH2 anchor, the health clause's three
-spec-side entries; anchors themselves would still need naming (F8).
+from all five views that carry it and, with an EZH2 anchor, two of the health clause's
+entries: S-EZH2 and the cohort, the spec's one declared input. The annotation is named
+only in the spec's method text (F4), so it stays an `addresses` entry unless `sci-06c689`
+gives `spec` a `reads` input. Anchors themselves would still need naming (F8).
 
 ### M3 The fence
 
@@ -1134,10 +1149,14 @@ the three arm sessions: 10. The walk's session ledger records 9 acts, one per mi
 
 - **The fence (projects design §7).** One reuse against one research question is not a
   pattern, and it needed no repair. No `beliefs` request is made.
-- **`beliefs-7c98bc`** is noted with M2's counts: the S30 `addresses` entry in five views
-  and the health clause's spec-side entries are what the edges would retire.
+- **`beliefs-7c98bc`** is noted with M2's counts: the S30 `addresses` entry in five views,
+  and S-EZH2 and the cohort in the health clause, are what the edges would retire; the
+  annotation only with `sci-06c689` (the first note's three entries were corrected to two
+  in a second note).
 - **`beliefs-655c10`** is noted with M1's: two coordination-only rebuilds in the schedule's
-  four builds, 1.91 s and 1.94 s live, each about an evidence build's cost.
+  four builds, 1.91 s and 1.94 s live against a 1.1 s floor, with the trigger class
+  confounded with the world's growth (the first note's cost reading and its cause for
+  r3's slowness were corrected in a second note).
 - **Proposed amendment to §6.2's term-clause rule** (design §8, not applied; the user's
   call): a project's term clauses name the concepts its own evidence binds. M2's evidence
   is that the prescribed rule's extra reach here is one unevidenced proposition plus any
