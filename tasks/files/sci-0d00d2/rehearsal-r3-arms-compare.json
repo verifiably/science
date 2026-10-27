@@ -1,0 +1,17 @@
+{
+  "a_workspace_equals_unrelated": {
+    "next.txt": true,
+    "projects.txt": true,
+    "status.txt": true
+  },
+  "all_equal": true,
+  "b_arms_next_equal_walk_next_health": {
+    "unrelated": true,
+    "workspace": true
+  },
+  "c_mcp": {
+    "next_cli_equals_next_health": true,
+    "next_project_mm_equals_next_multiple_myeloma": true,
+    "projects_marks_health_selected": true
+  }
+}
