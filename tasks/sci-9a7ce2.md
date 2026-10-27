@@ -1,15 +1,17 @@
 ---
 id: sci-9a7ce2
 title: Pass own-corpus declarations to publication and preview
-status: doing
+status: done
 priority: 2
 size: s
 complexity: mid
 process: direct
 owner: fix/9a7ce2-own-publication
 created: 2026-10-27T15:49:59Z
-updated: 2026-10-27T19:04:23Z
+updated: 2026-10-27T19:04:24Z
 started: 2026-10-27T18:49:38Z
+completed: 2026-10-27T19:04:24Z
+closed: 2026-10-27T19:04:24Z
 depends: [beliefs-7c612b]
 tags: []
 source: beliefs-7c612b
@@ -35,3 +37,7 @@ Implement the consumer integration from beliefs spec docs/superpowers/specs/2026
 - 2026-10-27T19:04:08Z (fix/9a7ce2-own-publication): Ruling: preserve the existing ValueError on missing/duplicate write mounts (review declined-to-judge item 1). Why: sci-9a7ce2 and beliefs spec deb8d99 section 6 explicitly require the helper’s actual failure behavior, not a new refusal translation. Cost: malformed mount configurations still expose the unpacking error rather than a friendlier diagnostic. Revision: 53c0764. No corrective change.
 - 2026-10-27T19:04:10Z (fix/9a7ce2-own-publication): Ruling: authenticated authorship and live milestone success remain outside this integration (review declined-to-judge item 2). Why: the accepted design supplies an explicit publisher claim and sci-775e90 owns the live rerun. Cost: this integration does not prove authorship or criterion-5 success in the live world. Revision: 53c0764; kernel spec deb8d99. No deferred minor findings.
 - 2026-10-27T19:04:23Z (fix/9a7ce2-own-publication): retained: {"host":"titan","kind":"worktree","path":".worktrees/9a7ce2-own-publication","state":"kept","verification":"verified","purpose":"Reviewed implementation and full review attachment, pending immediate local integration and checked removal in this turn; ignored items are only regenerable pytest cache, testmon database and installed environment","next_owner":"session:codex:01a17eb1-eac2-7e50-9dca-09bb9c9cb87b","cleanup_trigger":"Successful local merge, merged-tree checks, tt-report and final ignored-file/host-pointer checks"}
+- 2026-10-27T19:04:24Z (fix/9a7ce2-own-publication): done
+  provenance: {"harness_session":"codex:01a17eb1-eac2-7e50-9dca-09bb9c9cb87b","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-27T19:04:24Z (fix/9a7ce2-own-publication): Implemented 53c0764: existing Own roots passed to preview and new publication attempts; frozen resume preserved. V2/v3 restored-replica integration, registry/marker exclusions, duplicate/mount/read-error preconditions and remote resume covered. Baseline 886 passed; focused 21 passed; fast 897 passed plus stale-adapter case repaired and rerun 1/1; checks clean. Independent codex/gpt-6.1-sol review accepts with no findings; full report attached and both scope rulings recorded. This session owns immediate local integration and checked worktree removal. No live milestone claim or push; sci-775e90 owns live rerun.
+  provenance: {"harness_session":"codex:01a17eb1-eac2-7e50-9dca-09bb9c9cb87b","harness_session_source":"CODEX_THREAD_ID"}
