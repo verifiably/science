@@ -8,7 +8,7 @@ complexity: mid
 process: direct
 owner: fix/9a7ce2-own-publication
 created: 2026-10-27T15:49:59Z
-updated: 2026-10-27T18:50:17Z
+updated: 2026-10-27T18:52:48Z
 started: 2026-10-27T18:49:38Z
 depends: [beliefs-7c612b]
 tags: []
@@ -27,3 +27,4 @@ Implement the consumer integration from beliefs spec docs/superpowers/specs/2026
   provenance: {"harness_session":"codex:01a17eb1-eac2-7e50-9dca-09bb9c9cb87b","harness_session_source":"CODEX_THREAD_ID"}
 - 2026-10-27T18:50:17Z (fix/9a7ce2-own-publication): resumed
   provenance: {"harness_session":"codex:01a17eb1-eac2-7e50-9dca-09bb9c9cb87b","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-27T18:52:48Z (fix/9a7ce2-own-publication): Direct implementation in .worktrees/9a7ce2-own-publication (fix/9a7ce2-own-publication). Hydrated with documented uv sync route using --frozen; full baseline just test: 886 passed in 118.52s. Kernel prerequisite integrated in beliefs main at 918c5c1; frozen spec deb8d99 section 6 is the integration contract. sci-775e90 already depends on this task. Affected scope: publish/new-attempt call, publish-preview call/comment, command tests and current publication docs; no API/config/export/registry change.
