@@ -270,6 +270,56 @@ def test_a_chain_table_with_empty_predecessors_refuses_naming_the_key(tmp_path):
     assert "predecessors" in refusal.message
 
 
+def _extend_chain(tmp_path: Path, v1: Path, v2: Path) -> tuple[Path, str]:
+    """A third document succeeding v2, and the identity the whole chain compiles to."""
+    import yaml
+    from beliefs.contract.domain import parse_domain_contract
+    from beliefs.profile import shipped_base_contract
+
+    base = shipped_base_contract()
+    previous = None
+    for path in (v1, v2):
+        previous = parse_domain_contract(
+            yaml.safe_load(path.read_text())["contract"], source=str(path), base=base, predecessor=previous
+        )
+    lineage = f"  lineage: {{successor: \"{previous.predecessor}\"}}\n"
+    v3_text = v2.read_text().replace(lineage, f'  lineage: {{successor: "{previous.content_identity}"}}\n')
+    assert v3_text != v2.read_text()
+    v3_text = v3_text.replace(
+        "  operators:\n    regulates-concept-concept:",
+        "  operators:\n    inhibits-concept-concept: {arity: 2, arg_sorts: [concept, concept], "
+        "sign_apt: true, layers: [causal], dimensions: []}\n    regulates-concept-concept:",
+    )
+    successor = parse_domain_contract(
+        yaml.safe_load(v3_text)["contract"], source="v3", base=base, predecessor=previous
+    )
+    v3 = tmp_path / "v3.yaml"
+    v3.write_text(v3_text)
+    return v3, successor.content_identity
+
+
+def test_two_predecessors_are_read_oldest_first(tmp_path):
+    v1, v2, _ = _write_chain(tmp_path)
+    v3, expected = _extend_chain(tmp_path, v1, v2)
+    cfg = load_config(write_config(tmp_path, contracts=f'[{{ document = "{v3}", predecessors = ["{v1}", "{v2}"] }}]'))
+    assert cfg.profile.activated_contracts["testing"] == expected
+
+
+def test_two_predecessors_listed_newest_first_refuse_by_name(tmp_path):
+    v1, v2, _ = _write_chain(tmp_path)
+    v3, _ = _extend_chain(tmp_path, v1, v2)
+    refusal = assert_invalid_config(write_config(tmp_path, contracts=f'[{{ document = "{v3}", predecessors = ["{v2}", "{v1}"] }}]'))
+    assert "no predecessor was supplied" in refusal.message and str(v2) in refusal.message
+
+
+def test_a_contract_document_that_is_not_utf8_refuses(tmp_path):
+    _, v2, _ = _write_chain(tmp_path)
+    bad = tmp_path / "bad.yaml"
+    bad.write_bytes(b"contract: \xff\xfe\n")
+    refusal = assert_invalid_config(write_config(tmp_path, contracts=f'[{{ document = "{v2}", predecessors = ["{bad}"] }}]'))
+    assert str(bad) in refusal.message
+
+
 def test_a_read_contracts_chain_is_available_to_mounts_only(tmp_path):
     v1, v2, expected = _write_chain(tmp_path)
     cfg = load_config(write_config(tmp_path, extra=f'read_contracts = [{{ document = "{v2}", predecessors = ["{v1}"] }}]\n'))

@@ -103,7 +103,7 @@ def load_contract_document(
         _refuse(f"contract document not found: {path}")
     try:
         document = yaml.safe_load(path.read_text())
-    except (OSError, yaml.YAMLError) as caught:
+    except (OSError, UnicodeDecodeError, yaml.YAMLError) as caught:
         _refuse(f"contract document {path} is not readable YAML: {caught}")
     if not isinstance(document, dict) or "contract" not in document:
         _refuse(f"contract document {path} must be a table with a `contract` key")
