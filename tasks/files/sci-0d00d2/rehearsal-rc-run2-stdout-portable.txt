@@ -1,0 +1,4 @@
+resuming <task dir>/state/r3/runs/20261027T123425Z
+stop: W1.claim: proposition:concept-disease-stage-affects-protein-ezh2 already exists in this world
+stop: W1.claim: proposition:concept-disease-stage-affects-protein-ezh2 already exists in this world
+exit 2
