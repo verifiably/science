@@ -1,0 +1,4 @@
+new run <task dir>/state/rb/runs/20261027T123421Z
+stop: <task dir>/state/rb has no declared.json
+stop: <task dir>/state/rb has no declared.json
+exit 2
