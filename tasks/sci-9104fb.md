@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: commons-1b
 created: 2026-10-01T02:21:10Z
-updated: 2026-10-28T21:38:16Z
+updated: 2026-10-28T21:38:17Z
 started: 2026-10-28T20:03:15Z
 depends: [sci-13050a, beliefs-81367e, beliefs-a989fb]
 tags: [commons]
@@ -45,3 +45,5 @@ Spec §12 part 1b: A binds B, adopts B's publication; A publishes an update drop
 - 2026-10-28T21:18:44Z (commons-1b): parked (waiting on user, review): Keith reviews the 1b design revision 4 (worktree .worktrees/commons-1b, commit 8439319, docs/specs/2026-10-28-science-commons-1b-design.md); on accept, tasks start sci-9104fb in the worktree and invoke writing-plans (one plan, two phases per §7; the retirement tail waits on beliefs-a989fb)
   provenance: {"harness_session":"claude-code:f666f956-1928-4c06-8bf1-80cd5a586d90","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-28T21:38:16Z (commons-1b): review: spec round 3 — verdict: revise; findings: P1 4, P2 2, P3 1; reviewer: codex/gpt-6-astra
+- 2026-10-28T21:38:17Z (commons-1b): resumed
+  provenance: {"harness_session":"claude-code:f666f956-1928-4c06-8bf1-80cd5a586d90","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
