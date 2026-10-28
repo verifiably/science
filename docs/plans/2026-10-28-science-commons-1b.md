@@ -27,7 +27,13 @@ dependency), pytest with the certified-world fixtures and `helpers.snapshot`.
 §4.1, §4.2, §5.4, §6, §7, §8. Section numbers below (§5.1 …) are the 1b design's unless
 prefixed `commons` or `kernel`.
 
-**Review history:** revision 1, unreviewed.
+**Review history:** revision 1 (`cad8b3b`) reviewed by a fresh `claude-code` reviewer
+(round 1, revise: 2 Critical, 8 Important, 10 Minor): `keep` must load for an unpinned id
+(§5.7 rule 1), a sibling publication needs a fork of the publisher, the clock seam is the
+writer's, the guard tests need `reopened`, the dependency walk needs every holder's view
+and profile, `config-stale` needs the file's path, reconcile looks at `mounted` pins only,
+the checklist candidates need construction routes, the group key comes from the marker's
+`destination`, and the late-chain state precedes the late-link one. Revision 2 answers all.
 
 **Status:** draft.
 
@@ -71,7 +77,10 @@ Inputs the design implies but no task's tests exercise directly, most likely to 
 each line's test is in the owning task.
 
 1. **`keep` naming a corpus id the sharing registry does not pin** (a typo would silently
-   keep nothing): `load_config` refuses `invalid-input` naming the id. Task 1.
+   keep nothing): `load_config` accepts it, since §5.7 rule 1 requires the entry *before*
+   the `adopt` that first pins a late predecessor; `adopt`'s re-evaluation and `show`
+   report a Finding `keep names corpus <id>, which the sharing registry does not pin`.
+   Tasks 8, 9.
 2. **A candidate whose `(world, view, destination)` matches no mounted group** (the first
    adoption of a publisher's view): the preflight is trivially *resolved*, nothing is
    classified against, the candidate mounts. Task 8.
@@ -125,10 +134,14 @@ each line's test is in the owning task.
 
 **Interfaces:**
 - Produces: `Pin(corpus_id, marker, artifact, world, view, source, fetch, state)` with no
-  `keep` field; `ScienceConfig.keep: tuple[str, ...] = ()`; `load_config` reads a top-level
-  `keep = ["<32 hex>", ...]`, default `()`, refusing `invalid-input` for a non-list, a
-  non-hex entry, or (when `sharing_root` is set) an id no registry pin records, naming the
-  id. Every `Pin(...)` constructor site in tests drops its `keep` argument.
+  `keep` field; `ScienceConfig.keep: tuple[str, ...] = ()` and `ScienceConfig.source:
+  tuple[Path, str] | None = None` (the configuration file's path and the SHA-256 of its
+  bytes, set by `load_config`, `None` for a configuration built in code); `load_config`
+  reads a top-level `keep = ["<32 hex>", ...]`, default `()`, refusing `invalid-input` for
+  a non-list or a non-hex entry, naming the entry; an id no pin records is accepted
+  (Review Focus 1). The `Pin(...)` sites in `tests/test_acceptance.py`,
+  `tests/test_config_sharing.py`, `tests/test_publish_ownership.py` and
+  `tests/test_sharing_registry.py` already pass no `keep`; they need no edit.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -142,10 +155,10 @@ def test_a_pin_file_with_a_keep_key_still_parses_and_is_rewritten_without_it(tmp
     registry.write_pin(PIN)
     assert "keep" not in json.loads(path.read_text()) and json.loads(path.read_text())["version"] == 1
 # test_config_sharing.py
-def test_keep_loads_as_corpus_ids(tmp_path): ...            # keep = ["0"*32] with a pin for it -> cfg.keep == ("0"*32,)
+def test_keep_loads_as_corpus_ids(tmp_path): ...            # keep = ["0"*32] -> cfg.keep == ("0"*32,), pinned or not
 def test_keep_defaults_to_empty(tmp_path): ...
 def test_keep_refuses_a_non_hex_entry(tmp_path): ...        # invalid-input naming the entry
-def test_keep_refuses_a_corpus_no_pin_records(tmp_path): ...  # Review Focus 1: invalid-input naming the id
+def test_load_config_records_the_files_path_and_digest(tmp_path): ...   # cfg.source == (path, sha256(bytes))
 ```
 
 - [ ] **Step 2: Run the tests to verify they fail**
@@ -156,11 +169,10 @@ Expected: FAIL (`Pin` still requires `keep`; `ScienceConfig` has no `keep`).
 - [ ] **Step 3: Implement**
 
 Remove `keep` from `Pin`, `_pin_from` (stop reading it; other keys are already ignored)
-and `_pin_to`. Add `keep` to `ScienceConfig` and to `load_config` after the `sharing_root`
-block, validated like `accept` (`config.py:164-172`) plus the registry check; `show`'s
-`keep` row becomes `_yes(corpus_id in config.keep)`; `write_commons_config` emits `keep`.
-Fix every `Pin(` site in `tests/test_acceptance.py`, `tests/test_sharing_registry.py` and
-`tests/test_cmd_show.py`.
+and `_pin_to`. Add `keep` and `source` to `ScienceConfig` and to `load_config`, `keep`
+validated like `accept` (`config.py:175-179`); `show`'s `keep` row becomes
+`_yes(corpus_id in config.keep)` (`test_cmd_show.py:32`'s `keep: no` stays true);
+`write_commons_config` emits `keep`.
 
 - [ ] **Step 4: Run the tests and the fast suite**
 
@@ -254,8 +266,14 @@ git commit -m "feat(sharing): the admission checklist over content identity"
   `corpus_id`'s; unequal holders refuse `invalid-input` naming every holder and that the
   copies differ. `cited` additionally refuses `Refused(Refusal("corpus-retired", <message
   naming the corpus, the record and "reopen the session">, {"corpus": …, "record": …}))`
-  when the chosen holder's kernel status is not live. `dataset_at` considers only read
-  views whose corpus is live. `CODES` gains `corpus-retired`.
+  when the chosen holder's kernel status is `known and not live` (a configured root the
+  world never admitted is a different, existing refusal). `dataset_at` considers only read
+  views whose corpus is not `known and not live`. `CODES` gains `corpus-retired`. The
+  retired-corpus tests use the `reopened` fixture (P1 mounted at *B*; under `adopted` the
+  session's ids are *B*'s write root alone and no guard can fire) and retire P1 with
+  `open_world(cfg.world, authority=FIXTURE_AUTHORITY).retire(cid)`, the kernel act the door
+  will wrap in Task 13; `ReadContext.open(cfg).world.status(cid)` rescans the registry and
+  reads `live is False` while the pin stays `mounted`.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -264,10 +282,11 @@ def test_cited_answers_the_write_root_for_equal_copies_in_two_mounts(two_corpora
 def test_cited_answers_the_least_corpus_for_equal_copies_outside_the_write_root(...): ...
 def test_cited_refuses_differing_copies_naming_both_holders(...): assert r.code == "invalid-input" and "differ" in r.message
 def test_mount_holding_follows_the_same_rule(...): ...
-def test_cited_refuses_a_record_held_only_by_a_retired_corpus(...):
-    open_world(cfg.world, authority=FIXTURE_AUTHORITY).retire(cid)   # the kernel act directly; the door is Task 13's
-    r = refused(lambda: ReadContext.open(cfg).cited(ref)); assert r.code == "corpus-retired" and r.data == {"corpus": cid, "record": ref}
-def test_dataset_at_ignores_a_retired_holder(...): assert ReadContext.open(cfg).dataset_at(address) is None
+def test_cited_refuses_a_record_held_only_by_a_retired_corpus(reopened):
+    cid = a_identity(reopened.a)["corpus_id"]; ref = a_identity(reopened.a)["assessment"]
+    open_world(reopened.b.world, authority=FIXTURE_AUTHORITY).retire(cid)
+    r = refused(lambda: ReadContext.open(reopened.b).cited(ref)); assert r.code == "corpus-retired" and r.data == {"corpus": cid, "record": ref}
+def test_dataset_at_ignores_a_retired_holder(reopened): assert ReadContext.open(reopened.b).dataset_at(a_identity(reopened.a)["dataset"]) is None   # after the same retire
 ```
 
 - [ ] **Step 2: Run the tests to verify they fail**
@@ -365,7 +384,7 @@ git commit -am "feat(acceptance): the Carried branch compares content identities
 ```python
 def test_symbol_fields_binds_the_v2_retraction_enumeration_and_not_v1():
     assert SYMBOL_FIELDS["enumerate_retractions_v2"] == "retraction" and "enumerate_retractions" not in SYMBOL_FIELDS
-def test_an_epoch_science_builds_names_the_v2_rule(certified_work): ...   # build_over, then the epoch's bindings name enumerate_retractions_v2's identity
+def test_an_epoch_science_builds_names_the_v2_rule(shared): ...   # test_epoch_verb's own `shared` world; build_over, then the epoch's retraction binding is enumerate_retractions_v2's identity
 ```
 
 - [ ] **Step 2: Run to verify it fails** — `just test-one tests/test_epoch_verb.py -v`; Expected: FAIL.
@@ -383,10 +402,12 @@ def test_an_epoch_science_builds_names_the_v2_rule(certified_work): ...   # buil
   `MarkerFields(...)`, `Pin(...)`, `SharingLine(...)`)
 
 **Interfaces:**
-- Consumes: `science.publication.MarkerFields` (`uid, world, view, selection,
-  attributions, supersedes`), `science.publication.marker_of(root)`,
-  `beliefs.publication_arrival.publication_tip(roots, view, destination)`,
-  `beliefs.session.ledger.read_ledger_evidence`, `LedgerReader.sharing()`,
+- Consumes: `science.publication.MarkerFields`, which this task extends with
+  `destination: Destination` read from the marker facet's `destination` member through
+  `Destination.from_projection` (`marker_fields` fills it); `science.publication.marker_of(root)`;
+  `beliefs.publication_arrival.publication_tip(roots: tuple[Path, ...], view:
+  CoordinationAddress, destination: Destination)` (`CoordinationAddress.parse` for the
+  view); `beliefs.session.ledger.read_ledger_evidence`, `LedgerReader.sharing()`;
   `science.sharing.replay`'s ordering key `(at, session id, position)`.
 - Produces:
 
@@ -398,13 +419,15 @@ class Held:                      # one established authorized root, parsed once
     marker: MarkerFields
     state: Literal["mounted", "retired"]
 
-GroupKey = tuple[str, str, str]  # (world, unpinned view, destination locator)
+GroupKey = tuple[str, str, str]  # (world, unpinned view, destination locator), from the marker alone
 
-def group_of(marker: MarkerFields, destination: str) -> GroupKey
-def established(registry: SharingRegistry, operations_root: Path) -> tuple[Pin, ...]
-    # the pins folded in memory from every ledger's sharing lines in replay order under
-    # apply_line's state rule, keeping `mounted` and `retired` only; never reads pin files;
-    # refuses invalid-input naming the corpus and root when a mounted pin's root is unreadable (Review Focus 3)
+def group_of(marker: MarkerFields) -> GroupKey
+def sharing_lines(operations_root: Path) -> tuple[SharingLine, ...]
+    # every ledger's sharing lines in replay order; refuses SharingLedgerUnreadable as replay does
+def established(registry: SharingRegistry, lines: Sequence[SharingLine]) -> tuple[Pin, ...]
+    # the pins folded in memory from `lines` under apply_line's state rule, keeping `mounted`
+    # and `retired` only; never reads pin files; refuses invalid-input naming the corpus and
+    # root when a mounted pin's root is unreadable (Review Focus 3)
 def authorized(pins: Iterable[Pin], bindings: Mapping[str, ProviderBinding], registry, key: GroupKey) -> tuple[Held, ...]
     # established pins in the group whose source is origin-confirmed to key[0]
 def ancestry(tip: tuple[str, str], held: Iterable[Held]) -> frozenset[tuple[str, str]]
@@ -473,15 +496,19 @@ class Reason:
     kind: Literal["configuration", "chain", "attribution", "dependency"]
     detail: tuple[str, ...]   # chain: (the kept corpus,); attribution: (the naming corpus,); dependency: sorted addresses
 
-def dependency_closure(write_view: ReadView, profile: ProfileSpec) -> frozenset[str]
-    # fixed point of closure_missing from every write-root record plus the facet references of §5.7 rule 4
-    # (assessment spec/run/proposition; run spec; verification's two runs; spec's dataset roles and target;
-    # correction target); `supersedes` fields are not followed
+Holder = tuple[str, ReadView, ProfileSpec]   # (corpus_id, view opened by root, that root's manifest profile)
+
+def dependency_closure(write_root: Holder, holders: Sequence[Holder]) -> frozenset[str]
+    # the fixed point of: seed = every write-root record's address; for each seed address, the holder
+    # among `write_root` + `holders` that holds it (any, bytes equal under the checklist) supplies the
+    # node; add closure_missing(holder.view, (address,)) and the facet references of §5.7 rule 4, decoded
+    # under that holder's profile (assessment spec/run/proposition; run spec; verification's two runs;
+    # spec's dataset roles and target; correction target); `supersedes` fields are not followed; stop
+    # when no address is added. A seed held by no holder is kept as an address and not expanded.
 def required(predecessor: Held, *, keep: Sequence[str], group_chain: Sequence[Held], tip: tuple[str, str],
-             mounted: Sequence[Held], write_view: ReadView, live_views: Sequence[tuple[str, ReadView]],
-             profile: ProfileSpec) -> tuple[Reason, ...]
+             mounted: Sequence[Held], write_root: Holder, live: Sequence[Holder]) -> tuple[Reason, ...]
     # every applicable reason, in the kind order above; `dependency` lists the closure addresses that only
-    # `predecessor` holds with equal content among `live_views`
+    # `predecessor` holds with equal content among `live`
 ```
 
 - [ ] **Step 1: Write the failing tests**
@@ -498,9 +525,7 @@ def test_nothing_required_is_empty(...)
 ```
 
 - [ ] **Step 2: Run to verify they fail** — `just test-one tests/test_retention.py -v`; Expected: FAIL.
-- [ ] **Step 3: Implement `retention.py`.** `dependency_closure` iterates `closure_missing`
-  over a growing seed until no address is added, reading facet references through the
-  decoders on every record the seed names that the write root or a live view holds.
+- [ ] **Step 3: Implement `retention.py`** as the Interfaces block's fixed point says.
 - [ ] **Step 4: Run** `just test-one tests/test_retention.py -v`, then `just test-fast`; Expected: PASS.
 - [ ] **Step 5: Commit** — `git add python/src/science/retention.py python/tests/test_retention.py && git commit -m "feat(sharing): why a superseded publication stays mounted"`
 
@@ -510,10 +535,10 @@ def test_nothing_required_is_empty(...)
 
 **Files:**
 - Modify: `python/src/science/commands/adopt.py` (whole handler), `commands/adopt/prompt.md`,
-  `python/src/science/refusal.py` (`divergent-publication`, `config-stale`),
-  `python/src/science/report.py` (a `retired` pin block renders like the others; a
-  `Finding` for the pending door)
-- Test: `python/tests/test_cmd_adopt.py`
+  `python/src/science/refusal.py` (`divergent-publication`, `config-stale`); `report.py`
+  needs no change (`PinBlock` renders any transition; `Finding` exists)
+- Test: `python/tests/test_cmd_adopt.py`, `python/tests/helpers/commons.py` (the
+  candidate builders below)
 
 **Interfaces:**
 - Consumes: Task 2 `conflicts`; Task 6 `established`, `authorized`, `classify`, `current`,
@@ -521,10 +546,11 @@ def test_nothing_required_is_empty(...)
   `ctx.world.status`.
 - Produces: `handle(ctx, writer, *, location, corpus_id)` in this order (§5.7):
   1. inputs; `replay`; **reconcile completed effects**: `fetched`/`admitted` pins the
-     kernel lists admitted → `mounted` line and pin (as today); pins whose kernel status is
-     not live → see Task 13 (until then: a Finding `retirement pending: the kernel's retire
-     door (beliefs-a989fb) has not landed` per such pin, nothing written); a `departed`
-     status → its own Finding.
+     kernel lists admitted → `mounted` line and pin (as today); `mounted` pins whose kernel
+     status is `known and not live` and whose status record is `retired` → see Task 13
+     (until then: a Finding `retirement pending: the kernel's retire door (beliefs-a989fb)
+     has not landed` per such pin, nothing written); a `departed` status record → its own
+     Finding. A `fetched` pin is never looked at here.
   2. target state (as today, with one change: an already-mounted target proceeds to step 4
      and refuses `invalid-input` "already adopted" only when step 4 wrote nothing).
   3. candidate: fetch or reuse (as today); **checklist**: `conflicts(candidate_view,
@@ -539,24 +565,42 @@ def test_nothing_required_is_empty(...)
      `retired` `Held` → `adopt-conflict` rule `chain-retired`, `corpus` = the retired
      intermediate; otherwise admit and mark `mounted` (as today).
   4. **re-evaluation** over every group of the established state: for each `resolved`
-     group, each mounted non-tip member in chain order; `required(...)` empty → Task 13's
-     retirement (until then: the pending-door Finding, nothing written); non-empty → a
-     `KeyVals("retention <corpus>", (("kept", "configuration" | "chain (for <c>)" |
-     "attribution (named by <c>)" | "dependency (<addresses>)"), …))` block. Before any
-     retirement the configuration file's bytes are compared with those loaded
-     (`ScienceConfig` gains `source_digest: str`, set by `load_config`); a difference
-     refuses `Refusal("config-stale", …)` for the retirement step only, after the
-     adoption's blocks. Every retirement report carries the `keep` list evaluated under and
-     the reopen remedy.
+     group, each mounted non-tip member in chain order; `required(...)` empty → first the
+     stale check, then Task 13's retirement (until then: the pending-door Finding, nothing
+     written); non-empty → a `KeyVals("retention <corpus>", (("kept", "configuration" |
+     "chain (for <c>)" | "attribution (named by <c>)" | "dependency (<addresses>)"), …))`
+     block. The **stale check**: when `config.source` is not `None` and the file's current
+     SHA-256 differs from the recorded one, raise `Refused(Refusal("config-stale",
+     <message naming the file, the `keep` list evaluated under and the remedy "restart the
+     service and rerun adopt">, {"path": …, "keep": [...]}))`; the invocation closes
+     refused and its report is not rendered (`dispatch.py`'s `_close_refused`), but the
+     adoption stands because its lines are written, and the message says so. With
+     `config.source` `None` the check is skipped. A `keep` entry naming a corpus no pin
+     records is a Finding (Review Focus 1). Every `retired` block (Task 13) carries the
+     `keep` list evaluated under and the reopen remedy.
   The prompt describes the new refusals and blocks.
+
+  Candidate builders for the checklist, in `helpers/commons.py`, each from
+  `build_reopened`'s installations and using the fork-and-restore of Task 11 where *A*
+  must branch: `build_content_conflict` (fork *A* before any change, `CorpusWriter.revise`
+  of *A*'s proposition with new prose under `FIXTURE_AUTHORITY`, epoch, publish project `a`
+  to `LOC_A3 = "https://remote.test/a3"`; *B* binds `LOC_A3` and adopts → `content` at the
+  proposition's address, named corpus *A*'s P1) and `build_uid_corruption` (a third
+  installation `c` holding one `source` record selected by a `kinds: [source]` project,
+  published to `LOC_C`, adopted by *B*; then `correct_identifier` on that source under
+  `FIXTURE_AUTHORITY` moves its address and keeps its uid, republished to `LOC_C`; *B*
+  adopts the successor → `uid-corruption`). The `deprecated-key` rule has no publication
+  route in the fixture (a differing record sharing a deprecated id needs a second world
+  minting at the old address) and is proved by Task 2's unit test alone; the command path
+  is the same `conflicts` call.
 
 - [ ] **Step 1: Write the failing tests**
 
 ```python
 def test_an_equal_content_republication_passes_the_checklist_and_mounts(conflicting_publication): ...  # B adopts P1 then P1' from LOC_A2; both mounted
-def test_a_differing_copy_refuses_adopt_conflict_content_and_stays_fetched(...): ...
-def test_a_deprecated_key_meeting_a_live_address_refuses_deprecated_key(...): ...
-def test_a_redirect_published_as_a_successor_refuses_uid_corruption(...): ...
+def test_a_differing_copy_refuses_adopt_conflict_content_and_stays_fetched(content_conflict): ...
+def test_a_redirect_published_as_a_successor_refuses_uid_corruption(uid_corruption): ...
+def test_a_keep_entry_no_pin_records_is_a_finding(bound): ...   # Review Focus 1
 def test_a_sibling_republication_refuses_divergent_publication_and_stays_fetched(sibling_publications): ...
 def test_siblings_under_a_never_held_predecessor_refuse_the_same_way(...): ...
 def test_a_refused_sibling_left_fetched_changes_nothing_later(...): ...
@@ -564,13 +608,14 @@ def test_the_first_adoption_of_a_view_is_trivially_resolved(bound): ...   # Revi
 def test_a_successor_keeps_a_predecessor_b_depends_on_and_reports_why(updated): ...   # kept: dependency (<A's assessment>)
 def test_an_unrequired_predecessor_reports_retirement_pending_before_the_door(updated_unkept): ...
 def test_adopting_a_mounted_corpus_again_refuses_only_when_re_evaluation_wrote_nothing(...): ...
-def test_a_changed_configuration_file_refuses_config_stale_for_retirement_only(...): ...
+def test_a_changed_configuration_file_refuses_config_stale_before_the_pending_finding(updated_unkept): ...
+    # the file is rewritten after load; the empty-required branch raises config-stale (nothing is pending-reported)
 ```
 
 (`sibling_publications`, `updated`, `updated_unkept` are Task 11's fixtures; this task adds
-the hand-made candidates and runs against `conflicting_publication`; the fixture-dependent
-tests are written here and marked `xfail(strict=True, reason="Task 11 fixture")` until
-Task 11 lands, which removes the marks.)
+`content_conflict` and `uid_corruption` and runs against `conflicting_publication`; the
+Task 11-dependent tests are written here and marked `xfail(strict=True, reason="Task 11
+fixture")` until Task 11 lands, which removes the marks.)
 
 - [ ] **Step 2: Run to verify they fail** — `just test-one tests/test_cmd_adopt.py -v`; Expected: FAIL.
 - [ ] **Step 3: Implement** the handler order; `_require_no_overlap` and `CONFLICT_REASON` are removed.
@@ -582,9 +627,10 @@ Task 11 lands, which removes the marks.)
 ### Task 9: `show` — supersession and retention
 
 **Files:**
-- Modify: `python/src/science/commands/show.py`, `commands/show/prompt.md`,
-  `commands/show/command.toml` (`reads.families` gains the ledger's family if the schema
-  names one for the operations root; otherwise unchanged — check `schema.py`'s vocabulary)
+- Modify: `python/src/science/commands/show.py`, `commands/show/prompt.md`;
+  `commands/show/command.toml` is unchanged (`reads.families` stays `registry,
+  corpus-stored`: `adopt` declares no read for the ledger it replays either, and
+  `test_cmd_show.py:19-24` keeps asserting the exact set)
 - Test: `python/tests/test_cmd_show.py`
 
 **Interfaces:**
@@ -627,8 +673,8 @@ Task 11 lands, which removes the marks.)
 - [ ] **Step 1: Write the failing tests**
 
 ```python
-def test_publish_refuses_corpus_retired_when_a_session_corpus_is_not_live(adopted): ...   # World.retire directly, as Task 3
-def test_publish_preview_refuses_the_same_way(adopted): ...
+def test_publish_refuses_corpus_retired_when_a_session_corpus_is_not_live(reopened): ...   # World.retire directly, as Task 3; P1 is a session corpus only under reopened
+def test_publish_preview_refuses_the_same_way(reopened): ...
 def test_attribution_ambiguous_names_the_link_to_adopt(...): ...                  # xfail until Task 11's late-link fixture
 def test_attribution_ambiguous_with_unlinked_chains_says_no_marker_orders_them(...): ... # xfail until Task 11
 ```
@@ -649,27 +695,40 @@ def test_attribution_ambiguous_with_unlinked_chains_says_no_marker_orders_them(.
 - Create: `python/tests/test_commons_1b.py`
 
 **Interfaces:**
-- Produces builders, each snapshot-cached (`commons-1b-<name>`), in this chain from
-  `build_derived`:
-  - `build_published_b` — *B* publishes project `b` to `LOC_B` (P2).
+- Produces builders, each snapshot-cached (`commons-1b-<name>`), parametrised by their
+  base so the kept chain (from `build_derived`) and the unkept chain (from
+  `build_reopened`, no verification at *B*) share them:
+  - `fork(installation_home) -> Path` / `restore(copy, installation_home)` — a copy of one
+    installation's directory taken aside and put back at the same path the way
+    `helpers.snapshot.WorldSnapshot.restore` does (`_forget_roots_under`,
+    `_forget_worlds_under`, `rmtree`, `copytree`); the one way to publish a *sibling*, since
+    a publisher's next publish to a destination always supersedes its standing binding tip.
+  - `build_published_b(work, *, base=build_derived)` — `publish_session_epoch(b)` (*B*'s
+    write root drifted), then *B* publishes project `b` to `LOC_B` (P2).
   - `build_a_bound_b` — *A* binds `LOC_B` to *B*'s world.
   - `build_overlapping` — *A* adopts P2; `reopen(a)`; `publish_session_epoch(a)`.
   - `build_updated` — *A* revises project `a`'s query to
     `{"version": "science.view-query.v1", "clauses": [{"all": [{"addresses": [<proposition>, <data.txt dataset>, <concepts.txt dataset>, <levels.txt dataset>, <spec>, <run>]}]}]}`
     (P1's selection minus the assessment, by `a_identity` and `_list_address`), publishes
-    an epoch, and publishes project `a` to `LOC_A` again (P3).
-  - `build_b_updated` — *B* adopts P3 (P1 kept by rule 4); `reopen(b)`; epoch.
-  - `build_b_updated_unkept` — the same chain branched before `build_verified` (no
-    verification at *B*): P1 unrequired, the pending-door Finding.
-  - `build_sibling_publications` — from `build_updated`: *A* publishes project `a` to
-    `LOC_A` once more without reopening (P3′, a sibling of P3 under P1).
-  - `build_late_link` — a three-link chain P1 → P2′ → P3″ at `LOC_A` (A publishes twice
-    more on the unkept branch) with *B* holding P1 and P3″ only.
+    an epoch, and publishes project `a` to `LOC_A` again (P3, superseding P1 through *A*'s
+    standing binding tip).
+  - `build_b_updated` — *B* adopts P3 (P1 kept by rule 4 on the kept chain); `reopen(b)`;
+    epoch.
+  - `build_b_updated_unkept` — `build_b_updated` over the unkept base: P1 unrequired, the
+    pending-door Finding.
+  - `build_sibling_publications` — from `build_overlapping`: `fork` *A*, publish P3 as
+    `build_updated` does, `restore` *A*, publish project `a` to `LOC_A` again (P3′: its
+    binding tip is still P1's, so both P3 and P3′ supersede P1 and the remote holds both).
+  - `build_late_chain` — on the unkept base, branched before `build_updated`: *A*
+    publishes project `a` to `LOC_A` twice more (P2′ superseding P1, P3″ superseding P2′;
+    the dropped-record revision is not needed here); *B* holds P1 only.
+  - `build_late_link` — `build_late_chain`, then *B* adopts P3″ (P1 and P3″ held, P2′
+    absent).
   - Fixtures of the same names without `build_`, in `conftest.py`.
 - Test cases in `test_commons_1b.py`:
 
 ```python
-def test_overlap_reads_each_shared_record_once(overlapping): ...    # address map: holders == (A write root, P2) for A's records
+def test_overlap_reads_each_shared_record_once(overlapping): ...    # address map: holders == (A write root, P2) for A's records; and _world_inputs' pins name both holders (§5.4)
 def test_belief_under_empty_accept_lists_two_excluded_lines(overlapping): ...   # §5.9 step 3, accept = []
 def test_belief_under_accept_b_counts_as_own_assessment_through_the_write_root(overlapping): ...
 def test_the_update_supersedes_p1_and_drops_only_the_assessment(updated): ...
@@ -677,7 +736,11 @@ def test_b_adopting_the_update_keeps_p1_by_dependency_and_show_says_why(b_update
 def test_shared_records_of_the_two_revisions_read_once_at_b(b_updated): ...
 def test_both_sides_gather_equal_identities_for_the_shared_records(b_updated): ...   # §5.9's comparison
 def test_the_unkept_branch_reports_retirement_pending_and_retention_pending(b_updated_unkept): ...
-def test_two_sessions_mounting_a_gaps_ends_in_one_second_order_by_session_id(late_link, monkeypatch): ...  # seam beliefs.session.ledger.utc_now
+def test_two_sessions_mounting_a_gaps_ends_in_one_second_order_by_session_id(late_chain, monkeypatch): ...
+    # B adopts P3″ in one session and P1 is already held; the test re-adopts nothing: it opens two sessions,
+    # each adopting one end over a fresh late_chain copy (P1 and P3″ from the remote), under
+    # monkeypatch.setattr("beliefs.session.writer.utc_now", lambda: "2026-10-28T00:00:00Z") — the writer
+    # imports utc_now by name, so the ledger module's binding is not the seam
 def test_publish_in_the_late_link_state_refuses_attribution_ambiguous_naming_the_link(late_link): ...
 ```
 
@@ -720,8 +783,10 @@ def test_publish_in_the_late_link_state_refuses_attribution_ambiguous_naming_the
 
 - [ ] Steps: failing tests (`test_an_unrequired_predecessor_is_retired_through_the_door_and_its_line_folds`,
   `test_reconcile_ledgers_a_retirement_the_kernel_committed_without_a_line`,
-  `test_the_next_open_mounts_the_tip_only`), run to fail, implement, run, `just test-fast`,
-  commit `feat(adopt): retire an unrequired predecessor through the kernel door`.
+  `test_the_next_open_mounts_the_tip_only`), replacing Task 8's
+  `test_an_unrequired_predecessor_reports_retirement_pending_before_the_door` and Task 9's
+  `test_show_reports_pending_no_door_on_the_unkept_branch`; run to fail, implement, run,
+  `just test-fast`, commit `feat(adopt): retire an unrequired predecessor through the kernel door`.
 
 ---
 
