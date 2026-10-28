@@ -1,7 +1,16 @@
 # Science commons milestone 1b — design
 
 **Date:** 2026-10-28
-**Status:** draft for review, revision 6. Revision 5 (`a699ac1`) answered review round 3;
+**Status:** draft for review, revision 7. Revision 6 (`202a298`) answered review round 4;
+revision 7 answers review round 5 (reviewer `codex/gpt-6-astra`, verdict revise: P1 1, P2
+1, P3 2): a citation of a retired corpus refuses `corpus-retired` in `cited` and
+`mount_holding` until the session reopens, with a two-command gate (§5.7); the
+`duplicate-publication` refusal is withdrawn under the round's ruling, one view at two
+destinations is admitted and reported, the kernel's `attribution-ambiguous` stands, and
+the conflict fixture's expectation follows (§5.6, §5.9); the cross-session same-second
+order is kept as a stated limitation of an unresolved group's displayed `current` and
+tested (§5.6, §5.9); the pending-door report gate runs on the unkept branch (§5.9).
+Revision 5 (`a699ac1`) answered review round 3;
 revision 6 answers review round 4 (a fresh `claude-code` reviewer, verdict revise:
 Important 4, Minor 11): divergence is decided by named ancestry, so siblings under a
 never-held predecessor are refused, not mounted (§5.6); two publications of one view to two
@@ -239,9 +248,9 @@ candidate is admissible iff:
 A refusal is `adopt-conflict` with data `{"rule": "content" | "deprecated-key" |
 "uid-corruption", "addresses": [...], "corpus": <live corpus id>}` and a message naming the
 rule, the addresses and the live corpus; the candidate stays `fetched` and the world is
-untouched, as today. The preflight (§5.7) adds two rules under the same code,
-`chain-retired` and `duplicate-publication` (§5.6), whose data names the publication
-instead of addresses. The live set the checklist compares against is the kernel's: every
+untouched, as today. The preflight (§5.7) adds one rule under the same code,
+`chain-retired` (§5.6), whose data names the retired publication instead of addresses. The
+live set the checklist compares against is the kernel's: every
 corpus the registry lists admitted with no terminal status, read by root (the configured
 roots and the sharing registry's roots), plus the candidates this invocation admitted. It
 is not `ctx.read_views()`, which is fixed at session open and still holds a corpus retired
@@ -350,18 +359,20 @@ publication whose adoption, from a location bound to that world, would connect t
 
 **One view, two destinations.** A publisher may publish one view to two destinations; the
 marker address digests the destination, so the two publications are two chains with no
-supersession link between them. A reader holding both, origin-confirmed to the same world,
-can never publish a record they share: the kernel's attribution rule 3.3 needs one claimed
-marker to supersede the other, and neither `supersedes_markers` names anything, so `publish`
-refuses `attribution-ambiguous` with no link to name and no retirement route (each chain is
-resolved at its own tip). Commons §4.5 covers one publication held from several locations
-(one corpus id, a mirror), not two publications of one view. The preflight therefore refuses
-a candidate whose marker is origin-confirmed to the same world and names the same unpinned
-view as a mounted publication of a different destination, when no supersession link
-connects them: `adopt-conflict` rule `duplicate-publication`, naming the held publication;
-the candidate stays `fetched`. This is this document's call, for the user to confirm: the
-alternative is to admit the pair and have `show` and `publish` say that nothing orders the
-claims, which leaves the reader with no exit today.
+supersession link between them. Such a pair is **admitted and reported**, not refused
+(review round 5's ruling, rejecting this document's earlier `duplicate-publication`
+refusal): two revisions published to different destinations can select disjoint records,
+and shared records may carry the same origin attribution, which the kernel's rule 3.2
+resolves without any supersession; a refusal keyed on view and destination alone would
+narrow the overlap the approved design permits. What the kernel refuses stays refused: a
+record the two carry under *different* claims is `attribution-ambiguous` at `publish`, and
+since neither `supersedes_markers` names the other there is no link to adopt and no
+retirement route (each chain is resolved at its own tip). `show` reports, for a pin whose
+group has another mounted group of the same world and unpinned view, that the two chains
+are unlinked and that a record they attribute differently cannot be published while that
+holds; `publish`'s `attribution-ambiguous` detail says the same when a claimed marker's
+`supersedes_markers` is empty (§5.8). That limitation is accepted with the ruling, and is
+the cost of not refusing legitimate overlap.
 
 **The current publication under an unresolved outcome.** `publication_tip` sees the
 unconnected ends as two tips, and the held marker set alone cannot say which was current
@@ -371,7 +382,9 @@ is still missing, the tips are P2 and P4, and "the earliest mounted tip" would m
 to P4. The rule is a **fold over the ledger's sharing lines in replay order** (`(at, session
 id, ledger position)`, a total order, so two adoptions within one second are still
 ordered; across two sessions a same-second pair is ordered by the random session id, not by
-arrival, which the fixture avoids by putting its same-second pair in one session), read
+arrival, a narrow limitation this document keeps rather than adding an ordering mechanism:
+it can change the displayed `current` of an *unresolved* group, which authorizes no
+retirement, and §5.9 tests it instead of avoiding it), read
 through the kernel's ledger reader without writing anything, for the `mounted` lines of
 the group's established authorized pins, in that order: current starts empty; a line whose
 publication supersedes the current one, transitively through the markers of the
@@ -383,8 +396,10 @@ while some publication seen so far supersedes it. `retired` lines are not consum
 current never lands on a retired publication, since retirement runs only on a resolved
 group whose fold ends at its tip. So in the example current goes P1, stays P1 at P4, moves
 to P2, and reaches P3 and P4 only once P3 arrives and connects them. `current` is unmoved
-whichever end of a gap arrives second (§5.9's arrival-order test asserts both orders). The
-**established set itself** is derived the same way, by folding the same lines in memory
+whichever end of a gap arrives second (§5.9's arrival-order test asserts both orders), with
+the one qualification above: two sessions mounting the two ends within one second are
+ordered by session id, and the displayed `current` of that unresolved group follows that
+order. The **established set itself** is derived the same way, by folding the same lines in memory
 under `apply_line`'s state rule rather than by reading the registry's pin files, so that
 `show`'s answer does not lag a pin write that crashed after its line; `adopt` has replayed
 before it folds and reads the same. No `current` is stored (§3.3): it is a function of held
@@ -428,8 +443,7 @@ candidate stays `fetched` and nothing is admitted, which is commons §10.2's let
 divergent sibling among authorized links leaves the update unresolved and the candidate
 `fetched`"). Without this, two authorized siblings with equal shared content would pass the
 checklist, both mount, and nothing could remove either. A chain through a retired marker
-refuses `adopt-conflict` rule `chain-retired`, and a second publication of the same view to
-another destination refuses rule `duplicate-publication` (§5.6). A *resolved* or *unresolved* outcome
+refuses `adopt-conflict` rule `chain-retired` (§5.6). A *resolved* or *unresolved* outcome
 admits and mounts the candidate; *unresolved* leaves `current` where §5.6's fold puts it and
 `show` names the missing link.
 
@@ -451,8 +465,23 @@ does for `mounted`. A reader who adopts a predecessor after its successor to rea
 the successor dropped must list it in `keep` **before that `adopt`**, exactly as commons §3
 says for adopting a successor: the same invocation retires it otherwise. Every `adopt` that
 retires reports, with each `retired` block, that the session's mounts are fixed at open and
-the remedy is to reopen and run `science epoch`, as the `mounted` block does today: until
-then the session's read views, citations and conflict set still include the retired corpus.
+the remedy is to reopen and run `science epoch`, as the `mounted` block does today.
+
+**Citations of a retired corpus refuse until the session reopens.** The session's mounts
+are fixed at open, so after an in-session retirement the read views still hold the retired
+corpus, and a later write in the same service session could cite a record only it holds (a
+`spec` over a proposition P1 alone carries): the dependency would vanish at the next open
+and P1 cannot be readmitted. A remedy printed in a report does not prevent that, so the
+enforcement is in the resolution every citing write goes through: `ReadContext.cited` and
+`mount_holding` check the kernel's status of the holding corpus and refuse
+`corpus-retired`, naming the corpus, the record and the remedy (reopen the session), when
+it is not live; the kernel's `MountCitations` reads the fixed roots and checks no status,
+so science's check is the one that stands. `science epoch` in that session refuses the same
+way, since its coverage would name a corpus the kernel no longer lists live. Reads stay as
+they are until reopen: a belief or `show` over the stale mounts answers from records that
+are still readable, and the reopen remedy is in their reports. Gate: in one session, an
+`adopt` that retires P1, then a `spec` targeting a proposition only P1 holds; the second
+refuses `corpus-retired` before writing anything.
 
 A predecessor is **required** when any of these holds:
 
@@ -549,8 +578,9 @@ are `(corpus_id, marker uid)` pairs, so the held tip's marker already names the 
 and marker of the publication whose adoption, from a location bound to that world, would
 connect the claims. `show` of either claimed pin reports the same pair in its `supersession`
 block (its *unresolved* outcome, §5.6). When a claimed marker's `supersedes_markers` is
-empty, the detail says so instead of naming a link: no held marker orders the claims, a
-state the preflight's `duplicate-publication` rule prevents for one publisher's chains.
+empty, the detail says so instead of naming a link: no held marker orders the claims, and
+the record cannot be published while both carriers are mounted (§5.6, one view at two
+destinations).
 
 ### 5.9 The fixture and the decisive cases
 
@@ -615,16 +645,20 @@ The 1b fixture extends `helpers/commons.py` from `build_derived`:
    unkept branch, and "both retired" holds there; on the main branch *B*'s verification
    keeps P1 by rule 4. Two fold cases run before the door: the
    **disconnected-then-connected order** (P1, then an unconnected P4, then P2 superseding
-   P1 with P3 absent: current is P2, not P4) and **two adoptions in one second**, in one
-   session (current follows ledger order, not corpus-id order). The preflight is also
-   tested before the door: two sibling republications of P1 to the same destination while
-   P1 is mounted, the second refused `divergent-publication` and left `fetched`; the same
-   pair at a reader that never held P1, refused the same way (named ancestry); a refused
-   sibling left `fetched` neither changes `show`'s current nor makes a later evaluation
-   divergent; and the 1a conflict fixture (`build_conflicting`: *A*'s second publication of
-   project `a` to `LOC_A2`), which now refuses `adopt-conflict` rule `duplicate-publication`
-   naming P1 instead of 1a's address overlap, with the candidate `fetched`. An equal-content
-   republication *passing* the checklist is shown by the main fixture's P3. The checklist's
+   P1 with P3 absent: current is P2, not P4), **two adoptions in one second** in one
+   session (current follows ledger position, not corpus-id order), and **two sessions
+   mounting the two ends of a gap within one second** (current follows the session-id
+   order, the group is unresolved, nothing is retired). The preflight is also tested before
+   the door: two sibling republications of P1 to the same destination while P1 is mounted,
+   the second refused `divergent-publication` and left `fetched`; the same pair at a reader
+   that never held P1, refused the same way (named ancestry); and a refused sibling left
+   `fetched` neither changes `show`'s current nor makes a later evaluation divergent. The
+   1a conflict fixture (`build_conflicting`: *A*'s second publication of project `a` to
+   `LOC_A2`, equal content) now **passes** the checklist and mounts; `show` of either pin
+   reports the unlinked chain; and *B*'s `publish` of a view reaching a record both carry
+   under different claims refuses `attribution-ambiguous` with the detail that no held
+   marker orders them (§5.6). An equal-content republication passing the checklist is also
+   shown by the main fixture's P3. The checklist's
    other rules get one hand-made candidate each: a copy whose record differs in body
    (`content`), a copy carrying a write-root record's live address as a deprecated id
    (`deprecated-key`), and a redirect published as a successor, new live address with the
@@ -634,8 +668,12 @@ The 1b fixture extends `helpers/commons.py` from `build_derived`:
    Two reports get gates of their own: `publish` at *B* in the late-link state (P1 and P3
    mounted, P2 absent) refuses `attribution-ambiguous` with the rendered claims and the
    named `(P2 corpus, marker)` pair; and, before the door, the `retirement pending` Finding
-   and `show`'s `retention: pending (no door)` row on the main fixture, plus one assertion
-   that `SYMBOL_FIELDS` names `enumerate_retractions_v2` and not `enumerate_retractions`.
+   and `show`'s `retention: pending (no door)` row on the **unkept branch** (on the main
+   fixture *B*'s verification requires P1, so its row is `kept: dependency` and nothing
+   awaits the door), plus one assertion that `SYMBOL_FIELDS` names
+   `enumerate_retractions_v2` and not `enumerate_retractions`. The citation gate of §5.7
+   (retire P1, then a `spec` over a proposition only P1 holds, refused `corpus-retired`)
+   runs once the door lands, on the unkept branch.
 
    The Carried content check (§5.4) runs under none of the fixture's cases: at *A*, origin
    P1 is not pinned; at *B*, neither P1 nor P3 carries attributions. It gets its own unit
@@ -666,10 +704,11 @@ Made in place, dated, by the plan's final task, as 1a's Deviations were:
   never mounted; the current publication is folded from the ledger's lines (§5.6).
 - §10: the conflict rule is the kernel's §8 checklist (§5.1), retiring Deviation 3; the
   supersession preflight runs before admission and §10.2's `fetched` stands, a chain
-  through a retired marker refuses `chain-retired`, and a second publication of one view to
-  another destination refuses `duplicate-publication` (§5.6, §5.7); `keep` takes effect at
+  through a retired marker refuses `chain-retired`, and one view published to two
+  destinations is admitted and reported as unlinked (§5.6, §5.7); `keep` takes effect at
   the next session open and a changed configuration file refuses retirement `config-stale`
-  (§5.7 rule 1); the current publication
+  (§5.7 rule 1); a citation of a retired corpus refuses `corpus-retired` until the session
+  reopens (§5.7); the current publication
   under an unresolved chain is the ledger fold of §5.6; an `adopt` reconciles completed
   effects, adopts, then re-evaluates retirement with the candidate mounted (§5.7); the
   in-place content rule (§5.3); chain retention as a fourth reason a predecessor is
