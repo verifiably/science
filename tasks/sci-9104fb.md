@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: commons-1b
 created: 2026-10-01T02:21:10Z
-updated: 2026-10-28T21:02:56Z
+updated: 2026-10-28T21:17:05Z
 started: 2026-10-28T20:03:15Z
 depends: [sci-13050a, beliefs-81367e, beliefs-a989fb]
 tags: [commons]
@@ -40,3 +40,4 @@ Spec §12 part 1b: A binds B, adopts B's publication; A publishes an update drop
 - 2026-10-28T21:02:55Z (commons-1b): review: spec round 1 — verdict: revise; findings: P1 2, P2 3; reviewer: codex/gpt-6-astra
 - 2026-10-28T21:02:56Z (commons-1b): resumed
   provenance: {"harness_session":"claude-code:f666f956-1928-4c06-8bf1-80cd5a586d90","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-28T21:17:05Z (commons-1b): review: spec round 2 — verdict: revise; findings: Important 2, Minor 7; reviewer: claude-code
