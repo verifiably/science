@@ -8,7 +8,7 @@ complexity: low
 process: direct
 owner: fix/duplicate-refusal
 created: 2026-10-28T20:03:42Z
-updated: 2026-10-28T20:17:00Z
+updated: 2026-10-28T20:17:50Z
 started: 2026-10-28T20:03:53Z
 depends: []
 tags: []
@@ -34,3 +34,4 @@ Reproduce the reported test_two_corpora selected-next failure, trace the kernel 
 - 2026-10-28T20:13:15Z (fix/duplicate-refusal): Focused just test-one tests/test_two_corpora.py: 13 passed in 37.86s; just check passed. First just test-fast granted 1 worker under transient load; interrupted after 103 passed in 234.50s, no failures, once host-budget show recovered to 12. Rebuild generated testmon data and rerun the whole fast check at the current host budget.
 - 2026-10-28T20:17:00Z (fix/duplicate-refusal): Identify the current integration owner
   provenance: {"harness_session":"codex:01a1841b-698b-79f0-b115-6c26f9b6acb0","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-28T20:17:50Z (fix/duplicate-refusal): Verified: just test-fast selected every test and passed all 899 in 242.23s; focused test file passed all 13; just check and commit hook passed; independent codex/gpt-6.1-sol review accepted with no findings. Fix commit 065ae81. Interrupted first fast run had 103 passed, no failures; rerun was green in full.
