@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: commons-1b
 created: 2026-10-01T02:21:10Z
-updated: 2026-10-28T20:14:23Z
+updated: 2026-10-28T20:14:25Z
 started: 2026-10-28T20:03:15Z
 depends: [sci-13050a, beliefs-81367e, beliefs-a989fb]
 tags: [commons]
@@ -33,3 +33,4 @@ Spec §12 part 1b: A binds B, adopts B's publication; A publishes an update drop
   provenance: {"harness_session":"claude-code:f666f956-1928-4c06-8bf1-80cd5a586d90","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-28T20:03:32Z (commons-1b): resumed
   provenance: {"harness_session":"claude-code:f666f956-1928-4c06-8bf1-80cd5a586d90","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-28T20:14:25Z (commons-1b): 1b design drafted at docs/specs/2026-10-28-science-commons-1b-design.md (worktree .worktrees/commons-1b). Findings: the kernel has no retire door (record_sharing refuses retired; beliefs-c0d952 designs it, beliefs-a989fb implements it) so sci-9104fb now depends on beliefs-a989fb and the plan sequences retirement after it; keep becomes a config list (no sharing transition to ledger a pin flag under); the current publication is derived via publication_tip over authorized roots; sci-4a3543 is absorbed as a child
