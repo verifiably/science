@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: commons-1b
 created: 2026-10-01T02:21:10Z
-updated: 2026-10-28T23:06:05Z
+updated: 2026-10-28T23:06:07Z
 started: 2026-10-28T20:03:15Z
 depends: [sci-13050a, beliefs-81367e, beliefs-a989fb]
 tags: [commons]
@@ -61,3 +61,4 @@ Spec §12 part 1b: A binds B, adopts B's publication; A publishes an update drop
 - 2026-10-28T23:06:04Z (commons-1b): review: spec round 7 — verdict: accept; findings: none; reviewer: codex/gpt-6-astra
 - 2026-10-28T23:06:05Z (commons-1b): resumed
   provenance: {"harness_session":"claude-code:f666f956-1928-4c06-8bf1-80cd5a586d90","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-28T23:06:07Z (commons-1b): Design revision 8 (99eabaa) approved by Keith 2026-10-28 for planning after codex round 7 accept; retained limits: unlinked publications can block publication of conflicting-attribution records, cross-session same-second adoptions can change an unresolved group's displayed current, retirement does not preserve vocabulary declarations through profile bindings. Next: writing-plans, one plan in two phases, retirement tail blocked on beliefs-a989fb
