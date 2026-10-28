@@ -6,9 +6,9 @@ priority: 2
 size: xs
 complexity: low
 process: direct
-owner: main
+owner: fix/duplicate-refusal
 created: 2026-10-28T20:03:42Z
-updated: 2026-10-28T20:03:53Z
+updated: 2026-10-28T20:04:08Z
 started: 2026-10-28T20:03:53Z
 depends: []
 tags: []
@@ -23,4 +23,6 @@ Reproduce the reported test_two_corpora selected-next failure, trace the kernel 
 - 2026-10-28T20:03:42Z (add): created
   provenance: {"harness_session":"codex:01a1841b-698b-79f0-b115-6c26f9b6acb0","harness_session_source":"CODEX_THREAD_ID","origin":"user"}
 - 2026-10-28T20:03:53Z (main): started
+  provenance: {"harness_session":"codex:01a1841b-698b-79f0-b115-6c26f9b6acb0","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-28T20:04:08Z (fix/duplicate-refusal): resumed
   provenance: {"harness_session":"codex:01a1841b-698b-79f0-b115-6c26f9b6acb0","harness_session_source":"CODEX_THREAD_ID"}
