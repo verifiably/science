@@ -8,7 +8,7 @@ complexity: low
 process: direct
 owner: fix/duplicate-refusal
 created: 2026-10-28T20:03:42Z
-updated: 2026-10-28T20:11:16Z
+updated: 2026-10-28T20:11:18Z
 started: 2026-10-28T20:03:53Z
 depends: []
 tags: []
@@ -30,3 +30,4 @@ Reproduce the reported test_two_corpora selected-next failure, trace the kernel 
 - 2026-10-28T20:08:57Z (fix/duplicate-refusal): Baseline just test (hydrated isolated worktree): 898 tests, 897 passed and the reported selected-next test failed in 240.47s. Corrected only test setup and assertions to the kernel content-identity contract; no production changes or broader holder-policy adoption.
 - 2026-10-28T20:11:13Z (fix/duplicate-refusal): review: impl round 1 — verdict: accept; findings: none; reviewer: codex/gpt-6.1-sol
 - 2026-10-28T20:11:16Z (fix/duplicate-refusal): Ruling: Accept the reviewer scope exclusion for selecting/citing the duplicated address and broader holder-set acceptance; keep that work in sci-73c80e. Why: this change repairs a stale refusal fixture and claims only unrelated selected reads, while the broader adoption already has its own recorded intent. Cost: Science still refuses direct duplicate-holder reads until that task lands. Revision: working diff against 303feaa5d81f02c554f597bdf8a4873f35e92cdd, python/tests/test_two_corpora.py.
+- 2026-10-28T20:11:18Z (fix/duplicate-refusal): attached: implementation-review.md (1282 bytes): Read-only implementation review by codex/gpt-6.1-sol; no findings
