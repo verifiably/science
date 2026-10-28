@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: commons-1b
 created: 2026-10-01T02:21:10Z
-updated: 2026-10-28T21:59:13Z
+updated: 2026-10-28T22:01:05Z
 started: 2026-10-28T20:03:15Z
 depends: [sci-13050a, beliefs-81367e, beliefs-a989fb]
 tags: [commons]
@@ -48,3 +48,4 @@ Spec §12 part 1b: A binds B, adopts B's publication; A publishes an update drop
 - 2026-10-28T21:38:17Z (commons-1b): resumed
   provenance: {"harness_session":"claude-code:f666f956-1928-4c06-8bf1-80cd5a586d90","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-28T21:59:13Z (commons-1b): review: spec round 4 — verdict: revise; findings: Important 4, Minor 11; reviewer: claude-code
+- 2026-10-28T22:01:05Z (commons-1b): round 4 (fresh claude-code reviewer over a699ac1; model unverified) found 4 Important, all verified: siblings under a never-held predecessor read as unresolved and both mount (fixed: divergence by named ancestry); one view published to two destinations mounts side by side with no link to order attribution (fixed: preflight refuses duplicate-publication, my call for Keith to confirm; build_conflicting becomes that gate); keep is read once per service process (fixed: effect at next session open, config-stale refusal on a changed file, report prints the list); no gates for keep and chain retention (added, with the never-held sibling, checklist candidates and report gates). 11 minors folded. Revision 6 at 202a298
