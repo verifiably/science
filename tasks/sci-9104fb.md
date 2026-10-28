@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: commons-1b
 created: 2026-10-01T02:21:10Z
-updated: 2026-10-28T22:01:06Z
+updated: 2026-10-28T22:15:43Z
 started: 2026-10-28T20:03:15Z
 depends: [sci-13050a, beliefs-81367e, beliefs-a989fb]
 tags: [commons]
@@ -51,3 +51,4 @@ Spec §12 part 1b: A binds B, adopts B's publication; A publishes an update drop
 - 2026-10-28T22:01:05Z (commons-1b): round 4 (fresh claude-code reviewer over a699ac1; model unverified) found 4 Important, all verified: siblings under a never-held predecessor read as unresolved and both mount (fixed: divergence by named ancestry); one view published to two destinations mounts side by side with no link to order attribution (fixed: preflight refuses duplicate-publication, my call for Keith to confirm; build_conflicting becomes that gate); keep is read once per service process (fixed: effect at next session open, config-stale refusal on a changed file, report prints the list); no gates for keep and chain retention (added, with the never-held sibling, checklist candidates and report gates). 11 minors folded. Revision 6 at 202a298
 - 2026-10-28T22:01:06Z (commons-1b): parked (waiting on user, review): Keith reviews the 1b design revision 6 (worktree .worktrees/commons-1b, commit 202a298, docs/specs/2026-10-28-science-commons-1b-design.md); the one call to confirm is duplicate-publication (§5.6); on accept, tasks start sci-9104fb in the worktree and invoke writing-plans (one plan, two phases per §7; the retirement tail waits on beliefs-a989fb)
   provenance: {"harness_session":"claude-code:f666f956-1928-4c06-8bf1-80cd5a586d90","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-28T22:15:43Z (commons-1b): review: spec round 5 — verdict: revise; findings: P1 1, P2 1, P3 2; reviewer: codex/gpt-6-astra
