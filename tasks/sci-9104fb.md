@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: commons-1b
 created: 2026-10-01T02:21:10Z
-updated: 2026-10-28T21:18:42Z
+updated: 2026-10-28T21:18:44Z
 started: 2026-10-28T20:03:15Z
 depends: [sci-13050a, beliefs-81367e, beliefs-a989fb]
 tags: [commons]
@@ -42,3 +42,5 @@ Spec §12 part 1b: A binds B, adopts B's publication; A publishes an update drop
   provenance: {"harness_session":"claude-code:f666f956-1928-4c06-8bf1-80cd5a586d90","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-28T21:17:05Z (commons-1b): review: spec round 2 — verdict: revise; findings: Important 2, Minor 7; reviewer: claude-code
 - 2026-10-28T21:18:42Z (commons-1b): round 2 (fresh claude-code reviewer over a8f7a85; model unverified from dispatch metadata) found 2 Important: retired roots missing from the tip fold turn a post-retirement sibling into an unresolved pair that mounts; _reconcile cannot ledger retired (record_sharing refuses it). Both verified against publication_tip and writer.record_sharing and fixed in revision 4 (8439319) with the 7 minors (P2 retired with P1, keep before a late predecessor, reopen remedy on retirement, registry version bump and rebuild, group keyed by world, missing link named as the (corpus_id, marker) pair, Carried content unit test, excluded wording). Kernel observation beliefs-a02e11 filed (executes declared, never emitted)
+- 2026-10-28T21:18:44Z (commons-1b): parked (waiting on user, review): Keith reviews the 1b design revision 4 (worktree .worktrees/commons-1b, commit 8439319, docs/specs/2026-10-28-science-commons-1b-design.md); on accept, tasks start sci-9104fb in the worktree and invoke writing-plans (one plan, two phases per §7; the retirement tail waits on beliefs-a989fb)
+  provenance: {"harness_session":"claude-code:f666f956-1928-4c06-8bf1-80cd5a586d90","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
