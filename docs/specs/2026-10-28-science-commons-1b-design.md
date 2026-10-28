@@ -1,8 +1,10 @@
 # Science commons milestone 1b — design
 
 **Date:** 2026-10-28
-**Status:** draft for review. Task sci-9104fb (`planned`), child sci-73c80e (science's side
-of the kernel's cut 48), idea sci-4a3543 (absorbed, §5.4).
+**Status:** draft for review, revision 2 (after the builder check: §5.7's pending-door
+behaviour, §5.9's query by address and comparison assertion, §7's two merges). Task
+sci-9104fb (`planned`), child sci-73c80e (science's side of the kernel's cut 48), idea
+sci-4a3543 (absorbed, §5.4).
 **Scope:** how `science` meets milestone 1b of the commons design
 (`2026-09-30-science-commons-design.md` §12: update, overlap and retirement) now that the
 kernel reads one address held in several live corpora (`beliefs`
@@ -311,7 +313,18 @@ mounted is where its records are readable, which is what the reader has until th
 
 Until the kernel door lands, this rule is implemented up to the retirement call: the chain,
 the required set and the reports are computed and tested, and the plan's retirement step is
-blocked on `beliefs-a989fb` (§7). Nothing ships a retirement by another route.
+blocked on `beliefs-a989fb` (§7). Nothing ships a retirement by another route. In that
+state an `adopt` that finds an unrequired predecessor leaves it `mounted` and reports a
+Finding, `retirement pending: the kernel's retire door (beliefs-a989fb) has not landed`, and
+`show` reports `retention: pending (no door)` for it; the adoption itself has succeeded and
+is not misreported as a refusal. This behaviour is on `main` between the overlap half's merge
+and the retirement tail's (§7), and is the one departure from commons §10 this document
+leaves standing for a while rather than resolving.
+
+The closure walk of rule 4 needs less inward extension than commons §10.3 lists: `verifies`,
+`grounded-in` and `composes` are already `stored.WORLD_RELATIONS`, so a verification's target
+and a retraction's grounds are reached by the kernel's walk. What remains inward is the runs
+a verification compares and a spec's projection-held addresses (§8).
 
 ### 5.8 `show`
 
@@ -349,11 +362,16 @@ The 1b fixture extends `helpers/commons.py` from `build_derived`:
    excluded copies that counted through *A*'s write root; with `accept = [B]`, *A*'s own
    assessment counts through the write root, P2's copy is listed excluded, and *B*'s derived
    assessment counts.
-4. `build_updated`: *A* revises project `a`'s query to the kinds `proposition`, `dataset`,
-   `analysis-spec`, `run` (dropping `assessment`) and republishes to `LOC_A`, P3, whose marker
-   supersedes P1 and no longer carries *A*'s assessment. **This is the update that drops one
-   record.** The dropped record is the one *B*'s unpublished verification targets, so *B*
-   depends on it.
+4. `build_updated`: *A* revises project `a`'s query from `kinds` to an `addresses` clause
+   naming *A*'s own proposition, dataset, spec and run (dropping *A*'s assessment) and
+   republishes to `LOC_A`, P3, whose marker supersedes P1 (the revision keeps the unpinned
+   view address, and the publish door names P1 from *A*'s binding tips) and no longer carries
+   *A*'s assessment. **This is the update that drops one record.** The dropped record is the
+   one *B*'s unpublished verification targets, so *B* depends on it. The query names
+   addresses rather than kinds because, with P2 mounted at *A*, a kinds query would also
+   select *B*'s spec and run from P2 and P3 would carry them back to *B* attributed to P2: a
+   second scenario (own records returned in another publisher's carrier) that the milestone
+   does not set out to show and that would muddy the second-half assertions.
 5. `build_b_updated`: *B* adopts P3. **Pinned derivation:** P1 stays `mounted`, `adopt`'s
    report and `show --corpus-id P1` say `kept: dependency (<A's assessment address>)`, and
    P3 is current; *B* reopens and captures an epoch over its write root, P1 and P3.
@@ -364,8 +382,14 @@ The 1b fixture extends `helpers/commons.py` from `build_derived`:
    (the fixture branches before `build_verified`), where P1 is retired, its line is in the
    ledger, its pin is `retired`, and the next open mounts P3 only.
 
-Belief on both sides is compared over the same pins and the same policy: the test asserts
-equal `AcceptanceContext` statements and equal gathered identities for the shared records.
+Belief on both sides is compared over the same pins and the same policy, read as commons §9
+item 5 means it: each side evaluates under its own policy, and the comparison is of what both
+sides gathered. The test asserts that the shared records' gathered identities (their content
+identities and assessment identities) are equal on both sides, that each side's context
+names the shared addresses it read from more than one holder, and that each side's policy
+statement is the deterministic statement of its own inputs. The two statements are not
+asserted equal: `own_roots`, `pins`, `carriers` and `accept` differ between *A* and *B* by
+construction.
 
 The admission checklist is tested on the conflict fixture already built
 (`build_conflicting`: a republication holding the same addresses with equal content now
@@ -394,12 +418,21 @@ Made in place, dated, by the plan's final task, as 1a's Deviations were:
 ## 7. Kernel dependency
 
 Retirement needs `ScopedWriter.retire(corpus_id, *, evidence)` ledgering `retired`
-(`beliefs-a989fb`, waiting on the design `beliefs-c0d952`). sci-9104fb takes a dependency on
-`beliefs-a989fb`; the plan sequences the overlap work (§5.1, §5.2, §5.4, §5.5, §5.6, the
-reports, the fixture through step 5) first and the retirement call, reconciliation and the
-step 6 fixture after it. If the kernel's design changes the door's shape (its evidence, its
-recovery after a committed retirement with a failed ledger append), the plan's retirement task
-is revised against the merged kernel design before it starts, not guessed now.
+(`beliefs-a989fb`, waiting on the design `beliefs-c0d952`, which nothing has started).
+sci-9104fb takes a dependency on `beliefs-a989fb`.
+
+**The milestone lands in two merges.** One plan with two phases: the **overlap half** (§5.1,
+§5.2, §5.4, §5.5, §5.6, §5.7 up to the retirement call with the pending-door Finding, §5.8,
+the fixture through step 5, and the §6 amendments that do not describe retirement) is
+executed and merged to `main` without waiting on the kernel; the **retirement tail** (the
+retirement call through the door, `_reconcile`'s `retired` mark, fixture step 6, the §6
+amendments to §10 and §12 that describe retirement) is one plan task blocked on
+`beliefs-a989fb`, revised against the merged kernel design before it starts rather than
+guessed now, and merged second. The goal sci-9104fb closes after the second merge. Rejected:
+one branch held open until the door lands, which would hold the 1a follow-ups (§9) behind a
+kernel design no one has started and leave the overlap half, which is useful alone,
+unmerged. The cost of the chosen shape is §5.7's pending-door behaviour on `main` for the
+interval, which `show` and `adopt` name rather than hide.
 
 ## 8. What is left to the builder
 
@@ -415,7 +448,7 @@ is revised against the merged kernel design before it starts, not guessed now.
 ## 9. Sequencing with the 1a follow-ups
 
 sci-6d4286, sci-347a36 and sci-cf4d58 edit `adopt`, `show`, `acceptance` and `sharing` and
-are scoped as direct tasks. They stay separate and run after this branch merges, so that each
+are scoped as direct tasks. They stay separate and run after the overlap half merges, so that each
 lands against the 1b shapes rather than being redone; this document notes where 1b touches
 their items (§5.4 takes M3's key collision because the `explain` wording changes anyway; the
 rest of sci-cf4d58, and all of the other two, are untouched). sci-b979ce (a clean-environment
