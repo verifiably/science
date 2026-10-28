@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: commons-1b
 created: 2026-10-01T02:21:10Z
-updated: 2026-10-28T23:27:59Z
+updated: 2026-10-28T23:46:11Z
 started: 2026-10-28T20:03:15Z
 depends: [sci-13050a, beliefs-81367e, beliefs-a989fb]
 tags: [commons]
@@ -65,3 +65,4 @@ Spec §12 part 1b: A binds B, adopts B's publication; A publishes an update drop
 - 2026-10-28T23:06:07Z (commons-1b): Design revision 8 (99eabaa) approved by Keith 2026-10-28 for planning after codex round 7 accept; retained limits: unlinked publications can block publication of conflicting-attribution records, cross-session same-second adoptions can change an unresolved group's displayed current, retirement does not preserve vocabulary declarations through profile bindings. Next: writing-plans, one plan in two phases, retirement tail blocked on beliefs-a989fb
 - 2026-10-28T23:23:59Z (commons-1b): review: plan round 1 — verdict: revise; findings: Critical 2, Important 8, Minor 10; reviewer: claude-code
 - 2026-10-28T23:27:59Z (commons-1b): plan round 1 (fresh claude-code reviewer over cad8b3b; 2 Critical: keep must load for an unpinned id per design §5.7 rule 1, a sibling publication needs a fork of the publisher since a republish supersedes the standing binding tip; 8 Important incl. the writer-level clock seam, reopened fixture for the guards, per-holder dependency walk, config path for config-stale, candidate construction routes, marker destination for the group key) all verified and fixed in plan revision 2 (e54ca13); scoped re-review dispatched
+- 2026-10-28T23:46:11Z (commons-1b): review: plan round 2 — verdict: revise; findings: Critical 1, Important 3, Minor 6; reviewer: claude-code
