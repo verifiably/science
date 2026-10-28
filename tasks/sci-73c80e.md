@@ -4,8 +4,9 @@ title: "Adopt cut 48's overlap contract: content check, adopt checklist, holder-
 status: todo
 priority: 1
 created: 2026-10-28T17:14:33Z
-updated: 2026-10-28T17:14:33Z
+updated: 2026-10-28T20:03:11Z
 depends: [beliefs-918fd2]
+parent: sci-9104fb
 tags: [commons]
 source: beliefs-918fd2
 agent: claude-code/claude-fable-5-1
