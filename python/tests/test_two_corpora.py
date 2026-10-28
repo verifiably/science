@@ -169,13 +169,14 @@ def test_a_selected_record_no_configured_corpus_holds_refuses_naming_it(two_corp
     assert corpus_id_at(world.world.world_root.parent / "archive") in caught.value.refusal.message
 
 
-def _twice(world):
+def _twice(world, *, archive_title="twice"):
     from beliefs import stored
     from beliefs.root import open_corpus
     from helpers.world import archive_config
     node = stored.proposition_node("twice", title="twice", claim={"operator": "affects"})
-    for cfg in (world, archive_config(world)):
-        open_corpus(cfg.write_root, authority=FIXTURE_AUTHORITY, profile=cfg.profile).add(node)
+    for cfg, title in ((world, "twice"), (archive_config(world), archive_title)):
+        open_corpus(cfg.write_root, authority=FIXTURE_AUTHORITY, profile=cfg.profile).add(
+            node.model_copy(update={"title": title}))
 
 
 def test_one_id_in_two_corpora_refuses_naming_both_in_belief_and_unselected_next(world):
@@ -198,18 +199,33 @@ def test_one_id_in_two_corpora_refuses_naming_both_in_belief_and_unselected_next
         assert all(corpus_id in caught.value.refusal.message for corpus_id in ids)
 
 
-def test_one_id_in_two_corpora_refuses_selected_next_as_the_kernel_duplicate_location(two_corpora):
-    """Review round 1, P2: the live capture refuses the duplicate before the
-    project's query applies, whatever the project selects."""
+def test_differing_copies_in_two_corpora_refuse_selected_next_as_the_kernel_duplicate_location(two_corpora):
+    """The live capture refuses differing content at one address before the
+    project's query applies, even when it selects an unrelated record."""
     world = two_corpora
-    _twice(world)
+    _twice(world, archive_title="different content")
     with open_rig(world, NAMES) as (d, _):
-        d.invoke("project", {"name": "claimed", "query": _query({"addresses": ["proposition:claimed"]})})
-        d.invoke("project-select", {"target": "claimed"})
+        d.invoke("project", {"name": "archived", "query": _query({"addresses": ["proposition:archived"]})})
+        d.invoke("project-select", {"target": "archived"})
         with pytest.raises(Refused) as caught:
             d.invoke("next", {})
     assert caught.value.refusal.code == "kernel-refused"
     assert caught.value.refusal.data["kind"] == "AddressMapConflict"
+    assert "proposition:twice" in caught.value.refusal.message
+    assert all(corpus_id_at(root) in caught.value.refusal.message for root in world.world.corpus_roots)
+
+
+def test_identical_copies_in_two_corpora_allow_selected_next_for_another_record(two_corpora):
+    """Equal copies are multiple holders, so an unrelated selection can proceed."""
+    world = two_corpora
+    _twice(world)
+    with open_rig(world, NAMES) as (d, _):
+        d.invoke("project", {"name": "archived", "query": _query({"addresses": ["proposition:archived"]})})
+        d.invoke("project-select", {"target": "archived"})
+        text = d.invoke("next", {}).text
+    assert _rows(text) == (
+        "  proposition:archived: not-ready: concept:disease-stage affects protein:PHF19 (archived)\n"
+    )
 
 
 def test_a_read_mount_without_a_manifest_refuses_at_the_read_entry_points(two_corpora):
