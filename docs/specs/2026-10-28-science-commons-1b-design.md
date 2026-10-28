@@ -1,7 +1,14 @@
 # Science commons milestone 1b — design
 
 **Date:** 2026-10-28
-**Status:** draft for review, revision 8. Revision 7 (`e4f7160`) answered review round 5;
+**Status:** accepted by the user at revision 8, `99eabaa` (review round 7, reviewer
+`codex/gpt-6-astra`, no findings, 2026-10-28), for planning. The implementation plan is
+`docs/plans/2026-10-28-science-commons-1b.md`. Retained limits named at acceptance:
+unlinked publications of one view can prevent publishing a record they attribute
+differently (§5.6); same-second adoptions across sessions can change an unresolved group's
+displayed current (§5.6); retirement does not preserve vocabulary declarations reached
+through profile bindings, which may need re-declaration (§5.7). Revision 7 (`e4f7160`)
+answered review round 5;
 revision 8 answers a scoped review round 6 of that revision's delta (a fresh `claude-code`
 reviewer, verdict revise: Important 5, Minor 6): the `corpus-retired` guard sits on
 `cited` alone, since `mount_holding` serves reads only; `publish` and `publish-preview`
