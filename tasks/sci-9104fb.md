@@ -1,13 +1,15 @@
 ---
 id: sci-9104fb
 title: "Science commons milestone 1b: update, overlap and retirement"
-status: todo
+status: doing
 priority: 1
 size: l
 complexity: high
 process: planned
+owner: main
 created: 2026-10-01T02:21:10Z
-updated: 2026-10-28T20:03:13Z
+updated: 2026-10-28T20:03:15Z
+started: 2026-10-28T20:03:15Z
 depends: [sci-13050a, beliefs-81367e]
 tags: [commons]
 source: sci-fe8522
@@ -23,3 +25,5 @@ Spec §12 part 1b: A binds B, adopts B's publication; A publishes an update drop
 - 2026-10-28T17:14:36Z (main): cut 48 (beliefs-918fd2) lands the kernel precondition for 1b (one address held in several live corpora with equal content); science's side is {"id":"sci-73c80e","action":"created","at":"2026-10-28T17:14:33Z","warnings":[]}, which this milestone now depends on
 - 2026-10-28T17:15:01Z (main): the science-side task named in the previous note is sci-73c80e (the id was pasted as JSON there)
 - 2026-10-28T20:03:13Z (main): sci-73c80e (science's side of cut 48, filed today as 'science's side of commons milestone 1b') is folded in as a child instead of a dependency: 1b's plan decomposes its amendment list; sci-4a3543 keeps its dependency on it
+- 2026-10-28T20:03:15Z (main): started
+  provenance: {"harness_session":"claude-code:f666f956-1928-4c06-8bf1-80cd5a586d90","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
