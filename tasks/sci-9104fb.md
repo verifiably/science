@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: commons-1b
 created: 2026-10-01T02:21:10Z
-updated: 2026-10-28T23:48:08Z
+updated: 2026-10-28T23:48:10Z
 started: 2026-10-28T20:03:15Z
 depends: [sci-13050a, beliefs-81367e, beliefs-a989fb]
 tags: [commons]
@@ -67,3 +67,5 @@ Spec §12 part 1b: A binds B, adopts B's publication; A publishes an update drop
 - 2026-10-28T23:27:59Z (commons-1b): plan round 1 (fresh claude-code reviewer over cad8b3b; 2 Critical: keep must load for an unpinned id per design §5.7 rule 1, a sibling publication needs a fork of the publisher since a republish supersedes the standing binding tip; 8 Important incl. the writer-level clock seam, reopened fixture for the guards, per-holder dependency walk, config path for config-stale, candidate construction routes, marker destination for the group key) all verified and fixed in plan revision 2 (e54ca13); scoped re-review dispatched
 - 2026-10-28T23:46:11Z (commons-1b): review: plan round 2 — verdict: revise; findings: Critical 1, Important 3, Minor 6; reviewer: claude-code
 - 2026-10-28T23:48:08Z (commons-1b): plan round 2 (scoped, over e54ca13): the sharing report contract admits pin blocks only (render.audit_sharing_report, dispatch renders _pin_report), so adopt's retention rows and findings need the contract extended; the two-sessions test needs an unadopted late chain; late_link needs reopen+epoch; uid-corruption builder details. All verified and fixed in plan revision 3 (2de2c94) with the 6 minors; Task 12 records the report-contract change as a framework §4.4 amendment
+- 2026-10-28T23:48:10Z (commons-1b): parked (waiting on user, review): Keith reviews the 1b implementation plan revision 3 (worktree .worktrees/commons-1b, commit 2de2c94, docs/plans/2026-10-28-science-commons-1b.md; design accepted at 99eabaa); on accept, tasks start sci-9104fb in the worktree, add one child per Task heading (--plan docs/plans/2026-10-28-science-commons-1b.md --step), run the Setup baseline (just test) and execute Tasks 1-12 by the chosen method; Tasks 13-15 wait on beliefs-a989fb
+  provenance: {"harness_session":"claude-code:f666f956-1928-4c06-8bf1-80cd5a586d90","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
