@@ -1,15 +1,17 @@
 ---
 id: sci-0bc09c
 title: Fix selected next duplicate-corpus refusal regression blocking push
-status: doing
+status: done
 priority: 2
 size: xs
 complexity: low
 process: direct
 owner: fix/duplicate-refusal
 created: 2026-10-28T20:03:42Z
-updated: 2026-10-28T20:17:52Z
+updated: 2026-10-28T20:17:53Z
 started: 2026-10-28T20:03:53Z
+completed: 2026-10-28T20:17:53Z
+closed: 2026-10-28T20:17:53Z
 depends: []
 tags: []
 agent: codex
@@ -36,3 +38,7 @@ Reproduce the reported test_two_corpora selected-next failure, trace the kernel 
   provenance: {"harness_session":"codex:01a1841b-698b-79f0-b115-6c26f9b6acb0","harness_session_source":"CODEX_THREAD_ID"}
 - 2026-10-28T20:17:50Z (fix/duplicate-refusal): Verified: just test-fast selected every test and passed all 899 in 242.23s; focused test file passed all 13; just check and commit hook passed; independent codex/gpt-6.1-sol review accepted with no findings. Fix commit 065ae81. Interrupted first fast run had 103 passed, no failures; rerun was green in full.
 - 2026-10-28T20:17:52Z (fix/duplicate-refusal): retained: {"host":"titan","kind":"worktree","path":".worktrees/fix-duplicate-refusal","state":"kept","verification":"verified","purpose":"Immediate local integration of reviewed test-only fix 065ae81 and checked removal in this turn; no scratch or off-tree evidence copies","next_owner":"session:codex:01a1841b-698b-79f0-b115-6c26f9b6acb0","cleanup_trigger":"After local merge to main, verify ignored-file disposition, test timing harvest and no host pointers, then remove task worktree"}
+- 2026-10-28T20:17:53Z (fix/duplicate-refusal): done
+  provenance: {"harness_session":"codex:01a1841b-698b-79f0-b115-6c26f9b6acb0","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-28T20:17:53Z (fix/duplicate-refusal): Corrected stale duplicate fixture for content-identity holders; conflicting copies still refuse and identical copies permit unrelated selected reads. 13 focused and 899 full-selection fast tests passed; guide checks and independent review passed. Local merge and checked worktree cleanup follow in this turn.
+  provenance: {"harness_session":"codex:01a1841b-698b-79f0-b115-6c26f9b6acb0","harness_session_source":"CODEX_THREAD_ID"}
