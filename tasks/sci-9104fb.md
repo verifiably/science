@@ -7,8 +7,8 @@ size: l
 complexity: high
 process: planned
 created: 2026-10-01T02:21:10Z
-updated: 2026-10-28T17:15:01Z
-depends: [sci-13050a, beliefs-81367e, sci-73c80e]
+updated: 2026-10-28T20:03:08Z
+depends: [sci-13050a, beliefs-81367e]
 tags: [commons]
 source: sci-fe8522
 agent: claude-code/claude-fable-5-1
