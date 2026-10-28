@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: commons-1b
 created: 2026-10-01T02:21:10Z
-updated: 2026-10-28T22:27:52Z
+updated: 2026-10-28T22:29:03Z
 started: 2026-10-28T20:03:15Z
 depends: [sci-13050a, beliefs-81367e, beliefs-a989fb]
 tags: [commons]
@@ -55,3 +55,4 @@ Spec §12 part 1b: A binds B, adopts B's publication; A publishes an update drop
 - 2026-10-28T22:15:45Z (commons-1b): resumed
   provenance: {"harness_session":"claude-code:f666f956-1928-4c06-8bf1-80cd5a586d90","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-28T22:27:52Z (commons-1b): review: spec round 6 — verdict: revise; findings: Important 5, Minor 6; reviewer: claude-code
+- 2026-10-28T22:29:03Z (commons-1b): codex round 5 (1 P1: in-session writes could cite a retired corpus; ruling: admit-and-report instead of duplicate-publication; ruling: keep replay order as a stated limitation) -> revision 7 (e4f7160). Scoped own round 6 over the delta found the guard misplaced (mount_holding is reads only), publish/publish-preview unguarded (the kernel captures a retired corpus by presence), the epoch claim false, the gate's record carried by P3, and the unkept fixture on the wrong side of the split; all verified and fixed in revision 8 (99eabaa): guard on cited only, publish/preview refuse corpus-retired on a non-live session corpus, verify as the gate, unkept branch built in the overlap half
