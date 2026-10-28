@@ -8,7 +8,7 @@ complexity: low
 process: direct
 owner: fix/duplicate-refusal
 created: 2026-10-28T20:03:42Z
-updated: 2026-10-28T20:08:57Z
+updated: 2026-10-28T20:11:13Z
 started: 2026-10-28T20:03:53Z
 depends: []
 tags: []
@@ -28,3 +28,4 @@ Reproduce the reported test_two_corpora selected-next failure, trace the kernel 
   provenance: {"harness_session":"codex:01a1841b-698b-79f0-b115-6c26f9b6acb0","harness_session_source":"CODEX_THREAD_ID"}
 - 2026-10-28T20:05:23Z (fix/duplicate-refusal): Root cause: beliefs 759976f admits identical multi-holder records. The selected-next test duplicates identical bytes and queries proposition:claimed, absent from build_two_corpus_world, so it now reaches SelectionRefused/address-unknown. Scope is test fixtures and assertions only: preserve differing-content conflict coverage and add identical-copy coverage for an existing selected record. Production passthrough is correct. Focused reproduction: 1 failed in 2.80s.
 - 2026-10-28T20:08:57Z (fix/duplicate-refusal): Baseline just test (hydrated isolated worktree): 898 tests, 897 passed and the reported selected-next test failed in 240.47s. Corrected only test setup and assertions to the kernel content-identity contract; no production changes or broader holder-policy adoption.
+- 2026-10-28T20:11:13Z (fix/duplicate-refusal): review: impl round 1 — verdict: accept; findings: none; reviewer: codex/gpt-6.1-sol
