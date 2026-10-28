@@ -8,9 +8,9 @@ complexity: high
 process: planned
 owner: commons-1b
 created: 2026-10-01T02:21:10Z
-updated: 2026-10-28T20:03:32Z
+updated: 2026-10-28T20:14:19Z
 started: 2026-10-28T20:03:15Z
-depends: [sci-13050a, beliefs-81367e]
+depends: [sci-13050a, beliefs-81367e, beliefs-a989fb]
 tags: [commons]
 source: sci-fe8522
 agent: claude-code/claude-fable-5-1
