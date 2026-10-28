@@ -1,10 +1,18 @@
 # Science commons milestone 1b — design
 
 **Date:** 2026-10-28
-**Status:** draft for review, revision 2 (after the builder check: §5.7's pending-door
-behaviour, §5.9's query by address and comparison assertion, §7's two merges). Task
-sci-9104fb (`planned`), child sci-73c80e (science's side of the kernel's cut 48), idea
-sci-4a3543 (absorbed, §5.4).
+**Status:** draft for review, revision 3. Revision 2 (`3a6fcf8`) followed the builder
+check (§5.7's pending-door behaviour, §5.9's query by address and comparison assertion,
+§7's two merges). Revision 3 answers review round 1 (reviewer `codex/gpt-6-astra`, verdict
+revise: P1 2, P2 3): the supersession preflight runs before admission and a divergent
+sibling stays `fetched` (§5.7); the dependency walk follows the facet references the
+relations miss, with the spec-drop case as a gate (§5.7 rule 4); retirement is re-evaluated
+on every `adopt`, with a retry on a mounted tip (§5.7); `current` under an unresolved chain
+is the earliest mounted tip, from the `mounted` line's stamp (§5.6); P3's selection is P1's
+minus the assessment, vocabulary datasets included (§5.9). The round's rulings on the
+proposed choices (two merges, configuration-owned `keep`, derived current publication)
+stand as ruled. Task sci-9104fb (`planned`), child sci-73c80e (science's side of the
+kernel's cut 48), idea sci-4a3543 (absorbed, §5.4).
 **Scope:** how `science` meets milestone 1b of the commons design
 (`2026-09-30-science-commons-design.md` §12: update, overlap and retirement) now that the
 kernel reads one address held in several live corpora (`beliefs`
@@ -268,18 +276,53 @@ recommended, or confirmed to another world is held but supplies no link; a marke
 other world claiming *P*'s address is a different publisher's publication.
 
 The outcome is one of: *resolved* (one tip; *P* is the tip or is superseded by it through
-held links), *divergent* (sibling tips; `DivergentPublication`), or *unresolved* (the tip
-exists but the chain from *P* to it needs a link that is missing, recommended or confirmed to
-another world: `publication_tip` sees *P* and the tip as two tips, and science names, from the
-tip's `supersedes_markers`, the marker uid it holds no corpus for). No `current` is stored
-(§3.3).
+held links), *divergent* (two or more tips of which at least one names, in its
+`supersedes_markers`, a marker science holds, so they are siblings under the same
+predecessor; `DivergentPublication`), or *unresolved* (two or more tips none of which names
+a held marker that connects them: the chain needs a link that is missing, recommended or
+confirmed to another world, and science names, from each tip's `supersedes_markers`, the
+marker uids it holds no corpus for).
 
-### 5.7 Retirement
+**The current publication under an unresolved outcome.** `publication_tip` sees the
+unconnected ends as two tips, and the held marker set alone cannot say which was current
+before the gap arrived: P1 then P3, and P3 then P1, leave the same set. The rule is the
+**earliest mounted tip**: each pin records `mounted_at`, the `at` of its `mounted` sharing
+line, which `apply_line` copies onto the pin as a projection of that line (no new
+transition, no new write; `replay` rebuilds it). Among unconnected tips the current
+publication is the one with the least `mounted_at`, the least corpus id on an equal stamp.
+This keeps `current` unmoved whichever end arrives second, and the arrival-order test of
+§5.9 asserts it both ways. When the gap closes, the chain resolves and the tip is current.
+No `current` is stored (§3.3): it is a function of held markers, bindings and the ledger's
+order.
 
-After `adopt` admits and mounts a candidate, it computes §5.6 for the candidate's address.
-Only when the outcome is *resolved* and the candidate is the tip does retirement run: for
-every mounted publication on the candidate's chain other than the tip, in chain order from
-the oldest, the predecessor is retired unless it is **required**:
+### 5.7 Supersession preflight and retirement
+
+**Preflight, before admission.** `publication_tip` reads the roots it is given and needs no
+admission, so `adopt` computes §5.6 over the `fetched` candidate's root plus the authorized
+held roots of its `(view, destination)` after the admission checklist (§5.1) and before the
+admission door. A *divergent* outcome refuses `divergent-publication`, naming the sibling
+tips; the candidate stays `fetched` and nothing is admitted, which is commons §10.2's letter
+("a divergent sibling among authorized links leaves the update unresolved and the candidate
+`fetched`"). Without this, two authorized siblings with equal shared content would pass the
+checklist, both mount, and nothing could remove either. A *resolved* or *unresolved*
+outcome admits and mounts the candidate; *unresolved* leaves `current` where §5.6 puts it
+and `show` names the missing link.
+
+**Retirement re-evaluation, on every `adopt`.** Retirement is not tied to the candidate
+being the tip. After reconciliation (step 2) and again after any admission in the
+invocation, `adopt` re-evaluates every mounted address group: for each `(view, destination)`
+with a *resolved* outcome, every mounted publication on the chain other than the tip, in
+chain order from the oldest, is retired unless it is **required** (below). This covers the
+cases where the arriving corpus is not the tip: adopting the missing P2 after P1 and P3
+resolves their chain, and P1 is retired then; a crash after P3 was mounted and before P1 was
+retired is recovered by the next `adopt`, whichever corpus it names; and the pending
+retirements of the interval before the kernel door (§7) are made by the first `adopt` after
+the retirement tail lands. An `adopt` naming an already-mounted corpus runs the
+re-evaluation first and refuses `already adopted` only when it wrote nothing; when it retired
+something, the invocation is that recovery and reports the `retired` blocks, as the
+reconcile-and-return path already does for `mounted`.
+
+A predecessor is **required** when any of these holds:
 
 1. **`keep`**: its corpus id is in the configuration's `keep` list;
 2. **chain retention** (the kernel's §7 and §8): some older publication on the same chain is
@@ -291,9 +334,20 @@ the oldest, the predecessor is retired unless it is **required**:
 4. **dependency**: a record in the reader's write root, published or not, has a required
    dependency closure reaching a record that no other live mounted corpus holds with equal
    content identity. The closure is the kernel's publish-act walk (`closure_missing`, iterated
-   to a fixed point over the write root's records and what it reaches) extended inward by
-   commons §10.3's relations: a verification's target assessment and the runs it compares,
-   a correction's target, and a spec's projection-held addresses.
+   to a fixed point over the write root's records and what it reaches) **plus the stored
+   facet references the walk does not follow**. Those are real dependencies that are not
+   relations on the record: the base contract declares `executes` (run → analysis-spec) as a
+   world relation, but `stored.run_node` and `assessment_node` emit no such relation, and the
+   spec is named only in the run facet (`spec`) and the assessment facet (`spec`, `run`,
+   `proposition`); a verification names the two runs it compares in its facet; a spec names
+   its dataset roles in its facet. A successor that keeps an assessment and its run and drops
+   their spec passes the publish act's closure check, and `verify.handle` needs that spec
+   (`ctx.cited(spec_ref)`) to replay. The walk therefore follows, beside `WORLD_RELATIONS`:
+   an assessment's `spec`, `run` and `proposition`; a run's `spec`; a verification's two run
+   refs; a spec's dataset roles; a correction's target. The plan tests exactly that case: *B*
+   holds an unpublished verification of *A*'s assessment, *A*'s successor keeps the assessment
+   and run and drops the spec, and P1 stays mounted as `kept: dependency (<spec address>)`.
+   This test is a gate on the retirement tail: no retirement ships before it passes.
 
 A predecessor that is required stays `mounted`; `adopt`'s report names it with its reason,
 and `show` reports the same (§5.8). An unrequired predecessor is retired through the kernel
@@ -303,28 +357,18 @@ door (`ScopedWriter.retire`, `beliefs-c0d952` → `beliefs-a989fb`), which ledge
 door and the pin write: `_reconcile` marks `retired` every pin whose corpus the kernel's
 status records list retired, as it marks `mounted` from admissions today.
 
-A *divergent* or *unresolved* outcome retires nothing and leaves the candidate mounted,
-`current` unmoved; `show` names the missing link. Divergence among authorized links is
-commons §10.2's `divergent-publication`: the design says the candidate stays `fetched`, but
-the candidate has been admitted when the outcome is known (admission precedes supersession in
-§10's order, and the markers that decide it are read from admitted roots). This document
-amends that one word to *mounted* (§6): an admitted corpus cannot be un-admitted, and
-mounted is where its records are readable, which is what the reader has until they decide.
+An *unresolved* address group retires nothing; `show` names the missing link and `current`
+stays the earliest mounted tip (§5.6).
 
-Until the kernel door lands, this rule is implemented up to the retirement call: the chain,
-the required set and the reports are computed and tested, and the plan's retirement step is
-blocked on `beliefs-a989fb` (§7). Nothing ships a retirement by another route. In that
-state an `adopt` that finds an unrequired predecessor leaves it `mounted` and reports a
-Finding, `retirement pending: the kernel's retire door (beliefs-a989fb) has not landed`, and
-`show` reports `retention: pending (no door)` for it; the adoption itself has succeeded and
-is not misreported as a refusal. This behaviour is on `main` between the overlap half's merge
-and the retirement tail's (§7), and is the one departure from commons §10 this document
-leaves standing for a while rather than resolving.
-
-The closure walk of rule 4 needs less inward extension than commons §10.3 lists: `verifies`,
-`grounded-in` and `composes` are already `stored.WORLD_RELATIONS`, so a verification's target
-and a retraction's grounds are reached by the kernel's walk. What remains inward is the runs
-a verification compares and a spec's projection-held addresses (§8).
+Until the kernel door lands, this rule is implemented up to the retirement call: the
+preflight, the chain, the required set, the re-evaluation and the reports are computed and
+tested, and the plan's retirement step is blocked on `beliefs-a989fb` (§7). Nothing ships a
+retirement by another route. In that state a re-evaluation that finds an unrequired
+predecessor leaves it `mounted` and reports a Finding, `retirement pending: the kernel's
+retire door (beliefs-a989fb) has not landed`, and `show` reports `retention: pending (no
+door)` for it; the adoption itself has succeeded and is not misreported as a refusal. This
+behaviour is on `main` between the overlap half's merge and the retirement tail's (§7), and
+the first `adopt` after the tail lands retires what was pending.
 
 ### 5.8 `show`
 
@@ -363,15 +407,17 @@ The 1b fixture extends `helpers/commons.py` from `build_derived`:
    assessment counts through the write root, P2's copy is listed excluded, and *B*'s derived
    assessment counts.
 4. `build_updated`: *A* revises project `a`'s query from `kinds` to an `addresses` clause
-   naming *A*'s own proposition, dataset, spec and run (dropping *A*'s assessment) and
-   republishes to `LOC_A`, P3, whose marker supersedes P1 (the revision keeps the unpinned
-   view address, and the publish door names P1 from *A*'s binding tips) and no longer carries
-   *A*'s assessment. **This is the update that drops one record.** The dropped record is the
-   one *B*'s unpublished verification targets, so *B* depends on it. The query names
-   addresses rather than kinds because, with P2 mounted at *A*, a kinds query would also
-   select *B*'s spec and run from P2 and P3 would carry them back to *B* attributed to P2: a
-   second scenario (own records returned in another publisher's carrier) that the milestone
-   does not set out to show and that would muddy the second-half assertions.
+   naming **P1's selection minus *A*'s assessment**: *A*'s proposition, observed dataset,
+   the two vocabulary datasets (`concepts.txt`, `levels.txt`, which P1 carries and *B*'s
+   mounted vocabulary declarations rely on), spec and run. *A* republishes to `LOC_A`, P3,
+   whose marker supersedes P1 (the revision keeps the unpinned view address, and the publish
+   door names P1 from *A*'s binding tips) and no longer carries *A*'s assessment. **This is
+   the update that drops exactly one record.** The dropped record is the one *B*'s
+   unpublished verification targets, so *B* depends on it. The query names addresses rather
+   than kinds because, with P2 mounted at *A*, a kinds query would also select *B*'s spec and
+   run from P2 and P3 would carry them back to *B* attributed to P2: a second scenario (own
+   records returned in another publisher's carrier) that the milestone does not set out to
+   show and that would muddy the second-half assertions.
 5. `build_b_updated`: *B* adopts P3. **Pinned derivation:** P1 stays `mounted`, `adopt`'s
    report and `show --corpus-id P1` say `kept: dependency (<A's assessment address>)`, and
    P3 is current; *B* reopens and captures an epoch over its write root, P1 and P3.
@@ -380,7 +426,17 @@ The 1b fixture extends `helpers/commons.py` from `build_derived`:
    from P1.
 6. Once the door lands: `build_b_updated_unkept`, the same with *B*'s verification absent
    (the fixture branches before `build_verified`), where P1 is retired, its line is in the
-   ledger, its pin is `retired`, and the next open mounts P3 only.
+   ledger, its pin is `retired`, and the next open mounts P3 only. Beside it, the three
+   retirement gates of §5.7: the **spec-drop case** (P3 keeps *A*'s assessment and run and
+   drops the spec; *B*'s verification keeps P1 as `kept: dependency (<spec>)`), the
+   **late-link case** (*B* adopts P1 and P3 of a chain P1 → P2 → P3 with P2 absent, in both
+   arrival orders: the outcome is *unresolved*, `current` is the earliest mounted tip either
+   way, nothing is retired; *B* then adopts P2, the chain resolves, and P1 is retired by that
+   `adopt` although P2 is not the tip), and the **retry case** (a crash after P3 mounts and
+   before P1 retires; `adopt` of P3 again retires P1 and reports it rather than refusing).
+   The preflight is tested on the overlap fixture before the door: two sibling
+   republications of P1 to the same destination, the second refused
+   `divergent-publication` and left `fetched`.
 
 Belief on both sides is compared over the same pins and the same policy, read as commons §9
 item 5 means it: each side evaluates under its own policy, and the comparison is of what both
@@ -403,10 +459,12 @@ Made in place, dated, by the plan's final task, as 1a's Deviations were:
 - §3 (pin): `keep` is a configuration list, not a pin flag (§3.2).
 - §7.4: the configuration gains `keep = ["<corpus_id>", ...]`; the registry's pins carry no
   `keep`.
-- §10: the conflict rule is the kernel's §8 checklist (§5.1), retiring Deviation 3; §10.2's
-  divergent sibling leaves the candidate *mounted*, not `fetched` (§5.7); the in-place
-  content rule (§5.3); chain retention as a fourth reason a predecessor is required (§5.7
-  rule 2).
+- §10: the conflict rule is the kernel's §8 checklist (§5.1), retiring Deviation 3; the
+  supersession preflight runs before admission and §10.2's `fetched` stands (§5.7); the
+  current publication under an unresolved chain is the earliest mounted tip (§5.6); the
+  in-place content rule (§5.3); chain retention as a fourth reason a predecessor is
+  required, and the facet references the dependency walk follows beside the relations (§5.7);
+  retirement re-evaluated on every `adopt`, not only at the tip's arrival (§5.7).
 - §9: the Carried branch compares content identities (§5.4); Deviation 12's "tying a
   carrier's copy to the origin's content identity per address is deferred to milestone 1b" is
   closed.
@@ -438,9 +496,10 @@ interval, which `show` and `adopt` name rather than hide.
 
 - The exact placement of the content-identity cache (`Carrier.content` vs. a per-context map
   on `ReadContext`), as long as each holder's records are read once per context.
-- Whether the inward extension of the dependency walk (§5.7 rule 4) is a science function
-  over `stored` relation names or a parameter to the kernel's walk; the plan may file a
-  kernel idea if the kernel exposes no inward relation set.
+- How the dependency walk (§5.7 rule 4) is composed: `closure_missing` iterated by science
+  with the facet references read through `stored`'s decoders, or a kernel idea asking the
+  publish act to follow the same references (the gap between the declared `executes`
+  relation and the emitted records is a kernel observation worth filing either way).
 - Report block shapes (`KeyVals` rows and their labels), within §5.8's content.
 - The fixture's snapshot names and the split of `test_commons_1b.py` into cases.
 - Refusal message wording, within the codes and data fields fixed above.
