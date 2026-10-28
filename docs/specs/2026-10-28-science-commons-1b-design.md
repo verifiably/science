@@ -1,7 +1,17 @@
 # Science commons milestone 1b — design
 
 **Date:** 2026-10-28
-**Status:** draft for review, revision 7. Revision 6 (`202a298`) answered review round 4;
+**Status:** draft for review, revision 8. Revision 7 (`e4f7160`) answered review round 5;
+revision 8 answers a scoped review round 6 of that revision's delta (a fresh `claude-code`
+reviewer, verdict revise: Important 5, Minor 6): the `corpus-retired` guard sits on
+`cited` alone, since `mount_holding` serves reads only; `publish` and `publish-preview`
+refuse `corpus-retired` when a session corpus is not live, the one route that creates a
+dependency on a retired origin without a citation; the `science epoch` claim is replaced by
+its observed behaviour (a CLI-process build over the live set, then `epoch-stale` in the
+stale session); the gate is `verify` of the record P1 alone holds, not a `spec`; the unkept
+branch is built in the overlap half; and the `dataset` recovery, the vocabulary route, the
+coordination-kinds invariant and the clock seam are stated (§5.7, §5.9, §7).
+Revision 6 (`202a298`) answered review round 4;
 revision 7 answers review round 5 (reviewer `codex/gpt-6-astra`, verdict revise: P1 1, P2
 1, P3 2): a citation of a retired corpus refuses `corpus-retired` in `cited` and
 `mount_holding` until the session reopens, with a two-command gate (§5.7); the
@@ -467,21 +477,60 @@ says for adopting a successor: the same invocation retires it otherwise. Every `
 retires reports, with each `retired` block, that the session's mounts are fixed at open and
 the remedy is to reopen and run `science epoch`, as the `mounted` block does today.
 
-**Citations of a retired corpus refuse until the session reopens.** The session's mounts
+**Writes over a retired corpus refuse until the session reopens.** The session's mounts
 are fixed at open, so after an in-session retirement the read views still hold the retired
-corpus, and a later write in the same service session could cite a record only it holds (a
-`spec` over a proposition P1 alone carries): the dependency would vanish at the next open
-and P1 cannot be readmitted. A remedy printed in a report does not prevent that, so the
-enforcement is in the resolution every citing write goes through: `ReadContext.cited` and
-`mount_holding` check the kernel's status of the holding corpus and refuse
-`corpus-retired`, naming the corpus, the record and the remedy (reopen the session), when
-it is not live; the kernel's `MountCitations` reads the fixed roots and checks no status,
-so science's check is the one that stands. `science epoch` in that session refuses the same
-way, since its coverage would name a corpus the kernel no longer lists live. Reads stay as
-they are until reopen: a belief or `show` over the stale mounts answers from records that
-are still readable, and the reopen remedy is in their reports. Gate: in one session, an
-`adopt` that retires P1, then a `spec` targeting a proposition only P1 holds; the second
-refuses `corpus-retired` before writing anything.
+corpus, and a later write in the same service session could depend on a record only it
+holds: the dependency would vanish at the next open and P1 cannot be readmitted. A remedy
+printed in a report does not prevent that, so the enforcement is on the two write routes
+that reach records outside the write root:
+
+- **Citing writes** (`spec`, `run`, `assess`, `verify`, `fetch`) resolve every cited record
+  through `ReadContext.cited`, which gains the check: the holding corpus's kernel status
+  must be live, else `corpus-retired`, naming the corpus, the record and the remedy (reopen
+  the session). The kernel's `MountCitations` reads the fixed roots and checks no status,
+  so science's check is the one that stands. `mount_holding` is a read route (`belief`,
+  `next`, `publish-preview`'s dataset rows) and gets no guard.
+- **`publish` and `publish-preview`** cite nothing through `ReadContext`: the kernel's
+  `publication_preview` selects over the current epoch, whose coverage in the retiring
+  session still names P1, captures P1 by presence alone, and attributes a record it alone
+  holds to `(P1, m1)`, an origin the reader has retired; the kernel checks admission, not
+  liveness, and the registry's own docstring calls a retired corpus's continued presence in
+  a wider epoch intended. Science therefore refuses `corpus-retired` before
+  `writer.publish` and before the preview when any corpus in the session's ids is not live
+  by kernel status.
+
+Reads stay as they are until reopen: a belief, `next` or `show` over the stale mounts
+answers from records that are still readable, and the reopen remedy is in their reports.
+Two read-side consequences are stated rather than guarded: `dataset_at`, the duplicate
+check `dataset` runs over the read views, excludes holders that are not live, so a dataset
+only P1 declared can be declared again in the retiring session (its address is content-
+derived and equal), which is the recovery a retirement makes necessary; and the vocabulary
+route (`claim` and `spec` resolve terms through the profile's dataset-bound lists over the
+read views) resolves against a retired holder until reopen and mints no record dependency,
+while rule 4's walk follows relations and facet references only and never a profile's
+vocabulary binding, so a successor that dropped a vocabulary dataset would retire its
+holder and the reader re-declares the bytes with `dataset` afterwards; the fixture keeps
+the vocabulary datasets in P3 and the gap is recorded here, not closed.
+
+`science epoch` is not a session command: it runs in the CLI process over a fresh
+`load_config`, which mounts only `mounted` pins, so after the retirement it builds over the
+live set and succeeds, and the service session's belief reads then refuse `epoch-stale`
+until reopen, since its session ids still hold P1. The kernel's `CoverageNotLive` is
+reachable only when a retired corpus is still configured, which the loader never does for
+a registry pin, so `build_over` does not normalize it.
+
+The coordination commands (`project`, `question`, `hypothesis`, `task`, `decide`, `reuse`,
+`revise`, `project-select`) resolve through the coordination resolver over every configured
+root, not `cited`; they cannot reach a retired publication today only because a
+publication carries world kinds, the marker and act reports, never coordination kinds. That
+invariant is what closes the route, and a publication that carried coordination kinds
+would reopen it.
+
+The guard ships in the overlap half (§7), where it is inert since nothing can retire, and
+its gate runs on the unkept branch once the door lands: in one session, an `adopt` that
+retires P1, then `verify` of *A*'s assessment, the one record P1 alone holds there; the
+second refuses `corpus-retired` before writing anything. A `spec` cannot serve as the gate:
+its target and dataset are carried by P3 and resolve there.
 
 A predecessor is **required** when any of these holds:
 
@@ -617,9 +666,11 @@ The 1b fixture extends `helpers/commons.py` from `build_derived`:
    **Overlap, second half:** the records P1 and P3 share read once (one address-map entry,
    holders P1 and P3), and *B*'s belief and verification over *A*'s assessment still read it
    from P1.
-6. Once the door lands: `build_b_updated_unkept`, the same with *B*'s verification absent
-   (the fixture branches before `build_verified`), where P1 is retired, its line is in the
-   ledger, its pin is `retired`, and the next open mounts P3 only. Beside it, the three
+6. `build_b_updated_unkept`, the same with *B*'s verification absent (the fixture
+   branches before `build_verified`), is built in the overlap half: before the door it
+   carries the pending-door report gates, and once the door lands its retirement assertions
+   run there: P1 is retired, its line is in the ledger, its pin is `retired`, and the next
+   open mounts P3 only. Beside it, the three
    retirement gates of §5.7: the **spec-drop case** (P3 keeps *A*'s assessment and run and
    drops the spec; *B*'s verification keeps P1 as `kept: dependency (<spec>)`), the
    **late-link case** (*B* adopts P1 and P3 of a chain P1 → P2 → P3 with P2 absent, in both
@@ -647,14 +698,16 @@ The 1b fixture extends `helpers/commons.py` from `build_derived`:
    **disconnected-then-connected order** (P1, then an unconnected P4, then P2 superseding
    P1 with P3 absent: current is P2, not P4), **two adoptions in one second** in one
    session (current follows ledger position, not corpus-id order), and **two sessions
-   mounting the two ends of a gap within one second** (current follows the session-id
-   order, the group is unresolved, nothing is retired). The preflight is also tested before
+   mounting the two ends of a gap within one second** (the test seams the ledger's clock
+   so both `mounted` lines carry one stamp; current follows the session-id order, the group
+   is unresolved, nothing is retired). The preflight is also tested before
    the door: two sibling republications of P1 to the same destination while P1 is mounted,
    the second refused `divergent-publication` and left `fetched`; the same pair at a reader
    that never held P1, refused the same way (named ancestry); and a refused sibling left
    `fetched` neither changes `show`'s current nor makes a later evaluation divergent. The
    1a conflict fixture (`build_conflicting`: *A*'s second publication of project `a` to
-   `LOC_A2`, equal content) now **passes** the checklist and mounts; `show` of either pin
+   `LOC_A2`, equal content; *B* adopts P1 from `LOC_A` and then P1′ from `LOC_A2`) now
+   **passes** the checklist and mounts; `show` of either pin
    reports the unlinked chain; and *B*'s `publish` of a view reaching a record both carry
    under different claims refuses `attribution-ambiguous` with the detail that no held
    marker orders them (§5.6). An equal-content republication passing the checklist is also
@@ -671,9 +724,10 @@ The 1b fixture extends `helpers/commons.py` from `build_derived`:
    and `show`'s `retention: pending (no door)` row on the **unkept branch** (on the main
    fixture *B*'s verification requires P1, so its row is `kept: dependency` and nothing
    awaits the door), plus one assertion that `SYMBOL_FIELDS` names
-   `enumerate_retractions_v2` and not `enumerate_retractions`. The citation gate of §5.7
-   (retire P1, then a `spec` over a proposition only P1 holds, refused `corpus-retired`)
-   runs once the door lands, on the unkept branch.
+   `enumerate_retractions_v2` and not `enumerate_retractions`. The write-guard gates of
+   §5.7 run once the door lands, on the unkept branch: retire P1, then `verify` of *A*'s
+   assessment refused `corpus-retired`; and `publish-preview` and `publish` in that session
+   refused `corpus-retired` naming P1.
 
    The Carried content check (§5.4) runs under none of the fixture's cases: at *A*, origin
    P1 is not pinned; at *B*, neither P1 nor P3 carries attributions. It gets its own unit
@@ -707,8 +761,8 @@ Made in place, dated, by the plan's final task, as 1a's Deviations were:
   through a retired marker refuses `chain-retired`, and one view published to two
   destinations is admitted and reported as unlinked (§5.6, §5.7); `keep` takes effect at
   the next session open and a changed configuration file refuses retirement `config-stale`
-  (§5.7 rule 1); a citation of a retired corpus refuses `corpus-retired` until the session
-  reopens (§5.7); the current publication
+  (§5.7 rule 1); a citing write or a publish over a retired corpus refuses `corpus-retired`
+  until the session reopens (§5.7); the current publication
   under an unresolved chain is the ledger fold of §5.6; an `adopt` reconciles completed
   effects, adopts, then re-evaluates retirement with the candidate mounted (§5.7); the
   in-place content rule (§5.3); chain retention as a fourth reason a predecessor is
@@ -729,11 +783,14 @@ Retirement needs `ScopedWriter.retire(corpus_id, *, evidence)` ledgering `retire
 sci-9104fb takes a dependency on `beliefs-a989fb`.
 
 **The milestone lands in two merges.** One plan with two phases: the **overlap half** (§5.1,
-§5.2, §5.4, §5.5, §5.6, §5.7 up to the retirement call with the pending-door Finding, §5.8,
-the fixture through step 5, and the §6 amendments that do not describe retirement) is
-executed and merged to `main` without waiting on the kernel; the **retirement tail** (the
-retirement call through the door, `_reconcile`'s `retired` mark, fixture step 6, the §6
-amendments to §10 and §12 that describe retirement) is one plan task blocked on
+§5.2, §5.4, §5.5, §5.6, §5.7 up to the retirement call with the pending-door Finding and
+the write guards, inert until the door, §5.8, the fixture through step 5 and the
+construction of step 6's unkept branch with its pending-door report gates, and the §6
+amendments that do not describe retirement) is executed and merged to `main` without
+waiting on the kernel; the **retirement tail** (the retirement call through the door,
+`_reconcile`'s `retired` mark, step 6's retirement assertions and the retirement and
+write-guard gates, the §6 amendments to §10 and §12 that describe retirement) is one plan
+task blocked on
 `beliefs-a989fb`, revised against the merged kernel design before it starts rather than
 guessed now, and merged second. The goal sci-9104fb closes after the second merge. Rejected:
 one branch held open until the door lands, which would hold the 1a follow-ups (§9) behind a
