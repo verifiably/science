@@ -8,7 +8,7 @@ complexity: low
 process: direct
 owner: fix/duplicate-refusal
 created: 2026-10-28T20:03:42Z
-updated: 2026-10-28T20:18:23Z
+updated: 2026-10-28T20:18:35Z
 started: 2026-10-28T20:03:53Z
 completed: 2026-10-28T20:17:53Z
 closed: 2026-10-28T20:17:53Z
@@ -43,3 +43,4 @@ Reproduce the reported test_two_corpora selected-next failure, trace the kernel 
 - 2026-10-28T20:17:53Z (fix/duplicate-refusal): Corrected stale duplicate fixture for content-identity holders; conflicting copies still refuse and identical copies permit unrelated selected reads. 13 focused and 899 full-selection fast tests passed; guide checks and independent review passed. Local merge and checked worktree cleanup follow in this turn.
   provenance: {"harness_session":"codex:01a1841b-698b-79f0-b115-6c26f9b6acb0","harness_session_source":"CODEX_THREAD_ID"}
 - 2026-10-28T20:18:23Z (main): Local integration complete: main fast-forwarded to 0232f09, including fix 065ae81 and the full review attachment. Removal dispositions: python/.pytest_cache and python/.testmondata are regenerable test caches; python/.venv is the regenerable isolated installed environment. No other ignored or untracked files, no scratch or off-tree evidence copies; review is committed on main. tt-report ran successfully. Host-pointer scan of user bin directories and systemd units found none into this worktree; this session changed no launchers or config includes.
+- 2026-10-28T20:18:35Z (main): retained: {"host":"titan","kind":"worktree","path":".worktrees/fix-duplicate-refusal","state":"released","verification":"verified","purpose":"Reviewed fix and task records merged locally into main; generated caches/environment discarded after inspection; task worktree removed and merged branch deleted","next_owner":"none","cleanup_trigger":"none"}
