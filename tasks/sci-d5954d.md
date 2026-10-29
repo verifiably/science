@@ -8,7 +8,7 @@ complexity: mid
 process: direct
 owner: commons-1b
 created: 2026-10-29T01:50:49Z
-updated: 2026-10-29T06:39:50Z
+updated: 2026-10-29T07:03:09Z
 started: 2026-10-29T04:42:10Z
 depends: [sci-29a07b, sci-b47e33]
 parent: sci-9104fb
@@ -48,3 +48,4 @@ step: "Task 9: `show` — supersession and retention"
 - 2026-10-29T05:01:46Z (commons-1b): review: impl round 1 — verdict: accept; findings: none; reviewer: codex/gpt-6.1-sol
 - 2026-10-29T06:39:50Z (commons-1b): resumed
   provenance: {"harness_session":"codex:01a18661-af98-78f1-bb12-72888d43707e","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-29T07:03:09Z (commons-1b): retained: {"host":"titan","state":"kept","verification":"verified","next_owner":"task:sci-9104fb","cleanup_trigger":"After parent fresh scoped review and approved integration, inspect retained evidence and follow worktree removal checks","kind":"evidence","path":".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-9-report.md","purpose":"Task 9 final whole-branch correction round 1 report or RED/GREEN, fast, full-gate and commit evidence for controller scoped review","sha256":"93c2a03baab6edaaf77aea843734e5dd00c9c385cd1ca94b9c1efeff55806807"}
