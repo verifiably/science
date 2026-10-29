@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: commons-1b
 created: 2026-10-01T02:21:10Z
-updated: 2026-10-29T01:21:17Z
+updated: 2026-10-29T01:21:19Z
 started: 2026-10-28T20:03:15Z
 depends: [sci-13050a, beliefs-81367e, beliefs-a989fb]
 tags: [commons]
@@ -91,3 +91,5 @@ Spec §12 part 1b: A binds B, adopts B's publication; A publishes an update drop
   provenance: {"harness_session":"claude-code:f666f956-1928-4c06-8bf1-80cd5a586d90","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-29T01:20:46Z (commons-1b): review: plan round 6 — verdict: revise; findings: P2 2; reviewer: codex/gpt-6-astra
 - 2026-10-29T01:21:17Z (commons-1b): codex plan round 6 (P2: sync operations_root too, on every write; P2: a post-rename fsync failure leaves a complete sidecar a retry reads) fixed in plan revision 7 (8937235)
+- 2026-10-29T01:21:19Z (commons-1b): resumed
+  provenance: {"harness_session":"claude-code:f666f956-1928-4c06-8bf1-80cd5a586d90","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
