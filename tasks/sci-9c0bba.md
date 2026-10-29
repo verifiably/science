@@ -8,7 +8,7 @@ complexity: high
 process: direct
 owner: commons-1b
 created: 2026-10-29T01:50:59Z
-updated: 2026-10-29T14:24:24Z
+updated: 2026-10-29T14:25:32Z
 started: 2026-10-29T13:50:58Z
 depends: [beliefs-a989fb]
 parent: sci-9104fb
@@ -40,3 +40,5 @@ step: "Task 13: The retirement door and reconcile (blocked on `beliefs-a989fb`)"
 - 2026-10-29T14:24:22Z (commons-1b): retained: {"host":"titan","kind":"evidence","path":".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-13-report.md","state":"kept","verification":"verified","purpose":"Full Task 13 implementation/TDD report with target-state distinction and verification limits","next_owner":"task:sci-9104fb","cleanup_trigger":"Controller persists review, completes Tasks 14 and 15, and rechecks retention after retirement-tail integration","sha256":"199c90a24424725d5d776a758ef944b9a58d48e90140c1534974d11f58238c40"}
 - 2026-10-29T14:24:24Z (commons-1b): parked (waiting on agent): Controller reviews Task 13 commit bb1fad59b28dc48d76da891133d80a92d76fe2bd and task-13-report.md in .worktrees/commons-1b (independent impl round 2), then resolves findings and closes Task 13; Tasks 14 and 15 remain separate before integration.
   provenance: {"harness_session":"codex:01a187f2-a2e7-7d82-bd96-be8e5bf96a4b","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-29T14:25:32Z (commons-1b): resumed
+  provenance: {"harness_session":"codex:01a187eb-c21e-7a42-a216-2a6c5b309479","harness_session_source":"CODEX_THREAD_ID"}
