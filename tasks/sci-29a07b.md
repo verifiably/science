@@ -8,7 +8,7 @@ complexity: high
 process: direct
 owner: commons-1b
 created: 2026-10-29T01:50:44Z
-updated: 2026-10-29T03:45:15Z
+updated: 2026-10-29T03:49:56Z
 started: 2026-10-29T03:29:41Z
 depends: []
 parent: sci-9104fb
@@ -41,3 +41,4 @@ step: "Task 6: `supersession.py`"
 - 2026-10-29T03:44:40Z (commons-1b): resumed
   provenance: {"harness_session":"codex:01a185b3-ffbd-7501-8f8a-9a3251cf92f4","harness_session_source":"CODEX_THREAD_ID"}
 - 2026-10-29T03:45:15Z (commons-1b): Review correction round 1: verified impl round 2 note exists. Extracted shared read-only sharing_lines into sharing.py, with replay consuming it and supersession importing the same reader. Pure extraction; existing ordering, unreadable-ledger and replay tests cover it; no new behavior or redundant re-export test.
+- 2026-10-29T03:49:56Z (commons-1b): Correction round 1 complete in b5688de: one shared ordered sharing-line reader now serves replay and supersession. 45 focused tests passed in 8.03s; 129 serial affected-suite tests passed in 239.60s, exit 0; checks and pre-commit passed. No new behavior or tests; scoped re-review round 3 is controller-owned.
