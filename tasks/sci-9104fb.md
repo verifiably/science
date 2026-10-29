@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: main
 created: 2026-10-01T02:21:10Z
-updated: 2026-10-29T07:09:25Z
+updated: 2026-10-29T07:09:26Z
 started: 2026-10-28T20:03:15Z
 depends: [sci-13050a, beliefs-81367e, beliefs-a989fb]
 tags: [commons]
@@ -115,3 +115,4 @@ Spec §12 part 1b: A binds B, adopts B's publication; A publishes an update drop
 - 2026-10-29T07:08:35Z (main): attached: commons-1b-overlap-review.md (7596 bytes): Full whole-branch review identifying two Important findings and one new deferred Minor
 - 2026-10-29T07:08:37Z (main): attached: commons-1b-overlap-fix-review.md (3221 bytes): Fresh scoped review accepts both corrective fixes with no new findings; full gate 1053 passed and one expected retirement xfail
 - 2026-10-29T07:09:25Z (main): retained: {"host": "titan", "kind": "worktree", "path": ".worktrees/commons-1b", "state": "kept", "verification": "verified", "purpose": "Retain branch commons-1b after the overlap local merge for Tasks 13\u201315 once the scoped retirement door lands", "next_owner": "task:sci-9104fb", "cleanup_trigger": "After retirement-tail integration, inspect ignored files, preserve required evidence and run removal checks; not before"}
+- 2026-10-29T07:09:26Z (main): retained: {"host": "titan", "kind": "evidence", "path": ".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b", "state": "kept", "verification": "verified", "purpose": "Retain complete overlap implementation, test logs, task reviews, final correction evidence and rulings for retirement-tail resumption", "next_owner": "task:sci-9104fb", "cleanup_trigger": "At retirement-tail resumption verify this manifest; after final milestone integration attach or preserve needed evidence before workspace removal", "manifest": ".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/overlap-evidence-manifest.json", "sha256": "0e4007fecc305a42082bb0090912d6d39936bb55e066a483d9d1bfd7c4f3f5e2"}
