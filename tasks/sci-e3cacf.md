@@ -8,7 +8,7 @@ complexity: high
 process: direct
 owner: commons-1b
 created: 2026-10-29T01:50:47Z
-updated: 2026-10-29T04:36:15Z
+updated: 2026-10-29T04:36:17Z
 started: 2026-10-29T04:08:23Z
 depends: [sci-a23752, sci-29a07b, sci-b47e33]
 parent: sci-9104fb
@@ -29,3 +29,4 @@ step: "Task 8: `adopt` — checklist, preflight, order and re-evaluation"
 - 2026-10-29T04:24:18Z (commons-1b): review: impl round 1 — verdict: accept; findings: none; reviewer: codex/gpt-6-astra
 - 2026-10-29T04:27:30Z (commons-1b): Controller agreed the shared Task9 inputs: supersession.groups(registry, lines) folds authorized established groups; config.live_mounts(config, world, registry) collects current admitted/live roots and their profiles. This keeps retention pure and introduces no orchestration layer. Self-review round 1 is by codex/gpt-6-astra; fresh controller review will be round 2.
 - 2026-10-29T04:36:15Z (commons-1b): retained: {"host": "titan", "state": "kept", "verification": "verified", "next_owner": "task:sci-9104fb", "cleanup_trigger": "After controller review and phase integration, preserve needed evidence and perform worktree removal checks", "kind": "worktree", "path": ".worktrees/commons-1b", "purpose": "Task 8 implementation awaiting fresh controller review; shared workspace for remaining approved plan tasks"}
+- 2026-10-29T04:36:17Z (commons-1b): retained: {"host": "titan", "state": "kept", "verification": "verified", "next_owner": "task:sci-9104fb", "cleanup_trigger": "After controller review and phase integration, preserve needed evidence and perform worktree removal checks", "kind": "evidence", "path": "$WORK_ROOT/science/.worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-8-adopt-red.log", "purpose": "Task 8 implementation and verification evidence for controller review", "sha256": "c3a22d1ee1bd33e144de086999620cbb57e0761dc6c6e34a1d1769bfa37764f8"}
