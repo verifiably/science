@@ -85,7 +85,7 @@ def handle(ctx, *, corpus_id) -> Report:
     blocks: list = [
         Heading(f"Pin: {corpus_id}"),
         KeyVals("pin", (("state", pin.state), ("world", pin.world), ("marker", pin.marker),
-                        ("artifact", pin.artifact), ("view", pin.view), ("keep", _yes(pin.keep)))),
+                        ("artifact", pin.artifact), ("view", pin.view), ("keep", _yes(corpus_id in config.keep)))),
         KeyVals("source", (("kind", "none" if source is None else source.kind),
                            ("reference", "none" if source is None else source.reference),
                            ("confirmation", _confirmation(pin, inputs)))),

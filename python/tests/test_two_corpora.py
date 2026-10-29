@@ -198,9 +198,9 @@ def test_one_id_in_two_corpora_refuses_naming_both_in_belief_and_unselected_next
         assert all(corpus_id in caught.value.refusal.message for corpus_id in ids)
 
 
-def test_one_id_in_two_corpora_refuses_selected_next_as_the_kernel_duplicate_location(two_corpora):
-    """Review round 1, P2: the live capture refuses the duplicate before the
-    project's query applies, whatever the project selects."""
+def test_equal_copies_allow_selected_next_to_reach_the_missing_address_check(two_corpora):
+    """Equal copies pass the live capture; this fixture has no proposition:claimed,
+    so the project's query reaches the kernel's missing-address check."""
     world = two_corpora
     _twice(world)
     with open_rig(world, NAMES) as (d, _):
@@ -209,7 +209,9 @@ def test_one_id_in_two_corpora_refuses_selected_next_as_the_kernel_duplicate_loc
         with pytest.raises(Refused) as caught:
             d.invoke("next", {})
     assert caught.value.refusal.code == "kernel-refused"
-    assert caught.value.refusal.data["kind"] == "AddressMapConflict"
+    assert caught.value.refusal.data == {
+        "kind": "SelectionRefused", "reason": "address-unknown", "refs": ["proposition:claimed"],
+    }
 
 
 def test_a_read_mount_without_a_manifest_refuses_at_the_read_entry_points(two_corpora):

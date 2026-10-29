@@ -1,4 +1,7 @@
+from hashlib import sha256
 from pathlib import Path
+
+import pytest
 
 from science.config import FetchPolicy, load_config
 from science.sharing import FetchRecord, Pin, SharingRegistry
@@ -38,6 +41,45 @@ def test_sharing_keys_load_with_defaults(tmp_path):
 def test_accept_must_be_world_ids(tmp_path):
     refusal = refused(lambda: load_config(write_minimal_config(tmp_path, accept=["abc"])))
     assert refusal.code == "invalid-input" and "accept" in refusal.message
+
+
+@pytest.mark.parametrize("pinned", [False, True])
+def test_keep_loads_as_corpus_ids_whether_pinned_or_not(tmp_path, pinned):
+    if pinned:
+        registry_with(tmp_path, "fetched")
+    cfg = load_config(write_minimal_config(tmp_path, sharing_root="sharing", keep=[CID]))
+    assert cfg.keep == (CID,)
+
+
+def test_keep_defaults_to_empty(tmp_path):
+    assert load_config(write_minimal_config(tmp_path)).keep == ()
+
+
+@pytest.mark.parametrize("entry", ["abc", "A" * 32, 1])
+def test_keep_refuses_an_invalid_entry_by_name(tmp_path, entry):
+    refusal = refused(lambda: load_config(write_minimal_config(tmp_path, keep=[entry])))
+    assert refusal.code == "invalid-input"
+    assert "keep" in refusal.message and repr(entry) in refusal.message
+
+
+@pytest.mark.parametrize("keep", [CID, False])
+def test_keep_refuses_a_non_list(tmp_path, keep):
+    refusal = refused(lambda: load_config(write_minimal_config(tmp_path, keep=keep)))
+    assert refusal.code == "invalid-input" and "config keep must be a list" in refusal.message
+
+
+def test_load_config_records_the_files_path_and_digest(tmp_path):
+    path = write_minimal_config(tmp_path)
+    contents = path.read_bytes() + b"# source bytes, including comments\n"
+    path.write_bytes(contents)
+    assert load_config(path).source == (path, sha256(contents).hexdigest())
+
+
+def test_load_config_refuses_invalid_utf8(tmp_path):
+    path = write_minimal_config(tmp_path)
+    path.write_bytes(path.read_bytes() + b"# invalid byte: \xff\n")
+    refusal = refused(lambda: load_config(path))
+    assert refusal.code == "invalid-input" and "TOML" in refusal.message
 
 
 def test_fetch_table_validates_policy_and_bound(tmp_path):

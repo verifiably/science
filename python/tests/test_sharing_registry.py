@@ -1,6 +1,7 @@
 """The sharing registry: pins, provider bindings, adopted roots, ledger replay."""
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 
@@ -47,6 +48,21 @@ def test_pin_round_trips_and_sorts(tmp_path):
     assert [p.corpus_id for p in pins] == [CID, CID_B]
     assert registry.pin(CID) == pins[0] and pins[0].source == PinSource("catalog", "art1")
     assert registry.pin("e" * 32) is None
+
+
+def test_a_pin_file_with_a_keep_key_still_parses_and_is_rewritten_without_it(tmp_path):
+    registry = SharingRegistry(tmp_path)
+    pin = make_pin()
+    registry.write_pin(pin)
+    path = tmp_path / "pins" / f"{pin.corpus_id}.json"
+    data = json.loads(path.read_text())
+    data["keep"] = False
+    path.write_text(json.dumps(data))
+    assert registry.pin(pin.corpus_id) == pin
+    registry.write_pin(pin)
+    rewritten = json.loads(path.read_text())
+    assert "keep" not in rewritten
+    assert rewritten["version"] == 1
 
 
 def test_mounted_roots_are_exactly_the_mounted_pins(tmp_path):

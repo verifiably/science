@@ -71,7 +71,6 @@ class Pin:
     source: PinSource | None
     fetch: FetchRecord
     state: Literal["fetched", "admitted", "mounted", "retired"]
-    keep: bool = False
 
     def origin_confirmed(self, bindings: Mapping[str, ProviderBinding]) -> bool:
         if self.source is None or self.source.kind != "provider":
@@ -135,7 +134,7 @@ def _pin_from(data: object) -> Pin:
         corpus_id, _text(data, "marker"), _text(data, "artifact"), world, _text(data, "view"),
         PinSource.parse(_text(data, "source")),
         FetchRecord(_text(fetch, "location"), _text(fetch, "at"), _text(fetch, "verdict")),
-        state, _bool(data, "keep"),  # type: ignore[arg-type]
+        state,  # type: ignore[arg-type]
     )
 
 
@@ -145,7 +144,7 @@ def _pin_to(pin: Pin) -> dict:
         "artifact": pin.artifact, "world": pin.world, "view": pin.view,
         "source": pin.source.render() if pin.source else "",
         "fetch": {"location": pin.fetch.location, "at": pin.fetch.at, "verdict": pin.fetch.verdict},
-        "state": pin.state, "keep": pin.keep,
+        "state": pin.state,
     }
 
 
@@ -266,7 +265,7 @@ def apply_line(registry: SharingRegistry, line: SharingLine) -> bool:
         return False
     registry.write_pin(Pin(
         pin.corpus_id, pin.marker, pin.artifact, pin.world, pin.view, new_source,
-        pin.fetch, state, pin.keep,
+        pin.fetch, state,
     ))
     return True
 

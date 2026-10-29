@@ -2,12 +2,12 @@
 reading B's registry, the kernel's registry and the session's records; it writes nothing."""
 from dataclasses import replace
 
-from helpers.commons import LOC_A, a_identity, read_rig, refused
+from helpers.commons import LOC_A, a_identity, read_rig, refused, write_commons_config
 from helpers.world import (
     LEVELS, WORKING_FIELDS, _minted_ref, concept_list_address, level_list_address, open_rig,
 )
 
-from science.config import ReadContext
+from science.config import ReadContext, load_config
 from science.sharing import SharingRegistry
 
 LAG = "registry lags the kernel: `adopt` reconciles it"
@@ -49,6 +49,13 @@ def test_show_distinguishes_accepted_evidence_from_confirmed_origin(reopened):
     accepted = _show(replace(reopened.b, accept=(ids["world"],)), ids["corpus_id"])
     assert "world accepted: yes" in accepted and "counts as evidence: yes" in accepted
     assert f"{ids['assessment']}: counts yes; verifications 0" in accepted
+
+
+def test_show_keep_row_reads_the_configuration(reopened):
+    corpus_id = a_identity(reopened.a)["corpus_id"]
+    configured = replace(reopened.b, keep=(corpus_id,))
+    loaded = load_config(write_commons_config(configured))
+    assert "keep: yes" in _show(loaded, corpus_id)
 
 
 def test_b_resolves_the_vocabulary_from_fetched_bytes_without_redeclaring(verified):

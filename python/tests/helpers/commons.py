@@ -219,7 +219,7 @@ def build_fresh_no_epoch(work: Path) -> dict:
 def write_commons_config(cfg: ScienceConfig) -> Path:
     """The launcher TOML for an installation `build_installation` built, beside its world root: every key,
     including the configured corpus roots (the sharing registry's mounted roots are the loader's to add), the
-    write root, the sharing root, accept and fetch."""
+    write root, the sharing root, accept, fetch and keep."""
     home = cfg.world.world_root.parent
     contract = home.parent / "testing.yaml"
     assert contract.is_file(), "write_commons_config needs the installations' contract document"
@@ -238,6 +238,7 @@ def write_commons_config(cfg: ScienceConfig) -> Path:
         "sharing_root": str(cfg.sharing_root),
         "accept": list(cfg.accept),
         "fetch": {"policy": cfg.fetch.policy, "max_bytes": cfg.fetch.max_bytes},
+        "keep": list(cfg.keep),
     }
     if cfg.default_project is not None:
         keys["default_project"] = str(cfg.default_project)

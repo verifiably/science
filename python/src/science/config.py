@@ -7,6 +7,7 @@ import tomllib
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from functools import cached_property
+from hashlib import sha256
 from pathlib import Path
 from typing import Literal, NoReturn
 
@@ -35,7 +36,7 @@ _KEYS = (
 )
 _OPTIONAL_KEYS = (
     "service_socket", "default_project", "write_root", "read_contracts",
-    "sharing_root", "accept", "fetch",
+    "sharing_root", "accept", "fetch", "keep",
 )
 _FETCH_POLICIES = ("records-only", "fetch")
 
@@ -70,6 +71,8 @@ class ScienceConfig:
     sharing_root: Path | None = None
     accept: tuple[str, ...] = ()
     fetch: FetchPolicy = FetchPolicy("records-only", 0)
+    keep: tuple[str, ...] = ()
+    source: tuple[Path, str] | None = None
 
 
 def _refuse(message: str) -> NoReturn:
@@ -143,9 +146,9 @@ def load_config(path: Path) -> ScienceConfig:
     if not path.is_file():
         _refuse(f"config file not found: {path}")
     try:
-        with path.open("rb") as config_file:
-            raw = tomllib.load(config_file)
-    except (OSError, tomllib.TOMLDecodeError):
+        contents = path.read_bytes()
+        raw = tomllib.loads(contents.decode("utf-8"))
+    except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError):
         _refuse("config is not valid TOML")
     if type(raw) is not dict:
         _refuse("config must be a table")
@@ -177,6 +180,12 @@ def load_config(path: Path) -> ScienceConfig:
         type(value) is not str or not _WORLD_ID_RE.fullmatch(value) for value in accept
     ):
         _refuse("config accept must be a list of world ids, 32 lowercase hex characters each")
+    keep = raw.get("keep", [])
+    if type(keep) is not list:
+        _refuse("config keep must be a list of corpus ids, 32 lowercase hex characters each")
+    for entry in keep:
+        if type(entry) is not str or not _WORLD_ID_RE.fullmatch(entry):
+            _refuse(f"config keep entry {entry!r} must be a corpus id, 32 lowercase hex characters")
     fetch = _fetch_policy(raw["fetch"]) if "fetch" in raw else FetchPolicy("records-only", 0)
     if type(raw["store_root"]) is not str:
         _refuse("config store_root must be a string")
@@ -273,6 +282,8 @@ def load_config(path: Path) -> ScienceConfig:
         sharing_root=sharing_root,
         accept=tuple(accept),
         fetch=fetch,
+        keep=tuple(keep),
+        source=(path, sha256(contents).hexdigest()),
     )
 
 
