@@ -1,15 +1,17 @@
 ---
 id: sci-bb102d
 title: "Task 1: `keep` moves to the configuration"
-status: doing
+status: done
 priority: 1
 size: s
 complexity: low
 process: direct
 owner: commons-1b
 created: 2026-10-29T01:50:37Z
-updated: 2026-10-29T02:15:50Z
+updated: 2026-10-29T02:15:58Z
 started: 2026-10-29T02:09:27Z
+completed: 2026-10-29T02:15:58Z
+closed: 2026-10-29T02:15:58Z
 depends: []
 parent: sci-9104fb
 tags: [commons]
@@ -32,3 +34,7 @@ step: "Task 1: `keep` moves to the configuration"
 - 2026-10-29T02:15:47Z (commons-1b): retained: {"host": "titan", "kind": "evidence", "path": ".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-1-green.log", "state": "kept", "verification": "verified", "purpose": "Task 1 implementation and TDD evidence for controller review", "next_owner": "task:sci-9104fb", "cleanup_trigger": "After parent review and integration, preserve needed evidence before worktree cleanup", "sha256": "9e2812acd6a05f3731b4fdff8101f2cbc87ef47aa31fef46412d637d7992db80"}
 - 2026-10-29T02:15:49Z (commons-1b): retained: {"host": "titan", "kind": "evidence", "path": ".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-1-fast.log", "state": "kept", "verification": "verified", "purpose": "Task 1 implementation and TDD evidence for controller review", "next_owner": "task:sci-9104fb", "cleanup_trigger": "After parent review and integration, preserve needed evidence before worktree cleanup", "sha256": "419825022eb7032747652bff37caa8d80be3f04b82b20c72bd9d0e056bce199a"}
 - 2026-10-29T02:15:50Z (commons-1b): retained: {"host": "titan", "kind": "evidence", "path": ".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-1-report.md", "state": "kept", "verification": "verified", "purpose": "Task 1 implementation and TDD evidence for controller review", "next_owner": "task:sci-9104fb", "cleanup_trigger": "After parent review and integration, preserve needed evidence before worktree cleanup", "sha256": "c5290a01ddefea201dc92e81be61016e72817201ea1cb92ebc9abfe1db27d32e"}
+- 2026-10-29T02:15:58Z (commons-1b): done
+  provenance: {"harness_session":"codex:01a18561-925a-7bd0-b1a5-15a581f43b86","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-29T02:15:58Z (commons-1b): Committed 1c6f934: configuration-owned keep and exact-byte source digest; legacy pin key ignored, show and fixture wired. TDD RED then 65 focused tests and all 910 test-fast tests passed. Controller owns independent review and retained worktree/evidence under sci-9104fb.
+  provenance: {"harness_session":"codex:01a18561-925a-7bd0-b1a5-15a581f43b86","harness_session_source":"CODEX_THREAD_ID"}
