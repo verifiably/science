@@ -1,15 +1,17 @@
 ---
 id: sci-b47e33
 title: "Task 7: `retention.py`"
-status: doing
+status: done
 priority: 1
 size: m
 complexity: high
 process: direct
 owner: commons-1b
 created: 2026-10-29T01:50:46Z
-updated: 2026-10-29T04:03:22Z
+updated: 2026-10-29T04:03:24Z
 started: 2026-10-29T03:52:58Z
+completed: 2026-10-29T04:03:24Z
+closed: 2026-10-29T04:03:24Z
 depends: []
 parent: sci-9104fb
 tags: [commons]
@@ -33,3 +35,7 @@ step: "Task 7: `retention.py`"
 - 2026-10-29T04:03:18Z (commons-1b): retained: {"host":"titan","kind":"evidence","path":".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-7-bare-spec-red.log","sha256":"8f71fa07c6b37c2c26fa06e9c3dde479c3fcc137dfbb365871a40e5c022ee0e3","purpose":"Task 7 review and verification evidence for the parent plan","state":"kept","verification":"verified","next_owner":"task:sci-9104fb","cleanup_trigger":"After branch review and integration the parent reassesses evidence preservation and worktree removal checks"}
 - 2026-10-29T04:03:20Z (commons-1b): retained: {"host":"titan","kind":"evidence","path":".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-7-green.log","sha256":"77aa9005ef28f3bcf777ea129aeb9bd55428e21f3e90d39ac7fd0d8a18b25dc2","purpose":"Task 7 review and verification evidence for the parent plan","state":"kept","verification":"verified","next_owner":"task:sci-9104fb","cleanup_trigger":"After branch review and integration the parent reassesses evidence preservation and worktree removal checks"}
 - 2026-10-29T04:03:22Z (commons-1b): retained: {"host":"titan","kind":"evidence","path":".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-7-fast.log","sha256":"ec43a2ac0afbeb535d83ea81110da8b0cae6e5e8de15231a03c6f22d10296197","purpose":"Task 7 review and verification evidence for the parent plan","state":"kept","verification":"verified","next_owner":"task:sci-9104fb","cleanup_trigger":"After branch review and integration the parent reassesses evidence preservation and worktree removal checks"}
+- 2026-10-29T04:03:24Z (commons-1b): done
+  provenance: {"harness_session":"codex:01a185c9-6393-7362-b43e-8a90e7be3963","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-29T04:03:24Z (commons-1b): Implemented pure dependency closure and ordered retention reasons in 7bda583; 14 focused and 14 affected-suite tests pass. Self-review impl round 1 accept; controller owns fresh round 2 and remaining integration. Parent sci-9104fb owns retained worktree and hashed report/logs.
+  provenance: {"harness_session":"codex:01a185c9-6393-7362-b43e-8a90e7be3963","harness_session_source":"CODEX_THREAD_ID"}
