@@ -7,7 +7,7 @@ size: xs
 complexity: low
 process: direct
 created: 2026-10-29T08:58:56Z
-updated: 2026-10-29T08:58:56Z
+updated: 2026-10-29T08:59:44Z
 depends: []
 parent: sci-9104fb
 tags: [commons]
@@ -31,3 +31,4 @@ Done: a focused regression shows an existing pin with a different unpinned keep 
 
 - 2026-10-29T08:58:56Z (add): created
   provenance: {"harness_session":"codex:01a1855d-6c10-77a2-82b3-d0457ea936da","harness_session_source":"CODEX_THREAD_ID","origin":"agent"}
+- 2026-10-29T08:59:44Z (main): concerns: sci-d5954d defect — The completed and locally integrated show change omitted the Review Focus 1 warning for configured keep IDs without pins; this records the deferred overlap review Minor 3 as executable follow-up work.
