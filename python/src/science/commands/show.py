@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from beliefs import stored
 from beliefs.corpus import ReadView
+from beliefs.world.registry import content_identity
 
 from science import publication, supersession
 from science.acceptance import AcceptanceInputs, acceptance_inputs, counts
@@ -41,17 +42,17 @@ def _world_of(ctx, inputs: AcceptanceInputs, corpus_id: str) -> str:
                                            "own nor a publication, so its world is unknown"))
 
 
-def _verifications(ctx) -> dict[str, list[tuple[str, str]]]:
-    """Every verification record across the session's corpora, as (holding corpus, address), by the assessment
-    its `verifies` relation targets."""
-    found: dict[str, list[tuple[str, str]]] = {}
+def _verifications(ctx) -> dict[str, dict[tuple[str, str], list[str]]]:
+    """Verification records by assessment and (address, content identity), retaining every holding corpus."""
+    found: dict[str, dict[tuple[str, str], list[str]]] = {}
     for mount in ctx.session_mounts():
         for node in mount.view.iter_stored():
             if node.kind != "verification":
                 continue
+            identity = node.id, content_identity(node)
             for relation in node.relations:
                 if relation.predicate == stored.VERIFIES:
-                    found.setdefault(relation.target, []).append((mount.corpus_id, node.id))
+                    found.setdefault(relation.target, {}).setdefault(identity, []).append(mount.corpus_id)
     return found
 
 
@@ -59,9 +60,10 @@ def _evidence(ctx, inputs: AcceptanceInputs, corpus_id: str, assessments: list[s
     verifying = _verifications(ctx)
     rows = []
     for address in assessments:
-        held = verifying.get(address, [])
-        worlds = sorted({_world_of(ctx, inputs, holder) for holder, _ in held})
-        counted = sum(1 for holder, verification in held if counts(inputs, holder, verification))
+        held = verifying.get(address, {})
+        worlds = sorted({_world_of(ctx, inputs, holder) for holders in held.values() for holder in holders})
+        counted = sum(any(counts(inputs, holder, verification) for holder in holders)
+                      for (verification, _), holders in held.items())
         rows.append((address, f"counts {_yes(counts(inputs, corpus_id, address))}; verifications {len(held)} "
                               f"from worlds {', '.join(worlds) or 'none'}, {counted} count under the policy"))
     return tuple(rows) or (("assessments", "none: the corpus holds no assessment"),)

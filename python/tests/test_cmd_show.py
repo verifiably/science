@@ -1,14 +1,19 @@
 """`show` (commons 1a, Task 11): one pin's state, source, kernel status, acceptance and verification picture,
 reading B's registry, the kernel's registry and the session's records; it writes nothing."""
 from dataclasses import replace
+from types import SimpleNamespace
 
 import pytest
+from beliefs import stored
 from beliefs.coordination import CoordinationAddress
+from beliefs.corpus import ReadView
+from beliefs.world.registry import content_identity
+from nodes.core.corpus import Corpus
 
 from helpers.commons import LOC_A, LOC_A2, a_identity, publish_again, read_rig, refused, write_commons_config
 from test_cmd_adopt import _adopt, bound_fetched_only
 from helpers.world import (
-    LEVELS, WORKING_FIELDS, _minted_ref, concept_list_address, level_list_address, open_rig,
+    LEVELS, PROFILE, WORKING_FIELDS, _minted_ref, concept_list_address, level_list_address, open_rig,
 )
 
 from science.config import ReadContext, load_config
@@ -81,6 +86,44 @@ def test_show_lists_bs_verification_of_as_assessment_once_minted(verified):
     text = _show(verified.b, ids["corpus_id"])
     assert (f"{ids['assessment']}: counts no; verifications 1 from worlds {verified.b.world.world_id}, "
             "1 count under the policy") in text
+
+
+@pytest.mark.parametrize("eligible,different,total,counted", [
+    ((True, True), False, 1, 1),
+    ((False, True), False, 1, 1),
+    ((False, False), False, 1, 0),
+    ((True, True), True, 2, 2),
+])
+def test_show_counts_equal_verifications_once_through_any_eligible_holder(
+        certified_work, eligible, different, total, counted):
+    from science.acceptance import AcceptanceInputs, Carrier
+    from science.commands.show import _evidence
+    from science.config import Mount
+    from science.sharing import FetchRecord, Pin, PinSource, ProviderBinding
+
+    assessment = "assessment:target"
+    node = stored.verification_node("shared", title="verification", assessment="identity",
+                                    assessment_ref=assessment, scope="replay", verdict="passed")
+    mounts, pins, carriers, bindings = [], {}, {}, {}
+    worlds = ("a" * 32, "b" * 32)
+    for index, (corpus, world) in enumerate(zip(("1" * 32, "2" * 32), worlds)):
+        held = node.model_copy(update={"title": "different"}) if different and index else node
+        root = certified_work / corpus
+        root.mkdir()
+        Corpus(root).add(held)
+        mounts.append(Mount(corpus, root, ReadView.opened_at(root), PROFILE))
+        marker, location = f"marker-{index}", f"https://example.org/{index}"
+        pins[corpus] = Pin(corpus, marker, f"artifact-{index}", world, "view:x",
+                           PinSource("provider", location), FetchRecord(location, "now", "validated"), "mounted")
+        carriers[corpus] = Carrier(corpus, world, marker, frozenset({node.id}), {}, {node.id: content_identity(held)})
+        bindings[world] = ProviderBinding(world, (location,), "now", True)
+    inputs = AcceptanceInputs("0" * 32, frozenset(),
+                              frozenset(world for world, accepted in zip(worlds, eligible) if accepted),
+                              pins, bindings, frozenset(), carriers)
+    ctx = SimpleNamespace(session_mounts=lambda: tuple(mounts))
+    assert _evidence(ctx, inputs, "1" * 32, [assessment]) == ((assessment,
+        f"counts no; verifications {total} from worlds {worlds[0]}, {worlds[1]}, "
+        f"{counted} count under the policy"),)
 
 
 def test_show_reports_a_registry_that_lags_the_kernel(adopted):
@@ -264,6 +307,20 @@ def test_live_retention_inputs_follow_kernel_admission_when_pin_state_lags(reque
     corpus = a_identity(installations.a)["corpus_id"]
     registry = SharingRegistry(installations.b.sharing_root)
     registry.write_pin(replace(registry.pin(corpus), state="fetched"))
+    if not admitted:
+        import shutil
+        shutil.rmtree(registry.root_for(corpus))
     ctx = ReadContext.open(installations.b)
     assert ctx.world.status(corpus).known is admitted
     assert (corpus in {mount.corpus_id for mount in live_mounts(installations.b, ctx.world, registry)}) is admitted
+
+
+def test_live_retention_inputs_reject_an_unreadable_admitted_root(adopted):
+    from science.config import live_mounts
+    corpus = a_identity(adopted.a)["corpus_id"]
+    registry = SharingRegistry(adopted.b.sharing_root)
+    registry.write_pin(replace(registry.pin(corpus), state="fetched"))
+    (registry.root_for(corpus) / "corpus.yaml").unlink()
+    ctx = ReadContext.open(adopted.b)
+    refusal = refused(lambda: live_mounts(adopted.b, ctx.world, registry))
+    assert refusal.code == "invalid-input" and corpus in refusal.message

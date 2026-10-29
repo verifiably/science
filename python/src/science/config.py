@@ -367,9 +367,10 @@ def mount_profiles(config: ScienceConfig) -> dict[Path, ProfileSpec]:
 
 def live_mounts(config: ScienceConfig, world, registry) -> tuple[Mount, ...]:
     """Current admitted live inputs, reopened by root rather than the session's frozen mounts."""
-    roots = {root.resolve() for root in config.world.corpus_roots}
-    roots.update(registry.root_for(pin.corpus_id).resolve() for pin in registry.pins())
     admitted = {item.corpus_id for item in world.registry().admissions}
+    roots = {root.resolve() for root in config.world.corpus_roots}
+    roots.update(registry.root_for(pin.corpus_id).resolve() for pin in registry.pins()
+                 if pin.corpus_id in admitted and world.status(pin.corpus_id).live)
     keyed = sorted((corpus_id_at(root), root) for root in roots)
     keyed = [(corpus, root) for corpus, root in keyed if corpus in admitted and world.status(corpus).live]
     live_config = replace(config, world=replace(config.world, corpus_roots=tuple(root for _, root in keyed)))

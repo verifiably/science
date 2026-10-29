@@ -100,6 +100,20 @@ def test_adopt_unsourced_discards_the_copy_writes_no_pin_and_names_the_remedies(
     assert _sharing_lines(published.b) == []
 
 
+def test_adopt_ignores_an_unavailable_unadmitted_fetched_root(bound_fetched_only):
+    import shutil
+    first = a_identity(bound_fetched_only.a)["corpus_id"]
+    registry = SharingRegistry(bound_fetched_only.b.sharing_root)
+    shutil.rmtree(registry.root_for(first))
+    successor = publish_again(bound_fetched_only, LOC_A)
+    text = _adopt(bound_fetched_only, LOC_A, successor).text
+    assert _states(text) == ["fetched", "admitted", "mounted"]
+    assert not _known(bound_fetched_only.b, first)
+    assert _known(bound_fetched_only.b, successor)
+    assert registry.pin(first).state == "fetched"
+    assert registry.pin(successor).state == "mounted"
+
+
 def test_adopt_after_bind_admits_and_marks_mounted(bound):
     ids = a_identity(bound.a)
     cid = ids["corpus_id"]
