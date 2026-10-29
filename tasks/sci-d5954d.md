@@ -1,15 +1,17 @@
 ---
 id: sci-d5954d
 title: "Task 9: `show` — supersession and retention"
-status: doing
+status: done
 priority: 1
 size: s
 complexity: mid
 process: direct
 owner: commons-1b
 created: 2026-10-29T01:50:49Z
-updated: 2026-10-29T04:58:13Z
+updated: 2026-10-29T04:58:15Z
 started: 2026-10-29T04:42:10Z
+completed: 2026-10-29T04:58:15Z
+closed: 2026-10-29T04:58:15Z
 depends: [sci-29a07b, sci-b47e33]
 parent: sci-9104fb
 tags: [commons]
@@ -41,3 +43,7 @@ step: "Task 9: `show` — supersession and retention"
 - 2026-10-29T04:58:10Z (commons-1b): retained: {"host":"titan","state":"kept","verification":"verified","next_owner":"task:sci-9104fb","cleanup_trigger":"After parent fresh review and approved integration, inspect retained evidence and follow worktree removal checks","kind":"evidence","path":".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-9-red.log","purpose":"Task 9 implementation report or RED/GREEN/commit evidence for parent independent review","sha256":"c24bad317c4a477672a4f5ed7bce588acf06b1b6fecabc284793ee19942f3af8"}
 - 2026-10-29T04:58:12Z (commons-1b): retained: {"host":"titan","state":"kept","verification":"verified","next_owner":"task:sci-9104fb","cleanup_trigger":"After parent fresh review and approved integration, inspect retained evidence and follow worktree removal checks","kind":"evidence","path":".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-9-report.md","purpose":"Task 9 implementation report or RED/GREEN/commit evidence for parent independent review","sha256":"c27e7f3b381b6cc1cc600c8119a64f7118277912c9c9141ea109b9f303001bff"}
 - 2026-10-29T04:58:13Z (commons-1b): retained: {"host":"titan","state":"kept","verification":"verified","next_owner":"task:sci-9104fb","cleanup_trigger":"After parent fresh review and approved integration, inspect retained evidence and follow worktree removal checks","kind":"evidence","path":".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-9-terminal-red.log","purpose":"Task 9 implementation report or RED/GREEN/commit evidence for parent independent review","sha256":"51a0fbe2067e2b91d7178a2b1ee296fbfb0fccaf159e301d327f7865d66ff657"}
+- 2026-10-29T04:58:15Z (commons-1b): done
+  provenance: {"harness_session":"codex:01a185f6-78b2-7ce2-abda-5d3ac3e6b430","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-29T04:58:15Z (commons-1b): Implemented show supersession/retention in f22bf53; 22 focused passes +3 Task11 strict xfails, 11 adapter passes, final selected fast check green after generated prompt sync. Parent sci-9104fb owns fresh review and retained worktree/evidence.
+  provenance: {"harness_session":"codex:01a185f6-78b2-7ce2-abda-5d3ac3e6b430","harness_session_source":"CODEX_THREAD_ID"}
