@@ -2,12 +2,12 @@
 id: sci-cc4fb9
 title: "Design /science:discuss, research-topic and research-paper: three authored skills and the note, topic, source and source-assertion commands"
 status: todo
-priority: 2
+priority: 1
 size: m
 complexity: high
 process: planned
 created: 2026-10-29T20:02:26Z
-updated: 2026-10-29T20:02:54Z
+updated: 2026-10-29T20:06:54Z
 depends: []
 tags: [heritage, skills]
 agent: claude-code/claude-opus-5-5
