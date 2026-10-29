@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: commons-1b
 created: 2026-10-01T02:21:10Z
-updated: 2026-10-28T23:48:10Z
+updated: 2026-10-29T00:01:28Z
 started: 2026-10-28T20:03:15Z
 depends: [sci-13050a, beliefs-81367e, beliefs-a989fb]
 tags: [commons]
@@ -69,3 +69,4 @@ Spec §12 part 1b: A binds B, adopts B's publication; A publishes an update drop
 - 2026-10-28T23:48:08Z (commons-1b): plan round 2 (scoped, over e54ca13): the sharing report contract admits pin blocks only (render.audit_sharing_report, dispatch renders _pin_report), so adopt's retention rows and findings need the contract extended; the two-sessions test needs an unadopted late chain; late_link needs reopen+epoch; uid-corruption builder details. All verified and fixed in plan revision 3 (2de2c94) with the 6 minors; Task 12 records the report-contract change as a framework §4.4 amendment
 - 2026-10-28T23:48:10Z (commons-1b): parked (waiting on user, review): Keith reviews the 1b implementation plan revision 3 (worktree .worktrees/commons-1b, commit 2de2c94, docs/plans/2026-10-28-science-commons-1b.md; design accepted at 99eabaa); on accept, tasks start sci-9104fb in the worktree, add one child per Task heading (--plan docs/plans/2026-10-28-science-commons-1b.md --step), run the Setup baseline (just test) and execute Tasks 1-12 by the chosen method; Tasks 13-15 wait on beliefs-a989fb
   provenance: {"harness_session":"claude-code:f666f956-1928-4c06-8bf1-80cd5a586d90","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-29T00:01:28Z (commons-1b): review: plan round 3 — verdict: revise; findings: P1 1, P2 3, P3 1; reviewer: codex/gpt-6-astra
