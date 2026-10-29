@@ -8,7 +8,7 @@ complexity: mid
 process: direct
 owner: commons-1b
 created: 2026-10-29T01:50:49Z
-updated: 2026-10-29T07:03:19Z
+updated: 2026-10-29T07:03:20Z
 started: 2026-10-29T04:42:10Z
 depends: [sci-29a07b, sci-b47e33]
 parent: sci-9104fb
@@ -56,3 +56,4 @@ step: "Task 9: `show` — supersession and retention"
 - 2026-10-29T07:03:16Z (commons-1b): retained: {"host":"titan","state":"kept","verification":"verified","next_owner":"task:sci-9104fb","cleanup_trigger":"After parent fresh scoped review and approved integration, inspect retained evidence and follow worktree removal checks","kind":"evidence","path":".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/final-fix-1-focused.log","purpose":"Task 9 final whole-branch correction round 1 report or RED/GREEN, fast, full-gate and commit evidence for controller scoped review","sha256":"9baebb1a0d6534724074e9b627260b3611c2e9b3bf6b150e62465e7243c29f45"}
 - 2026-10-29T07:03:17Z (commons-1b): retained: {"host":"titan","state":"kept","verification":"verified","next_owner":"task:sci-9104fb","cleanup_trigger":"After parent fresh scoped review and approved integration, inspect retained evidence and follow worktree removal checks","kind":"evidence","path":".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/final-fix-1-gate.log","purpose":"Task 9 final whole-branch correction round 1 report or RED/GREEN, fast, full-gate and commit evidence for controller scoped review","sha256":"b62d2978f46412129d9b8a6d788b30e026b3382d1f281812328830b2cf0e071b"}
 - 2026-10-29T07:03:19Z (commons-1b): retained: {"host":"titan","state":"kept","verification":"verified","next_owner":"task:sci-9104fb","cleanup_trigger":"After parent fresh scoped review and approved integration, inspect retained evidence and follow worktree removal checks","kind":"evidence","path":".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/final-fix-1-green.log","purpose":"Task 9 final whole-branch correction round 1 report or RED/GREEN, fast, full-gate and commit evidence for controller scoped review","sha256":"30cf5fc20ba86de121eb4476204f9ab71a08ebf8330858dfdb16150bb6371dd8"}
+- 2026-10-29T07:03:20Z (commons-1b): retained: {"host":"titan","state":"kept","verification":"verified","next_owner":"task:sci-9104fb","cleanup_trigger":"After parent fresh scoped review and approved integration, inspect retained evidence and follow worktree removal checks","kind":"evidence","path":".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/final-fix-1-red.log","purpose":"Task 9 final whole-branch correction round 1 report or RED/GREEN, fast, full-gate and commit evidence for controller scoped review","sha256":"0de47be118c609569bd8b0071d55d2008797e00e420014a0d77c8f4dde2d42ec"}
