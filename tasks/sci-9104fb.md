@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: commons-1b
 created: 2026-10-01T02:21:10Z
-updated: 2026-10-29T01:56:51Z
+updated: 2026-10-29T01:58:15Z
 started: 2026-10-28T20:03:15Z
 depends: [sci-13050a, beliefs-81367e, beliefs-a989fb]
 tags: [commons]
@@ -102,3 +102,4 @@ Spec §12 part 1b: A binds B, adopts B's publication; A publishes an update drop
   provenance: {"harness_session":"claude-code:f666f956-1928-4c06-8bf1-80cd5a586d90","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-29T01:56:51Z (commons-1b): resumed
   provenance: {"harness_session":"codex:01a1855d-6c10-77a2-82b3-d0457ea936da","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-29T01:58:15Z (commons-1b): Execution resumed under the approved subagent-driven plan: sequential implementers, task reviews, whole-branch review before the overlap merge. Existing clean locked .worktrees/commons-1b reused; hooks and worktree-local environment present. Setup baseline just test running. Plan workspace .worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b contains the preflight ledger and mutable evidence; owned by sci-9104fb.
