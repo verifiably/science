@@ -166,3 +166,136 @@ def conflicting_publication(certified_worker_work):
     snap = snapshot(certified_worker_work, "commons-1a-conflicting", build_conflicting)
     snap.restore()
     return Installations.of(snap.value["installations"]), snap.value["corpus_id"]
+
+
+# Stable module-level builders give each 1b snapshot exactly one identity.
+
+
+@pytest.fixture
+def published_b(certified_worker_work):
+    from helpers.commons import Installations, build_published_b
+    from helpers.snapshot import snapshot
+    snap = snapshot(certified_worker_work, "commons-1b-published-b", build_published_b)
+    snap.restore()
+    return Installations.of(snap.value)
+
+
+@pytest.fixture
+def published_b_unkept(certified_worker_work):
+    from helpers.commons import Installations, build_published_b_unkept
+    from helpers.snapshot import snapshot
+    snap = snapshot(certified_worker_work, "commons-1b-published-b-unkept", build_published_b_unkept)
+    snap.restore()
+    return Installations.of(snap.value)
+
+
+@pytest.fixture
+def a_bound_b(certified_worker_work):
+    from helpers.commons import Installations, build_a_bound_b
+    from helpers.snapshot import snapshot
+    snap = snapshot(certified_worker_work, "commons-1b-a-bound-b", build_a_bound_b)
+    snap.restore()
+    return Installations.of(snap.value)
+
+
+@pytest.fixture
+def a_bound_b_unkept(certified_worker_work):
+    from helpers.commons import Installations, build_a_bound_b_unkept
+    from helpers.snapshot import snapshot
+    snap = snapshot(certified_worker_work, "commons-1b-a-bound-b-unkept", build_a_bound_b_unkept)
+    snap.restore()
+    return Installations.of(snap.value)
+
+
+@pytest.fixture
+def overlapping(certified_worker_work):
+    from helpers.commons import Installations, build_overlapping
+    from helpers.snapshot import snapshot
+    snap = snapshot(certified_worker_work, "commons-1b-overlapping", build_overlapping)
+    snap.restore()
+    return Installations.of(snap.value)
+
+
+@pytest.fixture
+def overlapping_unkept(certified_worker_work):
+    from helpers.commons import Installations, build_overlapping_unkept
+    from helpers.snapshot import snapshot
+    snap = snapshot(certified_worker_work, "commons-1b-overlapping-unkept", build_overlapping_unkept)
+    snap.restore()
+    return Installations.of(snap.value)
+
+
+@pytest.fixture
+def updated(certified_worker_work):
+    from helpers.commons import Installations, build_updated
+    from helpers.snapshot import snapshot
+    snap = snapshot(certified_worker_work, "commons-1b-updated", build_updated)
+    snap.restore()
+    return Installations.of(snap.value)
+
+
+@pytest.fixture
+def updated_unkept(certified_worker_work):
+    from helpers.commons import Installations, build_updated_unkept
+    from helpers.snapshot import snapshot
+    snap = snapshot(certified_worker_work, "commons-1b-updated-unkept", build_updated_unkept)
+    snap.restore()
+    return Installations.of(snap.value)
+
+
+@pytest.fixture
+def b_updated(certified_worker_work):
+    from helpers.commons import Installations, build_b_updated
+    from helpers.snapshot import snapshot
+    snap = snapshot(certified_worker_work, "commons-1b-b-updated", build_b_updated)
+    snap.restore()
+    return Installations.of(snap.value)
+
+
+@pytest.fixture
+def b_updated_unkept(certified_worker_work):
+    from helpers.commons import Installations, build_b_updated_unkept
+    from helpers.snapshot import snapshot
+    snap = snapshot(certified_worker_work, "commons-1b-b-updated-unkept", build_b_updated_unkept)
+    snap.restore()
+    return Installations.of(snap.value)
+
+
+@pytest.fixture
+def sibling_publications(certified_worker_work):
+    from helpers.commons import Installations, build_sibling_publications
+    from helpers.snapshot import snapshot
+    snap = snapshot(certified_worker_work, "commons-1b-sibling-publications", build_sibling_publications)
+    snap.restore()
+    value, *refs = snap.value
+    return Installations.of(value), *refs
+
+
+@pytest.fixture
+def late_chain(certified_worker_work):
+    from helpers.commons import Installations, build_late_chain
+    from helpers.snapshot import snapshot
+    snap = snapshot(certified_worker_work, "commons-1b-late-chain", build_late_chain)
+    snap.restore()
+    value, *refs = snap.value
+    return Installations.of(value), *refs
+
+
+@pytest.fixture
+def late_chain_unadopted(certified_worker_work):
+    from helpers.commons import Installations, build_late_chain_unadopted
+    from helpers.snapshot import snapshot
+    snap = snapshot(certified_worker_work, "commons-1b-late-chain-unadopted", build_late_chain_unadopted)
+    snap.restore()
+    value, *refs = snap.value
+    return Installations.of(value), *refs
+
+
+@pytest.fixture
+def late_link(certified_worker_work):
+    from helpers.commons import Installations, build_late_link
+    from helpers.snapshot import snapshot
+    snap = snapshot(certified_worker_work, "commons-1b-late-link", build_late_link)
+    snap.restore()
+    value, *refs = snap.value
+    return Installations.of(value), *refs

@@ -131,7 +131,6 @@ def test_show_an_unlinked_second_destination_reports_it(conflicting_publication)
         assert "retention:" not in text
 
 
-@pytest.mark.xfail(strict=True, reason="Task 11 fixture: late_link returns (Installations, missing_link)")
 def test_show_an_unresolved_group_names_the_link_to_adopt(request):
     installations, missing = request.getfixturevalue("late_link")
     registry = SharingRegistry(installations.b.sharing_root)
@@ -146,7 +145,6 @@ def test_show_an_unresolved_group_names_the_link_to_adopt(request):
         assert f"current: unresolved: adopt {missing} {missing_marker}" in _show(installations.b, pin.corpus_id)
 
 
-@pytest.mark.xfail(strict=True, reason="Task 11 fixture: updated returns Installations with P3 in A's binding")
 def test_show_a_superseded_kept_pin_reports_every_reason(request):
     updated = request.getfixturevalue("updated")
     registry = SharingRegistry(updated.b.sharing_root)
@@ -158,7 +156,6 @@ def test_show_a_superseded_kept_pin_reports_every_reason(request):
     assert (f"retention:\n  kept: configuration\n  kept: dependency ({ids['assessment']})\n") in text
 
 
-@pytest.mark.xfail(strict=True, reason="Task 11 fixture: updated_unkept returns Installations with P3 in A's binding")
 def test_show_reports_pending_no_door_on_the_unkept_branch(request):
     updated = request.getfixturevalue("updated_unkept")
     registry = SharingRegistry(updated.b.sharing_root)

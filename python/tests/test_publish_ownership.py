@@ -173,7 +173,6 @@ def test_attribution_ambiguous_with_unlinked_chains_says_no_marker_orders_them(c
 
 
 @pytest.mark.parametrize("command", ["publish-preview", "publish"])
-@pytest.mark.xfail(strict=True, reason="Task 11 fixture: late_link returns (Installations, missing_link)")
 def test_attribution_ambiguous_names_the_link_to_adopt(request, command):
     installations, missing = request.getfixturevalue("late_link")
     registry = SharingRegistry(installations.b.sharing_root)

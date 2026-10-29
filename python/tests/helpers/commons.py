@@ -275,7 +275,10 @@ def a_identity(a: ScienceConfig, *, binding_destination: str | None = None) -> d
     assert view.holds(dataset), f"A holds no dataset {dataset}"
     ids = {"proposition": only("proposition"), "dataset": dataset, "spec": only("analysis-spec"),
            "run": only("run"), "assessment": only("assessment"), "world": a.world.world_id}
-    bindings = [node for node in view.iter_stored() if node.kind == "publication-binding"]
+    from science.coordination import tip_nodes
+    resolver = ReadContext.open(a).coordination()
+    bindings = [node for resolved in resolver.standing("publication-binding").values()
+                for node in tip_nodes(resolver, resolved) if view.holds(node.id)]
     if binding_destination is not None:
         bindings = [node for node in bindings if binding_fields(node).destination.locator == binding_destination]
     assert len(bindings) <= 1, f"A holds {len(bindings)} publication bindings; a_identity reads one"
@@ -495,3 +498,159 @@ def build_uid_corruption(work: Path) -> dict:
         d.invoke("adopt", {"location": LOC_C, "corpus_id": first})
     writer.correct_identifier(source.id, {"doi": "10.1234/corrected"}, grounds="corrected DOI")
     return {"installations": value, "c": c, "corpus_id": publish(), "predecessor": first}
+
+
+def fork(installation_home: Path) -> Path:
+    """Save one publisher outside its home, keeping its absolute-path identities intact."""
+    import shutil
+    copy = Path(tempfile.mkdtemp(prefix=f"{installation_home.name}-fork-", dir=installation_home.parent))
+    copy.rmdir()
+    shutil.copytree(installation_home, copy, symlinks=True)
+    return copy
+
+
+def restore(copy: Path, installation_home: Path) -> None:
+    from helpers.snapshot import WorldSnapshot
+    WorldSnapshot(installation_home, copy, None, fork).restore()
+
+
+def _build_published_b(work: Path, *, base) -> dict:
+    from science.world_belief import publish_session_epoch
+    value = base(work)
+    publish_session_epoch(value["b"])
+    with with_remotes(Installations.of(value)), open_rig(value["b"], ("publish",)) as (d, _):
+        d.invoke("publish", {"target": "b", "to": LOC_B})
+    return value
+
+
+def build_published_b(work):
+    return _build_published_b(work, base=build_derived)
+
+
+def build_published_b_unkept(work):
+    return _build_published_b(work, base=build_reopened)
+
+
+def _b_publication(b):
+    (node,) = [node for node in ReadContext.open(b).write_view().iter_stored()
+               if node.kind == "publication-binding"]
+    return binding_fields(node)
+
+
+def _build_a_bound_b(work: Path, *, base) -> dict:
+    value = base(work)
+    with with_remotes(Installations.of(value)), open_rig(value["a"], ("provider-bind",)) as (d, _):
+        d.invoke("provider-bind", {"location": LOC_B, "corpus_id": _b_publication(value["b"]).corpus_id,
+                                   "world": value["b"].world.world_id})
+    return value
+
+
+def build_a_bound_b(work):
+    return _build_a_bound_b(work, base=build_published_b)
+
+
+def build_a_bound_b_unkept(work):
+    return _build_a_bound_b(work, base=build_published_b_unkept)
+
+
+def _build_overlapping(work: Path, *, base) -> dict:
+    from science.world_belief import publish_session_epoch
+    value = base(work)
+    with with_remotes(Installations.of(value)), open_rig(value["a"], ("adopt",)) as (d, _):
+        d.invoke("adopt", {"location": LOC_B, "corpus_id": _b_publication(value["b"]).corpus_id})
+    value["a"] = reopen(value["a"])
+    publish_session_epoch(value["a"])
+    return value
+
+
+def build_overlapping(work):
+    return _build_overlapping(work, base=build_a_bound_b)
+
+
+def build_overlapping_unkept(work):
+    return _build_overlapping(work, base=build_a_bound_b_unkept)
+
+
+def _publish_update(installations: Installations) -> str:
+    import json
+    from science.coordination import resolve_project_ref
+    ids = a_identity(installations.a)
+    addresses = [ids[key] for key in ("proposition", "dataset", "spec", "run")]
+    addresses += [_list_address(CONCEPTS, "concepts.txt"), _list_address(LEVELS, "levels.txt")]
+    with open_rig(installations.a, ("revise",)) as (d, ctx):
+        d.invoke("revise", {"address": str(resolve_project_ref(ctx, "a")),
+                            "query": json.dumps({"version": "science.view-query.v1",
+                                                 "clauses": [{"all": [{"addresses": addresses}]}]})})
+    return publish_again(installations, LOC_A)
+
+
+def _build_updated(work: Path, *, base) -> dict:
+    value = base(work)
+    _publish_update(Installations.of(value))
+    return value
+
+
+def build_updated(work):
+    return _build_updated(work, base=build_overlapping)
+
+
+def build_updated_unkept(work):
+    return _build_updated(work, base=build_overlapping_unkept)
+
+
+def _build_b_updated(work: Path, *, base) -> dict:
+    from science.world_belief import publish_session_epoch
+    value = base(work)
+    with with_remotes(Installations.of(value)), open_rig(value["b"], ("adopt",)) as (d, _):
+        d.invoke("adopt", {"location": LOC_A, "corpus_id": a_identity(value["a"])["corpus_id"]})
+    value["b"] = reopen(value["b"])
+    publish_session_epoch(value["b"])
+    return value
+
+
+def build_b_updated(work):
+    return _build_b_updated(work, base=build_updated)
+
+
+def build_b_updated_unkept(work):
+    return _build_b_updated(work, base=build_updated_unkept)
+
+
+def build_sibling_publications(work):
+    import shutil
+    value = build_overlapping(work)
+    installations = Installations.of(value)
+    home = installations.a.world.world_root.parent
+    copy = fork(home)
+    first = _publish_update(installations)
+    restore(copy, home)
+    sibling = _publish_update(installations)
+    shutil.rmtree(copy)
+    return value, first, sibling
+
+
+def _build_late_chain(work: Path, *, base) -> tuple:
+    value = base(work)
+    installations = Installations.of(value)
+    first = a_identity(installations.a)["corpus_id"]
+    missing = publish_again(installations, LOC_A)
+    last = publish_again(installations, LOC_A)
+    return value, first, missing, last
+
+
+def build_late_chain(work):
+    return _build_late_chain(work, base=build_overlapping_unkept)
+
+
+def build_late_chain_unadopted(work):
+    return _build_late_chain(work, base=build_bound)
+
+
+def build_late_link(work):
+    from science.world_belief import publish_session_epoch
+    value, _, missing, last = build_late_chain(work)
+    with with_remotes(Installations.of(value)), open_rig(value["b"], ("adopt",)) as (d, _):
+        d.invoke("adopt", {"location": LOC_A, "corpus_id": last})
+    value["b"] = reopen(value["b"])
+    publish_session_epoch(value["b"])
+    return value, missing

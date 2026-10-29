@@ -393,7 +393,6 @@ def test_preflight_refuses_a_chain_through_a_retired_intermediate(monkeypatch, l
     assert r.code == "adopt-conflict" and r.data == {"rule": "chain-retired", "addresses": [], "corpus": "p2"}
 
 
-@pytest.mark.xfail(strict=True, reason="Task 11 fixture: updated returns Installations with P3 in A's binding")
 def test_a_successor_keeps_a_predecessor_b_depends_on_and_reports_why(request):
     updated = request.getfixturevalue("updated")
     registry = SharingRegistry(updated.b.sharing_root)
@@ -405,7 +404,6 @@ def test_a_successor_keeps_a_predecessor_b_depends_on_and_reports_why(request):
     assert registry.pin(predecessor.corpus_id).state == "mounted"
 
 
-@pytest.mark.xfail(strict=True, reason="Task 11 fixture: updated_unkept returns Installations with P3 in A's binding")
 def test_unkept_dropped_assessment_reports_retirement_pending(request):
     updated = request.getfixturevalue("updated_unkept")
     registry = SharingRegistry(updated.b.sharing_root)
@@ -415,7 +413,6 @@ def test_unkept_dropped_assessment_reports_retirement_pending(request):
     assert registry.pin(predecessor.corpus_id).state == "mounted"
 
 
-@pytest.mark.xfail(strict=True, reason="Task 11 fixture: sibling_publications returns (Installations, P3, P3prime)")
 def test_a_refused_sibling_stays_fetched_and_does_not_change_later_evaluation(request):
     installations, first, sibling = request.getfixturevalue("sibling_publications")
     _adopt(installations, LOC_A, first)
@@ -424,6 +421,13 @@ def test_a_refused_sibling_stays_fetched_and_does_not_change_later_evaluation(re
     registry = SharingRegistry(installations.b.sharing_root)
     assert registry.pin(first).state == "mounted" and registry.pin(sibling).state == "fetched"
     assert not _known(installations.b, sibling)
+    from beliefs.world.registry import content_identity
+    fields = [marker_fields(marker_of(registry.root_for(cid))) for cid in (first, sibling)]
+    assert fields[0].supersedes == fields[1].supersedes
+    assert fields[0].selection == fields[1].selection
+    identities = [{address: content_identity(ReadView.opened_at(registry.root_for(cid)).get(address))
+                   for address in fields[0].selection} for cid in (first, sibling)]
+    assert identities[0] == identities[1]
     from science.supersession import classify, groups, sharing_lines
     state = groups(registry, sharing_lines(installations.b.operations_root))
     group = next(group for group in state.values() if any(item.corpus_id == first for item in group))
@@ -491,7 +495,6 @@ def test_completed_terminal_effect_is_reported_once_without_new_retirement(adopt
         assert "beliefs-a989fb" in text
 
 
-@pytest.mark.xfail(strict=True, reason="Task 11 fixture: sibling_publications returns (Installations, P3, P3prime)")
 def test_siblings_under_a_never_held_predecessor_refuse_the_same_way(request):
     from dataclasses import replace
     from helpers.commons import build_installation
