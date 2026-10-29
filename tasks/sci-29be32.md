@@ -1,15 +1,17 @@
 ---
 id: sci-29be32
 title: "Task 3: Session-holder resolution over equal copies, and the retired-corpus guard"
-status: doing
+status: done
 priority: 1
 size: s
 complexity: mid
 process: direct
 owner: commons-1b
 created: 2026-10-29T01:50:40Z
-updated: 2026-10-29T02:57:00Z
+updated: 2026-10-29T02:57:22Z
 started: 2026-10-29T02:31:27Z
+completed: 2026-10-29T02:57:22Z
+closed: 2026-10-29T02:57:22Z
 depends: []
 parent: sci-9104fb
 tags: [commons]
@@ -39,3 +41,7 @@ step: "Task 3: Session-holder resolution over equal copies, and the retired-corp
 - 2026-10-29T02:56:57Z (commons-1b): retained: {"host": "titan", "state": "kept", "verification": "verified", "next_owner": "task:sci-9104fb", "cleanup_trigger": "After independent review and remaining plan execution, controller verifies preservation and the worktree removal checks", "kind": "evidence", "path": ".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-3-refusal-green.log", "purpose": "Task 3 review report, RED/GREEN test evidence or implementation commit result; retain exact bytes for controller review", "sha256": "ab7476c70e0df400cb569768673d0d14b58c323a1b14c264e122112e4c39b8c2"}
 - 2026-10-29T02:56:59Z (commons-1b): retained: {"host": "titan", "state": "kept", "verification": "verified", "next_owner": "task:sci-9104fb", "cleanup_trigger": "After independent review and remaining plan execution, controller verifies preservation and the worktree removal checks", "kind": "evidence", "path": ".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-3-refusal-red.log", "purpose": "Task 3 review report, RED/GREEN test evidence or implementation commit result; retain exact bytes for controller review", "sha256": "a8f83f9cb968425e9d198baad2e0f6298bb330d69bae00df17b29e95e0c28d1d"}
 - 2026-10-29T02:57:00Z (commons-1b): retained: {"host": "titan", "state": "kept", "verification": "verified", "next_owner": "task:sci-9104fb", "cleanup_trigger": "After independent review and remaining plan execution, controller verifies preservation and the worktree removal checks", "kind": "evidence", "path": ".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-3-report.md", "purpose": "Task 3 review report, RED/GREEN test evidence or implementation commit result; retain exact bytes for controller review", "sha256": "fe6ddd825fa0fd2a60a22cb7c0d3915c8cb492f5965187323480122b6b91505e"}
+- 2026-10-29T02:57:22Z (commons-1b): done
+  provenance: {"harness_session":"codex:01a1857e-a8fe-7662-8f2e-d862f954be62","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-29T02:57:22Z (commons-1b): Implemented equal-holder selection and retired-corpus guard in cb87e5b, with focused RED/GREEN evidence and green incremental fast gate; controller independent review round 2 next. Worktree/report/log retention is recorded under open parent sci-9104fb.
+  provenance: {"harness_session":"codex:01a1857e-a8fe-7662-8f2e-d862f954be62","harness_session_source":"CODEX_THREAD_ID"}
