@@ -8,7 +8,7 @@ complexity: mid
 process: direct
 owner: commons-1b
 created: 2026-10-29T01:50:40Z
-updated: 2026-10-29T02:40:06Z
+updated: 2026-10-29T02:56:43Z
 started: 2026-10-29T02:31:27Z
 depends: []
 parent: sci-9104fb
@@ -26,3 +26,4 @@ step: "Task 3: Session-holder resolution over equal copies, and the retired-corp
 - 2026-10-29T02:31:27Z (commons-1b): started
   provenance: {"harness_session":"codex:01a1857e-a8fe-7662-8f2e-d862f954be62","harness_session_source":"CODEX_THREAD_ID"}
 - 2026-10-29T02:40:06Z (commons-1b): review: impl round 1 — verdict: accept; findings: none; reviewer: codex/gpt-6.1-sol
+- 2026-10-29T02:56:43Z (commons-1b): Implemented in cb87e5b: shared equal-holder choice, chosen-holder corpus-retired citation refusal, retired dataset filtering, and controller-authorized unselected-next row deduplication. Focused 52 + next conflict 1 passed; broad fast 627 passed with one stale refusal-count failure, corrected focused 1 and selected fast 1 passed. Full report/evidence under .worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-3-report.md. Fresh controller review round 2 next.
