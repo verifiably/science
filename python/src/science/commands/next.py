@@ -51,7 +51,7 @@ def _classify(ctx, proposition: str) -> tuple[str, str | None]:
     spec decision 9). A mounted session scans every session corpus and judges
     admission at the current epoch. Without read mounts the rule is today's,
     over the proposition's own corpus."""
-    holder = ctx.mount_holding(proposition)  # refuses a proposition no mount holds, or two do
+    holder = ctx.mount_holding(proposition)  # refuses an absent proposition or differing copies
     mounts = ctx.session_mounts() if ctx.has_read_mounts() else (holder,)
     if not _assessed(ctx, mounts, proposition):
         everywhere = ctx.mounts()
@@ -127,7 +127,8 @@ def handle(ctx, *, limit=None) -> Report:
     project = selected_project(ctx)
     blocks: list = [Heading("Next")]
     if project is None:
-        nodes = [node for mount in ctx.mounts() for node in mount.view.iter_stored() if node.kind == "proposition"]
+        nodes = {node.id: node for mount in ctx.mounts() for node in mount.view.iter_stored()
+                 if node.kind == "proposition"}.values()
     else:
         # The project's query, denoted over the world as it stands: no epoch
         # mediates seeing a proposition just minted (coordination design

@@ -74,15 +74,34 @@ def test_has_read_mounts_opens_no_corpus(shared, monkeypatch):
     assert not ReadContext.open(dataclasses.replace(cfg, coordination=None)).has_read_mounts()
 
 
-def test_a_ref_two_session_corpora_hold_refuses_naming_both(shared):
+@pytest.mark.parametrize("method", ["mount_holding", "cited"])
+def test_differing_copies_refuse_naming_every_holder(shared, method):
     cfg, _ = shared
     node = stored.proposition_node("twice", title="twice", claim={"operator": "affects"})
-    for each in (cfg, mount_config(cfg)):
-        open_corpus(each.write_root, authority=FIXTURE_AUTHORITY, profile=each.profile).add(node)
+    for index, each in enumerate((cfg, mount_config(cfg))):
+        copy = node.model_copy(update={"title": f"copy {index}"})
+        open_corpus(each.write_root, authority=FIXTURE_AUTHORITY, profile=each.profile).add(copy)
     with pytest.raises(Refused) as caught:
-        ReadContext.open(cfg).cited("proposition:twice")
+        getattr(ReadContext.open(cfg), method)("proposition:twice")
     assert caught.value.refusal.code == "invalid-input"
+    assert "differ" in caught.value.refusal.message
     assert all(corpus_id in caught.value.refusal.message for corpus_id in _ids(cfg).values())
+
+
+def test_cited_refuses_a_record_held_only_by_a_retired_corpus(reopened):
+    from beliefs.root import open_world
+    from helpers.commons import a_identity, refused
+    from science.sharing import SharingRegistry
+    ids = a_identity(reopened.a)
+    assert ReadContext.open(reopened.b).cited(ids["assessment"]).corpus_id == ids["corpus_id"]
+    open_world(reopened.b.world, authority=FIXTURE_AUTHORITY).retire(ids["corpus_id"])
+    ctx = ReadContext.open(reopened.b)
+    assert ctx.world.status(ids["corpus_id"]).live is False
+    assert SharingRegistry(reopened.b.sharing_root).pin(ids["corpus_id"]).state == "mounted"
+    refusal = refused(lambda: ctx.cited(ids["assessment"]))
+    assert refusal.code == "corpus-retired"
+    assert refusal.data == {"corpus": ids["corpus_id"], "record": ids["assessment"]}
+    assert all(text in refusal.message for text in (ids["corpus_id"], ids["assessment"], "reopen the session"))
 
 
 def test_own_refuses_a_mounted_record_naming_the_mount(shared):

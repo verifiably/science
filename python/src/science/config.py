@@ -23,7 +23,7 @@ from beliefs.profile import (
 )
 from beliefs.root import open_world_read
 from beliefs.world import WorldConfig
-from beliefs.world.registry import load_manifest
+from beliefs.world.registry import content_identity, load_manifest
 
 from science.refusal import Refusal, Refused
 from science.contracts import OperatorPlan, load_contract_chain, load_contract_document
@@ -374,6 +374,10 @@ def corpus_id_at(root: Path) -> str:
         _refuse(f"the corpus root {root} has no readable manifest: {caught}")
 
 
+def _retired(status) -> bool:
+    return status.known and not status.live
+
+
 @dataclass(frozen=True)
 class ReadContext:
     world: object
@@ -445,7 +449,8 @@ class ReadContext:
 
     def dataset_at(self, address: str):
         from science.holdings import dataset_at
-        return dataset_at(self.read_views(), address)
+        return dataset_at([(cid, view) for cid, view in self.read_views()
+                           if not _retired(self.world.status(cid))], address)
 
     def snapshot(self, profile: ProfileSpec | None = None, *, observations=None):
         """The resolution snapshot; `observations` passes ones the caller
@@ -514,17 +519,27 @@ class ReadContext:
             return NO_EPOCH_SNAPSHOT if absent is None else absent
 
     def mount_holding(self, ref: str) -> Mount:
-        """The one mounted corpus holding `ref`. A record id in two corpora is
-        the world's duplicate-location conflict, refused rather than answered
-        from whichever mount sorts first."""
+        """A configured holder of `ref`: equal copies prefer the write root,
+        then the least corpus id; differing copies refuse naming every holder."""
         holders = [mount for mount in self.mounts() if mount.view.holds(ref)]
         if not holders:
             raise Refused(Refusal("invalid-input", f"{ref!r} is not in the configured corpora"))
-        if len(holders) > 1:
+        return self._holder_among(holders, ref)
+
+    def _holder_among(self, holders: list[Mount], ref: str) -> Mount:
+        if len(holders) > 1 and len({content_identity(mount.view.get(ref)) for mount in holders}) > 1:
             raise Refused(Refusal("invalid-input",
                                   f"{ref!r} is held by corpora {', '.join(m.corpus_id for m in holders)}; "
-                                  "one address in two corpora is a duplicate location, which `status` reports"))
-        return holders[0]
+                                  "the copies differ"))
+        return min(holders, key=lambda mount: (mount.root != self.config.write_root, mount.corpus_id))
+
+    def _require_live(self, mount: Mount, ref: str) -> None:
+        if _retired(self.world.status(mount.corpus_id)):
+            raise Refused(Refusal(
+                "corpus-retired",
+                f"corpus {mount.corpus_id} holding {ref!r} is retired; reopen the session",
+                {"corpus": mount.corpus_id, "record": ref},
+            ))
 
     def session_mounts(self) -> tuple[Mount, ...]:
         """The corpora a write may cite (consumer spec decision 1): the write
@@ -572,18 +587,14 @@ class ReadContext:
         return frozenset(mount.corpus_id for mount in self.session_mounts())
 
     def cited(self, ref: str) -> Mount:
-        """The one session corpus holding `ref` (decision 2). Two holders are a
-        duplicate location, refused rather than picked by corpus order; none
-        refuses, naming a configured corpus outside the session that holds it."""
+        """A live session holder of `ref`, choosing among equal copies as
+        `mount_holding` does; none names any configured holder outside the session."""
         session = self.session_mounts()
         holders = [mount for mount in session if mount.view.holds(ref)]
-        if len(holders) > 1:
-            raise Refused(Refusal(
-                "invalid-input",
-                f"{ref!r} is held by corpora {', '.join(m.corpus_id for m in holders)}; one address in two "
-                "corpora is a duplicate location, and a citation never picks one"))
         if holders:
-            return holders[0]
+            mount = self._holder_among(holders, ref)
+            self._require_live(mount, ref)
+            return mount
         inside = {mount.root for mount in session}
         outside = [corpus_id_at(root) for root in self.config.world.corpus_roots
                    if root not in inside and ReadView.opened_at(root).holds(ref)]

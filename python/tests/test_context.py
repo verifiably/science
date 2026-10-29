@@ -1,9 +1,62 @@
+import dataclasses
+
 import pytest
 
 from beliefs.resolution import TermOutcome
 from science.config import ReadContext
 from science.refusal import Refused
 from helpers.world import build_belief_world, hold_fixture_dataset
+
+
+@pytest.fixture
+def equal_copies(certified_work):
+    from beliefs import stored
+    from beliefs.root import init_corpus_root, open_corpus, open_world
+    from beliefs.world import Fresh
+    from helpers.world import FIXTURE_AUTHORITY
+    cfg = build_belief_world(certified_work)
+    pins = ReadContext.open(cfg).pins()
+    extra = (certified_work / "copy", certified_work / "empty")
+    for root in extra:
+        init_corpus_root(root, authority=FIXTURE_AUTHORITY)
+        writer = open_corpus(root, authority=FIXTURE_AUTHORITY, profile=cfg.profile)
+        writer.adopt_manifest(profile=pins)
+        open_world(cfg.world, authority=FIXTURE_AUTHORITY).admit(root, provenance=Fresh())
+    cfg = dataclasses.replace(cfg, world=dataclasses.replace(
+        cfg.world, corpus_roots=cfg.world.corpus_roots + extra))
+    node = stored.proposition_node("twice", title="twice", claim={"operator": "affects"})
+    for root in (cfg.write_root, extra[0]):
+        open_corpus(root, authority=FIXTURE_AUTHORITY, profile=cfg.profile).add(node)
+    return cfg
+
+
+@pytest.mark.parametrize("method", ["mount_holding", "cited"])
+def test_equal_copies_prefer_the_write_root_over_the_least_corpus(equal_copies, method):
+    cfg = equal_copies
+    holders = [mount for mount in ReadContext.open(cfg).mounts() if mount.view.holds("proposition:twice")]
+    preferred = max(holders, key=lambda mount: mount.corpus_id)
+    ctx = ReadContext.open(dataclasses.replace(cfg, write_root=preferred.root))
+    assert getattr(ctx, method)("proposition:twice").corpus_id == preferred.corpus_id
+
+
+@pytest.mark.parametrize("method", ["mount_holding", "cited"])
+def test_equal_copies_outside_the_write_root_choose_the_least_corpus(equal_copies, method):
+    cfg = equal_copies
+    mounts = ReadContext.open(cfg).mounts()
+    empty = next(mount for mount in mounts if not mount.view.holds("proposition:twice"))
+    expected = min(mount.corpus_id for mount in mounts if mount.view.holds("proposition:twice"))
+    ctx = ReadContext.open(dataclasses.replace(cfg, write_root=empty.root))
+    assert getattr(ctx, method)("proposition:twice").corpus_id == expected
+
+
+def test_dataset_at_ignores_a_retired_holder(reopened):
+    from beliefs.root import open_world
+    from helpers.commons import a_identity
+    from helpers.world import FIXTURE_AUTHORITY
+    ids = a_identity(reopened.a)
+    assert ReadContext.open(reopened.b).dataset_at(ids["dataset"])[0] == ids["corpus_id"]
+    open_world(reopened.b.world, authority=FIXTURE_AUTHORITY).retire(ids["corpus_id"])
+    assert ReadContext.open(reopened.b).dataset_at(ids["dataset"]) is None
 
 
 def test_mount_holding_names_the_one_corpus(certified_work):

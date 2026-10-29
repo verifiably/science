@@ -710,9 +710,8 @@ service_socket = "{cfg.service_socket}"
 
 
 WORKING_FIELDS = dict(SPEC_FIELDS, method="rank comparison, working corpus")
-"""Spec fields for a spec the write root authors. A spec is content-addressed,
-so the mount's `SPEC_FIELDS` spec over the same target and dataset would be
-the same record in two corpora, a duplicate location (plan review round 1, P2)."""
+"""Spec fields distinct from the mount's content-addressed `SPEC_FIELDS` spec
+over the same target and dataset, so the write root authors its own spec."""
 
 
 def mount_config(cfg: ScienceConfig) -> ScienceConfig:

@@ -9,7 +9,7 @@ from science.report import Heading, KeyVals, Report
 
 
 def handle(ctx, *, proposition) -> Report:
-    ctx.mount_holding(proposition)  # refuses a proposition no mount holds, or two do
+    ctx.mount_holding(proposition)  # refuses an absent proposition or differing copies
     answer = ctx.evaluate(proposition)
     if isinstance(answer, Belief):
         pairs = (("kind", "Belief"), ("value", str(answer.value)),

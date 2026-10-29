@@ -169,33 +169,42 @@ def test_a_selected_record_no_configured_corpus_holds_refuses_naming_it(two_corp
     assert corpus_id_at(world.world.world_root.parent / "archive") in caught.value.refusal.message
 
 
-def _twice(world):
+def _twice(world, *, differing=False):
     from beliefs import stored
     from beliefs.root import open_corpus
     from helpers.world import archive_config
     node = stored.proposition_node("twice", title="twice", claim={"operator": "affects"})
-    for cfg in (world, archive_config(world)):
-        open_corpus(cfg.write_root, authority=FIXTURE_AUTHORITY, profile=cfg.profile).add(node)
+    for index, cfg in enumerate((world, archive_config(world))):
+        copy = node.model_copy(update={"title": f"copy {index}"}) if differing else node
+        open_corpus(cfg.write_root, authority=FIXTURE_AUTHORITY, profile=cfg.profile).add(copy)
 
 
-def test_one_id_in_two_corpora_refuses_naming_both_in_belief_and_unselected_next(world):
-    """The two halves differ in who judges. `belief` names the proposition, and
-    `mount_holding` refuses it as `invalid-input`. The unselected `next` reads the
-    world at the epoch first, so the kernel's W8b uid-uniqueness refusal
-    (`ResolutionRefused`) is what reaches the reader."""
+def test_equal_copies_in_two_corpora_answer_belief(world):
     from science.commands.belief import handle as belief
+    from science.world_belief import publish_session_epoch
     _twice(world)
+    publish_session_epoch(world)
     ctx = ReadContext.open(world)
-    ids = [mount.corpus_id for mount in ctx.mounts()]
-    with pytest.raises(Refused) as in_belief:
-        belief(ctx, proposition="proposition:twice")
-    assert in_belief.value.refusal.code == "invalid-input"
-    with pytest.raises(Refused) as in_next:
+    report = belief(ctx, proposition="proposition:twice")
+    assert dict(report[1].pairs) == {"kind": "NoBelief", "reason": "no-eligible-assessment", "detail": ""}
+
+
+def test_equal_copies_appear_once_in_unselected_next(world):
+    from science.world_belief import publish_session_epoch
+    _twice(world)
+    publish_session_epoch(world)
+    rows = handle(ReadContext.open(world), limit=None)[-1].pairs
+    assert [value for ref, value in rows if ref == "proposition:twice"] == ["not-ready: twice"]
+
+
+def test_unselected_next_still_refuses_differing_copies(two_corpora):
+    _twice(two_corpora, differing=True)
+    ctx = ReadContext.open(two_corpora)
+    with pytest.raises(Refused) as caught:
         handle(ctx, limit=None)
-    assert in_next.value.refusal.code == "kernel-refused"
-    assert in_next.value.refusal.data["kind"] == "ResolutionRefused"
-    for caught in (in_belief, in_next):
-        assert all(corpus_id in caught.value.refusal.message for corpus_id in ids)
+    assert caught.value.refusal.code == "invalid-input"
+    assert "differ" in caught.value.refusal.message
+    assert all(mount.corpus_id in caught.value.refusal.message for mount in ctx.mounts())
 
 
 def test_equal_copies_allow_selected_next_to_reach_the_missing_address_check(two_corpora):
