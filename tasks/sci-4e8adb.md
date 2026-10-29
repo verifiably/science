@@ -8,7 +8,7 @@ complexity: mid
 process: direct
 owner: fix/sci-4e8adb
 created: 2026-10-22T19:07:45Z
-updated: 2026-10-29T20:39:12Z
+updated: 2026-10-29T20:52:57Z
 started: 2026-10-29T20:26:47Z
 depends: []
 tags: []
@@ -32,3 +32,4 @@ Reported files:
 - 2026-10-29T20:27:34Z (fix/sci-4e8adb): resumed
   provenance: {"harness_session":"claude-code:0abf3f61-62e6-4a09-a944-9063cc887bf3","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-29T20:39:12Z (fix/sci-4e8adb): dispositions: docs/plans/2026-09-09-belief-path-commands.md:508,738,1129,1443 — reworded: host checkout path in four grep commands replaced with the project-role placeholder <beliefs checkout>/python/src/beliefs/...; path text only, plan wording and checkboxes unchanged; no layout_allowed entry added
+- 2026-10-29T20:52:57Z (fix/sci-4e8adb): verification: candidate rc=0 at d64ecb7 (rechecked rc=0 at e6642a7); just check rc=0 (ops-check, ops-docs check, tasks check); git diff --check clean; docs-only change, no focused tests owed; worktree baseline just test (policy enabled, no .tt.toml) 1070 passed in 1489s under host-budget 1 worker; worktree .worktrees/sci-4e8adb (locked, WORK_ROOT storage, branch fix/sci-4e8adb) retained for controller review and integration, remove after merge
