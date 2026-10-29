@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: commons-1b
 created: 2026-10-01T02:21:10Z
-updated: 2026-10-29T00:57:48Z
+updated: 2026-10-29T01:20:46Z
 started: 2026-10-28T20:03:15Z
 depends: [sci-13050a, beliefs-81367e, beliefs-a989fb]
 tags: [commons]
@@ -89,3 +89,4 @@ Spec §12 part 1b: A binds B, adopts B's publication; A publishes an update drop
   provenance: {"harness_session":"claude-code:f666f956-1928-4c06-8bf1-80cd5a586d90","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-29T00:57:48Z (commons-1b): parked (waiting on user, review): Keith reviews the 1b implementation plan revision 6 (worktree .worktrees/commons-1b, commit 80a1a88, docs/plans/2026-10-28-science-commons-1b.md; design accepted at 99eabaa; execution ruled subagent-driven, sequential, whole-branch review before each phase merges); on accept, tasks start sci-9104fb in the worktree, add one child per Task heading (--plan docs/plans/2026-10-28-science-commons-1b.md --step), run the Setup baseline (just test, note the count), then execute Tasks 1-12; Tasks 13-15 wait on beliefs-a989fb
   provenance: {"harness_session":"claude-code:f666f956-1928-4c06-8bf1-80cd5a586d90","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-29T01:20:46Z (commons-1b): review: plan round 6 — verdict: revise; findings: P2 2; reviewer: codex/gpt-6-astra
