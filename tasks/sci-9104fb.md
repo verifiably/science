@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: commons-1b
 created: 2026-10-01T02:21:10Z
-updated: 2026-10-29T00:31:25Z
+updated: 2026-10-29T00:31:27Z
 started: 2026-10-28T20:03:15Z
 depends: [sci-13050a, beliefs-81367e, beliefs-a989fb]
 tags: [commons]
@@ -80,4 +80,6 @@ Spec §12 part 1b: A binds B, adopts B's publication; A publishes an update drop
 - 2026-10-29T00:30:13Z (commons-1b): review: plan round 4 — verdict: revise; findings: P1 1, P2 2; reviewer: codex/gpt-6-astra
 - 2026-10-29T00:31:23Z (commons-1b): codex plan round 4 (1 P1: the ledger's close outcome admits exactly one key, so the report tail cannot ride in it; 2 P2: provider-bind and the synthetic handlers return pin blocks, and 1a invocations have no tail) verified against validated_outcome and fixed in plan revision 5 (60559ac): science persists the tail under operations_root/tails/<session>/<iid>.json before close, absent reads as empty, every sharing handler returns informational blocks only, audit-failure and 1a-ledger paths tested
 - 2026-10-29T00:31:25Z (commons-1b): resumed
+  provenance: {"harness_session":"claude-code:f666f956-1928-4c06-8bf1-80cd5a586d90","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-29T00:31:27Z (commons-1b): parked (waiting on user, review): Keith reviews the 1b implementation plan revision 5 (worktree .worktrees/commons-1b, commit 60559ac, docs/plans/2026-10-28-science-commons-1b.md; design accepted at 99eabaa; execution ruled subagent-driven, sequential, whole-branch review before each phase merges); on accept, tasks start sci-9104fb in the worktree, add one child per Task heading (--plan docs/plans/2026-10-28-science-commons-1b.md --step), run the Setup baseline (just test, note the count), then execute Tasks 1-12; Tasks 13-15 wait on beliefs-a989fb
   provenance: {"harness_session":"claude-code:f666f956-1928-4c06-8bf1-80cd5a586d90","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
