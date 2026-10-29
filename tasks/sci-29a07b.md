@@ -8,7 +8,7 @@ complexity: high
 process: direct
 owner: commons-1b
 created: 2026-10-29T01:50:44Z
-updated: 2026-10-29T03:50:20Z
+updated: 2026-10-29T03:50:22Z
 started: 2026-10-29T03:29:41Z
 depends: []
 parent: sci-9104fb
@@ -48,3 +48,4 @@ step: "Task 6: `supersession.py`"
 - 2026-10-29T03:50:17Z (commons-1b): retained: {"host":"titan","kind":"evidence","path":".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-6-green.log","state":"kept","verification":"verified","purpose":"Task 6 initial focused GREEN evidence unchanged and reverified","sha256":"147f9a318e2bf2b4c947464ac1a6fe4ff546468e6d1cbfb6735587d627170811","next_owner":"task:sci-9104fb","cleanup_trigger":"After milestone review and integration, preserve required plan evidence before worktree removal"}
 - 2026-10-29T03:50:19Z (commons-1b): retained: {"host":"titan","kind":"evidence","path":".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-6-fast.log","state":"kept","verification":"verified","purpose":"Task 6 initial affected-suite evidence unchanged and reverified","sha256":"b0176ff922fb63df7cd26601e001f423694544b86d43edeb3638e3acf546e447","next_owner":"task:sci-9104fb","cleanup_trigger":"After milestone review and integration, preserve required plan evidence before worktree removal"}
 - 2026-10-29T03:50:20Z (commons-1b): retained: {"host":"titan","kind":"evidence","path":".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-6-fix-1-focused.log","state":"kept","verification":"verified","purpose":"Corrective round 1 focused GREEN 45 tests","sha256":"9db8b63137da7f51029bdb37fa2d9e4ab0423dc0881c8e9a6e17753f23bff44f","next_owner":"task:sci-9104fb","cleanup_trigger":"After milestone review and integration, preserve required plan evidence before worktree removal"}
+- 2026-10-29T03:50:22Z (commons-1b): retained: {"host":"titan","kind":"evidence","path":".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-6-fix-1-fast.log","state":"kept","verification":"verified","purpose":"Corrective round 1 affected-suite GREEN 129 tests","sha256":"b40ce12dd6ba6654252e02a42ffb03cf975aa8d5c49bc207fc2340e096ddb73b","next_owner":"task:sci-9104fb","cleanup_trigger":"After milestone review and integration, preserve required plan evidence before worktree removal"}
