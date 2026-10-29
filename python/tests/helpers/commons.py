@@ -383,18 +383,23 @@ def build_verified(work: Path) -> dict:
     value = build_reopened(work)
     installations = Installations.of(value)
     ids = a_identity(installations.a)
-    data = installations.data_dir()
     code, entrypoint, _ = fixture_bundle(work / "a")  # the bundle A's run was minted from
     with pytest.MonkeyPatch.context() as monkeypatch:
         if host_prerequisites() is not None:
             monkeypatch.setattr(run_module, "POLICY", MINIMAL_POLICY)
         with open_rig(installations.b, ("fetch", "verify")) as (d, _):
-            for dataset, source in ((ids["dataset"], installations.data_a_path()),
-                                    (concept_list_address(), data / "concepts.txt"),
-                                    (level_list_address(), data / "levels.txt")):
-                d.invoke("fetch", {"dataset": dataset, "source": str(source)})
+            _fetch_a_datasets(installations, d)
             d.invoke("verify", {"assessment": ids["assessment"], "code": str(code), "entrypoint": entrypoint})
     return value
+
+
+def _fetch_a_datasets(installations: Installations, d: Dispatcher) -> None:
+    """B fetches the bytes of the three datasets A's mount declares, citing each from the mount."""
+    data = installations.data_dir()
+    for dataset, source in ((a_identity(installations.a)["dataset"], installations.data_a_path()),
+                            (concept_list_address(), data / "concepts.txt"),
+                            (level_list_address(), data / "levels.txt")):
+        d.invoke("fetch", {"dataset": dataset, "source": str(source)})
 
 
 def closure_input_addresses(closure) -> frozenset[str]:
@@ -572,11 +577,13 @@ def build_overlapping_unkept(work):
     return _build_overlapping(work, base=build_a_bound_b_unkept)
 
 
-def _publish_update(installations: Installations) -> str:
+def _publish_update(installations: Installations, keys=("proposition", "dataset", "spec", "run")) -> str:
+    """A revises project `a` to an `addresses` clause naming its records under `keys` and both vocabulary lists,
+    then republishes it to LOC_A: a successor of its current publication there."""
     import json
     from science.coordination import resolve_project_ref
     ids = a_identity(installations.a)
-    addresses = [ids[key] for key in ("proposition", "dataset", "spec", "run")]
+    addresses = [ids[key] for key in keys]
     addresses += [_list_address(CONCEPTS, "concepts.txt"), _list_address(LEVELS, "levels.txt")]
     with open_rig(installations.a, ("revise",)) as (d, ctx):
         d.invoke("revise", {"address": str(resolve_project_ref(ctx, "a")),
@@ -617,9 +624,9 @@ def build_b_updated_unkept(work):
     return _build_b_updated(work, base=build_updated_unkept)
 
 
-def build_sibling_publications(work):
+def _build_sibling_publications(work: Path, *, base) -> tuple:
     import shutil
-    value = build_overlapping(work)
+    value = base(work)
     installations = Installations.of(value)
     home = installations.a.world.world_root.parent
     copy = fork(home)
@@ -628,6 +635,14 @@ def build_sibling_publications(work):
     sibling = _publish_update(installations)
     shutil.rmtree(copy)
     return value, first, sibling
+
+
+def build_sibling_publications(work):
+    return _build_sibling_publications(work, base=build_overlapping)
+
+
+def build_sibling_publications_unkept(work):
+    return _build_sibling_publications(work, base=build_overlapping_unkept)
 
 
 def _build_late_chain(work: Path, *, base) -> tuple:
@@ -655,3 +670,25 @@ def build_late_link(work):
     value["b"] = reopen(value["b"])
     publish_session_epoch(value["b"])
     return value, missing
+
+
+def build_spec_drop(work):
+    """`build_verified`, then A republishes to LOC_A a successor that keeps its assessment and run and drops their
+    spec: B's unpublished verification replays through that spec (§5.9 item 6, the spec-drop case)."""
+    value = build_verified(work)
+    _publish_update(Installations.of(value), ("proposition", "dataset", "run", "assessment"))
+    return value
+
+
+def build_spec_only(work):
+    """`build_reopened`, then B fetches A's datasets and authors a spec of its own over A's proposition and dataset,
+    with no run or assessment; A republishes to LOC_A a successor that keeps the dataset and drops the proposition
+    with everything that relates to it (§5.9 item 6, the spec-only case)."""
+    value = build_reopened(work)
+    installations = Installations.of(value)
+    ids = a_identity(installations.a)
+    with open_rig(installations.b, ("fetch", "spec")) as (d, _):
+        _fetch_a_datasets(installations, d)
+        d.invoke("spec", dict(WORKING_FIELDS, target=ids["proposition"], dataset=ids["dataset"]))
+    _publish_update(installations, ("dataset",))
+    return value

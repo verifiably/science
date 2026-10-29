@@ -299,3 +299,31 @@ def late_link(certified_worker_work):
     snap.restore()
     value, *refs = snap.value
     return Installations.of(value), *refs
+
+
+@pytest.fixture
+def sibling_publications_unkept(certified_worker_work):
+    from helpers.commons import Installations, build_sibling_publications_unkept
+    from helpers.snapshot import snapshot
+    snap = snapshot(certified_worker_work, "commons-1b-sibling-publications-unkept", build_sibling_publications_unkept)
+    snap.restore()
+    value, *refs = snap.value
+    return Installations.of(value), *refs
+
+
+@pytest.fixture
+def spec_drop(certified_worker_work):
+    from helpers.commons import Installations, build_spec_drop
+    from helpers.snapshot import snapshot
+    snap = snapshot(certified_worker_work, "commons-1b-spec-drop", build_spec_drop)
+    snap.restore()
+    return Installations.of(snap.value)
+
+
+@pytest.fixture
+def spec_only(certified_worker_work):
+    from helpers.commons import Installations, build_spec_only
+    from helpers.snapshot import snapshot
+    snap = snapshot(certified_worker_work, "commons-1b-spec-only", build_spec_only)
+    snap.restore()
+    return Installations.of(snap.value)

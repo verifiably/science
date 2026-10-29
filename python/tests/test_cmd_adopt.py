@@ -344,8 +344,52 @@ def test_a_successor_reports_configuration_retention(adopted):
     assert "retirement pending" not in text
 
 
+@pytest.mark.parametrize("listed", [True, False])
+def test_a_keep_entry_loaded_at_open_keeps_the_predecessor_and_its_absence_retires_it(adopted, listed):
+    from dataclasses import replace
+    from science.config import load_config
+    from helpers.commons import write_commons_config
+    cid1 = a_identity(adopted.a)["corpus_id"]
+    cid2 = publish_again(adopted, LOC_A)
+    cfg = load_config(write_commons_config(replace(adopted.b, keep=(cid1,) if listed else ())))
+    assert cfg.keep == ((cid1,) if listed else ())
+    text = _adopt(replace(adopted, b=cfg), LOC_A, cid2).text
+    registry = SharingRegistry(cfg.sharing_root)
+    retired = [line for line in _sharing_lines(cfg) if line.transition == "retired"]
+    if listed:
+        assert f"retention {cid1}:\n  kept: configuration\n" in text
+        assert registry.pin(cid1).state == "mounted" and ReadContext.open(cfg).world.status(cid1).live
+        assert retired == []
+    else:
+        assert _states(text) == ["fetched", "admitted", "mounted", "retired"]
+        assert registry.pin(cid1).state == "retired" and [line.corpus for line in retired] == [cid1]
+    assert registry.pin(cid2).state == "mounted"
+
+
+def test_chain_retention_keeps_the_intermediate_for_a_kept_predecessor_until_released(adopted):
+    from dataclasses import replace
+    first = a_identity(adopted.a)["corpus_id"]
+    keeping = replace(adopted, b=replace(adopted.b, keep=(first,)))
+    middle = publish_again(adopted, LOC_A)
+    _adopt(keeping, LOC_A, middle)
+    tip = publish_again(adopted, LOC_A)
+    text = _adopt(keeping, LOC_A, tip).text
+    assert f"retention {first}:\n  kept: configuration\n" in text
+    assert f"retention {middle}:\n  kept: chain (for {first})\n" in text
+    registry = SharingRegistry(adopted.b.sharing_root)
+    assert {pin.corpus_id: pin.state for pin in registry.pins()} == {first: "mounted", middle: "mounted", tip: "mounted"}
+    assert not any(line.transition == "retired" for line in _sharing_lines(adopted.b))
+    # Released: an adopt naming the mounted tip is the re-evaluation, and it retires both rather than refusing.
+    released = _adopt(adopted, LOC_A, tip).text
+    assert _states(released) == ["retired", "retired"]
+    assert {pin.corpus_id: pin.state for pin in registry.pins()} == {first: "retired", middle: "retired", tip: "mounted"}
+    assert sorted(line.corpus for line in _sharing_lines(adopted.b) if line.transition == "retired") == sorted(
+        (first, middle))
+
+
 def test_changed_configuration_refuses_before_retirement_and_keeps_the_adoption(adopted):
     from dataclasses import replace
+    cid1 = a_identity(adopted.a)["corpus_id"]
     cid2 = publish_again(adopted, LOC_A)
     cfg = reopen(adopted.b)
     path, _ = cfg.source
@@ -354,7 +398,10 @@ def test_changed_configuration_refuses_before_retirement_and_keeps_the_adoption(
     refusal = refused(lambda: _adopt(value, LOC_A, cid2))
     assert refusal.code == "config-stale" and refusal.data == {"path": str(path), "keep": []}
     assert "restart the service and rerun adopt" in refusal.message and "adoption" in refusal.message
-    assert SharingRegistry(cfg.sharing_root).pin(cid2).state == "mounted"
+    registry = SharingRegistry(cfg.sharing_root)
+    assert registry.pin(cid2).state == "mounted"
+    assert registry.pin(cid1).state == "mounted" and ReadContext.open(cfg).world.status(cid1).live
+    assert not any(line.transition == "retired" for line in _sharing_lines(cfg))
 
 
 @pytest.fixture
