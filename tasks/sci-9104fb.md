@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: commons-1b
 created: 2026-10-01T02:21:10Z
-updated: 2026-10-29T16:11:01Z
+updated: 2026-10-29T16:11:02Z
 started: 2026-10-28T20:03:15Z
 depends: [sci-13050a, beliefs-81367e, beliefs-a989fb]
 tags: [commons]
@@ -132,3 +132,4 @@ Spec §12 part 1b: A binds B, adopts B's publication; A publishes an update drop
 - 2026-10-29T15:47:39Z (commons-1b): review: impl round 3 — verdict: revise; findings: Important 1, Minor 5; reviewer: claude-code/claude-opus-5-5
 - 2026-10-29T16:05:57Z (commons-1b): review: impl round 4 — verdict: accept; findings: none; reviewer: claude-code/claude-sonnet-5-5
 - 2026-10-29T16:11:01Z (commons-1b): attached: commons-1b-plan-ledger.md (42421 bytes): Full plan execution ledger: every task completion, all controller rulings and deferred minors, through the retirement tail's integration
+- 2026-10-29T16:11:02Z (commons-1b): attached: tail-final-review-report.md (9949 bytes): Retirement-tail whole-branch review: With fixes, Important 1 (equal-holder sweep gate), Minor 5; claude-code/claude-opus-5-5
