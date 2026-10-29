@@ -1,14 +1,14 @@
 ---
 id: sci-d5954d
 title: "Task 9: `show` — supersession and retention"
-status: todo
+status: doing
 priority: 1
 size: s
 complexity: mid
 process: direct
 owner: commons-1b
 created: 2026-10-29T01:50:49Z
-updated: 2026-10-29T06:39:48Z
+updated: 2026-10-29T06:39:50Z
 started: 2026-10-29T04:42:10Z
 depends: [sci-29a07b, sci-b47e33]
 parent: sci-9104fb
@@ -46,3 +46,5 @@ step: "Task 9: `show` — supersession and retention"
 - 2026-10-29T04:58:15Z (commons-1b): Implemented show supersession/retention in f22bf53; 22 focused passes +3 Task11 strict xfails, 11 adapter passes, final selected fast check green after generated prompt sync. Parent sci-9104fb owns fresh review and retained worktree/evidence.
   provenance: {"harness_session":"codex:01a185f6-78b2-7ce2-abda-5d3ac3e6b430","harness_session_source":"CODEX_THREAD_ID"}
 - 2026-10-29T05:01:46Z (commons-1b): review: impl round 1 — verdict: accept; findings: none; reviewer: codex/gpt-6.1-sol
+- 2026-10-29T06:39:50Z (commons-1b): resumed
+  provenance: {"harness_session":"codex:01a18661-af98-78f1-bb12-72888d43707e","harness_session_source":"CODEX_THREAD_ID"}
