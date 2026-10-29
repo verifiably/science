@@ -8,7 +8,7 @@ complexity: mid
 process: direct
 owner: commons-1b
 created: 2026-10-29T01:50:49Z
-updated: 2026-10-29T04:58:04Z
+updated: 2026-10-29T04:58:05Z
 started: 2026-10-29T04:42:10Z
 depends: [sci-29a07b, sci-b47e33]
 parent: sci-9104fb
@@ -34,3 +34,4 @@ step: "Task 9: `show` — supersession and retention"
 - 2026-10-29T04:58:01Z (commons-1b): retained: {"host":"titan","state":"kept","verification":"verified","next_owner":"task:sci-9104fb","cleanup_trigger":"After parent fresh review and approved integration, inspect retained evidence and follow worktree removal checks","kind":"evidence","path":".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-9-extra-red.log","purpose":"Task 9 implementation report or RED/GREEN/commit evidence for parent independent review","sha256":"268948f9a13f0327f1a3f364f56351c401929f5526603a3f9e932ffd7dd1313b"}
 - 2026-10-29T04:58:02Z (commons-1b): retained: {"host":"titan","state":"kept","verification":"verified","next_owner":"task:sci-9104fb","cleanup_trigger":"After parent fresh review and approved integration, inspect retained evidence and follow worktree removal checks","kind":"evidence","path":".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-9-fast-final.log","purpose":"Task 9 implementation report or RED/GREEN/commit evidence for parent independent review","sha256":"c9652d0052b2c1246811ae2dec453b777844a748d969c1725f671f3f65b7ec4c"}
 - 2026-10-29T04:58:04Z (commons-1b): retained: {"host":"titan","state":"kept","verification":"verified","next_owner":"task:sci-9104fb","cleanup_trigger":"After parent fresh review and approved integration, inspect retained evidence and follow worktree removal checks","kind":"evidence","path":".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-9-fast.log","purpose":"Task 9 implementation report or RED/GREEN/commit evidence for parent independent review","sha256":"ccefb90dbb9ec45ab9eecf951becce3504de244876a1baa3c035dafbafadc960"}
+- 2026-10-29T04:58:05Z (commons-1b): retained: {"host":"titan","state":"kept","verification":"verified","next_owner":"task:sci-9104fb","cleanup_trigger":"After parent fresh review and approved integration, inspect retained evidence and follow worktree removal checks","kind":"evidence","path":".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-9-focused-final.log","purpose":"Task 9 implementation report or RED/GREEN/commit evidence for parent independent review","sha256":"ef547ec22f4eb8404e7373ca25c75cbde85d5f1e8eb0382de575dea547fb2688"}
