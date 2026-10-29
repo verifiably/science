@@ -639,9 +639,11 @@ stored tail.
      path is `config.source[0]` as `load_config` received it; the test rewrites that file
      after the fixture is restored (the restore puts back the loaded bytes, so the digest
      matches at the test's start). With `config.source` `None` the check is skipped. A
-     `keep` entry naming a corpus no pin records is a Finding (Review Focus 1). Every
-     `retired` block (Task 13) is followed by a `KeyVals("retirement", (("keep", <the
-     list>), ("remedy", "reopen the session and run science epoch")))` block.
+     `keep` entry naming a corpus no pin records is a Finding (Review Focus 1). Each
+     retirement (Task 13) adds to the tail a `KeyVals("retirement <corpus>", (("keep",
+     <the list>), ("remedy", "reopen the session and run science epoch")))` block; the pin
+     blocks of two retirements in one invocation both precede the tail, by the contract
+     above.
   The prompt describes the new refusals and blocks.
 
   Candidate builders for the checklist, in `helpers/commons.py`, each from
