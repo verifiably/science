@@ -8,7 +8,7 @@ complexity: high
 process: direct
 owner: commons-1b
 created: 2026-10-29T01:50:53Z
-updated: 2026-10-29T06:04:26Z
+updated: 2026-10-29T06:04:27Z
 started: 2026-10-29T05:24:07Z
 depends: [sci-e3cacf, sci-d5954d, sci-f8a0cf]
 parent: sci-9104fb
@@ -31,3 +31,4 @@ step: "Task 11: The 1b fixture and the decisive cases through step 5"
 - 2026-10-29T06:04:12Z (commons-1b): Implemented in a1b0ac8b71426d3939f51d5ab9fdf06a92f5fb7d after main integration 2f4b5b4. Final serial test-fast: 1047 passed, 1 xfailed in 1369.69s; combined focused: 105 passed, 1 xfailed; strengthened verification/sibling assertions: 2 passed. All nine Task 8–10 deferred fixture gates active. Sole retained xfail is Task 13 actual two-retirements, blocked on beliefs-a989fb. No production change or formal self-review round; controller fresh impl review is round 1. Full report and logs in .worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/; Task 12 owns full gate.
 - 2026-10-29T06:04:25Z (commons-1b): retained: {"host": "titan", "state": "kept", "verification": "verified", "next_owner": "task:sci-9104fb", "cleanup_trigger": "After independent review, Task 12 gate and parent integration, recheck evidence disposition and worktree removal requirements", "kind": "worktree", "path": ".worktrees/commons-1b", "purpose": "Combined Task 1\u201311 branch retained for controller review, documentation/full gate and parent integration"}
 - 2026-10-29T06:04:26Z (commons-1b): retained: {"host": "titan", "state": "kept", "verification": "verified", "next_owner": "task:sci-9104fb", "cleanup_trigger": "After independent review, Task 12 gate and parent integration, recheck evidence disposition and worktree removal requirements", "kind": "evidence", "path": ".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-11-fast.log", "purpose": "Task 11 fixture development and verification evidence for controller review", "sha256": "36110813e87a407801910e80be89c1a9f9dc23868f5e4d0c5e393357a7585171"}
+- 2026-10-29T06:04:27Z (commons-1b): retained: {"host": "titan", "state": "kept", "verification": "verified", "next_owner": "task:sci-9104fb", "cleanup_trigger": "After independent review, Task 12 gate and parent integration, recheck evidence disposition and worktree removal requirements", "kind": "evidence", "path": ".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-11-focused-first.log", "purpose": "Task 11 fixture development and verification evidence for controller review", "sha256": "4c417738cb3e2e42bee35a3633849552278a813f37b38cc19628b572ff05c311"}
