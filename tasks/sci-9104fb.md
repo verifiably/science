@@ -1,18 +1,21 @@
 ---
 id: sci-9104fb
 title: "Science commons milestone 1b: update, overlap and retirement"
-status: doing
+status: done
 priority: 1
 size: l
 complexity: high
 process: planned
 owner: commons-1b
 created: 2026-10-01T02:21:10Z
-updated: 2026-10-29T16:11:28Z
+updated: 2026-10-29T16:11:30Z
 started: 2026-10-28T20:03:15Z
+completed: 2026-10-29T16:11:30Z
+closed: 2026-10-29T16:11:30Z
 depends: [sci-13050a, beliefs-81367e, beliefs-a989fb]
 tags: [commons]
 source: sci-fe8522
+model: claude-opus-5-5
 agent: claude-code/claude-fable-5-1
 spec: docs/specs/2026-09-30-science-commons-design.md
 plan: docs/plans/2026-10-28-science-commons-1b.md
@@ -137,3 +140,7 @@ Spec §12 part 1b: A binds B, adopts B's publication; A publishes an update drop
 - 2026-10-29T16:11:05Z (commons-1b): attached: tail-fix-1-review-report.md (2612 bytes): Scoped re-review of corrective round 1: addressed, no new breakage; claude-code/claude-sonnet-5-5
 - 2026-10-29T16:11:07Z (commons-1b): attached: tail-merge-gate.log (1595 bytes): Merge gate on 775ec0f: just gate exit 0, 1070 passed in 200.18s
 - 2026-10-29T16:11:28Z (commons-1b): retained: worktree .worktrees/commons-1b and plan workspace .superpowers/sdd/2026-10-28-science-commons-1b released at closeout: the full ledger (commons-1b-plan-ledger.md), tail reviews, fix report and merge gate log attached here; Task 13/14/15 reports and reviews attached to sci-9c0bba/sci-9da5a6/sci-50d0c2; overlap ledger and reviews attached earlier. Discarded as regenerable or summarized: briefs (from the plan), review diffs (from git), per-task Tasks 1-12 reports and run logs (summarized with commits and counts in the attached ledger), .venv, .pytest_cache, .testmondata.
+- 2026-10-29T16:11:30Z (commons-1b): done
+  provenance: {"harness_session":"claude-code:e9952dfd-ee2b-47b3-84ef-d176d9d3cc57","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-29T16:11:30Z (commons-1b): Milestone 1b complete on main 775ec0f (local, unpushed): overlap half (Tasks 1-12, b07e761) and retirement tail (Task 13 bb1fad5 door and reconcile, Task 14 320f9e3 + 1339976 gates, Task 15 240907e docs, 81bf98f integration wording). Tail whole-branch review claude-code/claude-opus-5-5 With fixes (Important 1) -> corrective round 1 accepted by scoped re-review. Merge gate just gate 1070 passed, 200.18s. Follow-ups: sci-4b5ec4 (retirement report/remedy minors), sci-7315fb (show keep warning); deferred minors in the attached ledger.
+  provenance: {"harness_session":"claude-code:e9952dfd-ee2b-47b3-84ef-d176d9d3cc57","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
