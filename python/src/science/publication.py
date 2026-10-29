@@ -53,6 +53,7 @@ class MarkerFields:
     uid: str
     world: str
     view: str  # the view address pinned to the revision the selection was evaluated against
+    destination: Destination
     selection: frozenset[str]
     attributions: dict[str, tuple[str, str]]  # address -> (origin corpus, origin marker)
     supersedes: tuple[tuple[str, str], ...]
@@ -111,6 +112,7 @@ def marker_fields(node: Node) -> MarkerFields:
         uid=node.uid,
         world=source["world_id"],
         view=source["view"],
+        destination=Destination.from_projection(facet["destination"]),
         selection=frozenset(facet["selection"]),
         attributions={address: (corpus, marker) for address, corpus, marker in source.get("attributions", [])},
         supersedes=tuple(tuple(pair) for pair in facet["supersedes_markers"]),
