@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: main
 created: 2026-10-01T02:21:10Z
-updated: 2026-10-29T07:08:10Z
+updated: 2026-10-29T07:08:13Z
 started: 2026-10-28T20:03:15Z
 depends: [sci-13050a, beliefs-81367e, beliefs-a989fb]
 tags: [commons]
@@ -110,3 +110,4 @@ Spec §12 part 1b: A binds B, adopts B's publication; A publishes an update drop
 - 2026-10-29T07:07:22Z (commons-1b): review: impl round 2 — verdict: accept; findings: none; reviewer: codex/gpt-6.1-sol
 - 2026-10-29T07:08:10Z (main): resumed
   provenance: {"harness_session":"codex:01a1855d-6c10-77a2-82b3-d0457ea936da","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-29T07:08:13Z (main): Overlap phase Tasks 1–12 is locally integrated into main by fast-forward at b07e761635ee5c39a05956059e8a721157172709, after whole-branch review and corrective round 1 accepted. Correction fac6b909 fixes duplicate verification counts and excluded fetched-root reads. Fresh normal just gate: 1054 collected, 1053 passed, 1 expected retirement xfail, 175.00s; integrated tree has no code/docs difference from that verified correction, and main just check passed. Nothing pushed. Tasks 13–15 remain blocked on beliefs-a989fb. Deferred minors: show omits the unknown-keep Finding (adopt warns), and dependency testmon survey output noise; full ledger/review attachments preserve details. Existing main sci-0bc09c coverage was preserved during integration.
