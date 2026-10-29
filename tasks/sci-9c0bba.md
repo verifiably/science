@@ -1,15 +1,17 @@
 ---
 id: sci-9c0bba
 title: "Task 13: The retirement door and reconcile (blocked on `beliefs-a989fb`)"
-status: doing
+status: done
 priority: 1
 size: m
 complexity: high
 process: direct
 owner: commons-1b
 created: 2026-10-29T01:50:59Z
-updated: 2026-10-29T14:29:52Z
+updated: 2026-10-29T14:31:16Z
 started: 2026-10-29T13:50:58Z
+completed: 2026-10-29T14:31:16Z
+closed: 2026-10-29T14:31:16Z
 depends: [beliefs-a989fb]
 parent: sci-9104fb
 tags: [commons]
@@ -48,3 +50,7 @@ step: "Task 13: The retirement door and reconcile (blocked on `beliefs-a989fb`)"
 - 2026-10-29T14:29:19Z (commons-1b): attached: task-13-review-report.md (3688 bytes): Full independent Task 13 review: spec compliant, quality approved, no findings; codex/gpt-6.1-sol
 - 2026-10-29T14:29:50Z (commons-1b): retained: {"host": "titan", "state": "kept", "verification": "verified", "next_owner": "task:sci-9104fb", "cleanup_trigger": "After Tasks 14 and 15 and retirement-tail review/integration, inspect and preserve evidence before any removal", "kind": "worktree", "path": ".worktrees/commons-1b", "purpose": "Reviewed Task 13 code on commons-1b awaiting remaining retirement-tail gates and documentation"}
 - 2026-10-29T14:29:52Z (commons-1b): retained: {"host": "titan", "state": "kept", "verification": "verified", "next_owner": "task:sci-9104fb", "cleanup_trigger": "After Tasks 14 and 15 and retirement-tail review/integration, inspect and preserve evidence before any removal", "kind": "evidence", "path": ".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b", "purpose": "Complete overlap and Task 13 implementation, test and review evidence for retirement-tail continuation", "manifest": ".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-13-evidence-manifest.json", "sha256": "83d2bd4f10e180669f464e8094688caef1984da12336caf0d61813295a522d78"}
+- 2026-10-29T14:31:16Z (commons-1b): done
+  provenance: {"harness_session":"codex:01a187eb-c21e-7a42-a216-2a6c5b309479","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-29T14:31:16Z (commons-1b): Implemented and independently reviewed at bb1fad5: retirement door, any-actor reconciliation, ledger-first pin projection, current live-holder sweep, actionable show retry and connected fixtures. Focused 7 passed; affected suite 87 passed; review round 2 accept/no findings. Reports attached. Retained commons-1b stays unmerged under sci-9104fb until Tasks 14–15 and whole-tail review.
+  provenance: {"harness_session":"codex:01a187eb-c21e-7a42-a216-2a6c5b309479","harness_session_source":"CODEX_THREAD_ID"}
