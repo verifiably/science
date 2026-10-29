@@ -8,7 +8,7 @@ complexity: high
 process: direct
 owner: commons-1b
 created: 2026-10-29T01:50:59Z
-updated: 2026-10-29T14:29:19Z
+updated: 2026-10-29T14:29:50Z
 started: 2026-10-29T13:50:58Z
 depends: [beliefs-a989fb]
 parent: sci-9104fb
@@ -46,3 +46,4 @@ step: "Task 13: The retirement door and reconcile (blocked on `beliefs-a989fb`)"
 - 2026-10-29T14:27:51Z (commons-1b): review: impl round 2 — verdict: accept; findings: none; reviewer: codex/gpt-6.1-sol
 - 2026-10-29T14:29:08Z (commons-1b): attached: task-13-report.md (10973 bytes): Task 13 implementation, RED/GREEN evidence, test counts, rulings and remaining integration gates
 - 2026-10-29T14:29:19Z (commons-1b): attached: task-13-review-report.md (3688 bytes): Full independent Task 13 review: spec compliant, quality approved, no findings; codex/gpt-6.1-sol
+- 2026-10-29T14:29:50Z (commons-1b): retained: {"host": "titan", "state": "kept", "verification": "verified", "next_owner": "task:sci-9104fb", "cleanup_trigger": "After Tasks 14 and 15 and retirement-tail review/integration, inspect and preserve evidence before any removal", "kind": "worktree", "path": ".worktrees/commons-1b", "purpose": "Reviewed Task 13 code on commons-1b awaiting remaining retirement-tail gates and documentation"}
