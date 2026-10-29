@@ -62,10 +62,15 @@ documents the sidecar as historical commentary in the guide and the framework (T
 12). Round 6 (`codex/gpt-6-astra`, revise: P2 2): revision 7 syncs the three fixed
 directories including `operations_root/` on every write, and splits the failure contract
 at the rename, a complete sidecar possibly surviving a post-rename fsync failure and a
-retry reading it when present (Task 8).
+retry reading it when present (Task 8). Round 7 (`codex/gpt-6-astra`): accept, no
+findings; approved by Keith 2026-10-28.
 
-**Status:** draft for review. Execution ruling (round 3, the user): subagent-driven,
-implementers sequential, a whole-branch review before each phase merges.
+**Status:** **approved by Keith 2026-10-28 at revision 7, `8937235`**, after review round 7
+(`codex/gpt-6-astra`, accept, no findings). Execution ruling (round 3, the user):
+subagent-driven, implementers sequential, a whole-branch review before each phase merges;
+execution starts in a fresh session with the Setup baseline (`just test`, count noted on
+sci-9104fb). Tasks 13–15 stay blocked on `beliefs-a989fb` and are revised against its
+merged design before they start.
 
 ## Global Constraints
 
