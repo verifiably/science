@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: commons-1b
 created: 2026-10-01T02:21:10Z
-updated: 2026-10-29T01:52:07Z
+updated: 2026-10-29T01:56:51Z
 started: 2026-10-28T20:03:15Z
 depends: [sci-13050a, beliefs-81367e, beliefs-a989fb]
 tags: [commons]
@@ -100,3 +100,5 @@ Spec §12 part 1b: A binds B, adopts B's publication; A publishes an update drop
   provenance: {"harness_session":"claude-code:f666f956-1928-4c06-8bf1-80cd5a586d90","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-29T01:52:07Z (commons-1b): parked (waiting on agent, session): Execute in a fresh session: in .worktrees/commons-1b run tasks start sci-9104fb, then the Setup baseline (just test; note the command and count on the task), then superpowers:subagent-driven-development over docs/plans/2026-10-28-science-commons-1b.md (approved at faad6f6; sequential implementers, a fresh reviewer per task, a whole-branch review before the overlap half merges): tasks start sci-bb102d (Task 1) first; Tasks 1-12 are sci-bb102d sci-a23752 sci-29be32 sci-390998 sci-ba7508 sci-29a07b sci-b47e33 sci-e3cacf sci-d5954d sci-f8a0cf sci-8f42b9 sci-12c16d; Tasks 13-15 (sci-9c0bba sci-9da5a6 sci-50d0c2) wait on beliefs-a989fb and are revised against its merged design before they start
   provenance: {"harness_session":"claude-code:f666f956-1928-4c06-8bf1-80cd5a586d90","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-29T01:56:51Z (commons-1b): resumed
+  provenance: {"harness_session":"codex:01a1855d-6c10-77a2-82b3-d0457ea936da","harness_session_source":"CODEX_THREAD_ID"}
