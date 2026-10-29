@@ -59,7 +59,10 @@ presentation-state exception rather than a kernel outcome change): revision 6 ma
 sidecar durable (directory fsync), closes the invocation in `finally` on any
 presentation failure with fault-injection and fresh-dispatcher continuation tests, and
 documents the sidecar as historical commentary in the guide and the framework (Tasks 8,
-12).
+12). Round 6 (`codex/gpt-6-astra`, revise: P2 2): revision 7 syncs the three fixed
+directories including `operations_root/` on every write, and splits the failure contract
+at the rename, a complete sidecar possibly surviving a post-rename fsync failure and a
+retry reading it when present (Task 8).
 
 **Status:** draft for review. Execution ruling (round 3, the user): subagent-driven,
 implementers sequential, a whole-branch review before each phase merges.
@@ -603,11 +606,15 @@ class:
   rejected). The dispatcher writes the tail, before `close_invocation`, to
   `operations_root / "tails" / <session id> / <invocation id>.json` (science already owns
   `transport/` and `scratch/` under the operations root), through a new
-  `report.write_tail(path, blocks)`: directories created as needed, a temp file in the
-  target directory, write, `fsync` the file, `os.replace`, then **`fsync` the directory
-  and each directory it created**, so the entry survives a crash that the ledger's close
-  survives; each block serialised as `{"kind": "keyvals", "title": …, "pairs": [[k, v],
-  …]}` or `{"kind": "finding", "text": …}` (`report.tail_to_json` / `report.tail_from_json`).
+  `report.write_tail(operations_root, session_id, invocation_id, blocks)`: `tails/` and
+  `tails/<session id>/` created as needed, a temp file in the target directory, write,
+  `fsync` the file, `os.replace`, then **`fsync` the three fixed directories in order,
+  `tails/<session id>/`, `tails/`, `operations_root/`**, on every write and not only when
+  this attempt created them (a directory entry is durable only when its containing
+  directory is synced, and a directory left by an earlier failed attempt is as unsynced as
+  a new one), so the entry survives a crash that the ledger's close survives; each block
+  serialised as `{"kind": "keyvals", "title": …, "pairs": [[k, v], …]}` or `{"kind":
+  "finding", "text": …}` (`report.tail_to_json` / `report.tail_from_json`).
   `_continue_write` and the replay of a closed invocation rebuild
   `_pin_report(record.sharing)` plus the tail read from that file, so the cursor digest
   matches; **an absent file is an empty tail**, which is what every 1a invocation has, so
@@ -621,16 +628,23 @@ class:
 - **Failure contract.** The audit, the tail serialisation and `write_tail` run inside the
   `try` whose `finally` closes the invocation `done` (today's shape for the audit alone):
   a presentation failure of any kind, `AuditViolation` or an `OSError` from the sidecar
-  write, never leaves committed effects in an open invocation. On such a failure no (or a
-  partial-but-never-renamed) tail file exists, the error propagates, and a retry renders
-  the canonical pin report.
+  write, never leaves committed effects in an open invocation; the error propagates in
+  both cases below. **Before the rename** (serialisation, temp-file write, file fsync,
+  `os.replace` itself) no final sidecar exists, only an unrenamed temp file at most, and a
+  retry renders pins only. **After the rename** (a directory fsync fails) a complete
+  sidecar exists without a durability guarantee; a retry reads it when it is present and
+  renders pins only when a crash took it. Neither case claims the sidecar durable.
 
 Fault-injection tests in `test_dispatch_sharing.py`: `os.replace` raising inside
-`write_tail` → the invocation is closed `done`, the error propagates, no tail file
-exists, the retry renders pins only; `tail_to_json` raising → the same; a tail written
-and then deleted by hand → continuation refuses `stale-cursor` and replay renders pins
-only; a continuation through a **fresh `Dispatcher`** over the same operations root
-renders the same page as the first one.
+`write_tail` → the invocation is closed `done`, the error propagates, no final tail file
+exists, the retry renders pins only; `tail_to_json` raising → the same; `os.fsync` raising
+on the first directory fsync after a successful rename → closed `done`, the error
+propagates, the complete sidecar exists and the retry renders it; the three directory
+fsyncs happen in the stated order on a first write (`tails/` and `<session id>/` created
+by this write) and again on a later write to the same session; a tail written and then
+deleted by hand → continuation refuses `stale-cursor` and replay renders pins only; a
+continuation through a **fresh `Dispatcher`** over the same operations root renders the
+same page as the first one.
 - Pagination is therefore one contract for every page: a page may end inside a pin block
   or inside the tail, and the cursor continues from the ledger-rebuilt report plus the
   persisted tail.
