@@ -8,7 +8,7 @@ complexity: high
 process: direct
 owner: commons-1b
 created: 2026-10-29T01:50:47Z
-updated: 2026-10-29T04:08:23Z
+updated: 2026-10-29T04:21:57Z
 started: 2026-10-29T04:08:23Z
 depends: [sci-a23752, sci-29a07b, sci-b47e33]
 parent: sci-9104fb
@@ -25,3 +25,4 @@ step: "Task 8: `adopt` — checklist, preflight, order and re-evaluation"
   provenance: {"harness_session":"claude-code:f666f956-1928-4c06-8bf1-80cd5a586d90","harness_session_source":"CLAUDE_CODE_SESSION_ID","origin":"agent"}
 - 2026-10-29T04:08:23Z (commons-1b): started
   provenance: {"harness_session":"codex:01a185d7-1b84-7670-8479-c67b00bb9272","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-29T04:21:57Z (commons-1b): Implemented sharing sidecar and adoption orchestration; focused verification 71 passed, 4 expected fixture xfails. Final affected-suite check runs with the approved single-worker invocation override and includes an added fifth deferred fixture case. No actual retirement door; Task11 fixtures and Task13 retirement gate remain assigned to their planned steps.
