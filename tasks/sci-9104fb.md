@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: commons-1b
 created: 2026-10-01T02:21:10Z
-updated: 2026-10-29T16:11:04Z
+updated: 2026-10-29T16:11:05Z
 started: 2026-10-28T20:03:15Z
 depends: [sci-13050a, beliefs-81367e, beliefs-a989fb]
 tags: [commons]
@@ -134,3 +134,4 @@ Spec §12 part 1b: A binds B, adopts B's publication; A publishes an update drop
 - 2026-10-29T16:11:01Z (commons-1b): attached: commons-1b-plan-ledger.md (42421 bytes): Full plan execution ledger: every task completion, all controller rulings and deferred minors, through the retirement tail's integration
 - 2026-10-29T16:11:02Z (commons-1b): attached: tail-final-review-report.md (9949 bytes): Retirement-tail whole-branch review: With fixes, Important 1 (equal-holder sweep gate), Minor 5; claude-code/claude-opus-5-5
 - 2026-10-29T16:11:04Z (commons-1b): attached: tail-fix-1-report.md (4855 bytes): Corrective round 1 fix report: equal-holder sweep gate 1339976, hoist mutation RED and GREEN, test-fast 1070 passed
+- 2026-10-29T16:11:05Z (commons-1b): attached: tail-fix-1-review-report.md (2612 bytes): Scoped re-review of corrective round 1: addressed, no new breakage; claude-code/claude-sonnet-5-5
