@@ -6,11 +6,13 @@ from __future__ import annotations
 from beliefs import stored
 from beliefs.corpus import ReadView
 
-from science import publication
+from science import publication, supersession
 from science.acceptance import AcceptanceInputs, acceptance_inputs, counts
+from science.config import live_mounts
+from science.retention import required
 from science.refusal import Refusal, Refused
 from science.report import Finding, Heading, KeyVals, Report, Text
-from science.sharing import STATE_ORDER, Pin, SharingRegistry
+from science.sharing import STATE_ORDER, Pin, SharingRegistry, sharing_lines
 
 LAG = "registry lags the kernel: `adopt` reconciles it"
 
@@ -65,6 +67,67 @@ def _evidence(ctx, inputs: AcceptanceInputs, corpus_id: str, assessments: list[s
     return tuple(rows) or (("assessments", "none: the corpus holds no assessment"),)
 
 
+def _supersession(ctx, registry, pin, status) -> Report:
+    history = sharing_lines(ctx.config.operations_root)
+    groups = supersession.groups(registry, history)
+    marker = publication.marker_fields(publication.marker_of(registry.root_for(pin.corpus_id)))
+    key = supersession.group_of(marker)
+    held = groups.get(key, ())
+    retired = (KeyVals("retention", (("retired", "yes"),)),) if any(
+        item.corpus_id == pin.corpus_id and item.status == "retired" for item in ctx.world.registry().statuses) else ()
+    if not held:
+        return retired
+    outcome = supersession.classify(held)
+    tip = outcome.tip if outcome.kind == "resolved" else supersession.current(history, held)
+    pair = pin.corpus_id, marker.uid
+    path = None if tip is None else supersession.chain(pair, tip, held)
+    relation = "sibling"
+    if outcome.kind != "divergent":
+        if pair == tip:
+            relation = "tip"
+        elif path:
+            relation = f"superseded by {tip[0]}"
+    if outcome.kind == "resolved":
+        current = " ".join(tip)
+    elif outcome.kind == "divergent":
+        current = "divergent: " + ", ".join(" ".join(pair) for pair in outcome.tips)
+    else:
+        current = "unresolved: " + ", ".join(f"adopt {corpus} {marker}" for corpus, marker in outcome.missing)
+    beside = sorted(item.corpus_id for other, items in groups.items() if other != key and other[:2] == key[:2]
+                    for item in items if item.state == "mounted" and ctx.world.status(item.corpus_id).live)
+    if beside:
+        relation = "unlinked chain beside " + ", ".join(beside)
+    blocks = [KeyVals("supersession", (("group", " ".join(key)), ("current", current), ("this pin", relation)))]
+    if beside:
+        blocks.append(Finding("records attributed differently cannot be published while both chains are mounted"))
+    if retired:
+        return (*blocks, *retired)
+    if outcome.kind != "resolved" or not path or pair == tip or not status.live:
+        return tuple(blocks)
+    predecessor = next(item for item in held if item.corpus_id == pin.corpus_id)
+    mounts = live_mounts(ctx.config, ctx.world, registry)
+    write = next(mount for mount in mounts if mount.root == ctx.config.write_root)
+    live_ids = {mount.corpus_id for mount in mounts}
+    reasons = required(predecessor, keep=ctx.config.keep, group_chain=held, tip=tip,
+                       mounted=tuple(item for items in groups.values() for item in items
+                                     if item.state == "mounted" and item.corpus_id in live_ids),
+                       write_root=(write.corpus_id, write.view, write.profile),
+                       live=tuple((mount.corpus_id, mount.view, mount.profile) for mount in mounts if mount != write))
+    rows = []
+    for reason in reasons:
+        if reason.kind == "configuration":
+            value = "configuration"
+        elif reason.kind == "chain":
+            value = f"chain (for {reason.detail[0]})"
+        elif reason.kind == "attribution":
+            value = f"attribution (named by {reason.detail[0]})"
+        else:
+            value = f"dependency ({', '.join(reason.detail)})"
+        rows.append(("kept", value))
+    blocks.append(KeyVals("retention", tuple(rows) or (("pending", "no door"),)))
+    return tuple(blocks)
+
+
 def handle(ctx, *, corpus_id) -> Report:
     publication.require_id(corpus_id, "corpus_id")
     config = ctx.config
@@ -98,6 +161,7 @@ def handle(ctx, *, corpus_id) -> Report:
         KeyVals("evidence", _evidence(ctx, inputs, corpus_id, assessments)),
         Text("independence: not exposed by the kernel's inputs (Deviation 8)"),
     ]
+    blocks.extend(_supersession(ctx, registry, pin, status))
     if status.known and status.live and STATE_ORDER.index(pin.state) < STATE_ORDER.index("mounted"):
         blocks.append(Finding(LAG))
     return tuple(blocks)
