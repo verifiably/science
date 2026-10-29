@@ -40,11 +40,18 @@ retention rows and findings need the contract extended (Task 8, Task 12); that t
 two-sessions test needs an unadopted late chain and the late-link fixture a reopen and an
 epoch (Task 11); and that the `uid-corruption` builder needed its value shape, the
 kernel-minted source, the `LOC_C` binding and basis-changing identifiers (Task 8).
-Revision 3 answers them, with the minors (the `apply_line` site, the sibling's re-applied
-query, the epoch before each late-chain publish, `dataset_at`'s predicate, the stale check's
-path, two snapshot callables per base-parametrised builder).
+Revision 3 (`2de2c94`) answered them, with the minors (the `apply_line` site, the sibling's
+re-applied query, the epoch before each late-chain publish, `dataset_at`'s predicate, the
+stale check's path, two snapshot callables per base-parametrised builder). Round 3
+(`codex/gpt-6-astra`, revise: P1 1, P2 3, P3 1): divergence is any intersecting pair of
+tips, not every pair (Task 6); the report contract must survive pagination and omit no
+committed pin, so the dispatcher composes the pin prefix and stores the handler's tail in
+the invocation outcome (Task 8); an already-mounted retry counts the whole invocation's
+writes (Task 8); two commit commands named their files (Tasks 6, 11). Revision 4 answers
+them.
 
-**Status:** draft.
+**Status:** draft for review. Execution ruling (round 3, the user): subagent-driven,
+implementers sequential, a whole-branch review before each phase merges.
 
 ## Global Constraints
 
@@ -456,7 +463,8 @@ class Outcome:
 
 def classify(held: Sequence[Held], candidate: Held | None = None) -> Outcome
     # publication_tip over the roots (candidate's included); one tip -> resolved; several:
-    # divergent iff their ancestries pairwise intersect, else unresolved with the unheld pairs
+    # divergent iff ANY two tips' ancestries intersect (a sibling pair is a fork whatever other
+    # tips a gap leaves standing), else unresolved with the unheld pairs
 def current(lines: Sequence[SharingLine], held: Sequence[Held]) -> tuple[str, str] | None
     # §5.6's fold over the group's `mounted` lines in replay order, links through held markers seen so far
 def chain(from_pair, to_pair, held) -> tuple[tuple[str, str], ...] | None
@@ -470,6 +478,7 @@ def test_group_key_is_world_view_destination(): ...
 def test_two_tips_under_one_held_predecessor_are_divergent(): ...
 def test_two_tips_naming_one_unheld_predecessor_are_divergent(): ...          # named ancestry
 def test_a_tip_naming_an_unheld_intermediate_is_unresolved_naming_the_pair(): ...
+def test_a_sibling_pair_is_divergent_even_beside_a_disconnected_tip(): ...   # P2 and P2' under P1, plus P4 with its link missing: divergent, not unresolved
 def test_a_forged_link_naming_a_held_marker_under_the_wrong_corpus_is_unheld(): ...   # Review Focus 5
 def test_current_follows_a_gap_filler_and_ignores_a_disconnected_adoption():   # P1, P4, P2 (P3 absent) -> P2
 def test_current_is_unmoved_whichever_end_of_a_gap_arrives_second(): ...        # both orders
@@ -484,7 +493,7 @@ def test_established_refuses_a_mounted_pin_whose_root_is_missing(tmp_path): ... 
   the roots tuple for `publication_tip` from `Held.root` values and maps the kernel's
   `CurrentPublication`/`DivergentPublication`/`None` onto `Outcome`.
 - [ ] **Step 4: Run** `just test-one tests/test_supersession.py -v`, then `just test-fast`; Expected: PASS.
-- [ ] **Step 5: Commit** — `git add python/src/science/supersession.py python/tests/test_supersession.py && git commit -m "feat(sharing): supersession groups, named ancestry and the current-publication fold"`
+- [ ] **Step 5: Commit** — `git add python/src/science/supersession.py python/src/science/publication.py python/tests/test_supersession.py && git commit -m "feat(sharing): supersession groups, named ancestry and the current-publication fold"`
 
 ---
 
@@ -557,18 +566,36 @@ def test_nothing_required_is_empty(...)
   `python/tests/helpers/commons.py` (the candidate builders below)
 
 **The sharing report contract, extended.** Today `audit_sharing_report` refuses any block
-that is not a `PinBlock` and the dispatcher renders `_pin_report(lines)` whatever the
-handler returned, so `adopt` could not say why a predecessor is kept, nor carry a Finding.
-This task changes the contract and Task 12 records it as a dated amendment of the
-framework's §4.4 `sharing` class: a `sharing` report is its ledger-backed pin blocks, each
-supported by a sharing line of the invocation in ledger order, **followed by** informational
-`KeyVals` and `Finding` blocks, the invocation's reading of registry and kernel state. The
-audit admits that tail and still refuses a `PinBlock` that no later line supports, out of
-order, or placed after an informational block. The first response renders the audited
-handler report; `_continue_write` and replay render `_pin_report(lines)` only, since the
-tail is not ledgered and `show` re-derives everything it says. Unit tests in
-`test_dispatch_sharing.py`: a tail renders on the first response; a `PinBlock` after a
-`KeyVals` refuses; a continued invocation renders pin blocks only.
+that is not a `PinBlock`, the dispatcher renders `_pin_report(lines)` whatever the handler
+returned, the write cursor hashes the rendered report (`_render_write`), and
+`_continue_write` rebuilds `_pin_report(record.sharing)` and refuses `stale-cursor` on a
+digest mismatch. So `adopt` could not say why a predecessor is kept, and any report that
+differed from the pin blocks would refuse its own continuation. This task changes the
+contract and Task 12 records it as a dated amendment of the framework's §4.4 `sharing`
+class:
+
+- A `sharing` **handler returns informational blocks only** (`KeyVals`, `Finding`), its
+  reading of registry and kernel state; it never authors a `PinBlock`. `adopt` today
+  returns `pin_block(line)` per line; that goes.
+- The **canonical report** is composed by the dispatcher: `_pin_report(lines)` (every
+  sharing line of the invocation, in ledger order: the complete pin prefix, so a committed
+  effect cannot be omitted) followed by the handler's tail. `audit_sharing_report(tail)`
+  refuses any `PinBlock` in the tail.
+- The tail is **stored in the invocation's close outcome**, `{"done": [], "tail":
+  [...]}`, each block serialised as `{"kind": "keyvals", "title": …, "pairs": [[k, v],
+  …]}` or `{"kind": "finding", "text": …}` (`report.tail_to_json` / `report.tail_from_json`
+  in `report.py`), so `_continue_write` rebuilds exactly the same report from
+  `record.sharing` plus `record.outcome["tail"]` and the cursor digest matches; replay of
+  a closed invocation renders the same.
+- Pagination is therefore one contract for every page: a page may end inside a pin block
+  or inside the tail, and the cursor continues from the ledger-rebuilt report.
+
+Unit tests in `test_dispatch_sharing.py`: a handler returning a `PinBlock` is refused by
+the audit; a tail renders after the complete pin prefix on the first response; an outcome
+with two sharing lines and a tail renders both pins before the tail; with a small
+`output_budget` a cursor issued inside a pin block and one issued inside the tail both
+continue to the same text from the ledger; a retry of a closed invocation renders the
+stored tail.
 
 **Interfaces:**
 - Consumes: Task 2 `conflicts`; Task 6 `established`, `authorized`, `classify`, `current`,
@@ -582,7 +609,11 @@ tail is not ledgered and `show` re-derives everything it says. Unit tests in
      has not landed` per such pin, nothing written); a `departed` status record → its own
      Finding. A `fetched` pin is never looked at here.
   2. target state (as today, with one change: an already-mounted target proceeds to step 4
-     and refuses `invalid-input` "already adopted" only when step 4 wrote nothing).
+     and refuses `invalid-input` "already adopted" only when **the whole invocation wrote
+     nothing**, step 1's reconcile included; a crash between admission and the `mounted`
+     mark is recovered by step 1 and reported as the recovery it is, which the existing
+     `test_a_crash_after_admission_before_the_pin_write_recovers_with_its_source` keeps
+     asserting).
   3. candidate: fetch or reuse (as today); **checklist**: `conflicts(candidate_view,
      live)` with `live` = every corpus the kernel lists admitted and live, read by root
      (configured roots + registry roots), plus candidates admitted this invocation →
@@ -647,7 +678,8 @@ def test_a_refused_sibling_left_fetched_changes_nothing_later(...): ...
 def test_the_first_adoption_of_a_view_is_trivially_resolved(bound): ...   # Review Focus 2
 def test_a_successor_keeps_a_predecessor_b_depends_on_and_reports_why(updated): ...   # kept: dependency (<A's assessment>)
 def test_an_unrequired_predecessor_reports_retirement_pending_before_the_door(updated_unkept): ...
-def test_adopting_a_mounted_corpus_again_refuses_only_when_re_evaluation_wrote_nothing(...): ...
+def test_adopting_a_mounted_corpus_again_refuses_only_when_the_invocation_wrote_nothing(...): ...
+def test_two_retirements_in_one_invocation_render_both_pins_before_the_tail(...): ...   # xfail until Task 13; the three-link late-link case
 def test_a_changed_configuration_file_refuses_config_stale_before_the_pending_finding(updated_unkept): ...
     # the file is rewritten after load; the empty-required branch raises config-stale (nothing is pending-reported)
 ```
@@ -804,7 +836,7 @@ def test_publish_in_the_late_link_state_refuses_attribution_ambiguous_naming_the
 - [ ] **Step 1: Write the builders, fixtures and tests; remove the xfail marks.**
 - [ ] **Step 2: Run** `just test-one tests/test_commons_1b.py tests/test_cmd_adopt.py tests/test_cmd_show.py tests/test_cmd_publish.py -v`; Expected: FAIL on the new cases first, then PASS after fixing builders.
 - [ ] **Step 3: Run** `just test-fast`; Expected: PASS.
-- [ ] **Step 4: Commit** — `git commit -am "test(commons): the 1b fixture chain and the decisive cases through the update"`
+- [ ] **Step 4: Commit** — `git add python/tests/test_commons_1b.py python/tests/helpers/commons.py python/tests/conftest.py python/tests/test_cmd_adopt.py python/tests/test_cmd_show.py python/tests/test_cmd_publish.py && git commit -m "test(commons): the 1b fixture chain and the decisive cases through the update"`
 
 ---
 
@@ -818,8 +850,9 @@ def test_publish_in_the_late_link_state_refuses_attribution_ambiguous_naming_the
 - [ ] **Step 1: Make the §6 amendments that do not describe retirement**, dated, in place,
   each marked *Amended <date> (milestone 1b plan, §<n>)* as 1a's were; and amend the
   framework design (`docs/specs/2026-08-31-command-framework-design.md` §4.4, the
-  `sharing` class) with Task 8's report contract: ledger-backed pin blocks in order,
-  followed by informational blocks the first response renders and replay omits.
+  `sharing` class) with Task 8's report contract: the dispatcher composes the complete
+  ledger-backed pin prefix, the handler supplies an informational tail stored in the
+  invocation's outcome, and every page continues from the ledger-rebuilt report.
 - [ ] **Step 2: Run** `just gate`; Expected: `check` silent, suite passes. Note the test count on the task.
 - [ ] **Step 3: Commit** — `git commit -am "docs(specs): commons amendments for milestone 1b's overlap half"`
 
