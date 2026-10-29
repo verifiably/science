@@ -1,17 +1,15 @@
 ---
 id: sci-d5954d
 title: "Task 9: `show` — supersession and retention"
-status: done
+status: todo
 priority: 1
 size: s
 complexity: mid
 process: direct
 owner: commons-1b
 created: 2026-10-29T01:50:49Z
-updated: 2026-10-29T05:01:46Z
+updated: 2026-10-29T06:39:48Z
 started: 2026-10-29T04:42:10Z
-completed: 2026-10-29T04:58:15Z
-closed: 2026-10-29T04:58:15Z
 depends: [sci-29a07b, sci-b47e33]
 parent: sci-9104fb
 tags: [commons]
