@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: commons-1b
 created: 2026-10-01T02:21:10Z
-updated: 2026-10-29T14:30:28Z
+updated: 2026-10-29T14:30:45Z
 started: 2026-10-28T20:03:15Z
 depends: [sci-13050a, beliefs-81367e, beliefs-a989fb]
 tags: [commons]
@@ -121,3 +121,4 @@ Spec §12 part 1b: A binds B, adopts B's publication; A publishes an update drop
 - 2026-10-29T08:59:46Z (main): Deferred overlap review Minor 3 is now tracked as sci-7315fb (P3, xs, low, direct): show warns for configured keep IDs without pins. It can run before the retirement door and should coordinate with sci-cf4d58 over show.py. The testmon race remains ops-ab03a7; survey-banner noise remains documented without a separate task. No duplicate retirement, acceptance, or re-fetch tasks were filed.
 - 2026-10-29T14:30:28Z (commons-1b): resumed
   provenance: {"harness_session":"codex:01a187eb-c21e-7a42-a216-2a6c5b309479","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-29T14:30:45Z (commons-1b): retained: {"host": "titan", "state": "kept", "verification": "verified", "next_owner": "task:sci-9104fb", "cleanup_trigger": "After Tasks 14 and 15 and retirement-tail review/integration, inspect and preserve evidence before any removal", "kind": "worktree", "path": ".worktrees/commons-1b", "purpose": "Reviewed Task 13 code on commons-1b awaiting remaining retirement-tail gates and documentation"}
