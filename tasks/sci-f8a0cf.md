@@ -8,7 +8,7 @@ complexity: mid
 process: direct
 owner: commons-1b
 created: 2026-10-29T01:50:51Z
-updated: 2026-10-29T05:19:13Z
+updated: 2026-10-29T05:22:27Z
 started: 2026-10-29T05:02:54Z
 completed: 2026-10-29T05:19:13Z
 closed: 2026-10-29T05:19:13Z
@@ -40,3 +40,4 @@ step: "Task 10: `publish` and `publish-preview` — the retired-corpus guard and
   provenance: {"harness_session":"codex:01a18609-985e-78b1-87f9-3fb87a45222b","harness_session_source":"CODEX_THREAD_ID"}
 - 2026-10-29T05:19:13Z (commons-1b): Implemented in 1773f7b: shared nonlive-session guard and exact-pair ambiguous-attribution remedies on publish/preview, including resume. Focused 31 passed/2 strict xfails; required fast 118 passed/2 strict xfails. Task 11 owns the late_link fixture gates; controller owns fresh review and retained worktree/evidence under sci-9104fb. No push, merge, host change or surviving session process.
   provenance: {"harness_session":"codex:01a18609-985e-78b1-87f9-3fb87a45222b","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-29T05:22:27Z (commons-1b): review: impl round 1 — verdict: accept; findings: none; reviewer: codex/gpt-6.1-sol
