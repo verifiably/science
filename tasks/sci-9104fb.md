@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: commons-1b
 created: 2026-10-01T02:21:10Z
-updated: 2026-10-29T03:27:06Z
+updated: 2026-10-29T03:27:08Z
 started: 2026-10-28T20:03:15Z
 depends: [sci-13050a, beliefs-81367e, beliefs-a989fb]
 tags: [commons]
@@ -105,3 +105,4 @@ Spec §12 part 1b: A binds B, adopts B's publication; A publishes an update drop
 - 2026-10-29T01:58:15Z (commons-1b): Execution resumed under the approved subagent-driven plan: sequential implementers, task reviews, whole-branch review before the overlap merge. Existing clean locked .worktrees/commons-1b reused; hooks and worktree-local environment present. Setup baseline just test running. Plan workspace .worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b contains the preflight ledger and mutable evidence; owned by sci-9104fb.
 - 2026-10-29T02:09:04Z (commons-1b): Setup baseline: just test completed with 897 passed, 1 failed (898 collected), 610.79s. Failure: test_two_corpora.py::test_one_id_in_two_corpora_refuses_selected_next_as_the_kernel_duplicate_location expects AddressMapConflict, but cut 48 admits the identical copies and selection correctly refuses address-unknown for proposition:claimed (absent in build_two_corpus_world). Focused reproduction: 1 failed in 1.34s. This is stale overlap-test expectation within 1b scope, not an environment failure. Carry its correction into Task 1 prerequisite and update the equal-holder read expectations in Task 3.
 - 2026-10-29T03:27:06Z (commons-1b): retained: {"host":"titan","kind":"worktree","path":".worktrees/commons-1b","state":"kept","verification":"verified","purpose":"Continue milestone 1b implementation and review on branch commons-1b; Task 5 commit is 3d75315","next_owner":"task:sci-9104fb","cleanup_trigger":"At milestone closeout, inspect retained evidence and run the worktree removal checks"}
+- 2026-10-29T03:27:08Z (commons-1b): retained: {"host":"titan","kind":"evidence","path":".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-5-report.md","state":"kept","verification":"verified","purpose":"Task 5 implementation and verification report","next_owner":"task:sci-9104fb","cleanup_trigger":"At milestone closeout, attach or otherwise preserve the report before removing the plan workspace","sha256":"addf7e5ba8696a28a3e46fa175cae37cfe20f4446e333299c9c707d15745d81e"}
