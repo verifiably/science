@@ -8,7 +8,7 @@ complexity: high
 process: direct
 owner: commons-1b
 created: 2026-10-29T01:50:44Z
-updated: 2026-10-29T03:38:27Z
+updated: 2026-10-29T03:39:41Z
 started: 2026-10-29T03:29:41Z
 depends: []
 parent: sci-9104fb
@@ -27,3 +27,4 @@ step: "Task 6: `supersession.py`"
   provenance: {"harness_session":"codex:01a185b3-ffbd-7501-8f8a-9a3251cf92f4","harness_session_source":"CODEX_THREAD_ID"}
 - 2026-10-29T03:33:16Z (commons-1b): Scope: extend MarkerFields destination; new supersession helpers and focused tests only. Existing marker parser is the sole constructor, and acceptance/publish/adopt readers keep their interfaces. RED just test-one tests/test_supersession.py -v exits 2: module science.supersession missing (collection blocked before tests), as planned.
 - 2026-10-29T03:38:27Z (commons-1b): review: impl round 1 — verdict: accept; findings: none; reviewer: codex/gpt-6.1-sol
+- 2026-10-29T03:39:41Z (commons-1b): GREEN: just test-one tests/test_supersession.py -v — 23 passed in 8.23s. just xdist="-n 1 --dist worksteal" test-fast — 102 passed in 261.11s, exit 0. tasks check, git diff --check and pre-commit passed. Implementation 77d4736; controller owns independent review.
