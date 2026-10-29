@@ -1,15 +1,17 @@
 ---
 id: sci-29a07b
 title: "Task 6: `supersession.py`"
-status: doing
+status: done
 priority: 1
 size: m
 complexity: high
 process: direct
 owner: commons-1b
 created: 2026-10-29T01:50:44Z
-updated: 2026-10-29T03:50:22Z
+updated: 2026-10-29T03:50:24Z
 started: 2026-10-29T03:29:41Z
+completed: 2026-10-29T03:50:24Z
+closed: 2026-10-29T03:50:24Z
 depends: []
 parent: sci-9104fb
 tags: [commons]
@@ -49,3 +51,7 @@ step: "Task 6: `supersession.py`"
 - 2026-10-29T03:50:19Z (commons-1b): retained: {"host":"titan","kind":"evidence","path":".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-6-fast.log","state":"kept","verification":"verified","purpose":"Task 6 initial affected-suite evidence unchanged and reverified","sha256":"b0176ff922fb63df7cd26601e001f423694544b86d43edeb3638e3acf546e447","next_owner":"task:sci-9104fb","cleanup_trigger":"After milestone review and integration, preserve required plan evidence before worktree removal"}
 - 2026-10-29T03:50:20Z (commons-1b): retained: {"host":"titan","kind":"evidence","path":".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-6-fix-1-focused.log","state":"kept","verification":"verified","purpose":"Corrective round 1 focused GREEN 45 tests","sha256":"9db8b63137da7f51029bdb37fa2d9e4ab0423dc0881c8e9a6e17753f23bff44f","next_owner":"task:sci-9104fb","cleanup_trigger":"After milestone review and integration, preserve required plan evidence before worktree removal"}
 - 2026-10-29T03:50:22Z (commons-1b): retained: {"host":"titan","kind":"evidence","path":".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-6-fix-1-fast.log","state":"kept","verification":"verified","purpose":"Corrective round 1 affected-suite GREEN 129 tests","sha256":"b40ce12dd6ba6654252e02a42ffb03cf975aa8d5c49bc207fc2340e096ddb73b","next_owner":"task:sci-9104fb","cleanup_trigger":"After milestone review and integration, preserve required plan evidence before worktree removal"}
+- 2026-10-29T03:50:24Z (commons-1b): done
+  provenance: {"harness_session":"codex:01a185b3-ffbd-7501-8f8a-9a3251cf92f4","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-29T03:50:24Z (commons-1b): Corrected Important review finding in b5688de by sharing the ordered ledger reader between replay and supersession; 45 focused and 129 affected tests pass. Parent sci-9104fb retains worktree and refreshed evidence; controller performs scoped re-review round 3 next.
+  provenance: {"harness_session":"codex:01a185b3-ffbd-7501-8f8a-9a3251cf92f4","harness_session_source":"CODEX_THREAD_ID"}
