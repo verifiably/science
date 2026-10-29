@@ -4,7 +4,7 @@ title: "Adopt cut 48's overlap contract: content check, adopt checklist, holder-
 status: todo
 priority: 1
 created: 2026-10-28T17:14:33Z
-updated: 2026-10-28T20:03:11Z
+updated: 2026-10-29T01:52:04Z
 depends: [beliefs-918fd2]
 parent: sci-9104fb
 tags: [commons]
@@ -19,3 +19,4 @@ From the overlapping-publications design (beliefs repo, docs/superpowers/specs/2
 
 - 2026-10-28T17:14:33Z (add): created
   provenance: {"harness_session":"claude-code:66da2a5f-ff6b-4b60-8d2a-cff7ba4e9cae","harness_session_source":"CLAUDE_CODE_SESSION_ID","origin":"agent"}
+- 2026-10-29T01:52:04Z (commons-1b): absorbed into sci-9104fb's approved plan (docs/plans/2026-10-28-science-commons-1b.md): the checklist is Task 2, holder resolution Task 3, Carried content and explain Task 4, the v2 rebinding Task 5, pins asserted in Task 11, chain retention Task 7, the attribution-ambiguous naming Task 10, the in-place content rule recorded in Task 12; dropped as a separate record, its description stays as the kernel handoff
