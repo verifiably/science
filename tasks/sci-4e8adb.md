@@ -1,13 +1,15 @@
 ---
 id: sci-4e8adb
 title: Resolve existing tilde-layout findings before checker rollout
-status: todo
+status: doing
 priority: 2
 size: s
 complexity: mid
 process: direct
+owner: main
 created: 2026-10-22T19:07:45Z
-updated: 2026-10-22T19:07:45Z
+updated: 2026-10-29T20:26:47Z
+started: 2026-10-29T20:26:47Z
 depends: []
 tags: []
 source: ops-295f8d
@@ -22,3 +24,8 @@ Where: the current project guide/profile, listed tracked files, existing layout_
 
 Reported files:
 - docs/plans/2026-09-09-belief-path-commands.md: first reported line 508; 4 reported finding(s)
+
+## Notes
+
+- 2026-10-29T20:26:47Z (main): started
+  provenance: {"harness_session":"claude-code:0abf3f61-62e6-4a09-a944-9063cc887bf3","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
