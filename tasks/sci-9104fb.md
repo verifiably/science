@@ -6,9 +6,9 @@ priority: 1
 size: l
 complexity: high
 process: planned
-owner: commons-1b
+owner: main
 created: 2026-10-01T02:21:10Z
-updated: 2026-10-29T07:07:22Z
+updated: 2026-10-29T07:08:10Z
 started: 2026-10-28T20:03:15Z
 depends: [sci-13050a, beliefs-81367e, beliefs-a989fb]
 tags: [commons]
@@ -108,3 +108,5 @@ Spec §12 part 1b: A binds B, adopts B's publication; A publishes an update drop
 - 2026-10-29T03:27:08Z (commons-1b): retained: {"host":"titan","kind":"evidence","path":".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-5-report.md","state":"kept","verification":"verified","purpose":"Task 5 implementation and verification report","next_owner":"task:sci-9104fb","cleanup_trigger":"At milestone closeout, attach or otherwise preserve the report before removing the plan workspace","sha256":"addf7e5ba8696a28a3e46fa175cae37cfe20f4446e333299c9c707d15745d81e"}
 - 2026-10-29T06:37:52Z (commons-1b): review: impl round 1 — verdict: revise; findings: Important 2, Minor 1; reviewer: codex/gpt-6-astra
 - 2026-10-29T07:07:22Z (commons-1b): review: impl round 2 — verdict: accept; findings: none; reviewer: codex/gpt-6.1-sol
+- 2026-10-29T07:08:10Z (main): resumed
+  provenance: {"harness_session":"codex:01a1855d-6c10-77a2-82b3-d0457ea936da","harness_session_source":"CODEX_THREAD_ID"}
