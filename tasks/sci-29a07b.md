@@ -8,7 +8,7 @@ complexity: high
 process: direct
 owner: commons-1b
 created: 2026-10-29T01:50:44Z
-updated: 2026-10-29T03:50:13Z
+updated: 2026-10-29T03:50:15Z
 started: 2026-10-29T03:29:41Z
 depends: []
 parent: sci-9104fb
@@ -44,3 +44,4 @@ step: "Task 6: `supersession.py`"
 - 2026-10-29T03:49:56Z (commons-1b): Correction round 1 complete in b5688de: one shared ordered sharing-line reader now serves replay and supersession. 45 focused tests passed in 8.03s; 129 serial affected-suite tests passed in 239.60s, exit 0; checks and pre-commit passed. No new behavior or tests; scoped re-review round 3 is controller-owned.
 - 2026-10-29T03:50:11Z (commons-1b): retained: {"host":"titan","kind":"worktree","path":".worktrees/commons-1b","state":"kept","verification":"verified","purpose":"Task 6 corrective round 1 committed; controller scoped re-review and milestone execution continue","next_owner":"task:sci-9104fb","cleanup_trigger":"After milestone integration, inspect all retained evidence and run worktree removal checks"}
 - 2026-10-29T03:50:13Z (commons-1b): retained: {"host":"titan","kind":"evidence","path":".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-6-report.md","state":"kept","verification":"verified","purpose":"Task 6 full implementation report including corrective round 1","sha256":"d4c69ffe2324ef467a949bd11a9ba316c9de8682322c5300f8b8854fa5543f07","next_owner":"task:sci-9104fb","cleanup_trigger":"After milestone review and integration, preserve required plan evidence before worktree removal"}
+- 2026-10-29T03:50:15Z (commons-1b): retained: {"host":"titan","kind":"evidence","path":".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-6-red.log","state":"kept","verification":"verified","purpose":"Task 6 initial RED evidence unchanged and reverified","sha256":"72e8abc8d60675d73c241e4a7cc52e0671311d25990e58124b50c2310d2d637e","next_owner":"task:sci-9104fb","cleanup_trigger":"After milestone review and integration, preserve required plan evidence before worktree removal"}
