@@ -86,6 +86,14 @@ is already filed (§7).
 **Baseline:** science main `a509cb8`; beliefs main `316c202`.
 **Workspace:** `.worktrees/commons-1b`, branch `commons-1b`.
 
+*Amended 2026-10-29 (milestone 1b plan, Task 12):* the overlap half is
+implemented through `a1b0ac8`, including the fixture through step 5 and the unkept
+branch's pending-door reports. All nine deferred overlap integration gates are
+active. Task 12's full `just gate` passed on 2026-10-29: 1,047 passed, 1 expected
+xfail, 1,048 collected, 177.22s suite time, exit 0. Tasks 13–15 remain blocked on
+`beliefs-a989fb`; the sole remaining strict
+xfail requires actual retirement. No retirement door is implemented by this phase.
+
 **Inherits:** the commons design §4.4, §4.7, §4.8, §9, §10 and §12 in full, with its 1a
 amendments (Deviations 1–12 of `docs/plans/2026-10-22-science-commons-1a.md`); the kernel's
 overlapping-publications design §4.1, §5.4, §6, §7, §8 and §10; the writer-session design's

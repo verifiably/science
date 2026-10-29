@@ -159,7 +159,7 @@ dimensions — see §4.2 for the capability model):
 | `coordination` | the coordination contract's kinds (sub-project 1) | `corpus-write` |
 | `mints:<k1,…>` | the named kinds | exactly the declared routes (below) |
 | `publishes` | the publication kinds (sub-project 5) | `publish` |
-| `sharing` | none — it writes no corpus; see the 2026-10-01 amendment to §4.4 | `lifecycle` (`restore_root`), `registry` (`admit_publication`, `World.retire`) |
+| `sharing` | none — it writes no corpus; ledger pin reports may carry a presentation-only historical tail (§4.4, §7.4) | `lifecycle` (`restore_root`), `registry` (`admit_publication`, `World.retire`; retirement door pending, §4.4) |
 
 A `mints` class must name kinds that exist in the governing contract the
 build validates against; an unknown kind is a build refusal. Until
@@ -368,6 +368,19 @@ record or lifecycle status. The kernel's scoped writer records `bound` and
 `mounted` lines directly (`record_sharing`); `fetched` and `admitted` are
 ledgered only by the `restore_root` and `admit_publication` doors.
 
+*Amended 2026-10-29 (milestone 1b plan, Task 12):* the scoped retirement door
+(`beliefs-a989fb`) remains pending; the overlap half does not call `World.retire`
+by another route. The registry's pins and bindings are projections of ledger
+evidence, distinct from science's second, presentation-only state: sharing-report
+tails under `operations_root/tails/<session_id>/<invocation_id>.json`.
+Plan review round 5 accepted this narrow exception so adoption can explain retention
+without extending the kernel's close outcome. A tail contains only `KeyVals` and
+`Finding` blocks, never pin evidence, corpus records, or a kernel outcome. It is
+historical commentary, not a recomputable cache: its cost is retaining the sidecar
+beside the ledger for exact historical replay. Every effect remains recoverable
+without it; losing a nonempty tail loses its commentary and stales cursors issued
+over it. An absent sidecar means an empty tail, including older invocations.
+
 ## 5. Writer sessions in `beliefs`
 
 ### 5.1 Opening a session
@@ -518,6 +531,28 @@ recorded, the handler broke the validate-before-act rule: the dispatcher closes
 `done` with the minted identities and raises `HandlerContractViolation`, an
 internal error, because a half-acted write is a defect and not a refusal.
 
+*Amended 2026-10-29 (milestone 1b plan, Task 8):* for `sharing`, the dispatcher
+composes the complete pin prefix from every invocation sharing line, in ledger
+order, and appends the handler's informational tail (§7.4). A handler cannot omit,
+duplicate or forge the prefix through its return value. Before closing a successful
+invocation, science audits and serializes the tail, writes a temporary file in the
+session tails directory, flushes and fsyncs it, atomically replaces the final sidecar,
+then fsyncs the session tails directory, `tails/`, and `operations_root/`, in that
+order on every write. Only completion of that sequence claims sidecar durability.
+The invocation closes `done: []` in `finally` even if the audit, serialization or
+persistence raises; no commentary is added to the kernel close outcome, and no
+presentation failure reruns committed effects.
+
+Before a successful rename, a failed write leaves no final sidecar for this invocation
+and a retry renders pins only. After rename, a directory-fsync failure may leave the
+complete file readable without a durability guarantee; replay reads it if present,
+or renders pins only if a crash lost it. Successful first responses, closed-invocation
+replay and continuation all use the same ledger prefix plus saved tail. A sharing
+handler may refuse after sharing lines (unlike corpus acts): those lines evidence
+recoverable state intentionally left behind, and the invocation closes refused and
+replays the refusal envelope, not a success report. A corpus act by a sharing handler
+is still a contract violation.
+
 ### 6.2 Invocation identity and retry
 
 The caller may supply an **`invocation_id`** (protocol field, exposed on
@@ -633,6 +668,16 @@ forms match the two invocation classes:
   identities, loaded back through ordinary reads. A write is executed at
   most once per invocation, and no cursor changes that.
 
+*Amended 2026-10-29 (milestone 1b plan, Task 8):* every `sharing` continuation,
+including a page starting within the pin prefix or within the informational tail,
+rebuilds all pin blocks from that invocation's ledger sharing lines and appends the
+persisted historical tail. It never recomputes retention from current state or calls
+the write handler. Any endpoint with the same operations root can continue a cursor;
+the digest covers the combined report. Losing a nonempty sidecar therefore refuses
+`stale-cursor` for its old cursor, while a fresh replay still includes every ledger
+pin. A missing older sidecar is an empty tail; malformed content fails explicitly
+rather than silently discarding commentary.
+
 ### 7.4 The write-audit rule
 
 For a write-class invocation the report may contain **only** `record`
@@ -650,6 +695,15 @@ that fail it, per block kind (§11).
 invocation's canonical report is exactly one selection block, rebuilt from
 the session ledger's `select` line for that invocation on the first response,
 on replay and on continuation; its audit admits that block and nothing else.
+
+*Amended 2026-10-29 (milestone 1b plan, Task 8):* a `sharing` handler returns
+only an informational tail of `KeyVals` and `Finding` blocks. The sharing audit
+rejects every other block, including handler-authored `PinBlock`s. The dispatcher
+alone constructs one pin block per sharing line in ledger order, before the tail,
+so commentary never replaces evidence. `provider-bind` returns an empty tail and
+still renders its ledger-backed `bound` block. These blocks are not admitted for
+other corpus-writing classes. The sidecar contract and failure recovery are §4.4
+and §6.1's; replay and every continuation page preserve it (§7.3).
 
 ## 8. The preamble
 

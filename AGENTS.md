@@ -53,9 +53,17 @@ the environment on first use, with `beliefs` as an editable path dependency.
   own. Two write classes leave evidence in the `beliefs` session ledger instead of a
   corpus: `session` (`project-select`'s selection line) and `sharing` (`provider-bind`
   and `adopt`'s sharing lines). The sharing registry under `sharing_root`
-  (`science.sharing`) is the one science-owned state: its pins and provider bindings
+  (`science.sharing`) is science-owned state: its pins and provider bindings
   are a projection of those lines, written only by sharing commands after the line
   each projects and rebuildable from the ledger by `replay`; the adopted corpora beside
-  them are `beliefs` corpora the kernel restores.
+  them are `beliefs` corpora the kernel restores. The second science-owned state is
+  presentation only: historical sharing-report tails under
+  `operations_root/tails/<session_id>/<invocation_id>.json`. The dispatcher rebuilds
+  every pin block from the ledger and appends this informational sidecar, never
+  kernel evidence, a close outcome, or a recomputable cache. An absent sidecar means
+  an empty tail; losing a nonempty tail loses commentary and stales its cursor while
+  every effect remains recoverable. Milestone 1b plan review round 5 accepted this
+  narrow exception; its cost is retaining the sidecar beside the ledger for exact
+  historical replay (framework design §4.4, §6.1, §7.3–§7.4).
 - A new command is a row in `tools/cli.toml` first; the conformance test asserts the
   live parser surface equals it.

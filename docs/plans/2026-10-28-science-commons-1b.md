@@ -72,6 +72,13 @@ execution starts in a fresh session with the Setup baseline (`just test`, count 
 sci-9104fb). Tasks 13–15 stay blocked on `beliefs-a989fb` and are revised against its
 merged design before they start.
 
+**Execution status (2026-10-29):** Tasks 1–11 implement the overlap half through
+`a1b0ac8`, including the fixture through step 5, all nine deferred overlap integration
+gates, and the unkept branch's pending-door reports. Task 12 amended the overlap
+documents; `just gate` passed with 1,047 passed and 1 expected xfail (1,048 collected,
+177.22s suite time, exit 0). Tasks 13–15 remain pending `beliefs-a989fb`; the
+remaining strict xfail is the actual-retirement gate, and sci-9104fb stays open.
+
 ## Global Constraints
 
 - Every registry write follows the ledger line that is its evidence (commons §7.4); 1b

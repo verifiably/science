@@ -68,10 +68,17 @@ prints the world: corpora and their lifecycle status, the current epoch, and rec
 counts by kind. Corpus writes run as kernel acts through an attended `beliefs` session,
 permit-checked per act and deduplicated through its ledger. Two classes of write leave
 no corpus record: `project-select` records the session's selection as a line in that
-session ledger, and `provider-bind` and `adopt` record sharing lines there. The one
-state science keeps itself is the sharing registry under the configured `sharing_root`:
+session ledger, and `provider-bind` and `adopt` record sharing lines there. Science keeps
+the sharing registry under the configured `sharing_root`:
 its pins and provider bindings are a projection of those sharing lines, written after
 each line and rebuilt from them, beside the adopted corpora the kernel restores there.
+Science also keeps presentation-only historical sharing-report tails under
+`operations_root/tails/<session_id>/<invocation_id>.json`. These sidecars hold commentary,
+separate from kernel evidence and close outcomes; they are not recomputed from current
+state. Reports rebuild every pin block from the ledger and append the saved tail.
+An absent sidecar means an empty tail; losing a nonempty tail loses that commentary and
+stales its cursor, while every effect stays recoverable. Exact historical replay needs
+the sidecar retained beside the ledger.
 
 `publish-preview` and new `publish` attempts use the same Own classification as
 belief acceptance: configured markerless roots, including restored replicas, are

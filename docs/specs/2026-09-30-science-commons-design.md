@@ -7,7 +7,9 @@ independent rounds per revision cycle, the external reviewer's accept at round
 `2026-08-31-command-framework-design.md` §3.3, §4.4 and §9.1. Task `sci-fe8522`.
 Amended 2026-10-22 where milestone 1a's implementation departs from this
 document's letter (`docs/plans/2026-10-22-science-commons-1a.md`, Deviations
-1–12); each amendment is marked in place.
+1–12); each amendment is marked in place. Amended 2026-10-29 for milestone 1b's
+implemented overlap half (`docs/plans/2026-10-28-science-commons-1b.md`, Task 12);
+retirement remains the pending second phase, not an implemented door.
 **Scope:** how published science is shared, found, trusted, reproduced,
 changed and preserved across installations of verifiably, and what a
 *commons* is in that model. The kernel has ruled that publishing mints an
@@ -98,7 +100,7 @@ lacks.
 | **location** | a remote destination URL under the holdings `url` canonicalization (publication records decision 9), or a local path. A publication may be held at several locations; its identity is its verified contents, never a location. *Amended 2026-10-22 (milestone 1a plan, Deviation 11):* in milestone 1 a provider's location is an `https://` git remote; `provider-inspect`, `provider-bind` and `adopt` refuse a local path `invalid-input`, since milestone 1 is over git (§12) and `adopt` fetches only through the git transport. `publish` still takes a local directory. A location is recorded in its canonical form (`Destination.locator`). |
 | **container** | what a location names: a directory-shaped remote holding `<corpus_id>/` roots and their `<corpus_id>.head-artifact.v1` siblings (`transport_files`), plus this design's side artifacts (§7). |
 | **side artifact** | a file science places in a container beside the corpora: a catalog or a provider list. Identified by its artifact identity. Not a world record, not a publication, never selected by a view, invisible to the kernel's `listing` check (§7). |
-| **pin** | `(corpus_id, marker uid, head artifact identity)` plus its **source** (where the reader learned it), its **fetch record** (§4.5), and a `keep` flag the reader sets, **before adopting a successor**, to hold that revision when the successor arrives (§10); retirement is irreversible, so a need discovered later cannot be met by re-adoption. A pin is what the reader holds or intends to hold. |
+| **pin** | `(corpus_id, marker uid, head artifact identity)` plus its **source** (where the reader learned it) and its **fetch record** (§4.5). A pin is what the reader holds or intends to hold. *Amended 2026-10-29 (milestone 1b plan, §3.2):* `keep` is a configuration list of corpus ids, not a pin flag; set it before opening the session that adopts a successor (§10). Retirement is irreversible, so a need discovered later cannot be met by re-adoption. |
 | **provider** | a world id bound, in the reader's sharing registry, to the locations the reader has confirmed speak for that world (§4.4). |
 | **mirror** | any location holding a publication the reader has already pinned. A mirror is not a provider: it serves bytes whose identity is known. |
 | **catalog** | a side artifact a host publishes: the publications it holds, with locations, observed holdings, and the host's inclusion decisions (§7.2). |
@@ -616,19 +618,28 @@ key, and the loader derives the session's mounts from it:
 ```toml
 sharing_root = "..."             # one directory; resolved like operations_root
 accept = ["<32-hex world id>"]   # §9; empty means the reader's own world only
+keep = ["<32-hex corpus id>"]   # 1b; revisions to retain, loaded at session open
 [fetch]                          # §4.11
 policy = "records-only"          # or "fetch"
 max_bytes = 0                    # with "fetch": 0 means no bound
 ```
 
 The sharing registry under `sharing_root` holds pins (with source and fetch
-record and `keep`), provider bindings (with `confirmed` and `via`),
+record), provider bindings (with `confirmed` and `via`),
 follows (artifact identity, kind, location) and the adopted corpora's
 roots. At session open the loader **unions** the roots the registry marks
 **mounted** (§10) into `WorldConfig.corpus_roots`, so the kernel's rule that
 mounts equal `corpus_roots` exactly holds; `write_root` and
 `read_contracts` apply unchanged. `accept` and `[fetch]` are policy the
 person authors, so they stay in the configuration file.
+
+*Amended 2026-10-29 (milestone 1b plan, §3.2, §5.6):* `keep` is also person-authored
+configuration, read at session open, and may name a corpus before its pin exists;
+`adopt` reports entries with no pin. Pins carry no `keep`, and their format stays
+version 1 without a migration. Supersession reads authorized copies under the registry,
+including retained copies of pins whose state is `retired`; those copies supply links
+and are never mounted. The established pin set and the displayed current publication
+are folded from ledger lines, not stored as new registry fields (§10's 1b amendment).
 
 Every registry write is the durable effect of a ledger-recorded act of the
 `sharing` write class (§11), and the registry is rebuildable from those
@@ -732,8 +743,15 @@ evaluated, and to every kind that lifecycle reads:
    sharing registry pins, refuse belief reads and `show` `invalid-input`,
    because the kernel names a record by `(corpus_id, address)` alone and the
    policy could not tell which root it came from. Tying a carrier's copy to the
-   origin's content identity per address is deferred to milestone 1b
+   origin's content identity per address was deferred to milestone 1b
    (`sci-4a3543`).
+
+   *Amended 2026-10-29 (milestone 1b plan, §5.4):* that deferral is closed.
+   **Carried** additionally requires the origin's and carrier's parsed copies at
+   the address to have equal kernel `content_identity`; the other branches are
+   unchanged. A differing copy counts under nothing. The explanation keeps one
+   corpus-qualified line per rejected copy and says when the record counts through
+   another session holder, so rejecting a copy does not imply rejecting the record.
 3. The rule applies to every record kind that can change what belief reads:
    assessments, verifications, superseding verifications, and the
    correction records — retractions and their successors — whose standing
@@ -822,10 +840,71 @@ and the candidate stays `fetched`. The kernel's world index raises
 so an overlapping admission would break the reader's next epoch.
 `beliefs-81367e` (milestone 1b, §4.7) lifts this.
 
+*Amended 2026-10-29 (milestone 1b plan, §5.1–§5.3):* Deviation 3's blanket
+overlap refusal is retired. The admission checklist compares parsed kernel
+`content_identity` values: every shared canonical or deprecated key must have equal
+content, and no candidate uid may be live under another canonical address. Equal
+copies admit and contribute once. A refusal remains `adopt-conflict`, with data
+`{"rule": "content" | "deprecated-key" | "uid-corruption", "addresses": [...],
+"corpus": <live corpus id>}`. It names the first conflicting live corpus, its
+highest-priority rule (uid corruption, then content, then deprecated key), and the
+sorted union of its conflicting addresses. A required same-chain predecessor's
+message includes its retention reasons. The candidate stays `fetched`.
+Session holder resolution likewise accepts equal copies, preferring the write root,
+then the least corpus id; differing copies refuse and name every holder. No science
+command rewrites a scientific record in place. Any future route that does must
+guard against changing an address a mounted carrier holds; no unused guard is added.
+
 *Amended 2026-10-22 (milestone 1a plan, Deviation 7):* `show` is read-only:
 it reports a registry that lags the kernel as a finding saying that `adopt`
 reconciles it, and writes nothing. `adopt` alone reconciles, before its
 already-adopted and conflict checks.
+
+*Amended 2026-10-29 (milestone 1b plan, §5.6–§5.8):* the implemented overlap
+half groups authorized established pins by `(world, unpinned view, destination)`.
+Established means ledger-derived `mounted` or `retired`, excluding fetched and
+admitted pins; a fetched candidate joins only its own preflight. Named ancestries
+that intersect identify divergent tips even when their common predecessor was
+never held. Preflight runs after the checklist and before admission, refuses
+`divergent-publication` for those siblings, and refuses `adopt-conflict` with
+`rule: chain-retired`, `addresses: []` and the retired intermediate's corpus id
+when a chain to current or another mounted pin passes through a retired marker.
+A missing authorized link instead permits admission, leaves the group unresolved,
+and is named as the `(corpus_id, marker uid)` pair to adopt.
+
+For an unresolved group, current is a fold over historical `mounted` lines in
+replay order `(at, session id, ledger position)`, using only authorized markers
+seen so far; a newly connected successor advances it, a predecessor or unconnected
+publication does not, and a late link can advance it again. Same-second adoptions
+across sessions sort by session id, which may change an unresolved group's displayed
+current; such a group authorizes no retirement. One view at two destinations is
+admitted as two unlinked chains. `show` names them, and a publication reaching a
+record they attribute differently still refuses the kernel's `attribution-ambiguous`;
+there is no missing link to adopt between those destinations.
+
+`adopt` reconciles completed admissions first, handles the candidate, then evaluates
+retention with the candidate mounted; a retry of an already-mounted target also
+evaluates retention before refusing if the whole invocation wrote no sharing line.
+Evaluation reads current live configured and registry roots by root, with each
+holder's profile, rather than the session's fixed mounts. It reports configuration,
+chain, attribution and dependency reasons. Chain retention keeps intermediate
+markers between a directly required predecessor and the tip. The dependency walk
+extends `closure_missing` with assessment spec/run/proposition, run spec,
+verification runs, spec dataset roles and target, and retraction targets; historical
+spec and verification `supersedes` references and profile vocabulary bindings are
+not dependencies. A reached record requires its predecessor only when no other live
+mounted holder has equal content.
+
+This phase adds no retirement call. An unrequired predecessor stays `mounted` with
+`retirement pending: the kernel's retire door (beliefs-a989fb) has not landed`;
+`show` reports `retention: pending (no door)`. Before that pending report, a changed
+configuration file refuses `config-stale`, naming the loaded `keep` list and the
+restart/rerun remedy; any admission already completed stands. Citing writes and
+both new and resumed publication attempts refuse `corpus-retired` for explicitly
+nonlive session corpora until reopen; ordinary reads remain possible. These guards
+are implemented, while their real post-retirement gates wait for the door. The
+retirement paragraphs below remain the intended second phase, Tasks 13–15, blocked
+on `beliefs-a989fb`; they do not claim that phase works today.
 
 When the candidate is a successor:
 
@@ -909,6 +988,7 @@ review, with the milestone part that needs it:
 | attribution entries on the marker, as a frozen facet (§7.1) | 1a |
 | an acceptance predicate `counts(corpus_id, address)` on gather, consulted before retraction standing is folded, and the policy statement in the context (§9) | 1a |
 | overlapping publications in the world index under §4.7's three outcomes (`beliefs-81367e`) | 1b |
+| permit-bound, ledgered retirement door (`beliefs-c0d952` design / `beliefs-a989fb` implementation), including idempotent recovery of completed retirement | 1b retirement tail; pending |
 | whether `beliefs-9ce6e4` covers an `assesses` edge and a `verification` whose targets live in a mount, or a sibling task does | 1a |
 | whether the marker should carry a workspace locator, or the catalog's `execution` claim suffices (§5 step 4) | open, asked at 1a |
 | key-bound provider identity: signed head artifacts (§4.4) | 4 |
@@ -929,6 +1009,12 @@ plan is `docs/plans/2026-10-22-science-commons-1a.md`, whose Deviations
 section records each departure from this document with its reason. It
 built `publish`, `publish-preview`, `provider-inspect`, `provider-bind`,
 `adopt`, `fetch` and `show`; `follow` and `find` are milestone 2's.
+
+*Amended 2026-10-29 (milestone 1b plan, §7):* overlapping world reads are supplied
+by the kernel's cut 48 (`316c202`); the retirement row remains a separate pending
+door. The overlap half does not call `World.retire` directly or substitute another
+route. Tasks 13–15 revise their provisional interfaces against the merged kernel
+design before implementation, and the parent milestone stays open through that tail.
 
 Framework amendments, made in the framework document before milestone 1a's
 plan:
