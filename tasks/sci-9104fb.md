@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: commons-1b
 created: 2026-10-01T02:21:10Z
-updated: 2026-10-29T16:11:05Z
+updated: 2026-10-29T16:11:28Z
 started: 2026-10-28T20:03:15Z
 depends: [sci-13050a, beliefs-81367e, beliefs-a989fb]
 tags: [commons]
@@ -135,3 +135,5 @@ Spec §12 part 1b: A binds B, adopts B's publication; A publishes an update drop
 - 2026-10-29T16:11:02Z (commons-1b): attached: tail-final-review-report.md (9949 bytes): Retirement-tail whole-branch review: With fixes, Important 1 (equal-holder sweep gate), Minor 5; claude-code/claude-opus-5-5
 - 2026-10-29T16:11:04Z (commons-1b): attached: tail-fix-1-report.md (4855 bytes): Corrective round 1 fix report: equal-holder sweep gate 1339976, hoist mutation RED and GREEN, test-fast 1070 passed
 - 2026-10-29T16:11:05Z (commons-1b): attached: tail-fix-1-review-report.md (2612 bytes): Scoped re-review of corrective round 1: addressed, no new breakage; claude-code/claude-sonnet-5-5
+- 2026-10-29T16:11:07Z (commons-1b): attached: tail-merge-gate.log (1595 bytes): Merge gate on 775ec0f: just gate exit 0, 1070 passed in 200.18s
+- 2026-10-29T16:11:28Z (commons-1b): retained: worktree .worktrees/commons-1b and plan workspace .superpowers/sdd/2026-10-28-science-commons-1b released at closeout: the full ledger (commons-1b-plan-ledger.md), tail reviews, fix report and merge gate log attached here; Task 13/14/15 reports and reviews attached to sci-9c0bba/sci-9da5a6/sci-50d0c2; overlap ledger and reviews attached earlier. Discarded as regenerable or summarized: briefs (from the plan), review diffs (from git), per-task Tasks 1-12 reports and run logs (summarized with commits and counts in the attached ledger), .venv, .pytest_cache, .testmondata.
