@@ -1,14 +1,14 @@
 ---
 id: sci-29a07b
 title: "Task 6: `supersession.py`"
-status: todo
+status: doing
 priority: 1
 size: m
 complexity: high
 process: direct
 owner: commons-1b
 created: 2026-10-29T01:50:44Z
-updated: 2026-10-29T03:44:38Z
+updated: 2026-10-29T03:44:40Z
 started: 2026-10-29T03:29:41Z
 depends: []
 parent: sci-9104fb
@@ -38,3 +38,5 @@ step: "Task 6: `supersession.py`"
 - 2026-10-29T03:40:05Z (commons-1b): Implemented supersession groups, exact-pair named ancestry, kernel-backed classification and ledger current fold in 77d4736; 23 focused and 102 fast tests pass. Parent sci-9104fb retains worktree and evidence; controller next performs independent review.
   provenance: {"harness_session":"codex:01a185b3-ffbd-7501-8f8a-9a3251cf92f4","harness_session_source":"CODEX_THREAD_ID"}
 - 2026-10-29T03:43:40Z (commons-1b): review: impl round 2 — verdict: revise; findings: Important 1; reviewer: codex/gpt-6-astra
+- 2026-10-29T03:44:40Z (commons-1b): resumed
+  provenance: {"harness_session":"codex:01a185b3-ffbd-7501-8f8a-9a3251cf92f4","harness_session_source":"CODEX_THREAD_ID"}
