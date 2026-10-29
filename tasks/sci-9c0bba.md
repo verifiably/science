@@ -8,7 +8,7 @@ complexity: high
 process: direct
 owner: commons-1b
 created: 2026-10-29T01:50:59Z
-updated: 2026-10-29T13:57:12Z
+updated: 2026-10-29T13:57:32Z
 started: 2026-10-29T13:50:58Z
 depends: [beliefs-a989fb]
 parent: sci-9104fb
@@ -31,3 +31,4 @@ step: "Task 13: The retirement door and reconcile (blocked on `beliefs-a989fb`)"
   provenance: {"harness_session":"codex:01a187eb-c21e-7a42-a216-2a6c5b309479","harness_session_source":"CODEX_THREAD_ID"}
 - 2026-10-29T13:57:12Z (commons-1b): resumed
   provenance: {"harness_session":"codex:01a187f2-a2e7-7d82-bd96-be8e5bf96a4b","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-29T13:57:32Z (commons-1b): Controller baseline just test: exit 0, 1053 passed, 1 expected xfailed, 1054 collected, 261.07s; log .superpowers/sdd/2026-10-28-science-commons-1b/task-13-baseline.log. Reusing hydrated .worktrees/commons-1b; trial-arm reports not enrolled. Task 13 uses direct execution and TDD; Task 14 additional gates and Task 15 documentation remain separate.
