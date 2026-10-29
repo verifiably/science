@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: commons-1b
 created: 2026-10-01T02:21:10Z
-updated: 2026-10-29T14:30:48Z
+updated: 2026-10-29T14:31:18Z
 started: 2026-10-28T20:03:15Z
 depends: [sci-13050a, beliefs-81367e, beliefs-a989fb]
 tags: [commons]
@@ -124,3 +124,5 @@ Spec §12 part 1b: A binds B, adopts B's publication; A publishes an update drop
 - 2026-10-29T14:30:45Z (commons-1b): retained: {"host": "titan", "state": "kept", "verification": "verified", "next_owner": "task:sci-9104fb", "cleanup_trigger": "After Tasks 14 and 15 and retirement-tail review/integration, inspect and preserve evidence before any removal", "kind": "worktree", "path": ".worktrees/commons-1b", "purpose": "Reviewed Task 13 code on commons-1b awaiting remaining retirement-tail gates and documentation"}
 - 2026-10-29T14:30:47Z (commons-1b): retained: {"host": "titan", "state": "kept", "verification": "verified", "next_owner": "task:sci-9104fb", "cleanup_trigger": "After Tasks 14 and 15 and retirement-tail review/integration, inspect and preserve evidence before any removal", "kind": "evidence", "path": ".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b", "purpose": "Complete overlap and Task 13 implementation, test and review evidence for retirement-tail continuation", "manifest": ".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-13-evidence-manifest.json", "sha256": "83d2bd4f10e180669f464e8094688caef1984da12336caf0d61813295a522d78"}
 - 2026-10-29T14:30:48Z (commons-1b): Task 13 sci-9c0bba implemented at bb1fad5 on retained commons-1b, independent task review accepts with no findings (codex/gpt-6.1-sol); focused 7 passed and affected suite 87 passed. Reports attached to sci-9c0bba. This session was asked for Task 13 only; Task 14 sci-9da5a6, Task 15 sci-50d0c2 and whole-tail review remain before local merge. Kernel dependency is now landed; no check or child remains running.
+- 2026-10-29T14:31:18Z (commons-1b): parked (waiting on agent, session): Next agent resumes in .worktrees/commons-1b: verify task-13-evidence-manifest.json, start sci-9da5a6 (Task 14 safety gates), then sci-50d0c2 (Task 15 documents), then whole-tail review and corrective rounds before local merge into main. Task 13 is done and reviewed at bb1fad5 on this branch; do not repeat it. Kernel dependency landed. No background checks or children remain running.
+  provenance: {"harness_session":"codex:01a187eb-c21e-7a42-a216-2a6c5b309479","harness_session_source":"CODEX_THREAD_ID"}
