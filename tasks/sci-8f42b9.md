@@ -1,15 +1,17 @@
 ---
 id: sci-8f42b9
 title: "Task 11: The 1b fixture and the decisive cases through step 5"
-status: doing
+status: done
 priority: 1
 size: m
 complexity: high
 process: direct
 owner: commons-1b
 created: 2026-10-29T01:50:53Z
-updated: 2026-10-29T06:04:38Z
+updated: 2026-10-29T06:04:56Z
 started: 2026-10-29T05:24:07Z
+completed: 2026-10-29T06:04:56Z
+closed: 2026-10-29T06:04:56Z
 depends: [sci-e3cacf, sci-d5954d, sci-f8a0cf]
 parent: sci-9104fb
 tags: [commons]
@@ -40,3 +42,7 @@ step: "Task 11: The 1b fixture and the decisive cases through step 5"
 - 2026-10-29T06:04:35Z (commons-1b): retained: {"host": "titan", "state": "kept", "verification": "verified", "next_owner": "task:sci-9104fb", "cleanup_trigger": "After independent review, Task 12 gate and parent integration, recheck evidence disposition and worktree removal requirements", "kind": "evidence", "path": ".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-11-red-gates.log", "purpose": "Task 11 fixture development and verification evidence for controller review", "sha256": "19c54e3b5dd6519e5b69c2057f1363ebf48568ae709f602c9fd4a5fa994bc889"}
 - 2026-10-29T06:04:36Z (commons-1b): retained: {"host": "titan", "state": "kept", "verification": "verified", "next_owner": "task:sci-9104fb", "cleanup_trigger": "After independent review, Task 12 gate and parent integration, recheck evidence disposition and worktree removal requirements", "kind": "evidence", "path": ".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-11-strengthened.log", "purpose": "Task 11 fixture development and verification evidence for controller review", "sha256": "9a27ec900e5a9079b9c605b78361109ff556b40b46cdf5a9fb3c16d9ae4524cf"}
 - 2026-10-29T06:04:38Z (commons-1b): retained: {"host": "titan", "state": "kept", "verification": "verified", "next_owner": "task:sci-9104fb", "cleanup_trigger": "After independent review, Task 12 gate and parent integration, recheck evidence disposition and worktree removal requirements", "kind": "evidence", "path": ".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-11-report.md", "purpose": "Complete Task 11 implementation, verification and deferred-gate handoff", "sha256": "ef7f0ed189b0181553b151542f9821fd5d7d90bae28b066964d882202e323789"}
+- 2026-10-29T06:04:56Z (commons-1b): done
+  provenance: {"harness_session":"codex:01a1861c-9ef0-7a03-a0ef-969ce02a4060","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-29T06:04:56Z (commons-1b): Completed fixture chain and decisive overlap/update/gap cases in a1b0ac8; main preflight merged at 2f4b5b4. Nine deferred gates activated. Focused 105 passed/1 xfailed, strengthened 2 passed, final serial fast 1047 passed/1 xfailed. Report/log hashes and retained worktree belong to open parent sci-9104fb. Controller performs fresh impl review round 1 and Task 12 full gate; actual retirement remains Task 13 blocked on beliefs-a989fb.
+  provenance: {"harness_session":"codex:01a1861c-9ef0-7a03-a0ef-969ce02a4060","harness_session_source":"CODEX_THREAD_ID"}
