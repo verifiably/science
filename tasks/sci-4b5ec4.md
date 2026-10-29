@@ -7,7 +7,7 @@ size: s
 complexity: mid
 process: direct
 created: 2026-10-29T15:48:17Z
-updated: 2026-10-29T16:15:28Z
+updated: 2026-10-29T16:15:29Z
 depends: []
 tags: [commons]
 source: sci-9104fb
@@ -25,3 +25,4 @@ Two report and remedy gaps the retirement tail's whole-branch review found (defe
 
 - 2026-10-29T15:48:17Z (add): created
   provenance: {"harness_session":"claude-code:e9952dfd-ee2b-47b3-84ef-d176d9d3cc57","harness_session_source":"CLAUDE_CODE_SESSION_ID","origin":"agent"}
+- 2026-10-29T16:15:29Z (main): Folded in the tail review's minors 3 and 5 (show's per-predecessor pending row; reconcile block's keep list): same report code, same pass.
