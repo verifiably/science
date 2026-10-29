@@ -10,14 +10,12 @@ from typing import Literal
 from beliefs.coordination import CoordinationAddress
 from beliefs.errors import PublicationArrivalRefused
 from beliefs.publication_arrival import CAPTURE_DAMAGE, CurrentPublication, DivergentPublication, publication_tip
-from beliefs.session.ledger import (
-    LedgerEmpty, LedgerMissing, LedgerReader, LedgerUnreadable, SharingLine, read_ledger_evidence,
-)
+from beliefs.session.ledger import SharingLine
 
 from science.publication import MarkerFields, marker_fields, marker_of
 from science.refusal import Refusal, Refused
 from science.sharing import (
-    STATE_ORDER, FetchRecord, Pin, PinSource, ProviderBinding, SharingLedgerUnreadable, SharingRegistry,
+    STATE_ORDER, FetchRecord, Pin, PinSource, ProviderBinding, SharingRegistry, sharing_lines,
 )
 
 GroupKey = tuple[str, str, str]
@@ -33,25 +31,6 @@ class Held:
 
 def group_of(marker: MarkerFields) -> GroupKey:
     return marker.world, str(CoordinationAddress.parse(marker.view).unpinned()), marker.destination.locator
-
-
-def sharing_lines(operations_root: Path) -> tuple[SharingLine, ...]:
-    """Read all sharing lines in replay's (time, session id, position) order, without writing."""
-    sessions = Path(operations_root) / "sessions"
-    ordered: list[tuple[str, str, int, SharingLine]] = []
-    if sessions.is_dir():
-        for directory in sorted(entry for entry in sessions.iterdir() if entry.is_dir()):
-            evidence = read_ledger_evidence(operations_root, directory.name)
-            if isinstance(evidence, (LedgerMissing, LedgerEmpty)):
-                continue
-            if isinstance(evidence, LedgerUnreadable):
-                raise SharingLedgerUnreadable(evidence.session_id, evidence.error)
-            if not isinstance(evidence, LedgerReader):
-                raise TypeError(f"unknown ledger evidence from the kernel: {evidence!r}")
-            ordered.extend((line.at, directory.name, position, line)
-                           for position, line in enumerate(evidence.sharing()))
-    ordered.sort(key=lambda each: each[:3])
-    return tuple(line for *_, line in ordered)
 
 
 def established(registry: SharingRegistry, lines: Sequence[SharingLine]) -> tuple[Pin, ...]:

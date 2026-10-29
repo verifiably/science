@@ -270,10 +270,8 @@ def apply_line(registry: SharingRegistry, line: SharingLine) -> bool:
     return True
 
 
-def replay(registry: SharingRegistry, operations_root: Path) -> tuple[SharingLine, ...]:
-    """Rebuild the registry from every session ledger's sharing lines (spec §7.4):
-    every line under `<operations_root>/sessions`, in (at, session id, ledger
-    position) order, folded through `apply_line`. Returns the lines that wrote.
+def sharing_lines(operations_root: Path) -> tuple[SharingLine, ...]:
+    """Read all sharing lines in (time, session id, position) order without writing.
 
     A session whose creation was interrupted (no ledger, or an empty one) holds no
     line by construction and is skipped, as the kernel's reconciliation treats it;
@@ -292,4 +290,11 @@ def replay(registry: SharingRegistry, operations_root: Path) -> tuple[SharingLin
             ordered.extend((line.at, directory.name, position, line)
                            for position, line in enumerate(evidence.sharing()))
     ordered.sort(key=lambda each: each[:3])
-    return tuple(line for *_, line in ordered if apply_line(registry, line))
+    return tuple(line for *_, line in ordered)
+
+
+def replay(registry: SharingRegistry, operations_root: Path) -> tuple[SharingLine, ...]:
+    """Rebuild the registry from replay-ordered ledger sharing lines (spec §7.4).
+
+    Fold through `apply_line`; return only the lines that wrote."""
+    return tuple(line for line in sharing_lines(operations_root) if apply_line(registry, line))
