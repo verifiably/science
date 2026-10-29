@@ -7,7 +7,7 @@ size: m
 complexity: high
 process: planned
 created: 2026-10-29T20:02:26Z
-updated: 2026-10-29T20:02:26Z
+updated: 2026-10-29T20:02:54Z
 depends: []
 tags: [heritage, skills]
 agent: claude-code/claude-opus-5-5
@@ -22,3 +22,4 @@ User's direction, 2026-10-29, in their words: 'there should be a single record f
 
 - 2026-10-29T20:02:26Z (add): created
   provenance: {"harness_session":"claude-code:f7cf60bb-2dad-4284-ab1a-1810d990d023","harness_session_source":"CLAUDE_CODE_SESSION_ID","origin":"mixed"}
+- 2026-10-29T20:02:54Z (main): lit side of the one-record-per-article direction filed as lit-0b5019.
