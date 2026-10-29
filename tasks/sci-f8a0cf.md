@@ -8,7 +8,7 @@ complexity: mid
 process: direct
 owner: commons-1b
 created: 2026-10-29T01:50:51Z
-updated: 2026-10-29T05:18:50Z
+updated: 2026-10-29T05:18:51Z
 started: 2026-10-29T05:02:54Z
 depends: []
 parent: sci-9104fb
@@ -31,3 +31,4 @@ step: "Task 10: `publish` and `publish-preview` — the retired-corpus guard and
 - 2026-10-29T05:18:47Z (commons-1b): retained: {"host":"titan","state":"kept","verification":"verified","next_owner":"task:sci-9104fb","cleanup_trigger":"After independent review and planned integration, inspect evidence and run the required worktree removal checks","kind":"evidence","path":".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-10-corrected-red.log","purpose":"Task 10 implementation report or RED/GREEN/fast/commit evidence for independent review","sha256":"ea94f0454049fc46d710af58e7737d70f28679c5abf7e82e15cf673ffce906a1"}
 - 2026-10-29T05:18:48Z (commons-1b): retained: {"host":"titan","state":"kept","verification":"verified","next_owner":"task:sci-9104fb","cleanup_trigger":"After independent review and planned integration, inspect evidence and run the required worktree removal checks","kind":"evidence","path":".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-10-fast.log","purpose":"Task 10 implementation report or RED/GREEN/fast/commit evidence for independent review","sha256":"ff1f4d70f3056dc4efc15562c8ad65ceaf6c569ba170ff72401f11dd97bc87c8"}
 - 2026-10-29T05:18:50Z (commons-1b): retained: {"host":"titan","state":"kept","verification":"verified","next_owner":"task:sci-9104fb","cleanup_trigger":"After independent review and planned integration, inspect evidence and run the required worktree removal checks","kind":"evidence","path":".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-10-focused.log","purpose":"Task 10 implementation report or RED/GREEN/fast/commit evidence for independent review","sha256":"7b313ae9bc5a93cddf931e26cd0288f8a4a7af3b0f42a070806de8e6925eb768"}
+- 2026-10-29T05:18:51Z (commons-1b): retained: {"host":"titan","state":"kept","verification":"verified","next_owner":"task:sci-9104fb","cleanup_trigger":"After independent review and planned integration, inspect evidence and run the required worktree removal checks","kind":"evidence","path":".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-10-green.log","purpose":"Task 10 implementation report or RED/GREEN/fast/commit evidence for independent review","sha256":"0627bbf9c5760a6e8c7afd1e8f28516035233ad94e2151b973e737991b2ec489"}
