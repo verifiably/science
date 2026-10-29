@@ -223,11 +223,12 @@ def write_commons_config(cfg: ScienceConfig) -> Path:
     home = cfg.world.world_root.parent
     contract = home.parent / "testing.yaml"
     assert contract.is_file(), "write_commons_config needs the installations' contract document"
-    mounted = set(SharingRegistry(cfg.sharing_root).mounted_roots())
+    registry = SharingRegistry(cfg.sharing_root)
+    managed = {registry.root_for(pin.corpus_id) for pin in registry.pins()}
     keys = {
         "world_root": str(cfg.world.world_root),
         "world_id": cfg.world.world_id,
-        "corpus_roots": [str(root) for root in cfg.world.corpus_roots if root not in mounted],
+        "corpus_roots": [str(root) for root in cfg.world.corpus_roots if root not in managed],
         "write_root": str(cfg.write_root),
         "operations_root": str(cfg.operations_root),
         "service_socket": str(cfg.service_socket),

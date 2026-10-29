@@ -147,13 +147,16 @@ def test_both_sides_gather_equal_identities_for_the_shared_records(b_updated):
     assert statements[0] != statements[1]
 
 
-def test_the_unkept_branch_reports_retirement_pending_and_retention_pending(b_updated_unkept):
+def test_the_unkept_branch_retires_the_predecessor_and_reports_it(b_updated_unkept):
     ids = a_identity(b_updated_unkept.a)
-    (first,) = [pin for pin in _a_pins(b_updated_unkept) if pin.corpus_id != ids["corpus_id"]]
+    registry = SharingRegistry(b_updated_unkept.b.sharing_root)
+    (first,) = [pin for pin in registry.pins() if pin.world == ids["world"] and pin.corpus_id != ids["corpus_id"]]
     text = read_rig(b_updated_unkept.b, "show").invoke("show", {"corpus_id": first.corpus_id}).text
-    assert "retention:\n  pending: no door\n" in text
-    assert all(pin.state == "mounted" for pin in _a_pins(b_updated_unkept))
-    assert not [line for line in sharing_lines(b_updated_unkept.b.operations_root) if line.transition == "retired"]
+    assert "retention:\n  retired: yes\n" in text
+    assert first.state == "retired"
+    assert [pin.corpus_id for pin in _a_pins(b_updated_unkept)] == [ids["corpus_id"]]
+    (line,) = [line for line in sharing_lines(b_updated_unkept.b.operations_root) if line.transition == "retired"]
+    assert line.corpus == first.corpus_id and line.verdict == "retired"
 
 
 @pytest.mark.parametrize("arrival", ["oldest-first", "newest-first"])

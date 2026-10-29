@@ -303,13 +303,35 @@ def test_the_reopened_fixture_mounts_the_adopted_corpus_under_an_epoch_covering_
     assert cid in dict(current_epoch(ReadContext.open(reopened.b).world).coverage)
 
 
-def test_an_unrequired_equal_successor_reports_retirement_pending(adopted):
+def test_an_unrequired_predecessor_is_retired_through_the_door_and_its_line_folds(adopted):
+    from dataclasses import replace
     cid1 = a_identity(adopted.a)["corpus_id"]
     cid2 = publish_again(adopted, LOC_A)
     text = _adopt(adopted, LOC_A, cid2).text
-    assert "retirement pending" in text and "beliefs-a989fb" in text and cid1 in text
-    assert _states(text) == ["fetched", "admitted", "mounted"]
-    assert SharingRegistry(adopted.b.sharing_root).pin(cid1).state == "mounted"
+    assert _states(text) == ["fetched", "admitted", "mounted", "retired"]
+    registry = SharingRegistry(adopted.b.sharing_root)
+    assert registry.pin(cid1).state == "retired"
+    assert not ReadContext.open(adopted.b).world.status(cid1).live
+    (line,) = [line for line in _sharing_lines(adopted.b) if line.transition == "retired"]
+    assert line.corpus == cid1 and line.verdict == "retired"
+    assert f"retirement {cid1}:\n  keep: []\n" in text
+    assert "session's mounts are fixed at open" in text
+    assert "reopen the session and run science epoch" in text
+    registry.write_pin(replace(registry.pin(cid1), state="mounted"))
+    replay(registry, adopted.b.operations_root)
+    assert registry.pin(cid1).state == "retired"
+
+
+def test_the_next_open_mounts_the_tip_only(adopted):
+    from dataclasses import replace
+    first = a_identity(adopted.a)["corpus_id"]
+    tip = publish_again(adopted, LOC_A)
+    opened = replace(adopted, b=reopen(adopted.b))
+    _adopt(opened, LOC_A, tip)
+    cfg = reopen(opened.b)
+    registry = SharingRegistry(cfg.sharing_root)
+    assert registry.root_for(tip) in cfg.world.corpus_roots
+    assert registry.root_for(first) not in cfg.world.corpus_roots
 
 
 def test_a_successor_reports_configuration_retention(adopted):
@@ -322,7 +344,7 @@ def test_a_successor_reports_configuration_retention(adopted):
     assert "retirement pending" not in text
 
 
-def test_changed_configuration_refuses_before_pending_and_keeps_the_adoption(adopted):
+def test_changed_configuration_refuses_before_retirement_and_keeps_the_adoption(adopted):
     from dataclasses import replace
     cid2 = publish_again(adopted, LOC_A)
     cfg = reopen(adopted.b)
@@ -418,13 +440,13 @@ def test_a_successor_keeps_a_predecessor_b_depends_on_and_reports_why(request):
     assert registry.pin(predecessor.corpus_id).state == "mounted"
 
 
-def test_unkept_dropped_assessment_reports_retirement_pending(request):
+def test_unkept_dropped_assessment_retires_the_predecessor(request):
     updated = request.getfixturevalue("updated_unkept")
     registry = SharingRegistry(updated.b.sharing_root)
     (predecessor,) = [pin for pin in registry.pins() if pin.world == updated.a.world.world_id and pin.state == "mounted"]
     text = _adopt(updated, LOC_A, a_identity(updated.a, binding_destination=LOC_A)["corpus_id"]).text
-    assert predecessor.corpus_id in text and "retirement pending" in text and "beliefs-a989fb" in text
-    assert registry.pin(predecessor.corpus_id).state == "mounted"
+    assert f"[pin] {predecessor.corpus_id} retired" in text
+    assert registry.pin(predecessor.corpus_id).state == "retired"
 
 
 def test_a_refused_sibling_stays_fetched_and_does_not_change_later_evaluation(request):
@@ -450,12 +472,18 @@ def test_a_refused_sibling_stays_fetched_and_does_not_change_later_evaluation(re
     assert again.code == "invalid-input" and "already adopted" in again.message
 
 
-@pytest.mark.xfail(strict=True, reason="Task 13 retirement door; Task 11 late_link returns (Installations, missing_link)")
 def test_two_retirements_in_one_invocation_render_both_pins_before_tail(request):
     installations, missing = request.getfixturevalue("late_link")
     registry = SharingRegistry(installations.b.sharing_root)
     before = {pin.corpus_id for pin in registry.pins() if pin.state == "mounted"}
-    text = _adopt(installations, LOC_A, missing).text
+    with with_remotes(installations), open_rig(installations.b, ("adopt",)) as (d, _):
+        page = d.invoke("adopt", {"location": LOC_A, "corpus_id": missing}).text
+        pieces = []
+        while "continue with cursor " in page:
+            pieces.append(page.split("\n… truncated at")[0])
+            token = page.rsplit("cursor ", 1)[1].strip()
+            page = d.invoke("adopt", {}, cursor=token).text
+        text = "".join((*pieces, page))
     retired = [line for line in text.splitlines() if line.startswith("[pin]") and line.endswith(" retired")]
     assert len(retired) == 2 and any(missing in line for line in retired)
     assert any(any(corpus in line for corpus in before) for line in retired)
@@ -471,8 +499,8 @@ def test_a_mounted_target_reports_another_pins_admission_recovery(adopted, monke
         _adopt(adopted, LOC_A, cid2)
     monkeypatch.undo()
     text = _adopt(adopted, LOC_A, cid1).text
-    assert _states(text) == ["mounted"] and f"[pin] {cid2} mounted" in text
-    assert "retirement pending" in text
+    assert _states(text) == ["mounted", "retired"] and f"[pin] {cid2} mounted" in text
+    assert f"[pin] {cid1} retired" in text
 
 
 def test_a_conflict_names_why_its_predecessor_is_required(adopted):
@@ -490,23 +518,50 @@ def test_a_conflict_names_why_its_predecessor_is_required(adopted):
     assert "required predecessor: configuration" in refusal.message
 
 
-@pytest.mark.parametrize("terminal", ["retired", "departed"])
-def test_completed_terminal_effect_is_reported_once_without_new_retirement(adopted, terminal):
+def test_reconcile_ledgers_a_retirement_the_kernel_committed_without_a_line(adopted):
     from beliefs.root import open_world
     from helpers.world import FIXTURE_AUTHORITY
     cid1 = a_identity(adopted.a)["corpus_id"]
     cid2 = publish_again(adopted, LOC_A)
     world = open_world(adopted.b.world, authority=FIXTURE_AUTHORITY)
-    (world.retire if terminal == "retired" else world.depart)(cid1)
+    original = world.retire(cid1)
+    text = _adopt(adopted, LOC_A, cid2).text
+    assert _states(text) == ["retired", "fetched", "admitted", "mounted"]
+    (line,) = [line for line in _sharing_lines(adopted.b) if line.transition == "retired"]
+    assert line.corpus == cid1 and line.verdict == "already-retired"
+    assert SharingRegistry(adopted.b.sharing_root).pin(cid1).state == "retired"
+    assert [status for status in world.registry().statuses if status.corpus_id == cid1] == [original]
+    assert f"retirement {cid1}:" in text
+
+
+def test_completed_departure_is_reported_once_without_retirement(adopted):
+    from beliefs.root import open_world
+    from helpers.world import FIXTURE_AUTHORITY
+    cid1 = a_identity(adopted.a)["corpus_id"]
+    cid2 = publish_again(adopted, LOC_A)
+    world = open_world(adopted.b.world, authority=FIXTURE_AUTHORITY)
+    world.depart(cid1)
     text = _adopt(adopted, LOC_A, cid2).text
     assert _states(text) == ["fetched", "admitted", "mounted"]
     findings = [line for line in text.splitlines() if line.startswith("!") and cid1 in line]
-    assert len(findings) == 1
-    assert ("retirement pending" if terminal == "retired" else "departed") in findings[0]
-    if terminal == "departed":
-        assert "retirement pending" not in text
-    else:
-        assert "beliefs-a989fb" in text
+    assert len(findings) == 1 and "departed" in findings[0]
+    assert not any(line.transition == "retired" for line in _sharing_lines(adopted.b))
+
+
+def test_reconcile_reports_the_doors_refusal_as_a_finding(adopted):
+    from dataclasses import replace
+    from beliefs.root import open_world
+    from helpers.world import FIXTURE_AUTHORITY
+    first = a_identity(adopted.a)["corpus_id"]
+    successor = publish_again(adopted, LOC_A)
+    open_world(adopted.b.world, authority=FIXTURE_AUTHORITY).retire(first)
+    registry = SharingRegistry(adopted.b.sharing_root)
+    registry.write_pin(replace(registry.pin(first), artifact="0" * 64))
+    text = _adopt(adopted, LOC_A, successor).text
+    findings = [line for line in text.splitlines() if line.startswith("!") and first in line]
+    assert len(findings) == 1 and "sharing evidence artifact" in findings[0]
+    assert registry.pin(first).state == "mounted" and registry.pin(successor).state == "mounted"
+    assert not any(line.transition == "retired" for line in _sharing_lines(adopted.b))
 
 
 def test_siblings_under_a_never_held_predecessor_refuse_the_same_way(request):

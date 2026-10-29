@@ -12,6 +12,8 @@ from beliefs.errors import (
     PublicationArrivalRefused,
     PublicationReadingRefused,
     SharingEvidenceDisagrees,
+    StatusTargetUnknown,
+    StatusTerminal,
     WriteRefused,
 )
 from beliefs.root import metadata_root_for
@@ -26,8 +28,6 @@ from science.report import Finding, KeyVals, Report
 from science.overlap import conflicts
 from science.retention import required
 from science.sharing import Pin, PinSource, SharingRegistry, apply_line, replay, sharing_lines
-
-RETIREMENT_PENDING = "retirement pending: the kernel's retire door (beliefs-a989fb) has not landed"
 
 
 def handle(ctx, writer, *, location, corpus_id) -> Report:
@@ -90,7 +90,7 @@ def handle(ctx, writer, *, location, corpus_id) -> Report:
             raise _kernel_refused(caught) from None
         record(admitted)
         _mark_mounted(writer, registry.pin(corpus_id), record)
-    tail.extend(_reevaluate(ctx, registry))
+    tail.extend(_reevaluate(ctx, writer, registry, record))
     if already_mounted and not lines:
         raise _already_adopted(pin)
     return tuple(tail)
@@ -111,10 +111,13 @@ def _reconcile(ctx, writer, registry: SharingRegistry, record, tail) -> None:
         elif pin.state == "mounted":
             status = ctx.world.status(pin.corpus_id)
             if status.known and not status.live:
-                if terminal.get(pin.corpus_id) == "retired":
-                    tail.append(Finding(f"{pin.corpus_id}: {RETIREMENT_PENDING}"))
-                elif terminal.get(pin.corpus_id) == "departed":
+                if terminal.get(pin.corpus_id) == "departed":
                     tail.append(Finding(f"corpus {pin.corpus_id} departed"))
+                else:
+                    try:
+                        tail.append(_retire(ctx, writer, registry, pin, record))
+                    except Refused as caught:
+                        tail.append(Finding(f"corpus {pin.corpus_id}: retirement refused: {caught.refusal.message}"))
 
 
 def _pair(item):
@@ -161,10 +164,9 @@ def _required(ctx, predecessor, held, tip, groups, mounts):
                     write_root=(write.corpus_id, write.view, write.profile), live=holders)
 
 
-def _reevaluate(ctx, registry):
+def _reevaluate(ctx, writer, registry, record):
     config = ctx.config
     groups = supersession.groups(registry, sharing_lines(config.operations_root))
-    mounts = live_mounts(config, ctx.world, registry)
     tail = [Finding(f"keep entry {corpus}: no pin records this corpus") for corpus in config.keep
             if registry.pin(corpus) is None]
     for held in groups.values():
@@ -177,12 +179,13 @@ def _reevaluate(ctx, registry):
         for predecessor in predecessors:
             if not ctx.world.status(predecessor.corpus_id).live:
                 continue  # Reconcile already reported this completed terminal effect.
+            mounts = live_mounts(config, ctx.world, registry)
             reasons = _required(ctx, predecessor, held, outcome.tip, groups, mounts)
             if reasons:
                 tail.append(KeyVals(f"retention {predecessor.corpus_id}", tuple(("kept", _reason(reason)) for reason in reasons)))
             else:
                 _require_current_config(config)
-                tail.append(Finding(f"{predecessor.corpus_id}: {RETIREMENT_PENDING}"))
+                tail.append(_retire(ctx, writer, registry, registry.pin(predecessor.corpus_id), record))
     return tail
 
 
@@ -199,6 +202,17 @@ def _require_current_config(config):
 def _mark_mounted(writer, pin: Pin, record) -> None:
     """Ledger `mounted` for an admitted pin, carrying its source and its fetch record's verification verdict."""
     record(writer.record_sharing(_evidence(pin), transition="mounted", verdict=pin.fetch.verdict))
+
+
+def _retire(ctx, writer, registry: SharingRegistry, pin: Pin, record):
+    observers = _observers(registry.head_artifact_for(pin.corpus_id).read_bytes())
+    try:
+        line = writer.retire(registry.root_for(pin.corpus_id), observers, evidence=_evidence(pin))
+    except (WriteRefused, StatusTargetUnknown, StatusTerminal) as caught:
+        raise _kernel_refused(caught) from None
+    record(line)
+    return KeyVals(f"retirement {pin.corpus_id}", (("keep", str(list(ctx.config.keep))),
+                   ("mounts", "the session's mounts are fixed at open; reopen the session and run science epoch")))
 
 
 def _evidence(pin: Pin) -> SharingEvidence:
@@ -269,7 +283,7 @@ def _discard(registry: SharingRegistry, corpus_id: str) -> None:
     registry.head_artifact_for(corpus_id).unlink(missing_ok=True)
 
 
-def _kernel_refused(caught: WriteRefused) -> Refused:
+def _kernel_refused(caught: WriteRefused | StatusTargetUnknown | StatusTerminal) -> Refused:
     """A sharing door's refusal before its line, with the kind and what the kernel says refused it."""
     data = {"kind": type(caught).__name__}
     if isinstance(caught, SharingEvidenceDisagrees):

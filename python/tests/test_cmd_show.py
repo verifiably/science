@@ -151,14 +151,14 @@ def test_show_a_tip_reports_current_and_tip(adopted):
 
 
 @pytest.mark.parametrize("kept", [False, True])
-def test_show_a_superseded_pin_reports_configuration_or_pending(adopted, kept):
+def test_show_a_superseded_pin_reports_configuration_or_retirement(adopted, kept):
     first = a_identity(adopted.a)["corpus_id"]
     successor = publish_again(adopted, LOC_A)
-    _adopt(adopted, LOC_A, successor)
     cfg = replace(adopted.b, keep=(first,) if kept else ())
+    _adopt(replace(adopted, b=cfg), LOC_A, successor)
     text = _show(cfg, first)
     assert f"this pin: superseded by {successor}" in text
-    assert ("retention:\n  kept: configuration\n" if kept else "retention:\n  pending: no door\n") in text
+    assert ("retention:\n  kept: configuration\n" if kept else "retention:\n  retired: yes\n") in text
     assert "retention:" not in _show(cfg, successor)
 
 
@@ -199,12 +199,35 @@ def test_show_a_superseded_kept_pin_reports_every_reason(request):
     assert (f"retention:\n  kept: configuration\n  kept: dependency ({ids['assessment']})\n") in text
 
 
-def test_show_reports_pending_no_door_on_the_unkept_branch(request):
+def test_show_reports_retired_on_the_unkept_branch(request):
     updated = request.getfixturevalue("updated_unkept")
     registry = SharingRegistry(updated.b.sharing_root)
     (first,) = [pin.corpus_id for pin in registry.pins() if pin.state == "mounted"]
     _adopt(updated, LOC_A, a_identity(updated.a, binding_destination=LOC_A)["corpus_id"])
-    assert "retention:\n  pending: no door\n" in _show(updated.b, first)
+    assert "retention:\n  retired: yes\n" in _show(updated.b, first)
+
+
+def test_show_reports_pending_retirement_read_only_until_adopt_retries(adopted, monkeypatch):
+    from science.sharing import sharing_lines
+    first = a_identity(adopted.a)["corpus_id"]
+    successor = publish_again(adopted, LOC_A)
+
+    def crash(*args):
+        raise RuntimeError("injected crash before sweep")
+
+    with monkeypatch.context() as patch:
+        patch.setattr("science.commands.adopt._reevaluate", crash)
+        with pytest.raises(RuntimeError, match="injected crash before sweep"):
+            _adopt(adopted, LOC_A, successor)
+    before = sharing_lines(adopted.b.operations_root)
+    assert "retention:\n  pending: rerun adopt\n" in _show(adopted.b, first)
+    registry = SharingRegistry(adopted.b.sharing_root)
+    assert registry.pin(first).state == "mounted"
+    assert ReadContext.open(adopted.b).world.status(first).live
+    assert sharing_lines(adopted.b.operations_root) == before
+    text = _adopt(adopted, LOC_A, successor).text
+    assert f"[pin] {first} retired" in text
+    assert registry.pin(first).state == "retired"
 
 
 def test_show_uses_mounted_ledger_history_when_the_pin_file_lags(adopted):
@@ -222,7 +245,7 @@ def test_show_reports_only_an_explicit_retired_kernel_status_as_retired(adopted,
     from beliefs.world.registry import StatusRecord
     corpus = a_identity(adopted.a)["corpus_id"]
     status, registry = World.status, World.registry
-    # The retirement door is not available yet; inject its complete parsed status reads.
+    # Isolate show's distinction between retired and departed terminal statuses.
     monkeypatch.setattr(World, "status", lambda world, target: replace(status(world, target), live=False)
                         if target == corpus else status(world, target))
     monkeypatch.setattr(World, "registry", lambda world: replace(registry(world), statuses=(
@@ -235,10 +258,11 @@ def test_show_reports_only_an_explicit_retired_kernel_status_as_retired(adopted,
 def test_show_an_intermediate_reports_configuration_and_chain(adopted):
     first = a_identity(adopted.a)["corpus_id"]
     second = publish_again(adopted, LOC_A)
-    _adopt(adopted, LOC_A, second)
+    kept = replace(adopted, b=replace(adopted.b, keep=(first, second)))
+    _adopt(kept, LOC_A, second)
     third = publish_again(adopted, LOC_A)
-    _adopt(adopted, LOC_A, third)
-    text = _show(replace(adopted.b, keep=(first, second)), second)
+    _adopt(kept, LOC_A, third)
+    text = _show(kept.b, second)
     assert f"this pin: superseded by {third}" in text
     assert f"retention:\n  kept: configuration\n  kept: chain (for {first})\n" in text
 

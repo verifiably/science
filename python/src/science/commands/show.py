@@ -126,7 +126,7 @@ def _supersession(ctx, registry, pin, status) -> Report:
         else:
             value = f"dependency ({', '.join(reason.detail)})"
         rows.append(("kept", value))
-    blocks.append(KeyVals("retention", tuple(rows) or (("pending", "no door"),)))
+    blocks.append(KeyVals("retention", tuple(rows) or (("pending", "rerun adopt"),)))
     return tuple(blocks)
 
 
