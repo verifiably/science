@@ -4,7 +4,7 @@ title: "Health program: the first real question and its contract"
 status: todo
 priority: 2
 created: 2026-10-29T16:27:33Z
-updated: 2026-10-29T16:27:33Z
+updated: 2026-10-29T17:01:37Z
 depends: []
 tags: [projects]
 source: docs/notes/2026-10-29-health-contract-brief.md
@@ -22,3 +22,4 @@ The health program's first real question is not representable today: the only es
 
 - 2026-10-29T16:27:33Z (add): created
   provenance: {"harness_session":"claude-code:791cb76f-ef91-47dc-a6c1-9d9ddd6101ab","harness_session_source":"CLAUDE_CODE_SESSION_ID","origin":"agent"}
+- 2026-10-29T17:01:37Z (main): Keith, 2026-10-29: the next program is health via post-acute infection. The goal's first milestone is therefore the contract and vocabulary that program's first question needs, sized by sci-ad7335
