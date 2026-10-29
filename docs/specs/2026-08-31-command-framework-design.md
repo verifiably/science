@@ -370,8 +370,7 @@ ledgered only by the `restore_root` and `admit_publication` doors.
 
 *Amended 2026-10-29 (milestone 1b plan, Task 12):* the scoped retirement door
 (`beliefs-a989fb`) remains pending; the overlap half does not call `World.retire`
-by another route.
-The registry's pins and bindings are projections of ledger
+by another route. The registry's pins and bindings are projections of ledger
 evidence, distinct from science's second, presentation-only state: sharing-report
 tails under `operations_root/tails/<session_id>/<invocation_id>.json`.
 Plan review round 5 accepted this narrow exception so adoption can explain retention

@@ -97,8 +97,8 @@ xfail requires actual retirement. No retirement door is implemented by this phas
 *Amended 2026-10-29 (milestone 1b plan, Task 15):* status: the retirement tail has
 landed on branch `commons-1b` at Task 13 (`bb1fad5`, retirement through the kernel door
 `ScopedWriter.retire`, beliefs `f274822`) and Task 14 (`320f9e3`, the §5.9 retirement
-gates); the strict retirement xfail is gone. The whole-tail review and local integration
-are pending. Sections 5.7, 5.9 and 7 above keep their interim, pre-door prose as the
+gates); the strict retirement xfail is gone. After the whole-tail review (one corrective round, adding
+the equal-holder sweep gate `1339976`) it was integrated into `main` on 2026-10-29. Sections 5.7, 5.9 and 7 above keep their interim, pre-door prose as the
 decision record; the shipped behaviour is in the commons design §10 and in
 `commands/adopt/prompt.md`.
 

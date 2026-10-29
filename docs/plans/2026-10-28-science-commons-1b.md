@@ -78,9 +78,10 @@ gates, and the unkept branch's pending-door reports. Task 12 amended the overlap
 documents; `just gate` passed with 1,047 passed and 1 expected xfail (1,048 collected,
 177.22s suite time, exit 0). Tasks 13–15 followed once `beliefs-a989fb` landed (beliefs
 `f274822`), all on `commons-1b`: Task 13 `bb1fad5` (retirement through the kernel door and
-reconcile), Task 14 `320f9e3` (the §5.9 retirement gates), Task 15 the document amendments
-(its commit follows this paragraph in history). The strict retirement xfail is gone. The
-whole-tail review and the local merge are still to come, and sci-9104fb stays open.
+reconcile), Task 14 `320f9e3` (the §5.9 retirement gates), Task 15 `240907e` (the document amendments). The strict retirement xfail is gone. The
+whole-tail review (claude-code/claude-opus-5-5) asked for one more gate, the sequential
+sweep's equal-holder rule, added in corrective round 1 (`1339976`) and accepted by a
+scoped re-review; the tail was integrated into `main` on 2026-10-29.
 
 ## Global Constraints
 

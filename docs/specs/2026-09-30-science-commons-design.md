@@ -896,7 +896,7 @@ not dependencies. A reached record requires its predecessor only when no other l
 mounted holder has equal content.
 
 *Amended 2026-10-29 (milestone 1b plan, Task 15):* the retirement tail ships on
-branch `commons-1b` (Tasks 13–14; pending local integration), superseding the
+`main` (Tasks 13–14, integrated 2026-10-29), superseding the
 interim state this paragraph first described (no retirement call; a
 `retirement pending` Finding and `show`'s `retention: pending (no door)`). After the
 candidate is mounted and the invocation's retention is evaluated, `adopt` retires each
@@ -1003,8 +1003,8 @@ kernel has the act, and "nothing acts on it" (remote §13 item 1) is the
 `sharing` write class's gap (§11) — not an option.
 
 *Amended 2026-10-29 (milestone 1b plan, Task 15):* the surface now acts on it:
-`adopt` reaches step 3 through the scoped door described above, on branch
-`commons-1b` pending local integration.
+`adopt` reaches step 3 through the scoped door described above, on `main` since
+the retirement tail's integration (2026-10-29).
 
 ## 11. What `beliefs` must add, what the framework must amend, what `science` builds
 
@@ -1115,9 +1115,9 @@ clean-environment verification (`sci-b979ce`). Overlap in 1a refuses
 `beliefs-81367e`.
 
 *1b, overlap and retirement.* *Amended 2026-10-29 (milestone 1b plan, Task 15):*
-both halves are implemented on branch `commons-1b`: the overlap half (Tasks 1–12) and
-the retirement tail (Tasks 13–14 at `bb1fad5` and `320f9e3`); local integration, with
-the whole-tail review, is pending. The pinned-derivation case and the retirement gates
+both halves are implemented on `main`: the overlap half (Tasks 1–12) and
+the retirement tail (Tasks 13–14 at `bb1fad5` and `320f9e3`, with the equal-holder
+sweep gate `1339976` from the whole-tail review), integrated 2026-10-29. The pinned-derivation case and the retirement gates
 of the 1b design §5.9 run as tests; the strict retirement xfail is gone. *A* binds *B*, adopts *B*'s publication; *A*
 publishes an update that drops one record; *B* adopts the update. Decisive
 cases:
