@@ -1,13 +1,15 @@
 ---
 id: sci-29be32
 title: "Task 3: Session-holder resolution over equal copies, and the retired-corpus guard"
-status: todo
+status: doing
 priority: 1
 size: s
 complexity: mid
 process: direct
+owner: commons-1b
 created: 2026-10-29T01:50:40Z
-updated: 2026-10-29T01:50:40Z
+updated: 2026-10-29T02:31:27Z
+started: 2026-10-29T02:31:27Z
 depends: []
 parent: sci-9104fb
 tags: [commons]
@@ -21,3 +23,5 @@ step: "Task 3: Session-holder resolution over equal copies, and the retired-corp
 
 - 2026-10-29T01:50:40Z (add): created
   provenance: {"harness_session":"claude-code:f666f956-1928-4c06-8bf1-80cd5a586d90","harness_session_source":"CLAUDE_CODE_SESSION_ID","origin":"agent"}
+- 2026-10-29T02:31:27Z (commons-1b): started
+  provenance: {"harness_session":"codex:01a1857e-a8fe-7662-8f2e-d862f954be62","harness_session_source":"CODEX_THREAD_ID"}
