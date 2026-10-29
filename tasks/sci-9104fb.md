@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: commons-1b
 created: 2026-10-01T02:21:10Z
-updated: 2026-10-29T16:11:30Z
+updated: 2026-10-29T16:12:04Z
 started: 2026-10-28T20:03:15Z
 completed: 2026-10-29T16:11:30Z
 closed: 2026-10-29T16:11:30Z
@@ -144,3 +144,4 @@ Spec §12 part 1b: A binds B, adopts B's publication; A publishes an update drop
   provenance: {"harness_session":"claude-code:e9952dfd-ee2b-47b3-84ef-d176d9d3cc57","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-29T16:11:30Z (commons-1b): Milestone 1b complete on main 775ec0f (local, unpushed): overlap half (Tasks 1-12, b07e761) and retirement tail (Task 13 bb1fad5 door and reconcile, Task 14 320f9e3 + 1339976 gates, Task 15 240907e docs, 81bf98f integration wording). Tail whole-branch review claude-code/claude-opus-5-5 With fixes (Important 1) -> corrective round 1 accepted by scoped re-review. Merge gate just gate 1070 passed, 200.18s. Follow-ups: sci-4b5ec4 (retirement report/remedy minors), sci-7315fb (show keep warning); deferred minors in the attached ledger.
   provenance: {"harness_session":"claude-code:e9952dfd-ee2b-47b3-84ef-d176d9d3cc57","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-29T16:12:04Z (commons-1b): detached: tail-merge-gate.log: layout check refuses its host path; its only content (just gate exit 0, 1070 passed, 200.18s on 775ec0f) is recorded in the done note and the attached ledger
