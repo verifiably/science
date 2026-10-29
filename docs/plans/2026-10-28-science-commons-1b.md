@@ -53,7 +53,13 @@ kernel's close outcome admits exactly one key, so the tail cannot ride in it; th
 conversion missed `provider-bind` and the synthetic test handlers; existing invocations
 have no tail. Revision 5 answers them: the tail is persisted by science under
 `operations_root/tails/`, absent meaning empty, every sharing handler converts, and the
-audit-failure and 1a-shaped-ledger paths are stated and tested (Task 8).
+audit-failure and 1a-shaped-ledger paths are stated and tested (Task 8). Round 5
+(`codex/gpt-6-astra`, revise: P2 1, P3 1; ruling: report sidecars accepted as a narrow
+presentation-state exception rather than a kernel outcome change): revision 6 makes the
+sidecar durable (directory fsync), closes the invocation in `finally` on any
+presentation failure with fault-injection and fresh-dispatcher continuation tests, and
+documents the sidecar as historical commentary in the guide and the framework (Tasks 8,
+12).
 
 **Status:** draft for review. Execution ruling (round 3, the user): subagent-driven,
 implementers sequential, a whole-branch review before each phase merges.
@@ -590,21 +596,41 @@ class:
   sharing line of the invocation, in ledger order: the complete pin prefix, so a committed
   effect cannot be omitted) followed by the handler's tail. `audit_sharing_report(tail)`
   refuses any `PinBlock` in the tail.
-- The tail is **persisted by science, not by the kernel**: the ledger's close outcome is
-  exactly `{"done": …}` or `{"refusal": …}` (`beliefs.session.ledger.validated_outcome`
-  refuses a second key), so the dispatcher writes the tail, before `close_invocation`, to
+- The tail is **persisted by science, not by the kernel**, as a **report sidecar**, the
+  one presentation-state exception review round 5 ruled (the ledger's close outcome is
+  exactly `{"done": …}` or `{"refusal": …}`, `beliefs.session.ledger.validated_outcome`
+  refuses a second key, and extending the kernel's effect protocol for commentary was
+  rejected). The dispatcher writes the tail, before `close_invocation`, to
   `operations_root / "tails" / <session id> / <invocation id>.json` (science already owns
-  `transport/` and `scratch/` under the operations root), atomically through
-  `sharing._write_json`, each block serialised as `{"kind": "keyvals", "title": …,
-  "pairs": [[k, v], …]}` or `{"kind": "finding", "text": …}` (`report.tail_to_json` /
-  `report.tail_from_json`). `_continue_write` and the replay of a closed invocation
-  rebuild `_pin_report(record.sharing)` plus the tail read from that file, so the cursor
-  digest matches; **an absent file is an empty tail**, which is what every 1a invocation
-  has, so their cursors and replays keep working. The tail is informational and
-  re-derivable by `show`; the ledger stays the truth for every effect.
-- On an audit failure the invocation still closes `done` first (as today), no tail file
-  is written, the `AuditViolation` propagates, and a retry renders the canonical pin
-  report.
+  `transport/` and `scratch/` under the operations root), through a new
+  `report.write_tail(path, blocks)`: directories created as needed, a temp file in the
+  target directory, write, `fsync` the file, `os.replace`, then **`fsync` the directory
+  and each directory it created**, so the entry survives a crash that the ledger's close
+  survives; each block serialised as `{"kind": "keyvals", "title": …, "pairs": [[k, v],
+  …]}` or `{"kind": "finding", "text": …}` (`report.tail_to_json` / `report.tail_from_json`).
+  `_continue_write` and the replay of a closed invocation rebuild
+  `_pin_report(record.sharing)` plus the tail read from that file, so the cursor digest
+  matches; **an absent file is an empty tail**, which is what every 1a invocation has, so
+  their cursors and replays keep working.
+- The tail is **historical commentary, not a cache**: it is the invocation's explanation
+  at the time it ran, and `show` explains the *current* state, which configuration or
+  retention changes move. Losing a sidecar loses that commentary and makes any cursor
+  issued over it stale (`stale-cursor`, re-run); the ledger-backed effects stay
+  recoverable and complete. Exact historical replay therefore needs the sidecar retained
+  beside the ledger.
+- **Failure contract.** The audit, the tail serialisation and `write_tail` run inside the
+  `try` whose `finally` closes the invocation `done` (today's shape for the audit alone):
+  a presentation failure of any kind, `AuditViolation` or an `OSError` from the sidecar
+  write, never leaves committed effects in an open invocation. On such a failure no (or a
+  partial-but-never-renamed) tail file exists, the error propagates, and a retry renders
+  the canonical pin report.
+
+Fault-injection tests in `test_dispatch_sharing.py`: `os.replace` raising inside
+`write_tail` → the invocation is closed `done`, the error propagates, no tail file
+exists, the retry renders pins only; `tail_to_json` raising → the same; a tail written
+and then deleted by hand → continuation refuses `stale-cursor` and replay renders pins
+only; a continuation through a **fresh `Dispatcher`** over the same operations root
+renders the same page as the first one.
 - Pagination is therefore one contract for every page: a page may end inside a pin block
   or inside the tail, and the cursor continues from the ledger-rebuilt report plus the
   persisted tail.
@@ -873,10 +899,15 @@ def test_publish_in_the_late_link_state_refuses_attribution_ambiguous_naming_the
 - [ ] **Step 1: Make the §6 amendments that do not describe retirement**, dated, in place,
   each marked *Amended <date> (milestone 1b plan, §<n>)* as 1a's were; and amend the
   framework design (`docs/specs/2026-08-31-command-framework-design.md` §4.4, the
-  `sharing` class) with Task 8's report contract: the dispatcher composes the complete
-  ledger-backed pin prefix, the handler supplies an informational tail that science
-  persists under the operations root (absent meaning empty), and every page continues
-  from the ledger-rebuilt report plus that tail.
+  `sharing` class, and its dispatch and continuation guarantees for write reports) with
+  Task 8's report contract: the dispatcher composes the complete ledger-backed pin prefix,
+  the handler supplies an informational tail that science persists as a report sidecar
+  under the operations root (absent meaning empty; historical commentary, whose loss
+  loses the commentary and stales its cursor while every effect stays recoverable), and
+  every page continues from the ledger-rebuilt report plus that tail. Amend `AGENTS.md`'s
+  rule that the sharing registry is "the one science-owned state" to name the report
+  sidecars as the second, presentation-only, science-owned state, with round 5's ruling
+  and its cost (exact historical replay needs the sidecar retained beside the ledger).
 - [ ] **Step 2: Run** `just gate`; Expected: `check` silent, suite passes. Note the test count on the task.
 - [ ] **Step 3: Commit** — `git commit -am "docs(specs): commons amendments for milestone 1b's overlap half"`
 
