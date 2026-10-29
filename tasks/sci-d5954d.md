@@ -1,15 +1,17 @@
 ---
 id: sci-d5954d
 title: "Task 9: `show` — supersession and retention"
-status: doing
+status: done
 priority: 1
 size: s
 complexity: mid
 process: direct
 owner: commons-1b
 created: 2026-10-29T01:50:49Z
-updated: 2026-10-29T07:03:32Z
+updated: 2026-10-29T07:03:43Z
 started: 2026-10-29T04:42:10Z
+completed: 2026-10-29T07:03:42Z
+closed: 2026-10-29T07:03:42Z
 depends: [sci-29a07b, sci-b47e33]
 parent: sci-9104fb
 tags: [commons]
@@ -59,3 +61,7 @@ step: "Task 9: `show` — supersession and retention"
 - 2026-10-29T07:03:20Z (commons-1b): retained: {"host":"titan","state":"kept","verification":"verified","next_owner":"task:sci-9104fb","cleanup_trigger":"After parent fresh scoped review and approved integration, inspect retained evidence and follow worktree removal checks","kind":"evidence","path":".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/final-fix-1-red.log","purpose":"Task 9 final whole-branch correction round 1 report or RED/GREEN, fast, full-gate and commit evidence for controller scoped review","sha256":"0de47be118c609569bd8b0071d55d2008797e00e420014a0d77c8f4dde2d42ec"}
 - 2026-10-29T07:03:21Z (commons-1b): retained: {"host":"titan","state":"kept","verification":"verified","next_owner":"task:sci-9104fb","cleanup_trigger":"After parent fresh scoped review and approved integration, inspect retained evidence and follow worktree removal checks","kind":"worktree","path":".worktrees/commons-1b","purpose":"Existing locked worktree with correction fac6b909 for parent fresh scoped review and phase-one integration"}
 - 2026-10-29T07:03:32Z (commons-1b): Final whole-branch correction round 1 addresses Important 1 and 2 in fac6b909: equal verification copies aggregate through kernel content identity with per-holder acceptance; registry roots filter by kernel admission/liveness before manifest reads. RED/GREEN and full report final-fix-1-report.md; focused 88 passed +1 expected xfail; fast 78 passed +1 expected xfail; normal just gate 1053 passed +1 expected xfail /1054 collected, 175.00s, exit 0. No duplicate parent impl review note, no Minor 3 or retirement changes; parent sci-9104fb owns fresh scoped review and retained worktree/evidence.
+- 2026-10-29T07:03:42Z (commons-1b): done
+  provenance: {"harness_session":"codex:01a18661-af98-78f1-bb12-72888d43707e","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-29T07:03:43Z (commons-1b): Corrected final review Important 1 and 2 in fac6b909; focused 88 passed +1 expected xfail, fast 78 passed +1 expected xfail, normal full gate 1053 passed +1 expected xfail /1054 collected, exit 0. Parent sci-9104fb owns fresh scoped review and retained worktree/evidence; Minor 3 and retirement unchanged.
+  provenance: {"harness_session":"codex:01a18661-af98-78f1-bb12-72888d43707e","harness_session_source":"CODEX_THREAD_ID"}
