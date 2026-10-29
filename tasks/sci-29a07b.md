@@ -8,7 +8,7 @@ complexity: high
 process: direct
 owner: commons-1b
 created: 2026-10-29T01:50:44Z
-updated: 2026-10-29T03:44:40Z
+updated: 2026-10-29T03:45:15Z
 started: 2026-10-29T03:29:41Z
 depends: []
 parent: sci-9104fb
@@ -40,3 +40,4 @@ step: "Task 6: `supersession.py`"
 - 2026-10-29T03:43:40Z (commons-1b): review: impl round 2 — verdict: revise; findings: Important 1; reviewer: codex/gpt-6-astra
 - 2026-10-29T03:44:40Z (commons-1b): resumed
   provenance: {"harness_session":"codex:01a185b3-ffbd-7501-8f8a-9a3251cf92f4","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-29T03:45:15Z (commons-1b): Review correction round 1: verified impl round 2 note exists. Extracted shared read-only sharing_lines into sharing.py, with replay consuming it and supersession importing the same reader. Pure extraction; existing ordering, unreadable-ledger and replay tests cover it; no new behavior or redundant re-export test.
