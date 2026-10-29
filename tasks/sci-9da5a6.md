@@ -1,17 +1,15 @@
 ---
 id: sci-9da5a6
 title: "Task 14: The retirement gates (blocked on Task 13)"
-status: done
+status: todo
 priority: 1
 size: m
 complexity: high
 process: direct
 owner: commons-1b
 created: 2026-10-29T01:51:02Z
-updated: 2026-10-29T15:21:18Z
+updated: 2026-10-29T15:49:06Z
 started: 2026-10-29T14:48:47Z
-completed: 2026-10-29T15:21:18Z
-closed: 2026-10-29T15:21:18Z
 depends: [sci-9c0bba]
 parent: sci-9104fb
 tags: [commons]
