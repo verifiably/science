@@ -1,14 +1,14 @@
 ---
 id: sci-9da5a6
 title: "Task 14: The retirement gates (blocked on Task 13)"
-status: todo
+status: doing
 priority: 1
 size: m
 complexity: high
 process: direct
 owner: commons-1b
 created: 2026-10-29T01:51:02Z
-updated: 2026-10-29T15:49:06Z
+updated: 2026-10-29T15:49:07Z
 started: 2026-10-29T14:48:47Z
 depends: [sci-9c0bba]
 parent: sci-9104fb
@@ -36,4 +36,6 @@ step: "Task 14: The retirement gates (blocked on Task 13)"
 - 2026-10-29T15:21:18Z (commons-1b): done
   provenance: {"harness_session":"claude-code:e9952dfd-ee2b-47b3-84ef-d176d9d3cc57","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-29T15:21:18Z (commons-1b): Retirement gates of design 5.9/5.7 landed at 320f9e3 (tests only, no source defect): spec-drop, spec-only, late-link both orders then P2, retry (cited show test), post-retirement sibling, chain-retired, requirement-before-sweep, chain retention by keep and by verification, configured keep, stale config, write guards, unkept retirement. Focused 94 passed; just test-fast 1069 passed 305s; review accept, 5 minors deferred in the plan ledger.
+  provenance: {"harness_session":"claude-code:e9952dfd-ee2b-47b3-84ef-d176d9d3cc57","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-29T15:49:07Z (commons-1b): resumed
   provenance: {"harness_session":"claude-code:e9952dfd-ee2b-47b3-84ef-d176d9d3cc57","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
