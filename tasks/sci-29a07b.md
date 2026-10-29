@@ -8,7 +8,7 @@ complexity: high
 process: direct
 owner: commons-1b
 created: 2026-10-29T01:50:44Z
-updated: 2026-10-29T03:39:41Z
+updated: 2026-10-29T03:39:56Z
 started: 2026-10-29T03:29:41Z
 depends: []
 parent: sci-9104fb
@@ -28,3 +28,4 @@ step: "Task 6: `supersession.py`"
 - 2026-10-29T03:33:16Z (commons-1b): Scope: extend MarkerFields destination; new supersession helpers and focused tests only. Existing marker parser is the sole constructor, and acceptance/publish/adopt readers keep their interfaces. RED just test-one tests/test_supersession.py -v exits 2: module science.supersession missing (collection blocked before tests), as planned.
 - 2026-10-29T03:38:27Z (commons-1b): review: impl round 1 — verdict: accept; findings: none; reviewer: codex/gpt-6.1-sol
 - 2026-10-29T03:39:41Z (commons-1b): GREEN: just test-one tests/test_supersession.py -v — 23 passed in 8.23s. just xdist="-n 1 --dist worksteal" test-fast — 102 passed in 261.11s, exit 0. tasks check, git diff --check and pre-commit passed. Implementation 77d4736; controller owns independent review.
+- 2026-10-29T03:39:56Z (commons-1b): retained: {"host":"titan","kind":"worktree","path":".worktrees/commons-1b","state":"kept","verification":"verified","purpose":"Task 6 implementation committed; milestone execution and independent review continue","next_owner":"task:sci-9104fb","cleanup_trigger":"After milestone integration, inspect all retained evidence and run worktree removal checks"}
