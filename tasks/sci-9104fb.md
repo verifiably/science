@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: main
 created: 2026-10-01T02:21:10Z
-updated: 2026-10-29T07:09:26Z
+updated: 2026-10-29T07:09:43Z
 started: 2026-10-28T20:03:15Z
 depends: [sci-13050a, beliefs-81367e, beliefs-a989fb]
 tags: [commons]
@@ -116,3 +116,5 @@ Spec §12 part 1b: A binds B, adopts B's publication; A publishes an update drop
 - 2026-10-29T07:08:37Z (main): attached: commons-1b-overlap-fix-review.md (3221 bytes): Fresh scoped review accepts both corrective fixes with no new findings; full gate 1053 passed and one expected retirement xfail
 - 2026-10-29T07:09:25Z (main): retained: {"host": "titan", "kind": "worktree", "path": ".worktrees/commons-1b", "state": "kept", "verification": "verified", "purpose": "Retain branch commons-1b after the overlap local merge for Tasks 13\u201315 once the scoped retirement door lands", "next_owner": "task:sci-9104fb", "cleanup_trigger": "After retirement-tail integration, inspect ignored files, preserve required evidence and run removal checks; not before"}
 - 2026-10-29T07:09:26Z (main): retained: {"host": "titan", "kind": "evidence", "path": ".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b", "state": "kept", "verification": "verified", "purpose": "Retain complete overlap implementation, test logs, task reviews, final correction evidence and rulings for retirement-tail resumption", "next_owner": "task:sci-9104fb", "cleanup_trigger": "At retirement-tail resumption verify this manifest; after final milestone integration attach or preserve needed evidence before workspace removal", "manifest": ".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/overlap-evidence-manifest.json", "sha256": "0e4007fecc305a42082bb0090912d6d39936bb55e066a483d9d1bfd7c4f3f5e2"}
+- 2026-10-29T07:09:43Z (main): parked (waiting on agent, dependency): After beliefs-a989fb lands, an agent resumes in .worktrees/commons-1b: verify the retained overlap-evidence-manifest.json, revise Tasks 13–15 interfaces against the merged kernel design, then tasks start sci-9c0bba and execute the retirement tail with its tests and fresh whole-branch review before a second local merge. Overlap Tasks 1–12 are already merged locally at b07e761; no work or checks remain running. Retained ledger attachments record both deferred minors and all rulings.
+  provenance: {"harness_session":"codex:01a1855d-6c10-77a2-82b3-d0457ea936da","harness_session_source":"CODEX_THREAD_ID"}
