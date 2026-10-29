@@ -65,6 +65,15 @@ vocabulary that lets a claim say what disease it is about.
 - Open milestone follow-ups that shape any new question: sci-c5872f (closure clauses
   never select their anchor), sci-2a3f0a (only a project can be published),
   sci-8e2cd7 (no command renders a view's selection).
+- **The chosen program (Keith, 2026-10-29): health via post-acute infection.** The
+  predecessor's plan (`proto/projects/health/processes/post-acute-infection/README.md`)
+  is a literature-grounded model of post-acute infection syndromes as failed recovery
+  of homeostasis, testing whether long COVID, ME/CFS, post-treatment Lyme disease,
+  post-dengue and post-Q-fever fatigue share a pathophysiology; its decision gates hold
+  computational analysis until the literature map names measurable state variables.
+  Its unit of analysis is a family of disease labels, so the disease vocabulary is the
+  first need, and option 3's tissue-level TPM estimand (a GTEx question) is not
+  obviously that program's first question.
 
 ## Alternatives
 
@@ -77,25 +86,29 @@ vocabulary that lets a claim say what disease it is about.
    estimands, disease still distinguished by `closure` and `kinds` as §6.3 allows. It
    lets the tissue question be asked but leaves "beyond myeloma" unrepresentable, so
    the health view stays coarse.
-3. **Defer until the next program is chosen** (current lean): the disease vocabulary
-   is shared infrastructure for health, cancer and a breast-cancer program alike, so
-   its binding is justified by whichever program comes next, and the contract's
-   estimands depend on that program's first question. A bounded research task sizes
-   the beliefs-side cost now so the user's choice of program is informed.
+3. **Defer until the next program is chosen.** Retired 2026-10-29: the program is
+   chosen (post-acute infection). The choice is now between 1 and 2 for that program,
+   with the lean on the vocabulary first: a post-acute-infection question is about a
+   family of disease labels before it is about a measured estimand, so an interim
+   contract without a vocabulary (2) buys less there than it would for a tissue
+   question. sci-ad7335 sizes both and recommends.
 
 ## Unanswered questions
 
-- Which program is next after the milestone: health (post-acute infection, the
-  predecessor's largest health program), cancer mechanisms, or the breast-cancer
-  candidate (sci-861d8f)? The user; projects design §9.3 leaves it to them.
-- Does the first health question stay option 3's GTEx co-expression claim, or does the
-  chosen program bring a different first question? The user, once the program is chosen.
-- Can a corpus-local contract declare tissue levels and a TPM measure as its estimand,
-  and what does a MONDO or EFO binding cost in the biology pack? Research: sci-ad7335
-  (filed by this pass; see Proposed decomposition).
-- Where would a GTEx-anchored dataset be held: under a new workspace project like the
-  mm program, or by a science command once sci-20aee0 lands? Follows from the program
-  choice and sci-20aee0's outcome.
+- Answered 2026-10-29 by Keith: the next program is health via post-acute infection
+  (the other candidates were cancer mechanisms and the breast-cancer idea sci-861d8f,
+  which keeps its own wait).
+- What is the post-acute-infection program's first operationalizable question, and what
+  does it need typed? The predecessor plan's decision gates say computational analysis
+  waits on a literature map naming measurable state variables, so the first question
+  may be a cross-syndrome mechanism claim rather than a cohort measurement. sci-ad7335
+  names one candidate; the user decides it.
+- Can a corpus-local contract carry the estimands that question needs, and what does a
+  MONDO or EFO binding cost in the biology pack? Research: sci-ad7335 (filed by this
+  pass; see Proposed decomposition).
+- Where would the program's datasets be held: under a new workspace project like the
+  mm program, or by a science command once sci-20aee0 lands? Follows from the first
+  question and sci-20aee0's outcome.
 - Does the term-clause amendment (sci-538142) land before the health contract is
   designed? Its ruling decides what a health contract's vocabulary selects.
 
@@ -103,10 +116,11 @@ vocabulary that lets a claim say what disease it is about.
 
 - Goal: sci-c4d587 "Health program: the first real question and its contract"
   (todo, P2, source this brief). Children:
-  - sci-036920 (this idea; stays `briefed` until the research below and the user's
-    program choice).
-  - sci-ad7335 (research): what a health contract needs from beliefs, the estimand
-    shape and the disease-vocabulary admission route. Wakes sci-036920.
+  - sci-036920 (this idea; stays `briefed` until the research below reports; the
+    program choice landed 2026-10-29).
+  - sci-ad7335 (research): what a health contract needs from beliefs for the
+    post-acute-infection program, the estimand shape and the disease-vocabulary
+    admission route, with one candidate first question. Wakes sci-036920.
 - Not filed: a design task. One sizing question does not need a design task; a
-  `Design the health contract from the brief` task is filed only after the user
-  chooses the program and the research reports.
+  `Design the health contract from the brief` task is filed only after the research
+  reports and the user settles the first question.
