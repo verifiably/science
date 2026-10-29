@@ -505,7 +505,7 @@ def load_contract_document(path: Path, base) -> tuple[DomainContract, OperatorPl
     return contract, plan
 ```
 
-Check the exception name: `grep -n "^class MalformedContract" ~/d/beliefs/python/src/beliefs/errors.py`; if it lives elsewhere, import from there. `DomainContract.namespace` and `.term(name)` are what the driver's `vocabulary.py` used.
+Check the exception name: `grep -n "^class MalformedContract" <beliefs checkout>/python/src/beliefs/errors.py`; if it lives elsewhere, import from there. `DomainContract.namespace` and `.term(name)` are what the driver's `vocabulary.py` used.
 
 - [x] **Step 5: Extend `science/config.py`**
 
@@ -735,7 +735,7 @@ def test_epoch_identity_is_the_no_epoch_value_without_one(certified_work):
     assert ctx.epoch_identity() == "no-epoch-published"
 ```
 
-Check `ResolutionSnapshot.resolve`'s name and return with `grep -n "def resolve\|class TermOutcome" -A 3 ~/d/beliefs/python/src/beliefs/resolution.py`; adjust the two assertions to the real method (it may be `outcome(binding, term)`).
+Check `ResolutionSnapshot.resolve`'s name and return with `grep -n "def resolve\|class TermOutcome" -A 3 <beliefs checkout>/python/src/beliefs/resolution.py`; adjust the two assertions to the real method (it may be `outcome(binding, term)`).
 
 - [x] **Step 2: Grow the helpers** (`python/tests/helpers/world.py`)
 
@@ -1126,7 +1126,7 @@ def is_held(view: ReadView, world, corpus_id: str, node) -> bool:
     return isinstance(admission_state(declaration, answer.observations), Held)
 ```
 
-Two names to pin at implementation: `beliefs.root.log_seam` (the session module imports it as `log_seam`; confirm with `grep -n "^def log_seam\|^def _log_seam" ~/d/beliefs/python/src/beliefs/root.py`), and whether `derive_holdings` runs under the read-only world the read context opens (it captures and resolves the held rule; it should require no act family — if it does, that is a finding for `beliefs-5fe2e3`).
+Two names to pin at implementation: `beliefs.root.log_seam` (the session module imports it as `log_seam`; confirm with `grep -n "^def log_seam\|^def _log_seam" <beliefs checkout>/python/src/beliefs/root.py`), and whether `derive_holdings` runs under the read-only world the read context opens (it captures and resolves the held rule; it should require no act family — if it does, that is a finding for `beliefs-5fe2e3`).
 
 - [x] **Step 6: Write `science/closure.py`**
 
@@ -1440,7 +1440,7 @@ def test_attested_by_is_the_session_actor(rig, tmp_path):
 In `helpers/world.py`'s `open_rig` (Task 3), the session call becomes
 `open_attended_session(cfg.world, cfg.operations_root, profile=cfg.profile, store_root=cfg.store_root)`.
 
-Check the exact accessor for a node's facets (`node.facets[...]` or `stored._facet(node, name)`) with `grep -n "def is_empirical_observation" -B2 -A3 ~/d/beliefs/python/src/beliefs/stored.py` and use the public one.
+Check the exact accessor for a node's facets (`node.facets[...]` or `stored._facet(node, name)`) with `grep -n "def is_empirical_observation" -B2 -A3 <beliefs checkout>/python/src/beliefs/stored.py` and use the public one.
 
 - [x] **Step 3: Run to verify they fail**
 
