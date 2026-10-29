@@ -6,9 +6,9 @@ priority: 2
 size: s
 complexity: mid
 process: direct
-owner: main
+owner: fix/sci-4e8adb
 created: 2026-10-22T19:07:45Z
-updated: 2026-10-29T20:26:47Z
+updated: 2026-10-29T20:27:34Z
 started: 2026-10-29T20:26:47Z
 depends: []
 tags: []
@@ -28,4 +28,6 @@ Reported files:
 ## Notes
 
 - 2026-10-29T20:26:47Z (main): started
+  provenance: {"harness_session":"claude-code:0abf3f61-62e6-4a09-a944-9063cc887bf3","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-29T20:27:34Z (fix/sci-4e8adb): resumed
   provenance: {"harness_session":"claude-code:0abf3f61-62e6-4a09-a944-9063cc887bf3","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
