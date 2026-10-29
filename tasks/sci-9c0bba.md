@@ -8,7 +8,7 @@ complexity: high
 process: direct
 owner: commons-1b
 created: 2026-10-29T01:50:59Z
-updated: 2026-10-29T14:24:20Z
+updated: 2026-10-29T14:24:22Z
 started: 2026-10-29T13:50:58Z
 depends: [beliefs-a989fb]
 parent: sci-9104fb
@@ -37,3 +37,4 @@ step: "Task 13: The retirement door and reconcile (blocked on `beliefs-a989fb`)"
 - 2026-10-29T14:24:03Z (commons-1b): Task 13 implementation committed bb1fad59b28dc48d76da891133d80a92d76fe2bd; focused GREEN 7 passed in 75.34s; just test-fast exit 0, 87 passed in 731.70s (1 host-budget worker); diff checks, tasks check and pre-commit hook passed. Report .worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-13-report.md. Controller performs independent impl review round 2 before closure; Tasks 14 and 15 remain required before integration. No push/merge; clean tracked tree; host-load reports nothing left running.
 - 2026-10-29T14:24:18Z (commons-1b): retained: {"host":"titan","kind":"worktree","path":".worktrees/commons-1b","state":"kept","verification":"verified","purpose":"Task 13 code bb1fad5 awaits controller review; retained retirement tail continues through Tasks 14 and 15","next_owner":"task:sci-9104fb","cleanup_trigger":"Controller finishes retirement tail reviews and integration, then inspects retention and removal gates"}
 - 2026-10-29T14:24:20Z (commons-1b): retained: {"host":"titan","kind":"scratch","path":".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b","state":"kept","verification":"verified","purpose":"Task 13 RED/GREEN logs, implementation report and inherited plan/review evidence for controller review; 149 files checkpointed","next_owner":"task:sci-9104fb","cleanup_trigger":"Controller refreshes checkpoint after independent review and finishes retirement-tail handoff before retention disposition","manifest":".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-13-evidence-manifest.json","sha256":"4cfa90c1a38f5772ddba086961a84e2a0a4743fa31939003632e9762385b0a5b"}
+- 2026-10-29T14:24:22Z (commons-1b): retained: {"host":"titan","kind":"evidence","path":".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-13-report.md","state":"kept","verification":"verified","purpose":"Full Task 13 implementation/TDD report with target-state distinction and verification limits","next_owner":"task:sci-9104fb","cleanup_trigger":"Controller persists review, completes Tasks 14 and 15, and rechecks retention after retirement-tail integration","sha256":"199c90a24424725d5d776a758ef944b9a58d48e90140c1534974d11f58238c40"}
