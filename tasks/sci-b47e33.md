@@ -8,7 +8,7 @@ complexity: high
 process: direct
 owner: commons-1b
 created: 2026-10-29T01:50:46Z
-updated: 2026-10-29T04:03:13Z
+updated: 2026-10-29T04:03:15Z
 started: 2026-10-29T03:52:58Z
 depends: []
 parent: sci-9104fb
@@ -28,3 +28,4 @@ step: "Task 7: `retention.py`"
 - 2026-10-29T04:00:24Z (commons-1b): Reused hydrated locked .worktrees/commons-1b and parent sci-9104fb baseline: just test collected 898, 897 passed/1 failed; obsolete duplicate-location expectation corrected by Task 1 as recorded in progress.md. Scope is retention.py and test_retention.py only; command wiring remains Tasks 8/9. Kernel field inspection requires stored.typed_ref for bare spec/run identities. Correction node/route targets use stored.RETRACTS beside closure_missing because retracts is not a WORLD_RELATIONS member; confirmed by focused RED and controller. Publication-fragment tests use test-only nodes Corpus writes with kernel-built stamped nodes, since CorpusWriter.add authoring checks cannot express a spec whose target is held in another subset.
 - 2026-10-29T04:01:09Z (commons-1b): review: impl round 1 — verdict: accept; findings: none; reviewer: codex/gpt-6.1-sol
 - 2026-10-29T04:03:13Z (commons-1b): retained: {"host":"titan","kind":"worktree","path":".worktrees/commons-1b","purpose":"Retain the shared approved-plan branch for fresh review and remaining Tasks 8–15","state":"kept","verification":"verified","next_owner":"task:sci-9104fb","cleanup_trigger":"After branch review and integration the parent reassesses evidence preservation and worktree removal checks"}
+- 2026-10-29T04:03:15Z (commons-1b): retained: {"host":"titan","kind":"evidence","path":".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-7-report.md","sha256":"ce1ee3419e9a9fca8f2201047435db7738daac2883213d67728cd81e02a88ec2","purpose":"Task 7 review and verification evidence for the parent plan","state":"kept","verification":"verified","next_owner":"task:sci-9104fb","cleanup_trigger":"After branch review and integration the parent reassesses evidence preservation and worktree removal checks"}
