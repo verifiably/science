@@ -1,15 +1,17 @@
 ---
 id: sci-f8a0cf
 title: "Task 10: `publish` and `publish-preview` — the retired-corpus guard and the ambiguous-attribution detail"
-status: doing
+status: done
 priority: 1
 size: s
 complexity: mid
 process: direct
 owner: commons-1b
 created: 2026-10-29T01:50:51Z
-updated: 2026-10-29T05:18:54Z
+updated: 2026-10-29T05:19:13Z
 started: 2026-10-29T05:02:54Z
+completed: 2026-10-29T05:19:13Z
+closed: 2026-10-29T05:19:13Z
 depends: []
 parent: sci-9104fb
 tags: [commons]
@@ -34,3 +36,7 @@ step: "Task 10: `publish` and `publish-preview` — the retired-corpus guard and
 - 2026-10-29T05:18:51Z (commons-1b): retained: {"host":"titan","state":"kept","verification":"verified","next_owner":"task:sci-9104fb","cleanup_trigger":"After independent review and planned integration, inspect evidence and run the required worktree removal checks","kind":"evidence","path":".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-10-green.log","purpose":"Task 10 implementation report or RED/GREEN/fast/commit evidence for independent review","sha256":"0627bbf9c5760a6e8c7afd1e8f28516035233ad94e2151b973e737991b2ec489"}
 - 2026-10-29T05:18:52Z (commons-1b): retained: {"host":"titan","state":"kept","verification":"verified","next_owner":"task:sci-9104fb","cleanup_trigger":"After independent review and planned integration, inspect evidence and run the required worktree removal checks","kind":"evidence","path":".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-10-red.log","purpose":"Task 10 implementation report or RED/GREEN/fast/commit evidence for independent review","sha256":"428d6b86e7de19fe6842542c4b2c7945605ace6d2f49f095052e57c373822b5d"}
 - 2026-10-29T05:18:54Z (commons-1b): retained: {"host":"titan","state":"kept","verification":"verified","next_owner":"task:sci-9104fb","cleanup_trigger":"After independent review and planned integration, inspect evidence and run the required worktree removal checks","kind":"evidence","path":".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-10-report.md","purpose":"Task 10 implementation report or RED/GREEN/fast/commit evidence for independent review","sha256":"d596655d2d48de58241ed057c1720cd915189feaf7a3bdb0a242f05765df50df"}
+- 2026-10-29T05:19:13Z (commons-1b): done
+  provenance: {"harness_session":"codex:01a18609-985e-78b1-87f9-3fb87a45222b","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-29T05:19:13Z (commons-1b): Implemented in 1773f7b: shared nonlive-session guard and exact-pair ambiguous-attribution remedies on publish/preview, including resume. Focused 31 passed/2 strict xfails; required fast 118 passed/2 strict xfails. Task 11 owns the late_link fixture gates; controller owns fresh review and retained worktree/evidence under sci-9104fb. No push, merge, host change or surviving session process.
+  provenance: {"harness_session":"codex:01a18609-985e-78b1-87f9-3fb87a45222b","harness_session_source":"CODEX_THREAD_ID"}
