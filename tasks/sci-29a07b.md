@@ -8,7 +8,7 @@ complexity: high
 process: direct
 owner: commons-1b
 created: 2026-10-29T01:50:44Z
-updated: 2026-10-29T03:49:56Z
+updated: 2026-10-29T03:50:11Z
 started: 2026-10-29T03:29:41Z
 depends: []
 parent: sci-9104fb
@@ -42,3 +42,4 @@ step: "Task 6: `supersession.py`"
   provenance: {"harness_session":"codex:01a185b3-ffbd-7501-8f8a-9a3251cf92f4","harness_session_source":"CODEX_THREAD_ID"}
 - 2026-10-29T03:45:15Z (commons-1b): Review correction round 1: verified impl round 2 note exists. Extracted shared read-only sharing_lines into sharing.py, with replay consuming it and supersession importing the same reader. Pure extraction; existing ordering, unreadable-ledger and replay tests cover it; no new behavior or redundant re-export test.
 - 2026-10-29T03:49:56Z (commons-1b): Correction round 1 complete in b5688de: one shared ordered sharing-line reader now serves replay and supersession. 45 focused tests passed in 8.03s; 129 serial affected-suite tests passed in 239.60s, exit 0; checks and pre-commit passed. No new behavior or tests; scoped re-review round 3 is controller-owned.
+- 2026-10-29T03:50:11Z (commons-1b): retained: {"host":"titan","kind":"worktree","path":".worktrees/commons-1b","state":"kept","verification":"verified","purpose":"Task 6 corrective round 1 committed; controller scoped re-review and milestone execution continue","next_owner":"task:sci-9104fb","cleanup_trigger":"After milestone integration, inspect all retained evidence and run worktree removal checks"}
