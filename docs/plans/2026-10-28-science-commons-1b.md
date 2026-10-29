@@ -104,11 +104,10 @@ remaining strict xfail is the actual-retirement gate, and sci-9104fb stays open.
 - Reads by root: everything `adopt` compares, classifies or walks is read from the
   sharing registry's roots and the configured roots by `ReadView.opened_at`, never from
   `ctx.mounts()`, which is fixed at session open (§5.1, §5.7 step 3).
-- The kernel door `ScopedWriter.retire` does not exist. Tasks 13–15 state the names this
-  plan assumes; when `beliefs-a989fb` lands, their Interfaces blocks and code are revised
-  together against the merged kernel design before Task 13 starts, never the 1b design. A
-  task that reaches the door before it exists parks `--reason dependency` naming
-  `beliefs-a989fb`.
+- The kernel door landed with `beliefs-a989fb` (beliefs main `f274822`). The retirement
+  tail uses `ScopedWriter.retire(root, observers, *, evidence)` against the merged
+  `beliefs/docs/superpowers/specs/2026-10-29-publication-retirement-door-design.md` §6;
+  Task 13's interface amendment below replaces the original assumed signature.
 - Test subprocess environments are built key by key (`helpers.commons.GIT_ENV`).
 - Dates: the plan is written 2026-10-28; documents amended by Task 12 and Task 15 carry
   the date of their commit.
@@ -947,13 +946,24 @@ def test_publish_in_the_late_link_state_refuses_attribution_ambiguous_naming_the
 - Test: `python/tests/test_cmd_adopt.py`
 
 **Interfaces:**
-- Consumes (assumed; revise with the merged kernel design): `ScopedWriter.retire(corpus_id:
-  str, *, evidence: SharingEvidence) -> SharingLine`, ledgering `retired`, idempotent when
-  the corpus already carries a `retired` status under the session's actor; `World.status`.
+- Amended 2026-10-29 against beliefs main `f274822` and its retirement-door design §6.
+  Consumes `ScopedWriter.retire(root: Path, observers: ObserverSet, *, evidence:
+  SharingEvidence) -> SharingLine`: pass `registry.root_for(cid)`, observers built from
+  `registry.head_artifact_for(cid)`, and the pin's evidence, as admission does. The
+  transition is always `retired`; verdict is `retired` or `already-retired`. Recovery
+  accepts an existing retirement by any actor without writing a second status record.
+  A departed corpus refuses `StatusTerminal`; a non-self-replica admission refuses
+  `StatusTargetUnknown`. Reconcile filters departed corpora before calling the door.
+  `apply_line` folds either verdict by transition, without a new registry schema.
 - Produces: step 4's empty-`required` branch calls the door, records the line, writes the
   pin `retired`, emits the `retired` pin block with the `keep` list and the reopen remedy;
   step 1 calls the door for every `mounted` pin whose status is known and not live and not
   `departed`; the pending-door Finding is removed.
+
+The connected existing expectations in `test_cmd_show.py` and `test_commons_1b.py`
+change with the unkept fixture's behavior; the existing two-retirement xfail becomes
+an active assertion. Task 14 still owns the additional retirement gates. Task 15
+documents this shipped signature and cross-actor recovery, not the assumed ID-only API.
 
 - [ ] Steps: failing tests (`test_an_unrequired_predecessor_is_retired_through_the_door_and_its_line_folds`,
   `test_reconcile_ledgers_a_retirement_the_kernel_committed_without_a_line`,
