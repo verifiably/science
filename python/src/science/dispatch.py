@@ -15,7 +15,7 @@ from science.canonical import canonicalize, input_digest
 from science.cursor import ReadCursor, WriteCursor, decode, encode
 from science.refusal import INVOCATION_ID_RE, Refusal, Refused, mint_token
 from science.render import render_page, report_digest
-from science.report import Report, SelectionBlock, pin_block, serialize_block
+from science.report import Report, SelectionBlock, pin_block, read_tail, serialize_block, write_tail
 from science.schema import Declaration
 
 
@@ -345,12 +345,13 @@ class Dispatcher:
                 raise self._close_acted(iid, acted, self._sharing_acted(decl, "returned", acted))
             lines = self._session.invocation_sharing(iid)
             try:
-                audit_sharing_report(report, lines)
+                audit_sharing_report(report)
+                write_tail(self._ctx.config.operations_root, self._session.session_id, iid, report)
             finally:
                 # Close first in every case, as a write does: the lines are
                 # truth whether or not the report survives its audit.
                 self._session.close_invocation(iid, {"done": []})
-            return Outcome(self._render_write(decl.output_budget, self._pin_report(lines), iid, (0, 0)), iid)
+            return Outcome(self._render_write(decl.output_budget, self._pin_report(lines) + report, iid, (0, 0)), iid)
 
     @staticmethod
     def _sharing_acted(decl: Declaration, why: str, acted) -> str:
@@ -473,7 +474,8 @@ class Dispatcher:
                 Refusal(refusal["code"], refusal["message"], refusal.get("data", {})), iid
             )
         if decl.write_class.kind == "sharing":
-            report = self._pin_report(self._session.invocation_sharing(iid))
+            report = self._pin_report(self._session.invocation_sharing(iid)) + read_tail(
+                self._ctx.config.operations_root, self._session.session_id, iid)
         else:
             report = self._minted_report(outcome["done"])
         return self._render_write(decl.output_budget, report, iid, position)
@@ -507,7 +509,8 @@ class Dispatcher:
                     f"{command} closed done with no selection line for {cursor.invocation_id}")
             report = self._selection_report(record.selection)
         elif decl.write_class.kind == "sharing":
-            report = self._pin_report(record.sharing)
+            report = self._pin_report(record.sharing) + read_tail(
+                operations_root, cursor.session_id, cursor.invocation_id)
         else:
             report = self._minted_report(record.outcome["done"])
         if report_digest(report) != cursor.report_digest:

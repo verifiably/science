@@ -1,6 +1,10 @@
 """Typed report blocks: what handlers return instead of prose (spec §7.1)."""
 from __future__ import annotations
 
+import json
+import os
+import tempfile
+from pathlib import Path
 from dataclasses import dataclass
 
 
@@ -98,3 +102,64 @@ def serialize_block(block: Block) -> str:
                 lines.append("takes effect at the next session open")
             return "\n".join(lines) + "\n"
     raise TypeError(f"not a block: {block!r}")
+
+
+def tail_to_json(blocks: Report) -> list[dict]:
+    """The sharing tail contains presentation only, never ledger evidence."""
+    from science.render import audit_sharing_report
+    audit_sharing_report(blocks)
+    return [{"kind": "keyvals", "title": block.title, "pairs": [list(pair) for pair in block.pairs]}
+            if isinstance(block, KeyVals) else {"kind": "finding", "text": block.text} for block in blocks]
+
+
+def tail_from_json(raw: object) -> Report:
+    if type(raw) is not list:
+        raise ValueError("sharing tail must be a list")
+    blocks = []
+    for item in raw:
+        if type(item) is not dict:
+            raise ValueError("sharing tail block must be an object")
+        if set(item) == {"kind", "text"} and item["kind"] == "finding" and type(item["text"]) is str:
+            blocks.append(Finding(item["text"]))
+        elif (set(item) == {"kind", "title", "pairs"} and item["kind"] == "keyvals"
+              and type(item["title"]) is str and type(item["pairs"]) is list
+              and all(type(pair) is list and len(pair) == 2 and all(type(value) is str for value in pair)
+                      for pair in item["pairs"])):
+            blocks.append(KeyVals(item["title"], tuple(tuple(pair) for pair in item["pairs"])))
+        else:
+            raise ValueError("invalid sharing tail block")
+    return tuple(blocks)
+
+
+def write_tail(operations_root: Path, session_id: str, invocation_id: str, blocks: Report) -> None:
+    payload = json.dumps(tail_to_json(blocks), ensure_ascii=False).encode()
+    directory = operations_root / "tails" / session_id
+    directory.mkdir(parents=True, exist_ok=True)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=directory, delete=False) as stream:
+            temporary = Path(stream.name)
+            stream.write(payload)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, directory / f"{invocation_id}.json")
+        # Sync parents even after an earlier attempt left their entries behind.
+        for parent in (directory, directory.parent, operations_root):
+            fd = os.open(parent, os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                os.fsync(fd)
+            finally:
+                os.close(fd)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
+def read_tail(operations_root: Path, session_id: str, invocation_id: str) -> Report:
+    """Missing sidecars carry no historical commentary, including invocations before tails existed."""
+    path = operations_root / "tails" / session_id / f"{invocation_id}.json"
+    try:
+        payload = path.read_text()
+    except FileNotFoundError:
+        return ()
+    return tail_from_json(json.loads(payload))

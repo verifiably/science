@@ -451,3 +451,47 @@ def build_conflicting(work: Path) -> dict:
         d.invoke("provider-bind",
                  {"location": LOC_A2, "corpus_id": corpus_id, "world": installations.a.world.world_id})
     return {"installations": value, "corpus_id": corpus_id}
+
+
+LOC_A3, LOC_C = "https://remote.test/a3", "https://remote.test/c"
+
+
+def build_content_conflict(work: Path) -> dict:
+    """A revises its published proposition in place; B still holds the earlier content."""
+    value = build_reopened(work)
+    installations = Installations.of(value)
+    a = installations.a
+    writer = open_corpus(a.write_root, authority=FIXTURE_AUTHORITY, profile=a.profile)
+    proposition = writer.read_view.get(a_identity(a)["proposition"])
+    writer.revise(proposition.model_copy(update={"title": "Revised proposition prose"}))
+    cid = publish_again(installations, LOC_A3)
+    with with_remotes(installations), open_rig(installations.b, ("provider-bind",)) as (d, _):
+        d.invoke("provider-bind", {"location": LOC_A3, "corpus_id": cid, "world": a.world.world_id})
+    return {"installations": value, "corpus_id": cid}
+
+
+def build_uid_corruption(work: Path) -> dict:
+    """C redirects a source's identifier after B adopted its first publication."""
+    from beliefs import stored
+    from science.world_belief import publish_session_epoch
+
+    value = build_reopened(work)
+    installations = Installations.of(value)
+    c = build_installation(work, "c", hold_vocabulary=False)
+    writer = open_corpus(c.write_root, authority=FIXTURE_AUTHORITY, profile=c.profile)
+    source = writer.add(stored.source_node(title="A source", identifiers={"doi": "10.1234/original"}))
+    with open_rig(c, ("project",)) as (d, _):
+        d.invoke("project", {"name": "sources", "query": "version: science.view-query.v1\nclauses:\n  - all:\n      - kinds: [source]\n"})
+
+    def publish():
+        publish_session_epoch(c)
+        with with_remotes(installations), open_rig(c, ("publish",)) as (d, ctx):
+            text = d.invoke("publish", {"target": "sources", "to": LOC_C}).text
+            return binding_fields(ctx.write_view().get(binding_ref(text))).corpus_id
+
+    first = publish()
+    with with_remotes(installations), open_rig(installations.b, ("provider-bind", "adopt")) as (d, _):
+        d.invoke("provider-bind", {"location": LOC_C, "corpus_id": first, "world": c.world.world_id})
+        d.invoke("adopt", {"location": LOC_C, "corpus_id": first})
+    writer.correct_identifier(source.id, {"doi": "10.1234/corrected"}, grounds="corrected DOI")
+    return {"installations": value, "c": c, "corpus_id": publish(), "predecessor": first}

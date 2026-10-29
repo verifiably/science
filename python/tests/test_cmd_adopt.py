@@ -217,17 +217,21 @@ def test_adopt_a_second_time_refuses_already_adopted(adopted):
     assert _sharing_lines(adopted.b) == before
 
 
-def test_adopt_of_a_conflicting_candidate_refuses_before_admission(conflicting_publication):
+def test_an_equal_content_republication_passes_the_checklist_and_mounts(conflicting_publication):
     installations, cid2 = conflicting_publication
     ids = a_identity(installations.a, binding_destination=LOC_A)
     _adopt(installations, LOC_A, ids["corpus_id"])
-    r = refused(lambda: _adopt(installations, LOC_A2, cid2))
-    assert r.code == "adopt-conflict" and r.data["corpus"] == ids["corpus_id"]
-    assert r.data["reason"] == "overlap is milestone 1b (beliefs-81367e)"
-    assert {ids[key] for key in ("proposition", "dataset", "spec", "run", "assessment")} <= set(r.data["addresses"])
+    assert _states(_adopt(installations, LOC_A2, cid2).text) == ["fetched", "admitted", "mounted"]
     registry = SharingRegistry(installations.b.sharing_root)
-    assert registry.pin(cid2).state == "fetched" and registry.root_for(cid2).is_dir()
-    assert not _known(installations.b, cid2)
+    assert registry.pin(cid2).state == registry.pin(ids["corpus_id"]).state == "mounted"
+    assert _known(installations.b, cid2)
+
+
+def test_a_keep_entry_no_pin_records_is_a_finding(bound):
+    from dataclasses import replace
+    value = replace(bound, b=replace(bound.b, keep=(NOT_A_CORPUS,)))
+    text = _adopt(value, LOC_A, a_identity(value.a)["corpus_id"]).text
+    assert f"! keep entry {NOT_A_CORPUS}" in text and "no pin" in text
 
 
 def test_adopt_of_an_absent_corpus_writes_nothing(bound):
@@ -283,3 +287,222 @@ def test_the_reopened_fixture_mounts_the_adopted_corpus_under_an_epoch_covering_
     cid = a_identity(reopened.a)["corpus_id"]
     assert SharingRegistry(reopened.b.sharing_root).root_for(cid) in reopened.b.world.corpus_roots
     assert cid in dict(current_epoch(ReadContext.open(reopened.b).world).coverage)
+
+
+def test_an_unrequired_equal_successor_reports_retirement_pending(adopted):
+    cid1 = a_identity(adopted.a)["corpus_id"]
+    cid2 = publish_again(adopted, LOC_A)
+    text = _adopt(adopted, LOC_A, cid2).text
+    assert "retirement pending" in text and "beliefs-a989fb" in text and cid1 in text
+    assert _states(text) == ["fetched", "admitted", "mounted"]
+    assert SharingRegistry(adopted.b.sharing_root).pin(cid1).state == "mounted"
+
+
+def test_a_successor_reports_configuration_retention(adopted):
+    from dataclasses import replace
+    cid1 = a_identity(adopted.a)["corpus_id"]
+    cid2 = publish_again(adopted, LOC_A)
+    value = replace(adopted, b=replace(adopted.b, keep=(cid1,)))
+    text = _adopt(value, LOC_A, cid2).text
+    assert f"retention {cid1}:\n  kept: configuration" in text
+    assert "retirement pending" not in text
+
+
+def test_changed_configuration_refuses_before_pending_and_keeps_the_adoption(adopted):
+    from dataclasses import replace
+    cid2 = publish_again(adopted, LOC_A)
+    cfg = reopen(adopted.b)
+    path, _ = cfg.source
+    path.write_text(path.read_text() + "\n# changed after load\n")
+    value = replace(adopted, b=cfg)
+    refusal = refused(lambda: _adopt(value, LOC_A, cid2))
+    assert refusal.code == "config-stale" and refusal.data == {"path": str(path), "keep": []}
+    assert "restart the service and rerun adopt" in refusal.message and "adoption" in refusal.message
+    assert SharingRegistry(cfg.sharing_root).pin(cid2).state == "mounted"
+
+
+@pytest.fixture
+def content_conflict(certified_worker_work):
+    from helpers.commons import build_content_conflict
+    snap = snapshot(certified_worker_work, "commons-1b-content-conflict", build_content_conflict)
+    snap.restore()
+    return Installations.of(snap.value["installations"]), snap.value["corpus_id"]
+
+
+@pytest.fixture
+def uid_corruption(certified_worker_work):
+    from helpers.commons import build_uid_corruption
+    snap = snapshot(certified_worker_work, "commons-1b-uid-corruption", build_uid_corruption)
+    snap.restore()
+    return Installations.of(snap.value["installations"]), snap.value
+
+
+def test_a_differing_copy_refuses_adopt_conflict_content_and_stays_fetched(content_conflict):
+    from helpers.commons import LOC_A3
+    installations, cid = content_conflict
+    ids = a_identity(installations.a, binding_destination=LOC_A)
+    refusal = refused(lambda: _adopt(installations, LOC_A3, cid))
+    assert refusal.code == "adopt-conflict"
+    assert refusal.data == {"rule": "content", "addresses": [ids["proposition"]], "corpus": ids["corpus_id"]}
+    assert SharingRegistry(installations.b.sharing_root).pin(cid).state == "fetched"
+    assert not _known(installations.b, cid)
+
+
+def test_a_redirect_published_as_a_successor_refuses_uid_corruption(uid_corruption):
+    from helpers.commons import LOC_C
+    installations, value = uid_corruption
+    cid = value["corpus_id"]
+    refusal = refused(lambda: _adopt(installations, LOC_C, cid))
+    assert refusal.code == "adopt-conflict" and refusal.data["rule"] == "uid-corruption"
+    assert refusal.data["corpus"] == value["predecessor"] and len(refusal.data["addresses"]) == 2
+    assert SharingRegistry(installations.b.sharing_root).pin(cid).state == "fetched"
+    assert not _known(installations.b, cid)
+
+
+def test_first_adoption_is_trivially_resolved(bound):
+    from science.supersession import classify, groups, sharing_lines
+    cid = a_identity(bound.a)["corpus_id"]
+    _adopt(bound, LOC_A, cid)
+    (held,) = groups(SharingRegistry(bound.b.sharing_root), sharing_lines(bound.b.operations_root)).values()
+    outcome = classify(held)
+    assert outcome.kind == "resolved" and outcome.tip[0] == cid
+
+
+@pytest.mark.parametrize("held_predecessor", [True, False])
+def test_preflight_refuses_siblings_even_under_an_unheld_predecessor(monkeypatch, held_predecessor):
+    from beliefs.publication_arrival import DivergentPublication
+    from science.commands.adopt import _preflight
+    from test_supersession import held, kernel_result, line
+    p1, p2, p3 = held(1), held(2, 1), held(3, 1)
+    previous = (p1, p2) if held_predecessor else (p2,)
+    kernel_result(monkeypatch, (*previous, p3), DivergentPublication((("p2", "m2"), ("p3", "m3"))))
+    r = refused(lambda: _preflight(previous, p3, tuple(map(line, previous))))
+    assert r.code == "divergent-publication" and r.data == {"tips": [["p2", "m2"], ["p3", "m3"]]}
+    assert "p2" in r.message and "p3" in r.message
+
+
+@pytest.mark.parametrize("late_predecessor", [True, False])
+def test_preflight_refuses_a_chain_through_a_retired_intermediate(monkeypatch, late_predecessor):
+    from beliefs.publication_arrival import CurrentPublication
+    from science.commands.adopt import _preflight
+    from test_supersession import held, kernel_result, line
+    p1, p2, p3 = held(1), held(2, 1, state="retired"), held(3, 2)
+    candidate, previous = (p1, (p2, p3)) if late_predecessor else (p3, (p1, p2))
+    kernel_result(monkeypatch, (*previous, candidate), CurrentPublication("p3", "m3"))
+    r = refused(lambda: _preflight(previous, candidate, tuple(map(line, previous))))
+    assert r.code == "adopt-conflict" and r.data == {"rule": "chain-retired", "addresses": [], "corpus": "p2"}
+
+
+@pytest.mark.xfail(strict=True, reason="Task 11 fixture: updated returns Installations with P3 in A's binding")
+def test_a_successor_keeps_a_predecessor_b_depends_on_and_reports_why(request):
+    updated = request.getfixturevalue("updated")
+    registry = SharingRegistry(updated.b.sharing_root)
+    (predecessor,) = [pin for pin in registry.pins() if pin.world == updated.a.world.world_id and pin.state == "mounted"]
+    ids = a_identity(updated.a, binding_destination=LOC_A)
+    text = _adopt(updated, LOC_A, ids["corpus_id"]).text
+    assert f"retention {predecessor.corpus_id}:" in text
+    assert f"dependency ({ids['assessment']})" in text
+    assert registry.pin(predecessor.corpus_id).state == "mounted"
+
+
+@pytest.mark.xfail(strict=True, reason="Task 11 fixture: updated_unkept returns Installations with P3 in A's binding")
+def test_unkept_dropped_assessment_reports_retirement_pending(request):
+    updated = request.getfixturevalue("updated_unkept")
+    registry = SharingRegistry(updated.b.sharing_root)
+    (predecessor,) = [pin for pin in registry.pins() if pin.world == updated.a.world.world_id and pin.state == "mounted"]
+    text = _adopt(updated, LOC_A, a_identity(updated.a, binding_destination=LOC_A)["corpus_id"]).text
+    assert predecessor.corpus_id in text and "retirement pending" in text and "beliefs-a989fb" in text
+    assert registry.pin(predecessor.corpus_id).state == "mounted"
+
+
+@pytest.mark.xfail(strict=True, reason="Task 11 fixture: sibling_publications returns (Installations, P3, P3prime)")
+def test_a_refused_sibling_stays_fetched_and_does_not_change_later_evaluation(request):
+    installations, first, sibling = request.getfixturevalue("sibling_publications")
+    _adopt(installations, LOC_A, first)
+    r = refused(lambda: _adopt(installations, LOC_A, sibling))
+    assert r.code == "divergent-publication" and {pair[0] for pair in r.data["tips"]} == {first, sibling}
+    registry = SharingRegistry(installations.b.sharing_root)
+    assert registry.pin(first).state == "mounted" and registry.pin(sibling).state == "fetched"
+    assert not _known(installations.b, sibling)
+    from science.supersession import classify, groups, sharing_lines
+    state = groups(registry, sharing_lines(installations.b.operations_root))
+    group = next(group for group in state.values() if any(item.corpus_id == first for item in group))
+    assert classify(group).kind == "resolved" and classify(group).tip[0] == first
+    again = refused(lambda: _adopt(installations, LOC_A, first))
+    assert again.code == "invalid-input" and "already adopted" in again.message
+
+
+@pytest.mark.xfail(strict=True, reason="Task 13 retirement door; Task 11 late_link returns (Installations, missing_link)")
+def test_two_retirements_in_one_invocation_render_both_pins_before_tail(request):
+    installations, missing = request.getfixturevalue("late_link")
+    registry = SharingRegistry(installations.b.sharing_root)
+    before = {pin.corpus_id for pin in registry.pins() if pin.state == "mounted"}
+    text = _adopt(installations, LOC_A, missing).text
+    retired = [line for line in text.splitlines() if line.startswith("[pin]") and line.endswith(" retired")]
+    assert len(retired) == 2 and any(missing in line for line in retired)
+    assert any(any(corpus in line for corpus in before) for line in retired)
+    assert max(text.index(line) for line in retired) < text.index("retirement ")
+    assert "reopen the session and run science epoch" in text
+
+
+def test_a_mounted_target_reports_another_pins_admission_recovery(adopted, monkeypatch):
+    cid1 = a_identity(adopted.a)["corpus_id"]
+    cid2 = publish_again(adopted, LOC_A)
+    _crash_on_write_pin(monkeypatch, "admitted")
+    with pytest.raises(RuntimeError, match="injected crash"):
+        _adopt(adopted, LOC_A, cid2)
+    monkeypatch.undo()
+    text = _adopt(adopted, LOC_A, cid1).text
+    assert _states(text) == ["mounted"] and f"[pin] {cid2} mounted" in text
+    assert "retirement pending" in text
+
+
+def test_a_conflict_names_why_its_predecessor_is_required(adopted):
+    from dataclasses import replace
+    from beliefs.root import open_corpus
+    from helpers.world import FIXTURE_AUTHORITY
+    cid1 = a_identity(adopted.a)["corpus_id"]
+    writer = open_corpus(adopted.a.write_root, authority=FIXTURE_AUTHORITY, profile=adopted.a.profile)
+    node = writer.read_view.get(a_identity(adopted.a)["proposition"])
+    writer.revise(node.model_copy(update={"title": "Revised content"}))
+    cid2 = publish_again(adopted, LOC_A)
+    installations = replace(adopted, b=replace(adopted.b, keep=(cid1,)))
+    refusal = refused(lambda: _adopt(installations, LOC_A, cid2))
+    assert refusal.code == "adopt-conflict" and refusal.data["rule"] == "content"
+    assert "required predecessor: configuration" in refusal.message
+
+
+@pytest.mark.parametrize("terminal", ["retired", "departed"])
+def test_completed_terminal_effect_is_reported_once_without_new_retirement(adopted, terminal):
+    from beliefs.root import open_world
+    from helpers.world import FIXTURE_AUTHORITY
+    cid1 = a_identity(adopted.a)["corpus_id"]
+    cid2 = publish_again(adopted, LOC_A)
+    world = open_world(adopted.b.world, authority=FIXTURE_AUTHORITY)
+    (world.retire if terminal == "retired" else world.depart)(cid1)
+    text = _adopt(adopted, LOC_A, cid2).text
+    assert _states(text) == ["fetched", "admitted", "mounted"]
+    findings = [line for line in text.splitlines() if line.startswith("!") and cid1 in line]
+    assert len(findings) == 1
+    assert ("retirement pending" if terminal == "retired" else "departed") in findings[0]
+    if terminal == "departed":
+        assert "retirement pending" not in text
+    else:
+        assert "beliefs-a989fb" in text
+
+
+@pytest.mark.xfail(strict=True, reason="Task 11 fixture: sibling_publications returns (Installations, P3, P3prime)")
+def test_siblings_under_a_never_held_predecessor_refuse_the_same_way(request):
+    from dataclasses import replace
+    from helpers.commons import build_installation
+    installations, first, sibling = request.getfixturevalue("sibling_publications")
+    reader = build_installation(installations.remotes.parent, "new-reader", hold_vocabulary=False)
+    value = replace(installations, b=reader)
+    _bind(value, LOC_A, first, installations.a.world.world_id)
+    _adopt(value, LOC_A, first)
+    refusal = refused(lambda: _adopt(value, LOC_A, sibling))
+    assert refusal.code == "divergent-publication"
+    assert {pair[0] for pair in refusal.data["tips"]} == {first, sibling}
+    pins = SharingRegistry(reader.sharing_root).pins()
+    assert {pin.corpus_id for pin in pins} == {first, sibling}
+    assert SharingRegistry(reader.sharing_root).pin(sibling).state == "fetched"

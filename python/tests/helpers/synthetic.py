@@ -7,7 +7,7 @@ kind the lying handler reaches for.
 from pathlib import Path
 
 from science.cursor import MIN_OUTPUT_BUDGET
-from science.report import Text, pin_block, record_block
+from science.report import Text, record_block
 from science.schema import Declaration, InputSpec, WriteClass
 
 from helpers.world import fixture_proposition_node, fixture_source_node
@@ -59,8 +59,8 @@ def probe_evidence(corpus_id: str):
 
 def share_probe_handler(ctx, writer, *, corpus_id):
     # A `bound` line: the door records it with no copy to restore.
-    line = writer.record_sharing(probe_evidence(corpus_id), transition="bound", verdict="validated")
-    return (pin_block(line),)
+    writer.record_sharing(probe_evidence(corpus_id), transition="bound", verdict="validated")
+    return ()
 
 
 HANDLERS = {"mint-claim": mint_claim_handler, "overreach": overreach_handler,

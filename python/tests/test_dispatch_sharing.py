@@ -82,6 +82,7 @@ def test_a_block_the_ledger_does_not_show_is_an_audit_violation(rig, forge):
     # The line is truth: the invocation closed done with it before the audit failed.
     assert _close(cfg, session, "F" * 8) == {"done": []}
     assert len(session.invocation_sharing("F" * 8)) == 1
+    assert d.invoke("share-probe", {"corpus_id": CID}, invocation_id="F" * 8).text.startswith(f"[pin] {CID} bound")
 
 
 def test_a_refusal_after_a_sharing_line_closes_refused_and_keeps_the_line(rig):
@@ -152,9 +153,9 @@ def test_a_long_pin_report_continues_from_the_ledger_without_the_handler(rig):
     d._decls["share-probe"] = probe
 
     def several(ctx, writer, *, corpus_id):
-        return tuple(pin_block(writer.record_sharing(probe_evidence(corpus_id), transition=transition,
-                                                     verdict="validated"))
-                     for transition in ("bound", "mounted", "bound", "mounted"))
+        for transition in ("bound", "mounted", "bound", "mounted"):
+            writer.record_sharing(probe_evidence(corpus_id), transition=transition, verdict="validated")
+        return ()
 
     d._handlers["share-probe"] = several
     pages = [d.invoke("share-probe", {"corpus_id": CID}, invocation_id="C" * 8).text]
@@ -192,3 +193,155 @@ def test_sharing_replay_reads_the_lines_the_door_wrote(rig):
     binding = registry.bindings()[PROBE_WORLD]
     assert binding.locations == (PROBE_LOCATION,) and binding.confirmed and binding.bound_since == written.at
     assert replay(registry, cfg.operations_root) == ()
+
+
+def _tail_handler(d, *, count=2, text="historical retention " * 120):
+    from science.report import Finding, KeyVals
+
+    tail = (KeyVals("retention predecessor", (("kept", "configuration"),)), Finding(text))
+
+    def sharing(ctx, writer, *, corpus_id):
+        for transition in ("bound", "mounted")[:count]:
+            writer.record_sharing(probe_evidence(corpus_id), transition=transition, verdict="validated")
+        return tail
+
+    d._handlers["share-probe"] = sharing
+    return tail
+
+
+def _tail_path(cfg, session, iid):
+    return cfg.operations_root / "tails" / session.session_id / f"{iid}.json"
+
+
+def test_tail_follows_every_pin_and_replays_historically(rig):
+    d, session, cfg = rig
+    tail = _tail_handler(d, text="retained at adoption")
+    first = d.invoke("share-probe", {"corpus_id": CID}, invocation_id="tail")
+    prefix = "".join(serialize_block(pin_block(line)) for line in session.invocation_sharing("tail"))
+    assert first.text == prefix + "".join(map(serialize_block, tail))
+    assert first.text.count("[pin]") == 2
+    assert _close(cfg, session, "tail") == {"done": []}
+    d._handlers["share-probe"] = lambda *a, **k: pytest.fail("must replay")
+    assert d.invoke("share-probe", {"corpus_id": CID}, invocation_id="tail").text == first.text
+
+
+def test_pin_and_tail_cursors_continue_through_a_fresh_dispatcher(rig):
+    from science.cursor import decode
+
+    d, session, cfg = rig
+    tail = _tail_handler(d)
+    d._decls["share-probe"] = dataclasses.replace(d._decls["share-probe"], output_budget=MIN_OUTPUT_BUDGET)
+    page = d.invoke("share-probe", {"corpus_id": CID}, invocation_id="pages").text
+    fresh = Dispatcher(tuple(d._decls.values()), {}, d._ctx)
+    pieces, positions = [], []
+    while "continue with cursor " in page:
+        pieces.append(page.split("\n… truncated at")[0])
+        token = page.rsplit("cursor ", 1)[1].strip()
+        cursor = decode(token)
+        positions.append((cursor.block, cursor.offset))
+        expected = d.invoke("share-probe", {}, cursor=token).text
+        page = fresh.invoke("share-probe", {}, cursor=token).text
+        assert page == expected
+    pieces.append(page)
+    assert any(block < 2 and offset > 0 for block, offset in positions)
+    assert any(block >= 2 and offset > 0 for block, offset in positions)
+    assert "".join(pieces) == "".join(serialize_block(pin_block(line)) for line in session.invocation_sharing("pages")) + "".join(map(serialize_block, tail))
+
+
+@pytest.mark.parametrize("failure", ["serialize", "replace", "directory-fsync"])
+def test_tail_write_failure_closes_done_and_retry_preserves_available_commentary(rig, monkeypatch, failure):
+    import os
+    import stat
+    from science import report
+
+    d, session, cfg = rig
+    tail = _tail_handler(d, text="historical commentary")
+    original_fsync = os.fsync
+
+    def fail(*args, **kwargs):
+        raise OSError("injected sidecar failure")
+
+    def fsync(fd):
+        if stat.S_ISDIR(os.fstat(fd).st_mode):
+            fail()
+        original_fsync(fd)
+
+    with monkeypatch.context() as patch:
+        if failure == "serialize":
+            patch.setattr(report, "tail_to_json", fail)
+        elif failure == "replace":
+            patch.setattr(report.os, "replace", fail)
+        else:
+            patch.setattr(report.os, "fsync", fsync)
+        with pytest.raises(OSError, match="injected sidecar failure"):
+            d.invoke("share-probe", {"corpus_id": CID}, invocation_id="failure")
+    assert _close(cfg, session, "failure") == {"done": []}
+    assert _tail_path(cfg, session, "failure").exists() == (failure == "directory-fsync")
+    prefix = "".join(serialize_block(pin_block(line)) for line in session.invocation_sharing("failure"))
+    expected = prefix + ("".join(map(serialize_block, tail)) if failure == "directory-fsync" else "")
+    assert d.invoke("share-probe", {"corpus_id": CID}, invocation_id="failure").text == expected
+
+
+def test_tail_syncs_session_tails_and_operations_directories_on_every_write(rig, monkeypatch):
+    import os
+    import stat
+    from pathlib import Path
+    from science import report
+
+    d, session, cfg = rig
+    _tail_handler(d, text="short")
+    synced = []
+    original = os.fsync
+
+    def fsync(fd):
+        if stat.S_ISDIR(os.fstat(fd).st_mode):
+            synced.append(Path(f"/proc/self/fd/{fd}").resolve())
+        original(fd)
+
+    monkeypatch.setattr(report.os, "fsync", fsync)
+    expected = [cfg.operations_root / "tails" / session.session_id, cfg.operations_root / "tails", cfg.operations_root]
+    for iid in ("first", "second"):
+        synced.clear()
+        d.invoke("share-probe", {"corpus_id": CID}, invocation_id=iid)
+        assert [path for path in synced if path in expected] == expected
+
+
+def test_lost_tail_makes_cursor_stale_and_replay_renders_all_pins(rig):
+    d, session, cfg = rig
+    _tail_handler(d)
+    d._decls["share-probe"] = dataclasses.replace(d._decls["share-probe"], output_budget=MIN_OUTPUT_BUDGET)
+    first = d.invoke("share-probe", {"corpus_id": CID}, invocation_id="lost").text
+    cursor = first.rsplit("cursor ", 1)[1].strip()
+    _tail_path(cfg, session, "lost").unlink()
+    assert refused(lambda: d.invoke("share-probe", {}, cursor=cursor)).code == "stale-cursor"
+    d._decls["share-probe"] = dataclasses.replace(d._decls["share-probe"], output_budget=16000)
+    assert d.invoke("share-probe", {"corpus_id": CID}, invocation_id="lost").text == "".join(
+        serialize_block(pin_block(line)) for line in session.invocation_sharing("lost"))
+
+
+def test_an_absent_1a_tail_continues_and_replays_as_pins_only(rig):
+    d, session, cfg = rig
+    _tail_handler(d, text="unused")
+    handler = d._handlers["share-probe"]
+
+    def pins(ctx, writer, **inputs):
+        handler(ctx, writer, **inputs)
+        return ()
+
+    d._handlers["share-probe"] = pins
+    d._decls["share-probe"] = dataclasses.replace(d._decls["share-probe"], output_budget=MIN_OUTPUT_BUDGET)
+    first = d.invoke("share-probe", {"corpus_id": CID}, invocation_id="old").text
+    cursor = first.rsplit("cursor ", 1)[1].strip()
+    expected = d.invoke("share-probe", {}, cursor=cursor).text
+    _tail_path(cfg, session, "old").unlink()
+    assert d.invoke("share-probe", {}, cursor=cursor).text == expected
+    assert d.invoke("share-probe", {"corpus_id": CID}, invocation_id="old").text == first
+
+
+@pytest.mark.parametrize("raw", [None, {}, [{"kind": "pin", "corpus": CID}],
+                                 [{"kind": "finding", "text": 3}],
+                                 [{"kind": "keyvals", "title": "x", "pairs": [["kept", 3]]}]])
+def test_tail_reader_rejects_non_commentary_or_malformed_blocks(raw):
+    from science.report import tail_from_json
+    with pytest.raises(ValueError):
+        tail_from_json(raw)

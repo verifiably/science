@@ -156,3 +156,12 @@ def chain(from_pair: tuple[str, str], to_pair: tuple[str, str], held: Iterable[H
         seen.add(pair)
         pending.extend((*path, predecessor) for predecessor in markers[pair].supersedes if predecessor in markers)
     return None
+
+
+def groups(registry: SharingRegistry, lines: Sequence[SharingLine]) -> dict[GroupKey, tuple[Held, ...]]:
+    """Authorized established groups, folded from the same evidence as replay."""
+    pins = established(registry, lines)
+    bindings = registry.bindings()
+    keys = {group_of(marker_fields(marker_of(registry.root_for(pin.corpus_id))))
+            for pin in pins if pin.origin_confirmed(bindings)}
+    return {key: authorized(pins, bindings, registry, key) for key in sorted(keys)}

@@ -6,7 +6,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from science.cursor import MARKER_TEMPLATE
-from science.report import PinBlock, RecordBlock, Report, SelectionBlock, pin_block, serialize_block
+from science.report import Finding, KeyVals, RecordBlock, Report, SelectionBlock, serialize_block
 
 
 class AuditViolation(Exception):
@@ -50,18 +50,11 @@ def audit_session_report(report: Report, recorded: str | None) -> None:
         )
 
 
-def audit_sharing_report(report: Report, lines) -> None:
-    """A `sharing` report carries only pin blocks its invocation's ledger sharing
-    lines support, each at most once and in ledger order."""
-    supported = iter([pin_block(line) for line in lines])
+def audit_sharing_report(report: Report) -> None:
+    """Handlers return commentary; the dispatcher alone derives the complete pin prefix."""
     for block in report:
-        if type(block) is not PinBlock:
-            raise AuditViolation(f"sharing reports carry pin blocks only, got {type(block).__name__}")
-        # Consuming the iterator: a block matches only a line after the last match.
-        if block not in supported:
-            raise AuditViolation(
-                f"pin block ({block.corpus_id}, {block.transition}) is not a later sharing line of this invocation"
-            )
+        if type(block) not in (KeyVals, Finding):
+            raise AuditViolation(f"sharing tails carry KeyVals or Finding only, got {type(block).__name__}")
 
 
 def render_full(report: Report) -> str:

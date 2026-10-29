@@ -5,7 +5,7 @@ import os
 import re
 import tomllib
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import cached_property
 from hashlib import sha256
 from pathlib import Path
@@ -363,6 +363,19 @@ def mount_profiles(config: ScienceConfig) -> dict[Path, ProfileSpec]:
         except (ManifestMissing, ManifestMalformed) as caught:
             _refuse(f"the read mount {root} has no readable manifest: {caught}")
     return profiles
+
+
+def live_mounts(config: ScienceConfig, world, registry) -> tuple[Mount, ...]:
+    """Current admitted live inputs, reopened by root rather than the session's frozen mounts."""
+    roots = {root.resolve() for root in config.world.corpus_roots}
+    roots.update(registry.root_for(pin.corpus_id).resolve() for pin in registry.pins()
+                 if pin.state in ("admitted", "mounted"))
+    admitted = {item.corpus_id for item in world.registry().admissions}
+    keyed = sorted((corpus_id_at(root), root) for root in roots)
+    keyed = [(corpus, root) for corpus, root in keyed if corpus in admitted and world.status(corpus).live]
+    live_config = replace(config, world=replace(config.world, corpus_roots=tuple(root for _, root in keyed)))
+    profiles = mount_profiles(live_config)
+    return tuple(Mount(corpus, root, ReadView.opened_at(root), profiles[root]) for corpus, root in keyed)
 
 
 def corpus_id_at(root: Path) -> str:

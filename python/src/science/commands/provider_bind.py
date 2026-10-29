@@ -9,7 +9,7 @@ from beliefs.session.ledger import SharingEvidence
 
 from science import publication
 from science.refusal import Refusal, Refused
-from science.report import Report, pin_block
+from science.report import Report
 from science.sharing import ProviderBinding, SharingRegistry, replay
 
 
@@ -41,4 +41,4 @@ def handle(ctx, writer, *, location, corpus_id, world) -> Report:
     finally:
         if scratch.exists():
             shutil.rmtree(scratch)
-    return (pin_block(line),)
+    return ()

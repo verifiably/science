@@ -5,6 +5,7 @@ no pin is written."""
 from __future__ import annotations
 
 import shutil
+from hashlib import sha256
 
 from beliefs.corpus import ReadView
 from beliefs.errors import (
@@ -18,12 +19,15 @@ from beliefs.session.ledger import SharingEvidence
 from beliefs.world.anchors import CorpusSubject
 from beliefs.world.verify import ArtifactCarrier, ObserverSet
 
-from science import publication
+from science import publication, supersession
+from science.config import live_mounts
 from science.refusal import Refusal, Refused
-from science.report import Report, pin_block
-from science.sharing import Pin, PinSource, SharingRegistry, apply_line, replay
+from science.report import Finding, KeyVals, Report
+from science.overlap import conflicts
+from science.retention import required
+from science.sharing import Pin, PinSource, SharingRegistry, apply_line, replay, sharing_lines
 
-CONFLICT_REASON = "overlap is milestone 1b (beliefs-81367e)"
+RETIREMENT_PENDING = "retirement pending: the kernel's retire door (beliefs-a989fb) has not landed"
 
 
 def handle(ctx, writer, *, location, corpus_id) -> Report:
@@ -40,59 +44,156 @@ def handle(ctx, writer, *, location, corpus_id) -> Report:
     lines = []
 
     def record(line):
-        """Keep the line for the report, then write the registry state it is the evidence of."""
+        """Track writes for recovery, then project the ledger evidence into the registry."""
         lines.append(line)
         apply_line(registry, line)
 
-    # 2. Reconcile, before any duplicate check: the kernel's registry is the truth about admission.
-    mounted_now = _reconcile(ctx, writer, registry, record)
-
-    # 3. The target's state.
+    tail = []
+    _reconcile(ctx, writer, registry, record, tail)
     pin = registry.pin(corpus_id)
-    if pin is not None and pin.state == "mounted" and corpus_id in mounted_now:
-        return tuple(pin_block(line) for line in lines)  # this invocation is the recovery
-    if pin is not None and pin.state in ("mounted", "retired"):
-        raise Refused(Refusal("invalid-input", f"corpus {corpus_id} is already adopted: its pin is {pin.state}",
-                              {"corpus_id": corpus_id, "state": pin.state}))
-    # A pin `admitted` the kernel does not list cannot arise (the line follows the act): it reads as `fetched`.
+    already_mounted = pin is not None and pin.state == "mounted"
+    if pin is not None and pin.state == "retired":
+        raise _already_adopted(pin)
+    if not already_mounted:
+        root = registry.root_for(corpus_id)
+        if pin is not None and pin.fetch.location != destination.locator:
+            raise Refused(Refusal(
+                "invalid-input", f"corpus {corpus_id} was fetched from {pin.fetch.location}, not {destination.locator}; "
+                f"adopt it from {pin.fetch.location}", {"location": pin.fetch.location}))
+        if pin is not None and root.is_dir() and registry.head_artifact_for(corpus_id).is_file():
+            evidence = _evidence(pin)
+            observers = _observers(registry.head_artifact_for(corpus_id).read_bytes())
+        else:
+            evidence, observers = _fetch(writer, transport, destination, registry, corpus_id, record)
+        candidate = supersession.Held(corpus_id, root, publication.marker_fields(publication.marker_of(root)), "mounted")
+        history = sharing_lines(config.operations_root)
+        groups = supersession.groups(registry, history)
+        held = groups.get(supersession.group_of(candidate.marker), ())
+        mounts = live_mounts(config, ctx.world, registry)
+        conflict = conflicts(ReadView.opened_at(root), [(mount.corpus_id, mount.view) for mount in mounts])
+        if conflict is not None:
+            message = (f"corpus {corpus_id} conflicts with live corpus {conflict.corpus}: "
+                       f"{conflict.rule} at {', '.join(conflict.addresses)}")
+            predecessor = next((item for item in held if item.corpus_id == conflict.corpus), None)
+            if predecessor is not None:
+                path = supersession.chain(_pair(predecessor), _pair(candidate), (*held, candidate))
+                if path is not None:
+                    reasons = _required(ctx, predecessor, (*held, candidate), _pair(candidate), groups, mounts)
+                    if reasons:
+                        message += "; required predecessor: " + ", ".join(map(_reason, reasons))
+            raise Refused(Refusal("adopt-conflict", message,
+                                  {"rule": conflict.rule, "addresses": list(conflict.addresses), "corpus": conflict.corpus}))
+        _preflight(held, candidate, history)
+        try:
+            admitted = writer.admit_publication(root, observers, evidence=evidence)
+        except WriteRefused as caught:
+            raise _kernel_refused(caught) from None
+        record(admitted)
+        _mark_mounted(writer, registry.pin(corpus_id), record)
+    tail.extend(_reevaluate(ctx, registry))
+    if already_mounted and not lines:
+        raise _already_adopted(pin)
+    return tuple(tail)
 
-    # 4-7. The copy: a `fetched` one reused at its own location, otherwise downloaded, sourced and restored.
-    root = registry.root_for(corpus_id)
-    if pin is not None and pin.fetch.location != destination.locator:
-        raise Refused(Refusal(
-            "invalid-input",
-            f"corpus {corpus_id} was fetched from {pin.fetch.location}, not {destination.locator}; "
-            f"adopt it from {pin.fetch.location}",
-            {"location": pin.fetch.location}))
-    if pin is not None and root.is_dir() and registry.head_artifact_for(corpus_id).is_file():
-        evidence = _evidence(pin)
-        observers = _observers(registry.head_artifact_for(corpus_id).read_bytes())
-    else:
-        evidence, observers = _fetch(writer, transport, destination, registry, corpus_id, record)
 
-    # 8. Conflict: the candidate's addresses against every live root.
-    _require_no_overlap(ctx, registry, corpus_id)
-
-    # 9. Admit, then mark mounted.
-    try:
-        admitted = writer.admit_publication(root, observers, evidence=evidence)
-    except WriteRefused as caught:
-        raise _kernel_refused(caught) from None
-    record(admitted)
-    _mark_mounted(writer, registry.pin(corpus_id), record)
-    return tuple(pin_block(line) for line in lines)
+def _already_adopted(pin):
+    return Refused(Refusal("invalid-input", f"corpus {pin.corpus_id} is already adopted: its pin is {pin.state}",
+                          {"corpus_id": pin.corpus_id, "state": pin.state}))
 
 
-def _reconcile(ctx, writer, registry: SharingRegistry, record) -> frozenset[str]:
-    """Mark `mounted` every `fetched` or `admitted` pin whose corpus the kernel's registry lists admitted (a crash
-    fell between the admission and the mark); the corpus ids it mounted."""
-    admitted = {admission.corpus_id for admission in ctx.world.registry().admissions}
-    mounted = []
+def _reconcile(ctx, writer, registry: SharingRegistry, record, tail) -> None:
+    state = ctx.world.registry()
+    admitted = {admission.corpus_id for admission in state.admissions}
+    terminal = {item.corpus_id: item.status for item in state.statuses}
     for pin in registry.pins():
         if pin.state in ("fetched", "admitted") and pin.corpus_id in admitted:
             _mark_mounted(writer, pin, record)
-            mounted.append(pin.corpus_id)
-    return frozenset(mounted)
+        elif pin.state == "mounted":
+            status = ctx.world.status(pin.corpus_id)
+            if status.known and not status.live:
+                if terminal.get(pin.corpus_id) == "retired":
+                    tail.append(Finding(f"{pin.corpus_id}: {RETIREMENT_PENDING}"))
+                elif terminal.get(pin.corpus_id) == "departed":
+                    tail.append(Finding(f"corpus {pin.corpus_id} departed"))
+
+
+def _pair(item):
+    return item.corpus_id, item.marker.uid
+
+
+def _preflight(held, candidate, history):
+    outcome = supersession.classify(held, candidate)
+    if outcome.kind == "divergent":
+        tips = [list(pair) for pair in outcome.tips]
+        raise Refused(Refusal("divergent-publication", f"divergent publication sibling tips: {tips}", {"tips": tips}))
+    items = (*held, candidate)
+    targets = {_pair(item) for item in held if item.state == "mounted"}
+    current = supersession.current(history, held)
+    if current is not None:
+        targets.add(current)
+    for target in sorted(targets):
+        path = (supersession.chain(_pair(candidate), target, items)
+                or supersession.chain(target, _pair(candidate), items))
+        if path is not None:
+            retired = next((item for item in held if item.state == "retired" and _pair(item) in path[1:-1]), None)
+            if retired is not None:
+                raise Refused(Refusal("adopt-conflict", f"chain-retired: the chain passes through retired corpus {retired.corpus_id}",
+                                      {"rule": "chain-retired", "addresses": [], "corpus": retired.corpus_id}))
+
+
+def _reason(reason):
+    if reason.kind == "configuration":
+        return "configuration"
+    if reason.kind == "chain":
+        return f"chain (for {reason.detail[0]})"
+    if reason.kind == "attribution":
+        return f"attribution (named by {reason.detail[0]})"
+    return f"dependency ({', '.join(reason.detail)})"
+
+
+def _required(ctx, predecessor, held, tip, groups, mounts):
+    write = next(mount for mount in mounts if mount.root == ctx.config.write_root)
+    holders = [(mount.corpus_id, mount.view, mount.profile) for mount in mounts if mount != write]
+    live_ids = {mount.corpus_id for mount in mounts}
+    return required(predecessor, keep=ctx.config.keep, group_chain=held, tip=tip,
+                    mounted=tuple(item for group in groups.values() for item in group
+                                  if item.state == "mounted" and item.corpus_id in live_ids),
+                    write_root=(write.corpus_id, write.view, write.profile), live=holders)
+
+
+def _reevaluate(ctx, registry):
+    config = ctx.config
+    groups = supersession.groups(registry, sharing_lines(config.operations_root))
+    mounts = live_mounts(config, ctx.world, registry)
+    tail = [Finding(f"keep entry {corpus}: no pin records this corpus") for corpus in config.keep
+            if registry.pin(corpus) is None]
+    for held in groups.values():
+        outcome = supersession.classify(held)
+        if outcome.kind != "resolved":
+            continue
+        paths = {_pair(item): supersession.chain(_pair(item), outcome.tip, held) for item in held}
+        predecessors = sorted((item for item in held if item.state == "mounted" and _pair(item) != outcome.tip
+                               and paths[_pair(item)] is not None), key=lambda item: (-len(paths[_pair(item)]), item.corpus_id))
+        for predecessor in predecessors:
+            if not ctx.world.status(predecessor.corpus_id).live:
+                continue  # Reconcile already reported this completed terminal effect.
+            reasons = _required(ctx, predecessor, held, outcome.tip, groups, mounts)
+            if reasons:
+                tail.append(KeyVals(f"retention {predecessor.corpus_id}", tuple(("kept", _reason(reason)) for reason in reasons)))
+            else:
+                _require_current_config(config)
+                tail.append(Finding(f"{predecessor.corpus_id}: {RETIREMENT_PENDING}"))
+    return tail
+
+
+def _require_current_config(config):
+    if config.source is None:
+        return
+    path, digest = config.source
+    if sha256(path.read_bytes()).hexdigest() != digest:
+        raise Refused(Refusal("config-stale", f"configuration {path} changed; evaluated keep {list(config.keep)}; "
+                              "the adoption stands; restart the service and rerun adopt",
+                              {"path": str(path), "keep": list(config.keep)}))
 
 
 def _mark_mounted(writer, pin: Pin, record) -> None:
@@ -166,26 +267,6 @@ def _discard(registry: SharingRegistry, corpus_id: str) -> None:
         if directory.exists():
             shutil.rmtree(directory)
     registry.head_artifact_for(corpus_id).unlink(missing_ok=True)
-
-
-def _require_no_overlap(ctx, registry: SharingRegistry, corpus_id: str) -> None:
-    """Refuse `adopt-conflict` when the candidate shares an address with a live root: the configured roots (the
-    write root among them) and the registry's admitted or mounted roots, which an adoption since this session
-    opened adds. The candidate stays `fetched`."""
-    candidate = {node.id for node in ReadView.opened_at(registry.root_for(corpus_id)).iter_stored()}
-    configured = {root.resolve() for root in ctx.config.world.corpus_roots}
-    live = list(ctx.read_views())
-    live += [(pin.corpus_id, ReadView.opened_at(registry.root_for(pin.corpus_id))) for pin in registry.pins()
-             if pin.state in ("admitted", "mounted") and pin.corpus_id != corpus_id
-             and registry.root_for(pin.corpus_id).resolve() not in configured]
-    for live_id, view in live:
-        shared = sorted(candidate & {node.id for node in view.iter_stored()})
-        if shared:
-            raise Refused(Refusal(
-                "adopt-conflict",
-                f"corpus {corpus_id} shares {len(shared)} address(es) with live corpus {live_id}: "
-                f"{', '.join(shared)}; {CONFLICT_REASON}",
-                {"addresses": shared, "corpus": live_id, "reason": CONFLICT_REASON}))
 
 
 def _kernel_refused(caught: WriteRefused) -> Refused:
