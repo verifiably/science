@@ -1,15 +1,17 @@
 ---
 id: sci-e3cacf
 title: "Task 8: `adopt` — checklist, preflight, order and re-evaluation"
-status: doing
+status: done
 priority: 1
 size: l
 complexity: high
 process: direct
 owner: commons-1b
 created: 2026-10-29T01:50:47Z
-updated: 2026-10-29T04:36:29Z
+updated: 2026-10-29T04:36:30Z
 started: 2026-10-29T04:08:23Z
+completed: 2026-10-29T04:36:30Z
+closed: 2026-10-29T04:36:30Z
 depends: [sci-a23752, sci-29a07b, sci-b47e33]
 parent: sci-9104fb
 tags: [commons]
@@ -39,3 +41,7 @@ step: "Task 8: `adopt` — checklist, preflight, order and re-evaluation"
 - 2026-10-29T04:36:26Z (commons-1b): retained: {"host": "titan", "state": "kept", "verification": "verified", "next_owner": "task:sci-9104fb", "cleanup_trigger": "After controller review and phase integration, preserve needed evidence and perform worktree removal checks", "kind": "evidence", "path": "$WORK_ROOT/science/.worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-8-sidecar-green.log", "purpose": "Task 8 implementation and verification evidence for controller review", "sha256": "897958d90fb5e8a1228e83622f612e3226d2eeaaa08f50dcf0e7e16ad024d467"}
 - 2026-10-29T04:36:27Z (commons-1b): retained: {"host": "titan", "state": "kept", "verification": "verified", "next_owner": "task:sci-9104fb", "cleanup_trigger": "After controller review and phase integration, preserve needed evidence and perform worktree removal checks", "kind": "evidence", "path": "$WORK_ROOT/science/.worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-8-sidecar-red.log", "purpose": "Task 8 implementation and verification evidence for controller review", "sha256": "275c797d0590e66bd0c2e066118f2f369759567ac4576f9b97879e4b713023a8"}
 - 2026-10-29T04:36:29Z (commons-1b): retained: {"host": "titan", "state": "kept", "verification": "verified", "next_owner": "task:sci-9104fb", "cleanup_trigger": "After controller review and phase integration, preserve needed evidence and perform worktree removal checks", "kind": "evidence", "path": "$WORK_ROOT/science/.worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-8-terminal-red.log", "purpose": "Task 8 implementation and verification evidence for controller review", "sha256": "244bda589963ba6b8028df7e4615824ec37b497c81d62794e39b51c03a3110d1"}
+- 2026-10-29T04:36:30Z (commons-1b): done
+  provenance: {"harness_session":"codex:01a185d7-1b84-7670-8479-c67b00bb9272","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-29T04:36:30Z (commons-1b): Implemented checklist, supersession preflight, retention re-evaluation and durable historical sharing tails in 7f5a2d7. Focused: 71 passed with 4 expected xfails; final fast: 707 passed, 5 expected xfails. Task11 fixture and Task13 retirement gates remain planned. Controller sci-9104fb owns fresh review, retained worktree and evidence.
+  provenance: {"harness_session":"codex:01a185d7-1b84-7670-8479-c67b00bb9272","harness_session_source":"CODEX_THREAD_ID"}
