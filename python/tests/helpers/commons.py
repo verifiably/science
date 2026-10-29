@@ -672,6 +672,17 @@ def build_late_link(work):
     return value, missing
 
 
+def build_equal_holders(work):
+    """`build_verified`, then A publishes to LOC_A P2, an equal-content successor of P1 that keeps the assessment
+    B verified (`publish_again`), and P3, a successor of P2 that drops it (`_publish_update`): P1 and P2 are equal
+    holders of the record B's verification depends on. Returns the value and the three corpus ids."""
+    value = build_verified(work)
+    installations = Installations.of(value)
+    first = a_identity(installations.a)["corpus_id"]
+    equal = publish_again(installations, LOC_A)
+    return value, first, equal, _publish_update(installations)
+
+
 def build_spec_drop(work):
     """`build_verified`, then A republishes to LOC_A a successor that keeps its assessment and run and drops their
     spec: B's unpublished verification replays through that spec (§5.9 item 6, the spec-drop case)."""

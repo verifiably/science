@@ -312,6 +312,16 @@ def sibling_publications_unkept(certified_worker_work):
 
 
 @pytest.fixture
+def equal_holders(certified_worker_work):
+    from helpers.commons import Installations, build_equal_holders
+    from helpers.snapshot import snapshot
+    snap = snapshot(certified_worker_work, "commons-1b-equal-holders", build_equal_holders)
+    snap.restore()
+    value, *refs = snap.value
+    return Installations.of(value), *refs
+
+
+@pytest.fixture
 def spec_drop(certified_worker_work):
     from helpers.commons import Installations, build_spec_drop
     from helpers.snapshot import snapshot

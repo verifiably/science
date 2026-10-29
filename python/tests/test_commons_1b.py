@@ -8,7 +8,7 @@ from beliefs.intents.publish import Destination
 from beliefs.world.registry import content_identity
 from helpers.commons import (
     LOC_A, LOC_B, _b_publication, a_identity, b_derivation, build_installation, publish_again, read_rig, refused,
-    transport_with, with_remotes,
+    reopen, transport_with, with_remotes,
 )
 from helpers.world import concept_list_address, fixture_bundle, level_list_address, open_rig
 from science.acceptance import acceptance_inputs, statement
@@ -266,6 +266,30 @@ def test_the_late_link_resolves_the_chain_and_retires_both_non_tips(late_chain_u
         first: "retired", missing: "retired", last: "mounted"}
     (held,) = groups(registry, sharing_lines(installations.b.operations_root)).values()
     assert classify(held).kind == "resolved" and classify(held).tip[0] == last
+
+
+def test_the_sweep_judges_each_predecessor_against_the_holders_the_last_retirement_left(equal_holders, monkeypatch):
+    installations, first, equal, last = equal_holders
+    ids = a_identity(installations.a)
+    _adopt(installations, LOC_A, last)
+    assert _retired_lines(installations.b) == []
+    # The late link resolves P1 -> P2 -> P3: P1 is judged first, while P2 still holds the assessment.
+    text = _adopt(installations, LOC_A, equal).text
+    registry = SharingRegistry(installations.b.sharing_root)
+    assert {pin.corpus_id: pin.state for pin in registry.pins()} == {
+        first: "retired", equal: "mounted", last: "mounted"}
+    assert [line.corpus for line in _retired_lines(installations.b)] == [first]
+    assert f"retirement {first}:\n" in text
+    assert f"retention {equal}:\n  kept: dependency ({ids['assessment']})\n" in text
+    assert f"retention:\n  kept: dependency ({ids['assessment']})\n" in _show(installations.b, equal)
+    b = reopen(installations.b)
+    publish_session_epoch(b)
+    assert ReadContext.open(b).cited(ids["assessment"]).corpus_id == equal
+    _confine(monkeypatch)
+    code, entrypoint, _ = fixture_bundle(installations.remotes.parent / "a")
+    with open_rig(b, ("verify",)) as (d, _):
+        text = d.invoke("verify", {"assessment": ids["assessment"], "code": str(code), "entrypoint": entrypoint}).text
+    assert "[verification]" in text
 
 
 def test_a_sibling_arriving_after_retirement_is_divergent_against_the_retired_copy(sibling_publications_unkept):
