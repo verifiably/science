@@ -8,7 +8,7 @@ complexity: high
 process: direct
 owner: commons-1b
 created: 2026-10-29T01:50:53Z
-updated: 2026-10-29T06:04:27Z
+updated: 2026-10-29T06:04:29Z
 started: 2026-10-29T05:24:07Z
 depends: [sci-e3cacf, sci-d5954d, sci-f8a0cf]
 parent: sci-9104fb
@@ -32,3 +32,4 @@ step: "Task 11: The 1b fixture and the decisive cases through step 5"
 - 2026-10-29T06:04:25Z (commons-1b): retained: {"host": "titan", "state": "kept", "verification": "verified", "next_owner": "task:sci-9104fb", "cleanup_trigger": "After independent review, Task 12 gate and parent integration, recheck evidence disposition and worktree removal requirements", "kind": "worktree", "path": ".worktrees/commons-1b", "purpose": "Combined Task 1\u201311 branch retained for controller review, documentation/full gate and parent integration"}
 - 2026-10-29T06:04:26Z (commons-1b): retained: {"host": "titan", "state": "kept", "verification": "verified", "next_owner": "task:sci-9104fb", "cleanup_trigger": "After independent review, Task 12 gate and parent integration, recheck evidence disposition and worktree removal requirements", "kind": "evidence", "path": ".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-11-fast.log", "purpose": "Task 11 fixture development and verification evidence for controller review", "sha256": "36110813e87a407801910e80be89c1a9f9dc23868f5e4d0c5e393357a7585171"}
 - 2026-10-29T06:04:27Z (commons-1b): retained: {"host": "titan", "state": "kept", "verification": "verified", "next_owner": "task:sci-9104fb", "cleanup_trigger": "After independent review, Task 12 gate and parent integration, recheck evidence disposition and worktree removal requirements", "kind": "evidence", "path": ".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-11-focused-first.log", "purpose": "Task 11 fixture development and verification evidence for controller review", "sha256": "4c417738cb3e2e42bee35a3633849552278a813f37b38cc19628b572ff05c311"}
+- 2026-10-29T06:04:29Z (commons-1b): retained: {"host": "titan", "state": "kept", "verification": "verified", "next_owner": "task:sci-9104fb", "cleanup_trigger": "After independent review, Task 12 gate and parent integration, recheck evidence disposition and worktree removal requirements", "kind": "evidence", "path": ".worktrees/commons-1b/.superpowers/sdd/2026-10-28-science-commons-1b/task-11-focused-fourth.log", "purpose": "Task 11 fixture development and verification evidence for controller review", "sha256": "1ddc630279f2dbfeda471d45c36c69e6c4a6d42ffdb69f1e070fd341283a492f"}
