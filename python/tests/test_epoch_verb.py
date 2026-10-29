@@ -5,10 +5,12 @@ import json
 
 import pytest
 
-from beliefs.root import chain_head_reader, init_corpus_root, open_corpus, open_world
+from beliefs.root import chain_head_reader, init_corpus_root, install_shipped_world_rules, open_corpus, open_world
 from beliefs.consulted import CorpusPins
 from beliefs.corpus import Finding
 from beliefs.world import Fresh, WorldConfig
+from beliefs.world.read import current_epoch
+from beliefs.world.rules import shipped_rule_bundles
 from helpers.snapshot import snapshot
 from helpers.world import (
     FIXTURE_AUTHORITY, QUERY, build_shared_world_with_evidence, fixture_proposition_node,
@@ -18,7 +20,7 @@ from science.cli import main
 from science.config import ReadContext
 from science.refusal import Refused
 import science.world_belief as world_belief
-from science.world_belief import build_over, epoch_currency, publish_session_epoch
+from science.world_belief import SYMBOL_FIELDS, build_over, epoch_currency, publish_session_epoch
 from beliefs.errors import AddressMapConflict, BuildContended, ResolutionRefused
 
 
@@ -35,6 +37,22 @@ def _refusal(cfg):
     with pytest.raises(Refused) as caught:
         epoch_currency(ctx.world, ctx.session_ids())
     return caught.value.refusal
+
+
+def test_symbol_fields_binds_the_v2_retraction_enumeration_and_not_v1():
+    assert SYMBOL_FIELDS["enumerate_retractions_v2"] == "retraction"
+    assert "enumerate_retractions" not in SYMBOL_FIELDS
+
+
+def test_an_epoch_science_builds_names_the_v2_rule(shared):
+    ctx = ReadContext.open(shared)
+    build_over(shared, ctx.session_ids())
+    bundles = shipped_rule_bundles()
+    world = open_world(shared.world, authority=world_belief.EPOCH_AUTHORITY)
+    bindings = dict(zip((bundle.symbol for bundle in bundles), install_shipped_world_rules(world), strict=True))
+    expected = bindings["enumerate_retractions_v2"]
+    receipt = current_epoch(ctx.world).receipts["retraction-receipt.yaml"]
+    assert receipt.binding == (expected.rule_identity, expected.implementation_identity)
 
 
 def test_no_epoch_refuses_naming_the_remedy(shared):

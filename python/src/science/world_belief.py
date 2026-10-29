@@ -27,7 +27,7 @@ REMEDY = "run `science epoch` to publish one over the session's corpora"
 # epoch design §7.5); a symbol missing here is a KeyError, never a guess.
 SYMBOL_FIELDS = {
     "derive_producer_snapshot": "producer",
-    "enumerate_retractions": "retraction",
+    "enumerate_retractions_v2": "retraction",
     "enumerate_certifications": "certification",
     "reduce_coreference": "coreference",
 }
