@@ -15,7 +15,7 @@ from pathlib import Path
 
 from beliefs import stored
 from beliefs.corpus import ReadView
-from beliefs.errors import MalformedRecord, ObserverCarrierInvalid, PublicationArrivalRefused, SelectionRefused
+from beliefs.errors import MalformedRecord, ObserverCarrierInvalid, PublicationArrivalRefused, PublicationRefused, SelectionRefused
 from beliefs.intents.publish import Destination
 from beliefs.publication import BINDING_KIND, MARKER_KIND
 from beliefs.publication_arrival import require_publication_layout
@@ -83,6 +83,33 @@ def parse_destination(text: str) -> Destination:
 def selection_detail(refused: SelectionRefused) -> str:
     """A kernel `SelectionRefused`'s message; a drifted corpus also names the remedy, a new epoch."""
     return f"{refused}; {REMEDY}" if refused.reason == "corpus-drifted" else str(refused)
+
+
+def require_live_session(ctx) -> None:
+    for corpus in sorted(ctx.session_ids()):
+        if ctx.world.status(corpus).live is False:
+            raise Refused(Refusal("corpus-retired", f"corpus {corpus} is not live; reopen the session",
+                                  {"corpus": corpus}))
+
+
+def publication_detail(ctx, refused: PublicationRefused) -> str:
+    """Keep the kernel's claims and explain only links named by exact held marker pairs."""
+    if refused.reason != "attribution-ambiguous":
+        return str(refused)
+    # Supersession's parsed graph imports MarkerFields from this module.
+    from science.supersession import Held, ancestry
+
+    held = tuple(Held(mount.corpus_id, mount.root, marker_fields(node), "mounted")
+                 for mount in ctx.session_mounts() for node in mount.view.iter_stored() if node.kind == MARKER_KIND)
+    present = {(item.corpus_id, item.marker.uid) for item in held}
+    claims = set(refused.field.split(","))
+    missing = sorted({(corpus, marker, item.marker.world)
+                      for item in held if f"{item.corpus_id}:{item.marker.uid}" in claims
+                      for corpus, marker in ancestry((item.corpus_id, item.marker.uid), held) - present})
+    remedy = "; ".join(f"adopt {corpus} {marker} from a location bound to world {world} to connect them"
+                       for corpus, marker, world in missing) if missing else (
+        "no held marker orders these claims; the record cannot be published while both carriers are mounted")
+    return f"{refused}; {remedy}"
 
 
 def transport_for(config, destination: Destination) -> Transport | None:

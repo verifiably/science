@@ -136,7 +136,7 @@ def test_publication_propagates_an_unselected_mount_read_error(fresh, monkeypatc
     def unreadable():
         raise OSError("unselected mount is unreadable")
 
-    unread = replace(mounts[0], corpus_id="f" * 32, root=fresh.remotes / "unreadable",
+    unread = replace(mounts[0], root=fresh.remotes / "unreadable",
                      view=SimpleNamespace(iter_stored=unreadable, holds=lambda ref: False))
     monkeypatch.setattr(ReadContext, "mounts", lambda self: (*mounts, unread))
     with pytest.raises(OSError, match="unselected mount is unreadable"):
@@ -145,3 +145,72 @@ def test_publication_propagates_an_unselected_mount_read_error(fresh, monkeypatc
                 d.invoke(command, {"target": "a", "to": str(fresh.remotes)})
         else:
             read_rig(fresh.a, command).invoke(command, {"target": "a", "to": str(fresh.remotes)})
+
+
+@pytest.mark.parametrize("command", ["publish-preview", "publish"])
+def test_attribution_ambiguous_with_unlinked_chains_says_no_marker_orders_them(conflicting_publication, command):
+    from helpers.commons import LOC_A, LOC_A2, reopen
+    from test_cmd_adopt import _adopt
+    installations, second = conflicting_publication
+    first = a_identity(installations.a, binding_destination=LOC_A)["corpus_id"]
+    _adopt(installations, LOC_A, first)
+    _adopt(installations, LOC_A2, second)
+    cfg = reopen(installations.b)
+    publish_session_epoch(cfg)
+    registry = SharingRegistry(cfg.sharing_root)
+    claims = [f"{cid}:{registry.pin(cid).marker}" for cid in (first, second)]
+    destination = cfg.world.world_root.parent / "ambiguous-publication"
+    destination.mkdir()
+    with open_rig(cfg, (command,)) as (d, ctx):
+        before = tuple(ctx.write_view().iter_stored())
+        refusal = refused(lambda: d.invoke(command, {"target": "b", "to": str(destination)}))
+        assert tuple(ctx.write_view().iter_stored()) == before
+    assert refusal.code == "kernel-refused" and refusal.data["reason"] == "attribution-ambiguous"
+    assert all(claim in refusal.message for claim in claims)
+    assert ("no held marker orders these claims; the record cannot be published while both carriers are mounted"
+            in refusal.message)
+    assert list(destination.iterdir()) == []
+
+
+@pytest.mark.parametrize("command", ["publish-preview", "publish"])
+@pytest.mark.xfail(strict=True, reason="Task 11 fixture: late_link returns (Installations, missing_link)")
+def test_attribution_ambiguous_names_the_link_to_adopt(request, command):
+    installations, missing = request.getfixturevalue("late_link")
+    registry = SharingRegistry(installations.b.sharing_root)
+    mounted = [pin for pin in registry.pins() if pin.state == "mounted" and pin.world == installations.a.world.world_id]
+    assert len(mounted) == 2
+    (missing_marker,) = {marker for pin in mounted
+                         for corpus, marker in marker_fields(marker_of(registry.root_for(pin.corpus_id))).supersedes
+                         if corpus == missing}
+    destination = installations.remotes / "destination"
+    destination.mkdir()
+    with open_rig(installations.b, (command,)) as (d, _):
+        refusal = refused(lambda: d.invoke(command, {"target": "b", "to": str(destination)}))
+    assert refusal.code == "kernel-refused" and refusal.data["reason"] == "attribution-ambiguous"
+    assert all(f"{pin.corpus_id}:{pin.marker}" in refusal.message for pin in mounted)
+    assert (f"adopt {missing} {missing_marker} from a location bound to world {installations.a.world.world_id} "
+            "to connect them") in refusal.message
+
+
+@pytest.mark.parametrize("wrong_pair", [False, True], ids=["missing-intermediate", "same-marker-wrong-corpus"])
+def test_ambiguous_detail_follows_only_exact_held_pairs(monkeypatch, wrong_pair):
+    from beliefs.errors import PublicationRefused
+    from science import publication
+    from test_supersession import W, held
+    p1, p3 = held(1), held(3, 2)
+    p4 = held(4, 3)
+    if wrong_pair:
+        p3 = replace(p3, corpus_id="wrong-corpus")
+    items = (p1, p3, p4)
+    # Only filesystem/parsing reads are replaced; named ancestry and rendering are real.
+    monkeypatch.setattr(publication, "marker_fields", lambda node: node.fields)
+    mounts = tuple(SimpleNamespace(corpus_id=item.corpus_id, root=item.root, view=SimpleNamespace(
+        iter_stored=lambda fields=item.marker: (SimpleNamespace(kind="publication", fields=fields),))) for item in items)
+    ctx = SimpleNamespace(session_mounts=lambda: mounts)
+    refusal = PublicationRefused("attribution-ambiguous", refs=("run:a",), corpus_ids=("p1", "p4"),
+                                 field="p1:m1,p4:m4")
+    detail = publication.publication_detail(ctx, refusal)
+    pair = "p3 m3" if wrong_pair else "p2 m2"
+    assert "p1:m1" in detail and "p4:m4" in detail
+    assert f"adopt {pair} from a location bound to world {W} to connect them" in detail
+    assert "no held marker orders" not in detail

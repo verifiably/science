@@ -7,7 +7,8 @@ import pytest
 from beliefs.intents.publish import Destination
 from beliefs.permit import RequiredCapabilities, scoped_authority
 from beliefs.publish import pending_publishes
-from beliefs.root import moment_seam, open_corpus
+from beliefs.publish_request import decode_snapshot
+from beliefs.root import moment_seam, open_corpus, open_world
 from helpers.commons import (
     LOC_A,
     Remotes,
@@ -19,9 +20,8 @@ from helpers.commons import (
     transport_with,
     with_remotes,
 )
-from helpers.world import concept_list_address, level_list_address, open_rig
+from helpers.world import FIXTURE_AUTHORITY, concept_list_address, level_list_address, open_rig
 import science.publication as publication
-from science.config import ReadContext
 from science.publication import binding_fields, marker_fields, marker_of
 from science.world_belief import publish_session_epoch
 
@@ -113,10 +113,13 @@ def test_a_transport_fault_closes_kernel_refused_and_a_fresh_attempt_is_blocked_
             (token,) = _pending(fresh.a)
             assert token in r2.message
             fault.fail_after_push = False
-            def no_reclassification(self):
+            (snapshot_path,) = (fresh.a.operations_root / "publish").glob("*/selection.v1")
+            frozen = decode_snapshot(snapshot_path.read_bytes())
+            def no_reclassification(ctx):
                 pytest.fail("resume recomputed ownership from current mounts")
-            monkeypatch.setattr(ReadContext, "mounts", no_reclassification)
+            monkeypatch.setattr("science.commands.publish.acceptance_inputs", no_reclassification)
             text = d.invoke("publish", {"target": "a", "to": LOC_A, "resume": token}, invocation_id="p3").text
+            assert decode_snapshot(snapshot_path.read_bytes()) == frozen
     finally:
         publication.transport_for = saved
     assert "[publication-binding]" in text
@@ -146,3 +149,23 @@ def test_preview_matches_what_publish_froze(published):
     assert fields.selection == previewed and fields.uid == ids["marker"]
     assert fields.world == published.a.world.world_id and fields.attributions == {}
     assert publication.artifact_identity(sibling) == ids["artifact"]
+
+
+@pytest.mark.parametrize("terminal", ["retire", "depart"])
+@pytest.mark.parametrize("command,resume", [("publish-preview", None), ("publish", None), ("publish", "f" * 32)])
+def test_publication_refuses_any_nonlive_session_corpus_before_the_kernel(reopened, terminal, command, resume):
+    cfg = reopened.b
+    cid = a_identity(reopened.a)["corpus_id"]
+    destination = cfg.world.world_root.parent / "refused-publication"
+    params = {"target": "b", "to": str(destination)}
+    if resume is not None:
+        params["resume"] = resume
+    with open_rig(cfg, (command,)) as (d, ctx):
+        assert cid in ctx.session_ids()
+        before = tuple(ctx.write_view().iter_stored())
+        getattr(open_world(cfg.world, authority=FIXTURE_AUTHORITY), terminal)(cid)
+        refusal = refused(lambda: d.invoke(command, params))
+        assert tuple(ctx.write_view().iter_stored()) == before
+    assert refusal.code == "corpus-retired" and refusal.data == {"corpus": cid}
+    assert cid in refusal.message and "reopen the session" in refusal.message
+    assert not destination.exists() and _pending(cfg) == ()

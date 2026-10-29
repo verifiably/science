@@ -35,13 +35,14 @@ def _refused(reason: str, detail: str) -> KernelRefusalValue:
 
 
 def handle(ctx, writer, *, target, to, resume=None) -> Report:
+    publication.require_live_session(ctx)
     try:
         outcome = _run(ctx, writer, target=target, to=to, resume=resume)
     except GitTransportFault as fault:
         # The kernel's attempt stays unfinished with its mark; `resume` continues it.
         raise KernelRefusalValue(publication.TransportFault(reason="transport-fault", detail=str(fault))) from fault
     except PublicationRefused as caught:
-        raise _refused(caught.reason, str(caught)) from caught
+        raise _refused(caught.reason, publication.publication_detail(ctx, caught)) from caught
     # Step 0 reads the current epoch and evaluates the view there before the intent: nothing was written.
     except EpochUnknown as caught:
         raise _refused("no-epoch", f"this world has published no epoch; {REMEDY}") from caught

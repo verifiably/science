@@ -9,13 +9,14 @@ from nodes.core.ids import NodeId
 
 from science.acceptance import acceptance_inputs
 from science.coordination import resolve_project_ref
-from science.publication import parse_destination, selection_detail
+from science.publication import parse_destination, publication_detail, require_live_session, selection_detail
 from science.refusal import Refusal, Refused
 from science.report import Heading, KeyVals, Report, Text
 from science.world_belief import REMEDY
 
 
 def handle(ctx, *, target, to) -> Report:
+    require_live_session(ctx)
     view = resolve_project_ref(ctx, target)
     destination = parse_destination(to)
     try:
@@ -27,7 +28,7 @@ def handle(ctx, *, target, to) -> Report:
         raise Refused(Refusal("kernel-refused", selection_detail(refused),
                               {"kind": type(refused).__name__, "reason": refused.reason})) from None
     except PublicationRefused as refused:
-        raise Refused(Refusal("kernel-refused", str(refused),
+        raise Refused(Refusal("kernel-refused", publication_detail(ctx, refused),
                               {"kind": type(refused).__name__, "reason": refused.reason})) from None
     kinds = Counter(NodeId.parse(address).kind for address in preview.selected)
     selection = (*((kind, str(count)) for kind, count in sorted(kinds.items())),
