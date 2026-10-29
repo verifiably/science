@@ -94,6 +94,14 @@ xfail, 1,048 collected, 177.22s suite time, exit 0. Tasks 13–15 remain blocked
 `beliefs-a989fb`; the sole remaining strict
 xfail requires actual retirement. No retirement door is implemented by this phase.
 
+*Amended 2026-10-29 (milestone 1b plan, Task 15):* status: the retirement tail has
+landed on branch `commons-1b` at Task 13 (`bb1fad5`, retirement through the kernel door
+`ScopedWriter.retire`, beliefs `f274822`) and Task 14 (`320f9e3`, the §5.9 retirement
+gates); the strict retirement xfail is gone. The whole-tail review and local integration
+are pending. Sections 5.7, 5.9 and 7 above keep their interim, pre-door prose as the
+decision record; the shipped behaviour is in the commons design §10 and in
+`commands/adopt/prompt.md`.
+
 **Inherits:** the commons design §4.4, §4.7, §4.8, §9, §10 and §12 in full, with its 1a
 amendments (Deviations 1–12 of `docs/plans/2026-10-22-science-commons-1a.md`); the kernel's
 overlapping-publications design §4.1, §5.4, §6, §7, §8 and §10; the writer-session design's

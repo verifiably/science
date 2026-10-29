@@ -370,7 +370,8 @@ ledgered only by the `restore_root` and `admit_publication` doors.
 
 *Amended 2026-10-29 (milestone 1b plan, Task 12):* the scoped retirement door
 (`beliefs-a989fb`) remains pending; the overlap half does not call `World.retire`
-by another route. The registry's pins and bindings are projections of ledger
+by another route.
+The registry's pins and bindings are projections of ledger
 evidence, distinct from science's second, presentation-only state: sharing-report
 tails under `operations_root/tails/<session_id>/<invocation_id>.json`.
 Plan review round 5 accepted this narrow exception so adoption can explain retention
@@ -380,6 +381,11 @@ historical commentary, not a recomputable cache: its cost is retaining the sidec
 beside the ledger for exact historical replay. Every effect remains recoverable
 without it; losing a nonempty tail loses its commentary and stales cursors issued
 over it. An absent sidecar means an empty tail, including older invocations.
+
+*Amended 2026-10-29 (milestone 1b plan, Task 15):* the door has landed (beliefs main
+`f274822`) and `adopt` reaches it through `ScopedWriter.retire(root, observers, *,
+evidence)`, which ledgers the `retired` sharing line; the sentence above describes the
+overlap half's interim state. Science still does not call `World.retire` directly.
 
 ## 5. Writer sessions in `beliefs`
 

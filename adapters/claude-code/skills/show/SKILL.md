@@ -47,8 +47,9 @@ with no authorized established group have no supersession block.
 For a superseded live pin in a resolved group, `retention` lists every
 reason it is kept: `configuration`, `chain (for <corpus>)`,
 `attribution (named by <corpus>)`, and `dependency (<addresses>)`.
-With no reason it says `pending: no door`: the kernel retirement door has
-not landed. An unresolved group reports the missing links without claiming
+With no reason it says `pending: rerun adopt`: the predecessor is unrequired but
+not yet retired (for example after a crash between mounting its successor and
+retiring it); `adopt` retires it. An unresolved group reports the missing links without claiming
 retirement is pending. A kernel-retired pin says `retired: yes`.
 The `keep` row reads the current configuration; this read-only command
 neither reconciles the registry nor retires a corpus.

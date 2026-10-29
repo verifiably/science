@@ -895,16 +895,41 @@ spec and verification `supersedes` references and profile vocabulary bindings ar
 not dependencies. A reached record requires its predecessor only when no other live
 mounted holder has equal content.
 
-This phase adds no retirement call. An unrequired predecessor stays `mounted` with
-`retirement pending: the kernel's retire door (beliefs-a989fb) has not landed`;
-`show` reports `retention: pending (no door)`. Before that pending report, a changed
-configuration file refuses `config-stale`, naming the loaded `keep` list and the
-restart/rerun remedy; any admission already completed stands. Citing writes and
-both new and resumed publication attempts refuse `corpus-retired` for explicitly
-nonlive session corpora until reopen; ordinary reads remain possible. These guards
-are implemented, while their real post-retirement gates wait for the door. The
-retirement paragraphs below remain the intended second phase, Tasks 13–15, blocked
-on `beliefs-a989fb`; they do not claim that phase works today.
+*Amended 2026-10-29 (milestone 1b plan, Task 15):* the retirement tail ships on
+branch `commons-1b` (Tasks 13–14; pending local integration), superseding the
+interim state this paragraph first described (no retirement call; a
+`retirement pending` Finding and `show`'s `retention: pending (no door)`). After the
+candidate is mounted and the invocation's retention is evaluated, `adopt` retires each
+unrequired predecessor through the kernel's scoped door
+`ScopedWriter.retire(root, observers, *, evidence)` (beliefs `f274822`; door design
+`beliefs` `docs/superpowers/specs/2026-10-29-publication-retirement-door-design.md` §6).
+The root is the registry's root for the pin, the observers come from the pin's retained
+head artifact, and the transition is always `retired`. The door ledgers the `retired`
+sharing line, which the pin projects; the session's mounts stay as opened until the
+reader reopens and runs `science epoch`, and the report says so and names the evaluated
+`keep` list. The door is idempotent for any actor: when the corpus already carries a
+`retired` status, whoever retired it, the verdict is `already-retired`, no second status
+record is written, and the line is still ledgered. Reconcile (`adopt`'s first step)
+calls the door for every `mounted` pin whose kernel status is known, not live and not
+departed, so a retirement completed by the kernel but not yet ledgered or projected is
+recovered by the next `adopt`. A `departed` corpus is reported as a Finding and never
+enters the door; the door's refusals (`StatusTerminal`, `StatusTargetUnknown`)
+surface as refusals or, in reconcile, as a Finding naming the corpus. A changed
+configuration file still refuses `config-stale` before retirement, naming the loaded
+`keep` list and the restart/rerun remedy, and any admission already completed stands.
+`show` stays read-only: a predecessor left unretired by a crash between the mount and
+the retirement reports `retention: pending: rerun adopt`, and the next `adopt`, even of
+the already-mounted target, retires it. Citing writes and both new and resumed
+publication attempts refuse `corpus-retired` for explicitly nonlive session corpora
+until reopen; ordinary reads remain possible. The §5.9 gates of the 1b design are
+tests: spec-drop, spec-only, late link in both arrival orders, retry after a crash,
+a sibling arriving after retirement, a chain through a retired intermediate,
+requirement before sweep, chain retention, configured `keep`, stale configuration, and
+the write guards after an in-session retirement. They show that retirement happens only
+when nothing requires the predecessor and that nothing is retired through an unresolved
+group. One limit: if reconcile itself retires the very corpus `adopt` was asked to adopt,
+the line and pin persist but the invocation then refuses `invalid-input`, because the
+requested pin is retired (a retired publication is not re-adopted).
 
 When the candidate is a successor:
 
@@ -977,6 +1002,10 @@ Retirement is therefore a milestone 1b obligation of the surface — the
 kernel has the act, and "nothing acts on it" (remote §13 item 1) is the
 `sharing` write class's gap (§11) — not an option.
 
+*Amended 2026-10-29 (milestone 1b plan, Task 15):* the surface now acts on it:
+`adopt` reaches step 3 through the scoped door described above, on branch
+`commons-1b` pending local integration.
+
 ## 11. What `beliefs` must add, what the framework must amend, what `science` builds
 
 Kernel requirements, each filed as a `beliefs` task after this spec's
@@ -988,7 +1017,7 @@ review, with the milestone part that needs it:
 | attribution entries on the marker, as a frozen facet (§7.1) | 1a |
 | an acceptance predicate `counts(corpus_id, address)` on gather, consulted before retraction standing is folded, and the policy statement in the context (§9) | 1a |
 | overlapping publications in the world index under §4.7's three outcomes (`beliefs-81367e`) | 1b |
-| permit-bound, ledgered retirement door (`beliefs-c0d952` design / `beliefs-a989fb` implementation), including idempotent recovery of completed retirement | 1b retirement tail; pending |
+| permit-bound, ledgered retirement door (`beliefs-c0d952` design / `beliefs-a989fb` implementation), including idempotent recovery of completed retirement | 1b retirement tail; landed (beliefs `f274822`) |
 | whether `beliefs-9ce6e4` covers an `assesses` edge and a `verification` whose targets live in a mount, or a sibling task does | 1a |
 | whether the marker should carry a workspace locator, or the catalog's `execution` claim suffices (§5 step 4) | open, asked at 1a |
 | key-bound provider identity: signed head artifacts (§4.4) | 4 |
@@ -1015,6 +1044,13 @@ by the kernel's cut 48 (`316c202`); the retirement row remains a separate pendin
 door. The overlap half does not call `World.retire` directly or substitute another
 route. Tasks 13–15 revise their provisional interfaces against the merged kernel
 design before implementation, and the parent milestone stays open through that tail.
+
+*Amended 2026-10-29 (milestone 1b plan, Task 15):* the retirement row is supplied by
+`beliefs-a989fb` (beliefs main `f274822`): the scoped door
+`ScopedWriter.retire(root, observers, *, evidence)` ledgers `retired`, is idempotent for
+any actor (verdict `already-retired`, no second status record), and refuses
+`StatusTerminal` for a departed corpus and `StatusTargetUnknown` for a non-self-replica
+admission. Tasks 13–14 use it as built; the original provisional interface is replaced.
 
 Framework amendments, made in the framework document before milestone 1a's
 plan:
@@ -1078,7 +1114,11 @@ clean-environment verification (`sci-b979ce`). Overlap in 1a refuses
 `adopt-conflict` (§10's Deviation 3 amendment), so 1b's cases wait on
 `beliefs-81367e`.
 
-*1b, overlap and retirement.* *A* binds *B*, adopts *B*'s publication; *A*
+*1b, overlap and retirement.* *Amended 2026-10-29 (milestone 1b plan, Task 15):*
+both halves are implemented on branch `commons-1b`: the overlap half (Tasks 1–12) and
+the retirement tail (Tasks 13–14 at `bb1fad5` and `320f9e3`); local integration, with
+the whole-tail review, is pending. The pinned-derivation case and the retirement gates
+of the 1b design §5.9 run as tests; the strict retirement xfail is gone. *A* binds *B*, adopts *B*'s publication; *A*
 publishes an update that drops one record; *B* adopts the update. Decisive
 cases:
 

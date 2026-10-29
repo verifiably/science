@@ -14,9 +14,10 @@ the candidate. A missing link leaves a publication unresolved until adopted.
 
 After admission, every resolved chain is re-evaluated. `retention <corpus>`
 blocks explain configuration, chain, attribution or dependency requirements;
-an unknown `keep` entry is a Finding. Unrequired predecessors currently report
-`retirement pending` until the kernel retirement door lands. Before that step,
-a changed configuration file refuses `config-stale`: the adoption stands;
+an unknown `keep` entry is a Finding. An unrequired predecessor is retired
+through the kernel's retirement door and the report names it (`[pin] <corpus> retired`);
+retirement is irreversible, and the session's mounts stay as opened until you reopen
+and run `science epoch`. Before retirement, a changed configuration file refuses `config-stale`: the adoption stands;
 restart the service and rerun `adopt` with the intended `keep` list loaded.
 
 Output begins with every ledger sharing step's canonical `[pin]` block, followed
