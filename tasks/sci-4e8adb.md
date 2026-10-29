@@ -1,18 +1,21 @@
 ---
 id: sci-4e8adb
 title: Resolve existing tilde-layout findings before checker rollout
-status: doing
+status: done
 priority: 2
 size: s
 complexity: mid
 process: direct
 owner: fix/sci-4e8adb
 created: 2026-10-22T19:07:45Z
-updated: 2026-10-29T20:54:06Z
+updated: 2026-10-29T20:54:08Z
 started: 2026-10-29T20:26:47Z
+completed: 2026-10-29T20:54:08Z
+closed: 2026-10-29T20:54:08Z
 depends: []
 tags: []
 source: ops-295f8d
+model: claude-opus-5-5
 agent: codex
 ---
 
@@ -38,3 +41,7 @@ Reported files:
 - 2026-10-29T20:54:05Z (fix/sci-4e8adb): resumed
   provenance: {"harness_session":"claude-code:0abf3f61-62e6-4a09-a944-9063cc887bf3","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-29T20:54:06Z (fix/sci-4e8adb): review: impl round 1 — verdict: accept; findings: none; reviewer: claude-code/claude-opus-5-5
+- 2026-10-29T20:54:08Z (fix/sci-4e8adb): done
+  provenance: {"harness_session":"claude-code:0abf3f61-62e6-4a09-a944-9063cc887bf3","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-29T20:54:08Z (fix/sci-4e8adb): Reworded 4 beliefs-checkout aliases in the belief-path-commands plan's grep commands to <beliefs checkout>; fast-forwarded into main; candidate exits 0 on main; just check passed; baseline just test 1070 passed
+  provenance: {"harness_session":"claude-code:0abf3f61-62e6-4a09-a944-9063cc887bf3","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
