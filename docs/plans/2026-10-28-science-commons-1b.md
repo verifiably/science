@@ -47,8 +47,13 @@ stale check's path, two snapshot callables per base-parametrised builder). Round
 tips, not every pair (Task 6); the report contract must survive pagination and omit no
 committed pin, so the dispatcher composes the pin prefix and stores the handler's tail in
 the invocation outcome (Task 8); an already-mounted retry counts the whole invocation's
-writes (Task 8); two commit commands named their files (Tasks 6, 11). Revision 4 answers
-them.
+writes (Task 8); two commit commands named their files (Tasks 6, 11). Revision 4
+(`92c9062`) answered them. Round 4 (`codex/gpt-6-astra`, revise: P1 1, P2 2): the
+kernel's close outcome admits exactly one key, so the tail cannot ride in it; the handler
+conversion missed `provider-bind` and the synthetic test handlers; existing invocations
+have no tail. Revision 5 answers them: the tail is persisted by science under
+`operations_root/tails/`, absent meaning empty, every sharing handler converts, and the
+audit-failure and 1a-shaped-ledger paths are stated and tested (Task 8).
 
 **Status:** draft for review. Execution ruling (round 3, the user): subagent-driven,
 implementers sequential, a whole-branch review before each phase merges.
@@ -559,11 +564,12 @@ def test_nothing_required_is_empty(...)
 - Modify: `python/src/science/commands/adopt.py` (whole handler), `commands/adopt/prompt.md`,
   `python/src/science/refusal.py` (`divergent-publication`, `config-stale`),
   `python/src/science/render.py:53-64` (`audit_sharing_report`),
-  `python/src/science/dispatch.py:346-353` (the first response of a `sharing` invocation);
-  `report.py` needs no change (`PinBlock` renders any transition; `Finding` and `KeyVals`
-  exist)
+  `python/src/science/dispatch.py:346-353,481-536` (the first response and the continuation
+  of a `sharing` invocation), `python/src/science/report.py` (`tail_to_json`,
+  `tail_from_json`), `python/src/science/commands/provider_bind.py` (returns `()`)
 - Test: `python/tests/test_cmd_adopt.py`, `python/tests/test_dispatch_sharing.py`,
-  `python/tests/helpers/commons.py` (the candidate builders below)
+  `python/tests/test_cmd_provider.py`, `python/tests/helpers/commons.py` (the candidate
+  builders below)
 
 **The sharing report contract, extended.** Today `audit_sharing_report` refuses any block
 that is not a `PinBlock`, the dispatcher renders `_pin_report(lines)` whatever the handler
@@ -575,27 +581,42 @@ contract and Task 12 records it as a dated amendment of the framework's §4.4 `s
 class:
 
 - A `sharing` **handler returns informational blocks only** (`KeyVals`, `Finding`), its
-  reading of registry and kernel state; it never authors a `PinBlock`. `adopt` today
-  returns `pin_block(line)` per line; that goes.
+  reading of registry and kernel state; it never authors a `PinBlock`. Every sharing
+  handler converts: `adopt` (today `pin_block(line)` per line), `provider-bind` (today
+  `(pin_block(line),)`, now `()`), and the synthetic sharing handlers in
+  `test_dispatch_sharing.py`. A regression test shows a successful binding still renders
+  its canonical `bound` pin block.
 - The **canonical report** is composed by the dispatcher: `_pin_report(lines)` (every
   sharing line of the invocation, in ledger order: the complete pin prefix, so a committed
   effect cannot be omitted) followed by the handler's tail. `audit_sharing_report(tail)`
   refuses any `PinBlock` in the tail.
-- The tail is **stored in the invocation's close outcome**, `{"done": [], "tail":
-  [...]}`, each block serialised as `{"kind": "keyvals", "title": …, "pairs": [[k, v],
-  …]}` or `{"kind": "finding", "text": …}` (`report.tail_to_json` / `report.tail_from_json`
-  in `report.py`), so `_continue_write` rebuilds exactly the same report from
-  `record.sharing` plus `record.outcome["tail"]` and the cursor digest matches; replay of
-  a closed invocation renders the same.
+- The tail is **persisted by science, not by the kernel**: the ledger's close outcome is
+  exactly `{"done": …}` or `{"refusal": …}` (`beliefs.session.ledger.validated_outcome`
+  refuses a second key), so the dispatcher writes the tail, before `close_invocation`, to
+  `operations_root / "tails" / <session id> / <invocation id>.json` (science already owns
+  `transport/` and `scratch/` under the operations root), atomically through
+  `sharing._write_json`, each block serialised as `{"kind": "keyvals", "title": …,
+  "pairs": [[k, v], …]}` or `{"kind": "finding", "text": …}` (`report.tail_to_json` /
+  `report.tail_from_json`). `_continue_write` and the replay of a closed invocation
+  rebuild `_pin_report(record.sharing)` plus the tail read from that file, so the cursor
+  digest matches; **an absent file is an empty tail**, which is what every 1a invocation
+  has, so their cursors and replays keep working. The tail is informational and
+  re-derivable by `show`; the ledger stays the truth for every effect.
+- On an audit failure the invocation still closes `done` first (as today), no tail file
+  is written, the `AuditViolation` propagates, and a retry renders the canonical pin
+  report.
 - Pagination is therefore one contract for every page: a page may end inside a pin block
-  or inside the tail, and the cursor continues from the ledger-rebuilt report.
+  or inside the tail, and the cursor continues from the ledger-rebuilt report plus the
+  persisted tail.
 
 Unit tests in `test_dispatch_sharing.py`: a handler returning a `PinBlock` is refused by
-the audit; a tail renders after the complete pin prefix on the first response; an outcome
-with two sharing lines and a tail renders both pins before the tail; with a small
-`output_budget` a cursor issued inside a pin block and one issued inside the tail both
-continue to the same text from the ledger; a retry of a closed invocation renders the
-stored tail.
+the audit and the retry renders the pin report; `provider-bind`'s binding renders its
+`bound` pin block; a tail renders after the complete pin prefix on the first response; an
+invocation with two sharing lines and a tail renders both pins before the tail; with a
+small `output_budget` a cursor issued inside a pin block and one issued inside the tail
+both continue to the same text; a retry of a closed invocation renders the persisted tail;
+an invocation whose tail file is absent (a 1a-shaped ledger) continues and replays as pins
+only.
 
 **Interfaces:**
 - Consumes: Task 2 `conflicts`; Task 6 `established`, `authorized`, `classify`, `current`,
@@ -853,8 +874,9 @@ def test_publish_in_the_late_link_state_refuses_attribution_ambiguous_naming_the
   each marked *Amended <date> (milestone 1b plan, §<n>)* as 1a's were; and amend the
   framework design (`docs/specs/2026-08-31-command-framework-design.md` §4.4, the
   `sharing` class) with Task 8's report contract: the dispatcher composes the complete
-  ledger-backed pin prefix, the handler supplies an informational tail stored in the
-  invocation's outcome, and every page continues from the ledger-rebuilt report.
+  ledger-backed pin prefix, the handler supplies an informational tail that science
+  persists under the operations root (absent meaning empty), and every page continues
+  from the ledger-rebuilt report plus that tail.
 - [ ] **Step 2: Run** `just gate`; Expected: `check` silent, suite passes. Note the test count on the task.
 - [ ] **Step 3: Commit** — `git commit -am "docs(specs): commons amendments for milestone 1b's overlap half"`
 
