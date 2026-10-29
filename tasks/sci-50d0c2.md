@@ -8,7 +8,7 @@ complexity: mid
 process: direct
 owner: commons-1b
 created: 2026-10-29T01:51:05Z
-updated: 2026-10-29T15:36:45Z
+updated: 2026-10-29T15:39:03Z
 started: 2026-10-29T15:22:28Z
 depends: [sci-9da5a6]
 parent: sci-9104fb
@@ -26,4 +26,6 @@ step: "Task 15: Documents for the retirement tail"
 - 2026-10-29T15:22:28Z (commons-1b): started
   provenance: {"harness_session":"claude-code:e9952dfd-ee2b-47b3-84ef-d176d9d3cc57","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-29T15:36:45Z (commons-1b): parked (waiting on agent): Controller dispatches the Task 15 review over 839e42d..240907e in .worktrees/commons-1b
+  provenance: {"harness_session":"claude-code:e9952dfd-ee2b-47b3-84ef-d176d9d3cc57","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-29T15:39:03Z (commons-1b): resumed
   provenance: {"harness_session":"claude-code:e9952dfd-ee2b-47b3-84ef-d176d9d3cc57","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
