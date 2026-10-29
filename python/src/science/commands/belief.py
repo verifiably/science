@@ -22,4 +22,6 @@ def handle(ctx, *, proposition) -> Report:
     report = (Heading(f"Belief: {proposition}"), KeyVals("answer", pairs))
     if answer.acceptance is None:
         return report
-    return (*report, KeyVals("acceptance", explain(answer.acceptance, acceptance_inputs(ctx))))
+    return (*report, KeyVals("acceptance", explain(
+        answer.acceptance, acceptance_inputs(ctx),
+        lambda address: tuple(m.corpus_id for m in ctx.session_mounts() if m.view.holds(address)))))

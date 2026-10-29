@@ -43,7 +43,7 @@ def test_belief_with_empty_accept_excludes_a_and_says_so(reopened):
     assert acceptance["verifiers"] == reopened.b.world.world_id
     assert acceptance[f"pin {ids['corpus_id']}"] == (
         f"world {ids['world']}; source provider:https://remote.test/a; origin-confirmed; mounted")
-    assert acceptance[f"excluded {ids['assessment']}"] == f"corpus {ids['corpus_id']}; world {ids['world']}"
+    assert acceptance[f"excluded {ids['assessment']} ({ids['corpus_id']})"] == f"corpus {ids['corpus_id']}; world {ids['world']}"
     assert ReadContext.open(reopened.b).gather_inputs(ids["proposition"]).assessments == ()
 
 

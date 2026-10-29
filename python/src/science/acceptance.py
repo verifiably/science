@@ -7,7 +7,7 @@ publications' markers, and states it as the policy statement the belief input di
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from functools import partial
 
@@ -15,6 +15,7 @@ from beliefs.belief import AcceptanceContext, AcceptancePolicy
 from beliefs.errors import PublicationArrivalRefused
 from beliefs.publication import BINDING_KIND, MARKER_KIND
 from beliefs.publication_arrival import require_publication_layout
+from beliefs.world.registry import content_identity
 
 from science.publication import binding_fields, marker_fields
 from science.refusal import Refusal, Refused
@@ -31,6 +32,7 @@ class Carrier:
     marker: str
     selection: frozenset[str]
     attributions: Mapping[str, tuple[str, str]]  # address -> (origin corpus, origin marker)
+    content: Mapping[str, str]  # address -> content identity of this copy
 
 
 @dataclass(frozen=True)
@@ -57,7 +59,8 @@ def _carrier(mount) -> Carrier | None:
                                                f"marker but is not a publication: {caught}")) from None
     (marker,) = (node for node in records if node.kind == MARKER_KIND)
     fields = marker_fields(marker)
-    return Carrier(mount.corpus_id, fields.world, fields.uid, fields.selection, dict(fields.attributions))
+    return Carrier(mount.corpus_id, fields.world, fields.uid, fields.selection, dict(fields.attributions),
+                   {node.id: content_identity(node) for node in records})
 
 
 def _refuse_claimed_duplicates(found, registry_roots: set) -> None:
@@ -127,7 +130,9 @@ def counts(inputs: AcceptanceInputs, corpus_id: str, address: str) -> bool:
     if carrier is None:
         return False  # neither ours nor a publication
     if address in carrier.attributions:
-        return _origin_holds(inputs, *carrier.attributions[address], address)  # Carried
+        origin, origin_marker = carrier.attributions[address]
+        return (_origin_holds(inputs, origin, origin_marker, address)
+                and inputs.carriers[origin].content.get(address) == carrier.content[address])  # Carried
     pin = inputs.pins.get(corpus_id)
     if pin is None:
         return False  # a hand-listed publication: its own records need a pin
@@ -175,9 +180,10 @@ def _world_of(inputs: AcceptanceInputs, corpus_id: str, address: str) -> str:
     return f"unknown: carried from corpus {origin}, which is not mounted"
 
 
-def explain(context: AcceptanceContext, inputs: AcceptanceInputs) -> tuple[tuple[str, str], ...]:
+def explain(context: AcceptanceContext, inputs: AcceptanceInputs,
+            holders_of: Callable[[str], tuple[str, ...]]) -> tuple[tuple[str, str], ...]:
     """What belief selected by (spec §9 item 4): the verifier set, each mounted pin's source and standing, and
-    every record the policy excluded with its world."""
+    every excluded copy with a counting session holder or its provenance world."""
     pairs = [("policy", POLICY), ("verifiers", ", ".join(sorted(inputs.verifiers)))]
     for corpus_id, pin in sorted(inputs.pins.items()):
         source = "none" if pin.source is None else pin.source.render()
@@ -188,5 +194,9 @@ def explain(context: AcceptanceContext, inputs: AcceptanceInputs) -> tuple[tuple
     elif not context.excluded:
         pairs.append(("excluded", "none"))
     for corpus_id, address in context.excluded:
-        pairs.append((f"excluded {address}", f"corpus {corpus_id}; world {_world_of(inputs, corpus_id, address)}"))
+        holder = next((other for other in holders_of(address)
+                       if other != corpus_id and counts(inputs, other, address)), None)
+        detail = (f"copy of a record that counts through corpus {holder}" if holder is not None
+                  else f"world {_world_of(inputs, corpus_id, address)}")
+        pairs.append((f"excluded {address} ({corpus_id})", f"corpus {corpus_id}; {detail}"))
     return tuple(pairs)

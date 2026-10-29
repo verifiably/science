@@ -10,13 +10,13 @@ import shutil
 from dataclasses import replace
 
 import pytest
-from beliefs.belief import AcceptancePolicy
+from beliefs.belief import AcceptanceContext, AcceptancePolicy
 from beliefs.identity import v1
 from beliefs.root import metadata_root_for
 from beliefs.world import WorldConfig
 from helpers.commons import a_identity
 
-from science.acceptance import AcceptanceInputs, Carrier, acceptance_inputs, counts, statement
+from science.acceptance import AcceptanceInputs, Carrier, acceptance_inputs, counts, explain, statement
 from science.commands.next import classify
 from science.config import ReadContext, corpus_id_at
 from science.refusal import Refused
@@ -45,12 +45,15 @@ def binding(world: str, location: str, *, confirmed: bool = True) -> ProviderBin
 
 PIN_A, PIN_B = pin(CID_A, W_A, MARKER_A, LOC_A), pin(CID_B, W_B, MARKER_B, LOC_B)
 BIND_A, BIND_B = binding(W_A, LOC_A), binding(W_B, LOC_B)
-CARRIER_A = Carrier(CID_A, W_A, MARKER_A, frozenset({A_ASSESSMENT, A_DATASET}), {})
+CARRIER_A = Carrier(CID_A, W_A, MARKER_A, frozenset({A_ASSESSMENT, A_DATASET}), {},
+                    {A_ASSESSMENT: "assessment-a", A_DATASET: "dataset-a"})
 # B carries A's assessment, attributed to A's publication, plus a forged attribution of a record A does not hold.
 CARRIER_B = Carrier(CID_B, W_B, MARKER_B, frozenset({B_OWN_ASSESSMENT, A_ASSESSMENT, "assessment:invented"}),
-                    {A_ASSESSMENT: (CID_A, MARKER_A), "assessment:invented": (CID_A, MARKER_A)})
+                    {A_ASSESSMENT: (CID_A, MARKER_A), "assessment:invented": (CID_A, MARKER_A)},
+                    {B_OWN_ASSESSMENT: "assessment-b", A_ASSESSMENT: "assessment-a", "assessment:invented": "invented"})
 # A hand-listed root carrying a marker: H's own assessment, and A's dataset carried.
-CARRIER_H = Carrier(CID_H, W_H, MARKER_H, frozenset({H_OWN_ASSESSMENT, A_DATASET}), {A_DATASET: (CID_A, MARKER_A)})
+CARRIER_H = Carrier(CID_H, W_H, MARKER_H, frozenset({H_OWN_ASSESSMENT, A_DATASET}),
+                    {A_DATASET: (CID_A, MARKER_A)}, {H_OWN_ASSESSMENT: "assessment-h", A_DATASET: "dataset-a"})
 
 INPUTS_EMPTY = AcceptanceInputs(
     own_corpus=CID_SELF, own_roots=frozenset({CID_SELF, CID_LOCAL}), verifiers=frozenset({W_SELF}),
@@ -160,7 +163,8 @@ def test_an_attribution_naming_another_marker_of_the_origin_never_counts():
 PIN_BACK = replace(pin(CID_BACK, W_SELF, MARKER_BACK, LOC_BACK), artifact="artifact-back")
 # Our own publication adopted back: our assessment, and A's assessment we had carried, attributed to A.
 CARRIER_BACK = Carrier(CID_BACK, W_SELF, MARKER_BACK, frozenset({OWN_ASSESSMENT, A_ASSESSMENT}),
-                       {A_ASSESSMENT: (CID_A, MARKER_A)})
+                       {A_ASSESSMENT: (CID_A, MARKER_A)},
+                       {OWN_ASSESSMENT: "assessment-own", A_ASSESSMENT: "assessment-a"})
 INPUTS_ADOPTED_BACK = replace(
     INPUTS_EMPTY, pins={CID_A: PIN_A, CID_BACK: PIN_BACK}, bindings={W_A: BIND_A},
     own_bindings=frozenset({(CID_BACK, MARKER_BACK, "artifact-back")}),
@@ -177,7 +181,7 @@ def test_own_records_adopted_back_count_through_the_binding():
 
 
 def test_a_marker_merely_claiming_our_world_never_takes_the_own_branch():
-    claiming = Carrier(CID_FAKE, W_SELF, MARKER_FAKE, frozenset({"assessment:fake"}), {})
+    claiming = Carrier(CID_FAKE, W_SELF, MARKER_FAKE, frozenset({"assessment:fake"}), {}, {"assessment:fake": "fake"})
     inputs = replace(INPUTS_EMPTY, pins={CID_FAKE: pin(CID_FAKE, W_SELF, MARKER_FAKE, LOC_FAKE)},
                      carriers={CID_FAKE: claiming})
     assert W_SELF in inputs.verifiers
@@ -261,3 +265,44 @@ def test_two_markerless_unpinned_roots_sharing_an_id_stay_own(reopened):
     _copy_corpus(own, twin)
     inputs = acceptance_inputs(ReadContext.open(_with_extra_root(reopened.b, twin)))
     assert corpus_id_at(own) in inputs.own_roots
+
+
+def test_a_carried_copy_equal_to_the_origins_counts():
+    origin = replace(CARRIER_A, content={A_ASSESSMENT: "original"})
+    carried = replace(CARRIER_B, content={A_ASSESSMENT: "original"})
+    inputs = replace(INPUTS_ACCEPT_A_AND_PIN_A, carriers={CID_A: origin, CID_B: carried})
+    assert counts(inputs, CID_B, A_ASSESSMENT)
+
+
+def test_a_carried_copy_differing_from_the_origins_never_counts():
+    origin = replace(CARRIER_A, content={A_ASSESSMENT: "original"})
+    carried = replace(CARRIER_B, content={A_ASSESSMENT: "changed"})
+    inputs = replace(INPUTS_ACCEPT_A_AND_PIN_A, carriers={CID_A: origin, CID_B: carried},
+                     verifiers=frozenset({W_SELF, W_A, W_B}))
+    assert not counts(inputs, CID_B, A_ASSESSMENT)
+
+
+def test_explain_words_a_copy_whose_record_counted_elsewhere_as_a_copy():
+    context = AcceptanceContext(statement(INPUTS_ACCEPT_B), ((CID_B, A_ASSESSMENT),), True)
+    pairs = dict(explain(context, INPUTS_ACCEPT_B, lambda address: (CID_B, CID_SELF)))
+    assert pairs[f"excluded {A_ASSESSMENT} ({CID_B})"] == (
+        f"corpus {CID_B}; copy of a record that counts through corpus {CID_SELF}")
+
+
+def test_explain_keys_are_qualified_by_corpus():
+    context = AcceptanceContext(statement(INPUTS_ACCEPT_B),
+                                ((CID_B, A_ASSESSMENT), (CID_H, A_ASSESSMENT)), True)
+    pairs = dict(explain(context, INPUTS_ACCEPT_B, lambda address: (CID_B, CID_H)))
+    assert pairs[f"excluded {A_ASSESSMENT} ({CID_B})"] == (
+        f"corpus {CID_B}; world {W_A} (carried from corpus {CID_A})")
+    assert pairs[f"excluded {A_ASSESSMENT} ({CID_H})"] == (
+        f"corpus {CID_H}; world unknown: the corpus is not a publication")
+
+
+def test_explain_names_no_counting_holder_when_the_other_holder_is_outside_the_session():
+    # The own root would count, but it is outside the session holders supplied by the caller.
+    assert counts(INPUTS_ACCEPT_B, CID_SELF, A_ASSESSMENT)
+    context = AcceptanceContext(statement(INPUTS_ACCEPT_B), ((CID_B, A_ASSESSMENT),), True)
+    pairs = dict(explain(context, INPUTS_ACCEPT_B, lambda address: (CID_B,)))
+    assert pairs[f"excluded {A_ASSESSMENT} ({CID_B})"] == (
+        f"corpus {CID_B}; world {W_A} (carried from corpus {CID_A})")

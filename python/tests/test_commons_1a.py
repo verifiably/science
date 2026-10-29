@@ -110,7 +110,7 @@ def test_belief_excludes_a_under_empty_accept_and_includes_it_under_accept_a(der
     publish_session_epoch(derived.b)   # a belief reads over a current epoch; B's derivation moved its write root
 
     answer, acceptance = _belief(derived.b, ids["proposition"])
-    assert acceptance[f"excluded {ids['assessment']}"] == f"corpus {ids['corpus_id']}; world {ids['world']}"
+    assert acceptance[f"excluded {ids['assessment']} ({ids['corpus_id']})"] == f"corpus {ids['corpus_id']}; world {ids['world']}"
     inputs = ReadContext.open(derived.b).gather_inputs(ids["proposition"])
     assert {value.identity() for value in inputs.assessments} == {_identity(derived.b, own["assessment"])}
     assert not [v for v in inputs.verifications if v.assessment == a_assessment]
