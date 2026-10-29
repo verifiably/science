@@ -1,17 +1,15 @@
 ---
 id: sci-29a07b
 title: "Task 6: `supersession.py`"
-status: done
+status: todo
 priority: 1
 size: m
 complexity: high
 process: direct
 owner: commons-1b
 created: 2026-10-29T01:50:44Z
-updated: 2026-10-29T03:43:40Z
+updated: 2026-10-29T03:44:38Z
 started: 2026-10-29T03:29:41Z
-completed: 2026-10-29T03:40:05Z
-closed: 2026-10-29T03:40:05Z
 depends: []
 parent: sci-9104fb
 tags: [commons]
