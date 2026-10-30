@@ -7,7 +7,7 @@ size: m
 complexity: high
 process: planned
 created: 2026-10-30T18:00:08Z
-updated: 2026-10-30T18:00:08Z
+updated: 2026-10-30T18:00:10Z
 depends: []
 tags: [halt, test-latency, testing]
 source: "tt-latency:titan:2026-10-30T18:00:00Z"
@@ -20,3 +20,4 @@ Process: planned
 ## Notes
 
 - 2026-10-30T18:00:08Z (add): created
+- 2026-10-30T18:00:10Z (main): breach: titan window 2026-10-23T18:00:00Z..2026-10-30T18:00:00Z: test-fast median 142.736 s, limit 90 s, 20 runs on 4 days
