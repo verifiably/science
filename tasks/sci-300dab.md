@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: sci-300dab-stores
 created: 2026-10-30T19:15:26Z
-updated: 2026-10-30T20:08:17Z
+updated: 2026-10-30T20:08:23Z
 started: 2026-10-30T19:45:58Z
 depends: []
 tags: [holdings]
@@ -49,3 +49,4 @@ Observed 2026-10-30 in the mm30 world (store 05b6c1225e710bb1559f36e8333f3f29), 
 - 2026-10-30T20:05:22Z (sci-300dab-stores): attached: stores-spec-round-2-report.md (5687 bytes): Full relayed spec review of 915409e; Important 1 and Minor 5, reviewer claude-code/claude-opus-5-5.
 - 2026-10-30T20:06:25Z (sci-300dab-stores): Spec round 2 disposition: all six findings accepted and addressed in new frozen revision 6d83468c5aa242ffd2ab8a10a3476dcfefa8c4ff, docs/specs/2026-10-30-readable-stores-design.md. (1) Require nonmutating lifecycle read admission, WRITABLE or READ_ONLY_SERVICEABLE, for every root in the readable mapping, with refused-copy/error/no-mutation coverage. (2) Preserve snapshot refusal for unresolved observations and specify unreadable cases and tests. (3) State lexicographic digest/location order, no write-store preference and no fallback. (4) State whole-dataset blockage and require actual mm-62e2da reduction before claiming readiness. (5) Use sibling store-working and name metadata_root_for paths/non-overlap checks. (6) Name only the three test configuration writers. The stage-input digest comparison question remains outside this task; no runtime or live-world integrity claim is made. Original revision 915409e and its SHA-256 6ec91aebaf5523361393c474dcbeb318a64d6f56412fd225ddd32bff2bc2ff96 remain unchanged.
 - 2026-10-30T20:08:17Z (sci-300dab-stores): review: spec round 3 — verdict: accept; findings: none; reviewer: codex/gpt-6.1-sol
+- 2026-10-30T20:08:23Z (sci-300dab-stores): attached: stores-spec-round-3-report.md (3377 bytes): Full fresh re-review of 6d83468: all six findings addressed, no new findings; reviewer codex/gpt-6.1-sol.
