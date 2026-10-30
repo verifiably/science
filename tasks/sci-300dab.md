@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: sci-300dab-stores
 created: 2026-10-30T19:15:26Z
-updated: 2026-10-30T19:51:53Z
+updated: 2026-10-30T19:51:56Z
 started: 2026-10-30T19:45:58Z
 depends: []
 tags: [holdings]
@@ -40,3 +40,4 @@ Observed 2026-10-30 in the mm30 world (store 05b6c1225e710bb1559f36e8333f3f29), 
 - 2026-10-30T19:51:15Z (sci-300dab-stores): review: spec round 1 — verdict: accept; findings: none; reviewer: codex/gpt-6.1-sol
 - 2026-10-30T19:51:18Z (sci-300dab-stores): attached: stores-builder-check-report.md (432 bytes): Full builder review of frozen design 915409e; accepted with no important questions, reviewer codex/gpt-6.1-sol.
 - 2026-10-30T19:51:53Z (sci-300dab-stores): retained: {"host": "titan", "kind": "scratch", "path": "$WORK_ROOT/science/.worktrees/sci-300dab-stores/.superpowers/sdd/sci-300dab-stores", "state": "kept", "verification": "verified", "purpose": "Frozen-design builder review workspace; full review also attached to sci-300dab as stores-builder-check-report.md", "next_owner": "task:sci-300dab", "cleanup_trigger": "After design approval and completed implementation integration, verify attached review then inspect for removal", "manifest": "$WORK_ROOT/science/.worktrees/sci-300dab-stores/.superpowers/sdd/sci-300dab-stores/manifest.sha256", "sha256": "fe4be9d742a5ef85596bc733016e5289c3e7dc9eaafd84444a1d9d69f043aea1"}
+- 2026-10-30T19:51:56Z (sci-300dab-stores): retained: {"host":"titan","kind":"worktree","path":".worktrees/sci-300dab-stores","state":"kept","verification":"verified","purpose":"Locked branch sci-300dab-stores holds frozen spec 915409e and attached builder review for human design review, then implementation planning","next_owner":"task:sci-300dab","cleanup_trigger":"After human spec and plan approval, implementation, final review and local integration, inspect retained contents and host pointers before removal"}
