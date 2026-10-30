@@ -7,7 +7,7 @@ size: s
 complexity: mid
 process: direct
 created: 2026-10-30T14:07:58Z
-updated: 2026-10-30T14:10:36Z
+updated: 2026-10-30T14:11:57Z
 depends: [mm-eca42c, sci-30eb71]
 tags: []
 source: sci-b2755f
@@ -21,3 +21,4 @@ Own the persistent exact pilot inputs, selected-section evidence and execution w
 
 - 2026-10-30T14:07:58Z (add): created
   provenance: {"harness_session":"codex:01a18ce3-2793-7ad1-b204-ef9b88b33aba","harness_session_source":"CODEX_THREAD_ID","origin":"agent"}
+- 2026-10-30T14:11:57Z (feat/sci-b2755f-assumption-sweep): Created $WORK_ROOT/science/sci-b2755f/plan-workspace on titan as an exact copy of the completed plan workspace before worktree cleanup; owner sci-eb1559, mutable until checkpoint below.
