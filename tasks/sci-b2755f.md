@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: feat/sci-b2755f-assumption-sweep
 created: 2026-10-30T01:53:54Z
-updated: 2026-10-30T11:44:26Z
+updated: 2026-10-30T11:44:28Z
 started: 2026-10-30T07:08:27Z
 depends: []
 tags: []
@@ -132,3 +132,4 @@ Related: sci-171ad1 is the causal-answer special case of this ranking; sci-434b9
 - 2026-10-30T11:41:00Z (feat/sci-b2755f-assumption-sweep): review: impl round 2 — verdict: accept; findings: none; reviewer: codex/gpt-6-astra
 - 2026-10-30T11:41:01Z (feat/sci-b2755f-assumption-sweep): attached: pilot-correction-round-1-report.md (2992 bytes): Fresh scoped review accepts readable prompt reconstruction at 97e5f9c, no new findings; prior Minor remains deferred
 - 2026-10-30T11:44:26Z (feat/sci-b2755f-assumption-sweep): retained: {"host": "titan", "kind": "worktree", "path": ".worktrees/sci-b2755f", "state": "kept", "verification": "verified", "purpose": "Hydrated locked feat/sci-b2755f-assumption-sweep; Tasks 1\u20132 accepted, pilot incomplete, no host pointer repointed; retain branch for primary-source continuation and final integration", "next_owner": "task:sci-b2755f", "cleanup_trigger": "After completed pilot acceptance and local integration, inspect ignored files, host pointers and retained evidence before checked removal"}
+- 2026-10-30T11:44:28Z (feat/sci-b2755f-assumption-sweep): retained: {"host": "titan", "kind": "scratch", "path": "$WORK_ROOT/science/sci-b2755f", "state": "kept", "verification": "verified", "purpose": "Persistent task workspace with reusable helpers and exact pilot-v1 evidence subdirectory; report/draft duplicates disposed after hash equality; 38 checkpointed files", "next_owner": "task:sci-b2755f", "cleanup_trigger": "After completed pilot acceptance and integration, preserve needed evidence and assess each helper/input before cleanup", "manifest": "$WORK_ROOT/science/sci-b2755f/manifest.sha256", "sha256": "ffdb3df810a8ca75c783a3399036238f633d325b1f0c1ac9e302cb99ae290490"}
