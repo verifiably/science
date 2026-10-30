@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: sci-300dab-stores
 created: 2026-10-30T19:15:26Z
-updated: 2026-10-30T20:20:07Z
+updated: 2026-10-30T20:24:15Z
 started: 2026-10-30T19:45:58Z
 depends: []
 tags: [holdings]
@@ -16,6 +16,7 @@ source: mm-62e2da
 agent: claude-code/claude-opus-5-5
 origin: mixed
 spec: docs/specs/2026-10-30-readable-stores-design.md
+plan: docs/plans/2026-10-30-readable-stores.md
 ---
 
 A relocated world's store root arrives through restore_root as read-only-serviceable. In atoms (lifecycle design §5, §12) nothing leaves that state and grant_read_serviceability never grants writability; beliefs makes a writable store only through init_store_root or fork_store, each with a fresh store id. Science binds exactly one `store_root` for both reads and writes, and `holdings.held_path_for` resolves only observations naming that store's id. So in the relocated mm30 world every `science dataset` holding write refuses: atoms raises PreconditionRefused("root lifecycle state read-only-serviceable does not grant writability"), and beliefs raises StoreWriteRefused. Repointing `store_root` at a fork or a fresh store would orphan the inherited holdings (5 active in the mm30 world).
