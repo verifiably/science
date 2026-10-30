@@ -7,7 +7,7 @@ size: m
 complexity: high
 process: planned
 created: 2026-10-24T02:16:32Z
-updated: 2026-10-24T10:05:22Z
+updated: 2026-10-30T15:05:58Z
 depends: [beliefs-d6060a]
 parent: sci-35af80
 tags: []
@@ -32,3 +32,7 @@ Ideas it wakes: on completion, add the design findings with tasks note --no-revi
 - commands (input, required, kind=spec): docs/specs/2026-08-31-command-framework-design.md — command construction and kernel writes
 - design (output, kind=spec): docs/specs/causal-analysis-workflow-design.md — first workflow and worked-example acceptance
 - brief (input, required, kind=brief): docs/notes/2026-10-24-causal-analysis-workflow-brief.md — scope boundaries and questions the workflow design must settle
+
+## Notes
+
+- 2026-10-30T15:05:58Z (main): Accepted sweep evidence is available at sci-b2755f attachments pilot-v3-report.md and discovery-inventory-v2.md (reviewed e674683). Q01 supplies a possible real causal-interpretation example: typed causal C1/C3 versus observational unconditioned X1/X2. It is a candidate, not a selected workflow example or established claim defect. Q04 is measurement validity and remains distinct. New beliefs-0e4feb assesses scoped epistemic premises/reliance; mm-87d8db challenges shortlist support. Preserve the existing design scope and user gate.
