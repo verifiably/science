@@ -1,13 +1,15 @@
 ---
 id: sci-bb8611
 title: Resolve inherited holdings and vocabularies through every admitted store
-status: todo
+status: doing
 priority: 1
 size: s
 complexity: mid
 process: direct
+owner: sci-300dab-stores
 created: 2026-10-30T20:24:32Z
-updated: 2026-10-30T20:24:32Z
+updated: 2026-10-30T23:15:29Z
+started: 2026-10-30T23:15:29Z
 depends: [sci-14a324]
 parent: sci-300dab
 tags: [holdings]
@@ -25,3 +27,6 @@ Implement plan Task 2 after plan approval and Task 1: shared identity mapping fo
 
 - 2026-10-30T20:24:32Z (add): created
   provenance: {"harness_session":"codex:01a18e58-0cdf-75c2-bf7d-f4ac22417069","harness_session_source":"CODEX_THREAD_ID","origin":"agent"}
+- 2026-10-30T23:15:29Z (sci-300dab-stores): started
+  provenance: {"harness_session":"codex:01a18e58-0cdf-75c2-bf7d-f4ac22417069","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-30T23:15:29Z (sci-300dab-stores): halt override: started past sci-0bea23 by 01a18e58-0cdf-75c2-bf7d-f4ac22417069: Execute approved readable-stores plan despite open timing halt sci-0bea23
