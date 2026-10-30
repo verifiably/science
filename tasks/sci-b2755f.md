@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: feat/sci-b2755f-assumption-sweep
 created: 2026-10-30T01:53:54Z
-updated: 2026-10-30T14:13:17Z
+updated: 2026-10-30T14:16:07Z
 started: 2026-10-30T07:08:27Z
 completed: 2026-10-30T14:13:17Z
 closed: 2026-10-30T14:13:17Z
@@ -174,3 +174,4 @@ Related: sci-171ad1 is the causal-answer special case of this ranking; sci-434b9
   provenance: {"harness_session":"codex:01a18ce3-2793-7ad1-b204-ef9b88b33aba","harness_session_source":"CODEX_THREAD_ID"}
 - 2026-10-30T14:13:17Z (feat/sci-b2755f-assumption-sweep): Authored sweep skill, synthetic rehearsal and bounded mm pilot accepted. Fresh whole-branch review at e674683 has no new findings; Q01/Q04/Q11 are candidate-level questions, not field priorities. Existing minor remains sci-30eb71; incidents mm-eca42c; exact evidence lifecycle sci-eb1559. Current session integrates reviewed branch locally and removes verified worktree; no push.
   provenance: {"harness_session":"codex:01a18ce3-2793-7ad1-b204-ef9b88b33aba","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-30T14:16:07Z (main): retained: {"host": "titan", "kind": "worktree", "path": ".worktrees/sci-b2755f", "state": "released", "verification": "verified", "purpose": "Accepted branch fast-forwarded into main at 43d5178; clean task worktree removed after tt-report, launcher/unit/config pointer checks and ignored-file dispositions. Exact plan workspace retained under sci-eb1559 and ledger/review attached on parent.", "next_owner": "none", "cleanup_trigger": "none"}
