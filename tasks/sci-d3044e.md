@@ -8,7 +8,7 @@ complexity: high
 process: direct
 owner: feat/sci-b2755f-assumption-sweep
 created: 2026-10-30T08:17:38Z
-updated: 2026-10-30T13:10:15Z
+updated: 2026-10-30T13:10:33Z
 started: 2026-10-30T10:50:45Z
 depends: [sci-69a1ca]
 parent: sci-b2755f
@@ -48,3 +48,4 @@ Execute Task 3 after plan approval and rehearsal acceptance: freeze bounded sour
   provenance: {"harness_session":"codex:01a18ce3-2793-7ad1-b204-ef9b88b33aba","harness_session_source":"CODEX_THREAD_ID"}
 - 2026-10-30T13:10:13Z (feat/sci-b2755f-assumption-sweep): attached: route-500-diagnosis.md (1777 bytes): Europe PMC fullTextXML 500 = non-open-access article; deterministic, with controls
 - 2026-10-30T13:10:15Z (feat/sci-b2755f-assumption-sweep): attached: route-500-oa-flags.tsv (255 bytes): pmid, pmcid, isOpenAccess, inEPMC for the 13 non-incident pilot sources (flags only)
+- 2026-10-30T13:10:33Z (feat/sci-b2755f-assumption-sweep): Route diagnosis (Claude Code, user request): Europe PMC REST fullTextXML returns a generic HTTP 500 for any PMC article outside its open-access subset. Probe source PMC12514755 is isOpenAccess=N, so the v1 and v2 probes were bound to fail; this is not an outage. Controls: 3/3 unrelated non-OA gave 500, 4/4 OA gave 200. Pilot non-incident sources: 4 OA in PMC (200), 2 non-OA in PMC (500), 7 not in PMC. Status and flag requests only; bodies discarded unread, except the 151-byte error JSON. See attachments route-500-diagnosis.md and route-500-oa-flags.tsv. Ruling: freeze setup v3 with a per-source metadata OA preflight, and re-probe isolation on an OA source whose roster cohorts permit reading. Non-OA and non-PMC sources stay metadata-only and are recorded as coverage gaps. Why: the route is licence-bound and deterministic, so waiting never clears it. Cost: 9/13 sources get no section evidence, so three defensible candidates may be unreachable. Rejected: waiting for availability, and scraping rendered non-OA pages (licence, and it bypasses the in-memory extraction boundary).
