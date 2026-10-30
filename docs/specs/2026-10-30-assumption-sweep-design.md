@@ -2,7 +2,7 @@
 
 Date: 2026-10-30
 Task: sci-b2755f
-Status: draft for builder check, then user review; no implementation or pilot authorized by this draft.
+Status: revision 2 after spec review round 2; pending scoped review and user approval.
 
 ## 1. Intent and origin
 
@@ -147,27 +147,71 @@ promotion on report acceptance. No raw paper collection or patient data is copie
 into the code repository. Persistent working inputs use the task's declared
 host-local storage and retained-item records.
 
-Published literature, including abstracts and search snippets, may itself reveal
-results about a cohort. Start screening with bibliographic/design metadata;
-before deliberately reading a candidate source's results, check identified cohort
-accessions against the current
-reservation/exposure records. Previously exposed discovery sources can be read
-with that origin recorded. For identified reserved/unresolved cohorts, use only
-public bibliographic/design metadata in this pilot; do not open their result
-tables or supplements to assess feasibility. Unknown cohort mapping is recorded
-and treated the same way for results. If results are encountered incidentally,
-record what was actually seen, mark possible new exposure and stop further reads
-of that source pending the existing mm exposure/assignment workflow's disposition.
-Do not silently mark it unexposed, assign a role, or change mm's policy here.
+### Literature screening order and exposure ruling
+
+**Designer ruling on review round 2:** retain mm's existing exposure definition;
+do not create an abstract exemption. The mm prior-exposure ledger
+(`docs/notes/2026-10-09-prior-exposure-ledger.md`, §1) already counts a person or
+agent reading phenotype-conditioned results “in any form” as exposure. Its dated
+entries include abstract and search-summary reads. An unmapped paper's
+results-bearing abstract is therefore not exposure-free merely because its
+cohort is unknown. Whether any result was actually seen and which datasets it
+affects must be recorded separately. Changing that policy would require a human
+decision in mm; this design changes only the sweep's screening procedure.
+
+For each source, follow this order and record the route reached:
+
+1. Retrieve bibliographic metadata (title, PMID, DOI, publication details) without
+   requesting abstract/result text or result-bearing snippets. Match PMID and
+   normalized DOI against **all** roster publication fields and accession aliases,
+   then resolve matches through cohort/overlap-group membership to the current
+   assignment and exposure entries. Record the matched entry IDs and revisions.
+   A title similarity is a lead, not a resolved identity; disagreement between
+   identifiers leaves the mapping unresolved. At the inspected mm revision,
+   830 of 1,559 entries have a publication PMID and 100 have a DOI; these overlap
+   and are not counts of uniquely resolvable papers.
+2. For no match, incomplete mapping, or a paper that may use additional cohorts,
+   inspect only an addressable data-availability statement and, if needed, study
+   design/methods metadata. Recheck every discovered accession against the roster
+   before reading results. One discovered discovery cohort does not license
+   results from another cohort in the paper. Fetch/extract named sections before
+   displaying them to the analyst; do not read through an abstract or results page
+   to reach the desired section. If the available retrieval route cannot isolate
+   that material, mark the source `metadata-only: mapping unavailable` and move on.
+3. Read abstracts/results only when the cohorts those results concern are mapped
+   to previously exposed discovery groups, with the evidence recorded. Known
+   reserved/unresolved groups, mixed groups without separable result attribution,
+   and still-unknown mappings remain metadata-only. Pure methods/theory material
+   with no cohort results may be used with that limitation documented; absence
+   from the roster alone never establishes that condition. An accessible abstract
+   is not permission to read it, and metadata-only candidates remain in coverage.
+4. If a title, snippet, abstract or supposedly metadata-only section incidentally
+   reveals phenotype-conditioned results, record the source identity, material
+   actually seen, reader/date and any known dataset mapping. A confirmed result
+   read is exposure evidence; uncertain mapping is not a reason to discard it.
+   Record uncertain content separately as possible exposure. Stop further reads
+   of **that source**, retain the evidence on this task, and route it to mm's
+   existing exposure/assignment workflow before its results are used further.
+   Continue screening other sources within the budget. The sweep neither assigns
+   roles nor declares the incident resolved; a source awaiting disposition is
+   omitted from consequence/ranking evidence and named as a coverage limit.
+
+The plan must demonstrate a metadata/section retrieval route in the synthetic
+rehearsal. If the real service cannot provide that separation, skip the affected
+source rather than display its whole page to find the metadata. The finite screen
+may consequently yield fewer readable abstracts or full texts; that is a reported
+coverage bias, not permission to relax reservation policy or expand the budget.
 
 ## 5. Phase A: discover, then freeze the inventory
 
 Before extraction, record the date, repositories/revisions, available corpus
 coverage, active contract dimensions, query plan and budget in the report's
 coverage section. Proposed pilot budget: at most 24 search queries, 80 unique
-title/abstract screens, and 18 full-text primary research articles; local code,
+bibliographic screens (abstracts only after §4 permits their reading), and 18
+full-text primary research articles; local code,
 record and roster inspections are accounted separately. An inaccessible full text
-remains an abstract-only source, not a completed full-text read. Search metadata
+remains an abstract-only source only if its abstract was permitted and read;
+otherwise it is metadata-only, never a completed full-text read. Search metadata
 does not establish that a paper's claim was read. Record access restrictions and
 the selection/disposition of every screened item. Stop at the caps; expanding
 them is a new recorded scope decision, never an invisible retry loop.
@@ -209,8 +253,13 @@ population text. Say “declared scope maps match” for `co_scoped`; judge adeq
 separately. Use `commensurable` only within its actual same-claim semantics.
 
 Preserve all discovered questions, premises, source citations, exclusions and
-aliases before considering available-data feasibility. Freeze this inventory by
-commit or content hash and identify that version in phase B. Later discoveries
+aliases before considering available-data feasibility. Save a self-contained
+Markdown inventory snapshot and freeze its bytes with SHA-256. Before phase B,
+attach it to this task through `tasks attach` under a versioned name such as
+`discovery-inventory-v1.md`, verify it appears in `tasks show`, and record the hash
+in the report. The attachment includes the citations, coverage and source
+dispositions needed to inspect it from the task record alone; a host-local path
+or hash alone does not satisfy preservation. Later discoveries
 create a new version with a reason and a changed comparison; they never overwrite
 the inventory used to justify an earlier shortlist.
 
@@ -312,20 +361,43 @@ appendices in the same document; each section points to the relevant row IDs.
 
 Expected change surface: the new authored skill and optional report template,
 generated Claude Code adapter copies, a short README usage entry, and focused
-adapter/skill behavior checks under the existing test front door. No new command
+adapter checks under the existing test front door. No new command
 declaration, export API or configuration setting is needed. The pilot report is
 attached through `tasks attach` to this task, with its source and inventory
 revision references, rather than copied manually into task files.
 
-The implementation plan must include a small rehearsal through the complete
-report contract before the real survey. Use synthetic records covering empty
+Authored-skill convention: use `skills/<name>/SKILL.md` with YAML `name` and
+`description` frontmatter, followed by the complete agent workflow and explicit
+write boundaries; optional supporting documents use relative links inside that
+skill directory. Use ordinary files, no symlinks, and a name that does not collide
+with a command. Generate and commit adapter copies; never edit them directly.
+No authored skill is present at this revision. If sci-cc4fb9 lands a documented
+authored-skill convention first, the implementer follows it and records the
+revision used; preserve this task's semantics and resolve an actual conflict
+before implementation. Do not invent a shared framework or wait on that task
+solely to establish these file conventions.
+
+The implementation plan must include a **manual dry run**, judged by a fresh
+reviewer, through the complete report contract before the real survey. Commit its
+synthetic input and expected-review checklist under
+`python/tests/fixtures/sweep-assumptions/` (plain documents, not a beliefs corpus
+and not shipped in the plugin). Proposed reliance edges, including a cycle, are
+report-local fixtures; no unsupported kernel relation is minted. Use synthetic
+records covering empty
 scope dimensions with a restriction in a contrast, target-only falsification,
 duplicate sources and repeated paths, a cycle, an inferred high-reach chain,
 a high-impact question with no suitable data, and absent/invalid read inputs.
-The checks must catch unsupported pooling claims, fabricated source attribution,
+Include PMID/DOI matching, an unmapped paper resolved through a section-only
+data-availability read, mixed/reserved/unresolved mappings, an unavailable
+section-only route, and an incidental result read that stops one source while
+the screen continues. The fresh reviewer judges the dry-run report and read log
+against the expected-review checklist, including unsupported pooling claims,
+fabricated source attribution,
 double-counted reach, hidden unevaluated consequences and treating catalogued
-data as held. Test adapter inclusion through the existing generation/fresh-build
-checks; do not use prose-substring tests as proof of scientific judgment quality.
+data as held. Attach the dry-run report, read log and full review to this task.
+Automated verification establishes adapter inclusion and fresh-build equality;
+it does not establish scientific judgment quality. Do not use prose-substring
+tests as a substitute for the manual rehearsal and review.
 
 The manual pilot is accepted only when all eight sections are present, every
 shortlist claim traces to inspected material or an explicit attributed judgment,
