@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: feat/sci-b2755f-assumption-sweep
 created: 2026-10-30T01:53:54Z
-updated: 2026-10-30T07:37:43Z
+updated: 2026-10-30T07:37:45Z
 started: 2026-10-30T07:08:27Z
 depends: []
 tags: []
@@ -74,3 +74,4 @@ Related: sci-171ad1 is the causal-answer special case of this ranking; sci-434b9
   provenance: {"harness_session":"codex:01a18ba2-9d92-7f91-8f82-774c55ba33d3","harness_session_source":"CODEX_THREAD_ID"}
 - 2026-10-30T07:33:47Z (feat/sci-b2755f-assumption-sweep): review: spec round 2 — verdict: revise; findings: Important 1, Minor 3; reviewer: claude-code/claude-fable-5-1
 - 2026-10-30T07:37:43Z (feat/sci-b2755f-assumption-sweep): attached: spec-round-2-report.md (4451 bytes): Full supplied review of frozen design af4b359; Important 1, Minor 3; claude-code/claude-fable-5-1
+- 2026-10-30T07:37:45Z (feat/sci-b2755f-assumption-sweep): Round-2 Important verified against mm ledger section 1 and dated abstract/search-summary exposure entries; roster counts checked: 1559 entries, 830 publication PMID, 100 DOI (overlapping). Ruling: retain existing in-any-form exposure policy, with no exemption for an unmapped results-bearing abstract; resolve identifiers then section-only design/data-availability metadata before results, skip unresolved sources while continuing the finite screen. Why: the existing policy already covers these reads, and sequential source dispositions avoid a survey-wide stop. Cost if wrong: reduced literature coverage or unintended exposure from a retrieval route; report the former and record/route the latter. All three minor clarifications incorporated; no deferred findings.
