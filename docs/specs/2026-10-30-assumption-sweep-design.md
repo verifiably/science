@@ -2,7 +2,7 @@
 
 Date: 2026-10-30
 Task: sci-b2755f
-Status: revision 2 after spec review round 2; pending scoped review and user approval.
+Status: accepted at spec round 4 for planning, with the review-navigation clarification below incorporated; implementation requires plan review.
 
 ## 1. Intent and origin
 
@@ -224,7 +224,7 @@ treatment response and resistance; persistence/relapse and temporal evolution.
 These are coverage prompts, not selected hypotheses. An open “other” category
 retains findings outside them. Use broad question/limitation searches as well as
 each family's terms; do not require expression data, attractor language, positive
-findings or existing local packages. Use reviews for navigation only; scientific
+findings or existing local packages. Use reviews for navigation only through their titles and addressable reference lists fetched by §4's section-only route, never by reading their results-bearing bodies; scientific
 claims in the report must be traced to inspected primary sources, with unresolved
 attribution marked when that is impossible.
 
