@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: feat/sci-b2755f-assumption-sweep
 created: 2026-10-30T01:53:54Z
-updated: 2026-10-30T14:10:37Z
+updated: 2026-10-30T14:12:07Z
 started: 2026-10-30T07:08:27Z
 depends: []
 tags: []
@@ -164,3 +164,4 @@ Related: sci-171ad1 is the causal-answer special case of this ranking; sci-434b9
 - 2026-10-30T14:10:34Z (feat/sci-b2755f-assumption-sweep): attached: execution-ledger-v3.md (14659 bytes): Complete execution rulings, review dispositions, deferred minor and verified completion
 - 2026-10-30T14:10:37Z (feat/sci-b2755f-assumption-sweep): Identify the current integration owner
   provenance: {"harness_session":"codex:01a18ce3-2793-7ad1-b204-ef9b88b33aba","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-30T14:12:07Z (feat/sci-b2755f-assumption-sweep): retained: {"host": "titan", "kind": "worktree", "path": ".worktrees/sci-b2755f", "state": "kept", "verification": "verified", "purpose": "Closing-session integration only; off-tree evidence ownership transferred to sci-eb1559. Original plan workspace has verified exact copy there.", "next_owner": "session:codex:01a18ce3-2793-7ad1-b204-ef9b88b33aba", "cleanup_trigger": "After authorized local merge, verified attachments/copy, tt-report, ignored-file dispositions and host-pointer check, remove this task worktree in this turn"}
