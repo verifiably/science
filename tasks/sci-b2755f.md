@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: feat/sci-b2755f-assumption-sweep
 created: 2026-10-30T01:53:54Z
-updated: 2026-10-30T08:16:14Z
+updated: 2026-10-30T08:17:42Z
 started: 2026-10-30T07:08:27Z
 depends: []
 tags: []
@@ -89,3 +89,4 @@ Related: sci-171ad1 is the causal-answer special case of this ranking; sci-434b9
 - 2026-10-30T08:09:43Z (feat/sci-b2755f-assumption-sweep): Round-4 disposition: accepted c2f3a88 for planning with the reviewer-permitted one-line clarification. Ruling: retain review navigation through titles and addressable reference lists isolated under section 4; do not read results-bearing review bodies. Why: this makes section 5 consistent with the accepted exposure boundary without dropping citation navigation. Cost: inaccessible reference lists reduce coverage. Incorporate with the plan-drafting commit; no extra spec-review round requested. Preserve the accepted consequence: question discovery may lean on metadata and previously exposed discovery publications; no policy relaxation.
 - 2026-10-30T08:15:54Z (feat/sci-b2755f-assumption-sweep): attached: spec-round-4-report.md (3021 bytes): Full round-4 design acceptance with one review-navigation minor; claude-code/claude-fable-5-1
 - 2026-10-30T08:16:14Z (feat/sci-b2755f-assumption-sweep): review: plan round 1 — verdict: accept; findings: none; reviewer: codex/gpt-6-astra
+- 2026-10-30T08:17:42Z (feat/sci-b2755f-assumption-sweep): Plan self-review at 1ecfa34f33448dd86a148c8ba23e7523664847a1 performed by controller codex/gpt-6-astra (fresh relay identity). Checked spec coverage, actionable steps, named interfaces/files, all five manual review-focus cases and proportionality. Corrected the rehearsal handoff before commit so the worker returns discovery first, the controller attaches/hash-checks it, then comparison resumes. No residual findings. This is a self-review, not user approval or independent plan review. Inline execution chosen; fresh workers only for required skill behavior checks and reviews.
