@@ -7,7 +7,7 @@ size: s
 complexity: mid
 process: direct
 created: 2026-10-30T15:04:23Z
-updated: 2026-10-30T15:04:25Z
+updated: 2026-10-30T15:05:52Z
 depends: []
 tags: []
 source: "sci-b2755f:screening-rehearsal-extension"
@@ -22,6 +22,7 @@ Why: the reusable skill already requires all implicated cohorts to be cleared, a
 Bound: strengthen the existing authored skill and synthetic rehearsal, not build a downloader or universal semantic filter. Add staged synthetic responses in which the first availability/sample section names only permitted cohort A, a separate validation section introduces unresolved cohort B, a Methods subsection embeds an outcome table, and a reference identifier field includes an encoded result title. Require the smallest explicit pre-abstract record of which result cohorts and validation sources were checked, their mappings and unresolved limits. Retain source-local stop/exclusion/routing behavior and the possibility that safe isolation is unavailable. Structural extraction and OA eligibility never certify semantic permission. No new scientific reads are needed: use invented fixture content informed by the incident categories.
 
 Done when the new staged rehearsal shows the current weakness, the revised workflow demonstrably refuses premature abstract access and handles embedded-result incidents, the existing reach/duplicate/freeze cases still pass, generated adapters match authored files, policy-appropriate focused packaging checks and hygiene pass, and a fresh read-only reviewer accepts the returned behavior. Preserve frozen historical fixtures/reports by versioning new execution evidence. Do not claim a text-only checklist guarantees zero exposure. quarry-404f63 owns Europe PMC metadata/file availability; section/cohort gating stays with the consumer. This is a scoped extension based on a pre-close recorded incident, not a newly discovered defect in the accepted report.
+Deliver the findings as [ref:result], attached through tasks attach; verify the task lists the attachment before completion.
 
 ## References
 
@@ -29,6 +30,7 @@ Done when the new staged rehearsal shows the current weakness, the revised workf
 - scenario (input, required, kind=dataset): python/tests/fixtures/sweep-assumptions/scenario.md — staged synthetic source inputs
 - oracle (input, required, kind=guide): python/tests/fixtures/sweep-assumptions/expected-review.md — existing behavioral acceptance
 - pilot (input, required, kind=report): tasks/files/sci-b2755f/pilot-v3-report.md — incidents and accepted use restrictions
+- result (output, kind=report): files:screening-rehearsal-v2-report.md — bounded findings and verification
 
 ## Notes
 
