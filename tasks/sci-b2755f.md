@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: feat/sci-b2755f-assumption-sweep
 created: 2026-10-30T01:53:54Z
-updated: 2026-10-30T10:46:47Z
+updated: 2026-10-30T10:46:49Z
 started: 2026-10-30T07:08:27Z
 depends: []
 tags: []
@@ -118,3 +118,4 @@ Related: sci-171ad1 is the causal-answer special case of this ranking; sci-434b9
 - 2026-10-30T10:41:17Z (feat/sci-b2755f-assumption-sweep): retained: {"host":"titan","kind":"worktree","path":".worktrees/sci-b2755f","state":"kept","verification":"verified","purpose":"Inline execution on feat/sci-b2755f-assumption-sweep: Task 1 complete at 461f407, Task 2 fixture-only rehearsal active; hydrated environment and clean product tree","next_owner":"task:sci-b2755f","cleanup_trigger":"After accepted pilot and local integration, preserve needed evidence and complete the worktree removal checks"}
 - 2026-10-30T10:42:55Z (feat/sci-b2755f-assumption-sweep): attached: rehearsal-discovery-v1.md (22985 bytes): Complete synthetic phase-A inventory frozen before comparison; codex/gpt-6.1-sol
 - 2026-10-30T10:46:47Z (feat/sci-b2755f-assumption-sweep): attached: rehearsal-v1-report.md (32965 bytes): Complete eight-part synthetic sweep after verified discovery freeze; codex/gpt-6.1-sol
+- 2026-10-30T10:46:49Z (feat/sci-b2755f-assumption-sweep): attached: rehearsal-v1-read-log.md (6493 bytes): Controller-served section/read log, freeze gate and exact tested extractor source; synthetic proof only
