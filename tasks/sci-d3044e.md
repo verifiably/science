@@ -8,7 +8,7 @@ complexity: high
 process: direct
 owner: feat/sci-b2755f-assumption-sweep
 created: 2026-10-30T08:17:38Z
-updated: 2026-10-30T13:03:04Z
+updated: 2026-10-30T13:10:13Z
 started: 2026-10-30T10:50:45Z
 depends: [sci-69a1ca]
 parent: sci-b2755f
@@ -46,3 +46,4 @@ Execute Task 3 after plan approval and rehearsal acceptance: freeze bounded sour
 - 2026-10-30T13:03:02Z (feat/sci-b2755f-assumption-sweep): Continuation v2 single live probe returned HTTP500 in 4.458s; no article, abstract, section or error-body content read. Parent attachments pilot-setup-v2.md, pilot-v2-continuation-report.md and execution-ledger-v2.md verified by tasks show and byte hashes. just check and git diff --check exit 0; extractor self-check passes. Evidence-only work: no runtime suite or new final completion review. Parent retained records refreshed for worktree, scratch, v1 evidence and plan workspace; child owns v2 evidence. No new inventory/comparison; pilot incomplete, cumulative 7/24 searches, 33/80 screens, 0/18 full-text-reading attempts. Two isolated probes failed across v1/v2. No retry process exists.
 - 2026-10-30T13:03:04Z (feat/sci-b2755f-assumption-sweep): parked (waiting on agent, environment): Agent resumes .worktrees/sci-b2755f after section-route availability changes: verify refreshed retained manifests, freeze a new one-probe setup carrying cumulative budgets, prove permitted live isolation, then refresh source/world/quarry contracts and complete primary-source survey, inventory freeze, comparison and fresh whole-branch review. Preserve v1/v2 evidence and excluded mm-eca42c sources; reconcile main before integration. HTTP500 repeated in v2; no further request running.
   provenance: {"harness_session":"codex:01a18ce3-2793-7ad1-b204-ef9b88b33aba","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-30T13:10:13Z (feat/sci-b2755f-assumption-sweep): attached: route-500-diagnosis.md (1777 bytes): Europe PMC fullTextXML 500 = non-open-access article; deterministic, with controls
