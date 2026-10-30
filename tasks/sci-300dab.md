@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: sci-300dab-stores
 created: 2026-10-30T19:15:26Z
-updated: 2026-10-30T19:50:37Z
+updated: 2026-10-30T19:51:15Z
 started: 2026-10-30T19:45:58Z
 depends: []
 tags: [holdings]
@@ -37,3 +37,4 @@ Observed 2026-10-30 in the mm30 world (store 05b6c1225e710bb1559f36e8333f3f29), 
   provenance: {"harness_session":"codex:01a18e58-0cdf-75c2-bf7d-f4ac22417069","harness_session_source":"CODEX_THREAD_ID"}
 - 2026-10-30T19:47:24Z (sci-300dab-stores): Origin recovered from claude-code:a2943a1d-dd3d-4577-a43b-8347da7f11bf: human asked to diagnose the store lifecycle and reconcile mm-62e2da, then authorized filing three science tasks. Writable-side-store architecture was the agent proposal; refusal closure and dangling-intent settlement were separately filed as sci-eccb43 and sci-409235. Current code confirms single-store binding in session.py and config.ReadContext; held_path_for and vocabulary.snapshot only resolve that identity. Planned design in .worktrees/sci-300dab-stores; setup used the AGENTS.md hook command. Full-suite baseline deliberately deferred to implementation Setup per planned-work rule; no code or live-world changes.
 - 2026-10-30T19:50:37Z (sci-300dab-stores): Design recommendation frozen for builder review at science commit 915409e42b540287e3fce9f062a097cca1bda100, docs/specs/2026-10-30-readable-stores-design.md: retain store_root for writes and add read_store_roots for identity-bound reads. The creation route is a documented operator-time init_store_root recipe, not a command-reachable lifecycle act. just check and git diff --check passed; no runtime tests were run in this design-only phase.
+- 2026-10-30T19:51:15Z (sci-300dab-stores): review: spec round 1 — verdict: accept; findings: none; reviewer: codex/gpt-6.1-sol
