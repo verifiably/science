@@ -6,21 +6,21 @@ import threading
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 
-from beliefs.errors import (AddressMapConflict, BuildContended, CitationContractMismatch, ProjectNotResolvable,
+from beliefs.errors import (AddressMapConflict, BuildContended, CitationContractMismatch,
                             WriteRefused)
 from beliefs.permit import PermitExceeded
 from beliefs.session import KernelRefusalValue
 
 from science.canonical import canonicalize, input_digest
 from science.cursor import ReadCursor, WriteCursor, decode, encode
-from science.refusal import INVOCATION_ID_RE, Refusal, Refused, mint_token
+from science.refusal import INVOCATION_ID_RE, Refusal, Refused, kernel_refusal, mint_token
 from science.render import render_page, report_digest
 from science.report import Report, SelectionBlock, pin_block, read_tail, serialize_block, write_tail
 from science.schema import Declaration
 
 
 # Every kernel refusal a write handler may raise; each write class closes them
-# through `Dispatcher._kernel_refusal`, the one normalization path.
+# through `science.refusal.kernel_refusal`, the one normalization path.
 KERNEL_REFUSALS = (PermitExceeded, KernelRefusalValue, WriteRefused,
                    CitationContractMismatch, AddressMapConflict, BuildContended)
 
@@ -199,32 +199,6 @@ class Dispatcher:
                 return RequiredCapabilities.sharing()
         raise AssertionError(write_class.kind)
 
-    @staticmethod
-    def _kernel_refusal(error) -> Refusal:
-        """The one normalization path for every kernel refusal shape."""
-        if isinstance(error, PermitExceeded):
-            return Refusal(
-                "permit-exceeded",
-                str(error),
-                {"requirement": str(error.requirement), "capability": str(error.capability)},
-            )
-        if isinstance(error, KernelRefusalValue):
-            value = error.value
-            data = {"kind": type(value).__name__, "reason": str(value.reason)}
-            message = str(value.reason)
-            # A RunRefused carries the refusing error's message as `detail`;
-            # without it a refusal reads only as its stable reason.
-            detail = str(getattr(value, "detail", ""))
-            if detail:
-                data["detail"] = detail
-                message = f"{message}: {detail}"
-            return Refusal("kernel-refused", message, data)
-        data = {"kind": type(error).__name__}
-        # A diverged project's tips are what a client reconciles it from (spec §4.3).
-        if isinstance(error, ProjectNotResolvable) and error.tips:
-            data["tips"] = list(error.tips)
-        return Refusal("kernel-refused", str(error), data)
-
     def _claim(self, decl: Declaration, canonical: Mapping[str, object], iid: str):
         """Claim `iid` for this command and payload: `ClaimDone` to replay or
         `ClaimFresh` to run, and every other claim refuses. The caller holds
@@ -256,7 +230,7 @@ class Dispatcher:
         try:
             writer = self._session.scoped(required, iid)
         except PermitExceeded as caught:
-            raise Refused(self._kernel_refusal(caught), iid) from None
+            raise Refused(kernel_refusal(caught), iid) from None
         with self._lock:
             claim = self._claim(decl, canonical, iid)
             if isinstance(claim, ClaimDone):
@@ -264,7 +238,7 @@ class Dispatcher:
             try:
                 report = self._handlers[decl.name](self._context(), writer, **canonical)
             except KERNEL_REFUSALS as caught:
-                return self._close_refused(iid, self._kernel_refusal(caught))
+                return self._close_refused(iid, kernel_refusal(caught))
             except Refused as caught:
                 acted = self._session.invocation_acts(iid)
                 if not acted:
@@ -326,7 +300,7 @@ class Dispatcher:
         try:
             writer = self._session.scoped(required, iid)
         except PermitExceeded as caught:
-            raise Refused(self._kernel_refusal(caught), iid) from None
+            raise Refused(kernel_refusal(caught), iid) from None
         with self._lock:
             claim = self._claim(decl, canonical, iid)
             if isinstance(claim, ClaimDone):
@@ -338,7 +312,7 @@ class Dispatcher:
                 if acted:
                     message = self._sharing_acted(decl, f"refused {caught}", acted)
                     raise self._close_acted(iid, acted, message) from caught
-                refusal = caught.refusal if isinstance(caught, Refused) else self._kernel_refusal(caught)
+                refusal = caught.refusal if isinstance(caught, Refused) else kernel_refusal(caught)
                 return self._close_refused(iid, refusal)
             acted = self._session.invocation_acts(iid)
             if acted:
@@ -395,7 +369,7 @@ class Dispatcher:
                         raise
                     refusal = (
                         caught.refusal if isinstance(caught, Refused)
-                        else self._kernel_refusal(caught)
+                        else kernel_refusal(caught)
                     )
                     return self._close_refused(iid, refusal)
                 # A recorded selection is truth, even if the handler then

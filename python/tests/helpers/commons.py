@@ -235,6 +235,7 @@ def write_commons_config(cfg: ScienceConfig) -> Path:
         "domains": list(DOMAINS),
         "contracts": [str(contract)],
         "store_root": str(cfg.store_root),
+        "read_store_roots": [str(root) for root in cfg.read_store_roots],
         "coordination": cfg.coordination,
         "sharing_root": str(cfg.sharing_root),
         "accept": list(cfg.accept),

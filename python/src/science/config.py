@@ -13,7 +13,7 @@ from typing import Literal, NoReturn
 
 from beliefs.contract.domain import DomainContract
 from beliefs.corpus import ReadView
-from beliefs.errors import ManifestMalformed, ManifestMissing, MountPinUnresolved, ProfileError
+from beliefs.errors import CorpusRootRefused, ManifestMalformed, ManifestMissing, MountPinUnresolved, ProfileError
 from beliefs.profile import (
     ProfileSpec,
     compile_profile,
@@ -21,11 +21,13 @@ from beliefs.profile import (
     shipped_coordination,
     shipped_domain_contract,
 )
-from beliefs.root import open_world_read
+from beliefs.root import LifecycleState, open_world_read, read_lifecycle_state, store_identity
+# shortcut: internal lifecycle error import pending public exports in beliefs-1dfd8c; remove when landed.
+from beliefs.root import AtomsError
 from beliefs.world import WorldConfig
 from beliefs.world.registry import content_identity, load_manifest
 
-from science.refusal import Refusal, Refused
+from science.refusal import Refusal, Refused, kernel_refusal
 from science.contracts import OperatorPlan, load_contract_chain, load_contract_document
 from science.sharing import SharingRegistry, SharingRegistryMalformed
 
@@ -36,7 +38,7 @@ _KEYS = (
 )
 _OPTIONAL_KEYS = (
     "service_socket", "default_project", "write_root", "read_contracts",
-    "sharing_root", "accept", "fetch", "keep",
+    "sharing_root", "accept", "fetch", "keep", "read_store_roots",
 )
 _FETCH_POLICIES = ("records-only", "fetch")
 
@@ -73,10 +75,48 @@ class ScienceConfig:
     fetch: FetchPolicy = FetchPolicy("records-only", 0)
     keep: tuple[str, ...] = ()
     source: tuple[Path, str] | None = None
+    read_store_roots: tuple[Path, ...] = ()
 
 
 def _refuse(message: str) -> NoReturn:
     raise Refused(Refusal("invalid-input", message))
+
+
+def _unique_store_roots(store_root: Path, read_store_roots: tuple[Path, ...]) -> tuple[Path, ...]:
+    roots = tuple(Path(root).resolve() for root in (store_root, *read_store_roots))
+    seen: set[Path] = set()
+    for root in roots:
+        if root in seen:
+            _refuse(f"config store_root/read_store_roots repeat resolved root {root}")
+        seen.add(root)
+    return roots
+
+
+def configured_stores(config: ScienceConfig) -> dict[str, Path]:
+    """One explicitly admitted carrier per identity, inspected without recovery."""
+    roots = _unique_store_roots(config.store_root, config.read_store_roots)
+    stores: dict[str, Path] = {}
+    for root in roots:
+        try:
+            identity = store_identity(root)
+        except CorpusRootRefused as caught:
+            raise Refused(Refusal("invalid-input", f"{root} is not a store: {caught}")) from caught
+        except (AtomsError, OSError) as caught:
+            raise Refused(kernel_refusal(caught, root=str(root))) from caught
+        if identity is None:
+            _refuse(f"{root} is not an initialized store")
+        if identity in stores:
+            _refuse(f"stores {stores[identity]} and {root} claim the same identity {identity}")
+        stores[identity] = root
+    for root in roots:
+        try:
+            state = read_lifecycle_state(root)
+        except (AtomsError, OSError) as caught:
+            raise Refused(kernel_refusal(caught, root=str(root))) from caught
+        if state not in {LifecycleState.WRITABLE, LifecycleState.READ_ONLY_SERVICEABLE}:
+            _refuse(f"store {root} is {state.value}; complete the kernel restore or initialization "
+                    "route before reading it")
+    return stores
 
 
 def _project_address(value: object):
@@ -189,6 +229,11 @@ def load_config(path: Path) -> ScienceConfig:
     fetch = _fetch_policy(raw["fetch"]) if "fetch" in raw else FetchPolicy("records-only", 0)
     if type(raw["store_root"]) is not str:
         _refuse("config store_root must be a string")
+    read_store_roots = raw.get("read_store_roots", [])
+    if type(read_store_roots) is not list or any(
+        type(value) is not str or not value for value in read_store_roots
+    ):
+        _refuse("config read_store_roots must be a list of nonempty path strings")
     coordination = raw["coordination"]
     if coordination is False:
         coordination = None
@@ -209,6 +254,9 @@ def load_config(path: Path) -> ScienceConfig:
         # process's working directory (projects design P1); an absolute value
         # is unchanged by the join.
         return (base_dir / value).resolve()
+
+    store_root, *read_roots = _unique_store_roots(
+        located(raw["store_root"]), tuple(located(value) for value in read_store_roots))
 
     try:
         domains = [shipped_domain_contract(namespace) for namespace in raw["domains"]]
@@ -273,7 +321,8 @@ def load_config(path: Path) -> ScienceConfig:
         operations_root=operations_root,
         profile=profile,
         service_socket=service_socket,
-        store_root=located(raw["store_root"]),
+        store_root=store_root,
+        read_store_roots=tuple(read_roots),
         coordination=coordination,
         write_root=write_root,
         plans=plans,

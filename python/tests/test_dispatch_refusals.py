@@ -171,3 +171,37 @@ def test_minting_under_a_diverged_selected_project_refuses_with_its_tips(certifi
             d.invoke("question", {"name": "q", "query": QUERY})
     assert caught.value.refusal.code == "kernel-refused"
     assert caught.value.refusal.data == {"kind": "ProjectNotResolvable", "tips": sorted(tips)}
+
+
+def _normalization_cases():
+    from beliefs.errors import PermitExceeded, PermitFact, PermitSummary, ProjectNotResolvable
+    from beliefs.session import KernelRefusalValue
+    class RunRefused:
+        reason = "closure-unsupported"
+        detail = "missing input"
+    return [
+        (PermissionError("denied"), "kernel-refused", "denied", {"kind": "PermissionError"}),
+        (ProjectNotResolvable("diverged", tips=("b" * 32, "a" * 32)), "kernel-refused", "diverged",
+         {"kind": "ProjectNotResolvable", "tips": ["a" * 32, "b" * 32]}),
+        (KernelRefusalValue(RunRefused()), "kernel-refused", "closure-unsupported: missing input",
+         {"kind": "RunRefused", "reason": "closure-unsupported", "detail": "missing input"}),
+        (PermitExceeded(PermitFact("family", "run"), PermitSummary((), (), False)),
+         "permit-exceeded", "permit exceeded: family run is not permitted",
+         {"requirement": "PermitFact(dimension='family', name='run')",
+          "capability": "PermitSummary(kinds=(), act_families=(), ungoverned=False)"}),
+    ]
+
+
+@pytest.mark.parametrize("error,code,message,data", _normalization_cases())
+def test_kernel_refusal_preserves_existing_shapes(error, code, message, data):
+    from science.refusal import kernel_refusal
+    assert kernel_refusal(error) == Refusal(code, message, data)
+
+
+@pytest.mark.parametrize("error,code,message,data", _normalization_cases())
+def test_kernel_refusal_adds_root_context(error, code, message, data):
+    from science.refusal import kernel_refusal
+    refusal = kernel_refusal(error, root="/store")
+    assert refusal.code == code
+    assert refusal.message == f"/store: {message}"
+    assert refusal.data == {**data, "root": "/store"}

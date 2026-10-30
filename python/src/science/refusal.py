@@ -6,6 +6,10 @@ import secrets
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 
+from beliefs.errors import ProjectNotResolvable
+from beliefs.permit import PermitExceeded
+from beliefs.session import KernelRefusalValue
+
 CODES = frozenset({
     "unknown-command", "invalid-input", "permit-exceeded", "outcome-unknown",
     "unknown-cursor", "stale-cursor", "input-mismatch", "kernel-refused",
@@ -43,3 +47,29 @@ def envelope(refusal: Refusal) -> dict:
 
 def mint_token() -> str:
     return secrets.token_hex(16)
+
+
+def kernel_refusal(error: Exception, *, root: str | None = None) -> Refusal:
+    """The one normalization path for every kernel refusal shape."""
+    code = "kernel-refused"
+    message = str(error)
+    if isinstance(error, PermitExceeded):
+        code = "permit-exceeded"
+        data = {"requirement": str(error.requirement), "capability": str(error.capability)}
+    elif isinstance(error, KernelRefusalValue):
+        value = error.value
+        data = {"kind": type(value).__name__, "reason": str(value.reason)}
+        message = str(value.reason)
+        # RunRefused carries the refusing error's message separately from its reason.
+        detail = str(getattr(value, "detail", ""))
+        if detail:
+            data["detail"] = detail
+            message = f"{message}: {detail}"
+    else:
+        data = {"kind": type(error).__name__}
+        if isinstance(error, ProjectNotResolvable) and error.tips:
+            data["tips"] = list(error.tips)
+    if root is not None:
+        data["root"] = root
+        message = f"{root}: {message}"
+    return Refusal(code, message, data)

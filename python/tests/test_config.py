@@ -18,6 +18,7 @@ def write_config(
     contracts: str | None = "[]",
     store_root: str | Path | None = "",
     coordination: str = "2",
+    read_store_roots: list[str | Path] | None = None,
 ) -> Path:
     world_root = tmp_path / "world"
     ops = tmp_path / "ops" if operations_root is None else operations_root
@@ -35,6 +36,9 @@ def write_config(
         lines.append(f"contracts = {contracts}")
     if store is not None:
         lines.append(f'store_root = "{store}"')
+    if read_store_roots is not None:
+        import json
+        lines.append("read_store_roots = " + json.dumps([str(root) for root in read_store_roots]))
     lines.append(f"coordination = {coordination}")
     cfg.write_text("\n".join(lines) + "\n" + extra)
     return cfg
@@ -435,3 +439,33 @@ def test_default_project_without_coordination_refuses_naming_the_setting(tmp_pat
     refusal = assert_invalid_config(write_config(
         tmp_path, coordination="false", extra=f'default_project = "coord:{"a" * 32}"\n'))
     assert "coordination = false" in refusal.message
+
+
+def test_read_store_roots_round_trip(tmp_path):
+    assert load_config(write_config(tmp_path)).read_store_roots == ()
+    path = write_config(tmp_path, read_store_roots=[tmp_path / "old"])
+    assert load_config(path).read_store_roots == (tmp_path / "old",)
+
+
+def test_read_store_paths_are_config_relative(tmp_path, monkeypatch):
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
+    path = write_config(tmp_path, read_store_roots=["old"])
+    link = elsewhere / "config.toml"
+    link.symlink_to(path)
+    assert load_config(link).read_store_roots == (tmp_path / "old",)
+
+
+@pytest.mark.parametrize("value", ['"old"', '[3]', '[""]', '[false]'])
+def test_read_store_roots_reject_bad_entries(tmp_path, value):
+    refusal = assert_invalid_config(write_config(tmp_path, extra=f"read_store_roots = {value}\n"))
+    assert "read_store_roots" in refusal.message
+
+
+@pytest.mark.parametrize("paths", [["old", "a/../old"], ["store"], ["old", "alias"]])
+def test_read_store_roots_reject_resolved_duplicates(tmp_path, paths):
+    (tmp_path / "alias").symlink_to(tmp_path / "old")
+    refusal = assert_invalid_config(write_config(tmp_path, read_store_roots=paths))
+    assert "read_store_roots" in refusal.message
+    assert str(tmp_path) in refusal.message
