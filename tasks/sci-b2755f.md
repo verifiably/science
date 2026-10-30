@@ -1,13 +1,15 @@
 ---
 id: sci-b2755f
 title: Sweep epistemic records for the premises they rely on and rank the questions whose answers would clarify the most
-status: todo
+status: doing
 priority: 2
 size: l
 complexity: high
 process: planned
+owner: main
 created: 2026-10-30T01:53:54Z
-updated: 2026-10-30T02:04:27Z
+updated: 2026-10-30T07:08:27Z
+started: 2026-10-30T07:08:27Z
 depends: []
 tags: []
 origin: mixed
@@ -54,3 +56,5 @@ Related: sci-171ad1 is the causal-answer special case of this ranking; sci-434b9
   provenance: {"harness_session":"claude-code:a96a86d4-06e5-4f80-a388-909eb54943aa","harness_session_source":"CLAUDE_CODE_SESSION_ID","origin":"mixed"}
 - 2026-10-30T02:04:27Z (main): scope: scoped; promoted to P2/l/high/planned for one science skill and a bounded manual pilot. Current user clarification keeps disease-system/attractor states within mm as one candidate, not a chosen question and not precursor-stage reclassification. Broad discovery precedes separate impact and available-data feasibility assessment; eight-part report retained. Agent decisions: one skill with discovery and assessment/report phases; mm30 as representation probe, broad bounded literature seed, mm roster/package metadata as feasibility inputs. Known empty scope dimensions are an initial finding, not a predetermined reliance-relation design. Evidence: beliefs cd4fe60, science bc0b6ae, existing sci-cc4fb9 and mm-a0dd3f; no duplicate research task or new brief needed. origin: filing matched in claude-code:a96a86d4-06e5-4f80-a388-909eb54943aa lines 96/101 (created result and timestamp); human turns 9 and 69 contain original user material and pasted agent proposals, kept distinct; latest clarification is the user in this session; mixed origin retained. Next executing agent performs initial read-only discovery to inform the written design, then obtains the required spec and plan reviews before implementing the skill. No pilot ran in this scope pass.
   provenance: {"harness_session":"codex:01a18a6a-6c3b-72b3-bb50-3dae23709299","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-30T07:08:27Z (main): started
+  provenance: {"harness_session":"codex:01a18ba2-9d92-7f91-8f82-774c55ba33d3","harness_session_source":"CODEX_THREAD_ID"}
