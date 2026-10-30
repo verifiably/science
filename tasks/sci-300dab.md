@@ -1,15 +1,17 @@
 ---
 id: sci-300dab
 title: "A relocated world has no writable store: science binds one store_root, the restored replica, so every dataset holding write refuses"
-status: doing
+status: done
 priority: 1
 size: m
 complexity: high
 process: planned
 owner: sci-300dab-stores
 created: 2026-10-30T19:15:26Z
-updated: 2026-10-30T23:39:06Z
+updated: 2026-10-30T23:39:08Z
 started: 2026-10-30T19:45:58Z
+completed: 2026-10-30T23:39:08Z
+closed: 2026-10-30T23:39:08Z
 depends: []
 tags: [holdings]
 source: mm-62e2da
@@ -98,3 +100,7 @@ Observed 2026-10-30 in the mm30 world (store 05b6c1225e710bb1559f36e8333f3f29), 
 - 2026-10-30T23:38:45Z (sci-300dab-stores): retained: {"host": "titan", "state": "kept", "verification": "verified", "next_owner": "session:codex:01a18e58-0cdf-75c2-bf7d-f4ac22417069", "cleanup_trigger": "Immediate reviewed local merge into main, then verify attachments and remove only the task worktree and regenerable scratch", "kind": "worktree", "path": ".worktrees/sci-300dab-stores", "purpose": "Reviewed implementation and completed child records, retained for immediate local merge and cleanup; no host pointers resolve here"}
 - 2026-10-30T23:39:05Z (sci-300dab-stores): Final implementation review accepted 452d555 with no findings; six rulings and no deferred minors are preserved in stores-execution-ledger.md, and the full reviewer report is attached. All three children are done. Baseline 1071 passed; Task 1 fast 1114, Task 2 selected fast 692, final focused 87 and single-worker selected fast 43 passed. Original Task 3 multiworker collection failed; ops-ab03a7 tracks it, not claimed fixed. Hygiene passed. Compatibility inventory is complete within its approved scope; live deployment and input digest comparison remain outside this change. Immediate session-owned local integration follows; no push or live world changes.
 - 2026-10-30T23:39:06Z (sci-300dab-stores): Cleanup dispositions: git status --ignored lists .superpowers/sdd/.gitignore, the two owned spec/plan and execution workspaces, python/.pytest_cache, python/.testmondata and python/.venv. All old reports, final reviewer report and execution ledger byte-match task attachments. Inventory JSON content exactly matches both parent and Task 3 notes; path lists are reproduced by that recorded search scope. Briefs and review package derive from committed plan/history. Test logs and manifests are regenerable verification output whose counts, failed collection diagnostic and decisions are recorded on tasks/ledger; no unique needed raw copy remains. Discard these regenerated scratch/environment/cache copies after merge; unrelated framework reports are tracked and remain in main. tt-report completed; host bin links, user units and environment includes contain no pointer into this worktree; no shared launcher was repointed.
+- 2026-10-30T23:39:08Z (sci-300dab-stores): done
+  provenance: {"harness_session":"codex:01a18e58-0cdf-75c2-bf7d-f4ac22417069","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-30T23:39:08Z (sci-300dab-stores): Readable stores implemented and accepted at 452d555: admitted identity mapping, inherited resolution, unchanged single writer, tested runbook and bounded compatibility inventory. Three children complete; final focused 87 and selected fast 43 pass, review/ledger attached. Session owns immediate reviewed local merge and checked worktree cleanup; live rollout is separate.
+  provenance: {"harness_session":"codex:01a18e58-0cdf-75c2-bf7d-f4ac22417069","harness_session_source":"CODEX_THREAD_ID"}
