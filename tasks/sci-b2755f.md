@@ -8,11 +8,12 @@ complexity: high
 process: planned
 owner: feat/sci-b2755f-assumption-sweep
 created: 2026-10-30T01:53:54Z
-updated: 2026-10-30T07:11:42Z
+updated: 2026-10-30T07:16:13Z
 started: 2026-10-30T07:08:27Z
 depends: []
 tags: []
 origin: mixed
+spec: docs/specs/2026-10-30-assumption-sweep-design.md
 ---
 
 Why: the user asked (2026-10-29, beliefs session) which question in a field, if answered, would most reduce uncertainty across it, and proposed sweeping epistemic entities (hypotheses, propositions, questions, models, analyses) for the assumptions each relies on, aggregating them into a dependency graph and ranking what to clarify. Their example: "multiple myeloma is a single disease" may collapse related diseases under one name. The sweep's output is ranked research questions, each with an explanation of what resolving it could clarify; making assumptions explicit is the means.
