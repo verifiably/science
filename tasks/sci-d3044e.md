@@ -8,7 +8,7 @@ complexity: high
 process: direct
 owner: feat/sci-b2755f-assumption-sweep
 created: 2026-10-30T08:17:38Z
-updated: 2026-10-30T13:17:30Z
+updated: 2026-10-30T13:17:54Z
 started: 2026-10-30T10:50:45Z
 depends: [sci-69a1ca]
 parent: sci-b2755f
@@ -54,3 +54,4 @@ Execute Task 3 after plan approval and rehearsal acceptance: freeze bounded sour
 - 2026-10-30T13:17:08Z (feat/sci-b2755f-assumption-sweep): resumed
   provenance: {"harness_session":"codex:01a18ce3-2793-7ad1-b204-ef9b88b33aba","harness_session_source":"CODEX_THREAD_ID"}
 - 2026-10-30T13:17:30Z (feat/sci-b2755f-assumption-sweep): review: impl round 1 — verdict: revise; findings: Important 1; reviewer: human
+- 2026-10-30T13:17:54Z (feat/sci-b2755f-assumption-sweep): Created mutable v3 evidence directory on titan at $WORK_ROOT/science/sci-b2755f/pilot-v3-evidence; owner sci-d3044e, not yet checkpointed. User diagnosis accepted; the v1/v2 route-availability wait was wrong for non-OA PMC12514755. All retained manifests verified. Four OA non-incident pilot sources have no roster match, so none yet qualifies as the permitted-cohort probe. Select a known exposed publication from the roster with OA eligibility metadata first, within existing screen cap; then permit only isolated mapping sections on unmapped OA sources. Guidance feedback lore-ee53f2 filed; prior snapshots remain historical.
