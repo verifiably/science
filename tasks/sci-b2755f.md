@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: feat/sci-b2755f-assumption-sweep
 created: 2026-10-30T01:53:54Z
-updated: 2026-10-30T07:18:09Z
+updated: 2026-10-30T07:18:13Z
 started: 2026-10-30T07:08:27Z
 depends: []
 tags: []
@@ -65,3 +65,4 @@ Related: sci-171ad1 is the causal-answer special case of this ranking; sci-434b9
 - 2026-10-30T07:11:42Z (feat/sci-b2755f-assumption-sweep): Setup: created and locked .worktrees/sci-b2755f on feat/sci-b2755f-assumption-sweep; ran root-guide hook setup and README cd python && uv sync successfully. No tracked setup changes. Full-suite baseline deliberately deferred to implementation Setup under the planned-work rule; no product code changed or tests run. Preliminary discovery is read-only; configured-world paths and old reproduction files exist, but existence/raw file inspection is not kernel validation or current holding.
 - 2026-10-30T07:18:03Z (feat/sci-b2755f-assumption-sweep): review: spec round 1 — verdict: accept; findings: none; reviewer: codex/gpt-6.1-sol
 - 2026-10-30T07:18:09Z (feat/sci-b2755f-assumption-sweep): attached: builder-check-round-1-report.md (595 bytes): Full read-only builder review of design af4b359; accepted with no findings; reviewer codex/gpt-6.1-sol
+- 2026-10-30T07:18:13Z (feat/sci-b2755f-assumption-sweep): attached: design-review-ledger.md (831 bytes): Design round 1 ledger; no rulings or deferred minors; user review remains
