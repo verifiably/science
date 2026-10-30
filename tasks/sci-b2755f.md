@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: feat/sci-b2755f-assumption-sweep
 created: 2026-10-30T01:53:54Z
-updated: 2026-10-30T08:15:54Z
+updated: 2026-10-30T08:16:14Z
 started: 2026-10-30T07:08:27Z
 depends: []
 tags: []
@@ -88,3 +88,4 @@ Related: sci-171ad1 is the causal-answer special case of this ranking; sci-434b9
 - 2026-10-30T08:08:03Z (feat/sci-b2755f-assumption-sweep): review: spec round 4 — verdict: accept; findings: Minor 1; reviewer: claude-code/claude-fable-5-1
 - 2026-10-30T08:09:43Z (feat/sci-b2755f-assumption-sweep): Round-4 disposition: accepted c2f3a88 for planning with the reviewer-permitted one-line clarification. Ruling: retain review navigation through titles and addressable reference lists isolated under section 4; do not read results-bearing review bodies. Why: this makes section 5 consistent with the accepted exposure boundary without dropping citation navigation. Cost: inaccessible reference lists reduce coverage. Incorporate with the plan-drafting commit; no extra spec-review round requested. Preserve the accepted consequence: question discovery may lean on metadata and previously exposed discovery publications; no policy relaxation.
 - 2026-10-30T08:15:54Z (feat/sci-b2755f-assumption-sweep): attached: spec-round-4-report.md (3021 bytes): Full round-4 design acceptance with one review-navigation minor; claude-code/claude-fable-5-1
+- 2026-10-30T08:16:14Z (feat/sci-b2755f-assumption-sweep): review: plan round 1 — verdict: accept; findings: none; reviewer: codex/gpt-6-astra
