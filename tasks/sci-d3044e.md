@@ -8,7 +8,7 @@ complexity: high
 process: direct
 owner: feat/sci-b2755f-assumption-sweep
 created: 2026-10-30T08:17:38Z
-updated: 2026-10-30T14:16:12Z
+updated: 2026-10-30T14:16:14Z
 started: 2026-10-30T10:50:45Z
 completed: 2026-10-30T14:13:16Z
 closed: 2026-10-30T14:13:16Z
@@ -76,3 +76,4 @@ Execute Task 3 after plan approval and rehearsal acceptance: freeze bounded sour
 - 2026-10-30T14:13:16Z (feat/sci-b2755f-assumption-sweep): Accepted bounded pilot: inventory v2, report/read log/source ledger v3 and fresh codex/gpt-6-astra review attached to sci-b2755f; three distinct candidates Q01/Q04/Q11, all reliance inferred. OA eligibility corrected; excluded incidents remain mm-eca42c. Fresh hygiene and four selector groups pass. Persistent evidence transferred to sci-eb1559; current session completes authorized local integration/removal.
   provenance: {"harness_session":"codex:01a18ce3-2793-7ad1-b204-ef9b88b33aba","harness_session_source":"CODEX_THREAD_ID"}
 - 2026-10-30T14:16:12Z (main): retained: {"host": "titan", "kind": "worktree", "path": ".worktrees/sci-b2755f", "state": "released", "verification": "verified", "purpose": "Accepted branch fast-forwarded into main at 43d5178; clean task worktree removed after tt-report, launcher/unit/config pointer checks and ignored-file dispositions. Exact plan workspace retained under sci-eb1559 and ledger/review attached on parent.", "next_owner": "none", "cleanup_trigger": "none"}
+- 2026-10-30T14:16:14Z (main): retained: {"host": "titan", "kind": "evidence", "path": ".worktrees/sci-b2755f/.superpowers/sdd/2026-10-30-assumption-sweep", "state": "released", "verification": "verified", "purpose": "Accepted branch fast-forwarded into main at 43d5178; clean task worktree removed after tt-report, launcher/unit/config pointer checks and ignored-file dispositions. Exact plan workspace retained under sci-eb1559 and ledger/review attached on parent.", "next_owner": "none", "cleanup_trigger": "none"}
