@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: feat/sci-b2755f-assumption-sweep
 created: 2026-10-30T01:53:54Z
-updated: 2026-10-30T11:09:41Z
+updated: 2026-10-30T11:24:33Z
 started: 2026-10-30T07:08:27Z
 depends: []
 tags: []
@@ -123,3 +123,4 @@ Related: sci-171ad1 is the causal-answer special case of this ranking; sci-434b9
 - 2026-10-30T10:54:12Z (feat/sci-b2755f-assumption-sweep): attached: pilot-setup-v1.md (6296 bytes): Frozen bounded pilot setup before literature extraction: inputs/revisions, policies, search plan and caps
 - 2026-10-30T11:09:39Z (feat/sci-b2755f-assumption-sweep): attached: pilot-source-ledger-v1.md (20135 bytes): Seven metadata queries, all 33 bibliography identities/dispositions, failed live probe and routed title incidents
 - 2026-10-30T11:09:41Z (feat/sci-b2755f-assumption-sweep): attached: discovery-inventory-v1.md (34998 bytes): Self-contained phase-A freeze before feasibility: exact local records, premises, broad leads, full citations and source dispositions
+- 2026-10-30T11:24:33Z (feat/sci-b2755f-assumption-sweep): attached: pilot-v1-report.md (28030 bytes): Eight-part incomplete pilot: frozen broad leads, local dependence/feasibility judgments and explicit primary-source shortfall
