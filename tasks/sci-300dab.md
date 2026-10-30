@@ -6,9 +6,9 @@ priority: 1
 size: m
 complexity: high
 process: planned
-owner: main
+owner: sci-300dab-stores
 created: 2026-10-30T19:15:26Z
-updated: 2026-10-30T19:45:58Z
+updated: 2026-10-30T19:46:36Z
 started: 2026-10-30T19:45:58Z
 depends: []
 tags: [holdings]
@@ -32,3 +32,5 @@ Observed 2026-10-30 in the mm30 world (store 05b6c1225e710bb1559f36e8333f3f29), 
 - 2026-10-30T19:45:58Z (main): started
   provenance: {"harness_session":"codex:01a18e58-0cdf-75c2-bf7d-f4ac22417069","harness_session_source":"CODEX_THREAD_ID"}
 - 2026-10-30T19:45:58Z (main): halt override: started past sci-0bea23 by 01a18e58-0cdf-75c2-bf7d-f4ac22417069: User explicitly requested sci-300dab; investigate and prepare its design despite the existing test-latency halt sci-0bea23.
+- 2026-10-30T19:46:36Z (sci-300dab-stores): resumed
+  provenance: {"harness_session":"codex:01a18e58-0cdf-75c2-bf7d-f4ac22417069","harness_session_source":"CODEX_THREAD_ID"}
