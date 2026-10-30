@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: feat/sci-b2755f-assumption-sweep
 created: 2026-10-30T01:53:54Z
-updated: 2026-10-30T14:08:35Z
+updated: 2026-10-30T14:10:34Z
 started: 2026-10-30T07:08:27Z
 depends: []
 tags: []
@@ -161,3 +161,4 @@ Related: sci-171ad1 is the causal-answer special case of this ranking; sci-434b9
 - 2026-10-30T13:58:49Z (feat/sci-b2755f-assumption-sweep): attached: pilot-v3-report.md (33662 bytes): Eight-part comparison with three provisional bounded questions; fresh acceptance review pending
 - 2026-10-30T14:07:41Z (feat/sci-b2755f-assumption-sweep): review: impl round 3 — verdict: accept; findings: none; reviewer: codex/gpt-6-astra
 - 2026-10-30T14:08:35Z (feat/sci-b2755f-assumption-sweep): attached: pilot-v3-review-report.md (10459 bytes): Full fresh codex/gpt-6-astra review of e674683: accept, no new findings; existing minor retained
+- 2026-10-30T14:10:34Z (feat/sci-b2755f-assumption-sweep): attached: execution-ledger-v3.md (14659 bytes): Complete execution rulings, review dispositions, deferred minor and verified completion
