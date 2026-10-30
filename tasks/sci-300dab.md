@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: sci-300dab-stores
 created: 2026-10-30T19:15:26Z
-updated: 2026-10-30T22:57:25Z
+updated: 2026-10-30T23:01:46Z
 started: 2026-10-30T19:45:58Z
 depends: []
 tags: [holdings]
@@ -80,4 +80,6 @@ Observed 2026-10-30 in the mm30 world (store 05b6c1225e710bb1559f36e8333f3f29), 
 - 2026-10-30T22:57:21Z (sci-300dab-stores): retained: {"host": "titan", "state": "kept", "verification": "verified", "next_owner": "task:sci-300dab", "cleanup_trigger": "After revised-plan review, implementation, final review, compatibility gate and local integration, inspect retained contents and host pointers before removal", "kind": "scratch", "path": "$WORK_ROOT/science/.worktrees/sci-300dab-stores/.superpowers/sdd/sci-300dab-stores", "purpose": "Full spec rounds 1\u20134 and plan rounds 1\u20133 reports; all verified against task attachments", "manifest": "$WORK_ROOT/science/.worktrees/sci-300dab-stores/.superpowers/sdd/sci-300dab-stores/manifest.sha256", "sha256": "08177088c306c8ae8879aefbfaf16de96983d285387262f5ed8a70042752ee48"}
 - 2026-10-30T22:57:23Z (sci-300dab-stores): retained: {"host": "titan", "state": "kept", "verification": "verified", "next_owner": "task:sci-300dab", "cleanup_trigger": "After revised-plan review, implementation, final review, compatibility gate and local integration, inspect retained contents and host pointers before removal", "kind": "worktree", "path": ".worktrees/sci-300dab-stores", "purpose": "Locked unmerged branch sci-300dab-stores retains unchanged design 6d83468, revised frozen plan 0ddb1ad, three unstarted children and review attachments; next action is revised-plan review"}
 - 2026-10-30T22:57:25Z (sci-300dab-stores): parked (waiting on user, review): User reviews science commit 0ddb1ad1df3c1d4c1a4ff4b43d08065eeeb0671a, docs/plans/2026-10-30-readable-stores.md in .worktrees/sci-300dab-stores. Implementation remains blocked until revised-plan review clears; then agent resumes execution Setup and children sci-14a324, sci-bb8611 and sci-e5d803 inline, with scoped halt overrides and fresh final review. After compatibility gate and completed review, agent integrates locally with git merge sci-300dab-stores. No implementation or live mutation yet.
+  provenance: {"harness_session":"codex:01a18e58-0cdf-75c2-bf7d-f4ac22417069","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-30T23:01:46Z (sci-300dab-stores): resumed
   provenance: {"harness_session":"codex:01a18e58-0cdf-75c2-bf7d-f4ac22417069","harness_session_source":"CODEX_THREAD_ID"}
