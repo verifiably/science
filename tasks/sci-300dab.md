@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: sci-300dab-stores
 created: 2026-10-30T19:15:26Z
-updated: 2026-10-30T20:08:49Z
+updated: 2026-10-30T20:08:51Z
 started: 2026-10-30T19:45:58Z
 depends: []
 tags: [holdings]
@@ -52,3 +52,5 @@ Observed 2026-10-30 in the mm30 world (store 05b6c1225e710bb1559f36e8333f3f29), 
 - 2026-10-30T20:08:23Z (sci-300dab-stores): attached: stores-spec-round-3-report.md (3377 bytes): Full fresh re-review of 6d83468: all six findings addressed, no new findings; reviewer codex/gpt-6.1-sol.
 - 2026-10-30T20:08:46Z (sci-300dab-stores): retained: {"host": "titan", "kind": "scratch", "path": "$WORK_ROOT/science/.worktrees/sci-300dab-stores/.superpowers/sdd/sci-300dab-stores", "state": "kept", "verification": "verified", "purpose": "Full frozen-spec review reports for rounds 1 through 3; each also verified against its task attachment", "next_owner": "task:sci-300dab", "cleanup_trigger": "After approved implementation integrates, verify attached reports and inspect workspace for removal", "manifest": "$WORK_ROOT/science/.worktrees/sci-300dab-stores/.superpowers/sdd/sci-300dab-stores/manifest.sha256", "sha256": "1dec56ba8cc0389434049e045d61e4e4fe47d05fb93da8d7768e212b28cfeaf1"}
 - 2026-10-30T20:08:49Z (sci-300dab-stores): retained: {"host":"titan","kind":"worktree","path":".worktrees/sci-300dab-stores","state":"kept","verification":"verified","purpose":"Locked unmerged branch sci-300dab-stores holds revised frozen design 6d83468c5aa242ffd2ab8a10a3476dcfefa8c4ff and all three review attachments; fresh round 3 accepts all six corrections","next_owner":"task:sci-300dab","cleanup_trigger":"After human design and plan approval, implementation, final review and local integration, inspect retained contents and host pointers before removal"}
+- 2026-10-30T20:08:51Z (sci-300dab-stores): parked (waiting on user, review): User reviews revised science spec at commit 6d83468c5aa242ffd2ab8a10a3476dcfefa8c4ff, docs/specs/2026-10-30-readable-stores-design.md (SHA-256 f0e64120d6bb9bfaa35d6cd705cb9d2ebfef5d3c43af61ed151680ac47fac31c), in .worktrees/sci-300dab-stores. Fresh round 3 accepts all six corrections with no findings. After approval, agent resumes this worktree and writes the separately reviewed implementation plan. No runtime tests or live-world changes; branch remains unmerged until implementation and final review, then agent may merge locally with git merge sci-300dab-stores.
+  provenance: {"harness_session":"codex:01a18e58-0cdf-75c2-bf7d-f4ac22417069","harness_session_source":"CODEX_THREAD_ID"}
