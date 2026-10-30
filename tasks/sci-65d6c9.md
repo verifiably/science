@@ -4,8 +4,9 @@ title: "Science commons milestone 3: preservation (Zenodo, fetch policy, host co
 status: idea
 priority: 2
 created: 2026-10-01T02:21:10Z
-updated: 2026-10-30T12:02:32Z
+updated: 2026-10-30T19:21:37Z
 depends: []
+parent: sci-009431
 tags: [commons]
 source: sci-fe8522
 agent: claude-code/claude-fable-5-1
@@ -13,6 +14,10 @@ spec: docs/specs/2026-09-30-science-commons-design.md
 ---
 
 Spec §12 milestone 3: the Zenodo transport, fetch policy beyond records-only, host copies of records and bytes, the preservation promise in catalog entries; test the transport-seam commit hypothesis (§4.10) by experiment first.
+
+## References
+
+- brief (input, required, kind=brief): docs/notes/2026-10-30-commons-next-milestones-brief.md — evidence, remaining decisions and wake obligations
 
 ## Notes
 
