@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: sci-300dab-stores
 created: 2026-10-30T19:15:26Z
-updated: 2026-10-30T19:46:36Z
+updated: 2026-10-30T19:47:24Z
 started: 2026-10-30T19:45:58Z
 depends: []
 tags: [holdings]
@@ -34,3 +34,4 @@ Observed 2026-10-30 in the mm30 world (store 05b6c1225e710bb1559f36e8333f3f29), 
 - 2026-10-30T19:45:58Z (main): halt override: started past sci-0bea23 by 01a18e58-0cdf-75c2-bf7d-f4ac22417069: User explicitly requested sci-300dab; investigate and prepare its design despite the existing test-latency halt sci-0bea23.
 - 2026-10-30T19:46:36Z (sci-300dab-stores): resumed
   provenance: {"harness_session":"codex:01a18e58-0cdf-75c2-bf7d-f4ac22417069","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-30T19:47:24Z (sci-300dab-stores): Origin recovered from claude-code:a2943a1d-dd3d-4577-a43b-8347da7f11bf: human asked to diagnose the store lifecycle and reconcile mm-62e2da, then authorized filing three science tasks. Writable-side-store architecture was the agent proposal; refusal closure and dangling-intent settlement were separately filed as sci-eccb43 and sci-409235. Current code confirms single-store binding in session.py and config.ReadContext; held_path_for and vocabulary.snapshot only resolve that identity. Planned design in .worktrees/sci-300dab-stores; setup used the AGENTS.md hook command. Full-suite baseline deliberately deferred to implementation Setup per planned-work rule; no code or live-world changes.
