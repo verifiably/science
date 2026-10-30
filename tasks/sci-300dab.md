@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: sci-300dab-stores
 created: 2026-10-30T19:15:26Z
-updated: 2026-10-30T19:51:56Z
+updated: 2026-10-30T19:51:58Z
 started: 2026-10-30T19:45:58Z
 depends: []
 tags: [holdings]
@@ -41,3 +41,5 @@ Observed 2026-10-30 in the mm30 world (store 05b6c1225e710bb1559f36e8333f3f29), 
 - 2026-10-30T19:51:18Z (sci-300dab-stores): attached: stores-builder-check-report.md (432 bytes): Full builder review of frozen design 915409e; accepted with no important questions, reviewer codex/gpt-6.1-sol.
 - 2026-10-30T19:51:53Z (sci-300dab-stores): retained: {"host": "titan", "kind": "scratch", "path": "$WORK_ROOT/science/.worktrees/sci-300dab-stores/.superpowers/sdd/sci-300dab-stores", "state": "kept", "verification": "verified", "purpose": "Frozen-design builder review workspace; full review also attached to sci-300dab as stores-builder-check-report.md", "next_owner": "task:sci-300dab", "cleanup_trigger": "After design approval and completed implementation integration, verify attached review then inspect for removal", "manifest": "$WORK_ROOT/science/.worktrees/sci-300dab-stores/.superpowers/sdd/sci-300dab-stores/manifest.sha256", "sha256": "fe4be9d742a5ef85596bc733016e5289c3e7dc9eaafd84444a1d9d69f043aea1"}
 - 2026-10-30T19:51:56Z (sci-300dab-stores): retained: {"host":"titan","kind":"worktree","path":".worktrees/sci-300dab-stores","state":"kept","verification":"verified","purpose":"Locked branch sci-300dab-stores holds frozen spec 915409e and attached builder review for human design review, then implementation planning","next_owner":"task:sci-300dab","cleanup_trigger":"After human spec and plan approval, implementation, final review and local integration, inspect retained contents and host pointers before removal"}
+- 2026-10-30T19:51:58Z (sci-300dab-stores): parked (waiting on user, review): User reviews science commit 915409e42b540287e3fce9f062a097cca1bda100, docs/specs/2026-10-30-readable-stores-design.md in .worktrees/sci-300dab-stores; after approval agent resumes this worktree and drafts the implementation plan for separate review. Builder accepted with no findings. Branch sci-300dab-stores remains unmerged; integrate locally only after implementation and review. No live-world changes or runtime tests performed.
+  provenance: {"harness_session":"codex:01a18e58-0cdf-75c2-bf7d-f4ac22417069","harness_session_source":"CODEX_THREAD_ID"}
