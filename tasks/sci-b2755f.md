@@ -1,15 +1,17 @@
 ---
 id: sci-b2755f
 title: Sweep epistemic records for the premises they rely on and rank the questions whose answers would clarify the most
-status: doing
+status: done
 priority: 2
 size: l
 complexity: high
 process: planned
 owner: feat/sci-b2755f-assumption-sweep
 created: 2026-10-30T01:53:54Z
-updated: 2026-10-30T14:12:13Z
+updated: 2026-10-30T14:13:17Z
 started: 2026-10-30T07:08:27Z
+completed: 2026-10-30T14:13:17Z
+closed: 2026-10-30T14:13:17Z
 depends: []
 tags: []
 origin: mixed
@@ -168,3 +170,7 @@ Related: sci-171ad1 is the causal-answer special case of this ranking; sci-434b9
 - 2026-10-30T14:12:09Z (feat/sci-b2755f-assumption-sweep): retained: {"host": "titan", "kind": "scratch", "path": "$WORK_ROOT/science/sci-b2755f", "state": "released", "verification": "verified", "purpose": "Ownership transferred to sci-eb1559; its verified kept record and manifest are present. Bytes retained at same path.", "next_owner": "none", "cleanup_trigger": "none"}
 - 2026-10-30T14:12:11Z (feat/sci-b2755f-assumption-sweep): retained: {"host": "titan", "kind": "evidence", "path": "$WORK_ROOT/science/sci-b2755f/pilot-v1-evidence", "state": "released", "verification": "verified", "purpose": "Ownership transferred to sci-eb1559; its verified kept record and manifest are present. Bytes retained at same path.", "next_owner": "none", "cleanup_trigger": "none"}
 - 2026-10-30T14:12:13Z (feat/sci-b2755f-assumption-sweep): retained: {"host": "titan", "kind": "evidence", "path": ".worktrees/sci-b2755f/.superpowers/sdd/2026-10-30-assumption-sweep", "state": "kept", "verification": "verified", "purpose": "Closing-session integration only; off-tree evidence ownership transferred to sci-eb1559. Original plan workspace has verified exact copy there.", "next_owner": "session:codex:01a18ce3-2793-7ad1-b204-ef9b88b33aba", "cleanup_trigger": "After authorized local merge, verified attachments/copy, tt-report, ignored-file dispositions and host-pointer check, remove this task worktree in this turn", "manifest": ".worktrees/sci-b2755f/.superpowers/sdd/2026-10-30-assumption-sweep/manifest.sha256", "sha256": "ad670078764b9373f9b2d55ff0610138100fd3322c85e4924b0a235fa2770128"}
+- 2026-10-30T14:13:17Z (feat/sci-b2755f-assumption-sweep): done
+  provenance: {"harness_session":"codex:01a18ce3-2793-7ad1-b204-ef9b88b33aba","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-30T14:13:17Z (feat/sci-b2755f-assumption-sweep): Authored sweep skill, synthetic rehearsal and bounded mm pilot accepted. Fresh whole-branch review at e674683 has no new findings; Q01/Q04/Q11 are candidate-level questions, not field priorities. Existing minor remains sci-30eb71; incidents mm-eca42c; exact evidence lifecycle sci-eb1559. Current session integrates reviewed branch locally and removes verified worktree; no push.
+  provenance: {"harness_session":"codex:01a18ce3-2793-7ad1-b204-ef9b88b33aba","harness_session_source":"CODEX_THREAD_ID"}
