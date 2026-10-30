@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: feat/sci-b2755f-assumption-sweep
 created: 2026-10-30T01:53:54Z
-updated: 2026-10-30T11:45:42Z
+updated: 2026-10-30T11:45:44Z
 started: 2026-10-30T07:08:27Z
 depends: []
 tags: []
@@ -136,3 +136,4 @@ Related: sci-171ad1 is the causal-answer special case of this ranking; sci-434b9
 - 2026-10-30T11:44:30Z (feat/sci-b2755f-assumption-sweep): retained: {"host": "titan", "kind": "evidence", "path": "$WORK_ROOT/science/sci-b2755f/pilot-v1-evidence", "state": "kept", "verification": "verified", "purpose": "Canonical exact bibliography/roster/local-record/phase-B inputs and raw read/error logs, 35 checkpointed files; original pilot-read-log basenames now resolve in this directory; no raw primary paper or patient rows", "next_owner": "task:sci-b2755f", "cleanup_trigger": "After accepted primary-source continuation and integrated report, verify preservation and decide each raw input/log disposition", "manifest": "$WORK_ROOT/science/sci-b2755f/pilot-v1-evidence/manifest.sha256", "sha256": "c72642b8ff891608e3e49eb69a4093e0e0e7513a3f3bd8a9f192005c6f066693"}
 - 2026-10-30T11:44:31Z (feat/sci-b2755f-assumption-sweep): retained: {"host": "titan", "kind": "evidence", "path": ".worktrees/sci-b2755f/.superpowers/sdd/2026-10-30-assumption-sweep", "state": "kept", "verification": "verified", "purpose": "Plan execution ledger, briefs, test logs, actual worker returns and complete reviews, 36 checkpointed files; Rulings and deferred minor retained for final report and next inline executor", "next_owner": "task:sci-b2755f", "cleanup_trigger": "After completed pilot acceptance, exhaustive rulings/minors handoff and verified evidence preservation, assess this plan workspace before removal", "manifest": ".worktrees/sci-b2755f/.superpowers/sdd/2026-10-30-assumption-sweep/manifest.sha256", "sha256": "805d47c6e20d181993c99d9a022aa457a8adbe5eab57c3f593b7508c871a453c"}
 - 2026-10-30T11:45:42Z (feat/sci-b2755f-assumption-sweep): attached: execution-ledger-v1.md (8302 bytes): Execution ledger with all five rulings, deferred Minor, correction acceptance and concrete pilot continuation
+- 2026-10-30T11:45:44Z (feat/sci-b2755f-assumption-sweep): attached: retention-dispositions-v1.md (2958 bytes): Per-file disposition of duplicate drafts/reports and byte-preserving pilot evidence move
