@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: sci-300dab-stores
 created: 2026-10-30T19:15:26Z
-updated: 2026-10-30T19:51:18Z
+updated: 2026-10-30T19:51:53Z
 started: 2026-10-30T19:45:58Z
 depends: []
 tags: [holdings]
@@ -39,3 +39,4 @@ Observed 2026-10-30 in the mm30 world (store 05b6c1225e710bb1559f36e8333f3f29), 
 - 2026-10-30T19:50:37Z (sci-300dab-stores): Design recommendation frozen for builder review at science commit 915409e42b540287e3fce9f062a097cca1bda100, docs/specs/2026-10-30-readable-stores-design.md: retain store_root for writes and add read_store_roots for identity-bound reads. The creation route is a documented operator-time init_store_root recipe, not a command-reachable lifecycle act. just check and git diff --check passed; no runtime tests were run in this design-only phase.
 - 2026-10-30T19:51:15Z (sci-300dab-stores): review: spec round 1 — verdict: accept; findings: none; reviewer: codex/gpt-6.1-sol
 - 2026-10-30T19:51:18Z (sci-300dab-stores): attached: stores-builder-check-report.md (432 bytes): Full builder review of frozen design 915409e; accepted with no important questions, reviewer codex/gpt-6.1-sol.
+- 2026-10-30T19:51:53Z (sci-300dab-stores): retained: {"host": "titan", "kind": "scratch", "path": "$WORK_ROOT/science/.worktrees/sci-300dab-stores/.superpowers/sdd/sci-300dab-stores", "state": "kept", "verification": "verified", "purpose": "Frozen-design builder review workspace; full review also attached to sci-300dab as stores-builder-check-report.md", "next_owner": "task:sci-300dab", "cleanup_trigger": "After design approval and completed implementation integration, verify attached review then inspect for removal", "manifest": "$WORK_ROOT/science/.worktrees/sci-300dab-stores/.superpowers/sdd/sci-300dab-stores/manifest.sha256", "sha256": "fe4be9d742a5ef85596bc733016e5289c3e7dc9eaafd84444a1d9d69f043aea1"}
