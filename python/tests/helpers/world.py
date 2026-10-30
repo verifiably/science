@@ -151,6 +151,7 @@ operations_root = "{ops}"
 domains = {list(DOMAINS)!r}
 contracts = []
 store_root = "{cfg.store_root}"
+read_store_roots = {[str(root) for root in cfg.read_store_roots]!r}
 coordination = {COORDINATION}
 {socket_line}''')
     return path
@@ -173,6 +174,7 @@ operations_root = "{cfg.operations_root}"
 domains = {list(DOMAINS)!r}
 contracts = ["{contract}"]
 store_root = "{cfg.store_root}"
+read_store_roots = {[str(root) for root in cfg.read_store_roots]!r}
 coordination = {COORDINATION}
 {socket_line}''')
     return path

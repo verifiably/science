@@ -100,3 +100,28 @@ def test_verify_refuses_before_the_replay_when_the_equivalence_implementation_ch
     assert again.value.refusal == first.value.refusal
     view = ctx.write_view()
     assert sum(1 for n in view.iter_stored() if n.kind == "run") == 1  # no replay was minted
+
+
+def test_verify_preparation_consumes_inherited_inputs(rig, monkeypatch):
+    from dataclasses import replace
+    from beliefs.root import init_store_root
+    from helpers.world import FIXTURE_AUTHORITY
+    from science.config import ReadContext
+    import science.commands.verify as verify_module
+    _, ctx, assessment_ref, (code, entrypoint, _) = rig
+    inherited = ctx.config.store_root
+    fresh = inherited.with_name("fresh")
+    init_store_root(fresh, authority=FIXTURE_AUTHORITY)
+    cfg = replace(ctx.config, store_root=fresh, read_store_roots=(inherited,))
+    real_prepare = verify_module.prepare
+    class Prepared(Exception):
+        pass
+    def stop_after_prepare(*args, **kwargs):
+        prepared = real_prepare(*args, **kwargs)
+        assert prepared["held_inputs"]
+        assert all(path.is_relative_to(inherited) for path in prepared["held_inputs"].values())
+        raise Prepared
+    monkeypatch.setattr(verify_module, "prepare", stop_after_prepare)
+    with pytest.raises(Prepared):
+        verify_module.handle(ReadContext.open(cfg), None, assessment=assessment_ref,
+                             code=str(code), entrypoint=entrypoint)

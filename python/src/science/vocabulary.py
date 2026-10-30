@@ -1,7 +1,9 @@
 """The resolution snapshot over held vocabularies (belief-path design §5.3)."""
 from __future__ import annotations
 
+from collections.abc import Mapping
 from hashlib import sha256
+from pathlib import Path
 
 from beliefs import stored
 from beliefs.contract.domain import VocabularyBinding
@@ -20,12 +22,13 @@ def dataset_bound_sorts(profile: ProfileSpec) -> dict[str, VocabularyBinding]:
     }
 
 
-def snapshot(profile: ProfileSpec, views, store_root, store_id: str, observations) -> ResolutionSnapshot:
-    """Read each dataset-bound vocabulary from the store by the address the
-    contract names. `observations` is the read context's reduced mapping
-    (address -> Found observations). A binding whose dataset is not in the
-    corpus or not held is listed unreadable, so a referent under it resolves
-    not-available."""
+def snapshot(profile: ProfileSpec, views, stores: Mapping[str, Path], observations) -> ResolutionSnapshot:
+    """Read dataset-bound vocabularies in reducer order across admitted stores.
+
+    Missing declarations or found observations, and selected bytes with a wrong
+    digest, are unreadable. Found observations with no configured carrier
+    refuse; I/O errors propagate. Neither failure retries another copy.
+    """
     readable: dict[VocabularyBinding, list[str]] = {}
     unreadable: list[VocabularyBinding] = []
     for binding in dataset_bound_sorts(profile).values():
@@ -34,7 +37,7 @@ def snapshot(profile: ProfileSpec, views, store_root, store_id: str, observation
         if node is None or address not in observations:
             unreadable.append(binding)
             continue
-        path = held_path_for(store_root, store_id, observations[address])
+        path = held_path_for(stores, observations[address])
         content = path.read_bytes()
         (resource,) = stored.dataset_declaration(node).resources
         if "sha256:" + sha256(content).hexdigest() != resource.digest:

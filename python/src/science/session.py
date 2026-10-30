@@ -1,7 +1,7 @@
 """The one place a science launcher opens its attended session."""
 from __future__ import annotations
 
-from science.config import ScienceConfig, mount_profiles, require_write_root_pins
+from science.config import ScienceConfig, configured_stores, mount_profiles, require_write_root_pins
 from science.refusal import Refusal, Refused
 
 
@@ -15,6 +15,7 @@ def open_session(config: ScienceConfig, project=None):
     from beliefs.errors import ProjectNotResolvable
     from beliefs.session import open_attended_session
 
+    configured_stores(config)
     require_write_root_pins(config)
     if config.coordination is None and project is not None:
         raise Refused(Refusal(

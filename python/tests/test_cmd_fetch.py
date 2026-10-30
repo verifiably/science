@@ -131,5 +131,12 @@ def test_fetch_leaves_another_stores_observation_of_the_same_path_standing(reope
     act = ActContext(cfg.write_root, other_root, "fixture", "fixture/hold.v1", FIXTURE_AUTHORITY, holdings_seam(),
                      profile=cfg.profile)
     write(act, StoreLocator(other_store, f"{DECLARED.removeprefix('sha256:')}/data.txt"), DATA_A, expected=DECLARED)
-    invoke(str(reopened.data_a_path()))
-    assert ReadContext.open(cfg).held_path(dataset).read_bytes() == DATA_A
+    cfg = replace(cfg, read_store_roots=(other_root,))
+    invoke(str(reopened.data_a_path()), cfg)
+    ctx = ReadContext.open(cfg)
+    assert ctx.held_path(dataset).read_bytes() == DATA_A
+    from beliefs.root import store_identity
+    locations = {observation.location for observation in ctx.observations()[dataset]}
+    relative = f"{DECLARED.removeprefix('sha256:')}/data.txt"
+    assert {f"store:{other_store}:{relative}",
+            f"store:{store_identity(cfg.store_root)}:{relative}"} <= locations
