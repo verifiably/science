@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: feat/sci-b2755f-assumption-sweep
 created: 2026-10-30T01:53:54Z
-updated: 2026-10-30T13:02:54Z
+updated: 2026-10-30T13:02:55Z
 started: 2026-10-30T07:08:27Z
 depends: []
 tags: []
@@ -147,3 +147,4 @@ Related: sci-171ad1 is the causal-answer special case of this ranking; sci-434b9
 - 2026-10-30T13:01:47Z (feat/sci-b2755f-assumption-sweep): attached: pilot-v2-continuation-report.md (3462 bytes): Continuation v2: single isolated availability probe HTTP500; no source text read, cumulative caps unchanged, pilot remains incomplete
 - 2026-10-30T13:01:50Z (feat/sci-b2755f-assumption-sweep): attached: execution-ledger-v2.md (9061 bytes): Execution ledger through blocked v2 continuation; prior rulings and deferred minor preserved
 - 2026-10-30T13:02:54Z (feat/sci-b2755f-assumption-sweep): retained: {"host": "titan", "kind": "worktree", "path": ".worktrees/sci-b2755f", "state": "kept", "verification": "verified", "purpose": "Hydrated locked feat/sci-b2755f-assumption-sweep, accepted Tasks 1\u20132 and incomplete pilot; main has advanced and must be reconciled before eventual integration", "next_owner": "task:sci-b2755f", "cleanup_trigger": "After completed pilot acceptance and integration, verify needed evidence preservation and assess each item before cleanup"}
+- 2026-10-30T13:02:55Z (feat/sci-b2755f-assumption-sweep): retained: {"host": "titan", "kind": "scratch", "path": "$WORK_ROOT/science/sci-b2755f", "state": "kept", "verification": "verified", "purpose": "Persistent helpers and exact frozen v1/v2 continuation evidence, 42 checkpointed files", "next_owner": "task:sci-b2755f", "cleanup_trigger": "After completed pilot acceptance and integration, verify needed evidence preservation and assess each item before cleanup", "manifest": "$WORK_ROOT/science/sci-b2755f/manifest.sha256", "sha256": "12b73f8c8c05c3e3cbaa053254baf46038f4f74f441199e84dd5c25da788ff6b"}
