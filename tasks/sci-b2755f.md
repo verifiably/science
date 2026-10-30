@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: feat/sci-b2755f-assumption-sweep
 created: 2026-10-30T01:53:54Z
-updated: 2026-10-30T13:01:50Z
+updated: 2026-10-30T13:02:54Z
 started: 2026-10-30T07:08:27Z
 depends: []
 tags: []
@@ -146,3 +146,4 @@ Related: sci-171ad1 is the causal-answer special case of this ranking; sci-434b9
 - 2026-10-30T13:00:31Z (feat/sci-b2755f-assumption-sweep): attached: pilot-setup-v2.md (3153 bytes): Frozen continuation setup: cumulative caps, unchanged exposure inputs and one isolated availability probe; no literature read yet
 - 2026-10-30T13:01:47Z (feat/sci-b2755f-assumption-sweep): attached: pilot-v2-continuation-report.md (3462 bytes): Continuation v2: single isolated availability probe HTTP500; no source text read, cumulative caps unchanged, pilot remains incomplete
 - 2026-10-30T13:01:50Z (feat/sci-b2755f-assumption-sweep): attached: execution-ledger-v2.md (9061 bytes): Execution ledger through blocked v2 continuation; prior rulings and deferred minor preserved
+- 2026-10-30T13:02:54Z (feat/sci-b2755f-assumption-sweep): retained: {"host": "titan", "kind": "worktree", "path": ".worktrees/sci-b2755f", "state": "kept", "verification": "verified", "purpose": "Hydrated locked feat/sci-b2755f-assumption-sweep, accepted Tasks 1\u20132 and incomplete pilot; main has advanced and must be reconciled before eventual integration", "next_owner": "task:sci-b2755f", "cleanup_trigger": "After completed pilot acceptance and integration, verify needed evidence preservation and assess each item before cleanup"}
