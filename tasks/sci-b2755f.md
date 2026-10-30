@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: feat/sci-b2755f-assumption-sweep
 created: 2026-10-30T01:53:54Z
-updated: 2026-10-30T11:41:01Z
+updated: 2026-10-30T11:44:26Z
 started: 2026-10-30T07:08:27Z
 depends: []
 tags: []
@@ -131,3 +131,4 @@ Related: sci-171ad1 is the causal-answer special case of this ranking; sci-434b9
 - 2026-10-30T11:36:31Z (feat/sci-b2755f-assumption-sweep): controls-prompts-v2.md supersedes the exact-readable-prompt claim in v1; v1 remains historical opaque evidence. Replacement is controller reconstruction from actual visible calls, not archive decryption or independently recovered verbatim text. Full branch review attached as pilot-v1-review-report.md. Minor coverage-identity precision finding stays deferred in the ledger; tooling archive-guidance gap filed as hq-d8a38c.
 - 2026-10-30T11:41:00Z (feat/sci-b2755f-assumption-sweep): review: impl round 2 — verdict: accept; findings: none; reviewer: codex/gpt-6-astra
 - 2026-10-30T11:41:01Z (feat/sci-b2755f-assumption-sweep): attached: pilot-correction-round-1-report.md (2992 bytes): Fresh scoped review accepts readable prompt reconstruction at 97e5f9c, no new findings; prior Minor remains deferred
+- 2026-10-30T11:44:26Z (feat/sci-b2755f-assumption-sweep): retained: {"host": "titan", "kind": "worktree", "path": ".worktrees/sci-b2755f", "state": "kept", "verification": "verified", "purpose": "Hydrated locked feat/sci-b2755f-assumption-sweep; Tasks 1\u20132 accepted, pilot incomplete, no host pointer repointed; retain branch for primary-source continuation and final integration", "next_owner": "task:sci-b2755f", "cleanup_trigger": "After completed pilot acceptance and local integration, inspect ignored files, host pointers and retained evidence before checked removal"}
