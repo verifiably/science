@@ -8,7 +8,7 @@ complexity: high
 process: direct
 owner: feat/sci-b2755f-assumption-sweep
 created: 2026-10-30T08:17:38Z
-updated: 2026-10-30T11:51:58Z
+updated: 2026-10-30T12:58:38Z
 started: 2026-10-30T10:50:45Z
 depends: [sci-69a1ca]
 parent: sci-b2755f
@@ -39,3 +39,5 @@ Execute Task 3 after plan approval and rehearsal acceptance: freeze bounded sour
 - 2026-10-30T11:49:27Z (feat/sci-b2755f-assumption-sweep): parked (waiting on agent, environment): Agent resumes Task 3 in .worktrees/sci-b2755f: verify parent retained manifests (raw inputs now under $WORK_ROOT/science/sci-b2755f/pilot-v1-evidence), establish a newly versioned bounded read setup and one permitted isolation probe after provider availability, then inspect primary sources across families, preserve new inventory versions, complete comparison and fresh review. Do not repeat accepted Tasks 1–2 or use stopped title sources before mm-eca42c disposition. Pilot incomplete; branch stays unmerged.
   provenance: {"harness_session":"codex:01a18c50-32b0-7103-beae-7c810e393c5c","harness_session_source":"CODEX_THREAD_ID"}
 - 2026-10-30T11:51:58Z (feat/sci-b2755f-assumption-sweep): Continuation also accounts for concurrent main ad27d0d ops-docs update: preserve/reconcile it before final integration and rerun applicable hygiene. Existing pilot/read snapshots remain frozen. Raw inputs now live in the parent-owned pilot-v1-evidence directory with verified manifest; no background process will retry the provider.
+- 2026-10-30T12:58:38Z (feat/sci-b2755f-assumption-sweep): resumed
+  provenance: {"harness_session":"codex:01a18ce3-2793-7ad1-b204-ef9b88b33aba","harness_session_source":"CODEX_THREAD_ID"}
