@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: feat/sci-b2755f-assumption-sweep
 created: 2026-10-30T01:53:54Z
-updated: 2026-10-30T07:18:13Z
+updated: 2026-10-30T07:18:46Z
 started: 2026-10-30T07:08:27Z
 depends: []
 tags: []
@@ -66,3 +66,4 @@ Related: sci-171ad1 is the causal-answer special case of this ranking; sci-434b9
 - 2026-10-30T07:18:03Z (feat/sci-b2755f-assumption-sweep): review: spec round 1 — verdict: accept; findings: none; reviewer: codex/gpt-6.1-sol
 - 2026-10-30T07:18:09Z (feat/sci-b2755f-assumption-sweep): attached: builder-check-round-1-report.md (595 bytes): Full read-only builder review of design af4b359; accepted with no findings; reviewer codex/gpt-6.1-sol
 - 2026-10-30T07:18:13Z (feat/sci-b2755f-assumption-sweep): attached: design-review-ledger.md (831 bytes): Design round 1 ledger; no rulings or deferred minors; user review remains
+- 2026-10-30T07:18:46Z (feat/sci-b2755f-assumption-sweep): retained: {"host":"titan","kind":"worktree","path":".worktrees/sci-b2755f","state":"kept","verification":"verified","purpose":"User review of frozen design af4b359e88f2a51368c6eac711516f550136cc26, followed by implementation planning and its review; hydrated workspace on feat/sci-b2755f-assumption-sweep. Full builder report and ledger are attached; temporary plan-workspace copies removed after SHA-256 equality checks.","next_owner":"task:sci-b2755f","cleanup_trigger":"After approved implementation is completed and integrated, inspect all retained evidence and perform the worktree removal checks"}
