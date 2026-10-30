@@ -8,7 +8,7 @@ complexity: high
 process: direct
 owner: feat/sci-b2755f-assumption-sweep
 created: 2026-10-30T08:17:38Z
-updated: 2026-10-30T14:12:16Z
+updated: 2026-10-30T14:12:18Z
 started: 2026-10-30T10:50:45Z
 depends: [sci-69a1ca]
 parent: sci-b2755f
@@ -66,3 +66,4 @@ Execute Task 3 after plan approval and rehearsal acceptance: freeze bounded sour
 - 2026-10-30T13:53:31Z (feat/sci-b2755f-assumption-sweep): Phase A v2 frozen before the new feasibility comparison: discovery-inventory-v2.md SHA256 9b78e64b4b3011312952c4fdfc9408e56d387fa23a7b78547b6355025bf9c262 and pilot-source-ledger-v3.md aed370bb1cf369ed0f7ba9ed234590209ba816af5154b4744c7ef33b25fa809c attached on parent; tasks show presence and byte equality verified. Cumulative 16/24 queries, 67/80 identities, 5/18 full-text-reading attempts, zero complete reads; one eligible abstract after incidents. All local records freshly unchanged. Comparing candidate questions now; no protected results, patient rows or scientific writes.
 - 2026-10-30T14:12:14Z (feat/sci-b2755f-assumption-sweep): retained: {"host": "titan", "kind": "worktree", "path": ".worktrees/sci-b2755f", "state": "kept", "verification": "verified", "purpose": "Closing-session integration only; off-tree evidence ownership transferred to sci-eb1559. Original plan workspace has verified exact copy there.", "next_owner": "session:codex:01a18ce3-2793-7ad1-b204-ef9b88b33aba", "cleanup_trigger": "After authorized local merge, verified attachments/copy, tt-report, ignored-file dispositions and host-pointer check, remove this task worktree in this turn"}
 - 2026-10-30T14:12:16Z (feat/sci-b2755f-assumption-sweep): retained: {"host": "titan", "kind": "scratch", "path": "$WORK_ROOT/science/sci-b2755f", "state": "released", "verification": "verified", "purpose": "Ownership transferred to sci-eb1559; its verified kept record and manifest are present. Bytes retained at same path.", "next_owner": "none", "cleanup_trigger": "none"}
+- 2026-10-30T14:12:18Z (feat/sci-b2755f-assumption-sweep): retained: {"host": "titan", "kind": "evidence", "path": "$WORK_ROOT/science/sci-b2755f/pilot-v1-evidence", "state": "released", "verification": "verified", "purpose": "Ownership transferred to sci-eb1559; its verified kept record and manifest are present. Bytes retained at same path.", "next_owner": "none", "cleanup_trigger": "none"}
