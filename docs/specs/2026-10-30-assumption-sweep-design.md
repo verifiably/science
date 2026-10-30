@@ -2,7 +2,7 @@
 
 Date: 2026-10-30
 Task: sci-b2755f
-Status: accepted at spec round 4 for planning, with the review-navigation clarification below incorporated; implementation requires plan review.
+Status: design accepted; implementation plan approved by Keith on 2026-10-30 with both plan-review minors resolved. Inline execution is parked for a fresh session.
 
 ## 1. Intent and origin
 
@@ -206,12 +206,16 @@ coverage bias, not permission to relax reservation policy or expand the budget.
 
 Before extraction, record the date, repositories/revisions, available corpus
 coverage, active contract dimensions, query plan and budget in the report's
-coverage section. Proposed pilot budget: at most 24 search queries, 80 unique
+coverage section. Pilot budget: at most 24 search queries, 80 unique
 bibliographic screens (abstracts only after §4 permits their reading), and 18
-full-text primary research articles; local code,
+deliberate attempts to retrieve primary articles for full-text reading. Failed
+access and retries each consume a slot; count completed full-text reads separately.
+Bibliographic and isolated-section reads do not consume full-text slots, but are
+logged and remain subject to the screening bounds. Local code,
 record and roster inspections are accounted separately. An inaccessible full text
 remains an abstract-only source only if its abstract was permitted and read;
-otherwise it is metadata-only, never a completed full-text read. Search metadata
+otherwise it is metadata-only, never a completed full-text read; its failed
+full-text attempt still consumes a slot. Search metadata
 does not establish that a paper's claim was read. Record access restrictions and
 the selection/disposition of every screened item. Stop at the caps; expanding
 them is a new recorded scope decision, never an invisible retry loop.
@@ -229,8 +233,9 @@ claims in the report must be traced to inspected primary sources, with unresolve
 attribution marked when that is impossible.
 
 Seek two primary articles per family, then use up to six remaining full-text
-slots for counterexamples, conflicting findings and uncovered questions. One
-article may inform multiple families but consumes one slot. Failure to cover a
+attempt slots for counterexamples, conflicting findings and uncovered questions.
+One completed article may inform multiple families without another slot, but a
+new retrieval attempt, including a retry, consumes another slot. Failure to cover a
 family remains a coverage gap; do not fill it from model memory. Selection favors
 explicit unanswered questions, premise-sensitive interpretations and contrasting
 designs/populations, not citation volume or effect size. Recent literature and

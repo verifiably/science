@@ -1,5 +1,7 @@
 # Assumption Sweep Implementation Plan
 
+**Status:** Approved by Keith on 2026-10-30 after resolution of plan round 2's two minors. Parked at the user's request for inline execution in a fresh session; no implementation has started.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. The controller implements inline; fresh agents supply the writing-skills controls, guided runs and read-only reviews. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Ship one reusable assumption-sweep skill and a bounded mm pilot yielding an inspectable inventory, three explained questions and concrete representation gaps.
@@ -14,7 +16,7 @@
 
 - Invocation: `/science:sweep-assumptions`. No `/sci:` alias or plugin rename.
 - Discovery precedes impact and feasibility assessment. Important questions without suitable data remain in the inventory.
-- Pilot caps: 24 search queries, 80 unique bibliographic screens, 18 full-text primary research articles. Abstracts require the spec §4 screening permission.
+- Pilot caps: 24 search queries, 80 unique bibliographic screens, 18 deliberate primary-article full-text retrieval attempts. Failures and retries each consume a slot; completed reads are counted separately. Abstracts require the spec §4 screening permission.
 - Preserve exact statements, revisions, scope, provenance and counterevidence. Proposed reliance is distinct from stored relations and biological causation.
 - No aggregate score or expected-information-gain claim; explain reach, consequence, remaining uncertainty and feasibility separately.
 - No world writes, new biological analyses, patient-level reads, protected result reads, kernel changes, scheduling, raw-paper attachment or persistent service.
@@ -53,10 +55,16 @@ an established convention if one exists, and record the revision used.
 
 The inspected quarry adapter `src/quarry/adapters/pubmed.py` maps ESummary to
 title, PMID, DOI/PMC cross-references, date and journal name, without an abstract.
-Its documented route is `quarry search --in pubmed ...` or `quarry show pubmed:<id>`;
-search supports `-n` and reports limited coverage. Check the resolved executable
-and installed behavior before the pilot. This is code-read evidence, not a live
-retrieval test. No section-only article route has yet been demonstrated.
+No `quarry` executable is on this host's PATH. Resolve its registered checkout
+with `tasks projects --paths --pretty` and run `uv run quarry search --in pubmed
+...` or `uv run quarry show pubmed:<id>` with that checkout as the working
+directory, using its own environment. Record `git rev-parse HEAD` there alongside
+the invocation; the revision inspected at approval was
+`7008433c8d3007b38a8fb08598e7e3ed49e965eb`. Search supports `-n` and reports limited
+coverage. Recheck the checkout/environment and metadata output contract before
+the pilot; do not fall back to an unrelated PATH install. This is code-read and
+environment-presence evidence, not a live retrieval test. No section-only article
+route has yet been demonstrated.
 
 ## Evidence and review convention
 
@@ -260,20 +268,26 @@ and three justified candidates, or an explicit incomplete result with its cause.
   as separate from the configured world. No dataset holdings claim follows from
   a file existing. Record current exposure/assignment evidence, the broad question
   families, search selection rules, exact budgets and output version. Resolve the
-  installed quarry executable and inspect its current metadata output contract
-  before querying. Record source/record availability rather than manufacturing
+  registered quarry checkout and its own environment, record its current Git
+  revision, and inspect the metadata output contract before querying. Run its
+  commands through `uv run quarry` with that checkout as the working directory.
+  Record source/record availability rather than manufacturing
   missing hypotheses or source assertions.
 
 - [ ] **Step 2: Screen sources under the frozen bounds.** Start with a broad
   PubMed metadata query and coverage across the six spec families, reserving
-  capacity for counterexamples and uncovered families. Use `quarry search --in
-  pubmed -n <remaining-screen-budget> <query>` with the actual query and service
+  capacity for counterexamples and uncovered families. From the registered quarry
+  checkout, use `uv run quarry search --in pubmed -n <remaining-screen-budget>
+  <query>` with the actual query and service
   ordering recorded. Do not use an unrestricted biology default search or display
   abstract-bearing generic search snippets. Count every literature search attempt
-  toward 24, unique screened identities toward 80, and every primary article
-  deliberately opened for full-text content toward 18 (including unsuccessful
-  attempts); log failed/partial access separately. Identity resolution and section
-  fetches are logged even when they do not add a unique source. Stop at the first
+  toward 24, unique screened identities toward 80, and every deliberate attempt
+  to retrieve a primary article for full-text reading toward 18. Failed access
+  and retries each consume one slot; count completed full-text reads separately
+  and log partial access. Bibliographic and isolated-section reads do not consume
+  full-text slots, but are logged and remain subject to the screening bounds.
+  Identity resolution and section fetches are logged even when they do not add
+  a unique source. Stop at the first
   exhausted applicable cap; no invisible retries or unrecorded replacement papers.
 
   Match PMID/DOI and aliases before results; check all implicated cohorts and
@@ -344,8 +358,11 @@ have manual fixture outcomes and final-review obligations. No new runtime API
 needs signature coordination. Each task produces an independently reviewable
 deliverable; implementation and evidence stay distinct.
 
-This plan requires user review before execution. Approval authorizes the bounded
-repository work and pilot within these read limits, not external publication,
+Keith approved this plan with the two round-2 minors resolved above, then asked
+to park for a fresh session. Resume by starting sci-7b3829 in the retained
+worktree and completing Task 1 Setup; no further plan approval is required.
+Approval authorizes the bounded repository work and pilot within these read limits,
+not external publication,
 paid access, policy amendments or protected data reads. The default is inline
 implementation with fresh behavioral/review workers where the skills and spec
 require them; no implementation agent fan-out is needed.
