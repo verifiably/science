@@ -7,7 +7,7 @@ size: s
 complexity: mid
 process: direct
 created: 2026-10-30T15:04:23Z
-updated: 2026-10-30T15:05:52Z
+updated: 2026-10-30T15:43:51Z
 depends: []
 tags: []
 source: "sci-b2755f:screening-rehearsal-extension"
@@ -37,3 +37,4 @@ Deliver the findings as [ref:result], attached through tasks attach; verify the 
 - 2026-10-30T15:04:23Z (add): created
   provenance: {"harness_session":"codex:01a18ce3-2793-7ad1-b204-ef9b88b33aba","harness_session_source":"CODEX_THREAD_ID","origin":"agent"}
 - 2026-10-30T15:04:25Z (main): concerns: sci-b2755f extension — Strengthen the reusable screening rehearsal using recorded pilot failure modes; preserve the accepted report and existing incident disposition.
+- 2026-10-30T15:43:51Z (main): quarry-404f63 has landed Europe PMC availability and hosted PMC XML listing support (quarry daace32; refs19f886a). This can replace run-local metadata/preflight requests in future reusable consumer work; no retry of the completed pilot is required. Keep this task focused on staged screening/rehearsal: OA and archive presence are metadata, never section/cohort clearance, and no downloader or semantic permission guarantee is added by quarry.
