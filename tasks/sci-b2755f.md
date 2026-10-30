@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: feat/sci-b2755f-assumption-sweep
 created: 2026-10-30T01:53:54Z
-updated: 2026-10-30T10:46:49Z
+updated: 2026-10-30T10:50:39Z
 started: 2026-10-30T07:08:27Z
 depends: []
 tags: []
@@ -119,3 +119,4 @@ Related: sci-171ad1 is the causal-answer special case of this ranking; sci-434b9
 - 2026-10-30T10:42:55Z (feat/sci-b2755f-assumption-sweep): attached: rehearsal-discovery-v1.md (22985 bytes): Complete synthetic phase-A inventory frozen before comparison; codex/gpt-6.1-sol
 - 2026-10-30T10:46:47Z (feat/sci-b2755f-assumption-sweep): attached: rehearsal-v1-report.md (32965 bytes): Complete eight-part synthetic sweep after verified discovery freeze; codex/gpt-6.1-sol
 - 2026-10-30T10:46:49Z (feat/sci-b2755f-assumption-sweep): attached: rehearsal-v1-read-log.md (6493 bytes): Controller-served section/read log, freeze gate and exact tested extractor source; synthetic proof only
+- 2026-10-30T10:50:39Z (feat/sci-b2755f-assumption-sweep): attached: rehearsal-v1-review-report.md (6898 bytes): Full read-only rehearsal review of frozen a666f4a; accepted, no findings; codex/gpt-6-astra
