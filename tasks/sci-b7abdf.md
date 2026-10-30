@@ -7,7 +7,7 @@ size: s
 complexity: mid
 process: direct
 created: 2026-10-30T15:04:23Z
-updated: 2026-10-30T15:04:23Z
+updated: 2026-10-30T15:04:25Z
 depends: []
 tags: []
 source: "sci-b2755f:screening-rehearsal-extension"
@@ -34,3 +34,4 @@ Done when the new staged rehearsal shows the current weakness, the revised workf
 
 - 2026-10-30T15:04:23Z (add): created
   provenance: {"harness_session":"codex:01a18ce3-2793-7ad1-b204-ef9b88b33aba","harness_session_source":"CODEX_THREAD_ID","origin":"agent"}
+- 2026-10-30T15:04:25Z (main): concerns: sci-b2755f extension — Strengthen the reusable screening rehearsal using recorded pilot failure modes; preserve the accepted report and existing incident disposition.
