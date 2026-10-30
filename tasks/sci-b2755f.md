@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: feat/sci-b2755f-assumption-sweep
 created: 2026-10-30T01:53:54Z
-updated: 2026-10-30T15:06:03Z
+updated: 2026-10-30T16:45:51Z
 started: 2026-10-30T07:08:27Z
 completed: 2026-10-30T14:13:17Z
 closed: 2026-10-30T14:13:17Z
@@ -178,3 +178,4 @@ Related: sci-171ad1 is the causal-answer special case of this ranking; sci-434b9
 - 2026-10-30T14:16:09Z (main): retained: {"host": "titan", "kind": "evidence", "path": ".worktrees/sci-b2755f/.superpowers/sdd/2026-10-30-assumption-sweep", "state": "released", "verification": "verified", "purpose": "Accepted branch fast-forwarded into main at 43d5178; clean task worktree removed after tt-report, launcher/unit/config pointer checks and ignored-file dispositions. Exact plan workspace retained under sci-eb1559 and ledger/review attached on parent.", "next_owner": "none", "cleanup_trigger": "none"}
 - 2026-10-30T14:16:11Z (main): Integrated locally into main at 43d51787114ddac0a503881d43efe5924798269c; merged just check passed. Task worktree and feature branch removed; no push, no surviving processes. Parent attachments now open from tasks/files/sci-b2755f/. Remaining exact evidence belongs to sci-eb1559; stopped sources remain excluded pending mm-eca42c, historical compact-control minor sci-30eb71.
 - 2026-10-30T15:06:03Z (main): Post-completion follow-ups filed after user asked what else would be useful: sci-b7abdf strengthens staged screening rehearsal; mm-87d8db seeks independent/counterevidence within remaining original caps and depends on that rehearsal; beliefs-0e4feb assesses scoped premise/reliance representations without preselecting a kernel extension. Existing quarry-404f63, sci-4e0f7f and beliefs-9cbde6 cover retrieval, causal-workflow design and the concrete independence question. All three new tasks carry concerns: extension notes, provenance and explicit completion outputs.
+- 2026-10-30T16:45:51Z (main): Post-summary clarification: user questioned the representativeness of local records. Exact source inspection confirms first two shortlisted questions mainly audit mm30 reproduction/working-corpus PHF19/EZH2 stage comparisons, while mm provided roster/policy metadata. Controller acknowledges that prior completion language overstated scientific breadth: accepted candidate formulation and workflow demonstration do not establish a representative discovery of MM research fronts. The original field-first goal remains intact; mm-87d8db now carries this clarification. Frozen reports and acceptance history remain unchanged.
