@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: feat/sci-b2755f-assumption-sweep
 created: 2026-10-30T01:53:54Z
-updated: 2026-10-30T10:39:35Z
+updated: 2026-10-30T10:40:59Z
 started: 2026-10-30T07:08:27Z
 depends: []
 tags: []
@@ -113,3 +113,4 @@ Related: sci-171ad1 is the causal-answer special case of this ranking; sci-434b9
 - 2026-10-30T10:31:45Z (feat/sci-b2755f-assumption-sweep): attached: controls-discovery-v1.md (7932 bytes): Frozen synthetic inventory and read scenarios for compact behavioral samples; not real scientific evidence
 - 2026-10-30T10:35:16Z (feat/sci-b2755f-assumption-sweep): attached: skill-controls-v1-report.md (83433 bytes): Five no-skill and five guided synthetic returns, prompts, manual scores and limitations; codex/gpt-6.1-sol
 - 2026-10-30T10:39:35Z (feat/sci-b2755f-assumption-sweep): retained: {"host": "titan", "kind": "scratch", "path": "$WORK_ROOT/science/sci-b2755f", "state": "kept", "verification": "verified", "purpose": "Mutable inline execution inputs, return collector and tested run-local section extractor for rehearsal and pilot; draft scenario/oracle are duplicate copies of committed fixtures", "next_owner": "task:sci-b2755f", "cleanup_trigger": "After pilot disposition and integration, verify attached evidence and assess each scratch item", "manifest": "$WORK_ROOT/science/sci-b2755f/manifest.sha256", "sha256": "0016709b72036ace3061e3dd08618994d78f30f37788e5c29b2d7f826e31b5b6"}
+- 2026-10-30T10:40:59Z (feat/sci-b2755f-assumption-sweep): attached: controls-prompts-v1.md (13322 bytes): Full ten control/guided dispatch texts; host paths substituted with named scenario/skill locations
