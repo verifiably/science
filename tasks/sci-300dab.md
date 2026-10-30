@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: sci-300dab-stores
 created: 2026-10-30T19:15:26Z
-updated: 2026-10-30T22:55:50Z
+updated: 2026-10-30T22:55:51Z
 started: 2026-10-30T19:45:58Z
 depends: []
 tags: [holdings]
@@ -73,3 +73,4 @@ Observed 2026-10-30 in the mm30 world (store 05b6c1225e710bb1559f36e8333f3f29), 
 - 2026-10-30T22:52:00Z (sci-300dab-stores): review: plan round 2 — verdict: revise; findings: Important 1, Minor 4; reviewer: claude-code/claude-opus-5-5
 - 2026-10-30T22:55:48Z (sci-300dab-stores): attached: stores-plan-round-2-report.md (5822 bytes): Full relayed review of plan 3ccc4a8: revise, Important 1 and Minor 4; reviewer claude-code/claude-opus-5-5.
 - 2026-10-30T22:55:50Z (sci-300dab-stores): Provenance correction: the controller approved design 6d83468 after accepted spec rounds 3 and 4. The user did not approve the design; the prior delegation wording in the plan and notes was misleading. The revised State line records controller approval directly. Plan review remains a separate gate, and no implementation has begun.
+- 2026-10-30T22:55:51Z (sci-300dab-stores): Plan round 2 disposition: accept all five findings. Extract the existing refusal normalizer into refusal.py with optional root context; preserve all existing shapes and the dispatcher catch tuple. Filed beliefs-1dfd8c for public lifecycle error exports; temporary internal imports must cite it. Document child halt overrides and slow test-fast; replace injected restore failure/retry tests with a real unserviceable replica plus science refusal/no-mutation checks; patch reduced_heads with a concrete blocked row through the real adapter; bound inventory to named sources and 20 minutes with explicit gap dispositions. No spec changes or implementation.
