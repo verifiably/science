@@ -8,7 +8,7 @@ complexity: high
 process: direct
 owner: feat/sci-b2755f-assumption-sweep
 created: 2026-10-30T08:17:38Z
-updated: 2026-10-30T12:59:56Z
+updated: 2026-10-30T13:03:01Z
 started: 2026-10-30T10:50:45Z
 depends: [sci-69a1ca]
 parent: sci-b2755f
@@ -42,3 +42,4 @@ Execute Task 3 after plan approval and rehearsal acceptance: freeze bounded sour
 - 2026-10-30T12:58:38Z (feat/sci-b2755f-assumption-sweep): resumed
   provenance: {"harness_session":"codex:01a18ce3-2793-7ad1-b204-ef9b88b33aba","harness_session_source":"CODEX_THREAD_ID"}
 - 2026-10-30T12:59:56Z (feat/sci-b2755f-assumption-sweep): Created mutable continuation evidence directory on titan at $WORK_ROOT/science/sci-b2755f/pilot-v2-evidence; owned by sci-d3044e, not yet checkpointed. Verified all 38 scratch, 35 v1-evidence and 36 plan-workspace entries against recorded manifests. Current roster/catchments/reservation/exposure-policy hashes equal v1; mm-eca42c remains todo, stopped sources remain excluded. Prior search/screen/full-text budgets carry forward; one new isolated live probe is the recorded continuation boundary.
+- 2026-10-30T13:03:01Z (feat/sci-b2755f-assumption-sweep): retained: {"host": "titan", "kind": "evidence", "path": "$WORK_ROOT/science/sci-b2755f/pilot-v2-evidence", "state": "kept", "verification": "verified", "purpose": "Frozen continuation setup, exact HTTP500 probe log and incomplete outcome, 3 checkpointed files", "next_owner": "task:sci-d3044e", "cleanup_trigger": "After completed pilot acceptance and integration, verify needed evidence preservation and assess each item before cleanup", "manifest": "$WORK_ROOT/science/sci-b2755f/pilot-v2-evidence/manifest.sha256", "sha256": "cff817d9495f81b81f650950b8bc263b84595b81138ba3051cd21f3e2f03f5d8"}
