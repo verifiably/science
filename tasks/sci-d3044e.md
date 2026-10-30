@@ -8,7 +8,7 @@ complexity: high
 process: direct
 owner: feat/sci-b2755f-assumption-sweep
 created: 2026-10-30T08:17:38Z
-updated: 2026-10-30T13:10:13Z
+updated: 2026-10-30T13:10:15Z
 started: 2026-10-30T10:50:45Z
 depends: [sci-69a1ca]
 parent: sci-b2755f
@@ -47,3 +47,4 @@ Execute Task 3 after plan approval and rehearsal acceptance: freeze bounded sour
 - 2026-10-30T13:03:04Z (feat/sci-b2755f-assumption-sweep): parked (waiting on agent, environment): Agent resumes .worktrees/sci-b2755f after section-route availability changes: verify refreshed retained manifests, freeze a new one-probe setup carrying cumulative budgets, prove permitted live isolation, then refresh source/world/quarry contracts and complete primary-source survey, inventory freeze, comparison and fresh whole-branch review. Preserve v1/v2 evidence and excluded mm-eca42c sources; reconcile main before integration. HTTP500 repeated in v2; no further request running.
   provenance: {"harness_session":"codex:01a18ce3-2793-7ad1-b204-ef9b88b33aba","harness_session_source":"CODEX_THREAD_ID"}
 - 2026-10-30T13:10:13Z (feat/sci-b2755f-assumption-sweep): attached: route-500-diagnosis.md (1777 bytes): Europe PMC fullTextXML 500 = non-open-access article; deterministic, with controls
+- 2026-10-30T13:10:15Z (feat/sci-b2755f-assumption-sweep): attached: route-500-oa-flags.tsv (255 bytes): pmid, pmcid, isOpenAccess, inEPMC for the 13 non-incident pilot sources (flags only)
