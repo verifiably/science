@@ -8,7 +8,7 @@ complexity: high
 process: direct
 owner: feat/sci-b2755f-assumption-sweep
 created: 2026-10-30T08:17:38Z
-updated: 2026-10-30T14:16:14Z
+updated: 2026-10-30T14:16:16Z
 started: 2026-10-30T10:50:45Z
 completed: 2026-10-30T14:13:16Z
 closed: 2026-10-30T14:13:16Z
@@ -77,3 +77,4 @@ Execute Task 3 after plan approval and rehearsal acceptance: freeze bounded sour
   provenance: {"harness_session":"codex:01a18ce3-2793-7ad1-b204-ef9b88b33aba","harness_session_source":"CODEX_THREAD_ID"}
 - 2026-10-30T14:16:12Z (main): retained: {"host": "titan", "kind": "worktree", "path": ".worktrees/sci-b2755f", "state": "released", "verification": "verified", "purpose": "Accepted branch fast-forwarded into main at 43d5178; clean task worktree removed after tt-report, launcher/unit/config pointer checks and ignored-file dispositions. Exact plan workspace retained under sci-eb1559 and ledger/review attached on parent.", "next_owner": "none", "cleanup_trigger": "none"}
 - 2026-10-30T14:16:14Z (main): retained: {"host": "titan", "kind": "evidence", "path": ".worktrees/sci-b2755f/.superpowers/sdd/2026-10-30-assumption-sweep", "state": "released", "verification": "verified", "purpose": "Accepted branch fast-forwarded into main at 43d5178; clean task worktree removed after tt-report, launcher/unit/config pointer checks and ignored-file dispositions. Exact plan workspace retained under sci-eb1559 and ledger/review attached on parent.", "next_owner": "none", "cleanup_trigger": "none"}
+- 2026-10-30T14:16:16Z (main): Integrated locally into main at 43d51787114ddac0a503881d43efe5924798269c; merged just check passed. Task worktree and feature branch removed; no push, no surviving processes. Parent attachments now open from tasks/files/sci-b2755f/. Remaining exact evidence belongs to sci-eb1559; stopped sources remain excluded pending mm-eca42c, historical compact-control minor sci-30eb71.
