@@ -1,6 +1,6 @@
 # Assumption Sweep Implementation Plan
 
-**Status:** Approved by Keith on 2026-10-30 after resolution of plan round 2's two minors. Inline Tasks 1–2 are complete. Task 3 v3 corrected the non-OA probe selection, froze an expanded inventory and submitted three bounded candidates for fresh acceptance review; the pilot remains open on sci-d3044e and sci-b2755f.
+**Status:** Approved by Keith on 2026-10-30 after resolution of plan round 2's two minors. Inline Tasks 1–2 are complete. Task 3 v3 corrected the non-OA probe selection, froze an expanded inventory and received fresh acceptance for three bounded candidates at e674683. All three tasks are complete; the evidence and review are attached to sci-b2755f.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. The controller implements inline; fresh agents supply the writing-skills controls, guided runs and read-only reviews. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -359,8 +359,7 @@ needs signature coordination. Each task produces an independently reviewable
 deliverable; implementation and evidence stay distinct.
 
 Keith approved this plan with the two round-2 minors resolved above, then asked
-to park for a fresh session. That original execution handoff has now completed Tasks 1–2. Resume sci-d3044e
-in the retained worktree at the v3 acceptance review; keep earlier incomplete pilot artifacts intact. OA eligibility, not provider availability, caused the original probe failures. No
+to park for a fresh session. That original execution handoff has now completed Tasks 1–2. Task 3 subsequently received fresh acceptance at e674683; its earlier incomplete artifacts remain intact. OA eligibility, not provider availability, caused the original probe failures. Retained evidence lifecycle is tracked on sci-eb1559, the historical control-wording minor on sci-30eb71, and exposure disposition on mm-eca42c. No
 further approval of this original plan is required.
 Approval authorizes the bounded repository work and pilot within these read limits,
 not external publication,

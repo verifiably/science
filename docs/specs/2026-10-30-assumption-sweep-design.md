@@ -2,7 +2,7 @@
 
 Date: 2026-10-30
 Task: sci-b2755f
-Status: design and implementation plan approved; authored skill and synthetic rehearsal implemented on 2026-10-30. The bounded mm pilot has an expanded frozen inventory and three provisional candidates awaiting fresh acceptance review. Its original probe was non-OA, not evidence of an outage; evidence and continuation are tracked on sci-b2755f and sci-d3044e.
+Status: design and implementation plan approved; authored skill and synthetic rehearsal implemented on 2026-10-30. The bounded mm pilot and three candidate questions received fresh acceptance at e674683 on 2026-10-30. This accepts candidate formulation, not field-wide priority or biological validation. Its original probe was non-OA, not evidence of an outage; the frozen evidence and review are attached to sci-b2755f.
 
 ## 1. Intent and origin
 
