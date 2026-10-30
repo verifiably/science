@@ -8,7 +8,7 @@ complexity: high
 process: direct
 owner: feat/sci-b2755f-assumption-sweep
 created: 2026-10-30T08:17:38Z
-updated: 2026-10-30T12:58:38Z
+updated: 2026-10-30T12:59:56Z
 started: 2026-10-30T10:50:45Z
 depends: [sci-69a1ca]
 parent: sci-b2755f
@@ -41,3 +41,4 @@ Execute Task 3 after plan approval and rehearsal acceptance: freeze bounded sour
 - 2026-10-30T11:51:58Z (feat/sci-b2755f-assumption-sweep): Continuation also accounts for concurrent main ad27d0d ops-docs update: preserve/reconcile it before final integration and rerun applicable hygiene. Existing pilot/read snapshots remain frozen. Raw inputs now live in the parent-owned pilot-v1-evidence directory with verified manifest; no background process will retry the provider.
 - 2026-10-30T12:58:38Z (feat/sci-b2755f-assumption-sweep): resumed
   provenance: {"harness_session":"codex:01a18ce3-2793-7ad1-b204-ef9b88b33aba","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-30T12:59:56Z (feat/sci-b2755f-assumption-sweep): Created mutable continuation evidence directory on titan at $WORK_ROOT/science/sci-b2755f/pilot-v2-evidence; owned by sci-d3044e, not yet checkpointed. Verified all 38 scratch, 35 v1-evidence and 36 plan-workspace entries against recorded manifests. Current roster/catchments/reservation/exposure-policy hashes equal v1; mm-eca42c remains todo, stopped sources remain excluded. Prior search/screen/full-text budgets carry forward; one new isolated live probe is the recorded continuation boundary.
