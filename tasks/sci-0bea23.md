@@ -7,7 +7,7 @@ size: m
 complexity: high
 process: planned
 created: 2026-10-30T18:00:08Z
-updated: 2026-10-30T23:02:03Z
+updated: 2026-10-30T23:15:29Z
 depends: []
 tags: [halt, test-latency, testing]
 source: "tt-latency:titan:2026-10-30T18:00:00Z"
@@ -23,3 +23,4 @@ Process: planned
 - 2026-10-30T18:00:10Z (main): breach: titan window 2026-10-23T18:00:00Z..2026-10-30T18:00:00Z: test-fast median 142.736 s, limit 90 s, 20 runs on 4 days
 - 2026-10-30T19:45:58Z (main): halt override: attempted sci-300dab by 01a18e58-0cdf-75c2-bf7d-f4ac22417069: User explicitly requested sci-300dab; investigate and prepare its design despite the existing test-latency halt sci-0bea23.
 - 2026-10-30T23:02:03Z (sci-300dab-stores): halt override: attempted sci-14a324 by 01a18e58-0cdf-75c2-bf7d-f4ac22417069: Execute approved readable-stores plan despite open timing halt sci-0bea23
+- 2026-10-30T23:15:29Z (sci-300dab-stores): halt override: attempted sci-bb8611 by 01a18e58-0cdf-75c2-bf7d-f4ac22417069: Execute approved readable-stores plan despite open timing halt sci-0bea23
