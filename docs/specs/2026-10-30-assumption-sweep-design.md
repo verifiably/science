@@ -2,7 +2,7 @@
 
 Date: 2026-10-30
 Task: sci-b2755f
-Status: design and implementation plan approved; authored skill and synthetic rehearsal implemented on 2026-10-30. The bounded mm pilot is incomplete after a failed live section probe; evidence and continuation are tracked on sci-b2755f.
+Status: design and implementation plan approved; authored skill and synthetic rehearsal implemented on 2026-10-30. The bounded mm pilot has an expanded frozen inventory and three provisional candidates awaiting fresh acceptance review. Its original probe was non-OA, not evidence of an outage; evidence and continuation are tracked on sci-b2755f and sci-d3044e.
 
 ## 1. Intent and origin
 
