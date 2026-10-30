@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: feat/sci-b2755f-assumption-sweep
 created: 2026-10-30T01:53:54Z
-updated: 2026-10-30T12:59:53Z
+updated: 2026-10-30T13:00:31Z
 started: 2026-10-30T07:08:27Z
 depends: []
 tags: []
@@ -143,3 +143,4 @@ Related: sci-171ad1 is the causal-answer special case of this ranking; sci-434b9
 - 2026-10-30T12:08:43Z (feat/sci-b2755f-assumption-sweep): Follow-ups filed after user asked what remains: beliefs-9cbde6 assesses scientific limits and the independence assumption of the documented intentional unpaired mm30 comparison, initially metadata/code only; it preserves the historical kernel-measurement intent and authorizes no rerun or patient-row read. sci-30eb71 separately tracks the deferred compact-control wording correction as eight provisional screen groups; it depends on sci-b2755f and is nonblocking for current pilot continuation. Existing sci-d3044e, mm-eca42c, hq-d8a38c and ops-9e20b3 already own continuation, exposure and tooling work. No duplicate provider-bug, generic reliance/kernel or scope-schema task filed on the incomplete evidence.
 - 2026-10-30T12:59:53Z (feat/sci-b2755f-assumption-sweep): resumed
   provenance: {"harness_session":"codex:01a18ce3-2793-7ad1-b204-ef9b88b33aba","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-30T13:00:31Z (feat/sci-b2755f-assumption-sweep): attached: pilot-setup-v2.md (3153 bytes): Frozen continuation setup: cumulative caps, unchanged exposure inputs and one isolated availability probe; no literature read yet
