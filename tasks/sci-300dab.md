@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: sci-300dab-stores
 created: 2026-10-30T19:15:26Z
-updated: 2026-10-30T23:38:40Z
+updated: 2026-10-30T23:38:41Z
 started: 2026-10-30T19:45:58Z
 depends: []
 tags: [holdings]
@@ -93,3 +93,4 @@ Observed 2026-10-30 in the mm30 world (store 05b6c1225e710bb1559f36e8333f3f29), 
 - 2026-10-30T23:38:16Z (sci-300dab-stores): attached: stores-execution-ledger.md (6387 bytes): Complete inline execution ledger: RED/GREEN checks, final review, six controller rulings, no deferred minors.
 - 2026-10-30T23:38:40Z (sci-300dab-stores): Identify the current integration owner for reviewed local merge and checked cleanup
   provenance: {"harness_session":"codex:01a18e58-0cdf-75c2-bf7d-f4ac22417069","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-30T23:38:41Z (sci-300dab-stores): retained: {"host": "titan", "state": "kept", "verification": "verified", "next_owner": "session:codex:01a18e58-0cdf-75c2-bf7d-f4ac22417069", "cleanup_trigger": "Immediate reviewed local merge into main, then verify attachments and remove only the task worktree and regenerable scratch", "kind": "scratch", "path": "$WORK_ROOT/science/.worktrees/sci-300dab-stores/.superpowers/sdd/sci-300dab-stores", "purpose": "Completed review/execution evidence; needed reports and ledger attached, inventory recorded exactly as parsed JSON on task; remove regenerable logs after integration", "manifest": "$WORK_ROOT/science/.worktrees/sci-300dab-stores/.superpowers/sdd/sci-300dab-stores/manifest.sha256", "sha256": "6262233427dbf2e895d57dcf7cd8cd4da56fd77798ffd6402f9165aab1e09bc7"}
