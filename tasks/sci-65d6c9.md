@@ -4,8 +4,8 @@ title: "Science commons milestone 3: preservation (Zenodo, fetch policy, host co
 status: idea
 priority: 2
 created: 2026-10-01T02:21:10Z
-updated: 2026-10-30T19:21:37Z
-depends: []
+updated: 2026-10-30T19:21:39Z
+depends: [sci-3a2f02]
 parent: sci-009431
 tags: [commons]
 source: sci-fe8522
