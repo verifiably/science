@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: feat/sci-b2755f-assumption-sweep
 created: 2026-10-30T01:53:54Z
-updated: 2026-10-30T10:26:04Z
+updated: 2026-10-30T10:31:45Z
 started: 2026-10-30T07:08:27Z
 depends: []
 tags: []
@@ -110,3 +110,4 @@ Related: sci-171ad1 is the causal-answer special case of this ranking; sci-434b9
 - 2026-10-30T10:25:33Z (feat/sci-b2755f-assumption-sweep): Execution resumed inline in existing hydrated/locked .worktrees/sci-b2755f. Scope: authored skill/template, synthetic fixtures, adapter inclusion test/generated copies, README and task-attached manual evidence. No handler/API/config or scientific store changes. Plan approved; child sci-7b3829 started, trial-arm not enrolled. Test policy absent; deferred just test baseline running.
 - 2026-10-30T10:26:04Z (feat/sci-b2755f-assumption-sweep): resumed
   provenance: {"harness_session":"codex:01a18c50-32b0-7103-beae-7c810e393c5c","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-30T10:31:45Z (feat/sci-b2755f-assumption-sweep): attached: controls-discovery-v1.md (7932 bytes): Frozen synthetic inventory and read scenarios for compact behavioral samples; not real scientific evidence
