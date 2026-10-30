@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: feat/sci-b2755f-assumption-sweep
 created: 2026-10-30T01:53:54Z
-updated: 2026-10-30T10:19:58Z
+updated: 2026-10-30T10:25:33Z
 started: 2026-10-30T07:08:27Z
 depends: []
 tags: []
@@ -107,3 +107,4 @@ Related: sci-171ad1 is the causal-answer special case of this ranking; sci-434b9
 - 2026-10-30T10:19:57Z (feat/sci-b2755f-assumption-sweep): Approval handoff verified: just check and git diff --check passed after review attachments and Task 1 unblock; tracked tree clean. Both minors fixed, no deferred findings, no pending user approval. No implementation, baseline/runtime tests, adapter build, retrieval or pilot ran. No push, host-pointer changes or other-session edits; no extra scratch/evidence copies remain outside attachments. Fresh session owns execution Setup and subsequent inline work.
 - 2026-10-30T10:19:58Z (feat/sci-b2755f-assumption-sweep): parked (waiting on agent, session): Fresh agent resumes inline in .worktrees/sci-b2755f on feat/sci-b2755f-assumption-sweep. Plan/spec approved by Keith; permitted minors resolved at 0f52b49f5b98fe6f10b8cc082de9142b46442cc9; no further approval needed. Start unblocked sci-7b3829, run trial-arm, read approved plan/spec and re-enter Task 1 Setup including the deferred policy-appropriate baseline, then execute the three dependent steps. Stopped before execution at Keith request; no background work.
   provenance: {"harness_session":"codex:01a18ba2-9d92-7f91-8f82-774c55ba33d3","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-30T10:25:33Z (feat/sci-b2755f-assumption-sweep): Execution resumed inline in existing hydrated/locked .worktrees/sci-b2755f. Scope: authored skill/template, synthetic fixtures, adapter inclusion test/generated copies, README and task-attached manual evidence. No handler/API/config or scientific store changes. Plan approved; child sci-7b3829 started, trial-arm not enrolled. Test policy absent; deferred just test baseline running.
