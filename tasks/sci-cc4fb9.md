@@ -7,7 +7,7 @@ size: m
 complexity: high
 process: planned
 created: 2026-10-29T20:02:26Z
-updated: 2026-10-29T20:06:54Z
+updated: 2026-10-30T15:43:49Z
 depends: []
 tags: [heritage, skills]
 agent: claude-code/claude-opus-5-5
@@ -23,3 +23,4 @@ User's direction, 2026-10-29, in their words: 'there should be a single record f
 - 2026-10-29T20:02:26Z (add): created
   provenance: {"harness_session":"claude-code:f7cf60bb-2dad-4284-ab1a-1810d990d023","harness_session_source":"CLAUDE_CODE_SESSION_ID","origin":"mixed"}
 - 2026-10-29T20:02:54Z (main): lit side of the one-record-per-article direction filed as lit-0b5019.
+- 2026-10-30T15:43:49Z (main): Europe PMC retrieval prerequisite quarry-404f63 is now done and locally integrated at quarry daace321b77e86b7fbd91be250010200d38023b2, with shared identifier registry prerequisite refs-1d0cb0 at refs19f886a. Research-paper design can consume quarry search/show/files: provider-qualified Europe PMC identity, canonical publication cross-references, core availability/licence fields, and metadata-gated hosted PMC XML locations. No article bytes, extraction or exposure authorization are supplied. Keep the user-directed single canonical source-record identity; the provider-qualified index id is not a second scientific article record. Read quarry README and completed task spec/ledger when designing this integration.
