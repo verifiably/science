@@ -8,7 +8,7 @@ complexity: high
 process: direct
 owner: feat/sci-b2755f-assumption-sweep
 created: 2026-10-30T08:17:38Z
-updated: 2026-10-30T14:16:16Z
+updated: 2026-10-30T17:32:40Z
 started: 2026-10-30T10:50:45Z
 completed: 2026-10-30T14:13:16Z
 closed: 2026-10-30T14:13:16Z
@@ -78,3 +78,4 @@ Execute Task 3 after plan approval and rehearsal acceptance: freeze bounded sour
 - 2026-10-30T14:16:12Z (main): retained: {"host": "titan", "kind": "worktree", "path": ".worktrees/sci-b2755f", "state": "released", "verification": "verified", "purpose": "Accepted branch fast-forwarded into main at 43d5178; clean task worktree removed after tt-report, launcher/unit/config pointer checks and ignored-file dispositions. Exact plan workspace retained under sci-eb1559 and ledger/review attached on parent.", "next_owner": "none", "cleanup_trigger": "none"}
 - 2026-10-30T14:16:14Z (main): retained: {"host": "titan", "kind": "evidence", "path": ".worktrees/sci-b2755f/.superpowers/sdd/2026-10-30-assumption-sweep", "state": "released", "verification": "verified", "purpose": "Accepted branch fast-forwarded into main at 43d5178; clean task worktree removed after tt-report, launcher/unit/config pointer checks and ignored-file dispositions. Exact plan workspace retained under sci-eb1559 and ledger/review attached on parent.", "next_owner": "none", "cleanup_trigger": "none"}
 - 2026-10-30T14:16:16Z (main): Integrated locally into main at 43d51787114ddac0a503881d43efe5924798269c; merged just check passed. Task worktree and feature branch removed; no push, no surviving processes. Parent attachments now open from tasks/files/sci-b2755f/. Remaining exact evidence belongs to sci-eb1559; stopped sources remain excluded pending mm-eca42c, historical compact-control minor sci-30eb71.
+- 2026-10-30T17:32:40Z (main): User-requested follow-up work recorded: sci-221697 coordinates cross-domain evaluation; sci-3b41ab designs its shared protocol; mm-87d8db is reframed as field-first discovery; sun-70ec71 and ns-0fa079 add contrasting pilots; sci-9d4797 tests a frozen workflow on a fresh topic. lit-bd3133 is reactivated for text-input assessment and lit-ed8bd8 records the corpus NLP pilot and derived article-question/topic resources. These extend the pilot rather than retroactively establishing broader scientific validation.
