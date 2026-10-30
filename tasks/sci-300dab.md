@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: sci-300dab-stores
 created: 2026-10-30T19:15:26Z
-updated: 2026-10-30T22:57:04Z
+updated: 2026-10-30T22:57:21Z
 started: 2026-10-30T19:45:58Z
 depends: []
 tags: [holdings]
@@ -77,3 +77,4 @@ Observed 2026-10-30 in the mm30 world (store 05b6c1225e710bb1559f36e8333f3f29), 
 - 2026-10-30T22:57:01Z (sci-300dab-stores): review: plan round 3 — verdict: accept; findings: none; reviewer: codex/gpt-6-astra
 - 2026-10-30T22:57:02Z (sci-300dab-stores): attached: stores-plan-round-3-report.md (3075 bytes): Controller self-review of revised plan 0ddb1ad; all round-2 findings addressed; separate plan review still required.
 - 2026-10-30T22:57:04Z (sci-300dab-stores): Revised plan frozen at science 0ddb1ad1df3c1d4c1a4ff4b43d08065eeeb0671a, docs/plans/2026-10-30-readable-stores.md; SHA-256 5f35ec669504e4772780d8b61791c466b18bacc5cf51f0b6173419e65a30ba1d. Spec remains unchanged at 6d83468. just check, git diff --check and documentation commit hooks passed. Round 3 is controller self-review only. Implementation remains blocked on separate revised-plan review; children are unstarted. No runtime tests or live mutations. beliefs-1dfd8c owns the error-export follow-up.
+- 2026-10-30T22:57:21Z (sci-300dab-stores): retained: {"host": "titan", "state": "kept", "verification": "verified", "next_owner": "task:sci-300dab", "cleanup_trigger": "After revised-plan review, implementation, final review, compatibility gate and local integration, inspect retained contents and host pointers before removal", "kind": "scratch", "path": "$WORK_ROOT/science/.worktrees/sci-300dab-stores/.superpowers/sdd/sci-300dab-stores", "purpose": "Full spec rounds 1\u20134 and plan rounds 1\u20133 reports; all verified against task attachments", "manifest": "$WORK_ROOT/science/.worktrees/sci-300dab-stores/.superpowers/sdd/sci-300dab-stores/manifest.sha256", "sha256": "08177088c306c8ae8879aefbfaf16de96983d285387262f5ed8a70042752ee48"}
