@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: feat/sci-b2755f-assumption-sweep
 created: 2026-10-30T01:53:54Z
-updated: 2026-10-30T11:49:29Z
+updated: 2026-10-30T11:51:56Z
 started: 2026-10-30T07:08:27Z
 depends: []
 tags: []
@@ -139,3 +139,4 @@ Related: sci-171ad1 is the causal-answer special case of this ranking; sci-434b9
 - 2026-10-30T11:45:44Z (feat/sci-b2755f-assumption-sweep): attached: retention-dispositions-v1.md (2958 bytes): Per-file disposition of duplicate drafts/reports and byte-preserving pilot evidence move
 - 2026-10-30T11:49:29Z (feat/sci-b2755f-assumption-sweep): parked (waiting on agent, environment): Agent resumes open sci-d3044e in .worktrees/sci-b2755f on feat/sci-b2755f-assumption-sweep. Tasks 1–2 complete; final Important evidence correction accepted at 97e5f9c. HTTP500 ended the single permitted section probe; pilot inventory/report/read log and all review evidence are attached. Verify current retained manifests, start a new versioned bounded primary-source read once a permitted route works, then finish the three-question comparison and fresh whole-branch review before local merge. Deferred Minor and five rulings are in execution-ledger-v1.md. No background work or host pointer change.
   provenance: {"harness_session":"codex:01a18c50-32b0-7103-beae-7c810e393c5c","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-30T11:51:56Z (feat/sci-b2755f-assumption-sweep): Final observation after park: main advanced concurrently from d33f0ed to ad27d0d (chore(tools): vendor ops-docs version 6); that update was left intact. Task branch and main now diverge. Before eventual integration, the executing agent reconciles this main update in the retained branch and reruns applicable hygiene/review; no fast-forward merge is promised. Both main and task working trees observed clean. host-load --section session reported nothing left running. No pushes, host-pointer changes or persistent processes from this session.
