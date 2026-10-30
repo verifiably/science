@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: sci-300dab-stores
 created: 2026-10-30T19:15:26Z
-updated: 2026-10-30T20:16:48Z
+updated: 2026-10-30T20:18:12Z
 started: 2026-10-30T19:45:58Z
 depends: []
 tags: [holdings]
@@ -57,3 +57,4 @@ Observed 2026-10-30 in the mm30 world (store 05b6c1225e710bb1559f36e8333f3f29), 
 - 2026-10-30T20:16:45Z (sci-300dab-stores): resumed
   provenance: {"harness_session":"codex:01a18e58-0cdf-75c2-bf7d-f4ac22417069","harness_session_source":"CODEX_THREAD_ID"}
 - 2026-10-30T20:16:48Z (sci-300dab-stores): review: spec round 4 — verdict: accept; findings: none; reviewer: claude-code/claude-opus-5-5
+- 2026-10-30T20:18:12Z (sci-300dab-stores): Design decision: approve frozen spec 6d83468c5aa242ffd2ab8a10a3476dcfefa8c4ff under this turn’s delegation that approval is the controller’s decision, following accepted rounds 3 and 4. This records a controller decision, not a claim that the relayed reviewer granted human approval. Next artifact is the implementation plan, separately reviewed before execution. Carry round 4’s rollout requirement into the plan: inventory and nonmutating lifecycle inspection of every discovered configured store, including mm30 and GSE24080 spike, before integration; no migration or live reconfiguration is authorized by inspection.
