@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: sci-300dab-stores
 created: 2026-10-30T19:15:26Z
-updated: 2026-10-30T20:26:54Z
+updated: 2026-10-30T20:26:56Z
 started: 2026-10-30T19:45:58Z
 depends: []
 tags: [holdings]
@@ -62,3 +62,4 @@ Observed 2026-10-30 in the mm30 world (store 05b6c1225e710bb1559f36e8333f3f29), 
 - 2026-10-30T20:19:28Z (sci-300dab-stores): Planning-time read-only inventory on titan: searched TOML store_root entries under registered sci, mm, beliefs, ns, sun and autonomy main trees and the SCIENCE_CONFIG data tree; found the active config /mnt/ssd/science/science.toml, the archived mm GSE24080 spike config, and sci-0d00d2 live-science.toml attachment (a copied config, not an active launcher). Using the existing beliefs interpreter with PYTHONDONTWRITEBYTECODE=1 and only store_identity/read_lifecycle_state: mm30 root /mnt/ssd/science/worlds/aec951bc6becacced13df8f7ae6f8abf/store has id 05b6c1225e710bb1559f36e8333f3f29 and read-only-serviceable state; spike root /mnt/ssd/science/spike/gse24080-world/store has no identity, is absent, and reads metadata-less. The mm report docs/reports/2026-10-09-gse24080-spike.md lines 281–287 records deletion of that disposable world and retention of its TOML as evidence. No world was opened, migrated or reconfigured. Search did not inventory arbitrary external config locations or every worktree; repeat and expand discovery before integration, documenting coverage and unresolved roots.
 - 2026-10-30T20:20:07Z (sci-300dab-stores): attached: stores-spec-round-4-report.md (2538 bytes): Full relayed round-4 acceptance of 6d83468, plus pre-integration inventory requirement; implementation tests remain proposed, not yet written.
 - 2026-10-30T20:26:54Z (sci-300dab-stores): review: plan round 1 — verdict: accept; findings: none; reviewer: codex/gpt-6-astra
+- 2026-10-30T20:26:56Z (sci-300dab-stores): attached: stores-plan-round-1-report.md (3121 bytes): Controller self-review of plan 3ccc4a8: spec coverage and interfaces checked, no findings; user plan review still pending.
