@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: feat/sci-b2755f-assumption-sweep
 created: 2026-10-30T01:53:54Z
-updated: 2026-10-30T13:03:06Z
+updated: 2026-10-30T13:17:10Z
 started: 2026-10-30T07:08:27Z
 depends: []
 tags: []
@@ -151,4 +151,6 @@ Related: sci-171ad1 is the causal-answer special case of this ranking; sci-434b9
 - 2026-10-30T13:02:57Z (feat/sci-b2755f-assumption-sweep): retained: {"host": "titan", "kind": "evidence", "path": "$WORK_ROOT/science/sci-b2755f/pilot-v1-evidence", "state": "kept", "verification": "verified", "purpose": "Unchanged canonical v1 bibliography, roster and local-record evidence, 35 files", "next_owner": "task:sci-b2755f", "cleanup_trigger": "After completed pilot acceptance and integration, verify needed evidence preservation and assess each item before cleanup", "manifest": "$WORK_ROOT/science/sci-b2755f/pilot-v1-evidence/manifest.sha256", "sha256": "c72642b8ff891608e3e49eb69a4093e0e0e7513a3f3bd8a9f192005c6f066693"}
 - 2026-10-30T13:02:59Z (feat/sci-b2755f-assumption-sweep): retained: {"host": "titan", "kind": "evidence", "path": ".worktrees/sci-b2755f/.superpowers/sdd/2026-10-30-assumption-sweep", "state": "kept", "verification": "verified", "purpose": "Plan ledger, full reviews, behavioral returns and logs, 36 checkpointed files; ledger v2 also attached", "next_owner": "task:sci-b2755f", "cleanup_trigger": "After completed pilot acceptance and integration, verify needed evidence preservation and assess each item before cleanup", "manifest": ".worktrees/sci-b2755f/.superpowers/sdd/2026-10-30-assumption-sweep/manifest.sha256", "sha256": "458d732c7d38f9a8177ab7d3e070c32e7d9b776e513741000725c4c158ae3d3b"}
 - 2026-10-30T13:03:06Z (feat/sci-b2755f-assumption-sweep): parked (waiting on agent, environment): Agent resumes sci-d3044e in .worktrees/sci-b2755f after section-route availability changes; verify updated manifests and follow v2 continuation report. Tasks 1–2 accepted; pilot still incomplete after second separately frozen one-probe HTTP500. Complete permitted primary-source survey and fresh review, reconcile main, then integrate locally. No background retry or push.
+  provenance: {"harness_session":"codex:01a18ce3-2793-7ad1-b204-ef9b88b33aba","harness_session_source":"CODEX_THREAD_ID"}
+- 2026-10-30T13:17:10Z (feat/sci-b2755f-assumption-sweep): resumed
   provenance: {"harness_session":"codex:01a18ce3-2793-7ad1-b204-ef9b88b33aba","harness_session_source":"CODEX_THREAD_ID"}
