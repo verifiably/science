@@ -88,6 +88,16 @@ commands read every configured mount, refuse duplicate claimed carriers, and
 require exactly one write mount; input-read errors propagate. Resume uses the
 attempt's frozen selection and attributions without reclassifying ownership.
 
+### Research skills
+
+With the generated `science` plugin installed, run `/science:sweep-assumptions`
+to discover premises and compare research questions across explicitly named inputs.
+It produces an eight-part report covering coverage, premises, dependency paths,
+reach, consequences, tractability, three candidates and representation gaps.
+The report is a dated task artifact; the workflow reads permitted sources and
+makes no scientific record writes or biological analyses. Discovery is preserved
+before feasibility assessment, including important questions with missing data.
+
 ## Layout
 
 - `commands/` — one directory per command: its declaration and prompt.

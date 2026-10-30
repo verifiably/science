@@ -23,6 +23,18 @@ def test_generated_tree_matches_committed(tmp_path):
     assert _tree_files(tmp_path) == _tree_files(REPO_ROOT / "adapters" / "claude-code")
 
 
+
+def test_assumption_sweep_authored_files_are_packaged(tmp_path):
+    from science.adapters import build_adapter
+
+    build_adapter(production_tree(), COMMANDS_ROOT, REPO_ROOT / "skills", tmp_path)
+    source = REPO_ROOT / "skills" / "sweep-assumptions"
+    packaged = tmp_path / "skills" / "sweep-assumptions"
+    for name in ("SKILL.md", "report-template.md"):
+        assert (packaged / name).is_file()
+        assert (packaged / name).read_bytes() == (source / name).read_bytes()
+
+
 def test_skill_carries_preamble_and_prompt(tmp_path):
     from science.adapters import build_adapter
 
