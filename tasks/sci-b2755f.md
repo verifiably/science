@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: feat/sci-b2755f-assumption-sweep
 created: 2026-10-30T01:53:54Z
-updated: 2026-10-30T13:52:49Z
+updated: 2026-10-30T13:52:52Z
 started: 2026-10-30T07:08:27Z
 depends: []
 tags: []
@@ -156,3 +156,4 @@ Related: sci-171ad1 is the causal-answer special case of this ranking; sci-434b9
   provenance: {"harness_session":"codex:01a18ce3-2793-7ad1-b204-ef9b88b33aba","harness_session_source":"CODEX_THREAD_ID"}
 - 2026-10-30T13:19:20Z (feat/sci-b2755f-assumption-sweep): attached: pilot-setup-v3.md (4950 bytes): Frozen v3 OA preflight and corrected probe selection; cumulative budgets and exposure boundary retained
 - 2026-10-30T13:52:49Z (feat/sci-b2755f-assumption-sweep): attached: pilot-source-ledger-v3.md (48072 bytes): Current 67-source dispositions and exact query history; OA correction, incidents and exclusions
+- 2026-10-30T13:52:52Z (feat/sci-b2755f-assumption-sweep): attached: discovery-inventory-v2.md (89463 bytes): Frozen expanded phase A before new feasibility comparison; complete local records, new resistance premise and source exclusions
