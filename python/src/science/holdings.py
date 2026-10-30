@@ -3,10 +3,13 @@ holdings reduction: the reduced answer per dataset address, the held path
 for an address, and the admission check."""
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
 
 from beliefs import stored
 from beliefs.dataset import ByteObservation, Held, admission_state, dataset_address
+from beliefs.errors import MalformedRecord
+from beliefs.holdings.records import StoreLocator
 from beliefs.holdings.adapter import DatasetAnswer, DatasetBlocked, dataset_observations
 from beliefs.holdings.receipt import derive_holdings
 from beliefs.holdings.reduce import holdings_rule_bundle
@@ -34,7 +37,7 @@ def reduced_heads(world, corpus_ids: frozenset[str]):
 
 def reduced_observations(views, world) -> dict[str, DatasetAnswer | DatasetBlocked]:
     """The reduction's answer for every dataset record any mount holds: one
-    store, whichever corpus declared the dataset."""
+    dataset, whichever corpus declared it."""
     active, blocked = reduced_heads(world, frozenset(corpus_id for corpus_id, _ in views))
     answers: dict[str, DatasetAnswer | DatasetBlocked] = {}
     for _, view in views:
@@ -69,28 +72,34 @@ def found_observations(views, world) -> dict[str, tuple[ByteObservation, ...]]:
     }
 
 
-def held_path_for(store_root: Path, store_id: str, observations: tuple[ByteObservation, ...]) -> Path:
-    """The reducer renders a location as `store:<store id>:<relative path>`.
-    Only an observation recorded for the configured store's own identity
-    resolves here: evidence for another store names bytes this root never
-    held, however the relative paths happen to coincide."""
+def held_path_for(stores: Mapping[str, Path], observations: tuple[ByteObservation, ...]) -> Path:
+    """First configured identity in reducer order; never retry a selected copy."""
     for observation in observations:
         parts = observation.location.split(":", 2)
-        if len(parts) == 3 and parts[0] == "store" and parts[1] == store_id and parts[2]:
-            return Path(store_root) / parts[2]
+        if len(parts) != 3 or parts[0] != "store" or parts[1] not in stores:
+            continue
+        try:
+            locator = StoreLocator(parts[1], parts[2])
+        except MalformedRecord as caught:
+            raise Refused(Refusal("invalid-input", str(caught))) from caught
+        root = stores[locator.store_id]
+        candidate = root / locator.relative_path
+        if not candidate.resolve().is_relative_to(root.resolve()):
+            raise Refused(Refusal("invalid-input", f"{observation.location} escapes store {root}"))
+        return candidate
     raise Refused(Refusal("invalid-input",
-                          f"no observation resolves in store {store_id}: "
+                          f"no observation resolves in stores {sorted(stores)}: "
                           f"{sorted(o.location for o in observations)}"))
 
 
-def held_path(views, world, store_root: Path, store_id: str, address: str) -> Path:
+def held_path(views, world, stores: Mapping[str, Path], address: str) -> Path:
     answer = reduced_observations(views, world).get(address)
     if isinstance(answer, DatasetBlocked):
         raise Refused(Refusal("invalid-input",
                               f"{address} is blocked at {answer.locations}: {answer.reasons}"))
     if not isinstance(answer, DatasetAnswer) or not answer.observations:
-        raise Refused(Refusal("invalid-input", f"{address} is not held in this store"))
-    return held_path_for(store_root, store_id, answer.observations)
+        raise Refused(Refusal("invalid-input", f"{address} is not held in the configured stores"))
+    return held_path_for(stores, answer.observations)
 
 
 def is_held(views, world, node) -> bool:

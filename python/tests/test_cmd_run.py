@@ -77,3 +77,20 @@ def test_boundary_refusal_is_kernel_refused_and_closes_the_invocation(rig, certi
         d.invoke("run", {"spec": spec_ref, "dataset": ref, "code": str(code),
                          "entrypoint": entrypoint, "targets": list(targets)}, invocation_id="K" * 8)
     assert again.value.refusal.code == "kernel-refused"
+
+
+def test_run_preparation_consumes_inherited_inputs(rig, certified_work):
+    from dataclasses import replace
+    from beliefs.root import init_store_root
+    from helpers.world import FIXTURE_AUTHORITY
+    from science.config import ReadContext
+    from science.commands.run import prepare
+    _, ctx, spec_ref, ref = rig
+    inherited = ctx.config.store_root
+    fresh = certified_work / "fresh"
+    init_store_root(fresh, authority=FIXTURE_AUTHORITY)
+    cfg = replace(ctx.config, store_root=fresh, read_store_roots=(inherited,))
+    code, entrypoint, targets = fixture_bundle(certified_work)
+    prepared = prepare(ReadContext.open(cfg), spec_ref, ref, str(code), entrypoint, targets)
+    assert prepared["held_inputs"][ref].is_relative_to(inherited)
+    assert prepared["held_inputs"][ref].read_bytes() == b"x\n"

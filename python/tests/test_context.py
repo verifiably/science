@@ -171,8 +171,8 @@ def test_held_path_resolves_only_the_configured_store(certified_work):
     foreign = ByteObservation(digest="sha256:" + "a" * 64, location=f"store:{other}:aa/f.txt")
     local = ByteObservation(digest="sha256:" + "a" * 64, location=f"store:{mine}:aa/f.txt")
     with pytest.raises(Refused):
-        held_path_for(cfg.store_root, mine, (foreign,))
-    assert held_path_for(cfg.store_root, mine, (foreign, local)) == cfg.store_root / "aa" / "f.txt"
+        held_path_for({mine: cfg.store_root}, (foreign,))
+    assert held_path_for({mine: cfg.store_root}, (foreign, local)) == cfg.store_root / "aa" / "f.txt"
 
 
 def test_held_path_refuses_an_unknown_address(certified_work):
@@ -192,3 +192,79 @@ def test_evaluate_answers_no_belief_before_any_assessment(certified_work):
 def test_epoch_identity_is_the_no_epoch_value_without_one(certified_work):
     ctx = ReadContext.open(build_belief_world(certified_work))
     assert ctx.epoch_identity() == "no-epoch-published"
+
+
+def test_context_reads_inherited_store_and_keeps_write_identity(certified_work):
+    from beliefs.root import init_store_root, store_identity
+    from helpers.world import FIXTURE_AUTHORITY, concept_list_address, write_config_for
+    from science.config import load_config
+    cfg = build_belief_world(certified_work)
+    inherited = cfg.store_root
+    write = certified_work / "fresh"
+    write_id = init_store_root(write, authority=FIXTURE_AUTHORITY)
+    cfg = dataclasses.replace(cfg, store_root=write, read_store_roots=(inherited,))
+    cfg = load_config(write_config_for(cfg))
+    ctx = ReadContext.open(cfg)
+    assert ctx.store_id() == write_id != store_identity(inherited)
+    assert ctx.held_path(concept_list_address()).is_relative_to(inherited)
+    binding = cfg.profile.sorts["testing/concept"].vocabulary
+    assert ctx.snapshot().resolve(binding, "concept:disease-stage") is TermOutcome.MEMBER
+
+
+@pytest.mark.parametrize("method", ["snapshot", "evaluate", "gather_inputs"])
+def test_snapshot_refuses_unconfigured_observation(certified_work, method):
+    from beliefs.root import init_store_root
+    from helpers.world import FIXTURE_AUTHORITY
+    cfg = build_belief_world(certified_work)
+    fresh = certified_work / "fresh"
+    init_store_root(fresh, authority=FIXTURE_AUTHORITY)
+    ctx = ReadContext.open(dataclasses.replace(cfg, store_root=fresh))
+    with pytest.raises(Refused) as caught:
+        getattr(ctx, method)(*(() if method == "snapshot" else ("proposition:p1",)))
+    assert caught.value.refusal.code == "invalid-input"
+
+
+@pytest.mark.parametrize("damage", ["digest", "io"])
+def test_snapshot_does_not_fall_back_after_bad_copy(certified_work, monkeypatch, damage):
+    from pathlib import Path
+    from beliefs.dataset import ByteObservation
+    from helpers.world import concept_list_address
+    from science.vocabulary import snapshot
+    cfg = build_belief_world(certified_work)
+    ctx = ReadContext.open(cfg)
+    bad = certified_work / "bad-copy"
+    bad.mkdir()
+    observations = {}
+    for address, found in ctx.observations().items():
+        relative = found[0].location.split(":", 2)[2]
+        target = bad / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes((cfg.store_root / relative).read_bytes())
+        observations[address] = tuple(ByteObservation(found[0].digest, f"store:{identity}:{relative}")
+                                      for identity in ("1" * 32, "2" * 32))
+    target = bad / observations[concept_list_address()][0].location.split(":", 2)[2]
+    if damage == "digest":
+        target.write_bytes(b"corrupt")
+    else:
+        target.unlink()
+    read_bytes = Path.read_bytes
+    def read_without_fallback(path):
+        if path.is_relative_to(cfg.store_root):
+            raise AssertionError("read a later good copy after choosing the bad copy")
+        return read_bytes(path)
+    monkeypatch.setattr(Path, "read_bytes", read_without_fallback)
+    stores = {"1" * 32: bad, "2" * 32: cfg.store_root}
+    if damage == "io":
+        with pytest.raises(FileNotFoundError):
+            snapshot(cfg.profile, ctx.read_views(), stores, observations)
+    else:
+        result = snapshot(cfg.profile, ctx.read_views(), stores, observations)
+        binding = cfg.profile.sorts["testing/concept"].vocabulary
+        assert result.resolve(binding, "concept:disease-stage") is TermOutcome.NOT_AVAILABLE
+
+
+def test_snapshot_without_found_observations_is_unreadable(certified_work):
+    cfg = build_belief_world(certified_work)
+    binding = cfg.profile.sorts["testing/concept"].vocabulary
+    assert ReadContext.open(cfg).snapshot(observations={}).resolve(
+        binding, "concept:disease-stage") is TermOutcome.NOT_AVAILABLE

@@ -171,3 +171,59 @@ def test_bad_store_binding_precedes_session_ledger(store_config):
     with pytest.raises(Refused):
         open_session(replace(store_config, read_store_roots=(missing,)))
     assert not (store_config.operations_root / "sessions").exists()
+
+
+@pytest.mark.parametrize("selected", ["1" * 32, "2" * 32])
+def test_held_path_reads_each_configured_identity(tmp_path, selected):
+    from beliefs.dataset import ByteObservation
+    from science.holdings import held_path_for
+    stores = {"1" * 32: tmp_path / "write", "2" * 32: tmp_path / "read"}
+    observation = ByteObservation("sha256:" + "a" * 64, f"store:{selected}:file.txt")
+    assert held_path_for(stores, (observation,)) == stores[selected] / "file.txt"
+
+
+@pytest.mark.parametrize("locations", [[], ["https://data.test/file.txt"], [f"store:{'3' * 32}:file.txt"]])
+def test_foreign_identity_never_resolves_by_path(tmp_path, locations):
+    from beliefs.dataset import ByteObservation
+    from science.holdings import held_path_for
+    (tmp_path / "file.txt").write_bytes(b"same path")
+    observations = tuple(ByteObservation("sha256:" + "a" * 64, location) for location in locations)
+    with pytest.raises(Refused) as caught:
+        held_path_for({"1" * 32: tmp_path}, observations)
+    assert caught.value.refusal.code == "invalid-input"
+    assert "1" * 32 in caught.value.refusal.message
+    for location in locations:
+        assert location in caught.value.refusal.message
+
+
+def test_read_copy_can_sort_before_write_copy(tmp_path):
+    from beliefs.dataset import DatasetDeclaration, ResourceDeclaration
+    from beliefs.holdings.adapter import dataset_observations
+    from science.holdings import held_path_for
+    digest = "sha256:" + "a" * 64
+    declaration = DatasetDeclaration(resources=(ResourceDeclaration(name="f", digest=digest),))
+    active = [{"location": f"store:{identity}:f", "outcome": {"finding": "found", "digest": digest},
+               "history": []} for identity in ["2" * 32, "1" * 32]]
+    observations = dataset_observations(declaration, active, []).observations
+    stores = {"2" * 32: tmp_path / "write", "1" * 32: tmp_path / "read"}
+    assert held_path_for(stores, observations) == tmp_path / "read" / "f"
+
+
+@pytest.mark.parametrize("relative", ["/outside", "../outside", "", "a/../../outside", "link/outside"])
+def test_held_path_rejects_escape(tmp_path, relative):
+    from beliefs.dataset import ByteObservation
+    from science.holdings import held_path_for
+    root = tmp_path / "store"
+    root.mkdir()
+    (root / "link").symlink_to(tmp_path, target_is_directory=True)
+    observation = ByteObservation("sha256:" + "a" * 64, f"store:{'1' * 32}:{relative}")
+    with pytest.raises(Refused) as caught:
+        held_path_for({"1" * 32: root}, (observation,))
+    assert caught.value.refusal.code == "invalid-input"
+
+
+def test_held_path_validates_a_matched_store_identity(tmp_path):
+    from beliefs.dataset import ByteObservation
+    from science.holdings import held_path_for
+    with pytest.raises(Refused):
+        held_path_for({"invalid": tmp_path}, (ByteObservation("sha256:" + "a" * 64, "store:invalid:f"),))

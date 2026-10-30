@@ -519,7 +519,7 @@ class ReadContext:
         already found, so a world read finds them once."""
         from science.vocabulary import snapshot
         return snapshot(self.config.profile if profile is None else profile, self.read_views(),
-                        self.config.store_root, self.store_id(),
+                        self._stores,
                         self.observations() if observations is None else observations)
 
     @cached_property
@@ -531,19 +531,18 @@ class ReadContext:
         """The holdings reduced once per context, over the context's views."""
         return self._observations
 
+    @cached_property
+    def _stores(self) -> dict[str, Path]:
+        return configured_stores(self.config)
+
     def store_id(self) -> str:
-        """The configured store's verified identity, read from its genesis by
-        detached inspection. `store_identity` is the public reader the store
-        identity seam (`beliefs-2d9a55`) adds, a prerequisite for this task."""
-        from beliefs.root import store_identity
-        identity = store_identity(self.config.store_root)
-        if identity is None:
-            raise Refused(Refusal("invalid-input", f"{self.config.store_root} is not an initialized store"))
-        return identity
+        """The write store's identity within this context's admitted mapping."""
+        root = self.config.store_root.resolve()
+        return next(identity for identity, carrier in self._stores.items() if carrier == root)
 
     def held_path(self, address: str) -> Path:
         from science.holdings import held_path
-        return held_path(self.read_views(), self.world, self.config.store_root, self.store_id(), address)
+        return held_path(self.read_views(), self.world, self._stores, address)
 
     def is_held(self, node) -> bool:
         from science.holdings import is_held
