@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: sci-300dab-stores
 created: 2026-10-30T19:15:26Z
-updated: 2026-10-30T23:40:10Z
+updated: 2026-10-30T23:44:35Z
 started: 2026-10-30T19:45:58Z
 completed: 2026-10-30T23:39:08Z
 closed: 2026-10-30T23:39:08Z
@@ -108,3 +108,4 @@ Observed 2026-10-30 in the mm30 world (store 05b6c1225e710bb1559f36e8333f3f29), 
 - 2026-10-30T23:40:06Z (main): retained: {"host": "titan", "kind": "worktree", "path": ".worktrees/sci-300dab-stores", "state": "released", "verification": "verified", "purpose": "Reviewed branch merged locally at eec6a48; reports and full ledger preserved as task attachments, inventory in task notes; checked worktree and regenerated copies removed", "next_owner": "none", "cleanup_trigger": "none"}
 - 2026-10-30T23:40:08Z (main): retained: {"host": "titan", "kind": "scratch", "path": "$WORK_ROOT/science/.worktrees/sci-300dab-stores/.superpowers/sdd/sci-300dab-stores", "state": "released", "verification": "verified", "purpose": "Reviewed branch merged locally at eec6a48; reports and full ledger preserved as task attachments, inventory in task notes; checked worktree and regenerated copies removed", "next_owner": "none", "cleanup_trigger": "none"}
 - 2026-10-30T23:40:10Z (main): retained: {"host": "titan", "kind": "scratch", "path": "$WORK_ROOT/science/.worktrees/sci-300dab-stores/.superpowers/sdd/2026-10-30-readable-stores", "state": "released", "verification": "verified", "purpose": "Reviewed branch merged locally at eec6a48; reports and full ledger preserved as task attachments, inventory in task notes; checked worktree and regenerated copies removed", "next_owner": "none", "cleanup_trigger": "none"}
+- 2026-10-30T23:44:35Z (main): Follow-up sci-242851 filed at P1: enforce declared-input integrity on the actual staged bytes consumed by run/verify, with a reviewed cross-boundary contract. Existing tasks cover public error exports (beliefs-1dfd8c), testmon collection (ops-ab03a7), unmatched holding repair (sci-409235) and live readiness (mm-62e2da); no duplicate rollout or inventory-audit task filed.
