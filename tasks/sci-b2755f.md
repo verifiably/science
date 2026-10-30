@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: feat/sci-b2755f-assumption-sweep
 created: 2026-10-30T01:53:54Z
-updated: 2026-10-30T10:41:01Z
+updated: 2026-10-30T10:41:17Z
 started: 2026-10-30T07:08:27Z
 depends: []
 tags: []
@@ -115,3 +115,4 @@ Related: sci-171ad1 is the causal-answer special case of this ranking; sci-434b9
 - 2026-10-30T10:39:35Z (feat/sci-b2755f-assumption-sweep): retained: {"host": "titan", "kind": "scratch", "path": "$WORK_ROOT/science/sci-b2755f", "state": "kept", "verification": "verified", "purpose": "Mutable inline execution inputs, return collector and tested run-local section extractor for rehearsal and pilot; draft scenario/oracle are duplicate copies of committed fixtures", "next_owner": "task:sci-b2755f", "cleanup_trigger": "After pilot disposition and integration, verify attached evidence and assess each scratch item", "manifest": "$WORK_ROOT/science/sci-b2755f/manifest.sha256", "sha256": "0016709b72036ace3061e3dd08618994d78f30f37788e5c29b2d7f826e31b5b6"}
 - 2026-10-30T10:40:59Z (feat/sci-b2755f-assumption-sweep): attached: controls-prompts-v1.md (13322 bytes): Full ten control/guided dispatch texts; host paths substituted with named scenario/skill locations
 - 2026-10-30T10:41:01Z (feat/sci-b2755f-assumption-sweep): Task 1 supplemental exact portable dispatch texts attached as controls-prompts-v1.md; model/effort and all returns retained. Shared documentation gate repair friction filed as ops-9e20b3; resolved locally by using a Usage subsection, with no tool bypass.
+- 2026-10-30T10:41:17Z (feat/sci-b2755f-assumption-sweep): retained: {"host":"titan","kind":"worktree","path":".worktrees/sci-b2755f","state":"kept","verification":"verified","purpose":"Inline execution on feat/sci-b2755f-assumption-sweep: Task 1 complete at 461f407, Task 2 fixture-only rehearsal active; hydrated environment and clean product tree","next_owner":"task:sci-b2755f","cleanup_trigger":"After accepted pilot and local integration, preserve needed evidence and complete the worktree removal checks"}
