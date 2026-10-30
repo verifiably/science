@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: feat/sci-b2755f-assumption-sweep
 created: 2026-10-30T01:53:54Z
-updated: 2026-10-30T11:26:06Z
+updated: 2026-10-30T11:34:21Z
 started: 2026-10-30T07:08:27Z
 depends: []
 tags: []
@@ -125,3 +125,4 @@ Related: sci-171ad1 is the causal-answer special case of this ranking; sci-434b9
 - 2026-10-30T11:09:41Z (feat/sci-b2755f-assumption-sweep): attached: discovery-inventory-v1.md (34998 bytes): Self-contained phase-A freeze before feasibility: exact local records, premises, broad leads, full citations and source dispositions
 - 2026-10-30T11:24:33Z (feat/sci-b2755f-assumption-sweep): attached: pilot-v1-report.md (28030 bytes): Eight-part incomplete pilot: frozen broad leads, local dependence/feasibility judgments and explicit primary-source shortfall
 - 2026-10-30T11:26:06Z (feat/sci-b2755f-assumption-sweep): attached: pilot-v1-read-log.md (8810 bytes): Exact pilot query/probe/read sequence, verified pre-comparison freeze and retained input hashes
+- 2026-10-30T11:34:21Z (feat/sci-b2755f-assumption-sweep): review: impl round 1 — verdict: revise; findings: Important 1, Minor 1; reviewer: codex/gpt-6-astra
