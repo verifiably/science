@@ -1,6 +1,6 @@
 # Assumption Sweep Implementation Plan
 
-**Status:** Approved by Keith on 2026-10-30 after resolution of plan round 2's two minors. Parked at the user's request for inline execution in a fresh session; no implementation has started.
+**Status:** Approved by Keith on 2026-10-30 after resolution of plan round 2's two minors. Inline Tasks 1–2 are complete. Task 3 produced a frozen inventory and incomplete report after its live section probe returned HTTP 500; continuation remains on sci-d3044e and sci-b2755f.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. The controller implements inline; fresh agents supply the writing-skills controls, guided runs and read-only reviews. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -359,8 +359,10 @@ needs signature coordination. Each task produces an independently reviewable
 deliverable; implementation and evidence stay distinct.
 
 Keith approved this plan with the two round-2 minors resolved above, then asked
-to park for a fresh session. Resume by starting sci-7b3829 in the retained
-worktree and completing Task 1 Setup; no further plan approval is required.
+to park for a fresh session. That original execution handoff has now completed Tasks 1–2. Resume sci-d3044e
+in the retained worktree for a newly versioned bounded source-reading run after
+the live provider is usable; keep the incomplete pilot artifacts intact. No
+further approval of this original plan is required.
 Approval authorizes the bounded repository work and pilot within these read limits,
 not external publication,
 paid access, policy amendments or protected data reads. The default is inline

@@ -2,7 +2,7 @@
 
 Date: 2026-10-30
 Task: sci-b2755f
-Status: design accepted; implementation plan approved by Keith on 2026-10-30 with both plan-review minors resolved. Inline execution is parked for a fresh session.
+Status: design and implementation plan approved; authored skill and synthetic rehearsal implemented on 2026-10-30. The bounded mm pilot is incomplete after a failed live section probe; evidence and continuation are tracked on sci-b2755f.
 
 ## 1. Intent and origin
 
