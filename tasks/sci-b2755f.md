@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: feat/sci-b2755f-assumption-sweep
 created: 2026-10-30T01:53:54Z
-updated: 2026-10-30T10:19:16Z
+updated: 2026-10-30T10:19:18Z
 started: 2026-10-30T07:08:27Z
 depends: []
 tags: []
@@ -102,3 +102,4 @@ Related: sci-171ad1 is the causal-answer special case of this ranking; sci-434b9
 - 2026-10-30T10:18:28Z (feat/sci-b2755f-assumption-sweep): review: plan round 3 — verdict: accept; findings: none; reviewer: human
 - 2026-10-30T10:18:30Z (feat/sci-b2755f-assumption-sweep): Keith explicitly approved the plan after noting or fixing the two round-2 minors, and requested parking for inline execution in a fresh session. Resolve both now; approval covers the stated final integration/cleanup ownership under existing personal-checkout and retained-item rules. Do not begin execution, baseline tests or the pilot in this session.
 - 2026-10-30T10:19:16Z (feat/sci-b2755f-assumption-sweep): attached: plan-round-2-report.md (3136 bytes): Full plan round-2 acceptance with two minors and Keith approval/request to park; reviewer claude-code/claude-fable-5-1
+- 2026-10-30T10:19:18Z (feat/sci-b2755f-assumption-sweep): attached: design-review-ledger-v4.md (8590 bytes): Ledger through plan review round 2 and human approval round 3; both minors resolved at 0f52b49; no pending approval
