@@ -744,7 +744,7 @@ selected project. The 2026-09-23 amendment's interim sentence is retired.
 One launcher-owned TOML file, located by `--config PATH` or
 `SCIENCE_CONFIG`: the fields of `beliefs.WorldConfig` (world root, world id,
 corpus roots) plus `operations_root`, `domains`, `contracts`, `store_root`, and
-`coordination`. The loader constructs
+`coordination`, with optional `read_store_roots` for inherited holdings. The loader constructs
 `beliefs.WorldConfig` directly — no parallel world model, no drift.
 Configuration is untrusted input (§6.4): paths are resolved and validated at
 session open.
@@ -766,7 +766,7 @@ declared key set, so a configuration written before this amendment refuses
 rather than silently compiling a base-only profile against a corpus that pins
 domains.
 
-`service_socket` (**added 2026-09-09**: `sci-fd792c`) is the one optional key:
+`service_socket` (**added 2026-09-09**: `sci-fd792c`) is an optional key:
 the path of the service socket `science serve` binds and write-class CLI
 invocations connect to, resolved like `operations_root`. Absent, it is
 `service.sock` beside the operations root. It exists because AF_UNIX caps a
@@ -782,6 +782,14 @@ It is required and may be empty, for `domains`'s reason. `store_root` is the
 holdings store the session and the `dataset` command bind, resolved like
 `operations_root`; required. Both are superseded whenever the kernel gives
 contracts a home (belief-path ruling 5).
+
+`read_store_roots` defaults to `[]`: additional roots supplying inherited bytes,
+resolved like `store_root`, which remains the sole destination for new holdings.
+All roots require an identity and `WRITABLE` or `READ_ONLY_SERVICEABLE` admission;
+duplicate resolved paths or identities refuse before a session ledger opens.
+Reads use exact identities and reducer order, with no write-store preference or
+fallback after an I/O error or digest mismatch. The check never performs recovery
+or migration. See [the store runbook](../stores.md) for creation and rollout.
 
 `coordination` (**added 2026-09-24**: coordination command set design §6) is
 required: the shipped coordination contract version compiled into the one profile

@@ -684,7 +684,7 @@ design §5.5's part 3 amendments.
 
 ## 5. Configuration and the read context
 
-### 5.1 Two keys
+### 5.1 Store and contract keys
 
 `contracts` (ruling 5) and `store_root` join framework §9.1's file:
 
@@ -695,7 +695,8 @@ corpus_roots = ["…"]
 operations_root = "…"
 domains = ["biology"]
 contracts = ["…/mm30.yaml"]     # corpus-local domain-contract documents; may be empty
-store_root = "…"                # the holdings store; required
+store_root = "…"                # the write store, also readable; required
+read_store_roots = ["…"]        # optional inherited stores; defaults to []
 ```
 
 `contracts` is required and may be empty, for the reason `domains` is: a
@@ -704,6 +705,12 @@ profile the corpus's pins disagree with. `store_root` is required because
 `dataset` binds a store and the session carries none; the loader resolves
 it like `operations_root`. Both are added to the framework design's §9.1
 as amendments in the implementing commit.
+
+`read_store_roots` supplies additional identity-bound carriers for reads. Every
+configured root, including `store_root`, must already be writable or
+read-only-serviceable. The session still binds only `store_root` for writes.
+The [store runbook](../stores.md) describes initialization, admission, deterministic
+read selection, and the checks required before relocating a live world.
 
 ### 5.2 Compiling the profile, and the operator plan
 

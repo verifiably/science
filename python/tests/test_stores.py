@@ -227,3 +227,120 @@ def test_held_path_validates_a_matched_store_identity(tmp_path):
     from science.holdings import held_path_for
     with pytest.raises(Refused):
         held_path_for({"invalid": tmp_path}, (ByteObservation("sha256:" + "a" * 64, "store:invalid:f"),))
+
+
+def run_store_recipe(destination, home):
+    """Execute the runbook's shell block, changing only interpreter and destination."""
+    import os
+    import shlex
+    import subprocess
+    import sys
+    doc = Path(__file__).resolve().parents[2] / "docs" / "stores.md"
+    recipe = doc.read_text().split("<!-- store-init-recipe -->", 1)[1].split("```sh", 1)[1].split("```", 1)[0]
+    recipe = recipe.replace("uv run python", shlex.quote(sys.executable))
+    recipe = recipe.replace("/absolute/path/to/store-working", shlex.quote(str(destination)))
+    home.mkdir(exist_ok=True)
+    env = {"PATH": str(Path(sys.executable).parent) + os.pathsep + os.defpath,
+           "HOME": str(home), "USER": "store-test", "PYTHONDONTWRITEBYTECODE": "1"}
+    return subprocess.run(["/bin/sh", "-c", recipe], env=env, capture_output=True, text=True, timeout=30)
+
+
+@pytest.fixture
+def relocated_store(certified_work):
+    from helpers.world import build_belief_world, hold_fixture_dataset
+    from science.config import FetchPolicy
+    cfg = build_belief_world(certified_work)
+    content = b"inherited expression\n"
+    address = hold_fixture_dataset(cfg, "old.txt", content, "inherited")
+    restored = replicate_store(cfg, certified_work / "restored", admit=True)
+    assert read_lifecycle_state(restored) is LifecycleState.READ_ONLY_SERVICEABLE
+    fresh = certified_work / "store-working"
+    created = run_store_recipe(fresh, certified_work / "recipe-home")
+    assert created.returncode == 0, created.stderr
+    cfg = replace(cfg, store_root=fresh, read_store_roots=(restored,), fetch=FetchPolicy("fetch", 0))
+    return cfg, address, content
+
+
+def test_relocated_store_reads_and_new_dataset_write(relocated_store, certified_work):
+    from beliefs.resolution import TermOutcome
+    from helpers.world import open_rig
+    from science.config import ReadContext
+    cfg, old_address, old_bytes = relocated_store
+    restored, = cfg.read_store_roots
+    inherited_id, write_id = store_identity(restored), store_identity(cfg.store_root)
+    assert write_id != inherited_id
+    before = store_snapshot(restored)
+    ctx = ReadContext.open(cfg)
+    binding = cfg.profile.sorts["testing/concept"].vocabulary
+    assert ctx.snapshot().resolve(binding, "concept:disease-stage") is TermOutcome.MEMBER
+    assert ctx.held_path(old_address).read_bytes() == old_bytes
+    source = certified_work / "new.txt"
+    source.write_bytes(b"new expression\n")
+    with open_rig(cfg, ("dataset",)) as (dispatcher, _):
+        outcome = dispatcher.invoke("dataset", {"path": str(source), "title": "new"})
+    new_address = next(word for word in outcome.text.split() if word.startswith("dataset:"))
+    ctx = ReadContext.open(cfg)
+    assert ctx.held_path(new_address).is_relative_to(cfg.store_root)
+    assert ctx.held_path(new_address).read_bytes() == source.read_bytes()
+    assert all(o.location.startswith(f"store:{write_id}:") for o in ctx.observations()[new_address])
+    assert ctx.snapshot().resolve(binding, "concept:disease-stage") is TermOutcome.MEMBER
+    assert ctx.held_path(old_address).read_bytes() == old_bytes
+    assert store_snapshot(restored) == before
+
+
+def fetch_inherited(cfg, address):
+    from helpers.world import open_rig
+    from science.config import ReadContext
+    source = ReadContext.open(cfg).held_path(address)
+    with open_rig(cfg, ("fetch",)) as (dispatcher, _):
+        dispatcher.invoke("fetch", {"dataset": address, "source": str(source)})
+
+
+def test_fetch_keeps_inherited_observation(relocated_store):
+    from science.config import ReadContext
+    cfg, address, content = relocated_store
+    restored, = cfg.read_store_roots
+    before = store_snapshot(restored)
+    old_location = ReadContext.open(cfg).observations()[address][0].location
+    fetch_inherited(cfg, address)
+    found = ReadContext.open(cfg).observations()[address]
+    locations = {observation.location for observation in found}
+    assert old_location in locations
+    assert any(location.startswith(f"store:{store_identity(cfg.store_root)}:") for location in locations)
+    assert len(locations) == 2
+    assert ReadContext.open(cfg).held_path(address).read_bytes() == content
+    assert store_snapshot(restored) == before
+
+
+def test_blocked_digest_is_not_rescued_by_fresh_store(relocated_store, monkeypatch):
+    from beliefs.holdings.adapter import DatasetBlocked
+    from science.config import ReadContext
+    import science.holdings as holdings
+    cfg, address, _ = relocated_store
+    fetch_inherited(cfg, address)
+    ctx = ReadContext.open(cfg)
+    active, blocked = holdings.reduced_heads(ctx.world, frozenset(cid for cid, _ in ctx.read_views()))
+    assert not blocked
+    inherited_location = next(o.location for o in ctx.observations()[address]
+                              if o.location.startswith(f"store:{store_identity(cfg.read_store_roots[0])}:"))
+    inherited_head = next(row for row in active if row["location"] == inherited_location)
+    active = [row for row in active if row["location"] != inherited_location]
+    blocked = [{"location": inherited_location, "heads": [inherited_head], "reasons": ["unsettled"]}]
+    monkeypatch.setattr(holdings, "reduced_heads", lambda world, corpus_ids: (active, blocked))
+    assert isinstance(holdings.reduced_observations(ctx.read_views(), ctx.world)[address], DatasetBlocked)
+    with pytest.raises(Refused) as caught:
+        ReadContext.open(cfg).held_path(address)
+    assert caught.value.refusal.code == "invalid-input"
+    assert "blocked" in caught.value.refusal.message
+
+
+def test_operator_store_recipe_is_repeatable(relocated_store, certified_work):
+    cfg, _, _ = relocated_store
+    repeated = run_store_recipe(cfg.store_root, certified_work / "recipe-home")
+    assert repeated.returncode == 0, repeated.stderr
+    assert repeated.stdout.strip() == store_identity(cfg.store_root)
+    restored, = cfg.read_store_roots
+    before = store_snapshot(restored)
+    refused = run_store_recipe(restored, certified_work / "recipe-home")
+    assert refused.returncode != 0
+    assert store_snapshot(restored) == before

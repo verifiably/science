@@ -56,7 +56,10 @@ and refuses when neither is given; nothing is discovered from the working direct
 roots and the activated domains: §9.1 of the
 [command framework design](docs/specs/2026-08-31-command-framework-design.md) lists its
 keys, and §3.1 of the [mm30 record](docs/records/2026-09-23-mm30-through-the-commands.md)
-creates a world and writes one. An entry of `contracts` or `read_contracts` is a contract
+creates a world and writes one. Optional `read_store_roots` supplies inherited
+holdings while `store_root` remains the sole write destination; every root must
+already have read admission. See [store configuration and relocation](docs/stores.md)
+for the operator recipe and rollout checks. An entry of `contracts` or `read_contracts` is a contract
 document's path, or for a successor contract a table
 `{ document = "<path>", predecessors = ["<oldest>", …] }` naming its lineage. With that file,
 
