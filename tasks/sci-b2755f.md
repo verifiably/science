@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: feat/sci-b2755f-assumption-sweep
 created: 2026-10-30T01:53:54Z
-updated: 2026-10-30T07:40:11Z
+updated: 2026-10-30T07:40:13Z
 started: 2026-10-30T07:08:27Z
 depends: []
 tags: []
@@ -77,3 +77,4 @@ Related: sci-171ad1 is the causal-answer special case of this ranking; sci-434b9
 - 2026-10-30T07:37:45Z (feat/sci-b2755f-assumption-sweep): Round-2 Important verified against mm ledger section 1 and dated abstract/search-summary exposure entries; roster counts checked: 1559 entries, 830 publication PMID, 100 DOI (overlapping). Ruling: retain existing in-any-form exposure policy, with no exemption for an unmapped results-bearing abstract; resolve identifiers then section-only design/data-availability metadata before results, skip unresolved sources while continuing the finite screen. Why: the existing policy already covers these reads, and sequential source dispositions avoid a survey-wide stop. Cost if wrong: reduced literature coverage or unintended exposure from a retrieval route; report the former and record/route the latter. All three minor clarifications incorporated; no deferred findings.
 - 2026-10-30T07:40:09Z (feat/sci-b2755f-assumption-sweep): review: spec round 3 — verdict: accept; findings: none; reviewer: codex/gpt-6.1-sol
 - 2026-10-30T07:40:11Z (feat/sci-b2755f-assumption-sweep): attached: spec-round-3-report.md (2299 bytes): Full scoped re-review of c2f3a88; all round-2 findings resolved; codex/gpt-6.1-sol
+- 2026-10-30T07:40:13Z (feat/sci-b2755f-assumption-sweep): attached: design-review-ledger-v2.md (3680 bytes): Design review ledger through round 3, Important ruling and three resolved minors; supersedes ledger v1 without changing it
