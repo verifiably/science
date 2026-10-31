@@ -1,6 +1,6 @@
 # Snapshot lineages: build each commons world once from its base, not from scratch
 
-Status: draft for review, 2026-10-31, revision 3 (answers spec review rounds 1 and 2: §2 rewritten, §2.6 added). Task `sci-0bea23` (test-latency halt).
+Status: implemented 2026-10-31 on perf/test-latency; latency verify pending. Revision 3 (answers spec review rounds 1 and 2: §2 rewritten, §2.6 added). Task `sci-0bea23` (test-latency halt).
 
 Revises `docs/specs/2026-10-02-world-fixture-snapshots-design.md` (§2.3, §2.4): a snapshot
 may now be derived from another snapshot's image instead of from an empty directory.
