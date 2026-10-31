@@ -6,9 +6,9 @@ priority: 2
 size: s
 complexity: mid
 process: direct
-owner: main
+owner: fix/store-write-refused
 created: 2026-10-30T19:15:45Z
-updated: 2026-10-31T18:21:54Z
+updated: 2026-10-31T18:23:00Z
 started: 2026-10-31T18:21:54Z
 depends: []
 tags: [holdings]
@@ -30,3 +30,5 @@ Same class as the uncaught RuleNotHeld found under sci-0d00d2. Observed in invoc
 - 2026-10-31T18:21:54Z (main): started
   provenance: {"harness_session":"claude-code:2d4f1b44-70f6-4dcf-877c-e39755156302","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-31T18:21:54Z (main): halt override: started past sci-0bea23 by 2d4f1b44-70f6-4dcf-877c-e39755156302: User explicitly requested sci-eccb43 despite open test-latency halt sci-0bea23
+- 2026-10-31T18:23:00Z (fix/store-write-refused): resumed
+  provenance: {"harness_session":"claude-code:2d4f1b44-70f6-4dcf-877c-e39755156302","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
