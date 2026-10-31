@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: perf/test-latency
 created: 2026-10-30T18:00:08Z
-updated: 2026-10-31T20:50:22Z
+updated: 2026-10-31T20:50:24Z
 started: 2026-10-31T18:41:31Z
 depends: []
 tags: [halt, test-latency, testing]
@@ -63,3 +63,5 @@ Process: planned
   provenance: {"harness_session":"claude-code:e1c106c7-398b-4f30-8ca8-d851dbb5e76b","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-31T20:49:32Z (perf/test-latency): review: plan round 1 — verdict: revise; findings: P2 3, P3 1; reviewer: codex/gpt-6.1-sol
 - 2026-10-31T20:50:22Z (perf/test-latency): plan revision 2 at 4254cf3 answers plan round 1: ancestor identity checks + impostor-ancestor test, plugin file snaptime_lineage.py + pilot step, reverse-order snippet under explicit bash, retry test asserts half.txt absent at step entry
+- 2026-10-31T20:50:24Z (perf/test-latency): retention checkpoint: observed 2026-10-31T20:50:24Z on titan; basis sci in-tree . b9a175683abad880b0c363c1124e3dc32d12b62a:tasks/sci-0bea23.md; retained by refs/heads/perf/test-latency; this host: kept verified 1, kept unknown 0, released 0; changed 0. Rechecked all kept/verified items on this host. Other hosts retain their own dated observations. Next: plan review round 2.
+  provenance: {"harness_session":"claude-code:e1c106c7-398b-4f30-8ca8-d851dbb5e76b","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
