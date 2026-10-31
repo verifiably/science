@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: perf/test-latency
 created: 2026-10-30T18:00:08Z
-updated: 2026-10-31T20:54:36Z
+updated: 2026-10-31T22:02:10Z
 started: 2026-10-31T18:41:31Z
 depends: []
 tags: [halt, test-latency, testing]
@@ -71,3 +71,4 @@ Process: planned
   provenance: {"harness_session":"claude-code:e1c106c7-398b-4f30-8ca8-d851dbb5e76b","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-31T20:54:34Z (perf/test-latency): review: plan round 2 — verdict: accept; findings: none; reviewer: codex/gpt-6.1-sol
 - 2026-10-31T20:54:36Z (perf/test-latency): plan revision 2 (4254cf3) approved for implementation by Keith 2026-10-31; execution inline (executing-plans) with a fresh whole-branch review
+- 2026-10-31T22:02:10Z (perf/test-latency): attached: snaptime_lineage.py (707 bytes): pytest plugin logging each lineage link build (wraps helpers.snapshot._build_link); run: SNAP_OUT=<file> PYTHONPATH=<dir> just test-one tests -p snaptime_lineage -n auto --dist worksteal
