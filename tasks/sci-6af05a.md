@@ -2,12 +2,12 @@
 id: sci-6af05a
 title: Adopt shared broad-test policy and remote verification
 status: todo
-priority: 2
+priority: 1
 size: m
 complexity: mid
 process: planned
 created: 2026-10-29T13:46:08Z
-updated: 2026-10-29T13:46:08Z
+updated: 2026-10-31T20:04:01Z
 depends: [ops-68729d]
 tags: []
 source: "tt-policy:sci"
