@@ -8,7 +8,7 @@ complexity: mid
 process: direct
 owner: fix/store-write-refused
 created: 2026-10-30T19:15:45Z
-updated: 2026-10-31T18:23:00Z
+updated: 2026-10-31T18:28:46Z
 started: 2026-10-31T18:21:54Z
 depends: []
 tags: [holdings]
@@ -32,3 +32,4 @@ Same class as the uncaught RuleNotHeld found under sci-0d00d2. Observed in invoc
 - 2026-10-31T18:21:54Z (main): halt override: started past sci-0bea23 by 2d4f1b44-70f6-4dcf-877c-e39755156302: User explicitly requested sci-eccb43 despite open test-latency halt sci-0bea23
 - 2026-10-31T18:23:00Z (fix/store-write-refused): resumed
   provenance: {"harness_session":"claude-code:2d4f1b44-70f6-4dcf-877c-e39755156302","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-31T18:28:46Z (fix/store-write-refused): decision: StoreWriteRefused joins KERNEL_REFUSALS and closes refused, not _close_acted. The holdings intent append is not a session act (only publish_fulfilling records one), so invocation_acts is empty at the refusal; beliefs' acquire treats the error as a routine stop too. Fix 868808f on fix/store-write-refused; RED->GREEN via tests/test_cmd_dataset.py::test_a_store_refused_write_closes_refused_and_replays against a restored read-only-serviceable store.
