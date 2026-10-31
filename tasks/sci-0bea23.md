@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: perf/test-latency
 created: 2026-10-30T18:00:08Z
-updated: 2026-10-31T20:16:55Z
+updated: 2026-10-31T20:16:57Z
 started: 2026-10-31T18:41:31Z
 depends: []
 tags: [halt, test-latency, testing]
@@ -47,4 +47,6 @@ Process: planned
 - 2026-10-31T20:15:32Z (perf/test-latency): review: spec round 2 — verdict: revise; findings: P2 3, P3 9; reviewer: claude-code/claude-opus-5-5
 - 2026-10-31T20:16:53Z (perf/test-latency): spec revision 3 at 0471907 answers round 1 (codex: copy_value for mappingproxy leaves, declaration objects for ancestry, construction vs live restores, build_bound_fetched_only) and round 2 (self: restore_tree for step-internal restores, per-kind identity, isolation runs, P3s incl. limitations §2.6)
 - 2026-10-31T20:16:55Z (perf/test-latency): retention checkpoint: observed 2026-10-31T20:16:55Z on titan; basis sci in-tree . 86c2aa10ba37f02b0a54af6e79ef719a5e5f30ae:tasks/sci-0bea23.md; retained by refs/heads/perf/test-latency; this host: kept verified 1, kept unknown 0, released 0; changed 0. Rechecked all kept/verified items on this host. Other hosts retain their own dated observations. Next: spec review round 3.
+  provenance: {"harness_session":"claude-code:e1c106c7-398b-4f30-8ca8-d851dbb5e76b","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-31T20:16:57Z (perf/test-latency): parked (waiting on user, review): User (or codex) reviews spec revision 3: docs/specs/2026-10-31-snapshot-lineages-design.md at 0471907 on perf/test-latency (.worktrees/test-latency); on accept, the agent writes the plan
   provenance: {"harness_session":"claude-code:e1c106c7-398b-4f30-8ca8-d851dbb5e76b","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
