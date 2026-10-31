@@ -35,6 +35,14 @@ def _no_thread_left_running():
     assert not alive, f"threads still running after the test: {alive}"
 
 
+@pytest.fixture(autouse=True)
+def _one_live_world_per_lineage():
+    """Each test starts with no live snapshot world (lineages spec §2.3)."""
+    yield
+    from helpers.snapshot import clear_live
+    clear_live()
+
+
 @contextmanager
 def _certified_dir():
     base = Path(os.environ.get("SCIENCE_TEST_ROOT", MAIN_ROOT / ".framework-test"))

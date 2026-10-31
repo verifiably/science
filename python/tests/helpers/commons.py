@@ -517,8 +517,9 @@ def fork(installation_home: Path) -> Path:
 
 
 def restore(copy: Path, installation_home: Path) -> None:
-    from helpers.snapshot import WorldSnapshot
-    WorldSnapshot(installation_home, copy, None, fork).restore()
+    """Put a `fork`ed publisher back in its home. A step-internal restore: it records no live world."""
+    from helpers.snapshot import restore_tree
+    restore_tree(copy, installation_home)
 
 
 def _build_published_b(work: Path, *, base) -> dict:
