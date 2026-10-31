@@ -270,3 +270,17 @@ def test_a_socket_in_the_lineage_refuses_construction(short_tmp):
             materialize(short_tmp, Derived(uuid.uuid4().hex, root, lambda work, value: value))
     finally:
         server.close(); path.unlink()
+
+
+def test_the_commons_chain_is_one_lineage_rooted_at_fresh():
+    from helpers import commons
+    leaves = [commons.SIBLING_PUBLICATIONS, commons.SIBLING_PUBLICATIONS_UNKEPT, commons.LATE_LINK,
+              commons.B_UPDATED, commons.B_UPDATED_UNKEPT, commons.EQUAL_HOLDERS, commons.SPEC_DROP,
+              commons.SPEC_ONLY, commons.CONFLICTING, commons.CONTENT_CONFLICT, commons.UID_CORRUPTION,
+              commons.LATE_CHAIN_UNADOPTED]
+    for leaf in leaves:
+        node = leaf
+        while isinstance(node, Derived):
+            node = node.base
+        assert node is commons.FRESH, leaf.name
+    assert isinstance(commons.FRESH_NO_EPOCH, Root)
