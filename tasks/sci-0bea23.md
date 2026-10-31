@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: perf/test-latency
 created: 2026-10-30T18:00:08Z
-updated: 2026-10-31T22:25:25Z
+updated: 2026-10-31T22:25:27Z
 started: 2026-10-31T18:41:31Z
 depends: []
 tags: [halt, test-latency, testing]
@@ -82,3 +82,4 @@ Process: planned
 - 2026-10-31T22:21:54Z (perf/test-latency): attached: fix-rereview-report.md (5897 bytes): Scoped re-review of fix e2a5236 (claude-opus-5-5): resolved, Minor 3
 - 2026-10-31T22:21:56Z (perf/test-latency): rulings and deferred minors for the snapshot-lineages plan are in files:snapshot-lineages-ledger.md (4 execution rulings, 2 final-review re-grades, 5 minor (deferred))
 - 2026-10-31T22:25:25Z (main): retained: {"host":"titan","kind":"worktree","path":".worktrees/test-latency","state":"released","verification":"verified","purpose":"merged into main as f57543a (merged suite 1157 passed in 139 s); ignored files discarded as regenerable (.venv, caches, .testmondata) or attached (ledger, review reports); branch perf/test-latency deleted after ancestry check","next_owner":"none","cleanup_trigger":"none"}
+- 2026-10-31T22:25:27Z (main): merged perf/test-latency into main as f57543a (2026-10-31T22:22:06Z, the tt-latency verify cutoff); merged-result just test 1157 passed in 139.3 s; worktree removed, branch deleted; tt-report run. Halt stays open until tt-latency verify passes on titan.
