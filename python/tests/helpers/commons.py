@@ -17,6 +17,7 @@ from beliefs.profile import compile_profile, shipped_base_contract, shipped_coor
 from beliefs.root import init_corpus_root, init_store_root, init_world_root, open_corpus, open_world
 from beliefs.world import Fresh, WorldConfig
 
+from helpers.snapshot import Derived, Root
 from helpers.world import (
     CONCEPTS,
     COORDINATION_V3,
@@ -304,18 +305,16 @@ def with_remotes(installations: Installations) -> Iterator[None]:
         publication.REMOTE_FOR, publication.GIT_ENV = saved
 
 
-def build_published(work: Path) -> dict:
+def step_published(work: Path, value: dict) -> dict:
     """`build_fresh`, then A publishes its project `a` to LOC_A over the remotes' bare repositories."""
-    value = build_fresh(work)
     with with_remotes(Installations.of(value)), open_rig(value["a"], ("publish",)) as (d, _):
         d.invoke("publish", {"target": "a", "to": LOC_A})
     return value
 
 
-def build_bound(work: Path) -> dict:
-    """`build_published`, then B binds LOC_A to A's world with `provider-bind`, passing the world id A's marker
+def step_bound(work: Path, value: dict) -> dict:
+    """`PUBLISHED`, then B binds LOC_A to A's world with `provider-bind`, passing the world id A's marker
     claims."""
-    value = build_published(work)
     installations = Installations.of(value)
     ids = a_identity(installations.a)
     with with_remotes(installations), open_rig(installations.b, ("provider-bind",)) as (d, _):
@@ -354,34 +353,31 @@ def publish_again(installations: Installations, location: str) -> str:
         return binding_fields(ctx.write_view().get(binding_ref(text))).corpus_id
 
 
-def build_adopted(work: Path) -> dict:
-    """`build_bound`, then B adopts A's publication from LOC_A: B's pin is `mounted`; B's configuration is the
+def step_adopted(work: Path, value: dict) -> dict:
+    """`BOUND`, then B adopts A's publication from LOC_A: B's pin is `mounted`; B's configuration is the
     one it opened with, so the adopted root mounts at B's next open (`reopen`)."""
-    value = build_bound(work)
     installations = Installations.of(value)
     with with_remotes(installations), open_rig(installations.b, ("adopt",)) as (d, _):
         d.invoke("adopt", {"location": LOC_A, "corpus_id": a_identity(installations.a)["corpus_id"]})
     return value
 
 
-def build_reopened(work: Path) -> dict:
-    """`build_adopted`, then B reopened (its adopted root mounted) with an epoch published over it."""
+def step_reopened(work: Path, value: dict) -> dict:
+    """`ADOPTED`, then B reopened (its adopted root mounted) with an epoch published over it."""
     from science.world_belief import publish_session_epoch
-    value = build_adopted(work)
     b = reopen(value["b"])
     publish_session_epoch(b)
     return {**value, "b": b}
 
 
-def build_verified(work: Path) -> dict:
-    """`build_reopened`, then B fetches the bytes of three datasets A's mount declares (A's dataset from
+def step_verified(work: Path, value: dict) -> dict:
+    """`REOPENED`, then B fetches the bytes of three datasets A's mount declares (A's dataset from
     `data_dir()/a.txt`, the concept and level lists from `concepts.txt` and `levels.txt`), citing each from the
     mount and declaring none, and verifies A's assessment. The run policy is the minimal one for the build when
     the host cannot confine, as `test_mount_citations._confine` sets it."""
     import science.commands.run as run_module
     from beliefs.confinement import host_prerequisites
     from beliefs.recipe import MINIMAL_POLICY
-    value = build_reopened(work)
     installations = Installations.of(value)
     ids = a_identity(installations.a)
     code, entrypoint, _ = fixture_bundle(work / "a")  # the bundle A's run was minted from
@@ -412,7 +408,7 @@ def derive_changed_analysis(installations: Installations) -> dict[str, str]:
     """B's changed analysis over A's mounted records, declaring none of them: a `spec` on A's proposition over
     A's dataset with one changed input (WORKING_FIELDS' method), a run of it from B's own copy of the fixture
     bundle (minted under MINIMAL_POLICY, as `mint_fixture_run` does), and its assessment. B must hold the
-    dataset's bytes (`build_verified` fetched them). Returns the spec, run and assessment refs."""
+    dataset's bytes (`VERIFIED` fetched them). Returns the spec, run and assessment refs."""
     b = installations.b
     ids = a_identity(installations.a)
     with open_rig(b, ("spec",)) as (d, _):
@@ -439,10 +435,9 @@ def b_derivation(b: ScienceConfig) -> dict[str, str]:
             "run": run_ref(stored.assessment_value(assessment, profile=b.profile).run)}
 
 
-def build_derived(work: Path) -> dict:
-    """`build_verified`, then B derives its changed analysis over A's mounted records
+def step_derived(work: Path, value: dict) -> dict:
+    """`VERIFIED`, then B derives its changed analysis over A's mounted records
     (`derive_changed_analysis`)."""
-    value = build_verified(work)
     derive_changed_analysis(Installations.of(value))
     return value
 
@@ -450,11 +445,10 @@ def build_derived(work: Path) -> dict:
 LOC_A2 = "https://remote.test/a2"
 
 
-def build_conflicting(work: Path) -> dict:
-    """`build_bound`, then A publishes its project `a` a second time, to LOC_A2 (a new corpus id holding the same
+def step_conflicting(work: Path, value: dict) -> dict:
+    """`BOUND`, then A publishes its project `a` a second time, to LOC_A2 (a new corpus id holding the same
     addresses), and B binds LOC_A2 to A's world. `installations` is the `Installations` value; `corpus_id` the
     second publication's."""
-    value = build_bound(work)
     installations = Installations.of(value)
     corpus_id = publish_again(installations, LOC_A2)
     with with_remotes(installations), open_rig(installations.b, ("provider-bind",)) as (d, _):
@@ -466,9 +460,8 @@ def build_conflicting(work: Path) -> dict:
 LOC_A3, LOC_C = "https://remote.test/a3", "https://remote.test/c"
 
 
-def build_content_conflict(work: Path) -> dict:
+def step_content_conflict(work: Path, value: dict) -> dict:
     """A revises its published proposition in place; B still holds the earlier content."""
-    value = build_reopened(work)
     installations = Installations.of(value)
     a = installations.a
     writer = open_corpus(a.write_root, authority=FIXTURE_AUTHORITY, profile=a.profile)
@@ -480,12 +473,11 @@ def build_content_conflict(work: Path) -> dict:
     return {"installations": value, "corpus_id": cid}
 
 
-def build_uid_corruption(work: Path) -> dict:
+def step_uid_corruption(work: Path, value: dict) -> dict:
     """C redirects a source's identifier after B adopted its first publication."""
     from beliefs import stored
     from science.world_belief import publish_session_epoch
 
-    value = build_reopened(work)
     installations = Installations.of(value)
     c = build_installation(work, "c", hold_vocabulary=False)
     writer = open_corpus(c.write_root, authority=FIXTURE_AUTHORITY, profile=c.profile)
@@ -517,25 +509,17 @@ def fork(installation_home: Path) -> Path:
 
 
 def restore(copy: Path, installation_home: Path) -> None:
-    from helpers.snapshot import WorldSnapshot
-    WorldSnapshot(installation_home, copy, None, fork).restore()
+    """Put a `fork`ed publisher back in its home. A step-internal restore: it records no live world."""
+    from helpers.snapshot import restore_tree
+    restore_tree(copy, installation_home)
 
 
-def _build_published_b(work: Path, *, base) -> dict:
+def step_published_b(work: Path, value: dict) -> dict:
     from science.world_belief import publish_session_epoch
-    value = base(work)
     publish_session_epoch(value["b"])
     with with_remotes(Installations.of(value)), open_rig(value["b"], ("publish",)) as (d, _):
         d.invoke("publish", {"target": "b", "to": LOC_B})
     return value
-
-
-def build_published_b(work):
-    return _build_published_b(work, base=build_derived)
-
-
-def build_published_b_unkept(work):
-    return _build_published_b(work, base=build_reopened)
 
 
 def _b_publication(b):
@@ -544,38 +528,20 @@ def _b_publication(b):
     return binding_fields(node)
 
 
-def _build_a_bound_b(work: Path, *, base) -> dict:
-    value = base(work)
+def step_a_bound_b(work: Path, value: dict) -> dict:
     with with_remotes(Installations.of(value)), open_rig(value["a"], ("provider-bind",)) as (d, _):
         d.invoke("provider-bind", {"location": LOC_B, "corpus_id": _b_publication(value["b"]).corpus_id,
                                    "world": value["b"].world.world_id})
     return value
 
 
-def build_a_bound_b(work):
-    return _build_a_bound_b(work, base=build_published_b)
-
-
-def build_a_bound_b_unkept(work):
-    return _build_a_bound_b(work, base=build_published_b_unkept)
-
-
-def _build_overlapping(work: Path, *, base) -> dict:
+def step_overlapping(work: Path, value: dict) -> dict:
     from science.world_belief import publish_session_epoch
-    value = base(work)
     with with_remotes(Installations.of(value)), open_rig(value["a"], ("adopt",)) as (d, _):
         d.invoke("adopt", {"location": LOC_B, "corpus_id": _b_publication(value["b"]).corpus_id})
     value["a"] = reopen(value["a"])
     publish_session_epoch(value["a"])
     return value
-
-
-def build_overlapping(work):
-    return _build_overlapping(work, base=build_a_bound_b)
-
-
-def build_overlapping_unkept(work):
-    return _build_overlapping(work, base=build_a_bound_b_unkept)
 
 
 def _publish_update(installations: Installations, keys=("proposition", "dataset", "spec", "run")) -> str:
@@ -593,23 +559,13 @@ def _publish_update(installations: Installations, keys=("proposition", "dataset"
     return publish_again(installations, LOC_A)
 
 
-def _build_updated(work: Path, *, base) -> dict:
-    value = base(work)
+def step_updated(work: Path, value: dict) -> dict:
     _publish_update(Installations.of(value))
     return value
 
 
-def build_updated(work):
-    return _build_updated(work, base=build_overlapping)
-
-
-def build_updated_unkept(work):
-    return _build_updated(work, base=build_overlapping_unkept)
-
-
-def _build_b_updated(work: Path, *, base) -> dict:
+def step_b_updated(work: Path, value: dict) -> dict:
     from science.world_belief import publish_session_epoch
-    value = base(work)
     with with_remotes(Installations.of(value)), open_rig(value["b"], ("adopt",)) as (d, _):
         d.invoke("adopt", {"location": LOC_A, "corpus_id": a_identity(value["a"])["corpus_id"]})
     value["b"] = reopen(value["b"])
@@ -617,17 +573,8 @@ def _build_b_updated(work: Path, *, base) -> dict:
     return value
 
 
-def build_b_updated(work):
-    return _build_b_updated(work, base=build_updated)
-
-
-def build_b_updated_unkept(work):
-    return _build_b_updated(work, base=build_updated_unkept)
-
-
-def _build_sibling_publications(work: Path, *, base) -> tuple:
+def step_sibling_publications(work: Path, value: dict) -> tuple:
     import shutil
-    value = base(work)
     installations = Installations.of(value)
     home = installations.a.world.world_root.parent
     copy = fork(home)
@@ -638,16 +585,7 @@ def _build_sibling_publications(work: Path, *, base) -> tuple:
     return value, first, sibling
 
 
-def build_sibling_publications(work):
-    return _build_sibling_publications(work, base=build_overlapping)
-
-
-def build_sibling_publications_unkept(work):
-    return _build_sibling_publications(work, base=build_overlapping_unkept)
-
-
-def _build_late_chain(work: Path, *, base) -> tuple:
-    value = base(work)
+def step_late_chain(work: Path, value: dict) -> tuple:
     installations = Installations.of(value)
     first = a_identity(installations.a)["corpus_id"]
     missing = publish_again(installations, LOC_A)
@@ -655,17 +593,9 @@ def _build_late_chain(work: Path, *, base) -> tuple:
     return value, first, missing, last
 
 
-def build_late_chain(work):
-    return _build_late_chain(work, base=build_overlapping_unkept)
-
-
-def build_late_chain_unadopted(work):
-    return _build_late_chain(work, base=build_bound)
-
-
-def build_late_link(work):
+def step_late_link(work: Path, chain: tuple) -> tuple:
     from science.world_belief import publish_session_epoch
-    value, _, missing, last = build_late_chain(work)
+    value, _, missing, last = chain
     with with_remotes(Installations.of(value)), open_rig(value["b"], ("adopt",)) as (d, _):
         d.invoke("adopt", {"location": LOC_A, "corpus_id": last})
     value["b"] = reopen(value["b"])
@@ -673,30 +603,27 @@ def build_late_link(work):
     return value, missing
 
 
-def build_equal_holders(work):
-    """`build_verified`, then A publishes to LOC_A P2, an equal-content successor of P1 that keeps the assessment
+def step_equal_holders(work: Path, value: dict):
+    """`VERIFIED`, then A publishes to LOC_A P2, an equal-content successor of P1 that keeps the assessment
     B verified (`publish_again`), and P3, a successor of P2 that drops it (`_publish_update`): P1 and P2 are equal
     holders of the record B's verification depends on. Returns the value and the three corpus ids."""
-    value = build_verified(work)
     installations = Installations.of(value)
     first = a_identity(installations.a)["corpus_id"]
     equal = publish_again(installations, LOC_A)
     return value, first, equal, _publish_update(installations)
 
 
-def build_spec_drop(work):
-    """`build_verified`, then A republishes to LOC_A a successor that keeps its assessment and run and drops their
+def step_spec_drop(work: Path, value: dict):
+    """`VERIFIED`, then A republishes to LOC_A a successor that keeps its assessment and run and drops their
     spec: B's unpublished verification replays through that spec (§5.9 item 6, the spec-drop case)."""
-    value = build_verified(work)
     _publish_update(Installations.of(value), ("proposition", "dataset", "run", "assessment"))
     return value
 
 
-def build_spec_only(work):
-    """`build_reopened`, then B fetches A's datasets and authors a spec of its own over A's proposition and dataset,
+def step_spec_only(work: Path, value: dict):
+    """`REOPENED`, then B fetches A's datasets and authors a spec of its own over A's proposition and dataset,
     with no run or assessment; A republishes to LOC_A a successor that keeps the dataset and drops the proposition
     with everything that relates to it (§5.9 item 6, the spec-only case)."""
-    value = build_reopened(work)
     installations = Installations.of(value)
     ids = a_identity(installations.a)
     with open_rig(installations.b, ("fetch", "spec")) as (d, _):
@@ -704,3 +631,37 @@ def build_spec_only(work):
         d.invoke("spec", dict(WORKING_FIELDS, target=ids["proposition"], dataset=ids["dataset"]))
     _publish_update(installations, ("dataset",))
     return value
+
+
+# The commons lineage (lineages spec §2.4): every snapshot builds in FRESH's directory from its base's image.
+# Names are the snapshot names the fixtures used before lineages, so build timings stay comparable.
+FRESH = Root("commons-1a-fresh", build_fresh)
+FRESH_NO_EPOCH = Root("commons-1a-fresh-no-epoch", build_fresh_no_epoch)
+PUBLISHED = Derived("commons-1a-published", FRESH, step_published)
+BOUND = Derived("commons-1a-bound", PUBLISHED, step_bound)
+ADOPTED = Derived("commons-1a-adopted", BOUND, step_adopted)
+REOPENED = Derived("commons-1a-reopened", ADOPTED, step_reopened)
+VERIFIED = Derived("commons-1a-verified", REOPENED, step_verified)
+DERIVED = Derived("commons-1a-derived", VERIFIED, step_derived)
+CONFLICTING = Derived("commons-1a-conflicting", BOUND, step_conflicting)
+CONTENT_CONFLICT = Derived("commons-1b-content-conflict", REOPENED, step_content_conflict)
+UID_CORRUPTION = Derived("commons-1b-uid-corruption", REOPENED, step_uid_corruption)
+PUBLISHED_B = Derived("commons-1b-published-b", DERIVED, step_published_b)
+PUBLISHED_B_UNKEPT = Derived("commons-1b-published-b-unkept", REOPENED, step_published_b)
+A_BOUND_B = Derived("commons-1b-a-bound-b", PUBLISHED_B, step_a_bound_b)
+A_BOUND_B_UNKEPT = Derived("commons-1b-a-bound-b-unkept", PUBLISHED_B_UNKEPT, step_a_bound_b)
+OVERLAPPING = Derived("commons-1b-overlapping", A_BOUND_B, step_overlapping)
+OVERLAPPING_UNKEPT = Derived("commons-1b-overlapping-unkept", A_BOUND_B_UNKEPT, step_overlapping)
+UPDATED = Derived("commons-1b-updated", OVERLAPPING, step_updated)
+UPDATED_UNKEPT = Derived("commons-1b-updated-unkept", OVERLAPPING_UNKEPT, step_updated)
+B_UPDATED = Derived("commons-1b-b-updated", UPDATED, step_b_updated)
+B_UPDATED_UNKEPT = Derived("commons-1b-b-updated-unkept", UPDATED_UNKEPT, step_b_updated)
+SIBLING_PUBLICATIONS = Derived("commons-1b-sibling-publications", OVERLAPPING, step_sibling_publications)
+SIBLING_PUBLICATIONS_UNKEPT = Derived("commons-1b-sibling-publications-unkept", OVERLAPPING_UNKEPT,
+                                      step_sibling_publications)
+LATE_CHAIN = Derived("commons-1b-late-chain", OVERLAPPING_UNKEPT, step_late_chain)
+LATE_CHAIN_UNADOPTED = Derived("commons-1b-late-chain-unadopted", BOUND, step_late_chain)
+LATE_LINK = Derived("commons-1b-late-link", LATE_CHAIN, step_late_link)
+EQUAL_HOLDERS = Derived("commons-1b-equal-holders", VERIFIED, step_equal_holders)
+SPEC_DROP = Derived("commons-1b-spec-drop", VERIFIED, step_spec_drop)
+SPEC_ONLY = Derived("commons-1b-spec-only", REOPENED, step_spec_only)

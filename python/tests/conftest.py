@@ -35,6 +35,14 @@ def _no_thread_left_running():
     assert not alive, f"threads still running after the test: {alive}"
 
 
+@pytest.fixture(autouse=True)
+def _one_live_world_per_lineage():
+    """Each test starts with no live snapshot world (lineages spec §2.3)."""
+    yield
+    from helpers.snapshot import clear_live
+    clear_live()
+
+
 @contextmanager
 def _certified_dir():
     base = Path(os.environ.get("SCIENCE_TEST_ROOT", MAIN_ROOT / ".framework-test"))
@@ -72,16 +80,16 @@ def short_tmp():
         shutil.rmtree(root)
 
 
-# The commons 1a fixture chain (plan Task 5 onward): each builder's dict is snapshot-cached per worker and
-# restored per test; `fresh_value` is the raw dict, the others wrap it with `Installations.of`. Later tasks add
-# their snapshots (`published`, `bound`, ...) beside these.
+# The commons fixture chain: each declaration in `helpers.commons` is built once per worker from its base's image
+# (lineages spec) and restored per test; every fixture hands its test a copy of the snapshot's value, never the
+# cached one. `fresh_value` is that dict, the others wrap it with `Installations.of`.
 @pytest.fixture
 def fresh_value(certified_worker_work):
-    from helpers.commons import build_fresh
-    from helpers.snapshot import snapshot
-    snap = snapshot(certified_worker_work, "commons-1a-fresh", build_fresh)
+    from helpers.commons import FRESH
+    from helpers.snapshot import copy_value, materialize
+    snap = materialize(certified_worker_work, FRESH)
     snap.restore()
-    return snap.value
+    return copy_value(snap.value)
 
 
 @pytest.fixture
@@ -92,68 +100,68 @@ def fresh(fresh_value):
 
 @pytest.fixture
 def fresh_no_epoch(certified_worker_work):
-    from helpers.commons import Installations, build_fresh_no_epoch
-    from helpers.snapshot import snapshot
-    snap = snapshot(certified_worker_work, "commons-1a-fresh-no-epoch", build_fresh_no_epoch)
+    from helpers.commons import Installations, FRESH_NO_EPOCH
+    from helpers.snapshot import copy_value, materialize
+    snap = materialize(certified_worker_work, FRESH_NO_EPOCH)
     snap.restore()
-    return Installations.of(snap.value)
+    return Installations.of(copy_value(snap.value))
 
 
 @pytest.fixture
 def published(certified_worker_work):
-    from helpers.commons import Installations, build_published
-    from helpers.snapshot import snapshot
-    snap = snapshot(certified_worker_work, "commons-1a-published", build_published)
+    from helpers.commons import Installations, PUBLISHED
+    from helpers.snapshot import copy_value, materialize
+    snap = materialize(certified_worker_work, PUBLISHED)
     snap.restore()
-    return Installations.of(snap.value)
+    return Installations.of(copy_value(snap.value))
 
 
 @pytest.fixture
 def bound(certified_worker_work):
-    from helpers.commons import Installations, build_bound
-    from helpers.snapshot import snapshot
-    snap = snapshot(certified_worker_work, "commons-1a-bound", build_bound)
+    from helpers.commons import Installations, BOUND
+    from helpers.snapshot import copy_value, materialize
+    snap = materialize(certified_worker_work, BOUND)
     snap.restore()
-    return Installations.of(snap.value)
+    return Installations.of(copy_value(snap.value))
 
 
 @pytest.fixture
 def adopted(certified_worker_work):
-    from helpers.commons import Installations, build_adopted
-    from helpers.snapshot import snapshot
-    snap = snapshot(certified_worker_work, "commons-1a-adopted", build_adopted)
+    from helpers.commons import Installations, ADOPTED
+    from helpers.snapshot import copy_value, materialize
+    snap = materialize(certified_worker_work, ADOPTED)
     snap.restore()
-    return Installations.of(snap.value)
+    return Installations.of(copy_value(snap.value))
 
 
 @pytest.fixture
 def reopened(certified_worker_work):
-    from helpers.commons import Installations, build_reopened
-    from helpers.snapshot import snapshot
-    snap = snapshot(certified_worker_work, "commons-1a-reopened", build_reopened)
+    from helpers.commons import Installations, REOPENED
+    from helpers.snapshot import copy_value, materialize
+    snap = materialize(certified_worker_work, REOPENED)
     snap.restore()
-    return Installations.of(snap.value)
+    return Installations.of(copy_value(snap.value))
 
 
 @pytest.fixture
 def verified(certified_worker_work):
     """`reopened`, once B has fetched A's dataset and both vocabulary lists and verified A's assessment."""
-    from helpers.commons import Installations, build_verified
-    from helpers.snapshot import snapshot
-    snap = snapshot(certified_worker_work, "commons-1a-verified", build_verified)
+    from helpers.commons import Installations, VERIFIED
+    from helpers.snapshot import copy_value, materialize
+    snap = materialize(certified_worker_work, VERIFIED)
     snap.restore()
-    return Installations.of(snap.value)
+    return Installations.of(copy_value(snap.value))
 
 
 @pytest.fixture
 def derived(certified_worker_work):
     """`verified`, once B has derived its changed analysis over A's mounted records: a spec, run and assessment
     of its own (`helpers.commons.b_derivation` reads them)."""
-    from helpers.commons import Installations, build_derived
-    from helpers.snapshot import snapshot
-    snap = snapshot(certified_worker_work, "commons-1a-derived", build_derived)
+    from helpers.commons import Installations, DERIVED
+    from helpers.snapshot import copy_value, materialize
+    snap = materialize(certified_worker_work, DERIVED)
     snap.restore()
-    return Installations.of(snap.value)
+    return Installations.of(copy_value(snap.value))
 
 
 @pytest.fixture
@@ -161,11 +169,11 @@ def conflicting_publication(certified_worker_work):
     """`(installations, corpus_id)`: the bound installations once A has published a second time to `LOC_A2` and
     B has bound it, and that second publication's corpus id. Its own snapshot, so it carries its installations
     rather than sharing `bound`'s."""
-    from helpers.commons import Installations, build_conflicting
-    from helpers.snapshot import snapshot
-    snap = snapshot(certified_worker_work, "commons-1a-conflicting", build_conflicting)
+    from helpers.commons import Installations, CONFLICTING
+    from helpers.snapshot import copy_value, materialize
+    snap = materialize(certified_worker_work, CONFLICTING)
     snap.restore()
-    return Installations.of(snap.value["installations"]), snap.value["corpus_id"]
+    return Installations.of(copy_value(snap.value)["installations"]), copy_value(snap.value)["corpus_id"]
 
 
 # Stable module-level builders give each 1b snapshot exactly one identity.
@@ -173,167 +181,167 @@ def conflicting_publication(certified_worker_work):
 
 @pytest.fixture
 def published_b(certified_worker_work):
-    from helpers.commons import Installations, build_published_b
-    from helpers.snapshot import snapshot
-    snap = snapshot(certified_worker_work, "commons-1b-published-b", build_published_b)
+    from helpers.commons import Installations, PUBLISHED_B
+    from helpers.snapshot import copy_value, materialize
+    snap = materialize(certified_worker_work, PUBLISHED_B)
     snap.restore()
-    return Installations.of(snap.value)
+    return Installations.of(copy_value(snap.value))
 
 
 @pytest.fixture
 def published_b_unkept(certified_worker_work):
-    from helpers.commons import Installations, build_published_b_unkept
-    from helpers.snapshot import snapshot
-    snap = snapshot(certified_worker_work, "commons-1b-published-b-unkept", build_published_b_unkept)
+    from helpers.commons import Installations, PUBLISHED_B_UNKEPT
+    from helpers.snapshot import copy_value, materialize
+    snap = materialize(certified_worker_work, PUBLISHED_B_UNKEPT)
     snap.restore()
-    return Installations.of(snap.value)
+    return Installations.of(copy_value(snap.value))
 
 
 @pytest.fixture
 def a_bound_b(certified_worker_work):
-    from helpers.commons import Installations, build_a_bound_b
-    from helpers.snapshot import snapshot
-    snap = snapshot(certified_worker_work, "commons-1b-a-bound-b", build_a_bound_b)
+    from helpers.commons import Installations, A_BOUND_B
+    from helpers.snapshot import copy_value, materialize
+    snap = materialize(certified_worker_work, A_BOUND_B)
     snap.restore()
-    return Installations.of(snap.value)
+    return Installations.of(copy_value(snap.value))
 
 
 @pytest.fixture
 def a_bound_b_unkept(certified_worker_work):
-    from helpers.commons import Installations, build_a_bound_b_unkept
-    from helpers.snapshot import snapshot
-    snap = snapshot(certified_worker_work, "commons-1b-a-bound-b-unkept", build_a_bound_b_unkept)
+    from helpers.commons import Installations, A_BOUND_B_UNKEPT
+    from helpers.snapshot import copy_value, materialize
+    snap = materialize(certified_worker_work, A_BOUND_B_UNKEPT)
     snap.restore()
-    return Installations.of(snap.value)
+    return Installations.of(copy_value(snap.value))
 
 
 @pytest.fixture
 def overlapping(certified_worker_work):
-    from helpers.commons import Installations, build_overlapping
-    from helpers.snapshot import snapshot
-    snap = snapshot(certified_worker_work, "commons-1b-overlapping", build_overlapping)
+    from helpers.commons import Installations, OVERLAPPING
+    from helpers.snapshot import copy_value, materialize
+    snap = materialize(certified_worker_work, OVERLAPPING)
     snap.restore()
-    return Installations.of(snap.value)
+    return Installations.of(copy_value(snap.value))
 
 
 @pytest.fixture
 def overlapping_unkept(certified_worker_work):
-    from helpers.commons import Installations, build_overlapping_unkept
-    from helpers.snapshot import snapshot
-    snap = snapshot(certified_worker_work, "commons-1b-overlapping-unkept", build_overlapping_unkept)
+    from helpers.commons import Installations, OVERLAPPING_UNKEPT
+    from helpers.snapshot import copy_value, materialize
+    snap = materialize(certified_worker_work, OVERLAPPING_UNKEPT)
     snap.restore()
-    return Installations.of(snap.value)
+    return Installations.of(copy_value(snap.value))
 
 
 @pytest.fixture
 def updated(certified_worker_work):
-    from helpers.commons import Installations, build_updated
-    from helpers.snapshot import snapshot
-    snap = snapshot(certified_worker_work, "commons-1b-updated", build_updated)
+    from helpers.commons import Installations, UPDATED
+    from helpers.snapshot import copy_value, materialize
+    snap = materialize(certified_worker_work, UPDATED)
     snap.restore()
-    return Installations.of(snap.value)
+    return Installations.of(copy_value(snap.value))
 
 
 @pytest.fixture
 def updated_unkept(certified_worker_work):
-    from helpers.commons import Installations, build_updated_unkept
-    from helpers.snapshot import snapshot
-    snap = snapshot(certified_worker_work, "commons-1b-updated-unkept", build_updated_unkept)
+    from helpers.commons import Installations, UPDATED_UNKEPT
+    from helpers.snapshot import copy_value, materialize
+    snap = materialize(certified_worker_work, UPDATED_UNKEPT)
     snap.restore()
-    return Installations.of(snap.value)
+    return Installations.of(copy_value(snap.value))
 
 
 @pytest.fixture
 def b_updated(certified_worker_work):
-    from helpers.commons import Installations, build_b_updated
-    from helpers.snapshot import snapshot
-    snap = snapshot(certified_worker_work, "commons-1b-b-updated", build_b_updated)
+    from helpers.commons import Installations, B_UPDATED
+    from helpers.snapshot import copy_value, materialize
+    snap = materialize(certified_worker_work, B_UPDATED)
     snap.restore()
-    return Installations.of(snap.value)
+    return Installations.of(copy_value(snap.value))
 
 
 @pytest.fixture
 def b_updated_unkept(certified_worker_work):
-    from helpers.commons import Installations, build_b_updated_unkept
-    from helpers.snapshot import snapshot
-    snap = snapshot(certified_worker_work, "commons-1b-b-updated-unkept", build_b_updated_unkept)
+    from helpers.commons import Installations, B_UPDATED_UNKEPT
+    from helpers.snapshot import copy_value, materialize
+    snap = materialize(certified_worker_work, B_UPDATED_UNKEPT)
     snap.restore()
-    return Installations.of(snap.value)
+    return Installations.of(copy_value(snap.value))
 
 
 @pytest.fixture
 def sibling_publications(certified_worker_work):
-    from helpers.commons import Installations, build_sibling_publications
-    from helpers.snapshot import snapshot
-    snap = snapshot(certified_worker_work, "commons-1b-sibling-publications", build_sibling_publications)
+    from helpers.commons import Installations, SIBLING_PUBLICATIONS
+    from helpers.snapshot import copy_value, materialize
+    snap = materialize(certified_worker_work, SIBLING_PUBLICATIONS)
     snap.restore()
-    value, *refs = snap.value
+    value, *refs = copy_value(snap.value)
     return Installations.of(value), *refs
 
 
 @pytest.fixture
 def late_chain(certified_worker_work):
-    from helpers.commons import Installations, build_late_chain
-    from helpers.snapshot import snapshot
-    snap = snapshot(certified_worker_work, "commons-1b-late-chain", build_late_chain)
+    from helpers.commons import Installations, LATE_CHAIN
+    from helpers.snapshot import copy_value, materialize
+    snap = materialize(certified_worker_work, LATE_CHAIN)
     snap.restore()
-    value, *refs = snap.value
+    value, *refs = copy_value(snap.value)
     return Installations.of(value), *refs
 
 
 @pytest.fixture
 def late_chain_unadopted(certified_worker_work):
-    from helpers.commons import Installations, build_late_chain_unadopted
-    from helpers.snapshot import snapshot
-    snap = snapshot(certified_worker_work, "commons-1b-late-chain-unadopted", build_late_chain_unadopted)
+    from helpers.commons import Installations, LATE_CHAIN_UNADOPTED
+    from helpers.snapshot import copy_value, materialize
+    snap = materialize(certified_worker_work, LATE_CHAIN_UNADOPTED)
     snap.restore()
-    value, *refs = snap.value
+    value, *refs = copy_value(snap.value)
     return Installations.of(value), *refs
 
 
 @pytest.fixture
 def late_link(certified_worker_work):
-    from helpers.commons import Installations, build_late_link
-    from helpers.snapshot import snapshot
-    snap = snapshot(certified_worker_work, "commons-1b-late-link", build_late_link)
+    from helpers.commons import Installations, LATE_LINK
+    from helpers.snapshot import copy_value, materialize
+    snap = materialize(certified_worker_work, LATE_LINK)
     snap.restore()
-    value, *refs = snap.value
+    value, *refs = copy_value(snap.value)
     return Installations.of(value), *refs
 
 
 @pytest.fixture
 def sibling_publications_unkept(certified_worker_work):
-    from helpers.commons import Installations, build_sibling_publications_unkept
-    from helpers.snapshot import snapshot
-    snap = snapshot(certified_worker_work, "commons-1b-sibling-publications-unkept", build_sibling_publications_unkept)
+    from helpers.commons import Installations, SIBLING_PUBLICATIONS_UNKEPT
+    from helpers.snapshot import copy_value, materialize
+    snap = materialize(certified_worker_work, SIBLING_PUBLICATIONS_UNKEPT)
     snap.restore()
-    value, *refs = snap.value
+    value, *refs = copy_value(snap.value)
     return Installations.of(value), *refs
 
 
 @pytest.fixture
 def equal_holders(certified_worker_work):
-    from helpers.commons import Installations, build_equal_holders
-    from helpers.snapshot import snapshot
-    snap = snapshot(certified_worker_work, "commons-1b-equal-holders", build_equal_holders)
+    from helpers.commons import Installations, EQUAL_HOLDERS
+    from helpers.snapshot import copy_value, materialize
+    snap = materialize(certified_worker_work, EQUAL_HOLDERS)
     snap.restore()
-    value, *refs = snap.value
+    value, *refs = copy_value(snap.value)
     return Installations.of(value), *refs
 
 
 @pytest.fixture
 def spec_drop(certified_worker_work):
-    from helpers.commons import Installations, build_spec_drop
-    from helpers.snapshot import snapshot
-    snap = snapshot(certified_worker_work, "commons-1b-spec-drop", build_spec_drop)
+    from helpers.commons import Installations, SPEC_DROP
+    from helpers.snapshot import copy_value, materialize
+    snap = materialize(certified_worker_work, SPEC_DROP)
     snap.restore()
-    return Installations.of(snap.value)
+    return Installations.of(copy_value(snap.value))
 
 
 @pytest.fixture
 def spec_only(certified_worker_work):
-    from helpers.commons import Installations, build_spec_only
-    from helpers.snapshot import snapshot
-    snap = snapshot(certified_worker_work, "commons-1b-spec-only", build_spec_only)
+    from helpers.commons import Installations, SPEC_ONLY
+    from helpers.snapshot import copy_value, materialize
+    snap = materialize(certified_worker_work, SPEC_ONLY)
     snap.restore()
-    return Installations.of(snap.value)
+    return Installations.of(copy_value(snap.value))

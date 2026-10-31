@@ -6,20 +6,20 @@ from beliefs.corpus import ReadView
 from beliefs.session.ledger import LedgerReader, read_ledger_evidence
 from beliefs.session.writer import ScopedWriter
 from helpers.commons import (
+    BOUND,
     LOC_A,
     LOC_A2,
     LOC_B,
     Installations,
     a_identity,
     binding_ref,
-    build_bound,
     publish_again,
     refused,
     reopen,
     transport_with,
     with_remotes,
 )
-from helpers.snapshot import snapshot
+from helpers.snapshot import Derived, copy_value, materialize
 from helpers.world import hold_fixture_dataset, open_rig
 
 from science.config import ReadContext
@@ -66,10 +66,9 @@ def _no_copy(registry: SharingRegistry, corpus_id: str) -> bool:
         not root.with_name(root.name + ".metadata").exists()
 
 
-def build_bound_fetched_only(work):
-    """`build_bound`, then an adopt that crashes as it reaches admission: B holds a `fetched` pin of A's corpus
+def step_bound_fetched_only(work, value):
+    """`BOUND`, then an adopt that crashes as it reaches admission: B holds a `fetched` pin of A's corpus
     at LOC_A, with its copy, and the kernel has not admitted it."""
-    value = build_bound(work)
     installations = Installations.of(value)
 
     def crash(*args, **kwargs):
@@ -82,11 +81,14 @@ def build_bound_fetched_only(work):
     return value
 
 
+BOUND_FETCHED_ONLY = Derived("commons-1a-bound-fetched-only", BOUND, step_bound_fetched_only)
+
+
 @pytest.fixture
 def bound_fetched_only(certified_worker_work):
-    snap = snapshot(certified_worker_work, "commons-1a-bound-fetched-only", build_bound_fetched_only)
+    snap = materialize(certified_worker_work, BOUND_FETCHED_ONLY)
     snap.restore()
-    return Installations.of(snap.value)
+    return Installations.of(copy_value(snap.value))
 
 
 def test_adopt_unsourced_discards_the_copy_writes_no_pin_and_names_the_remedies(published):
@@ -406,18 +408,20 @@ def test_changed_configuration_refuses_before_retirement_and_keeps_the_adoption(
 
 @pytest.fixture
 def content_conflict(certified_worker_work):
-    from helpers.commons import build_content_conflict
-    snap = snapshot(certified_worker_work, "commons-1b-content-conflict", build_content_conflict)
+    from helpers.commons import CONTENT_CONFLICT
+    snap = materialize(certified_worker_work, CONTENT_CONFLICT)
     snap.restore()
-    return Installations.of(snap.value["installations"]), snap.value["corpus_id"]
+    value = copy_value(snap.value)
+    return Installations.of(value["installations"]), value["corpus_id"]
 
 
 @pytest.fixture
 def uid_corruption(certified_worker_work):
-    from helpers.commons import build_uid_corruption
-    snap = snapshot(certified_worker_work, "commons-1b-uid-corruption", build_uid_corruption)
+    from helpers.commons import UID_CORRUPTION
+    snap = materialize(certified_worker_work, UID_CORRUPTION)
     snap.restore()
-    return Installations.of(snap.value["installations"]), snap.value
+    value = copy_value(snap.value)
+    return Installations.of(value["installations"]), value
 
 
 def test_a_differing_copy_refuses_adopt_conflict_content_and_stays_fetched(content_conflict):
