@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: perf/test-latency
 created: 2026-10-30T18:00:08Z
-updated: 2026-10-31T22:21:35Z
+updated: 2026-10-31T22:21:51Z
 started: 2026-10-31T18:41:31Z
 depends: []
 tags: [halt, test-latency, testing]
@@ -77,3 +77,4 @@ Process: planned
 - 2026-10-31T22:02:15Z (perf/test-latency): measurements 2026-10-31 titan (before = 4254cf3 tree, after = 2fb2d8d): snapshot builds 1591 s / worst worker 149 s (82 builds) -> 937 s / 110 s quiet run (234 links, each at most once per worker; projection 845/95; threshold 1000 met) and 1196 s / 138 s in a run contaminated by a concurrent suite (load to 54); full suite just test 1140 in 164.8 s (user 24m09) -> 1155 in 136.3 s (user 17m44); test-fast cold (all selected) 1140 in 288.4 s -> 1155 in 223.9 s; test-fast warm (one test-body edit in test_snapshot.py) 1 selected 3.7 s -> 1 selected 3.6 s. Broad test-fast selections stay well over 90 s, as the spec anticipated (§4).
 - 2026-10-31T22:10:00Z (perf/test-latency): review: impl round 1 — verdict: accept; findings: Minor 4; reviewer: claude-code/claude-opus-5-5
 - 2026-10-31T22:21:35Z (perf/test-latency): review: impl round 2 — verdict: accept; findings: Minor 3; reviewer: claude-code/claude-opus-5-5
+- 2026-10-31T22:21:51Z (perf/test-latency): attached: snapshot-lineages-ledger.md (5803 bytes): Execution ledger for plan docs/plans/2026-10-31-snapshot-lineages.md: setup baselines, per-task results, rulings, deferred minors
