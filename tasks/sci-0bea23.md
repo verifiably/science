@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: perf/test-latency
 created: 2026-10-30T18:00:08Z
-updated: 2026-10-31T22:02:13Z
+updated: 2026-10-31T22:02:15Z
 started: 2026-10-31T18:41:31Z
 depends: []
 tags: [halt, test-latency, testing]
@@ -74,3 +74,4 @@ Process: planned
 - 2026-10-31T22:02:10Z (perf/test-latency): attached: snaptime_lineage.py (707 bytes): pytest plugin logging each lineage link build (wraps helpers.snapshot._build_link); run: SNAP_OUT=<file> PYTHONPATH=<dir> just test-one tests -p snaptime_lineage -n auto --dist worksteal
 - 2026-10-31T22:02:12Z (perf/test-latency): attached: snapshot-links-after-run1-loaded-2026-10-31.jsonl (12913 bytes): Lineage link builds, full suite at 2fb2d8d, run 1 under a concurrent suite (load 11.6 -> 53.8): 223 links, 1196 s, worst worker 138 s
 - 2026-10-31T22:02:13Z (perf/test-latency): attached: snapshot-links-after-run2-quiet-2026-10-31.jsonl (13514 bytes): Lineage link builds, full suite at 2fb2d8d, run 2 at load 7.2 start: 234 links, 937 s, worst worker 110 s, best 14 s
+- 2026-10-31T22:02:15Z (perf/test-latency): measurements 2026-10-31 titan (before = 4254cf3 tree, after = 2fb2d8d): snapshot builds 1591 s / worst worker 149 s (82 builds) -> 937 s / 110 s quiet run (234 links, each at most once per worker; projection 845/95; threshold 1000 met) and 1196 s / 138 s in a run contaminated by a concurrent suite (load to 54); full suite just test 1140 in 164.8 s (user 24m09) -> 1155 in 136.3 s (user 17m44); test-fast cold (all selected) 1140 in 288.4 s -> 1155 in 223.9 s; test-fast warm (one test-body edit in test_snapshot.py) 1 selected 3.7 s -> 1 selected 3.6 s. Broad test-fast selections stay well over 90 s, as the spec anticipated (§4).
