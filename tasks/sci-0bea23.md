@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: perf/test-latency
 created: 2026-10-30T18:00:08Z
-updated: 2026-10-31T19:03:44Z
+updated: 2026-10-31T19:03:46Z
 started: 2026-10-31T18:41:31Z
 depends: []
 tags: [halt, test-latency, testing]
@@ -36,3 +36,4 @@ Process: planned
 - 2026-10-31T19:03:16Z (perf/test-latency): diagnosis 2026-10-31 (titan, c701049): full suite 1140 tests 179-195 s; 82 per-worker snapshot builds sum 1591 s (53-149 s/worker) because each commons builder rebuilds its whole prefix chain; testmon ~1.5x per test; one profiled test 84 s, 76 s building sibling_publications, ~40 s in atoms chain decode/validate. Filed atoms-eaadf0 (decode memo). sysmon coverage core rejected (no dynamic contexts). Spec: docs/specs/2026-10-31-snapshot-lineages-design.md at ced2be9 in worktree .worktrees/test-latency (branch perf/test-latency).
 - 2026-10-31T19:03:42Z (perf/test-latency): attached: snapshot-builds-baseline-2026-10-31.jsonl (4678 bytes): Per-worker first snapshot() build times, full suite at c701049 on titan, 16 workers, 179 s run: 82 builds, 1591 s
 - 2026-10-31T19:03:44Z (perf/test-latency): attached: snaptime-plugin.py (536 bytes): pytest plugin that logs each first snapshot() build (run: SNAP_OUT=<file> PYTHONPATH=<dir> just test-one tests -p snaptime -n auto --dist worksteal)
+- 2026-10-31T19:03:46Z (perf/test-latency): retained: {"host":"titan","kind":"worktree","path":".worktrees/test-latency","state":"kept","verification":"verified","purpose":"branch perf/test-latency holding the snapshot-lineages spec (ced2be9) and the coming implementation","next_owner":"task:sci-0bea23","cleanup_trigger":"perf/test-latency merged into main and tt-latency verify recorded"}
