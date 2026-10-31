@@ -150,3 +150,41 @@ def test_a_url_observation_in_the_write_root_does_not_block_holding_bytes(rig, t
     data = tmp_path / "matrix.txt"
     data.write_bytes(content)
     assert "[dataset] dataset:sha256:" in d.invoke("dataset", {"path": str(data), "title": "expression"}).text
+
+
+def test_a_store_refused_write_closes_refused_and_replays(certified_work, tmp_path):
+    """A read-only-serviceable store refuses the holdings write after its intent
+    is appended. No act was published, so the invocation closes refused with
+    the kernel's kind, and a retry under the same id replays that refusal
+    rather than finding the invocation open."""
+    from dataclasses import replace
+
+    from beliefs.root import (LifecycleState, export_head_artifact, open_world, read_lifecycle_state,
+                              replicate_root, restore_root, store_identity)
+    from beliefs.world.anchors import StoreSubject
+    from beliefs.world.verify import ArtifactCarrier, ObserverSet
+    from helpers.world import FIXTURE_AUTHORITY
+
+    cfg = build_belief_world(certified_work)
+    subject = StoreSubject(store_identity(cfg.store_root))
+    artifact = export_head_artifact(open_world(cfg.world, authority=FIXTURE_AUTHORITY), subject,
+                                    store_root=cfg.store_root)
+    restored = certified_work / "restored"
+    replicate_root(cfg.store_root, restored, authority=FIXTURE_AUTHORITY)
+    report = restore_root(restored, subject, ObserverSet((ArtifactCarrier.from_bytes(artifact),)),
+                          authority=FIXTURE_AUTHORITY)
+    assert report.outcome == "validated"
+    assert read_lifecycle_state(restored) is LifecycleState.READ_ONLY_SERVICEABLE
+    data = tmp_path / "matrix.txt"
+    data.write_bytes(b"gene\tv\nPHF19\t1\n")
+    payload = {"path": str(data), "title": "expression"}
+    with open_rig(replace(cfg, store_root=restored), ("dataset",)) as (d, ctx):
+        with pytest.raises(Refused) as first:
+            d.invoke("dataset", payload, invocation_id="S" * 8)
+        assert first.value.refusal.code == "kernel-refused"
+        assert first.value.refusal.data["kind"] == "StoreWriteRefused"
+        with pytest.raises(Refused) as again:
+            d.invoke("dataset", payload, invocation_id="S" * 8)
+        assert again.value.refusal == first.value.refusal
+        view = ctx.write_view()
+        assert not any(n.kind == "dataset" and n.title == "expression" for n in view.iter_stored())
