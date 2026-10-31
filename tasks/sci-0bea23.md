@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: perf/test-latency
 created: 2026-10-30T18:00:08Z
-updated: 2026-10-31T20:49:32Z
+updated: 2026-10-31T20:50:22Z
 started: 2026-10-31T18:41:31Z
 depends: []
 tags: [halt, test-latency, testing]
@@ -62,3 +62,4 @@ Process: planned
 - 2026-10-31T20:49:31Z (perf/test-latency): resumed
   provenance: {"harness_session":"claude-code:e1c106c7-398b-4f30-8ca8-d851dbb5e76b","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-31T20:49:32Z (perf/test-latency): review: plan round 1 — verdict: revise; findings: P2 3, P3 1; reviewer: codex/gpt-6.1-sol
+- 2026-10-31T20:50:22Z (perf/test-latency): plan revision 2 at 4254cf3 answers plan round 1: ancestor identity checks + impostor-ancestor test, plugin file snaptime_lineage.py + pilot step, reverse-order snippet under explicit bash, retry test asserts half.txt absent at step entry
