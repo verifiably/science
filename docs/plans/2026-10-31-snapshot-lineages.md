@@ -31,7 +31,7 @@
 1. **A step that raises partway.** The next request for that declaration on the worker builds it again from the base's image. No half-built link is recorded, and no partial image is used. (Task 1: `test_a_failed_step_is_rebuilt_from_its_base`.)
 2. **A live socket left under a lineage directory by an earlier test.** The next construction in that lineage refuses with the socket's path in the message rather than copying over it. (Task 1: `test_a_socket_in_the_lineage_refuses_construction`.)
 3. **Tuple-shaped values** (`late_chain`, `sibling_publications`) through `copy_value` and `check_value`. The copy is a fresh tuple with equal members. (Task 1: `test_copy_value_rebuilds_containers_and_keeps_leaves`.)
-4. **One name under both `snapshot()` and a module-level declaration.** It raises `ValueError` naming the snapshot, whichever came first. (Task 1: `test_a_declaration_reusing_a_root_name_is_refused`.)
+4. **One name under two declarations**, whether through `snapshot()` and a module-level declaration or as an ancestor of a new descendant. It raises `ValueError` naming the snapshot instead of reusing the other world. (Task 1: `test_a_declaration_reusing_a_root_name_is_refused`, `test_a_descendant_of_an_impostor_ancestor_is_refused`.)
 5. **`request.getfixturevalue` mid-test** (`test_cmd_show.py:330` picks `adopted` or `bound_fetched_only`). A single snapshot per test still restores and passes under the guard. (Task 2: covered by the module runs of `test_cmd_show.py`.)
 
 ---
@@ -70,9 +70,9 @@ Behaviour the tests pin (spec §2.1–§2.3):
   - then calls `restore_tree(self.image, self.work)`;
   - then sets `_LIVE[self.work] = self.declaration`.
 - **`materialize`**:
-  - checks identity first: a built name whose declaration `is not` the requested one raises `ValueError` naming the snapshot;
+  - checks identity first, for the requested declaration and every ancestor up to its root. Any of them whose name is built under a declaration that `is not` it raises `ValueError` naming that snapshot. A built ancestor is reused only after its own identity holds;
   - then checks the guard against the lineage directory, before any build or restore;
-  - then, for a `Derived` declaration, builds the missing ancestors top-down, each through `_build_link`.
+  - then, for a `Derived` declaration, builds the missing ancestors top-down, each through `_build_link`, and `_build_link` is looked up as a module global at call time so Task 3's plugin can wrap it.
 - **`_build_link`**:
   - **Root:** `work.mkdir()`, `value = build(work)`.
   - **Derived:** `restore_tree(base_snap.image, lineage_dir)`, then `value = step(lineage_dir, copy_value(base_snap.value))`.
@@ -153,6 +153,15 @@ def test_snapshot_calls_share_one_root_per_name_and_builder(tmp_path):
     with pytest.raises(ValueError, match=name):
         snapshot(tmp_path, name, lambda work: {})
 
+def test_a_descendant_of_an_impostor_ancestor_is_refused(tmp_path):
+    name = uuid.uuid4().hex
+    materialize(tmp_path, Root(name, lambda work: {"which": "a"}))
+    impostor = Root(name, lambda work: {"which": "b"})
+    leaf = Derived(uuid.uuid4().hex, impostor, lambda work, value: value)
+    with pytest.raises(ValueError, match=name):
+        materialize(tmp_path, leaf)
+    assert leaf.name not in snapshot_module._SNAPSHOTS
+
 def test_a_declaration_reusing_a_root_name_is_refused(tmp_path):
     name = uuid.uuid4().hex
     snapshot(tmp_path, name, lambda work: {})
@@ -181,6 +190,7 @@ def test_a_failed_step_is_rebuilt_from_its_base(tmp_path):
     root = Root(uuid.uuid4().hex, lambda work: ((work / "base.txt").write_text("b"), {})[2])
     attempts = []
     def step(work, value):
+        assert not (work / "half.txt").exists()  # each attempt starts from the base's image
         attempts.append(1); (work / "half.txt").write_text("x")
         if len(attempts) == 1:
             raise RuntimeError("step failed")
@@ -306,11 +316,10 @@ Expected: FAIL with `AttributeError: module 'helpers.commons' has no attribute '
 3. The same five, each alone with its test ids reversed:
 
    ```sh
-   mapfile -t ids < <(just test-one <module> --collect-only -q 2>&1 | grep '::' | tac)
-   just test-one "${ids[@]}"
+   bash -c 'mapfile -t ids < <(just test-one "$1" --collect-only -q 2>&1 | grep "::" | tac) && just test-one "${ids[@]}"' _ <module>
    ```
 
-   Collection also goes through the front door. The array keeps parametrized ids that contain spaces whole. Expect all to pass.
+   Run it under explicit `bash`, since `mapfile` does not exist in zsh. Collection also goes through the front door. The array keeps parametrized ids that contain spaces whole. Expect all to pass.
 4. The five combined under worksteal, the order-nondeterministic case (spec §2.5):
 
    ```sh
@@ -336,7 +345,7 @@ git commit -m "test(commons): build each commons snapshot from its base's image 
 ### Task 3: Measure against the baseline and record
 
 **Files:**
-- Create (scratch, attached to the task, not committed): `snaptime-lineage-plugin.py`, an adaptation of the attachment `snaptime-plugin.py` on sci-0bea23
+- Create (scratch, attached to the task, not committed): `$S/snaptime_lineage.py` (the file name is the module name `-p` loads), an adaptation of the attachment `snaptime-plugin.py` on sci-0bea23
 - Modify: `docs/specs/2026-10-31-snapshot-lineages-design.md` status line
 
 **Interfaces:**
@@ -346,7 +355,12 @@ git commit -m "test(commons): build each commons snapshot from its base's image 
 
 In `pytest_sessionstart`, wrap `helpers.snapshot._build_link`. For each call, append `{"w": PYTEST_XDIST_WORKER, "name": declaration.name, "s": seconds}` to `$SNAP_OUT`. Each line is now one link's own cost, and their sum is the worker's build time, comparable to the baseline's sum.
 
-- [ ] **Step 2: Run the full suite under the plugin, on the same host as the 2026-10-31 baseline**
+- [ ] **Step 2: Pilot the plugin on one small module**
+
+Run: `SNAP_OUT=$S/snaps-pilot.jsonl PYTHONPATH=$S just test-one tests/test_cmd_spec.py -p snaptime_lineage -q`
+Expected: the tests pass and `$S/snaps-pilot.jsonl` holds at least one line naming `spec-rig`. If the plugin fails to import or writes nothing, fix it before Step 3.
+
+- [ ] **Step 3: Run the full suite under the plugin, on the same host as the 2026-10-31 baseline**
 
 Run: `SNAP_OUT=$S/snaps-after.jsonl PYTHONPATH=$S just test-one tests -p snaptime_lineage -n auto --dist worksteal -q`
 Expected:
@@ -356,7 +370,7 @@ Expected:
 
 If the total is above 1,000, stop: record the numbers and park the task for the user instead of merging. Note the host load (`cat /proc/loadavg`) beside the result.
 
-- [ ] **Step 3: After-timings for test-fast**
+- [ ] **Step 4: After-timings for test-fast**
 
 Same two runs as Setup step 2, with `TESTMON_DATAFILE=$S/tm-after`:
 - **Cold:** a fresh data file.
@@ -364,13 +378,13 @@ Same two runs as Setup step 2, with `TESTMON_DATAFILE=$S/tm-after`:
 
 Record the wall time and the selected count for each. Expected: a warm selected count above 0.
 
-- [ ] **Step 4: Record the results**
+- [ ] **Step 5: Record the results**
 
 1. `tasks attach sci-0bea23` the plugin and `snaps-after.jsonl`, with captions.
 2. Add one `tasks note` with the before and after figures: build total, worst worker, full-suite wall time, and cold and warm test-fast wall times with their counts.
 3. Set the spec's status line to `implemented <date> on perf/test-latency; latency verify pending`.
 
-- [ ] **Step 5: `just check`, then commit**
+- [ ] **Step 6: `just check`, then commit**
 
 ```bash
 git add docs/specs/2026-10-31-snapshot-lineages-design.md
