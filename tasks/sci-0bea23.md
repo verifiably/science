@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: perf/test-latency
 created: 2026-10-30T18:00:08Z
-updated: 2026-10-31T22:25:27Z
+updated: 2026-10-31T22:25:29Z
 started: 2026-10-31T18:41:31Z
 depends: []
 tags: [halt, test-latency, testing]
@@ -83,3 +83,5 @@ Process: planned
 - 2026-10-31T22:21:56Z (perf/test-latency): rulings and deferred minors for the snapshot-lineages plan are in files:snapshot-lineages-ledger.md (4 execution rulings, 2 final-review re-grades, 5 minor (deferred))
 - 2026-10-31T22:25:25Z (main): retained: {"host":"titan","kind":"worktree","path":".worktrees/test-latency","state":"released","verification":"verified","purpose":"merged into main as f57543a (merged suite 1157 passed in 139 s); ignored files discarded as regenerable (.venv, caches, .testmondata) or attached (ledger, review reports); branch perf/test-latency deleted after ancestry check","next_owner":"none","cleanup_trigger":"none"}
 - 2026-10-31T22:25:27Z (main): merged perf/test-latency into main as f57543a (2026-10-31T22:22:06Z, the tt-latency verify cutoff); merged-result just test 1157 passed in 139.3 s; worktree removed, branch deleted; tt-report run. Halt stays open until tt-latency verify passes on titan.
+- 2026-10-31T22:25:29Z (main): retention checkpoint: observed 2026-10-31T22:25:29Z on titan; basis sci in-tree . 931852b9d3c1a3e7ec23d4e9979af28178c33eea:tasks/sci-0bea23.md; retained by refs/heads/main; this host: kept verified 0, kept unknown 0, released 1; changed 1. No kept items remain on this host. Other hosts retain their own dated observations.
+  provenance: {"harness_session":"claude-code:e1c106c7-398b-4f30-8ca8-d851dbb5e76b","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
