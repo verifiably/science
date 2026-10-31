@@ -34,9 +34,8 @@ class Derived:
 Declaration = Root | Derived
 
 
-def restore_tree(image: Path, target: Path) -> None:
-    """Replace `target` with a copy of `image`, evicting beliefs' per-process registries for it.
-    Records nothing: construction, step-internal and live restores all come through here."""
+def _clear_tree(target: Path) -> None:
+    """Remove `target`, evicting beliefs' per-process registries for it; a live socket under it refuses."""
     from beliefs.corpus import _forget_roots_under
     from beliefs.world.registry import _forget_worlds_under
     from helpers.world import short_socket
@@ -47,6 +46,12 @@ def restore_tree(image: Path, target: Path) -> None:
     _forget_roots_under(target)
     _forget_worlds_under(target)
     shutil.rmtree(target)
+
+
+def restore_tree(image: Path, target: Path) -> None:
+    """Replace `target` with a copy of `image`, evicting beliefs' per-process registries for it.
+    Records nothing: construction, step-internal and live restores all come through here."""
+    _clear_tree(target)
     shutil.copytree(image, target, symlinks=True)
 
 
@@ -126,10 +131,16 @@ def lineage_dir(work_base: Path, declaration: Declaration) -> Path:
 
 
 def _build_link(work_base: Path, declaration: Declaration) -> WorldSnapshot:
-    """Build one link whose base is already built; record it only once its image is complete."""
+    """Build one link whose base is already built; record it only once its image is complete. An unrecorded
+    link's directory or image is what a failed earlier attempt left, never a world in use, so it is removed and
+    the link built again: one failed root build would otherwise fail every later request in its lineage."""
     work = lineage_dir(work_base, declaration)
     image = work_base / f"{declaration.name}.image"
+    if image.exists():
+        shutil.rmtree(image)
     if isinstance(declaration, Root):
+        if work.exists():
+            _clear_tree(work)
         work.mkdir()
         value = declaration.build(work)
     else:

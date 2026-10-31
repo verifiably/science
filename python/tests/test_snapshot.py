@@ -284,3 +284,31 @@ def test_the_commons_chain_is_one_lineage_rooted_at_fresh():
             node = node.base
         assert node is commons.FRESH, leaf.name
     assert isinstance(commons.FRESH_NO_EPOCH, Root)
+
+
+def test_a_failed_root_build_is_retried_from_an_empty_directory(tmp_path):
+    attempts = []
+
+    def build(work):
+        assert list(work.iterdir()) == []  # each attempt starts empty
+        attempts.append(1)
+        (work / "half.txt").write_text("x")
+        if len(attempts) == 1:
+            raise RuntimeError("root build failed")
+        return {}
+    root = Root(uuid.uuid4().hex, build)
+    with pytest.raises(RuntimeError, match="root build failed"):
+        materialize(tmp_path, root)
+    assert root.name not in snapshot_module._SNAPSHOTS
+    snap = materialize(tmp_path, root)
+    assert set(_manifest(snap.image)) == {"half.txt"} and len(attempts) == 2
+
+
+def test_a_leftover_unrecorded_image_is_replaced(tmp_path):
+    root, mid, _ = _chain([])
+    materialize(tmp_path, root)
+    stale = tmp_path / f"{mid.name}.image"  # what a failed image copy leaves
+    stale.mkdir()
+    (stale / "partial.txt").write_text("partial")
+    snap = materialize(tmp_path, mid)
+    assert set(_manifest(snap.image)) == {f"{root.name}.txt", f"{mid.name}.txt"}
