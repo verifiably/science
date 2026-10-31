@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: perf/test-latency
 created: 2026-10-30T18:00:08Z
-updated: 2026-10-31T19:03:59Z
+updated: 2026-10-31T19:04:11Z
 started: 2026-10-31T18:41:31Z
 depends: []
 tags: [halt, test-latency, testing]
@@ -38,4 +38,6 @@ Process: planned
 - 2026-10-31T19:03:44Z (perf/test-latency): attached: snaptime-plugin.py (536 bytes): pytest plugin that logs each first snapshot() build (run: SNAP_OUT=<file> PYTHONPATH=<dir> just test-one tests -p snaptime -n auto --dist worksteal)
 - 2026-10-31T19:03:46Z (perf/test-latency): retained: {"host":"titan","kind":"worktree","path":".worktrees/test-latency","state":"kept","verification":"verified","purpose":"branch perf/test-latency holding the snapshot-lineages spec (ced2be9) and the coming implementation","next_owner":"task:sci-0bea23","cleanup_trigger":"perf/test-latency merged into main and tt-latency verify recorded"}
 - 2026-10-31T19:03:59Z (perf/test-latency): retention checkpoint: observed 2026-10-31T19:03:59Z on titan; basis sci in-tree . d15fecd7fad48f7cc4d870c2df74a0b2539c73ce:tasks/sci-0bea23.md; retained by refs/heads/perf/test-latency; this host: kept verified 1, kept unknown 0, released 0; changed 1. Rechecked all kept/verified items on this host. Other hosts retain their own dated observations. Next: user reviews the spec, then write the plan.
+  provenance: {"harness_session":"claude-code:e1c106c7-398b-4f30-8ca8-d851dbb5e76b","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-31T19:04:11Z (perf/test-latency): parked (waiting on user, review): User reviews docs/specs/2026-10-31-snapshot-lineages-design.md at ced2be9 (branch perf/test-latency, worktree .worktrees/test-latency); on accept, the agent writes the implementation plan
   provenance: {"harness_session":"claude-code:e1c106c7-398b-4f30-8ca8-d851dbb5e76b","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
