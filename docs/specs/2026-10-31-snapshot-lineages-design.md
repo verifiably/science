@@ -1,6 +1,6 @@
 # Snapshot lineages: build each commons world once from its base, not from scratch
 
-Status: draft for review, 2026-10-31, revision 2 (answers spec review round 1: §2.1–§2.5 rewritten). Task `sci-0bea23` (test-latency halt).
+Status: draft for review, 2026-10-31, revision 3 (answers spec review rounds 1 and 2: §2 rewritten, §2.6 added). Task `sci-0bea23` (test-latency halt).
 
 Revises `docs/specs/2026-10-02-world-fixture-snapshots-design.md` (§2.3, §2.4): a snapshot
 may now be derived from another snapshot's image instead of from an empty directory.
@@ -53,32 +53,47 @@ base's directory.
 
 Ancestry has to be known before anything is built: a cold worker whose first test asks
 for `adopted` has never requested `bound`, `published` or `fresh`. So a snapshot is a
-declaration, a module-level object made at import time, and a derived declaration
-holds its base declaration itself, not its base's name:
+declaration, and a derived declaration holds its base declaration itself, not its
+base's name:
 
 - **`Root(name, build)`.** `build(work) -> value`, built in `work_base / name`.
 - **`Derived(name, base, step)`.** `base` is a `Root` or `Derived` object, and
   `step(work, value) -> value`. It builds in its root's directory, which every
-  declaration in the lineage shares.
+  declaration in the lineage shares, and `work` is always that directory.
+
+**Lineage directory.** The root's directory, `work_base / <root name>`. Builders rely on
+`work` being that directory: `build_verified` calls `fixture_bundle(work / "a")`, and
+`build_uid_corruption` calls `build_installation(work, "c")`.
+
+**The step's input.** A copy (§2.2) of the base's value, whatever its shape: a dict for
+most links, and a tuple for `late_chain`, which `late_link` unpacks as
+`value, _, missing, last`. Its result is checked by `check_value`, like any snapshot's
+value.
 
 `materialize(work_base, declaration)` returns the built `WorldSnapshot`. For a `Derived`
 declaration it walks up `base` to the nearest ancestor already built in this process,
 or to the root, and builds each missing link downwards. For each link it:
 
-1. restores the base's image into the shared directory (a construction restore,
+1. restores the base's image into the lineage directory (a construction restore,
    §2.3);
 2. runs `step(work, copy_value(base.value))`;
 3. runs `check_value` on the result;
 4. saves the image as `work_base / f"{name}.image"`.
 
-The existing `snapshot(work_base, name, build)` stays as the call for single-level
-roots: it is `materialize(work_base, Root(name, build))`, keeping today's identity
-check that a name is built by one builder.
+`WorldSnapshot` becomes `(work, image, value, declaration)`. Here `work` is the lineage
+directory, and `declaration` takes the place of today's `build` field.
 
-A name stays one identity (2026-10-02 §2.3). `_SNAPSHOTS` keeps the declaration each
-name was built from, and a request carrying a different declaration object under a
-built name raises, as a different builder does today. Declarations are compared by
-identity, so each is declared exactly once at module level.
+**Identity**, per kind of declaration:
+
+- **Module-level declarations** (the commons chain, §2.4) compare by object identity.
+  Each is made exactly once, at import, and `_SNAPSHOTS` keeps the declaration each
+  name was built from. A request carrying a different declaration object under a
+  built name raises.
+- **`snapshot(work_base, name, build)`** stays the call for the single-level roots
+  that several modules share (`shared-with-evidence`, `verify-rig`, `snapshot-check`).
+  It memoizes one `Root(name, build)` per name. A later call with the same `build`
+  gets the same `Root`, and a call with a different `build` raises, which is today's
+  rule. So repeated calls never manufacture distinct declarations.
 
 The cost of a snapshot on a worker becomes its own step, plus each ancestor step that
 worker has not yet built. The cost of the whole prefix is no longer paid again.
@@ -93,7 +108,9 @@ A step must never change its base's cached value, and the base's value holds
 `copy_value(value)` therefore follows the shapes `check_value` admits (2026-10-02
 §2.4a):
 
-- it rebuilds every `dict`, `list` and `tuple`;
+- it rebuilds every value whose type is exactly `dict`, `list` or `tuple`, and raises
+  on a subclass, such as a namedtuple, rather than changing its type. No current value
+  holds one;
 - it returns every leaf (`ScienceConfig`, `Path`, `str`, `int`, `bool`, `None`) as the
   same object. These leaves are immutable: `ScienceConfig` is a frozen dataclass,
   trusted whole as `check_value` already trusts it.
@@ -101,76 +118,167 @@ A step must never change its base's cached value, and the base's value holds
 A step that changes an installation replaces the leaf (`value["a"] = reopen(value["a"])`)
 rather than mutating it, which the frozen dataclass enforces.
 
-### 2.3 Construction restores and the live-world guard are separate
+Fixtures hand tests `copy_value(snap.value)`, never the cached container. Today
+`fresh_value` and `test_cmd_adopt.py`'s `uid_corruption` hand over the cached dict
+itself. Under lineages, a test that mutated a root's cached value would corrupt every
+descendant built after it on that worker.
+
+### 2.3 Three kinds of restore, kept apart
 
 Snapshots in one lineage now share a directory, so a test that used two of them would
-silently get the second over the first. No test requests two snapshots from one lineage
-today. The only multi-snapshot tests are three `test_cmd_provider.py` cases that use
-`published` and `world`, which are different roots.
+silently get the second over the first. No test uses two snapshots at all today. This
+was checked by scanning every test and fixture signature, plus every
+`getfixturevalue` call: the `test_cmd_provider.py` case that looked like one
+parametrizes `world` as an argument, not a fixture.
 
-Two kinds of restore therefore exist, kept apart:
+All three kinds go through one plain function, `restore_tree(image, target)`:
 
-- **Construction restore.** Inside `materialize`, restoring a base's image to build the
-  next link. It is internal and records nothing.
-- **Live restore.** `WorldSnapshot.restore()`, called by a fixture or test to use a
-  world. It records `(lineage directory → declaration)` in a per-test live record. An
-  autouse fixture in `conftest.py` clears that record at teardown.
+- it refuses a live socket under `target`;
+- it evicts beliefs' registries for `target`;
+- it replaces `target` with a copy of `image`.
 
-`materialize` checks the live record first, before any build or restore. If the lineage
-directory already holds a live world of a different declaration in this test, it
-raises, naming both, and leaves the directory and the image set untouched. Without that
-check, a lazy build would replace the live world before any restore could object.
-`restore()` repeats the same check. Requesting and restoring the same declaration again
-within one test is allowed.
+It records nothing.
+
+- **Construction restore.** Inside `materialize`: `restore_tree(base.image, lineage)`
+  before each step.
+- **Step-internal restore.** A step's own save-and-restore of a subdirectory.
+  `_build_sibling_publications` forks A's home and later puts it back. The `fork` and
+  `restore` helpers in `commons.py` call `restore_tree(copy, home)` directly and no
+  longer build a `WorldSnapshot`.
+- **Live restore.** `WorldSnapshot.restore()`, called by a fixture or test to use a world.
+  It calls `restore_tree(self.image, self.work)`, then records
+  `self.work → self.declaration` in a per-test live record. Keys are lineage
+  directories compared by path equality, never by containment. An autouse fixture in
+  `conftest.py` clears that record at teardown.
+
+**The guard.** `materialize` checks the live record before any build or restore. If
+the lineage directory is already recorded under a different declaration in this test,
+it raises, naming both, and leaves the directory and the image set untouched. Without
+that check, a lazy build would replace the live world before any restore could
+object. `WorldSnapshot.restore()` makes the same check before restoring. Requesting
+and restoring the same declaration again within one test is allowed.
 
 ### 2.4 The builders that become steps
 
-Each commons builder that starts with `value = build_<base>(work)` becomes a `Derived`
-declaration:
+Each commons chain builder opens by building its base: `value = build_<base>(work)` in
+the 1a builders, `value = base(work)` in the kept/unkept helpers, and
+`value, _, missing, last = build_late_chain(work)` in `build_late_link`. Each becomes a
+module-level `Derived` declaration:
 
-- its step is the code after that line;
+- its step is the code after that opening, receiving the base's value as described
+  in §2.1;
 - its base is the declaration of the builder it called.
 
-Root declarations are `build_fresh` and `build_fresh_no_epoch`. Kept and unkept pairs
-share one step function in two declarations with different bases. Covered:
+**Roots.** `build_fresh` and `build_fresh_no_epoch`.
 
-- every `build_X` in `tests/helpers/commons.py`, including `build_conflicting`,
-  `build_content_conflict`, `build_uid_corruption`, `build_late_*`, `build_equal_holders`,
-  `build_spec_drop` and `build_spec_only`;
-- `build_bound_fetched_only` in `tests/test_cmd_adopt.py`, which calls `build_bound(work)`
-  directly today. It becomes a `Derived` declaration on the `bound` declaration, in that
-  module.
+**Shared steps.** A shared helper becomes one step function in several declarations
+with different bases:
+
+- the kept/unkept pairs;
+- `_build_late_chain`, under `late_chain` (base `overlapping_unkept`) and
+  `late_chain_unadopted` (base `bound`).
+
+**Covered:**
+
+- every snapshot builder in `tests/helpers/commons.py`: the chain from `build_published`
+  to `build_b_updated*` and `build_sibling_publications*`, plus `build_conflicting`,
+  `build_content_conflict`, `build_uid_corruption`, `build_late_*`,
+  `build_equal_holders`, `build_spec_drop` and `build_spec_only`;
+- `build_bound_fetched_only` in `tests/test_cmd_adopt.py`, which calls
+  `build_bound(work)` directly today. It becomes a `Derived` declaration on the `bound`
+  declaration, in that module.
+
+**Not covered.** `build_installation(work, name, *, hold_vocabulary)` is not a snapshot
+builder: test bodies call it directly, and it stays as it is.
 
 The fixtures in `conftest.py` and the three direct `snapshot()` calls in
-`test_cmd_adopt.py` call `materialize` with the declaration. No test calls a commons
-builder outside `snapshot()` (checked 2026-10-31), so no composite full-chain builder is
-kept.
+`test_cmd_adopt.py` call `materialize` with the declaration. No test calls a chain
+builder outside `snapshot()` (checked 2026-10-31), so no composite full-chain builder
+is kept.
 
-The other lineages are independent roots with a single level, and they stay on
-`snapshot(work_base, name, build)`: `walked-*`, `shared-with-evidence`, `verify-rig`,
-`spec-rig`, `two-corpus-walked`, `rig`, `world`, `shared` and `two_corpora`.
+**Other snapshots stay on `snapshot(work_base, name, build)` unchanged:**
 
-### 2.5 Acceptance by measurement
+- `walked-confined`, `walked-portable`, `shared-with-evidence`, `verify-rig`,
+  `spec-rig`, `snapshot-check`, `two-corpus` and `two-corpus-walked`.
+- `two-corpus-walked` is itself two levels deep: its builder calls the `two-corpus`
+  builder. Converting it is possible, but it is left out of this branch because its
+  measured cost is 19 s across one build.
 
-- The suite passes. The snapshot timing plugin, adapted to `materialize`, reruns on
-  the same host, and the plan records its totals beside the 2026-10-31 baseline. The
-  projection from that baseline's per-worker build sets: total build time 1,591 s →
+### 2.5 Acceptance
+
+**Measurement.** The snapshot timing plugin, adapted to `materialize`, reruns the
+full suite on the same host, and the plan records the totals beside the 2026-10-31
+baseline:
+
+- Projection from the baseline's per-worker build sets: total build time 1,591 s →
   about 845 s, worst worker 149 s → about 95 s.
-- `test_snapshot.py` gains cases, each with declarations of its own so that
-  `_SNAPSHOTS` state from other tests cannot satisfy them:
-  - **Cold deep descendant.** In a process with none of its ancestors built,
-    requesting a declaration three links deep first builds every ancestor once, in
-    order. A later request for an ancestor reuses its image without building it again.
-  - **Construction restores.** A derived build restores its base's image before its
-    step runs. Those restores do not enter the live record, so the fixture's following
-    live restore succeeds.
-  - **Copy.** `copy_value` on a real commons value (with `ScienceConfig` leaves)
-    succeeds. A step that rebinds or mutates containers in its copy leaves the base's
-    cached value equal to what it was.
-  - **Identity.** A different declaration object under a built name raises.
-  - **Live-world refusal.** After a live restore of one declaration, requesting another
-    declaration from the same lineage raises before building anything. The lineage
-    directory's file manifest and the set of images are byte-for-byte unchanged.
+- Threshold: a total above 1,000 s means the lineages did not remove the duplicated
+  prefixes as designed. The implementation stops and reports instead of merging.
+- `test-fast` is measured too: one run with a fresh testmon data file (every test
+  selected) and one after touching a single test module. Both run before and after,
+  on the same host, through `just test-fast` with `TESTMON_DATAFILE` pointed at
+  scratch. These figures inform the closure route in §4. The halt's own gate is
+  `tt-latency verify`.
+
+**Isolation.** Under worksteal, an ancestor built early and a test that dirtied the
+lineage directory since then happen in a nondeterministic order. As 2026-10-02 §4.2
+required for its modules, each of these modules passes run serially and with its
+test ids reversed:
+
+- `test_commons_1a.py`;
+- `test_commons_1b.py`;
+- `test_cmd_adopt.py`;
+- `test_cmd_show.py`;
+- `test_publish_ownership.py`.
+
+All five use `just test-one`, alone and in one combined run.
+
+**Unit cases.** `test_snapshot.py` gains these cases. Each uses declarations of its own,
+so `_SNAPSHOTS` state from other tests cannot satisfy them:
+
+- **Cold deep descendant.** In a process with none of its ancestors built, requesting
+  a declaration three links deep first builds every ancestor once, in order. A later
+  request for an ancestor reuses its image without building it again.
+- **Construction from a dirtied directory.** After a live restore of the base, the
+  test writes and deletes files in the lineage directory. A request for a derived
+  declaration (in a fresh test, after the live record is cleared) then builds from
+  the base's image. Its step sees exactly the base's files.
+- **Construction restores record nothing.** The fixture's live restore that follows a
+  lazy build succeeds.
+- **Step-internal restores record nothing.** A step that forks and restores a
+  subdirectory leaves the live record empty.
+- **Copy.** `copy_value` on a real commons value (with `ScienceConfig` leaves)
+  succeeds. A step that rebinds or mutates containers in its copy leaves the base's
+  cached value equal to what it was. A namedtuple raises.
+- **Identity.**
+  - A different declaration object under a built name raises.
+  - Two `snapshot()` calls with the same name and builder share one `Root`; a
+    different builder raises.
+- **Live-world refusal, request half.** After a live restore of one declaration,
+  requesting another from the same lineage raises before building anything. The
+  lineage directory's file manifest and the set of images are byte-for-byte
+  unchanged.
+- **Live-world refusal, restore half.** After a live restore of one declaration,
+  `restore()` of another declaration of the same lineage that is already built
+  raises. The directory is unchanged.
+
+### 2.6 Limitations
+
+- **One directory for a whole lineage.** Different snapshots of a lineage now share
+  absolute paths, so per-process state keyed by path can outlive a restore that
+  swaps one snapshot's files for another's:
+  - `STORE_IDS[lineage/c]` is written both by `build_uid_corruption` and by the
+    `test_commons_1b.py` test that calls `build_installation(…, "c")`. No current
+    caller of `hold_fixture_dataset` reads `c`.
+  - A test that leaves a live socket under the lineage directory now blocks every
+    later construction in that lineage on its worker, not one snapshot. The refusal
+    names the socket.
+- **Lower testmon precision.** testmon attributes a fixture's setup coverage to the test
+  that ran it. An ancestor's step now runs only in the first test on each worker that
+  needs it, so later descendants record no dependency on that step's code or the
+  production code it exercises, and a change there selects fewer tests. Reused
+  snapshots already had this gap, and the full suite at pre-push still covers it.
+  The lineages widen it for test-fast.
 
 ## 3. Rejected
 
