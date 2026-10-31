@@ -2,11 +2,11 @@
 id: sci-ba7150
 title: "quarry: domain layers (core, biology, …) over scientific resources, with one CLI and skills"
 status: doing
-priority: 2
+priority: 1
 process: planned
 owner: main
 created: 2026-10-10T16:34:30Z
-updated: 2026-10-11T09:06:33Z
+updated: 2026-10-31T08:42:19Z
 started: 2026-10-10T17:12:51Z
 depends: [quarry-3f4c3b, quarry-06c10c]
 tags: []
