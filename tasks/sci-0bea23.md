@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: perf/test-latency
 created: 2026-10-30T18:00:08Z
-updated: 2026-10-31T19:03:13Z
+updated: 2026-10-31T19:03:16Z
 started: 2026-10-31T18:41:31Z
 depends: []
 tags: [halt, test-latency, testing]
@@ -33,3 +33,4 @@ Process: planned
   provenance: {"harness_session":"claude-code:e1c106c7-398b-4f30-8ca8-d851dbb5e76b","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-31T18:42:27Z (perf/test-latency): resumed
   provenance: {"harness_session":"claude-code:e1c106c7-398b-4f30-8ca8-d851dbb5e76b","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-31T19:03:16Z (perf/test-latency): diagnosis 2026-10-31 (titan, c701049): full suite 1140 tests 179-195 s; 82 per-worker snapshot builds sum 1591 s (53-149 s/worker) because each commons builder rebuilds its whole prefix chain; testmon ~1.5x per test; one profiled test 84 s, 76 s building sibling_publications, ~40 s in atoms chain decode/validate. Filed atoms-eaadf0 (decode memo). sysmon coverage core rejected (no dynamic contexts). Spec: docs/specs/2026-10-31-snapshot-lineages-design.md at ced2be9 in worktree .worktrees/test-latency (branch perf/test-latency).
