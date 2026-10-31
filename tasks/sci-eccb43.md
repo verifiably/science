@@ -1,18 +1,21 @@
 ---
 id: sci-eccb43
 title: "dataset: StoreWriteRefused escapes as internal-error and leaves the invocation unclosed"
-status: doing
+status: done
 priority: 2
 size: s
 complexity: mid
 process: direct
 owner: fix/store-write-refused
 created: 2026-10-30T19:15:45Z
-updated: 2026-10-31T18:28:46Z
+updated: 2026-10-31T18:28:56Z
 started: 2026-10-31T18:21:54Z
+completed: 2026-10-31T18:28:56Z
+closed: 2026-10-31T18:28:56Z
 depends: []
 tags: [holdings]
 source: mm-62e2da
+model: claude-opus-5-5
 agent: claude-code/claude-opus-5-5
 origin: mixed
 ---
@@ -33,3 +36,7 @@ Same class as the uncaught RuleNotHeld found under sci-0d00d2. Observed in invoc
 - 2026-10-31T18:23:00Z (fix/store-write-refused): resumed
   provenance: {"harness_session":"claude-code:2d4f1b44-70f6-4dcf-877c-e39755156302","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-31T18:28:46Z (fix/store-write-refused): decision: StoreWriteRefused joins KERNEL_REFUSALS and closes refused, not _close_acted. The holdings intent append is not a session act (only publish_fulfilling records one), so invocation_acts is empty at the refusal; beliefs' acquire treats the error as a routine stop too. Fix 868808f on fix/store-write-refused; RED->GREEN via tests/test_cmd_dataset.py::test_a_store_refused_write_closes_refused_and_replays against a restored read-only-serviceable store.
+- 2026-10-31T18:28:56Z (fix/store-write-refused): done
+  provenance: {"harness_session":"claude-code:2d4f1b44-70f6-4dcf-877c-e39755156302","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-31T18:28:56Z (fix/store-write-refused): StoreWriteRefused now closes refused (kernel-refused, kind StoreWriteRefused) and replays; 868808f. Verification: focused RED->GREEN on the new dataset test; 69 passed over test_cmd_dataset, test_dispatch_refusals, test_write_dispatch, test_dispatch_sharing; pre-commit test-fast green. Baseline just test at creation: 2 failed, 1137 passed; both failures pass alone on main and the branch, filed as sci-56d9ce. Follow-up sci-62e5aa (kernel refusal after a published act). Disclosures: nothing pushed; merged locally into main; worktree .worktrees/store-write-refused removed after merge (ignored entries: venv/caches, regenerable); no surviving processes; no host pointers repointed.
+  provenance: {"harness_session":"claude-code:2d4f1b44-70f6-4dcf-877c-e39755156302","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
