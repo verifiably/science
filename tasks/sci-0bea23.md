@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: perf/test-latency
 created: 2026-10-30T18:00:08Z
-updated: 2026-10-31T20:15:32Z
+updated: 2026-10-31T20:16:53Z
 started: 2026-10-31T18:41:31Z
 depends: []
 tags: [halt, test-latency, testing]
@@ -45,3 +45,4 @@ Process: planned
   provenance: {"harness_session":"claude-code:e1c106c7-398b-4f30-8ca8-d851dbb5e76b","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-31T20:04:26Z (perf/test-latency): review: spec round 1 — verdict: revise; findings: P1 3, P2 1; reviewer: codex/gpt-6.1-sol
 - 2026-10-31T20:15:32Z (perf/test-latency): review: spec round 2 — verdict: revise; findings: P2 3, P3 9; reviewer: claude-code/claude-opus-5-5
+- 2026-10-31T20:16:53Z (perf/test-latency): spec revision 3 at 0471907 answers round 1 (codex: copy_value for mappingproxy leaves, declaration objects for ancestry, construction vs live restores, build_bound_fetched_only) and round 2 (self: restore_tree for step-internal restores, per-kind identity, isolation runs, P3s incl. limitations §2.6)
