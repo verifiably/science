@@ -6,9 +6,9 @@ priority: 0
 size: m
 complexity: high
 process: planned
-owner: main
+owner: perf/test-latency
 created: 2026-10-30T18:00:08Z
-updated: 2026-10-31T18:41:31Z
+updated: 2026-10-31T18:42:27Z
 started: 2026-10-31T18:41:31Z
 depends: []
 tags: [halt, test-latency, testing]
@@ -29,4 +29,6 @@ Process: planned
 - 2026-10-30T23:26:25Z (sci-300dab-stores): halt override: attempted sci-e5d803 by 01a18e58-0cdf-75c2-bf7d-f4ac22417069: Execute approved readable-stores plan despite open timing halt sci-0bea23
 - 2026-10-31T18:21:54Z (main): halt override: attempted sci-eccb43 by 2d4f1b44-70f6-4dcf-877c-e39755156302: User explicitly requested sci-eccb43 despite open test-latency halt sci-0bea23
 - 2026-10-31T18:41:31Z (main): started
+  provenance: {"harness_session":"claude-code:e1c106c7-398b-4f30-8ca8-d851dbb5e76b","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-31T18:42:27Z (perf/test-latency): resumed
   provenance: {"harness_session":"claude-code:e1c106c7-398b-4f30-8ca8-d851dbb5e76b","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
