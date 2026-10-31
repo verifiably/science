@@ -1,6 +1,6 @@
 # Snapshot lineages: build each commons world once from its base, not from scratch
 
-Status: draft for review, 2026-10-31. Task `sci-0bea23` (test-latency halt).
+Status: draft for review, 2026-10-31, revision 2 (answers spec review round 1: §2.1–§2.5 rewritten). Task `sci-0bea23` (test-latency halt).
 
 Revises `docs/specs/2026-10-02-world-fixture-snapshots-design.md` (§2.3, §2.4): a snapshot
 may now be derived from another snapshot's image instead of from an empty directory.
@@ -45,71 +45,132 @@ their prefixes again inside every snapshot.
 
 ## 2. Decisions
 
-### 2.1 A snapshot may derive from a base snapshot in the same lineage directory
+### 2.1 Snapshots are declared objects; a derived one holds its base
 
 A world records its absolute path (2026-10-02 §2.1), so an image cannot be restored
 anywhere but the directory it was built in. A derived snapshot therefore builds in its
-base's directory:
+base's directory.
 
-- **Root snapshot.** Unchanged: `snapshot(work_base, name, build)` builds in
-  `work_base / name`.
-- **Derived snapshot.** `snapshot(work_base, name, step, base=<base name>)`. Its
-  directory is its root's directory. To build it, `snapshot()` first makes sure the
-  base exists, then restores the base's image into the shared directory, then runs
-  `step(work, value)` on a deep copy of the base's value. The image is saved as
-  `work_base / f"{name}.image"`.
-- **Restore.** Unchanged: a derived snapshot's restore replaces the shared directory
-  with its own image.
+Ancestry has to be known before anything is built: a cold worker whose first test asks
+for `adopted` has never requested `bound`, `published` or `fresh`. So a snapshot is a
+declaration, a module-level object made at import time, and a derived declaration
+holds its base declaration itself, not its base's name:
+
+- **`Root(name, build)`.** `build(work) -> value`, built in `work_base / name`.
+- **`Derived(name, base, step)`.** `base` is a `Root` or `Derived` object, and
+  `step(work, value) -> value`. It builds in its root's directory, which every
+  declaration in the lineage shares.
+
+`materialize(work_base, declaration)` returns the built `WorldSnapshot`. For a `Derived`
+declaration it walks up `base` to the nearest ancestor already built in this process,
+or to the root, and builds each missing link downwards. For each link it:
+
+1. restores the base's image into the shared directory (a construction restore,
+   §2.3);
+2. runs `step(work, copy_value(base.value))`;
+3. runs `check_value` on the result;
+4. saves the image as `work_base / f"{name}.image"`.
+
+The existing `snapshot(work_base, name, build)` stays as the call for single-level
+roots: it is `materialize(work_base, Root(name, build))`, keeping today's identity
+check that a name is built by one builder.
+
+A name stays one identity (2026-10-02 §2.3). `_SNAPSHOTS` keeps the declaration each
+name was built from, and a request carrying a different declaration object under a
+built name raises, as a different builder does today. Declarations are compared by
+identity, so each is declared exactly once at module level.
 
 The cost of a snapshot on a worker becomes its own step, plus each ancestor step that
 worker has not yet built. The cost of the whole prefix is no longer paid again.
 
-The `base` argument names a snapshot rather than a builder function. A name stays one
-identity (2026-10-02 §2.3): asking for a name with a different step or base raises, as
-a different builder does today.
+### 2.2 Copying a value: rebuild the containers, share the leaves
 
-### 2.2 The commons builders become steps
+A step must never change its base's cached value, and the base's value holds
+`ScienceConfig` objects. `copy.deepcopy` cannot copy those: their compiled
+`ProfileSpec` holds `mappingproxy` views, and deepcopy raises
+`TypeError: cannot pickle 'mappingproxy' object`.
 
-Each `build_X` in `tests/helpers/commons.py` that starts with `value = build_<base>(work)`
-splits in two:
+`copy_value(value)` therefore follows the shapes `check_value` admits (2026-10-02
+§2.4a):
 
-- the step: the code after that line, taking `(work, value)`;
-- the base name.
+- it rebuilds every `dict`, `list` and `tuple`;
+- it returns every leaf (`ScienceConfig`, `Path`, `str`, `int`, `bool`, `None`) as the
+  same object. These leaves are immutable: `ScienceConfig` is a frozen dataclass,
+  trusted whole as `check_value` already trusts it.
 
-The shared `_build_X(work, *, base=…)` helpers keep their kept/unkept pairs as two
-registrations of the same step with different bases. Fixtures in `conftest.py` and the
-three direct `snapshot()` calls in `test_cmd_adopt.py` pass the base name. No test calls
-a commons builder outside `snapshot()` (checked 2026-10-31), so no composite full-chain
-builder is kept.
+A step that changes an installation replaces the leaf (`value["a"] = reopen(value["a"])`)
+rather than mutating it, which the frozen dataclass enforces.
 
-Builders that already copy in-process values (`{**value, "b": b}`, `value["a"] = reopen(…)`)
-receive their own deep copy, so a step can never change its base's cached value.
+### 2.3 Construction restores and the live-world guard are separate
 
-The other lineages are independent roots with a single level, and they stay as they are:
-`walked-*`, `shared-with-evidence`, `verify-rig`, `spec-rig`, `two-corpus-walked`, `rig`,
-`world`, `shared` and `two_corpora`.
+Snapshots in one lineage now share a directory, so a test that used two of them would
+silently get the second over the first. No test requests two snapshots from one lineage
+today. The only multi-snapshot tests are three `test_cmd_provider.py` cases that use
+`published` and `world`, which are different roots.
 
-### 2.3 One live snapshot per lineage per test, enforced
+Two kinds of restore therefore exist, kept apart:
 
-Snapshots in one lineage now share a directory, so a test that restored two of them would
-silently get the second over the first. No test requests two snapshot fixtures from one
-lineage today. The only multi-snapshot tests are three `test_cmd_provider.py` cases that
-use `published` and `world`, which are different roots. `restore()` records the name it
-restored per lineage directory, and an autouse fixture clears that record between tests.
-A second restore of a different name in the same directory within one test raises,
-naming both snapshots.
+- **Construction restore.** Inside `materialize`, restoring a base's image to build the
+  next link. It is internal and records nothing.
+- **Live restore.** `WorldSnapshot.restore()`, called by a fixture or test to use a
+  world. It records `(lineage directory → declaration)` in a per-test live record. An
+  autouse fixture in `conftest.py` clears that record at teardown.
 
-### 2.4 Acceptance by measurement
+`materialize` checks the live record first, before any build or restore. If the lineage
+directory already holds a live world of a different declaration in this test, it
+raises, naming both, and leaves the directory and the image set untouched. Without that
+check, a lazy build would replace the live world before any restore could object.
+`restore()` repeats the same check. Requesting and restoring the same declaration again
+within one test is allowed.
 
-- The suite passes. The snapshot timing plugin reruns on the same host, and the plan
-  records its totals beside the 2026-10-31 baseline. The projection from that baseline's
-  per-worker build sets: total build time 1,591 s → about 845 s, worst worker
-  149 s → about 95 s.
-- `test_snapshot.py` gains derived-snapshot cases:
-  - a derived build restores its base's image first;
-  - a step mutating its value does not reach the base's cached value;
-  - a name re-registered with another base raises;
-  - two restores from one lineage in one test raise.
+### 2.4 The builders that become steps
+
+Each commons builder that starts with `value = build_<base>(work)` becomes a `Derived`
+declaration:
+
+- its step is the code after that line;
+- its base is the declaration of the builder it called.
+
+Root declarations are `build_fresh` and `build_fresh_no_epoch`. Kept and unkept pairs
+share one step function in two declarations with different bases. Covered:
+
+- every `build_X` in `tests/helpers/commons.py`, including `build_conflicting`,
+  `build_content_conflict`, `build_uid_corruption`, `build_late_*`, `build_equal_holders`,
+  `build_spec_drop` and `build_spec_only`;
+- `build_bound_fetched_only` in `tests/test_cmd_adopt.py`, which calls `build_bound(work)`
+  directly today. It becomes a `Derived` declaration on the `bound` declaration, in that
+  module.
+
+The fixtures in `conftest.py` and the three direct `snapshot()` calls in
+`test_cmd_adopt.py` call `materialize` with the declaration. No test calls a commons
+builder outside `snapshot()` (checked 2026-10-31), so no composite full-chain builder is
+kept.
+
+The other lineages are independent roots with a single level, and they stay on
+`snapshot(work_base, name, build)`: `walked-*`, `shared-with-evidence`, `verify-rig`,
+`spec-rig`, `two-corpus-walked`, `rig`, `world`, `shared` and `two_corpora`.
+
+### 2.5 Acceptance by measurement
+
+- The suite passes. The snapshot timing plugin, adapted to `materialize`, reruns on
+  the same host, and the plan records its totals beside the 2026-10-31 baseline. The
+  projection from that baseline's per-worker build sets: total build time 1,591 s →
+  about 845 s, worst worker 149 s → about 95 s.
+- `test_snapshot.py` gains cases, each with declarations of its own so that
+  `_SNAPSHOTS` state from other tests cannot satisfy them:
+  - **Cold deep descendant.** In a process with none of its ancestors built,
+    requesting a declaration three links deep first builds every ancestor once, in
+    order. A later request for an ancestor reuses its image without building it again.
+  - **Construction restores.** A derived build restores its base's image before its
+    step runs. Those restores do not enter the live record, so the fixture's following
+    live restore succeeds.
+  - **Copy.** `copy_value` on a real commons value (with `ScienceConfig` leaves)
+    succeeds. A step that rebinds or mutates containers in its copy leaves the base's
+    cached value equal to what it was.
+  - **Identity.** A different declaration object under a built name raises.
+  - **Live-world refusal.** After a live restore of one declaration, requesting another
+    declaration from the same lineage raises before building anything. The lineage
+    directory's file manifest and the set of images are byte-for-byte unchanged.
 
 ## 3. Rejected
 
