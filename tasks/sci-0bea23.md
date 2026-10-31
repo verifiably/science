@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: perf/test-latency
 created: 2026-10-30T18:00:08Z
-updated: 2026-10-31T20:31:05Z
+updated: 2026-10-31T20:31:07Z
 started: 2026-10-31T18:41:31Z
 depends: []
 tags: [halt, test-latency, testing]
@@ -56,4 +56,6 @@ Process: planned
 - 2026-10-31T20:27:10Z (perf/test-latency): review: spec round 3 — verdict: accept; findings: P3 1; reviewer: codex/gpt-6.1-sol
 - 2026-10-31T20:27:11Z (perf/test-latency): spec revision 3 (0471907) accepted for planning by Keith 2026-10-31; P3 carried into the plan: the warm test-fast benchmark uses a temporary executable-code change in one test module and records the selected count
 - 2026-10-31T20:31:05Z (perf/test-latency): retention checkpoint: observed 2026-10-31T20:31:05Z on titan; basis sci in-tree . 1a7f718b07c5fe998994ee75d24ee4eb6dc3a122:tasks/sci-0bea23.md; retained by refs/heads/perf/test-latency; this host: kept verified 1, kept unknown 0, released 0; changed 0. Rechecked all kept/verified items on this host. Other hosts retain their own dated observations. Next: plan review.
+  provenance: {"harness_session":"claude-code:e1c106c7-398b-4f30-8ca8-d851dbb5e76b","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-31T20:31:07Z (perf/test-latency): parked (waiting on user, review): User reviews docs/plans/2026-10-31-snapshot-lineages.md at dc48b68 (perf/test-latency, .worktrees/test-latency); on accept, the agent runs Setup then steps sci-6ef17c, sci-f84065, sci-1a9c25
   provenance: {"harness_session":"claude-code:e1c106c7-398b-4f30-8ca8-d851dbb5e76b","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
