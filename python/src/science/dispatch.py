@@ -7,7 +7,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 
 from beliefs.errors import (AddressMapConflict, BuildContended, CitationContractMismatch,
-                            WriteRefused)
+                            StoreWriteRefused, WriteRefused)
 from beliefs.permit import PermitExceeded
 from beliefs.session import KernelRefusalValue
 
@@ -21,8 +21,11 @@ from science.schema import Declaration
 
 # Every kernel refusal a write handler may raise; each write class closes them
 # through `science.refusal.kernel_refusal`, the one normalization path.
+# StoreWriteRefused follows a holdings intent append, but an intent is not an
+# act: nothing published, so the invocation closes refused like any other.
 KERNEL_REFUSALS = (PermitExceeded, KernelRefusalValue, WriteRefused,
-                   CitationContractMismatch, AddressMapConflict, BuildContended)
+                   CitationContractMismatch, AddressMapConflict, BuildContended,
+                   StoreWriteRefused)
 
 
 class HandlerContractViolation(RuntimeError):
