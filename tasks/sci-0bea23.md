@@ -1,18 +1,21 @@
 ---
 id: sci-0bea23
 title: "Test latency over limit: test-fast 142.736 s against 90 s"
-status: doing
+status: done
 priority: 0
 size: m
 complexity: high
 process: planned
 owner: main
 created: 2026-10-30T18:00:08Z
-updated: 2026-11-01T08:39:45Z
+updated: 2026-11-01T08:40:05Z
 started: 2026-10-31T18:41:31Z
+completed: 2026-11-01T08:40:05Z
+closed: 2026-11-01T08:40:05Z
 depends: []
 tags: [halt, test-latency, testing]
 source: "tt-latency:titan:2026-10-30T18:00:00Z"
+model: claude-opus-5-5
 spec: docs/specs/2026-10-31-snapshot-lineages-design.md
 plan: docs/plans/2026-10-31-snapshot-lineages.md
 ---
@@ -97,3 +100,7 @@ Process: planned
   provenance: {"harness_session":"claude-code:80afb3b7-ff22-4d16-b8f4-64e3e566d8d3","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-11-01T08:39:35Z (main): verified: titan after 2026-10-31T22:22:06Z: test-fast median 71.383 s, limit 90 s, 4 runs
 - 2026-11-01T08:39:45Z (main): attached: verify-titan.txt (214 bytes): verified: every obligation is met (titan test-fast median 71.383 s, 4 runs, limit 90 s, after 2026-10-31T22:22:06Z)
+- 2026-11-01T08:40:05Z (main): done
+  provenance: {"harness_session":"claude-code:80afb3b7-ff22-4d16-b8f4-64e3e566d8d3","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-11-01T08:40:05Z (main): tt-latency verify exit 0: verified: every obligation is met (titan test-fast median 71.383 s, 4 runs, limit 90 s); cutoff 2026-10-31T22:22:06Z; output in files:verify-titan.txt; no retained items remain; session left no processes
+  provenance: {"harness_session":"claude-code:80afb3b7-ff22-4d16-b8f4-64e3e566d8d3","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
