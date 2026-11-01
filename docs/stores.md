@@ -111,13 +111,13 @@ needs the person's authorization first.
    write: …`, and replaying that invocation by its id returns the same
    refusal. The holdings reduction lists it among its blocked rows; no
    science command lists blocked rows by itself. A dataset read names it
-   (`<address> is blocked at (<locations>): <reasons>`, the locations
-   quoted as a tuple) only once the location also has an observation
-   matching the dataset's declared digest; after a first write refused with
-   no observation, the read reports the dataset not held instead. The
+   (`<address> is blocked (<reasons>) at:` followed by one location per
+   line) only once the location also has an observation matching the
+   dataset's declared digest; after a first write refused with no
+   observation, the read reports the dataset not held instead. The
    location's spelling is `store:<store id>:<relative path>`; give it to
-   `recheck` without the tuple's quotes and parentheses and with nothing
-   else added or trimmed.
+   `recheck` exactly as either message prints it, with nothing added or
+   trimmed.
 2. When the location's store is the current `store_root`, for instance before
    relocating, run `science recheck --location <location>` with the working
    configuration.

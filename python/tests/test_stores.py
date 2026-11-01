@@ -332,6 +332,8 @@ def test_blocked_digest_is_not_rescued_by_fresh_store(relocated_store, monkeypat
         ReadContext.open(cfg).held_path(address)
     assert caught.value.refusal.code == "invalid-input"
     assert "blocked" in caught.value.refusal.message
+    # Each location on its own line, spelled as `recheck` takes it (sci-409235).
+    assert caught.value.refusal.message.splitlines()[1:] == [inherited_location]
 
 
 def test_operator_store_recipe_is_repeatable(relocated_store, certified_work):
