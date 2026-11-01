@@ -188,3 +188,32 @@ def test_a_store_refused_write_closes_refused_and_replays(certified_work, tmp_pa
         assert again.value.refusal == first.value.refusal
         view = ctx.write_view()
         assert not any(n.kind == "dataset" and n.title == "expression" for n in view.iter_stored())
+
+
+def test_a_kernel_refused_record_after_held_bytes_closes_done_with_the_holding(rig, tmp_path, monkeypatch):
+    """`dataset` acts twice: the holdings write publishes an observation, then
+    `writer.add` mints the record. When the kernel refuses the second act, the
+    published observation still committed, so the invocation closes done with
+    it (an internal error, not a refusal that would drop the act), and a retry
+    under the same id replays that act instead of re-running the handler."""
+    from beliefs.errors import WriteRefused
+    from beliefs.session.writer import ScopedWriter
+
+    from science.dispatch import HandlerContractViolation
+
+    def refused_add(self, node):
+        raise WriteRefused(f"{node.id}: refused by the kernel")
+
+    monkeypatch.setattr(ScopedWriter, "add", refused_add)
+    d, ctx = rig
+    data = tmp_path / "matrix.txt"
+    data.write_bytes(b"gene\tv\nPHF19\t1\n")
+    payload = {"path": str(data), "title": "expression"}
+    with pytest.raises(HandlerContractViolation, match="kernel-refused"):
+        d.invoke("dataset", payload, invocation_id="D" * 8)
+    acts = d._session.invocation_acts("D" * 8)
+    assert len(acts) == 1
+    out = d.invoke("dataset", payload, invocation_id="D" * 8)
+    assert "holdings-observation" in out.text
+    view = ctx.write_view()
+    assert not any(n.kind == "dataset" and n.title == "expression" for n in view.iter_stored())

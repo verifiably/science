@@ -23,6 +23,8 @@ from science.schema import Declaration
 # through `science.refusal.kernel_refusal`, the one normalization path.
 # StoreWriteRefused follows a holdings intent append, but an intent is not an
 # act: nothing published, so the invocation closes refused like any other.
+# A kernel refusal after a published act closes `done` with that act, as a
+# surface refusal after an act does (framework design §6.1, amended 2026-10-31).
 KERNEL_REFUSALS = (PermitExceeded, KernelRefusalValue, WriteRefused,
                    CitationContractMismatch, AddressMapConflict, BuildContended,
                    StoreWriteRefused)
@@ -240,16 +242,17 @@ class Dispatcher:
                 return Outcome(self._replay_outcome(decl, claim.outcome, iid, (0, 0)), iid)
             try:
                 report = self._handlers[decl.name](self._context(), writer, **canonical)
-            except KERNEL_REFUSALS as caught:
-                return self._close_refused(iid, kernel_refusal(caught))
-            except Refused as caught:
+            except (*KERNEL_REFUSALS, Refused) as caught:
+                # A kernel refusal of a later act does not unmake an earlier
+                # one: whichever kind refused, committed acts close `done`.
+                refusal = caught.refusal if isinstance(caught, Refused) else kernel_refusal(caught)
                 acted = self._session.invocation_acts(iid)
                 if not acted:
-                    return self._close_refused(iid, caught.refusal)
+                    return self._close_refused(iid, refusal)
                 raise self._close_acted(
                     iid, acted,
-                    f"{decl.name} refused {caught.refusal.code!r} after {len(acted)} act(s); "
-                    "a write handler validates before its first act",
+                    f"{decl.name} refused {refusal.code!r} ({refusal.message}) after "
+                    f"{len(acted)} act(s); a write handler validates before its first act",
                 ) from caught
             minted = frozenset(
                 tuple(pair)
