@@ -8,7 +8,7 @@ complexity: mid
 process: direct
 owner: fix/kernel-refusal-after-act
 created: 2026-10-31T18:28:44Z
-updated: 2026-11-01T02:16:24Z
+updated: 2026-11-01T02:16:59Z
 started: 2026-11-01T01:56:13Z
 completed: 2026-11-01T02:16:24Z
 closed: 2026-11-01T02:16:24Z
@@ -37,3 +37,4 @@ origin: agent
   provenance: {"harness_session":"claude-code:83e6ed02-8814-4b88-8d94-828898b574a0","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-11-01T02:16:24Z (fix/kernel-refusal-after-act): A kernel refusal after a published act now closes done with the act and raises HandlerContractViolation (e7b3fa1). Verification: focused RED->GREEN on test_dispatch_refusals::test_a_kernel_refusal_after_an_act_closes_done_and_is_an_internal_error (second add of one proposition) and test_cmd_dataset::test_a_kernel_refused_record_after_held_bytes_closes_done_with_the_holding (real dataset handler, writer.add refused after the holdings publish, retry replays the holding); 71 passed over test_dispatch_refusals, test_cmd_dataset, test_write_dispatch, test_dispatch_sharing; pre-commit test-fast and check green. Baseline just test at creation: 1191 passed. Limitation: post-act kernel refusals from races read as internal-error. Disclosures: nothing pushed; merged locally into main; no surviving processes; no host pointers repointed.
   provenance: {"harness_session":"claude-code:83e6ed02-8814-4b88-8d94-828898b574a0","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-11-01T02:16:59Z (main): retained: worktree .worktrees/kernel-refusal-after-act released on titan after merge 9fc06b9; ignored entries python/.venv and python/.pytest_cache discarded as regenerable; tt-report run; branch fix/kernel-refusal-after-act deleted after merge; no host pointers resolved into it. host-load: no processes left by this session (baseline and focused runs exited).
