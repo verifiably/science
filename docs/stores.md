@@ -115,9 +115,13 @@ needs the person's authorization first.
    line) only once the location also has an observation matching the
    dataset's declared digest; after a first write refused with no
    observation, the read reports the dataset not held instead. The
-   location's spelling is `store:<store id>:<relative path>`; give it to
-   `recheck` exactly as either message prints it, with nothing added or
-   trimmed.
+   location's spelling is `store:<store id>:<relative path>`. Take it from
+   the decoded refusal message, never from escaped text: the CLI writes a
+   refusal as one JSON line on stderr, escaping newlines, tabs, quotes and
+   non-ASCII characters, so decode it first (for example
+   `jq -r .refusal.message`); an MCP client receives the message decoded.
+   Give the location to `recheck` as the decoded message spells it, with
+   nothing added or trimmed.
 2. When the location's store is the current `store_root`, for instance before
    relocating, run `science recheck --location <location>` with the working
    configuration.
