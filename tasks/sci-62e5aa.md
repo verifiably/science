@@ -8,7 +8,7 @@ complexity: mid
 process: direct
 owner: fix/kernel-refusal-after-act
 created: 2026-10-31T18:28:44Z
-updated: 2026-11-01T02:15:00Z
+updated: 2026-11-01T02:16:22Z
 started: 2026-11-01T01:56:13Z
 depends: []
 tags: [command-framework]
@@ -29,3 +29,4 @@ origin: agent
 - 2026-11-01T01:57:26Z (fix/kernel-refusal-after-act): resumed
   provenance: {"harness_session":"claude-code:83e6ed02-8814-4b88-8d94-828898b574a0","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-11-01T02:15:00Z (fix/kernel-refusal-after-act): baseline at worktree creation: just test, 1191 passed in 1021 s (one xdist worker: host loaded by other sessions' suites); worktree .worktrees/kernel-refusal-after-act on branch fix/kernel-refusal-after-act
+- 2026-11-01T02:16:22Z (fix/kernel-refusal-after-act): decision: a kernel refusal after a published act closes done with the act pairs and raises HandlerContractViolation (the _close_acted path, as surface refusals and _invoke_sharing already do). Why: the ledger records act truth; closing refused dropped a committed act from the outcome and its replay. Cost if wrong: a legitimate post-act kernel refusal (e.g. a concurrent session minting the same dataset between the handler's pre-check and writer.add) surfaces as internal-error rather than a classified refusal; the acts stay correct either way. Rejected: an outcome carrying both acts and a refusal envelope (needs a beliefs close-outcome shape change; out of scope). Spec amendment added to framework design §6.1.
