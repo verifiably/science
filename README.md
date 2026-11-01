@@ -42,7 +42,7 @@ whether a person or an agent did the work. The
 analysis through exactly that path. The command surface, from `tools/cli.toml`:
 
 - The belief path: `dataset`, `claim`, `spec`, `run`, `assess`, `verify`, `belief`,
-  `next`.
+  `next`, `recheck`.
 - Coordination: `project`, `question`, `hypothesis`, `task`, `decide`, `revise`,
   `reuse`, `project-select`, `projects`, `project-show`.
 - Sharing, between worlds (the [commons design](docs/specs/2026-09-30-science-commons-design.md)):

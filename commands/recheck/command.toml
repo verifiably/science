@@ -1,0 +1,17 @@
+schema_version = 1
+name = "recheck"
+purpose = "Re-check one store location and record what the store holds there, settling an unmatched holdings intent."
+write_class = "mints:holdings-observation,act-report"
+output_budget = 2048
+
+[write.routes]
+holdings-observation = "holdings"
+act-report = "corpus-write"
+
+[inputs.location]
+type = "string"
+required = true
+doc = "A store locator, store:<store id>:<relative path>, in this session's store_root."
+
+[reads]
+families = ["corpus-stored", "holdings"]

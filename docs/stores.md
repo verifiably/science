@@ -86,13 +86,57 @@ PY
    A blocked location for a declared digest blocks the entire dataset, even
    beside a healthy copy of the same bytes. This configuration cannot repair
    or route around that block. Before declaring the mm-62e2da pilot ready,
-   inspect its actual reduction; sci-409235 owns any unsettled-intent work
-   under separate live-write authorization.
+   inspect its actual reduction and settle any unsettled location as
+   [Settling an unsettled location](#settling-an-unsettled-location) describes.
 
 5. Back up both stores and both metadata trees. After new writes, reverting
    to the old single-store config hides the new holdings. Rollback must keep
    every still-referenced store identity available; removing a config entry
    does not move or rewrite observations.
+
+## Settling an unsettled location
+
+A holdings write appends its intent to the write corpus before it touches the
+store. When the store then refuses (a read-only-serviceable `store_root`) or
+the write is interrupted, no observation follows, and the holdings reduction
+blocks that location `unsettled` until a later re-check at the same location,
+in the same corpus chain, is matched by its observation. `science recheck`
+is that re-check. It reads the store and writes governed evidence (an
+observation and a re-check act-report) to the configuration's `write_root`, so
+it settles only intents in that `write_root`'s chain, and on a live world it
+needs the person's authorization first.
+
+1. Find the blocked location. The refused write names it: a
+   `StoreWriteRefused` refusal reads `<location>: the store refused the
+   write: …`, and replaying that invocation by its id returns the same
+   refusal. The holdings reduction lists it among its blocked rows; no
+   science command lists blocked rows by itself. A dataset read names it
+   (`<address> is blocked (<reasons>) at:` followed by one location per
+   line) only once the location also has an observation matching the
+   dataset's declared digest; after a first write refused with no
+   observation, the read reports the dataset not held instead. The
+   location's spelling is `store:<store id>:<relative path>`. Take it from
+   the decoded refusal message, never from escaped text: the CLI writes a
+   refusal as one JSON line on stderr, escaping newlines, tabs, quotes and
+   non-ASCII characters, so decode it first (for example
+   `jq -r .refusal.message`); an MCP client receives the message decoded.
+   Give the location to `recheck` as the decoded message spells it, with
+   nothing added or trimmed.
+2. When the location's store is the current `store_root`, for instance before
+   relocating, run `science recheck --location <location>` with the working
+   configuration.
+3. When the location's store is in `read_store_roots`, as after relocation,
+   the working configuration refuses and names this route. Stop any running
+   `science serve`, then run the re-check under a recovery configuration: that
+   read store as `store_root`, the same `write_root` and operations root, and
+   the writable store moved to `read_store_roots`. A re-check never writes the
+   store, so binding a read-only-serviceable one is valid. Then restore the
+   working configuration and restart the writer.
+4. Read the result. `found <digest>` or `absent` publishes an observation and
+   clears the block. An inconclusive read (`retrieval-failed` or
+   `byte-locator-untested` with the kernel's reason) publishes none and leaves
+   the block: fix the store's serviceability, then re-check again. Absent is
+   never assumed; the report carries what the kernel observed.
 
 ## Existing stores without admission
 

@@ -96,7 +96,8 @@ def held_path(views, world, stores: Mapping[str, Path], address: str) -> Path:
     answer = reduced_observations(views, world).get(address)
     if isinstance(answer, DatasetBlocked):
         raise Refused(Refusal("invalid-input",
-                              f"{address} is blocked at {answer.locations}: {answer.reasons}"))
+                              f"{address} is blocked ({', '.join(answer.reasons)}) at:\n"
+                              + "\n".join(answer.locations)))
     if not isinstance(answer, DatasetAnswer) or not answer.observations:
         raise Refused(Refusal("invalid-input", f"{address} is not held in the configured stores"))
     return held_path_for(stores, answer.observations)

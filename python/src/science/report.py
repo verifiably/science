@@ -25,11 +25,45 @@ class RecordBlock:
     record_id: str
     kind: str
     title: str
+    detail: tuple[str, ...] = ()
+
+
+def _observation_detail(node) -> tuple[str, ...]:
+    from beliefs import stored
+    from beliefs.holdings.records import Found
+    value = stored.holdings_observation_value(node)
+    location = value.location.canonical()
+    if isinstance(value.outcome, Found):
+        return (f"found {value.outcome.digest} at {location}",)
+    return (f"absent at {location}",)
+
+
+def _recheck_entry(entry) -> str:
+    outcome = entry["outcome"]
+    match outcome["type"]:
+        case "published-observation":
+            return f"{entry['subject']}: observed {outcome['ref']}"
+        case "byte-locator-untested" | "retrieval-failed":
+            return f"{entry['subject']}: {outcome['type']} {outcome['reason']}"
+    raise RuntimeError(f"a re-check report entry carries outcome type {outcome['type']!r}")
+
+
+def _detail(node) -> tuple[str, ...]:
+    """What the kernel observed, read from the stored record: a holdings
+    observation's outcome and a re-check report's entries (framework §7.4)."""
+    from beliefs import stored
+    if node.kind == "holdings-observation":
+        return _observation_detail(node)
+    if node.kind == "act-report":
+        facet = stored.act_report_facet(node)
+        if facet["operation"] == "re-check":
+            return tuple(_recheck_entry(entry) for entry in facet["entries"])
+    return ()
 
 
 def record_block(node) -> RecordBlock:
     """Derive a record block from a kernel record; handlers never author one."""
-    return RecordBlock(node.uid, node.id, node.kind, node.title)
+    return RecordBlock(node.uid, node.id, node.kind, node.title, _detail(node))
 
 
 @dataclass(frozen=True)
@@ -83,8 +117,8 @@ def serialize_block(block: Block) -> str:
         case KeyVals(title, pairs):
             lines = [f"{title}:"] + [f"  {k}: {v}" for k, v in pairs]
             return "\n".join(lines) + "\n"
-        case RecordBlock(uid, record_id, kind, title):
-            return f"[{kind}] {record_id} uid={uid}\n{title}\n"
+        case RecordBlock(uid, record_id, kind, title, detail):
+            return f"[{kind}] {record_id} uid={uid}\n{title}\n" + "".join(f"{line}\n" for line in detail)
         case Finding(text):
             return f"! {text}\n"
         case Text(text):
