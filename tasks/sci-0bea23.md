@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: main
 created: 2026-10-30T18:00:08Z
-updated: 2026-11-01T08:39:20Z
+updated: 2026-11-01T08:39:35Z
 started: 2026-10-31T18:41:31Z
 depends: []
 tags: [halt, test-latency, testing]
@@ -95,3 +95,4 @@ Process: planned
 - 2026-11-01T01:56:13Z (main): halt override: attempted sci-62e5aa by 83e6ed02-8814-4b88-8d94-828898b574a0: user asked in session to take sci-62e5aa; halt sci-0bea23 remedy merged f57543a and waits only on tt-latency verify runs
 - 2026-11-01T08:39:20Z (main): resumed
   provenance: {"harness_session":"claude-code:80afb3b7-ff22-4d16-b8f4-64e3e566d8d3","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-11-01T08:39:35Z (main): verified: titan after 2026-10-31T22:22:06Z: test-fast median 71.383 s, limit 90 s, 4 runs
