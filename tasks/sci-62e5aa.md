@@ -1,13 +1,15 @@
 ---
 id: sci-62e5aa
 title: "Write dispatch: a kernel refusal after a published act closes refused and drops the act"
-status: todo
+status: doing
 priority: 2
 size: s
 complexity: mid
 process: direct
+owner: main
 created: 2026-10-31T18:28:44Z
-updated: 2026-10-31T18:28:44Z
+updated: 2026-11-01T01:56:13Z
+started: 2026-11-01T01:56:13Z
 depends: []
 tags: [command-framework]
 source: sci-eccb43
@@ -21,3 +23,6 @@ origin: agent
 
 - 2026-10-31T18:28:44Z (add): created
   provenance: {"harness_session":"claude-code:2d4f1b44-70f6-4dcf-877c-e39755156302","harness_session_source":"CLAUDE_CODE_SESSION_ID","origin":"agent"}
+- 2026-11-01T01:56:13Z (main): started
+  provenance: {"harness_session":"claude-code:83e6ed02-8814-4b88-8d94-828898b574a0","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-11-01T01:56:13Z (main): halt override: started past sci-0bea23 by 83e6ed02-8814-4b88-8d94-828898b574a0: user asked in session to take sci-62e5aa; halt sci-0bea23 remedy merged f57543a and waits only on tt-latency verify runs

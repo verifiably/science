@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: perf/test-latency
 created: 2026-10-30T18:00:08Z
-updated: 2026-11-01T00:39:59Z
+updated: 2026-11-01T01:56:13Z
 started: 2026-10-31T18:41:31Z
 depends: []
 tags: [halt, test-latency, testing]
@@ -92,3 +92,4 @@ Process: planned
 - 2026-11-01T00:21:06Z (feat/holdings-recheck): halt override: attempted sci-08833f by 224a01cb-bb9b-421b-ac3d-a55e9a312f6f: step of sci-409235, user asked to execute it in session; halt sci-0bea23 waits only on tt-latency verify
 - 2026-11-01T00:31:55Z (feat/holdings-recheck): halt override: attempted sci-f4109b by 224a01cb-bb9b-421b-ac3d-a55e9a312f6f: step of sci-409235, user asked to execute it in session; halt sci-0bea23 waits only on tt-latency verify
 - 2026-11-01T00:39:59Z (feat/holdings-recheck): halt override: attempted sci-5e18bc by 224a01cb-bb9b-421b-ac3d-a55e9a312f6f: step of sci-409235, user asked to execute it in session; halt sci-0bea23 waits only on tt-latency verify
+- 2026-11-01T01:56:13Z (main): halt override: attempted sci-62e5aa by 83e6ed02-8814-4b88-8d94-828898b574a0: user asked in session to take sci-62e5aa; halt sci-0bea23 remedy merged f57543a and waits only on tt-latency verify runs
