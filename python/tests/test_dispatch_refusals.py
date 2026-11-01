@@ -15,6 +15,10 @@ REFUSING = Declaration("refusing", "fixture",
 HALF_ACTED = Declaration("half-acted", "fixture",
                          WriteClass("mints", ("proposition",), {"proposition": "corpus-write"}),
                          MIN_OUTPUT_BUDGET, (InputSpec("slug", "string", True, "d"),), (), Path("."))
+KERNEL_REFUSED_AFTER_ACT = Declaration(
+    "kernel-refused-after-act", "fixture",
+    WriteClass("mints", ("proposition",), {"proposition": "corpus-write"}),
+    MIN_OUTPUT_BUDGET, (InputSpec("slug", "string", True, "d"),), (), Path("."))
 
 
 def refusing_handler(ctx, writer, *, slug):
@@ -26,14 +30,21 @@ def half_acted_handler(ctx, writer, *, slug):
     raise Refused(Refusal("invalid-input", "refused after acting"))
 
 
+def kernel_refused_after_act_handler(ctx, writer, *, slug):
+    """Two acts, the second refused by the kernel: the same proposition twice."""
+    writer.add(fixture_proposition_node(slug))
+    writer.add(fixture_proposition_node(slug))
+
+
 @pytest.fixture
 def rig(certified_work):
     from science.session import open_session
     from science.config import ReadContext
     cfg = build_fixture_world(certified_work)
     session = open_session(cfg)
-    dispatcher = Dispatcher((REFUSING, HALF_ACTED),
-                            {"refusing": refusing_handler, "half-acted": half_acted_handler},
+    dispatcher = Dispatcher((REFUSING, HALF_ACTED, KERNEL_REFUSED_AFTER_ACT),
+                            {"refusing": refusing_handler, "half-acted": half_acted_handler,
+                             "kernel-refused-after-act": kernel_refused_after_act_handler},
                             ReadContext.open(cfg), session=session)
     try:
         yield dispatcher, session
@@ -62,6 +73,19 @@ def test_refusal_after_an_act_closes_done_and_is_an_internal_error(rig):
     assert len(session.invocation_acts("H" * 8)) == 1
     out = d.invoke("half-acted", {"slug": "acted"}, invocation_id="H" * 8)
     assert "proposition:acted" in out.text
+
+
+def test_a_kernel_refusal_after_an_act_closes_done_and_is_an_internal_error(rig):
+    """The kernel refusing a later act does not unmake the earlier one: the
+    invocation closes done with the committed act, as a surface refusal after
+    an act does, and a retry replays that act rather than a refusal."""
+    d, session = rig
+    from science.dispatch import HandlerContractViolation
+    with pytest.raises(HandlerContractViolation, match="kernel-refused"):
+        d.invoke("kernel-refused-after-act", {"slug": "twice"}, invocation_id="K" * 8)
+    assert len(session.invocation_acts("K" * 8)) == 1
+    out = d.invoke("kernel-refused-after-act", {"slug": "twice"}, invocation_id="K" * 8)
+    assert "proposition:twice" in out.text
 
 
 @pytest.mark.parametrize("raised", [
