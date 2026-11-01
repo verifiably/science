@@ -280,3 +280,31 @@ def test_replay_renders_the_same_detail(incident):
         assert "continue with cursor " in paged
         assert pages(d, paged) == first.text
     assert f"absent at {location}" in first.text
+
+
+def test_recovery_configuration_settles_a_read_store_location(certified_work, tmp_path):
+    """docs/stores.md's route: after relocation the blocked location is in a
+    read store, so the working configuration refuses; a recovery configuration
+    binding that store as `store_root`, with the same `write_root`, settles it."""
+    from science.config import ReadContext
+    from test_stores import run_store_recipe
+    cfg, location = refused_write(build_belief_world(certified_work), certified_work, tmp_path)
+    restored = cfg.store_root
+    fresh = certified_work / "store-working"
+    created = run_store_recipe(fresh, certified_work / "recipe-home")
+    assert created.returncode == 0, created.stderr
+    working = replace(cfg, store_root=fresh, read_store_roots=(restored,))
+    source = tmp_path / "new.txt"
+    source.write_bytes(b"new expression\n")
+    with open_rig(working, ("dataset",)) as (d, _):
+        out = d.invoke("dataset", {"path": str(source), "title": "new"})
+    new_address = next(word for word in out.text.split() if word.startswith("dataset:"))
+    refusal = refuses_before_effect(working, location)
+    assert str(restored) in refusal.message and "recovery configuration" in refusal.message
+    assert blocked_reasons(working)[location] == ["unsettled"]
+    recovery = replace(cfg, store_root=restored, read_store_roots=(fresh,))
+    (observation,) = recheck(recovery, location, "V" * 8)["holdings-observation"]
+    assert stored.holdings_observation_value(observation).outcome == Absent()
+    assert location not in blocked_reasons(working)
+    held = ReadContext.open(working).held_path(new_address)
+    assert held.is_relative_to(fresh) and held.read_bytes() == source.read_bytes()
