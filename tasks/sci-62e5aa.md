@@ -6,9 +6,9 @@ priority: 2
 size: s
 complexity: mid
 process: direct
-owner: main
+owner: fix/kernel-refusal-after-act
 created: 2026-10-31T18:28:44Z
-updated: 2026-11-01T01:56:13Z
+updated: 2026-11-01T01:57:26Z
 started: 2026-11-01T01:56:13Z
 depends: []
 tags: [command-framework]
@@ -26,3 +26,5 @@ origin: agent
 - 2026-11-01T01:56:13Z (main): started
   provenance: {"harness_session":"claude-code:83e6ed02-8814-4b88-8d94-828898b574a0","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-11-01T01:56:13Z (main): halt override: started past sci-0bea23 by 83e6ed02-8814-4b88-8d94-828898b574a0: user asked in session to take sci-62e5aa; halt sci-0bea23 remedy merged f57543a and waits only on tt-latency verify runs
+- 2026-11-01T01:57:26Z (fix/kernel-refusal-after-act): resumed
+  provenance: {"harness_session":"claude-code:83e6ed02-8814-4b88-8d94-828898b574a0","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
