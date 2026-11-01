@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: perf/test-latency
 created: 2026-10-30T18:00:08Z
-updated: 2026-11-01T00:18:02Z
+updated: 2026-11-01T00:21:06Z
 started: 2026-10-31T18:41:31Z
 depends: []
 tags: [halt, test-latency, testing]
@@ -89,3 +89,4 @@ Process: planned
   provenance: {"harness_session":"claude-code:e1c106c7-398b-4f30-8ca8-d851dbb5e76b","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
 - 2026-10-31T22:52:00Z (main): halt override: attempted sci-409235 by c721656d-65c9-4353-b42b-9116120745b0: user asked in session to take sci-409235; halt remedy merged f57543a, halt waits only on tt-latency verify runs accumulating
 - 2026-11-01T00:18:02Z (feat/holdings-recheck): halt override: attempted sci-3578d6 by 224a01cb-bb9b-421b-ac3d-a55e9a312f6f: step of sci-409235, which the user asked to execute in session; halt sci-0bea23 waits only on tt-latency verify runs
+- 2026-11-01T00:21:06Z (feat/holdings-recheck): halt override: attempted sci-08833f by 224a01cb-bb9b-421b-ac3d-a55e9a312f6f: step of sci-409235, user asked to execute it in session; halt sci-0bea23 waits only on tt-latency verify
