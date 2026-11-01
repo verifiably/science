@@ -22,8 +22,8 @@ def parse_store_location(text: str) -> StoreLocator:
     """The canonical spelling `store:<id>:<path>`, exactly as given: a padded
     or otherwise altered locator would name a different path, so nothing is
     stripped."""
-    if text != text.strip() or not text.isprintable():
-        _refuse(f"location {text!r} carries surrounding whitespace or control characters; "
+    if text != text.strip():
+        _refuse(f"location {text!r} carries surrounding whitespace; "
                 "give it exactly as the blocked row names it")
     if text.startswith(("url:", "https://", "http://")):
         _refuse(f"location {text!r} is a URL; recheck re-checks store locations only")

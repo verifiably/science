@@ -106,11 +106,18 @@ observation and a re-check act-report) to the configuration's `write_root`, so
 it settles only intents in that `write_root`'s chain, and on a live world it
 needs the person's authorization first.
 
-1. Find the blocked location. A dataset read that meets the block refuses
-   naming it (`<address> is blocked at <locations>: <reasons>`), and the
-   holdings reduction lists it among its blocked rows; no science command
-   lists blocked rows by itself. Its spelling is
-   `store:<store id>:<relative path>`; give it to `recheck` unchanged.
+1. Find the blocked location. The refused write names it: a
+   `StoreWriteRefused` refusal reads `<location>: the store refused the
+   write: …`, and replaying that invocation by its id returns the same
+   refusal. The holdings reduction lists it among its blocked rows; no
+   science command lists blocked rows by itself. A dataset read names it
+   (`<address> is blocked at (<locations>): <reasons>`, the locations
+   quoted as a tuple) only once the location also has an observation
+   matching the dataset's declared digest; after a first write refused with
+   no observation, the read reports the dataset not held instead. The
+   location's spelling is `store:<store id>:<relative path>`; give it to
+   `recheck` without the tuple's quotes and parentheses and with nothing
+   else added or trimmed.
 2. When the location's store is the current `store_root`, for instance before
    relocating, run `science recheck --location <location>` with the working
    configuration.

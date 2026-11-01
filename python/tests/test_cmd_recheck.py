@@ -201,6 +201,16 @@ def test_padded_location_refuses(certified_work):
     refuses_before_effect(cfg, location + "\n", "Q" * 8)
 
 
+@pytest.mark.parametrize("name", ["no\u00a0break.txt", "tab\tinside.txt", "zero\u200dwidth.txt"])
+def test_interior_unprintable_characters_are_a_valid_path(certified_work, name):
+    """The kernel admits every character but NUL in a store path, and `dataset`
+    names files as given: only surrounding whitespace is refused."""
+    cfg = build_belief_world(certified_work)
+    location = f"store:{store_identity(cfg.store_root)}:never/{name}"
+    (observation,) = recheck(cfg, location, "T" * 8)["holdings-observation"]
+    assert stored.holdings_observation_value(observation).location.canonical() == location
+
+
 def test_unconfigured_store_refuses(certified_work):
     cfg = build_belief_world(certified_work)
     refusal = refuses_before_effect(cfg, f"store:{uuid4().hex}:x.txt")
