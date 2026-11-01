@@ -246,3 +246,37 @@ def test_insufficient_permit_refuses_before_effect(certified_work, dropped):
         session.close()
     assert caught.value.refusal.code == "permit-exceeded"
     assert tree_snapshot(cfg.write_root) == before
+
+
+def test_rendered_report_states_absent(incident):
+    cfg, location, _ = incident
+    with open_rig(cfg, ("recheck",)) as (d, _):
+        text = d.invoke("recheck", {"location": location}).text
+    assert f"absent at {location}" in text
+    assert f"{location}: observed holdings-observation:" in text
+
+
+def pages(d, first: str) -> str:
+    """Every page of a truncated write report, cursor markers dropped."""
+    text, out = first, []
+    while "continue with cursor " in text:
+        body, _, tail = text.rpartition("\n… truncated at ")
+        out.append(body)
+        text = d.invoke("recheck", {}, cursor=tail.rsplit("cursor ", 1)[1].strip()).text
+    return "".join(out) + text
+
+
+def test_replay_renders_the_same_detail(incident):
+    from science.cursor import MIN_OUTPUT_BUDGET
+    cfg, location, _ = incident
+    with open_rig(cfg, ("recheck",)) as (d, _):
+        first = d.invoke("recheck", {"location": location}, invocation_id="Y" * 8)
+        acts = d._session.invocation_acts("Y" * 8)
+        again = d.invoke("recheck", {"location": location}, invocation_id="Y" * 8)
+        assert again.text == first.text
+        assert d._session.invocation_acts("Y" * 8) == acts
+        d._decls["recheck"] = replace(d._decls["recheck"], output_budget=MIN_OUTPUT_BUDGET)
+        paged = d.invoke("recheck", {"location": location}, invocation_id="Y" * 8).text
+        assert "continue with cursor " in paged
+        assert pages(d, paged) == first.text
+    assert f"absent at {location}" in first.text

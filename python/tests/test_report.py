@@ -1,3 +1,4 @@
+import pytest
 from types import SimpleNamespace
 
 from science.report import (
@@ -71,3 +72,66 @@ def test_a_pin_block_serializes_its_facts_and_a_mount_says_when_it_takes_effect(
     mounted = serialize_block(pin_block(_sharing_line("mounted")))
     assert mounted.startswith(f"[pin] {'a' * 32} mounted\n")
     assert mounted.endswith("verdict: validated\ntakes effect at the next session open\n")
+
+
+# --- holdings detail lines (sci-409235) -------------------------------------
+
+STORE = "c" * 32
+LOCATION = f"store:{STORE}:{'d' * 64}/x.txt"
+
+
+def _observation_node(outcome):
+    from beliefs import stored
+    from beliefs.holdings.records import StoreLocator, holdings_observation
+    return stored.holdings_observation_node(holdings_observation(
+        location=StoreLocator(STORE, f"{'d' * 64}/x.txt"), outcome=outcome, observer="fixture",
+        instrument="fixture/report.v1", event_token="e" * 32, observed_at="2026-10-31T00:00:00Z"))
+
+
+def _report_node(operation, entries):
+    """A kernel act-report node; tests reach the boundary's minting directly."""
+    from beliefs import stored
+    from beliefs.report import _mint_report
+    return stored.act_report_node(_mint_report(
+        operation=operation, event_token="f" * 32, actor="fixture", observer="fixture",
+        instrument="fixture/report.v1", opened_at="2026-10-31T00:00:00Z",
+        closed_at="2026-10-31T00:00:01Z", entries=entries))
+
+
+def test_observation_block_states_the_outcome():
+    from beliefs.holdings.records import Absent, Found
+    digest = "sha256:" + "d" * 64
+    assert record_block(_observation_node(Found(digest))).detail == (f"found {digest} at {LOCATION}",)
+    assert record_block(_observation_node(Absent())).detail == (f"absent at {LOCATION}",)
+
+
+def test_recheck_report_block_lists_a_published_entry():
+    from beliefs.report import LocatorEntry, PublishedObservation
+    ref = "holdings-observation:" + "a" * 64
+    node = _report_node("re-check", (LocatorEntry(LOCATION, PublishedObservation(ref)),))
+    assert record_block(node).detail == (f"{LOCATION}: observed {ref}",)
+
+
+@pytest.mark.parametrize("outcome_type", ["retrieval-failed", "byte-locator-untested"])
+def test_recheck_report_block_lists_an_inconclusive_entry(outcome_type):
+    from beliefs.report import ByteLocatorUntested, LocatorEntry, RetrievalFailed
+    value = {"retrieval-failed": RetrievalFailed, "byte-locator-untested": ByteLocatorUntested}[outcome_type]
+    node = _report_node("re-check", (LocatorEntry(LOCATION, value("io-error")),))
+    assert record_block(node).detail == (f"{LOCATION}: {outcome_type} io-error",)
+
+
+def test_other_act_reports_carry_no_detail():
+    from beliefs.report import RunAttemptEntry, RunRefusal
+    node = _report_node("run-attempt", (RunAttemptEntry("run:" + "a" * 64, RunRefusal("inputs")),))
+    block = record_block(node)
+    assert block.detail == ()
+    assert serialize_block(block) == f"[act-report] {node.id} uid={node.uid}\n{node.title}\n"
+
+
+def test_four_argument_record_block_still_constructs():
+    assert RecordBlock("u", "i", "k", "t").detail == ()
+
+
+def test_detail_lines_follow_the_title():
+    block = RecordBlock("u", "i", "k", "t", ("one", "two"))
+    assert serialize_block(block) == "[k] i uid=u\nt\none\ntwo\n"

@@ -710,6 +710,15 @@ still renders its ledger-backed `bound` block. These blocks are not admitted for
 other corpus-writing classes. The sidecar contract and failure recovery are §4.4
 and §6.1's; replay and every continuation page preserve it (§7.3).
 
+*Amended 2026-10-31 (sci-409235):* a record block for a `holdings-observation`
+or for an `act-report` whose operation is `re-check` carries detail lines after
+its title, derived by the renderer from the stored record on the first
+response, on replay and on continuation alike: `found <digest> at <location>`
+or `absent at <location>` for an observation, and one
+`<locator>: observed <ref>` or `<locator>: <inconclusive type> <reason>` line
+per entry of a re-check report. Handlers author none, so the audit's purpose
+is unchanged. Other kinds and other act-report operations carry no detail.
+
 ## 8. The preamble
 
 One `commands/PREAMBLE.md`, prepended by the adapter generator to every
