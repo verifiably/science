@@ -8,7 +8,7 @@ complexity: mid
 process: planned
 owner: feat/sci-6af05a-test-policy
 created: 2026-10-29T13:46:08Z
-updated: 2026-11-02T12:06:45Z
+updated: 2026-11-02T12:10:47Z
 started: 2026-11-02T10:38:24Z
 depends: [ops-68729d]
 tags: []
@@ -79,3 +79,4 @@ After approved activation, commit .tt.toml with real broad target names, verify 
 - 2026-11-02T12:06:02Z (feat/sci-6af05a-test-policy): resumed
 - 2026-11-02T12:06:05Z (feat/sci-6af05a-test-policy): review: plan round 2 — verdict: accept; findings: minor 3; reviewer: claude-code/claude-opus-5-5
 - 2026-11-02T12:06:45Z (feat/sci-6af05a-test-policy): plan round 2 rulings: accepted all 3 minor findings from claude-code/claude-opus-5-5 (update tasks/files/sci-6af05a/plan-review-ledger.md in place and attach sdd-progress-ledger.md by path in Task 7 Step 6.2; document re-merging main and rerunning just check + just test-full if main advances before Task 5 Step 3; pin Spec header to 8cd98e827a9de0df9836a353349f2cfed23915a7). Approved by Keith for execution.
+- 2026-11-02T12:10:47Z (feat/sci-6af05a-test-policy): baseline: just check and just test passed in .worktrees/sci-6af05a before code changes (1195 passed in 157.67s).
