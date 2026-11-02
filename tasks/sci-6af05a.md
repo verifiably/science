@@ -8,7 +8,7 @@ complexity: mid
 process: planned
 owner: feat/sci-6af05a-test-policy
 created: 2026-10-29T13:46:08Z
-updated: 2026-11-02T12:37:57Z
+updated: 2026-11-02T12:38:29Z
 started: 2026-11-02T10:38:24Z
 depends: [ops-68729d]
 tags: []
@@ -82,3 +82,4 @@ After approved activation, commit .tt.toml with real broad target names, verify 
 - 2026-11-02T12:10:47Z (feat/sci-6af05a-test-policy): baseline: just check and just test passed in .worktrees/sci-6af05a before code changes (1195 passed in 157.67s).
 - 2026-11-02T12:37:55Z (feat/sci-6af05a-test-policy): review: final round 1 — verdict: accept; findings: minor 3; reviewer: antigravity/pro
 - 2026-11-02T12:37:57Z (feat/sci-6af05a-test-policy): final review rulings: whole-branch review over dc39b31716328fae9dcc633985eadb9888e0f85d..1a0a94e0ef186882ee51171d12eab3cc371402d9 accepted with 0 critical, 0 important, 3 deferred minors; just check and just test-full passed (1218 passed in 150.94s, 0 failed, 0 errors). Rulings and deferred minors recorded in tasks/files/sci-6af05a/plan-review-ledger.md.
+- 2026-11-02T12:38:29Z (main): policy: enabled at 2026-11-02T12:38:29Z revision 9c79d0afbe2574e7ab7f1c1415b6bb0013a82f42
