@@ -1,5 +1,0 @@
-prefix = "sci"
-color = "#25786d"
-
-[git]
-commit = true

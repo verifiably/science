@@ -1,3 +1,0 @@
-  titan     test-fast           met (median 71.4 s, 4 runs, 1 widened, limit 90 s)
-noted: verified: titan after 2026-10-31T22:22:06Z: test-fast median 71.383 s, limit 90 s, 4 runs
-verified: every obligation is met
