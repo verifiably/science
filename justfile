@@ -35,7 +35,7 @@ docs_paths := "README.md AGENTS.md docs/*.md tasks/*.md"
 docs_check_cmd := check_hygiene_cmd
 
 # Activated to "refs/heads/*" in Phase 3 after hosted CI verification.
-ci_suite_refs := ""
+ci_suite_refs := "refs/heads/*"
 ci_remote := "origin"
 ci_evidence_cmd := "case \"${SCIENCE_CI_EVIDENCE_DIR:?set SCIENCE_CI_EVIDENCE_DIR}\" in /*) ;; *) echo \"CI evidence path must be absolute\" >&2; exit 2;; esac"
 ci_py_test_cmd := "cd python && uv run --frozen pytest --junitxml=\"$SCIENCE_CI_EVIDENCE_DIR/pytest.xml\" " + xdist

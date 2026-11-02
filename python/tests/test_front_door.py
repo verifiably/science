@@ -478,10 +478,16 @@ def test_unreadable_policy_refuses_push(front_door: FrontDoor) -> None:
         'automatic_broad = "no"\nbroad_targets = ["test"]\n',
         encoding="utf-8",
     )
-    stdin = f"refs/heads/main {'a' * 40} refs/heads/main {'b' * 40}\n"
-    res = front_door.run_hook("pre-push", "origin", "https://example.invalid/repo.git", stdin=stdin)
-    assert res.returncode == 2
-    assert "cannot inspect test execution policy" in res.stderr
+    tag_stdin = f"refs/tags/v1 {'a' * 40} refs/tags/v1 {'b' * 40}\n"
+    res_uncovered = front_door.run_hook("pre-push", "origin", "https://example.invalid/repo.git", stdin=tag_stdin)
+    assert res_uncovered.returncode == 2
+    assert "cannot inspect test execution policy" in res_uncovered.stderr
+    assert front_door.markers() == []
+
+    branch_stdin = f"refs/heads/main {'a' * 40} refs/heads/main {'b' * 40}\n"
+    res_covered = front_door.run_hook("pre-push", "origin", "https://example.invalid/repo.git", stdin=branch_stdin)
+    assert res_covered.returncode == 2
+    assert "expected only boolean automatic_broad and broad_targets" in res_covered.stderr
     assert front_door.markers() == []
 
 
@@ -590,5 +596,54 @@ def test_live_ops_check_passes_without_tasks_registry(tmp_path: Path) -> None:
         check=False,
     )
     assert res.returncode == 0, res.stderr
+
+
+def test_live_repository_policy_and_ci_suite_refs(front_door: FrontDoor) -> None:
+    res = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import importlib.machinery, importlib.util, json, pathlib\n"
+                "root = pathlib.Path.cwd()\n"
+                "loader = importlib.machinery.SourceFileLoader('tt_mod', str(root / 'tools/tt'))\n"
+                "spec = importlib.util.spec_from_loader(loader.name, loader)\n"
+                "tt = importlib.util.module_from_spec(spec)\n"
+                "loader.exec_module(tt)\n"
+                "policy = tt.read_policy(root)\n"
+                "print(json.dumps(None if policy is None else {k: v for k, v in policy.items() if k != 'path'}))\n"
+            ),
+        ],
+        cwd=REPO,
+        env=front_door.env,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    assert json.loads(res.stdout) == {
+        "automatic_broad": False,
+        "broad_targets": ["test", "test-fast", "ci-python"],
+    }
+
+    refs = subprocess.run(
+        ["just", "--justfile", str(REPO / "justfile"), "--evaluate", "ci_suite_refs"],
+        cwd=REPO,
+        env=front_door.env,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    assert refs.stdout == "refs/heads/*"
+
+    remote = subprocess.run(
+        ["just", "--justfile", str(REPO / "justfile"), "--evaluate", "ci_remote"],
+        cwd=REPO,
+        env=front_door.env,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    assert remote.stdout == "origin"
+
 
 
