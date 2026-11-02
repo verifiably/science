@@ -6,7 +6,7 @@ priority: 1
 process: planned
 owner: main
 created: 2026-10-10T16:34:30Z
-updated: 2026-10-31T08:42:19Z
+updated: 2026-11-02T10:38:26Z
 started: 2026-10-10T17:12:51Z
 depends: [quarry-3f4c3b, quarry-06c10c]
 tags: []
@@ -115,3 +115,5 @@ Agents currently work out each bio resource themselves (GEO E-utilities, ENA por
 - 2026-10-10T21:57:16Z (main): parked (waiting on agent, dependency): Agent drafts and reviews the repositories/acquisition plan under quarry-3f4c3b, then the terms/skills plan under quarry-06c10c; close this broader first-version goal only after those milestones land. The foundation plan is complete and merged.
   provenance: {"harness_session":"codex:01a12769-e196-7e72-829a-066a98c2baa4","harness_session_source":"CODEX_THREAD_ID"}
 - 2026-10-11T09:06:33Z (main): Follow-ups filed 2026-10-11: quarry-bba493 (Bioregistry snapshot refresh, deferred to 2027-01-08, recurring once run), quarry-dd5180 (idea: beliefs contract version drift), lit-51fbf3 (idea: lit PubMed/OpenAlex onto quarry adapters, after quarry-3f4c3b).
+- 2026-11-02T10:38:26Z (main): resumed
+  provenance: {"harness_session":"claude-code:7cd61eed-7c30-4d68-82e9-b377f1904fd6","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
