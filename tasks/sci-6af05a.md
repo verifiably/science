@@ -8,7 +8,7 @@ complexity: mid
 process: planned
 owner: feat/sci-6af05a-test-policy
 created: 2026-10-29T13:46:08Z
-updated: 2026-11-02T11:23:52Z
+updated: 2026-11-02T11:29:51Z
 started: 2026-11-02T10:38:24Z
 depends: [ops-68729d]
 tags: []
@@ -62,3 +62,4 @@ After approved activation, commit .tt.toml with real broad target names, verify 
 - 2026-11-02T11:23:48Z (feat/sci-6af05a-test-policy): review: spec round 2 — verdict: approved; findings: none; reviewer: antigravity/inherit
 - 2026-11-02T11:23:50Z (feat/sci-6af05a-test-policy): spec round 1 rulings & pilot verification: ran uncertified-volume pilot in .worktrees/sci-6af05a (1195 collected across 72 modules: 532 passed across 14 all-pass + 27 mixed modules, 663 skipped across 27 mixed + 31 all-skip modules, 0 failed in 5.45s on 16 workers / 5.22s on 4 workers). Accepted all 6 round-1 items from claude-code/claude-opus-5-5 in 2fb59e88ee75498baeb50b935c4ae647d7fccc44 (recorded with Why/Cost in tasks/files/sci-6af05a/spec-review-ledger.md; no deferred minors). Worktree .worktrees/sci-6af05a remains locked on unmerged branch feat/sci-6af05a-test-policy; no pushes performed; host-load --section session reports nothing left running.
 - 2026-11-02T11:23:52Z (feat/sci-6af05a-test-policy): parked (waiting on user, review): Write implementation plan in docs/plans/2026-11-02-test-execution-policy.md after user approves revised docs/specs/2026-11-02-test-execution-policy-design.md (frozen at 2fb59e88ee75498baeb50b935c4ae647d7fccc44)
+- 2026-11-02T11:29:51Z (feat/sci-6af05a-test-policy): resumed
