@@ -8,7 +8,7 @@ complexity: mid
 process: planned
 owner: feat/sci-6af05a-test-policy
 created: 2026-10-29T13:46:08Z
-updated: 2026-11-02T13:10:50Z
+updated: 2026-11-02T13:14:40Z
 started: 2026-11-02T10:38:24Z
 depends: [ops-68729d]
 tags: []
@@ -92,3 +92,4 @@ After approved activation, commit .tt.toml with real broad target names, verify 
 - 2026-11-02T12:54:14Z (feat/sci-6af05a-test-policy): parked (waiting on user, approval): Commit .tt.toml and ci_suite_refs := "refs/heads/*", verify post-activation checks, and close sci-6af05a in Task 7 Steps 2-6 after user activation approval
 - 2026-11-02T12:59:37Z (feat/sci-6af05a-test-policy): resumed
 - 2026-11-02T13:10:50Z (feat/sci-6af05a-test-policy): review: activation round 1 — verdict: accept; findings: minor 1; reviewer: antigravity/pro
+- 2026-11-02T13:14:40Z (feat/sci-6af05a-test-policy): policy: disabled at 2026-11-02T13:10:54Z revision d124639a7fabf023c895537b5c377ae64712fae5
