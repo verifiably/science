@@ -1,15 +1,18 @@
 ---
 id: sci-ba7150
 title: "quarry: domain layers (core, biology, …) over scientific resources, with one CLI and skills"
-status: doing
+status: done
 priority: 1
 process: planned
 owner: main
 created: 2026-10-10T16:34:30Z
-updated: 2026-11-02T10:38:26Z
+updated: 2026-11-02T10:38:28Z
 started: 2026-10-10T17:12:51Z
+completed: 2026-11-02T10:38:28Z
+closed: 2026-11-02T10:38:28Z
 depends: [quarry-3f4c3b, quarry-06c10c]
 tags: []
+model: claude-opus-5-5
 agent: claude-code/claude-opus-5-5
 spec: docs/specs/2026-10-10-quarry-domain-layers-design.md
 plan: docs/plans/2026-10-10-quarry-foundation.md
@@ -116,4 +119,8 @@ Agents currently work out each bio resource themselves (GEO E-utilities, ENA por
   provenance: {"harness_session":"codex:01a12769-e196-7e72-829a-066a98c2baa4","harness_session_source":"CODEX_THREAD_ID"}
 - 2026-10-11T09:06:33Z (main): Follow-ups filed 2026-10-11: quarry-bba493 (Bioregistry snapshot refresh, deferred to 2027-01-08, recurring once run), quarry-dd5180 (idea: beliefs contract version drift), lit-51fbf3 (idea: lit PubMed/OpenAlex onto quarry adapters, after quarry-3f4c3b).
 - 2026-11-02T10:38:26Z (main): resumed
+  provenance: {"harness_session":"claude-code:7cd61eed-7c30-4d68-82e9-b377f1904fd6","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-11-02T10:38:28Z (main): done
+  provenance: {"harness_session":"claude-code:7cd61eed-7c30-4d68-82e9-b377f1904fd6","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-11-02T10:38:28Z (main): quarry's first version (spec docs/specs/2026-10-10-quarry-domain-layers-design.md §13) is complete: foundation (children here), repositories and acquisition (quarry-3f4c3b), and ontology terms, generated skills and live checks (quarry-06c10c, merged into quarry main 98bc6fa on 2026-11-02, skills installed through hq on the user's approval). core and biology domains; GEO, ENA, BioStudies, Zenodo, figshare, PubMed (plus Europe PMC), GO, UBERON, NCBITaxon. The spec's Status line still names the two milestones as open; it is a decision record and was left as written.
   provenance: {"harness_session":"claude-code:7cd61eed-7c30-4d68-82e9-b377f1904fd6","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
