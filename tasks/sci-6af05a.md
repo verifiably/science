@@ -1,13 +1,15 @@
 ---
 id: sci-6af05a
 title: Adopt shared broad-test policy and remote verification
-status: todo
+status: doing
 priority: 1
 size: m
 complexity: mid
 process: planned
+owner: main
 created: 2026-10-29T13:46:08Z
-updated: 2026-10-31T20:04:01Z
+updated: 2026-11-02T10:38:24Z
+started: 2026-11-02T10:38:24Z
 depends: [ops-68729d]
 tags: []
 source: "tt-policy:sci"
@@ -44,3 +46,4 @@ After approved activation, commit .tt.toml with real broad target names, verify 
 
 - 2026-10-29T13:46:08Z (add): created
   provenance: {"harness_session":"codex:01a1874f-c2d8-7320-ae81-7114e37e343f","harness_session_source":"CODEX_THREAD_ID","origin":"agent"}
+- 2026-11-02T10:38:24Z (main): started
