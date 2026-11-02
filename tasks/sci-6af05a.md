@@ -8,7 +8,7 @@ complexity: mid
 process: planned
 owner: feat/sci-6af05a-test-policy
 created: 2026-10-29T13:46:08Z
-updated: 2026-11-02T11:30:58Z
+updated: 2026-11-02T11:31:00Z
 started: 2026-11-02T10:38:24Z
 depends: [ops-68729d]
 tags: []
@@ -65,3 +65,4 @@ After approved activation, commit .tt.toml with real broad target names, verify 
 - 2026-11-02T11:29:51Z (feat/sci-6af05a-test-policy): resumed
 - 2026-11-02T11:29:53Z (feat/sci-6af05a-test-policy): review: spec round 2 — verdict: revise; findings: 1 important; reviewer: claude-code/claude-opus-5-5
 - 2026-11-02T11:30:58Z (feat/sci-6af05a-test-policy): spec round 2 rulings: accepted Important 1 from claude-code/claude-opus-5-5 in 365799fe519726eafa7e8a70e1f2ef2f796c268b (§5.3 now requires TT_FORCE=1 just test-fast on the certified host before merging any branch touching python/, and just test-full for shared fixtures, lifecycle code, or dependency changes) and restored 'policy: disabled at <RFC3339-UTC> revision <full-sha>' in §7.3.3 to match ops/bin/tt-latency:452 and autonomy-23aeff (recorded with Why/Cost in tasks/files/sci-6af05a/spec-review-ledger.md; no deferred minors). Worktree .worktrees/sci-6af05a remains locked on unmerged branch feat/sci-6af05a-test-policy; no pushes performed; host-load --section session reports nothing left running.
+- 2026-11-02T11:31:00Z (feat/sci-6af05a-test-policy): parked (waiting on user, review): Write implementation plan in docs/plans/2026-11-02-test-execution-policy.md after user approves docs/specs/2026-11-02-test-execution-policy-design.md (frozen at 365799fe519726eafa7e8a70e1f2ef2f796c268b)
