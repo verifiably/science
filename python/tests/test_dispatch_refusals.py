@@ -88,6 +88,100 @@ def test_a_kernel_refusal_after_an_act_closes_done_and_is_an_internal_error(rig)
     assert "proposition:twice" in out.text
 
 
+def _refusing_boundary_call(writer, scratch_base: Path):
+    from beliefs.boundary import execute_production_run
+    from beliefs.recipe import CONFINED_POLICY
+    return execute_production_run(
+        inputs=(),
+        port=writer.operation_port(),
+        boundary_policy=CONFINED_POLICY,
+        parameters={},
+        nondeterminism=None,  # type: ignore[arg-type] — refuses on missing code root before nondeterminism
+        definition=None,  # type: ignore[arg-type]
+        code_roots=(scratch_base / "missing-bundle",),
+        held_inputs={},
+        entrypoint="workflow/Snakefile",
+        targets=(),
+        declared_outputs=(),
+        observer=writer.actor,
+        started_at="2026-09-09T00:00:00Z",
+        host_realization="linux-x86_64",
+        scratch_base=scratch_base / "scratch",
+    )
+
+
+def test_a_boundary_refusal_recording_only_an_act_report_closes_refused_and_replays(certified_work):
+    """A boundary operation (run, replay, publish) records its refusal as an
+    act-report through the ledgered operation port before returning RunRefused
+    or PublishRefused. That act-report is the refusal's own durable evidence,
+    not a prior act: the invocation closes refused and replays the refusal."""
+    from beliefs.session import KernelRefusalValue, reconcile_sessions
+    from science.config import ReadContext
+    from science.session import open_session
+
+    boundary_refusing = Declaration(
+        "boundary-refusing", "fixture",
+        WriteClass("mints", ("run", "act-report"), {"run": "run", "act-report": "run"}),
+        MIN_OUTPUT_BUDGET, (), (), Path("."))
+
+    def handler(ctx, writer):
+        outcome = _refusing_boundary_call(writer, certified_work)
+        raise KernelRefusalValue(outcome)
+
+    cfg = build_fixture_world(certified_work)
+    session = open_session(cfg)
+    try:
+        d = Dispatcher((boundary_refusing,), {"boundary-refusing": handler},
+                       ReadContext.open(cfg), session=session)
+        with pytest.raises(Refused) as first:
+            d.invoke("boundary-refusing", {}, invocation_id="B" * 8)
+        assert first.value.refusal.code == "kernel-refused"
+        assert first.value.refusal.data["kind"] == "RunRefused"
+        acts = session.invocation_acts("B" * 8)
+        assert len(acts) == 1
+        assert all(rid.startswith("act-report:") for _, rid in acts[0].record_ids)
+        with pytest.raises(Refused) as again:
+            d.invoke("boundary-refusing", {}, invocation_id="B" * 8)
+        assert again.value.refusal == first.value.refusal
+    finally:
+        session.close()
+    assert reconcile_sessions(cfg.world, cfg.operations_root) == ()
+
+
+def test_a_boundary_refusal_after_a_committed_act_closes_done_and_is_an_internal_error(certified_work):
+    """When an earlier act already minted a record before a later boundary act
+    refuses and records its act-report, the earlier act still committed: the
+    invocation closes done and raises HandlerContractViolation."""
+    from beliefs.session import KernelRefusalValue, reconcile_sessions
+    from science.config import ReadContext
+    from science.dispatch import HandlerContractViolation
+    from science.session import open_session
+
+    mixed = Declaration(
+        "mixed", "fixture",
+        WriteClass("mints", ("proposition", "run", "act-report"),
+                   {"proposition": "corpus-write", "run": "run", "act-report": "run"}),
+        MIN_OUTPUT_BUDGET, (InputSpec("slug", "string", True, "d"),), (), Path("."))
+
+    def handler(ctx, writer, *, slug):
+        writer.add(fixture_proposition_node(slug))
+        outcome = _refusing_boundary_call(writer, certified_work)
+        raise KernelRefusalValue(outcome)
+
+    cfg = build_fixture_world(certified_work)
+    session = open_session(cfg)
+    try:
+        d = Dispatcher((mixed,), {"mixed": handler}, ReadContext.open(cfg), session=session)
+        with pytest.raises(HandlerContractViolation, match="kernel-refused"):
+            d.invoke("mixed", {"slug": "kept"}, invocation_id="M" * 8)
+        assert len(session.invocation_acts("M" * 8)) == 2
+        out = d.invoke("mixed", {"slug": "kept"}, invocation_id="M" * 8)
+        assert "proposition:kept" in out.text
+    finally:
+        session.close()
+    assert reconcile_sessions(cfg.world, cfg.operations_root) == ()
+
+
 @pytest.mark.parametrize("raised", [
     lambda: __import__("beliefs.errors", fromlist=["x"]).CitationContractMismatch(
         Path("/m"), "testing", "testing:aa", "testing:bb"),

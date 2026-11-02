@@ -23,7 +23,9 @@ from science.schema import Declaration
 # through `science.refusal.kernel_refusal`, the one normalization path.
 # StoreWriteRefused follows a holdings intent append, but an intent is not an
 # act: nothing published, so the invocation closes refused like any other.
-# A kernel refusal after a published act closes `done` with that act, as a
+# A boundary refusal (`KernelRefusalValue`) records its own refusal `act-report`
+# through the operation port; with no other act recorded, it closes refused too.
+# A kernel refusal after a published prior act closes `done` with that act, as a
 # surface refusal after an act does (framework design §6.1, amended 2026-10-31).
 KERNEL_REFUSALS = (PermitExceeded, KernelRefusalValue, WriteRefused,
                    CitationContractMismatch, AddressMapConflict, BuildContended,
@@ -245,9 +247,19 @@ class Dispatcher:
             except (*KERNEL_REFUSALS, Refused) as caught:
                 # A kernel refusal of a later act does not unmake an earlier
                 # one: whichever kind refused, committed acts close `done`.
+                # A boundary refusal (`KernelRefusalValue`) records its own
+                # `act-report` through the operation port as durable evidence
+                # of the refusal; that `act-report` alone is not a prior act.
                 refusal = caught.refusal if isinstance(caught, Refused) else kernel_refusal(caught)
                 acted = self._session.invocation_acts(iid)
-                if not acted:
+                prior = (
+                    acted if isinstance(caught, Refused)
+                    else tuple(
+                        pair for act in acted for pair in act.record_ids
+                        if not (isinstance(caught, KernelRefusalValue) and pair[1].startswith("act-report:"))
+                    )
+                )
+                if not prior:
                     return self._close_refused(iid, refusal)
                 raise self._close_acted(
                     iid, acted,

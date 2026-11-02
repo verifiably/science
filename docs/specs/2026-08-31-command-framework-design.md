@@ -536,12 +536,15 @@ recorded, the handler broke the validate-before-act rule: the dispatcher closes
 `done` with the minted identities and raises `HandlerContractViolation`, an
 internal error, because a half-acted write is a defect and not a refusal.
 
-*Amended 2026-10-31 (sci-62e5aa):* a kernel refusal raised by a write handler
-closes by the same rule. With no act recorded it closes refused with the kernel's
-envelope; with an act recorded (a multi-act handler whose later act the kernel
-refuses) it closes `done` with the minted identities and raises
-`HandlerContractViolation`, so the outcome and its replay keep every act that
-committed.
+*Amended 2026-10-31 (sci-62e5aa, sci-5d1956):* a kernel refusal raised by a
+write handler closes by the same rule. With no prior act recorded it closes
+refused with the kernel's envelope; a boundary refusal (`KernelRefusalValue`)
+whose only recorded act is the boundary's own refusal `act-report` likewise
+closes refused with that envelope while its `act` line stays in the ledger to
+cover the chain registration; with a prior act recorded (a multi-act handler
+whose later act the kernel refuses) it closes `done` with the minted identities
+and raises `HandlerContractViolation`, so the outcome and its replay keep every
+act that committed.
 
 *Amended 2026-10-29 (milestone 1b plan, Task 8):* for `sharing`, the dispatcher
 composes the complete pin prefix from every invocation sharing line, in ledger
