@@ -8,7 +8,7 @@ complexity: mid
 process: planned
 owner: feat/sci-6af05a-test-policy
 created: 2026-10-29T13:46:08Z
-updated: 2026-11-02T11:53:40Z
+updated: 2026-11-02T11:56:40Z
 started: 2026-11-02T10:38:24Z
 depends: [ops-68729d]
 tags: []
@@ -73,3 +73,4 @@ After approved activation, commit .tt.toml with real broad target names, verify 
 - 2026-11-02T11:44:24Z (feat/sci-6af05a-test-policy): parked (waiting on user, review): Execute docs/plans/2026-11-02-test-execution-policy.md (frozen at e0ba174bd04bc7f2638529ecbadb9e4ca80560ce) after user approves the plan
 - 2026-11-02T11:53:38Z (feat/sci-6af05a-test-policy): resumed
 - 2026-11-02T11:53:40Z (feat/sci-6af05a-test-policy): review: plan round 1 — verdict: revise; findings: 4 important, 4 minor; reviewer: claude-code/claude-opus-5-5
+- 2026-11-02T11:56:40Z (feat/sci-6af05a-test-policy): attached: plan-review-ledger.md (5216 bytes): Plan review ledger for docs/plans/2026-11-02-test-execution-policy.md
