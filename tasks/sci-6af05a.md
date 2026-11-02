@@ -8,7 +8,7 @@ complexity: mid
 process: planned
 owner: feat/sci-6af05a-test-policy
 created: 2026-10-29T13:46:08Z
-updated: 2026-11-02T12:40:40Z
+updated: 2026-11-02T12:53:26Z
 started: 2026-11-02T10:38:24Z
 depends: [ops-68729d]
 tags: []
@@ -86,3 +86,4 @@ After approved activation, commit .tt.toml with real broad target names, verify 
 - 2026-11-02T12:39:21Z (feat/sci-6af05a-test-policy): publication packet (Task 6 Step 1): Phase 1 integrated to main at 9c79d0afbe2574e7ab7f1c1415b6bb0013a82f42 (policy: enabled recorded at 2026-11-02T12:38:29Z in c8e227ea542a43a66c59c0b7ed2335b2c6a09712). Public repos: verifiably/science, verifiably/beliefs, verifiably/atoms, verifiably/nodes (ubuntu-latest free on public repos per ops-2bf257; gh account khughitt via GH_TOKEN). Sync state vs origin/main: (1) science main is 633 commits ahead of origin/main (7a4915237c9af766fb7d38abc96413839642c60a); (2) beliefs main (1e878c8c2945039c8aada0766898733aaa3dcc8f) is 36 commits ahead of origin/main (600afa63396bb7353e8f67adf447f28fc6b6e019), 0 diff under python/; (3) atoms main (12a47676e0a82f604e3dbfb975129d426d3c9424) is 38 commits ahead of origin/main (935535a7275eeaa9d5ea9189b0b2163c021d4a95), 3 files changed under python/ (python/README.md, python/pyproject.toml import-names, python/src/atoms/coordinator/__init__.py docstring); (4) nodes main (b90edafac6a2c28162c57d20d416a2513353ae62) is 6 commits ahead of origin/main (ce159f2694c3149416f3d7e24ac0fedad5f4253d), 0 diff under python/. Expected hosted CI coverage on ubuntu-latest (Python 3.11 and 3.13): 555 executed tests (532 pilot + 23 new in test_uncertified_host.py and test_front_door.py), 663 skipped (661 CapabilityUnavailable + 2 confinement unavailable), 0 failed, 0 errors. Requesting user approval to push main to origin in atoms, nodes, beliefs, and science (or science alone).
 - 2026-11-02T12:39:23Z (feat/sci-6af05a-test-policy): parked (waiting on user, approval): Push main to origin (and sibling main branches if approved) and verify initial hosted CI run in Task 6 Step 2
 - 2026-11-02T12:40:40Z (feat/sci-6af05a-test-policy): resumed
+- 2026-11-02T12:53:26Z (feat/sci-6af05a-test-policy): attached: ci-module-inventory.txt (2097 bytes): Hosted CI module-inventory.txt from verified run 41448141023
