@@ -70,3 +70,42 @@
 
 - None.
 
+## Task 3 & Task 4 Execution Rulings
+
+1. **Task 3 — `test_pre_commit_routes_docs_paths_only_when_every_staged_file_matches` appends `# changed` rather than overwriting `justfile`.**
+   - Ruling: appended `\n# changed\n` to `target_file` in `python/tests/test_front_door.py` (`83a6d01`).
+   - Why: Overwriting `justfile` deleted the recipes before `.githooks/pre-commit` invoked `just hook-pre-commit`.
+   - Cost: None; appending stages a real modification to `justfile` while preserving its recipes.
+2. **Task 4 — Place `README.md` sibling checkout and test-command note under `## Install` and avoid backticked non-local paths in `AGENTS.md`.**
+   - Ruling: updated `## Install` in `README.md` and wrote sibling repo names (`beliefs`, `atoms`, `nodes`) and artifact names (`JUnit and module-inventory artifacts`) without path-style backticks in `AGENTS.md` (`1a0a94e`).
+   - Why: `tools/family.toml` restricts top-level `README.md` headings to `["Install", "Usage", "Layout", "Documentation", "License"]`, and `python3 tools/ops-docs check` validates backticked path-like tokens in `AGENTS.md` as tracked local files.
+   - Cost: None; all required content is preserved in `README.md` and `AGENTS.md` and passes `ops-docs check`.
+
+## Phase 1 Whole-Branch Final Review (dc39b31716328fae9dcc633985eadb9888e0f85d..1a0a94e0ef186882ee51171d12eab3cc371402d9)
+
+- Reviewer: antigravity/pro (session:84826be2-0d66-411f-85dd-134da839362f)
+- Verdict: accept
+- Findings: minor 3
+
+### Rulings on Declined-to-Judge Items
+
+1. **Activation of `.tt.toml` (`automatic_broad = false`) and widening of `ci_suite_refs := "refs/heads/*"`**
+   - Ruling: stands as intentionally deferred to Task 7 after hosted CI verification in Task 6.
+   - Why: Spec §7.1–§7.3 and Global Constraints forbid disabling automatic local broad runs before an approved hosted CI run finishes with a nonzero executed test count.
+   - Cost: None; Phase 1 must land with local policy enabled.
+2. **Local `main` commit lead in sibling repositories (`beliefs`, `atoms`, `nodes` ahead of `origin/main`)**
+   - Ruling: stands as scoped to Task 6 Step 1 (Publication Packet).
+   - Why: Pushing sibling repositories is an external side effect requiring explicit user approval in the Publication Packet.
+   - Cost: None; nothing is pushed in Phase 1.
+3. **Host-level SSH keepalive configuration in `~/.ssh/config`**
+   - Ruling: stands as host-level configuration outside the repository tree.
+   - Why: `.githooks/pre-push` probes `ssh -G` at runtime and refuses before running the gate when `ServerAliveInterval` is `0`.
+   - Cost: None.
+
+### Minor (deferred)
+
+- `.github/workflows/ci.yml:80`: `Require coverage evidence` step omits `if: always()` (step 11 `Upload coverage evidence` still has `if: always()`, and omitting `if: always()` on step 10 avoids masking earlier setup/hygiene failures with `missing JUnit report`).
+- `.github/workflows/ci.yml:72`: `module-inventory.txt` records the 4 repo SHAs and sorted `[test modules]` list without appending `cat pyproject.toml`.
+- `python/tests/conftest.py:57-58`: Three blank lines instead of two after `pytest_runtest_teardown`.
+
+
