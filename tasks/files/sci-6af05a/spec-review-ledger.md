@@ -48,3 +48,24 @@
 - Reviewer: antigravity/inherit (read-only builder check ba3749e7-9108-4b88-9787-7685eb3d702d)
 - Verdict: approved
 - Findings: none (nothing important left)
+
+## Round 2 — User / External Review (2fb59e88ee75498baeb50b935c4ae647d7fccc44 -> 365799fe519726eafa7e8a70e1f2ef2f796c268b)
+
+- Reviewer: claude-code/claude-opus-5-5
+- Verdict: revise
+- Findings: 1 important
+
+### Rulings
+
+1. **Important 1 — Broaden §5.3 pre-merge certified-host rule from a hand-kept file subset to any branch touching `python/`.**
+   - Ruling: accepted and fixed in `365799fe519726eafa7e8a70e1f2ef2f796c268b` (§5.3).
+   - Why: 58 of the 72 test modules (31 all-skip and 27 mixed, including `retention.py`, `overlap.py`, `sharing.py`, `coordination.py`, `supersession.py`, `closure.py`, `cli.py`, `loader.py`, `stop.py`, `mcp.py`, and `serve.py`) have certified-fixture tests skipped on an uncertified runner, and a hand-kept file list would both omit existing modules and go stale as modules are added. Requiring `TT_FORCE=1 just test-fast` on the certified host before merging any branch that touches `python/` covers all Python modules while letting `pytest-testmon` scale the run to affected tests, and keeping `just test-full` for shared fixtures (`python/tests/conftest.py`, `python/tests/helpers/*`), lifecycle code, and sibling/locked dependencies (`python/pyproject.toml`, `python/uv.lock`) covers cross-cutting changes.
+   - Cost: Every branch touching `python/` pays one `TT_FORCE=1 just test-fast` run on the certified host before merge.
+2. **Correction to Round 1 Finding 4 — Restore `policy: disabled at <RFC3339-UTC> revision <full-sha>` in §7.3.3.**
+   - Ruling: accepted and restored in `365799fe519726eafa7e8a70e1f2ef2f796c268b` (§7.3.3).
+   - Why: `ops/bin/tt-latency:452` explicitly parses `policy: (enabled|disabled) at (\S+) revision [0-9a-f]{40}` (using `enabled` for the latency floor), and sibling adoptions (`autonomy-23aeff`) record `policy: disabled at <RFC3339-UTC> revision <full-sha>` at activation.
+   - Cost: None.
+
+### Minor (deferred)
+
+- None.
