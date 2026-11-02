@@ -8,7 +8,7 @@ complexity: mid
 process: planned
 owner: feat/sci-6af05a-test-policy
 created: 2026-10-29T13:46:08Z
-updated: 2026-11-02T12:53:26Z
+updated: 2026-11-02T12:53:28Z
 started: 2026-11-02T10:38:24Z
 depends: [ops-68729d]
 tags: []
@@ -87,3 +87,4 @@ After approved activation, commit .tt.toml with real broad target names, verify 
 - 2026-11-02T12:39:23Z (feat/sci-6af05a-test-policy): parked (waiting on user, approval): Push main to origin (and sibling main branches if approved) and verify initial hosted CI run in Task 6 Step 2
 - 2026-11-02T12:40:40Z (feat/sci-6af05a-test-policy): resumed
 - 2026-11-02T12:53:26Z (feat/sci-6af05a-test-policy): attached: ci-module-inventory.txt (2097 bytes): Hosted CI module-inventory.txt from verified run 41448141023
+- 2026-11-02T12:53:28Z (feat/sci-6af05a-test-policy): attached: ci-junit-summary.md (607 bytes): Hosted CI JUnit counts and skip comparison for Python 3.11 and 3.13 (run 41448141023)
