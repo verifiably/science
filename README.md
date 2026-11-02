@@ -117,7 +117,9 @@ before feasibility assessment, including important questions with missing data.
 - `commands/` — one directory per command: its declaration and prompt.
 - `adapters/` — the generated harness adapters (Claude Code).
 - `python/` — the package: the dispatcher, the CLI and MCP surfaces, the writer service.
-- `docs/specs/`, `docs/plans/`, `docs/records/` — designs, plans and records.
+- `docs/` — the designs, plans and records this tree cites, and the store guide. Task
+  records and newer working documents live in the project's records directory, outside
+  this repository.
 
 ## Documentation
 

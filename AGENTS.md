@@ -45,7 +45,7 @@ the environment on first use, with `beliefs` as an editable path dependency.
   `TT_FORCE=1` is set; `test-one`, `test-full`, `check-hygiene`, `docs`, and the
   `hook-*` recipes are protected and always run their hygiene commands.
 - Git hooks: `.githooks/pre-commit` classifies every staged path against `docs_paths` in
-  `justfile` (`README.md`, `AGENTS.md`, `docs/*.md`, `tasks/*.md` take
+  `justfile` (`README.md`, `AGENTS.md`, `docs/*.md` take
   `hook-pre-commit-docs`; markdown command fixtures under `python/tests/fixtures/` are
   excluded; renames count on both sides and failed classification runs `hook-pre-commit`).
   At pre-push, `.githooks/pre-push` routes pushes to `ci_remote` (`origin`) whose
@@ -82,6 +82,10 @@ the environment on first use, with `beliefs` as an editable path dependency.
 - `commands/<name>/` — `command.toml` and `prompt.md` per command; `tools/cli.toml` is
   the authority for the surface.
 - `python/` — the package; tests under `python/tests/`.
+- `docs/` — the specs, plans and records this tree's files cite; they stay and are revised
+  in place. Task records and every other working document live in science's records
+  directory, committed in the records repository; new design specs, plans, briefs and
+  handoffs go there.
 
 ## Rules
 

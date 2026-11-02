@@ -30,8 +30,8 @@ one_cmd := "cd python && uv run pytest"
 # seconds-long hygiene gate is the guide checks (ops-check, ops-docs) and the task-record check.
 check_hygiene_cmd := "python3 tools/ops-check && python3 tools/ops-docs check && tasks check"
 
-# Only passive docs and task records: python/tests/fixtures/*.md are command inputs.
-docs_paths := "README.md AGENTS.md docs/*.md tasks/*.md"
+# Only passive docs: python/tests/fixtures/*.md are command inputs.
+docs_paths := "README.md AGENTS.md docs/*.md"
 docs_check_cmd := check_hygiene_cmd
 
 # Activated to "refs/heads/*" in Phase 3 after hosted CI verification.

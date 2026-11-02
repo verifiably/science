@@ -230,7 +230,7 @@ def test_recipes_match_shared_contract(front_door: FrontDoor) -> None:
         ("README.md", "hook-pre-commit-docs"),
         ("AGENTS.md", "hook-pre-commit-docs"),
         ("docs/stores.md", "hook-pre-commit-docs"),
-        ("tasks/sci-6af05a.md", "hook-pre-commit-docs"),
+        ("tasks/sci-6af05a.md", "hook-pre-commit"),
         ("python/tests/fixtures/doc.md", "hook-pre-commit"),
         ("justfile", "hook-pre-commit"),
     ],
