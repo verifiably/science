@@ -1,15 +1,17 @@
 ---
 id: sci-6af05a
 title: Adopt shared broad-test policy and remote verification
-status: doing
+status: done
 priority: 1
 size: m
 complexity: mid
 process: planned
 owner: feat/sci-6af05a-test-policy
 created: 2026-10-29T13:46:08Z
-updated: 2026-11-02T13:19:19Z
+updated: 2026-11-02T13:19:21Z
 started: 2026-11-02T10:38:24Z
+completed: 2026-11-02T13:19:21Z
+closed: 2026-11-02T13:19:21Z
 depends: [ops-68729d]
 tags: []
 source: "tt-policy:sci"
@@ -95,3 +97,5 @@ After approved activation, commit .tt.toml with real broad target names, verify 
 - 2026-11-02T13:14:40Z (feat/sci-6af05a-test-policy): policy: disabled at 2026-11-02T13:10:54Z revision d124639a7fabf023c895537b5c377ae64712fae5
 - 2026-11-02T13:16:38Z (feat/sci-6af05a-test-policy): attached: sdd-progress-ledger.md (10567 bytes): SDD execution ledger for sci-6af05a
 - 2026-11-02T13:19:19Z (main): retro: Running the local uncertified-volume pilot in the worktree before finalizing the spec exposed wrapped CapabilityUnavailable causes and exact 532/663 pass/skip counts. Adding test_live_ops_check_passes_without_tasks_registry caught how tools/ops-check resolves project-prefixed backticked paths when XDG_CONFIG_HOME lacks tasks/projects.toml on a hosted runner.
+- 2026-11-02T13:19:21Z (main): done
+- 2026-11-02T13:19:21Z (main): Adopted shared tt broad-test policy (tools/tt v10), opt-in VERIFIABLY_UNCERTIFIED_HOST=1 capability gate, and GitHub Actions CI workflow (Python 3.11 and 3.13). Phase 1 integrated to main at 9c79d0afbe2574e7ab7f1c1415b6bb0013a82f42 (policy: enabled at 2026-11-02T12:38:29Z; just test-full 1,218 passed in 150.94s). Initial hosted CI run 41448141023 on 4a3294fd4128899dcbb5d02dcc0f52ae80f2e5c3 passed in 48s/45s with 556 executed, 663 skipped (661 CapabilityUnavailable + 2 confinement), 0 failed, 0 errors across 73 modules (attached in ci-junit-summary.md and ci-module-inventory.txt). Phase 3 activated .tt.toml (automatic_broad = false, broad_targets = ["test", "test-fast", "ci-python"]) and ci_suite_refs := "refs/heads/*" at d124639a7fabf023c895537b5c377ae64712fae5 (policy: disabled at 2026-11-02T13:10:54Z), verified focused execution (test-one ran, exit 0), automatic skip (just test skipped, policy-disabled), forced failure propagation (TT_FORCE=1 just test-fast exit 1, forced), and covered remote push routing (hook-pre-push-fast skipped test-fast locally; post-activation CI run 41451318824 passed in 33s). tt-report recorded 0 bypasses. All review and execution rulings and 4 deferred minors are attached in plan-review-ledger.md and sdd-progress-ledger.md. Discarded regenerable ignored directories (python/.venv, python/.pytest_cache, python/.testmondata, tools/__pycache__), verified no host pointers resolved into .worktrees/sci-6af05a, and removed .worktrees/sci-6af05a and branch feat/sci-6af05a-test-policy. Updated ops-39bff6, ops-8bfa85, and ops-56aab7. Closing disclosures: pushed main to origin in verifiably/atoms (203be8e), verifiably/nodes (6bf8ba2), verifiably/beliefs (50e1c4d), and verifiably/science; no surviving processes; no unmerged branches; .worktrees/sci-6af05a removed.
