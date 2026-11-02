@@ -8,7 +8,7 @@ complexity: mid
 process: planned
 owner: feat/sci-6af05a-test-policy
 created: 2026-10-29T13:46:08Z
-updated: 2026-11-02T11:40:38Z
+updated: 2026-11-02T11:44:18Z
 started: 2026-11-02T10:38:24Z
 depends: [ops-68729d]
 tags: []
@@ -16,6 +16,7 @@ source: "tt-policy:sci"
 agent: codex
 origin: agent
 spec: docs/specs/2026-11-02-test-execution-policy-design.md
+plan: docs/plans/2026-11-02-test-execution-policy.md
 ---
 
 Adopt the approved shared test execution policy for this personal project after the ops pilot. Owner: the next sci implementer; Keith approves external activation. State: pending preparation, not offloaded. Shared authority: ops-8bfa85 (read its approved spec and plan with tasks doc); pilot prerequisite ops-68729d.
