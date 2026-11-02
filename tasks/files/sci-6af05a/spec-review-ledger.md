@@ -69,3 +69,24 @@
 ### Minor (deferred)
 
 - None.
+
+## Round 3 — User / External Review (365799fe519726eafa7e8a70e1f2ef2f796c268b -> 8cd98e857bd75ce0be1858c06b2b2053f9db382a)
+
+- Reviewer: claude-code/claude-opus-5-5 (accepted for planning by Keith)
+- Verdict: accept
+- Findings: 2 minor
+
+### Rulings
+
+1. **Minor 1 — §5.3 item 2 listed source modules (`retention.py`, `overlap.py`, etc.) directly after "58 of the 72 test modules".**
+   - Ruling: accepted and fixed in `8cd98e857bd75ce0be1858c06b2b2053f9db382a` (§5.3).
+   - Why: Clarifying that those are source modules under `python/src/science/` whose corresponding test modules skip keeps the sentence accurate.
+   - Cost: None.
+2. **Minor 2 — §5.3 named "session/dispatch/store lifecycle code" for the `just test-full` trigger without naming the files.**
+   - Ruling: accepted and fixed in `8cd98e857bd75ce0be1858c06b2b2053f9db382a` (§5.3).
+   - Why: Naming `python/src/science/{config,session,dispatch,holdings,publication,world_belief}.py` explicitly prevents two readings of the `AGENTS.md` rule.
+   - Cost: None.
+
+### Minor (deferred)
+
+- None.
