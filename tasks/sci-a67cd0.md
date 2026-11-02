@@ -1,13 +1,15 @@
 ---
 id: sci-a67cd0
 title: "Task 4: Hosted CI Workflow (`.github/workflows/ci.yml`) and Project Guides (`README.md`, `AGENTS.md`)"
-status: todo
+status: doing
 priority: 1
 size: s
 complexity: low
 process: direct
+owner: main
 created: 2026-11-02T13:22:16Z
-updated: 2026-11-02T13:22:16Z
+updated: 2026-11-02T13:22:18Z
+started: 2026-11-02T13:22:18Z
 depends: []
 parent: sci-6af05a
 tags: []
@@ -21,3 +23,5 @@ step: "Task 4: Hosted CI Workflow (`.github/workflows/ci.yml`) and Project Guide
 
 - 2026-11-02T13:22:16Z (add): created
   provenance: {"harness_session":"claude-code:4260e5c5-b638-4926-a788-0499d6e14b9d","harness_session_source":"CLAUDE_CODE_SESSION_ID","origin":"agent"}
+- 2026-11-02T13:22:18Z (main): started
+  provenance: {"harness_session":"claude-code:4260e5c5-b638-4926-a788-0499d6e14b9d","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
