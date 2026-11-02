@@ -44,3 +44,29 @@
 ### Minor (deferred)
 
 - None.
+
+## Round 2 — User / External Review (d32cbf1ae6a0613c48d93d6ec900a334d34a78a0)
+
+- Reviewer: claude-code/claude-opus-5-5
+- Verdict: accept
+- Findings: minor 3
+
+### Rulings
+
+1. **Minor 1 — Task 7 Step 6.2 `tasks attach sci-6af05a -` reads from stdin with nothing piped in; pass the ledger's actual file path.**
+   - Ruling: accepted and updated in `docs/plans/2026-11-02-test-execution-policy.md` (Task 7 Step 6.2 now updates `tasks/files/sci-6af05a/plan-review-ledger.md` and runs `tasks attach sci-6af05a tasks/files/sci-6af05a/plan-review-ledger.md --name plan-review-ledger.md ...`).
+   - Why: Avoids hanging or attaching an empty file when `tasks attach` runs at closure.
+   - Cost: None.
+2. **Minor 2 — Note in Task 5 Step 3 that if `git merge --ff-only` fails because another session committed to `main` between review and integration, merge `main` into the branch again, rerun `just check` and `just test-full`, and record the merge commit in the ledger.**
+   - Ruling: accepted and updated in `docs/plans/2026-11-02-test-execution-policy.md` (Task 5 Step 3).
+   - Why: Handles a concurrent advance on `main` during the review window without rebasing.
+   - Cost: None.
+3. **Minor 3 — Pin the `Spec:` header line in `docs/plans/2026-11-02-test-execution-policy.md` to the approved spec revision (`8cd98e827a9de0df9836a353349f2cfed23915a7`).**
+   - Ruling: accepted and updated in `docs/plans/2026-11-02-test-execution-policy.md` (line 11).
+   - Why: Keeps the plan's spec reference pinned to the approved revision.
+   - Cost: None.
+
+### Minor (deferred)
+
+- None.
+

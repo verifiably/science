@@ -8,7 +8,7 @@
 
 **Tech Stack:** `just`, POSIX `sh` git hooks (`.githooks/pre-commit`, `.githooks/pre-push`), `tools/tt` (the version `main` carries, currently v10), Python 3.11 / 3.13, `uv`, `pytest`, `pytest-xdist`, `pytest-testmon`, GitHub Actions.
 
-**Spec:** `docs/specs/2026-11-02-test-execution-policy-design.md`
+**Spec:** `docs/specs/2026-11-02-test-execution-policy-design.md` (frozen at `8cd98e827a9de0df9836a353349f2cfed23915a7`)
 
 ## Global Constraints
 
@@ -435,7 +435,7 @@ Dispatch a fresh read-only review subagent over the whole Phase 1 branch (`git d
 
 - [ ] **Step 3: Integrate Phase 1 to `main` and record the `policy: enabled` note**
 
-From the main checkout, fast-forward `main` to `feat/sci-6af05a-test-policy`, record the exact `policy: enabled` lifecycle note on `sci-6af05a`, and fast-forward `feat/sci-6af05a-test-policy` in `.worktrees/sci-6af05a` to match `main`:
+From the main checkout, fast-forward `main` to `feat/sci-6af05a-test-policy` (if `git merge --ff-only` fails because another session committed to `main` between the review and integration, merge `main` into `feat/sci-6af05a-test-policy` via `git -C .worktrees/sci-6af05a merge --no-edit main`, rerun `just check` and `just test-full` in `.worktrees/sci-6af05a`, record the merge commit in the ledger, and then retry `git merge --ff-only`), record the exact `policy: enabled` lifecycle note on `sci-6af05a`, and fast-forward `feat/sci-6af05a-test-policy` in `.worktrees/sci-6af05a` to match `main`:
 ```bash
 git merge --ff-only feat/sci-6af05a-test-policy
 SHA=$(git rev-parse HEAD)
@@ -568,7 +568,7 @@ Verify and record on `sci-6af05a`:
 - [ ] **Step 6: Run `tt-report`, attach plan ledger, remove `.worktrees/sci-6af05a`, update `ops` tasks, and close `sci-6af05a`**
 
 1. Run `tt-report --project sci --since 2026-11-02 --all` and record the timing summary in the done note on `sci-6af05a`.
-2. Attach `plan-review-ledger.md` (containing all plan and final/activation review rulings and any deferred minors) to `sci-6af05a` via `tasks attach sci-6af05a - --name plan-review-ledger.md --caption "Plan and code review ledger for sci-6af05a"` and verify `tasks show sci-6af05a` lists all attachments (`spec-round-1-builder-report.md`, `spec-round-2-builder-report.md`, `spec-review-ledger.md`, `ci-module-inventory.txt`, `ci-junit-summary.md`, `plan-review-ledger.md`).
+2. Update `tasks/files/sci-6af05a/plan-review-ledger.md` in place with all plan, final, and activation review rulings and any deferred minors, attach `.superpowers/sdd/2026-11-02-test-execution-policy/progress.md` via `tasks attach sci-6af05a .superpowers/sdd/2026-11-02-test-execution-policy/progress.md --name sdd-progress-ledger.md --caption "SDD execution ledger for sci-6af05a"`, and verify `tasks show sci-6af05a` lists all attachments (`spec-round-1-builder-report.md`, `spec-round-2-builder-report.md`, `spec-review-ledger.md`, `ci-module-inventory.txt`, `ci-junit-summary.md`, `plan-review-ledger.md`, `sdd-progress-ledger.md`).
 3. Inspect `git -C .worktrees/sci-6af05a status --ignored --porcelain` and give each entry an explicit disposition in the task note (discard regenerable `python/.venv`, `python/.pytest_cache`, `python/.testmondata`).
 4. Check `readlink -f ~/bin/* ~/.local/bin/*` to confirm no host pointer resolves into `.worktrees/sci-6af05a`, confirm `git -C .worktrees/sci-6af05a status --porcelain` prints nothing, then remove the worktree and branch:
    ```bash
