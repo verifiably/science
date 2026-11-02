@@ -108,4 +108,12 @@
 - `.github/workflows/ci.yml:72`: `module-inventory.txt` records the 4 repo SHAs and sorted `[test modules]` list without appending `cat pyproject.toml`.
 - `python/tests/conftest.py:57-58`: Three blank lines instead of two after `pytest_runtest_teardown`.
 
+## Task 6 Hosted CI Fix
+
+1. **Task 6 — `AGENTS.md:40` backticked `ops` path under hosted CI without `~/.config/tasks/projects.toml`.**
+   - Ruling: wrote `ops's 2026-10-29 test-execution-policy design` without backticks in `AGENTS.md` and added `test_live_ops_check_passes_without_tasks_registry` in `python/tests/test_front_door.py` (RED -> GREEN).
+   - Why: On a GitHub Actions runner where `~/.config/tasks/projects.toml` is absent (`registry(env) == {}`), `tools/ops-check` resolves `ops \`docs/specs/2026-10-29-test-execution-policy-design.md\`` against `science` rather than `ops` and exits 1 (run `41447264420`).
+   - Cost: None; matches how `beliefs/AGENTS.md` writes external design references without path backticks and adds a permanent regression test with `XDG_CONFIG_HOME` isolated.
+
+
 

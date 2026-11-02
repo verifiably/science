@@ -574,3 +574,21 @@ def test_ci_workflow_conformance() -> None:
     positions = [workflow.index(marker) for marker in ordered]
     assert positions == sorted(positions)
 
+
+def test_live_ops_check_passes_without_tasks_registry(tmp_path: Path) -> None:
+    env = {
+        "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+        "HOME": str(tmp_path),
+        "XDG_CONFIG_HOME": str(tmp_path / "xdg"),
+    }
+    res = subprocess.run(
+        [sys.executable, str(REPO / "tools/ops-check")],
+        cwd=REPO,
+        env=env,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert res.returncode == 0, res.stderr
+
+

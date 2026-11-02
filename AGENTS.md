@@ -37,7 +37,7 @@ the environment on first use, with `beliefs` as an editable path dependency.
   and `just gate` is an untimed alias running `just check` then `just test`
   (`TT_FORCE=1 just gate` forces the full gate).
 - Test execution policy comes from the root tt policy configuration validated by
-  `tools/tt` (ops `docs/specs/2026-10-29-test-execution-policy-design.md`; adoption:
+  `tools/tt` (ops's 2026-10-29 test-execution-policy design; adoption:
   `docs/specs/2026-11-02-test-execution-policy-design.md`). If the policy file is absent,
   policy is enabled and every target runs. With `automatic_broad = false`, automatic
   invocations of the broad targets (`test`, `test-fast`, `ci-python`) record a
