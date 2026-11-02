@@ -211,9 +211,13 @@ otherwise. It finds:
   and Zenodo and figshare emit `doi:`). A CURIE whose prefix has no owner is refused
   (`no_owner`). In the first version `doi:` has none: it is a cross-reference only,
   until a resource that owns it (DataCite, Crossref) is added.
-- **Bare accessions.** `id normalize GSE24080` matches the patterns of owned prefixes
-  only, not the whole snapshot: several Bioregistry patterns (`ena.embl`'s
-  `^[A-Z]+[0-9]+(\.\d+)?$`) match nearly every accession. When exactly one owned prefix
+- **Bare accessions.** `id normalize GSE24080` matches the patterns of prefixes owned by
+  data-holding resources only (`repository`, `knowledgebase`, `literature-index`), not
+  the whole snapshot: several Bioregistry patterns (`ena.embl`'s
+  `^[A-Z]+[0-9]+(\.\d+)?$`) match nearly every accession, and term prefixes such as
+  `ncbitaxon` (`^([0-9]+)|([a-zA-Z_]+)$`) match any word or number. A term id is
+  written with its prefix (`go:0006915`). (Amended 2026-11-02 when the term verbs landed,
+  quarry-06c10c.) When exactly one owned prefix
   matches, it prints that CURIE. When several match, it fails with the error kind
   `ambiguous_id`, whose detail names the candidates. Other commands refuse a bare
   accession with the same error rather than guess.
