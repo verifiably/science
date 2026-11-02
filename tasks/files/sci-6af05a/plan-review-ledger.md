@@ -115,5 +115,38 @@
    - Why: On a GitHub Actions runner where `~/.config/tasks/projects.toml` is absent (`registry(env) == {}`), `tools/ops-check` resolves `ops \`docs/specs/2026-10-29-test-execution-policy-design.md\`` against `science` rather than `ops` and exits 1 (run `41447264420`).
    - Cost: None; matches how `beliefs/AGENTS.md` writes external design references without path backticks and adds a permanent regression test with `XDG_CONFIG_HOME` isolated.
 
+## Task 7 Execution Rulings & Phase 3 Activation Review (353d2f1c7ceb45d58a56ba750d68e600101d9937..d124639a7fabf023c895537b5c377ae64712fae5)
+
+- Reviewer: antigravity/pro (session:95cf17ec-3e2f-4fbb-a5e0-c00140d7a23a)
+- Verdict: accept
+- Findings: minor 1
+
+### Task 7 Execution Rulings
+
+1. **Task 7 — `test_unreadable_policy_refuses_push` tests both uncovered (`refs/tags/v1`) and covered (`refs/heads/main`) pushes under `ci_suite_refs := "refs/heads/*"`.**
+   - Ruling: updated `test_unreadable_policy_refuses_push` in `python/tests/test_front_door.py` (`d124639`).
+   - Why: Once `ci_suite_refs` is `"refs/heads/*"`, pushing `refs/heads/main` to `origin` routes to `hook-pre-push-fast` where `tt` exits 2 on invalid `.tt.toml`, whereas uncovered `refs/tags/v1` routes to `hook-pre-push` where `.githooks/pre-push`'s policy check exits 2 before `just`.
+   - Cost: None; both refusal paths are asserted.
+2. **Task 7 — `test_live_repository_policy_and_ci_suite_refs` omits non-JSON-serializable `'path'` `PosixPath` key from `tt.read_policy(root)` before `json.dumps`.**
+   - Ruling: serialized `{k: v for k, v in policy.items() if k != 'path'}` in `python/tests/test_front_door.py` (`d124639`).
+   - Why: `tt.read_policy` returns `{"path": PosixPath(...), "automatic_broad": ..., "broad_targets": ...}`.
+   - Cost: None.
+
+### Rulings on Declined-to-Judge Items
+
+1. **Hosted GitHub Actions runner execution and artifact download verification performed in Task 6 (run `41448141023`)**
+   - Ruling: stands as verified and attached in Task 6 (`ci-module-inventory.txt` and `ci-junit-summary.md`).
+   - Why: Task 6 already verified the hosted CI run and attached both artifacts before Task 7 began.
+   - Cost: None.
+2. **Post-activation verification steps (Task 7 Step 5)**
+   - Ruling: stands as the next step in Task 7 Step 5 immediately following integration of `d124639` to `main`.
+   - Why: Post-activation verification tests the live integrated policy on `main` and `.worktrees/sci-6af05a`.
+   - Cost: None.
+
+### Minor (deferred)
+
+- `python/tests/test_front_door.py:648-650`: File ends with trailing blank lines instead of a single trailing newline.
+
+
 
 
