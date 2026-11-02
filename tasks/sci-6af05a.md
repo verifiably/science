@@ -8,7 +8,7 @@ complexity: mid
 process: planned
 owner: feat/sci-6af05a-test-policy
 created: 2026-10-29T13:46:08Z
-updated: 2026-11-02T11:56:42Z
+updated: 2026-11-02T11:56:44Z
 started: 2026-11-02T10:38:24Z
 depends: [ops-68729d]
 tags: []
@@ -75,3 +75,4 @@ After approved activation, commit .tt.toml with real broad target names, verify 
 - 2026-11-02T11:53:40Z (feat/sci-6af05a-test-policy): review: plan round 1 — verdict: revise; findings: 4 important, 4 minor; reviewer: claude-code/claude-opus-5-5
 - 2026-11-02T11:56:40Z (feat/sci-6af05a-test-policy): attached: plan-review-ledger.md (5216 bytes): Plan review ledger for docs/plans/2026-11-02-test-execution-policy.md
 - 2026-11-02T11:56:42Z (feat/sci-6af05a-test-policy): plan round 1 rulings: merged main (dc39b31, tt v10) into feat/sci-6af05a-test-policy and accepted all 8 findings (4 important, 4 minor) from claude-code/claude-opus-5-5 in d32cbf1ae6a0613c48d93d6ec900a334d34a78a0 (sha256 23ed6f1ab0c4bdbd4b32d2d212d006a181493a58fcd56e6e13ee930f2dffe86e; rulings with Why/Cost attached in tasks/files/sci-6af05a/plan-review-ledger.md; no deferred minors). Worktree .worktrees/sci-6af05a remains locked on unmerged branch feat/sci-6af05a-test-policy; no pushes performed; host-load --section session reports nothing left running.
+- 2026-11-02T11:56:44Z (feat/sci-6af05a-test-policy): parked (waiting on user, review): Execute docs/plans/2026-11-02-test-execution-policy.md (frozen at d32cbf1ae6a0613c48d93d6ec900a334d34a78a0) after user approves the revised plan
