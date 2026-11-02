@@ -16,11 +16,22 @@ Part of **verifiably**: verifiably builds understanding of the world from small,
 
 ## Install
 
-From a checkout, with `beliefs` checked out beside it as an editable path dependency:
+From a checkout, with `atoms`, `nodes`, and `beliefs` checked out beside it as sibling
+repositories (`python/pyproject.toml` takes `beliefs` from `../beliefs`, which takes
+`atoms` and `nodes` from `../atoms` and `../nodes`):
 
 ```sh
-cd python && uv sync
+git clone https://github.com/verifiably/atoms
+git clone https://github.com/verifiably/nodes
+git clone https://github.com/verifiably/beliefs
+git clone https://github.com/verifiably/science
+cd science && git config core.hooksPath .githooks
+cd python && uv sync --frozen
 ```
+
+From the repository root, `just test-one <pytest args>` runs a focused test selection,
+`just check` runs the hygiene checks, and `just test-full` forces the full test suite on
+a certified host (see `AGENTS.md` for the test execution policy and hosted CI split).
 
 ## Usage
 

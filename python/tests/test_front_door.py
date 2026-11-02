@@ -519,3 +519,58 @@ def test_pre_push_clears_git_local_environment(front_door: FrontDoor) -> None:
     assert "GIT_DIR" not in child_env
     assert "GIT_WORK_TREE" not in child_env
     assert "GIT_INDEX_FILE" not in child_env
+
+
+def test_ci_workflow_conformance() -> None:
+    import re
+
+    workflow = (REPO / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+    assert 'branches: ["**"]' in workflow
+    assert "pull_request:" in workflow
+    assert "workflow_dispatch:" in workflow
+    assert (
+        "if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository"
+        in workflow
+    )
+    assert "group: ${{ github.workflow }}-${{ github.ref }}" in workflow
+    assert "cancel-in-progress: true" in workflow
+    assert "contents: read" in workflow
+    assert "timeout-minutes: 30" in workflow
+    assert 'python-version: ["3.11", "3.13"]' in workflow
+    assert 'TT_FORCE: "1"' in workflow
+    assert 'PYTEST_XDIST_AUTO_NUM_WORKERS: "4"' in workflow
+    assert "working-directory: science/python" in workflow
+
+    uses = re.findall(r"^\s*-?\s*uses:\s*(\S+)", workflow, flags=re.MULTILINE)
+    assert uses
+    for ref in uses:
+        assert re.fullmatch(r"[^@]+@[0-9a-f]{40}", ref), f"unpinned action: {ref}"
+    assert "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0" in uses
+    assert "astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990" in uses
+    assert "extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3" in uses
+    assert "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a" in uses
+    assert "setup-python" not in workflow
+    assert 'version: "0.11.29"' in workflow
+    assert "python-version: ${{ matrix.python-version }}" in workflow
+
+    for repo_line in (
+        "path: science",
+        "repository: verifiably/beliefs",
+        "path: beliefs",
+        "repository: verifiably/atoms",
+        "path: atoms",
+        "repository: verifiably/nodes",
+        "path: nodes",
+    ):
+        assert repo_line in workflow
+
+    ordered = [
+        "Prepare coverage evidence",
+        "uv sync --frozen",
+        "just ci-python",
+        "Require coverage evidence",
+        "actions/upload-artifact@",
+    ]
+    positions = [workflow.index(marker) for marker in ordered]
+    assert positions == sorted(positions)
+

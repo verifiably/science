@@ -21,24 +21,61 @@ the environment on first use, with `beliefs` as an editable path dependency.
 
 ## Gates
 
-- Tests: `just test-one <pytest args>` runs the test at hand: a path relative to `python/`,
-  `tests/test_file.py::test_name`, or `-k "a and b"`; at least one argument is required.
-  `just test-fast` is the inner loop (pytest-testmon selects affected tests from its
-  dependency data); run it before committing. `just test` runs the suite.
-  All test recipes run under ops' `host-budget run`, which sizes
-  `-n auto` to the host's budget. `just check` runs the seconds-long gate;
-  `just gate` runs both. All test recipes run in a worktree as they are. Every recipe
-  records its run through `tools/tt`, the timing wrapper vendored from the ops
-  repository; do not call `pytest` directly.
-- The pre-commit hook classifies every staged path against `docs_paths` in the justfile:
-  only `README.md`, `AGENTS.md`, `docs/*.md` and `tasks/*.md` take `hook-pre-commit-docs`.
-  Markdown command fixtures are excluded; renames count on both sides and failed
-  classification runs the full check. Both checks currently run ops-check, ops-docs check and tasks check.
-- There is no CI workflow, so `ci_suite_refs` is empty and the pre-push hook always
-  carries the full suite through `just hook-pre-push`. `hook-pre-push-fast` is available
-  for future CI-covered push refs and uses testmon's dependency selection. Run `just test`
-  yourself only when hooks are not installed, the fast target does not cover the affected
-  behavior, or you are asked to.
+- Focused and broad tests: `just test-one <pytest args>` runs the test at hand (a path
+  relative to `python/`, `tests/test_file.py::test_name`, or `-k "a and b"`; at least
+  one argument is required) and is protected from policy disabling.
+  `just test-fast` is the inner broad loop (pytest-testmon selects affected tests from
+  its dependency data); `just test` is the broad full suite; `just test-full` is an
+  untimed alias for `TT_FORCE=1 just test` so only the inner `test` target records a
+  forced timing row; `just ci-python` is the broad hosted CI recipe (requires absolute
+  `SCIENCE_CI_EVIDENCE_DIR`, runs `python3 tools/ops-check`, and writes JUnit XML).
+  All local test recipes run under ops' `host-budget run`, which sizes `-n auto` to the
+  host's budget, and record through `tools/tt`; do not call `pytest` directly.
+- Hygiene and composition targets: `just check-hygiene` runs the mandatory seconds-long
+  checks (`python3 tools/ops-check && python3 tools/ops-docs check && tasks check`) and
+  is protected in `tools/tt`. `just check` is an untimed alias for `just check-hygiene`,
+  and `just gate` is an untimed alias running `just check` then `just test`
+  (`TT_FORCE=1 just gate` forces the full gate).
+- Test execution policy comes from the root tt policy configuration validated by
+  `tools/tt` (ops `docs/specs/2026-10-29-test-execution-policy-design.md`; adoption:
+  `docs/specs/2026-11-02-test-execution-policy-design.md`). If the policy file is absent,
+  policy is enabled and every target runs. With `automatic_broad = false`, automatic
+  invocations of the broad targets (`test`, `test-fast`, `ci-python`) record a
+  `policy-disabled` skip row (`exit: null`, `tests: null`) instead of running unless
+  `TT_FORCE=1` is set; `test-one`, `test-full`, `check-hygiene`, `docs`, and the
+  `hook-*` recipes are protected and always run their hygiene commands.
+- Git hooks: `.githooks/pre-commit` classifies every staged path against `docs_paths` in
+  `justfile` (`README.md`, `AGENTS.md`, `docs/*.md`, `tasks/*.md` take
+  `hook-pre-commit-docs`; markdown command fixtures under `python/tests/fixtures/` are
+  excluded; renames count on both sides and failed classification runs `hook-pre-commit`).
+  At pre-push, `.githooks/pre-push` routes pushes to `ci_remote` (`origin`) whose
+  non-deletion refs all match `ci_suite_refs` to `just hook-pre-push-fast` (hygiene under
+  `hook-pre-push-fast`, then `just test-fast`), and routes any other push to
+  `just hook-pre-push` (hygiene under `hook-pre-push`, then `just test`), printing a
+  stderr warning when policy skips `test` on an uncovered push and exiting `2` if
+  the policy file is malformed.
+- Remote CI and certified-host split: `.github/workflows/ci.yml` (`CI`) runs
+  `TT_FORCE=1 VERIFIABLY_UNCERTIFIED_HOST=1 just ci-python` on `ubuntu-latest` for Python
+  3.11 and 3.13 on every branch push (`branches: ["**"]`), `workflow_dispatch`, and fork
+  `pull_request` events, checking out beliefs, atoms, and nodes beside `science` and
+  uploading 30-day JUnit and module-inventory artifacts. `VERIFIABLY_UNCERTIFIED_HOST=1`
+  converts only `atoms.core.errors.CapabilityUnavailable` (direct or direct `__cause__` on
+  `nodes.core.errors.ExecutionError` or `science.refusal.Refused`) into a `pytest.skip`
+  prefixed `certified tuple unavailable on this host:`; on the uncertified pilot, 532 of
+  1,195 items pass across 41 modules while 663 items across 58 test modules skip (661 at
+  `CapabilityUnavailable`, 2 at `bwrap` confinement). Hosted CI therefore verifies the
+  non-certified surface only.
+- Mandatory certified-host verification rule:
+  1. Every change runs `just test-one` on its affected test module(s) during development.
+  2. Any branch that touches `python/` must run `TT_FORCE=1 just test-fast` on the
+     certified host before merging to `main`.
+  3. Any branch that changes shared test fixtures (`python/tests/conftest.py`,
+     `python/tests/helpers/`), session/dispatch/store lifecycle modules
+     (`python/src/science/config.py`, `python/src/science/session.py`,
+     `python/src/science/dispatch.py`, `python/src/science/holdings.py`,
+     `python/src/science/publication.py`, `python/src/science/world_belief.py`),
+     or sibling/locked dependencies (`python/pyproject.toml`, `python/uv.lock`) must run
+     `just test-full` on the certified host before merging to `main`.
 
 ## Layout
 
