@@ -8,7 +8,7 @@ complexity: mid
 process: planned
 owner: feat/sci-6af05a-test-policy
 created: 2026-10-29T13:46:08Z
-updated: 2026-11-02T11:00:33Z
+updated: 2026-11-02T11:00:35Z
 started: 2026-11-02T10:38:24Z
 depends: [ops-68729d]
 tags: []
@@ -54,3 +54,4 @@ After approved activation, commit .tt.toml with real broad target names, verify 
 - 2026-11-02T11:00:29Z (feat/sci-6af05a-test-policy): attached: spec-round-1-builder-report.md (274 bytes): Read-only builder check report on frozen spec 7608d2c9af3cdcaa61b1f696fc4e6ceb540035bd
 - 2026-11-02T11:00:31Z (feat/sci-6af05a-test-policy): attached: spec-review-ledger.md (275 bytes): Spec review ledger for docs/specs/2026-11-02-test-execution-policy-design.md
 - 2026-11-02T11:00:33Z (feat/sci-6af05a-test-policy): review: spec round 1 — verdict: approved; findings: none; reviewer: antigravity/inherit
+- 2026-11-02T11:00:35Z (feat/sci-6af05a-test-policy): retained-items & disclosures: worktree .worktrees/sci-6af05a locked on branch feat/sci-6af05a-test-policy (unmerged; integrates to main after plan execution and verification); gitignored python/.venv is regenerable via uv sync --frozen; no pushes performed; no host pointers repointed; host-load --section session reports nothing left running. Spec design calls and rejected alternatives (synthetic check-code target, monolithic hook-pre-push-fast wrapper, host-budget in hosted CI) are recorded in docs/specs/2026-11-02-test-execution-policy-design.md §3.
