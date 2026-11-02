@@ -1,13 +1,15 @@
 ---
 id: sci-4a30ed
 title: "Task 6: Publication Packet and Hosted CI Verification"
-status: todo
+status: doing
 priority: 1
 size: s
 complexity: low
 process: direct
+owner: main
 created: 2026-11-02T13:22:27Z
-updated: 2026-11-02T13:22:27Z
+updated: 2026-11-02T13:22:29Z
+started: 2026-11-02T13:22:29Z
 depends: []
 parent: sci-6af05a
 tags: []
@@ -21,3 +23,5 @@ step: "Task 6: Publication Packet and Hosted CI Verification"
 
 - 2026-11-02T13:22:27Z (add): created
   provenance: {"harness_session":"claude-code:4260e5c5-b638-4926-a788-0499d6e14b9d","harness_session_source":"CLAUDE_CODE_SESSION_ID","origin":"agent"}
+- 2026-11-02T13:22:29Z (main): started
+  provenance: {"harness_session":"claude-code:4260e5c5-b638-4926-a788-0499d6e14b9d","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
