@@ -8,7 +8,7 @@ complexity: mid
 process: planned
 owner: feat/sci-6af05a-test-policy
 created: 2026-10-29T13:46:08Z
-updated: 2026-11-02T10:40:30Z
+updated: 2026-11-02T10:51:25Z
 started: 2026-11-02T10:38:24Z
 depends: [ops-68729d]
 tags: []
@@ -48,3 +48,4 @@ After approved activation, commit .tt.toml with real broad target names, verify 
   provenance: {"harness_session":"codex:01a1874f-c2d8-7320-ae81-7114e37e343f","harness_session_source":"CODEX_THREAD_ID","origin":"agent"}
 - 2026-11-02T10:38:24Z (main): started
 - 2026-11-02T10:40:30Z (feat/sci-6af05a-test-policy): resumed
+- 2026-11-02T10:51:25Z (feat/sci-6af05a-test-policy): origin: filed by codex:01a1874f-c2d8-7320-ae81-7114e37e343f (2026-10-29T13:46:08Z, L1682/L1695) as the science adoption child of ops-8bfa85 (authority docs/specs/2026-10-29-test-execution-policy-design.md in ops, dependency ops-68729d resolved). User intent in L15/L108/L294/L538/L2555/L2583/L2697 of that session established shared tt broad-test policy, local hook split, once-per-branch-push CI offload with TT_FORCE=1, dropping the exact-balance billing prerequisite for public GitHub repositories, and the 30-day shared evaluation ops-56aab7. No open intent questions remain for user clarification before drafting the spec.
