@@ -8,7 +8,7 @@ complexity: mid
 process: planned
 owner: feat/sci-6af05a-test-policy
 created: 2026-10-29T13:46:08Z
-updated: 2026-11-02T13:16:38Z
+updated: 2026-11-02T13:19:19Z
 started: 2026-11-02T10:38:24Z
 depends: [ops-68729d]
 tags: []
@@ -94,3 +94,4 @@ After approved activation, commit .tt.toml with real broad target names, verify 
 - 2026-11-02T13:10:50Z (feat/sci-6af05a-test-policy): review: activation round 1 — verdict: accept; findings: minor 1; reviewer: antigravity/pro
 - 2026-11-02T13:14:40Z (feat/sci-6af05a-test-policy): policy: disabled at 2026-11-02T13:10:54Z revision d124639a7fabf023c895537b5c377ae64712fae5
 - 2026-11-02T13:16:38Z (feat/sci-6af05a-test-policy): attached: sdd-progress-ledger.md (10567 bytes): SDD execution ledger for sci-6af05a
+- 2026-11-02T13:19:19Z (main): retro: Running the local uncertified-volume pilot in the worktree before finalizing the spec exposed wrapped CapabilityUnavailable causes and exact 532/663 pass/skip counts. Adding test_live_ops_check_passes_without_tasks_registry caught how tools/ops-check resolves project-prefixed backticked paths when XDG_CONFIG_HOME lacks tasks/projects.toml on a hosted runner.
