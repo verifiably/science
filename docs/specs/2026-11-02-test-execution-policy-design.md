@@ -18,11 +18,11 @@ Originating user intent (recovered from `codex:01a1874f-c2d8-7320-ae81-7114e37e3
 2. Each repository keeps focused tests (`just test-one <args>`) and fast hygiene checks active during local work, splits local git hooks so mandatory hygiene is timed under the hook target and broad suites are invoked as separate child recipes that `.tt.toml` (`automatic_broad = false`) can skip and record, and offloads automatic broad runs to once-per-branch-push CI with `TT_FORCE=1`.
 3. Public GitHub repositories use standard free GitHub-hosted runners without a paid-allowance prerequisite (`ops-2bf257`), and local `automatic_broad = false` is activated only after an approved hosted CI run finishes with a nonzero executed test count and accepted coverage.
 
-## 2. Verified Current State (at `06dd4a7`)
+## 2. Verified Current State (at `dc39b31`)
 
 ### 2.1 Tooling and Policy
 
-- `tools/tt` is already version 9 (the task body's observation of version 7 is stale; no `tt` re-vendor is required).
+- `tools/tt` is at version 10 (updated on `main` at `dc39b31`; the task body's observation of version 7 is stale, and no `tt` re-vendor is required).
 - `tools/ops-check` is version 17 and `tools/ops-docs` is version 6.
 - No `.tt.toml` exists at the repository root, so `tt` currently defaults to `automatic_broad = true`.
 - No open `test-latency` or `halt` tasks exist in `sci`.

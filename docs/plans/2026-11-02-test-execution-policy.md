@@ -2,17 +2,17 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Split `science`'s local hygiene and broad test recipes under `tools/tt` v9 policy control, add an opt-in `VERIFIABLY_UNCERTIFIED_HOST=1` pytest gate and GitHub Actions `CI` workflow with durable JUnit + module-inventory artifacts, and activate `.tt.toml` (`automatic_broad = false`) and `ci_suite_refs := "refs/heads/*"` after hosted verification.
+**Goal:** Split `science`'s local hygiene and broad test recipes under `tools/tt` policy control, add an opt-in `VERIFIABLY_UNCERTIFIED_HOST=1` pytest gate and GitHub Actions `CI` workflow with durable JUnit + module-inventory artifacts, and activate `.tt.toml` (`automatic_broad = false`) and `ci_suite_refs := "refs/heads/*"` after hosted verification.
 
-**Architecture:** `justfile` separates mandatory seconds-long checks (`check-hygiene`, `hook-pre-commit`, `hook-pre-commit-docs`, and the hygiene step of `hook-pre-push` / `hook-pre-push-fast`) from broad pytest targets (`test`, `test-fast`, `ci-python`) and provides untimed composition/force aliases (`check`, `gate`, `test-full`). `python/tests/uncertified_host.py` and `python/tests/conftest.py` convert `atoms.core.errors.CapabilityUnavailable` (both direct and direct `__cause__`) into `pytest.skip` only when `VERIFIABLY_UNCERTIFIED_HOST=1`, allowing `.github/workflows/ci.yml` to run the 532 non-certified tests on `ubuntu-latest` across Python 3.11 and 3.13 while preserving fail-closed certified-host testing locally.
+**Architecture:** `justfile` separates mandatory seconds-long checks (`check-hygiene`, `hook-pre-commit`, `hook-pre-commit-docs`, and the hygiene step of `hook-pre-push` / `hook-pre-push-fast`) from broad pytest targets (`test`, `test-fast`, `ci-python`) and provides untimed composition/force aliases (`check`, `gate`, `test-full`). `python/tests/uncertified_host.py` and `python/tests/conftest.py` convert `atoms.core.errors.CapabilityUnavailable` (both direct and direct `__cause__`) into `pytest.skip` only when `VERIFIABLY_UNCERTIFIED_HOST=1`, allowing `.github/workflows/ci.yml` to run the non-certified tests on `ubuntu-latest` across Python 3.11 and 3.13 while preserving fail-closed certified-host testing locally.
 
-**Tech Stack:** `just`, POSIX `sh` git hooks (`.githooks/pre-commit`, `.githooks/pre-push`), `tools/tt` v9, Python 3.11 / 3.13, `uv`, `pytest`, `pytest-xdist`, `pytest-testmon`, GitHub Actions.
+**Tech Stack:** `just`, POSIX `sh` git hooks (`.githooks/pre-commit`, `.githooks/pre-push`), `tools/tt` (the version `main` carries, currently v10), Python 3.11 / 3.13, `uv`, `pytest`, `pytest-xdist`, `pytest-testmon`, GitHub Actions.
 
-**Spec:** `docs/specs/2026-11-02-test-execution-policy-design.md` (commit `8cd98e857bd75ce0be1858c06b2b2053f9db382a`)
+**Spec:** `docs/specs/2026-11-02-test-execution-policy-design.md`
 
 ## Global Constraints
 
-- `tools/tt` is already version 9, `tools/ops-check` is version 17, and `tools/ops-docs` is version 6; do not downgrade or replace them.
+- Keep the versions of `tools/tt` (currently v10 at `dc39b31`), `tools/ops-check` (v17), and `tools/ops-docs` (v6) that `main` carries; before integrating to `main`, check whether `main` has advanced and merge `main` into `feat/sci-6af05a-test-policy` (never rebase) if it has.
 - Every `just` recipe that records a timing row runs through `python3 tools/tt`; do not call `pytest` directly from the shell.
 - `check`, `gate`, and `test-full` are untimed aliases so only their child targets (`check-hygiene`, `test`) record timing rows.
 - `VERIFIABLY_UNCERTIFIED_HOST` is opt-in and matches only the exact string `"1"`; anywhere else `CapabilityUnavailable` remains a test failure.
@@ -23,7 +23,7 @@
 
 ## Review Focus
 
-1. **Wrapped `CapabilityUnavailable` (`ExecutionError` or `Refused` with `__cause__ = CapabilityUnavailable`) on an uncertified host**: If a test reaches `beliefs/root.py:871,1043,1359` or `science/config.py:104,114` without an earlier `register_root` / `read_chain` call, the unhandled wrapper exception must still skip under `VERIFIABLY_UNCERTIFIED_HOST=1` and re-raise when unset (pinned in Task 2, `test_uncertified_host.py`).
+1. **Wrapped `CapabilityUnavailable` (`ExecutionError` or `Refused` with `__cause__ = CapabilityUnavailable`) on an uncertified host**: If a test reaches `beliefs/root.py:871,1043,1359` (`nodes.core.errors.ExecutionError`) or `science/config.py:104,114` (`science.refusal.Refused`) without an earlier `register_root` / `read_chain` call, the unhandled wrapper exception must still skip under `VERIFIABLY_UNCERTIFIED_HOST=1` and re-raise when unset (pinned in Task 2, `test_uncertified_host.py`).
 2. **Non-`"1"` `VERIFIABLY_UNCERTIFIED_HOST` values (`""`, `"0"`, `"true"`, `"yes"`)**: Must never disarm the certified-host failure gate (pinned in Task 2, `test_uncertified_host.py`).
 3. **Hosted CI running a broad target (`ci-python` or nested `hook-pre-push-fast`) under `automatic_broad = false` when `TT_FORCE=1` is omitted**: `tt` must exit `2` with `"TT_FORCE=1"` on stderr and record no skipped broad row (pinned in Task 3, `test_front_door.py`).
 4. **`ci-python` invoked with `SCIENCE_CI_EVIDENCE_DIR` unset or relative**: Must exit `2` with an error on stderr before running pytest (pinned in Task 3, `test_front_door.py`).
@@ -38,7 +38,7 @@
 
 **Interfaces:**
 - Consumes: hydrated `.worktrees/sci-6af05a` (`git config core.hooksPath .githooks`, `python/.venv` synced from `python/uv.lock`).
-- Produces: recorded baseline test count and duration on `sci-6af05a` before any code changes.
+- Produces: recorded baseline test count (`1195 passed`) and duration on `sci-6af05a` before any code changes.
 
 - [ ] **Step 1: Verify worktree hydration and clean status**
 
@@ -52,7 +52,7 @@ Expected: clean status, `core.hooksPath` is `.githooks`, `uv sync --frozen` repo
 
 - [ ] **Step 2: Run the baseline hygiene check and full test suite**
 
-Run in `.worktrees/sci-6af05a` (using physical path so `pytest` and `conftest.py` resolve cleanly):
+Run in `.worktrees/sci-6af05a`:
 ```bash
 just check
 just test
@@ -77,7 +77,7 @@ Expected: `{"id":"sci-6af05a","warnings":[]}`.
 - Test: `python/tests/test_uncertified_host.py`
 
 **Interfaces:**
-- Consumes: `atoms.core.errors.CapabilityUnavailable`
+- Consumes: `atoms.core.errors.CapabilityUnavailable`, `nodes.core.errors.ExecutionError`, `science.refusal.{Refusal, Refused}`
 - Produces:
   - `uncertified_host.UNCERTIFIED_HOST_VAR: str = "VERIFIABLY_UNCERTIFIED_HOST"`
   - `uncertified_host.uncertified_host(environ: Mapping[str, str]) -> bool`
@@ -94,7 +94,7 @@ Create `python/tests/test_uncertified_host.py`:
 import pytest
 from _pytest.outcomes import Skipped
 from atoms.core.errors import CapabilityUnavailable
-from beliefs.errors import ExecutionError
+from nodes.core.errors import ExecutionError
 from science.refusal import Refusal, Refused
 
 import conftest
@@ -227,7 +227,7 @@ git commit -m "test(conftest): add opt-in VERIFIABLY_UNCERTIFIED_HOST skip gate 
 - Modify: `python/tests/test_front_door.py`
 
 **Interfaces:**
-- Consumes: `tools/tt` v9 (`read_policy`, `execution_decision`), `.githooks/pre-commit`, `.githooks/pre-push`, `justfile`
+- Consumes: `tools/tt` (`read_policy`, `execution_decision`), `.githooks/pre-commit`, `.githooks/pre-push`, `justfile`
 - Produces:
   - `justfile` variables: `xdist`, `fast_cmd`, `test_cmd`, `one_cmd`, `check_hygiene_cmd`, `docs_paths`, `docs_check_cmd`, `ci_suite_refs := ""`, `ci_remote := "origin"`, `ci_evidence_cmd`, `ci_py_test_cmd`
   - `justfile` recipes: `test-one +args`, `test-fast`, `test`, `test-full`, `ci-python`, `check-hygiene`, `check`, `gate`, `docs`, `hook-pre-commit`, `hook-pre-commit-docs`, `hook-pre-push`, `hook-pre-push-fast`
@@ -236,7 +236,7 @@ git commit -m "test(conftest): add opt-in VERIFIABLY_UNCERTIFIED_HOST skip gate 
 
 - [ ] **Step 1: Replace `python/tests/test_front_door.py` with isolated `FrontDoor` route and policy tests (RED)**
 
-Update `python/tests/test_front_door.py` to define `FrontDoor(base: Path)` (isolated git repo in `tmp_path` with key-by-key `self.env` containing only `PATH`, `HOME`, `USER`, `GIT_CONFIG_GLOBAL="/dev/null"`, `GIT_CONFIG_NOSYSTEM="1"`, `GIT_AUTHOR_*`, `GIT_COMMITTER_*`, `TT_LOG`, plus a stub `host-budget` and ` ssh` in `base / "bin"` and `marker.py` replacing `check_hygiene_cmd`, `fast_cmd`, `test_cmd`, `one_cmd`, and `ci_py_test_cmd`) and tests:
+Update `python/tests/test_front_door.py` to define `FrontDoor(base: Path)` (isolated git repo in `tmp_path` with key-by-key `self.env` containing only `PATH`, `HOME`, `USER`, `GIT_CONFIG_GLOBAL="/dev/null"`, `GIT_CONFIG_NOSYSTEM="1"`, `GIT_AUTHOR_*`, `GIT_COMMITTER_*`, `TT_LOG`, plus a stub `host-budget` and `ssh` in `base / "bin"` and `marker.py` replacing `check_hygiene_cmd`, `fast_cmd`, `test_cmd`, `one_cmd`, and `ci_py_test_cmd`) and tests:
 - `test_fixture_environment_is_isolated(front_door)`: asserts no `TT_FORCE`, `GITHUB_ACTIONS`, `CI`, or extra `GIT_*` vars in `front_door.env`.
 - `test_recipes_match_shared_contract(front_door)`: asserts `just --summary` equals `{"test-fast", "test-one", "test", "test-full", "ci-python", "check-hygiene", "check", "gate", "docs", "hook-pre-commit", "hook-pre-commit-docs", "hook-pre-push", "hook-pre-push-fast"}`.
 - `test_pre_commit_routes_docs_paths_only_when_every_staged_file_matches(front_door, path, expected_target)`: parametrized over `("README.md", "hook-pre-commit-docs")`, `("AGENTS.md", "hook-pre-commit-docs")`, `("docs/stores.md", "hook-pre-commit-docs")`, `("tasks/sci-6af05a.md", "hook-pre-commit-docs")`, `("python/tests/fixtures/doc.md", "hook-pre-commit")`, `("justfile", "hook-pre-commit")`.
@@ -385,7 +385,7 @@ Create `.github/workflows/ci.yml` matching Spec §5.1–§5.2 (`name: CI`, trigg
 Update `README.md` (`## Development`) and `AGENTS.md` (`## Gates`) to document:
 - `just test-one <pytest args>` (protected focused loop), `just test-fast` (broad inner loop), `just test` (broad full suite), `just test-full` (untimed `TT_FORCE=1 just test`), `just ci-python` (hosted CI target), `just check-hygiene` (mandatory hygiene), `just check` (untimed alias), `just gate` (untimed `check` + `test`; `TT_FORCE=1 just gate` forces the full gate).
 - `.tt.toml` policy behavior (`automatic_broad = false` skips `test`, `test-fast`, and `ci-python` locally unless `TT_FORCE=1`), `.githooks/pre-push` routing (`ci_suite_refs` to `hook-pre-push-fast`, uncovered refs to `hook-pre-push` with stderr warning when skipped).
-- Hosted CI vs certified-host split (532 items run on `ubuntu-latest`, 663 items requiring the certified `atoms` kernel + ext4 tuple or `bwrap` confinement skip via `VERIFIABLY_UNCERTIFIED_HOST=1`) and the mandatory certified-host verification rule:
+- Hosted CI vs certified-host split (532 baseline items run on `ubuntu-latest`, 663 items requiring the certified `atoms` kernel + ext4 tuple or `bwrap` confinement skip via `VERIFIABLY_UNCERTIFIED_HOST=1`) and the mandatory certified-host verification rule:
   - Every change runs `just test-one` on its affected test module(s).
   - Any branch touching `python/` must run `TT_FORCE=1 just test-fast` on the certified host before merging to `main`.
   - Any branch changing shared test fixtures (`python/tests/conftest.py`, `python/tests/helpers/*`), session/dispatch/store lifecycle modules (`python/src/science/{config,session,dispatch,holdings,publication,world_belief}.py`), or sibling/locked dependencies (`python/pyproject.toml`, `python/uv.lock`) must run `just test-full` on the certified host before merging to `main`.
@@ -408,27 +408,34 @@ git commit -m "ci: add hosted Python workflow and document certified-host verifi
 
 ---
 
-### Task 5: Phase 1 Integration to `main`, `policy: enabled` Note, Publication Packet, and Hosted CI Verification
+### Task 5: Whole-Branch Final Review and Phase 1 Integration to `main`
 
 **Files:**
-- Modify: `tasks/sci-6af05a.md` (via `tasks note` / `tasks park`)
+- Modify: `tasks/sci-6af05a.md` (via `tasks note`)
 
 **Interfaces:**
-- Consumes: completed Tasks 1–4 on `feat/sci-6af05a-test-policy` (with `.tt.toml` still absent and `ci_suite_refs := ""`)
-- Produces: Phase 1 integrated to `main` with `policy: enabled at <RFC3339-UTC> revision <full-sha>` recorded on `sci-6af05a`, user-approved push to `origin`, and verified GitHub Actions `CI` coverage artifacts (`python-3.11-coverage`, `python-3.13-coverage`).
+- Consumes: completed Tasks 1–4 on `feat/sci-6af05a-test-policy` (with `.tt.toml` absent and `ci_suite_refs := ""`)
+- Produces: reviewed Phase 1 branch integrated to `main` with `policy: enabled at <RFC3339-UTC> revision <full-sha>` recorded on `sci-6af05a`.
 
-- [ ] **Step 1: Run full certified verification in `.worktrees/sci-6af05a` before merging Phase 1**
+- [ ] **Step 1: Sync with `main` if `main` has moved, then run full certified verification**
 
-Because Task 2 modified `python/tests/conftest.py`, run `just test-full` and `just check` in `.worktrees/sci-6af05a`:
+Run in `.worktrees/sci-6af05a`:
 ```bash
+git rev-list --left-right --count main...HEAD
+# If main has commits ahead of the merge base, merge main (never rebase):
+git merge --no-edit main
 just check
 just test-full
 ```
-Expected: `just check` exits 0; `just test-full` exits 0 (`1209 passed`, including the new tests in `test_uncertified_host.py` and `test_front_door.py`).
+Expected: `just check` exits 0; `just test-full` exits 0 with `0 failed, 0 errors`, and `passed == baseline (1195) + new tests added in test_uncertified_host.py and test_front_door.py`.
 
-- [ ] **Step 2: Integrate Phase 1 to `main` and record the `policy: enabled` note**
+- [ ] **Step 2: Run whole-branch final code review (`requesting-code-review`)**
 
-From the main checkout, fast-forward / merge `feat/sci-6af05a-test-policy` into `main`, then record the exact `policy: enabled` lifecycle note on `sci-6af05a` and sync `feat/sci-6af05a-test-policy` to `main`:
+Dispatch a fresh read-only review subagent over the whole Phase 1 branch (`git diff main..HEAD` at the frozen branch commit) against `docs/specs/2026-11-02-test-execution-policy-design.md` and `docs/plans/2026-11-02-test-execution-policy.md`. Record `review: final round 1 — verdict: ...; findings: ...; reviewer: ...` on `sci-6af05a` and rulings in the plan ledger (`plan-review-ledger.md`), running up to 5 review-and-fix rounds until approved and rerunning `just check` and `just test-full` after any fix.
+
+- [ ] **Step 3: Integrate Phase 1 to `main` and record the `policy: enabled` note**
+
+From the main checkout, fast-forward `main` to `feat/sci-6af05a-test-policy`, record the exact `policy: enabled` lifecycle note on `sci-6af05a`, and fast-forward `feat/sci-6af05a-test-policy` in `.worktrees/sci-6af05a` to match `main`:
 ```bash
 git merge --ff-only feat/sci-6af05a-test-policy
 SHA=$(git rev-parse HEAD)
@@ -438,7 +445,18 @@ git -C .worktrees/sci-6af05a merge --ff-only main
 ```
 Expected: `main` and `feat/sci-6af05a-test-policy` match, `just check` passes, and `sci-6af05a` carries `policy: enabled at <RFC3339-UTC> revision <full-sha>`.
 
-- [ ] **Step 3: Prepare the Publication Packet and park for user push approval**
+---
+
+### Task 6: Publication Packet and Hosted CI Verification
+
+**Files:**
+- Modify: `tasks/sci-6af05a.md` (via `tasks note`, `tasks attach`, `tasks park`)
+
+**Interfaces:**
+- Consumes: Phase 1 integrated on `main` from Task 5
+- Produces: user-approved push of `main` (and any ahead sibling `main` branches) to `origin`, verified GitHub Actions `CI` run, and attached `ci-module-inventory.txt` and `ci-junit-summary.md` on `sci-6af05a`.
+
+- [ ] **Step 1: Prepare the Publication Packet and park for user push approval**
 
 Check `gh auth status`, repository visibility, and `HEAD...origin/main` across `science`, `beliefs`, `atoms`, and `nodes`:
 ```bash
@@ -451,7 +469,7 @@ done
 ```
 Record the Publication Packet note on `sci-6af05a`, park `sci-6af05a` (`--waiting-on user --reason approval`), and ask the user for approval to push `main` in `science` (and any ahead sibling `main` branches in `beliefs`, `atoms`, `nodes`) to `origin`.
 
-- [ ] **Step 4: Push approved refs, watch the hosted `CI` run, and inspect uploaded coverage artifacts**
+- [ ] **Step 2: Push approved refs, watch the hosted `CI` run, verify coverage, and attach evidence to `sci-6af05a`**
 
 After user push approval:
 ```bash
@@ -461,11 +479,19 @@ GH_TOKEN=$(gh auth token --user khughitt) gh run list --repo verifiably/science 
 GH_TOKEN=$(gh auth token --user khughitt) gh run watch <run-id> --repo verifiably/science --exit-status
 GH_TOKEN=$(gh auth token --user khughitt) gh run download <run-id> --repo verifiably/science --dir /tmp/sci-6af05a-ci-artifacts
 ```
-Verify `/tmp/sci-6af05a-ci-artifacts/python-3.11-coverage/{pytest.xml,module-inventory.txt}` and `python-3.13-coverage/{pytest.xml,module-inventory.txt}`: confirm `executed > 0` (~546 passed including new tests), `skipped == 663`, `failures == 0`, `errors == 0`, and record the hosted run ID, URL, and counts on `sci-6af05a`. Remove `/tmp/sci-6af05a-ci-artifacts`.
+Verify `/tmp/sci-6af05a-ci-artifacts/python-3.11-coverage/{pytest.xml,module-inventory.txt}` and `python-3.13-coverage/{pytest.xml,module-inventory.txt}`:
+- Confirm `failures == 0`, `errors == 0`, `executed >= pilot (532) + new tests added in test_uncertified_host.py and test_front_door.py`, and compare `skipped` against the local uncertified pilot (`663`), verifying every skip message matches `"certified tuple unavailable on this host:"` or `"confinement unavailable"`.
+- Attach `module-inventory.txt` and a JUnit count summary to `sci-6af05a` before deleting `/tmp/sci-6af05a-ci-artifacts`:
+  ```bash
+  tasks attach sci-6af05a /tmp/sci-6af05a-ci-artifacts/python-3.13-coverage/module-inventory.txt --name ci-module-inventory.txt --caption "Hosted CI module-inventory.txt from initial verification run"
+  # Format and attach ci-junit-summary.md with run ID, URL, and 3.11/3.13 executed/skipped/failed/error counts:
+  tasks attach sci-6af05a /tmp/sci-6af05a-ci-artifacts/ci-junit-summary.md --name ci-junit-summary.md --caption "Hosted CI JUnit counts and skip comparison for Python 3.11 and 3.13"
+  rm -rf /tmp/sci-6af05a-ci-artifacts
+  ```
 
 ---
 
-### Task 6: Activation Packet, `.tt.toml` + `ci_suite_refs` Activation, Post-Activation Verification, and Reporting
+### Task 7: Activation Packet, `.tt.toml` + `ci_suite_refs` Activation, Post-Activation Verification, and Reporting
 
 **Files:**
 - Create: `.tt.toml`
@@ -474,12 +500,18 @@ Verify `/tmp/sci-6af05a-ci-artifacts/python-3.11-coverage/{pytest.xml,module-inv
 - Modify: `tasks/sci-6af05a.md`
 
 **Interfaces:**
-- Consumes: verified hosted `CI` run from Task 5
-- Produces: committed `.tt.toml` (`automatic_broad = false`, `broad_targets = ["test", "test-fast", "ci-python"]`), `ci_suite_refs := "refs/heads/*"` in `justfile`, live repository policy conformance tests in `python/tests/test_front_door.py`, post-activation verification evidence, `policy: disabled at <RFC3339-UTC> revision <full-sha>` note on `sci-6af05a`, and updates on `ops-39bff6`, `ops-8bfa85`, and `ops-56aab7`.
+- Consumes: verified hosted `CI` run and attached `ci-module-inventory.txt` / `ci-junit-summary.md` from Task 6
+- Produces: committed `.tt.toml` (`automatic_broad = false`, `broad_targets = ["test", "test-fast", "ci-python"]`), `ci_suite_refs := "refs/heads/*"` in `justfile`, live repository policy conformance tests in `python/tests/test_front_door.py`, post-activation verification evidence, `policy: disabled at <RFC3339-UTC> revision <full-sha>` note on `sci-6af05a`, removed `.worktrees/sci-6af05a`, and updates on `ops-39bff6`, `ops-8bfa85`, and `ops-56aab7`.
 
 - [ ] **Step 1: Present the Activation Packet and park for user activation approval**
 
-Record the Activation Packet note on `sci-6af05a` (hosted run URL/ID/SHA, Python 3.11 and 3.13 executed and skipped counts vs the local pilot, sibling SHAs and module inventory count, certified-host omission and `AGENTS.md` pre-merge verification rule, proposed `.tt.toml` and `ci_suite_refs := "refs/heads/*"` diff, and rollback route), park `sci-6af05a` (`--waiting-on user --reason approval`), and request user approval to activate `.tt.toml` and `ci_suite_refs := "refs/heads/*"`.
+Record the Activation Packet note on `sci-6af05a`:
+- Hosted run URL/ID/SHA, Python 3.11 and 3.13 executed and skipped counts vs the local pilot (referencing attached `ci-junit-summary.md`).
+- Sibling SHAs and module inventory count (referencing attached `ci-module-inventory.txt`).
+- Certified-host omission and `AGENTS.md` pre-merge verification rule.
+- Proposed `.tt.toml` and `ci_suite_refs := "refs/heads/*"` diff and rollback route.
+- Explicit push scope covered by the activation approval: (1) pushing `main` to `origin` (`verifiably/science`) with the activation commit (`.tt.toml`, `justfile`, `python/tests/test_front_door.py`) to verify covered push routing and trigger hosted `CI`, and (2) pushing `main` to `origin` (`verifiably/science`) with the final `sci-6af05a` lifecycle-note and task-closure commit.
+Park `sci-6af05a` (`--waiting-on user --reason approval`) and request user approval.
 
 - [ ] **Step 2: Add live repository policy assertions in `python/tests/test_front_door.py` (RED)**
 
@@ -508,16 +540,41 @@ just check
 ```
 Expected: all tests in `test_front_door.py` pass; `just check` exits 0.
 
-- [ ] **Step 4: Commit activation, integrate to `main`, verify the four post-activation behaviors, and push to `origin`**
+- [ ] **Step 4: Commit activation, run scoped review, and integrate to `main`**
 
-Commit `.tt.toml`, `justfile`, and `python/tests/test_front_door.py` in `.worktrees/sci-6af05a`, merge to `main`, and verify:
-1. Focused execution runs under policy-off: `just test-one tests/test_front_door.py` (check `tt-report` / log row shows `target: "test-one"`, `execution: "ran"`).
-2. Automatic broad target records skip: `just test` (check log row shows `target: "test"`, `execution: "skipped"`, `execution_reason: "policy-disabled"`).
-3. Forced failure propagates nonzero exit and records failure: run `TT_FORCE=1` against a failing target in `FrontDoor` or `just test-one tests/test_front_door.py -k "nonexistent_filter_that_deselects_all"` and verify nonzero exit and recorded row.
-4. Record `policy: disabled at <RFC3339-UTC> revision <full-sha>` on `sci-6af05a` using the activation commit SHA on `main`, then push `main` to `origin` and confirm `.githooks/pre-push` runs `hook-pre-push-fast` (running hygiene and skipping `test-fast`) and triggers a passing hosted `CI` run on GitHub Actions.
+In `.worktrees/sci-6af05a`:
+```bash
+git rev-list --left-right --count main...HEAD
+# Merge main if it moved:
+git merge --no-edit main
+git add .tt.toml justfile python/tests/test_front_door.py
+git commit -m "build(policy): disable automatic local broad suites after CI verification (sci-6af05a)"
+```
+Dispatch a scoped read-only review subagent over the activation commit diff (`git show HEAD`) against the Activation Packet and Spec §4 / §7.3, record `review: activation round 1 — verdict: ...` on `sci-6af05a`, then fast-forward `main` to `feat/sci-6af05a-test-policy`.
 
-- [ ] **Step 5: Clean up `.worktrees/sci-6af05a`, update `ops-39bff6`, `ops-8bfa85`, and `ops-56aab7`, and close `sci-6af05a`**
+- [ ] **Step 5: Verify the four post-activation behaviors, record `policy: disabled`, and push to `origin`**
 
-- Inspect `git -C .worktrees/sci-6af05a status --ignored --porcelain` (discard regenerable `.venv` / `.pytest_cache` / `.testmondata`), verify no host pointers resolve into `.worktrees/sci-6af05a`, run `git worktree unlock .worktrees/sci-6af05a` and `git worktree remove .worktrees/sci-6af05a`, and delete the merged local branch `feat/sci-6af05a-test-policy`.
-- Record completion notes (with activation revision/timestamp, hosted CI run ID/counts, and certified-host rule) on `ops-39bff6`, `ops-8bfa85`, and `ops-56aab7` (`tasks -C ../ops note ...` and `tasks -C ../ops edit ops-56aab7 --ref ...`).
-- Close `sci-6af05a` (`tasks done sci-6af05a ...`) and push the task closure commit to `origin`.
+Verify and record on `sci-6af05a`:
+1. **Focused execution runs under policy-off**: run `just test-one tests/test_front_door.py` and confirm the recorded timing row has `target == "test-one"`, `execution == "ran"`, `execution_reason == "default"`, `exit == 0`.
+2. **Automatic broad target records a skip**: run `just test` and confirm the recorded timing row has `target == "test"`, `execution == "skipped"`, `execution_reason == "policy-disabled"`, `exit is None`.
+3. **Forced failure on a broad target propagates nonzero exit and records failure**:
+   - Create an untracked failing test file `.worktrees/sci-6af05a/python/tests/test_forced_failure_probe.py` containing `def test_forced_failure_probe(): assert False`.
+   - Run `TT_FORCE=1 just test-fast` in `.worktrees/sci-6af05a` and verify a nonzero exit code and that the recorded `test-fast` row has `execution == "ran"`, `execution_reason == "forced"`, and `exit != 0`.
+   - Remove `.worktrees/sci-6af05a/python/tests/test_forced_failure_probe.py` and verify `git -C .worktrees/sci-6af05a status --short` is empty.
+4. **Record `policy: disabled` and verify covered remote push**:
+   - Record `policy: disabled at <RFC3339-UTC> revision <full-sha>` on `sci-6af05a` using the activation commit SHA on `main`.
+   - Push `main` to `origin` (`git push origin main`), confirm `.githooks/pre-push` selects `hook-pre-push-fast` (running `hook-pre-push-fast` hygiene and skipping `test-fast`), and watch the triggered hosted `CI` run on GitHub Actions to completion (`gh run watch --exit-status`).
+
+- [ ] **Step 6: Run `tt-report`, attach plan ledger, remove `.worktrees/sci-6af05a`, update `ops` tasks, and close `sci-6af05a`**
+
+1. Run `tt-report --project sci --since 2026-11-02 --all` and record the timing summary in the done note on `sci-6af05a`.
+2. Attach `plan-review-ledger.md` (containing all plan and final/activation review rulings and any deferred minors) to `sci-6af05a` via `tasks attach sci-6af05a - --name plan-review-ledger.md --caption "Plan and code review ledger for sci-6af05a"` and verify `tasks show sci-6af05a` lists all attachments (`spec-round-1-builder-report.md`, `spec-round-2-builder-report.md`, `spec-review-ledger.md`, `ci-module-inventory.txt`, `ci-junit-summary.md`, `plan-review-ledger.md`).
+3. Inspect `git -C .worktrees/sci-6af05a status --ignored --porcelain` and give each entry an explicit disposition in the task note (discard regenerable `python/.venv`, `python/.pytest_cache`, `python/.testmondata`).
+4. Check `readlink -f ~/bin/* ~/.local/bin/*` to confirm no host pointer resolves into `.worktrees/sci-6af05a`, confirm `git -C .worktrees/sci-6af05a status --porcelain` prints nothing, then remove the worktree and branch:
+   ```bash
+   git worktree unlock .worktrees/sci-6af05a
+   git worktree remove .worktrees/sci-6af05a
+   git branch -d feat/sci-6af05a-test-policy
+   ```
+5. Record completion notes (with activation revision/timestamp, hosted CI run ID/counts, and certified-host rule) on `ops-39bff6`, `ops-8bfa85`, and `ops-56aab7` (`tasks -C ../ops note ...` and `tasks -C ../ops edit ops-56aab7 --ref ...`).
+6. Close `sci-6af05a` (`tasks done sci-6af05a ...`), run `just check`, and push `main` to `origin`.
