@@ -107,8 +107,13 @@ JSON parse. Cursors are not authority or signatures: the dispatcher rechecks the
 bindings, report digest and valid UTF-8 position. Read continuation reruns the
 read with the same canonical inputs and current selection; changed report content
 refuses `stale-cursor`. Write continuation rebuilds the ledger-bound outcome,
-never repeats effects, and cannot cross sessions. Sharing replay also needs its
-saved presentation tail; changing or losing commentary can stale the cursor.
+never repeats effects. A write cursor stays bound to its original session and
+invocation ledger, but any endpoint over the same `operations_root` can continue
+it while the ledger and referenced records remain available; the library reader
+needs no active writer session or handler. This durable lookup is distinct from
+new-write deduplication, which remains scoped to the original attended session.
+Sharing replay also needs its saved presentation tail; changing or losing
+commentary can stale the cursor.
 
 ## Scientific command contracts
 

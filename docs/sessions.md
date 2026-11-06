@@ -99,14 +99,49 @@ opening a world; `adapters build` generates harness artifacts without one.
 ## MCP stdio
 
 `science mcp serve --config <file>` reads newline-delimited JSON-RPC requests.
-Initialize with the advertised MCP version; tool discovery derives input schemas
-from declarations, with unknown tool arguments forbidden. Tools add optional
-`invocation_id` and `cursor`, and `project` only on selecting reads. Tool results
-carry rendered text plus structured invocation metadata; a command refusal sets
-`isError` and carries the structured refusal. JSON-RPC framing/shape errors remain
-RPC errors, distinct from scientific refusals. Requests are bounded to 1,048,576
-bytes. Notifications receive no response. Shutdown drains active work and closes
-the session and companion socket; stop the launcher rather than abandoning it.
+This implementation uses `server/discover`; `initialize` is unsupported and returns
+`-32601`. Each request with an id is independent and carries `params._meta` with
+required `io.modelcontextprotocol/protocolVersion` (`2026-07-28`) and
+`io.modelcontextprotocol/clientCapabilities` (an object, `{}` is valid). For example:
+
+```json
+{"jsonrpc":"2.0","id":1,"method":"server/discover","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientCapabilities":{}}}}
+```
+
+Repeat that metadata on `tools/list` and `tools/call`; discovery does not establish
+a protocol session or supply metadata for later requests. Optional
+`io.modelcontextprotocol/clientInfo` is validated as an Implementation: string
+`name` and `version`, optional string `title`/`description`, URI `websiteUrl`, and
+validated `icons`. Known capability fields are shape-checked when present: `roots`
+is an object; `sampling` and `elicitation` contain object-shaped known features;
+`experimental`/`extensions` map to objects, with namespaced extension keys.
+
+`server/discover` takes only `_meta` and returns `supportedVersions`, `capabilities`
+(`tools:{}`), `_meta["io.modelcontextprotocol/serverInfo"]`, `ttlMs:300000` and
+`cacheScope:"public"`. `tools/list` returns declaration-derived schemas with the
+same cache fields and no `nextCursor`; every supplied listing cursor refuses.
+Result trees are fresh allocations; callers cannot mutate later results. The
+launcher-owned attended writer session is process state shared by these independent
+requests, distinct from protocol request state.
+
+`tools/call` takes `_meta`, `name`, and optional object `arguments`. Schemas forbid
+unknown tool arguments and add optional `invocation_id` and `cursor`, plus `project`
+only on selecting reads. A cursor continues that command's report rather than
+invoking a separate tool. Optional `inputResponses` (object) and `requestState`
+(string) are type-checked but then refused as unsolicited multi-round state:
+science never returns `input_required`. Every successful RPC result has
+`resultType:"complete"`; tool results contain rendered text, structured invocation
+metadata and `isError`. A scientific refusal is a complete tool result with
+`isError:true` and structured refusal detail, not a JSON-RPC protocol error.
+
+Malformed JSON, duplicate keys and invalid UTF-8 produce `-32700`; an invalid
+closed envelope (`jsonrpc:"2.0"`, string method, non-null string/integer id)
+produces `-32600`. Malformed params or metadata and unknown tools use `-32602`;
+unsupported protocol versions use `-32022` with supported/requested versions;
+unknown methods (including initialize) use `-32601`. Notifications omit `id` and
+receive no response. Frames are bounded to 1,048,576 bytes; oversized or malformed
+frames are drained through their newline and do not end or desynchronize the loop.
+Shutdown drains active work and closes the attended session and companion socket.
 
 ## Failure and recovery
 
