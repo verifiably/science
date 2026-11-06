@@ -123,6 +123,8 @@ before feasibility assessment, including important questions with missing data.
 
 ## Documentation
 
+- [Using science](docs/guide.md) — setup, an explicit synthetic walkthrough, real analyses and refusals.
+
 - [mm30 through the commands](docs/records/2026-09-23-mm30-through-the-commands.md) —
   one real analysis from an empty corpus to a computed belief (here the honest
   `NoBelief`, the data's answer under the rule), with every command's inputs and the
