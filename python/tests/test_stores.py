@@ -346,3 +346,122 @@ def test_operator_store_recipe_is_repeatable(relocated_store, certified_work):
     refused = run_store_recipe(restored, certified_work / "recipe-home")
     assert refused.returncode != 0
     assert store_snapshot(restored) == before
+
+
+def test_inherited_and_write_stores_refuse_corrupted_bytes_in_run_and_verify_without_fallback(
+    certified_work, monkeypatch
+):
+    import science.commands.run as run_module
+    from beliefs import boundary as boundary_module
+    from beliefs.confinement import host_prerequisites
+    from beliefs.recipe import MINIMAL_POLICY
+    from helpers.world import (
+        OBSERVED,
+        SPEC_FIELDS,
+        STORE_IDS,
+        build_belief_world,
+        fixture_bundle,
+        hold_fixture_dataset,
+        open_rig,
+    )
+    from science.config import FetchPolicy, ReadContext
+
+    if host_prerequisites() is not None:
+        monkeypatch.setattr(run_module, "POLICY", MINIMAL_POLICY)
+        monkeypatch.setattr(run_module, "host_prerequisites", lambda: None)
+
+    cfg = build_belief_world(certified_work)
+    orig_store = cfg.store_root
+    cand_a = certified_work / "cand-a"
+    cand_b = certified_work / "cand-b"
+    init_store_root(cand_a, authority=FIXTURE_AUTHORITY)
+    init_store_root(cand_b, authority=FIXTURE_AUTHORITY)
+    low_store, high_store = sorted((cand_a, cand_b), key=store_identity)
+
+    cfg_low = replace(cfg, store_root=low_store, read_store_roots=(orig_store,))
+    STORE_IDS[cfg_low.write_root.parent] = store_identity(low_store)
+    inherited_bytes = b"inherited-expression\n"
+    inherited_ref = hold_fixture_dataset(cfg_low, "data.txt", inherited_bytes, "inherited", **OBSERVED)
+    restored = replicate_store(cfg_low, certified_work / "restored-low", admit=True)
+
+    cfg = replace(
+        cfg,
+        store_root=high_store,
+        read_store_roots=(restored, orig_store),
+        fetch=FetchPolicy("fetch", 0),
+    )
+    STORE_IDS[cfg.write_root.parent] = store_identity(high_store)
+    code, entrypoint, targets = fixture_bundle(certified_work, "supported")
+
+    # (a) Unchanged inherited holding succeeds through run, assess, and verify.
+    with open_rig(cfg, ("spec", "run", "assess", "verify")) as (d, ctx):
+        spec_out = d.invoke("spec", dict(SPEC_FIELDS, target="proposition:p1", dataset=inherited_ref))
+        spec_ref = next(t for t in spec_out.text.split() if t.startswith("analysis-spec:"))
+        run_out = d.invoke("run", {"spec": spec_ref, "dataset": inherited_ref, "code": str(code),
+                                   "entrypoint": entrypoint, "targets": list(targets)})
+        run_ref = next(t for t in run_out.text.split() if t.startswith("run:"))
+        assess_out = d.invoke("assess", {"run": run_ref})
+        assessment_ref = next(t for t in assess_out.text.split() if t.startswith("assessment:"))
+        verify_out = d.invoke("verify", {"assessment": assessment_ref, "code": str(code), "entrypoint": entrypoint})
+        assert "[verification] verification:" in verify_out.text
+
+    # (b) Add a valid second copy in store_root (high_store), then corrupt the first-selected
+    # inherited carrier in restored (low_store). Both run and verify must refuse without
+    # falling back to high_store or launching an engine.
+    fetch_inherited(cfg, inherited_ref)
+    ctx = ReadContext.open(cfg)
+    assert len(ctx.observations()[inherited_ref]) == 2
+    selected_inherited = ctx.held_path(inherited_ref)
+    assert selected_inherited.is_relative_to(restored)
+    selected_inherited.write_bytes(b"corrupted-inherited\n")
+
+    def _never_engine(*args, **kwargs):
+        raise AssertionError("engine must not launch on corrupted store bytes")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(boundary_module, "run_engine", _never_engine)
+        patch.setattr(boundary_module, "launch_confined", _never_engine)
+        with open_rig(cfg, ("run", "verify")) as (d, _):
+            with pytest.raises(Refused) as run_caught:
+                d.invoke("run", {"spec": spec_ref, "dataset": inherited_ref, "code": str(code),
+                                 "entrypoint": entrypoint, "targets": list(targets)})
+            assert run_caught.value.refusal.code == "kernel-refused"
+            assert "does not match expected" in run_caught.value.refusal.data["reason"]
+
+            with pytest.raises(Refused) as verify_caught:
+                d.invoke("verify", {"assessment": assessment_ref, "code": str(code), "entrypoint": entrypoint})
+            assert verify_caught.value.refusal.code == "kernel-refused"
+            assert "does not match expected" in verify_caught.value.refusal.data["reason"]
+
+    # (c) Holding in store_root (high_store) whose bytes are altered after admission refuses
+    # in both run and verify before workflow execution.
+    write_bytes = b"write-store-expression\n"
+    write_ref = hold_fixture_dataset(cfg, "data.txt", write_bytes, "writable", **OBSERVED)
+    with open_rig(cfg, ("spec", "run", "assess")) as (d, _):
+        w_spec_out = d.invoke("spec", dict(SPEC_FIELDS, target="proposition:p1", dataset=write_ref))
+        w_spec_ref = next(t for t in w_spec_out.text.split() if t.startswith("analysis-spec:"))
+        w_run_out = d.invoke("run", {"spec": w_spec_ref, "dataset": write_ref, "code": str(code),
+                                     "entrypoint": entrypoint, "targets": list(targets)})
+        w_run_ref = next(t for t in w_run_out.text.split() if t.startswith("run:"))
+        w_assess_out = d.invoke("assess", {"run": w_run_ref})
+        w_assessment_ref = next(t for t in w_assess_out.text.split() if t.startswith("assessment:"))
+
+    write_carrier = ReadContext.open(cfg).held_path(write_ref)
+    assert write_carrier.is_relative_to(high_store)
+    write_carrier.write_bytes(b"corrupted-writable\n")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(boundary_module, "run_engine", _never_engine)
+        patch.setattr(boundary_module, "launch_confined", _never_engine)
+        with open_rig(cfg, ("run", "verify")) as (d, _):
+            with pytest.raises(Refused) as w_run_caught:
+                d.invoke("run", {"spec": w_spec_ref, "dataset": write_ref, "code": str(code),
+                                 "entrypoint": entrypoint, "targets": list(targets)})
+            assert w_run_caught.value.refusal.code == "kernel-refused"
+            assert "does not match expected" in w_run_caught.value.refusal.data["reason"]
+
+            with pytest.raises(Refused) as w_verify_caught:
+                d.invoke("verify", {"assessment": w_assessment_ref, "code": str(code), "entrypoint": entrypoint})
+            assert w_verify_caught.value.refusal.code == "kernel-refused"
+            assert "does not match expected" in w_verify_caught.value.refusal.data["reason"]
+

@@ -125,3 +125,127 @@ def test_verify_preparation_consumes_inherited_inputs(rig, monkeypatch):
     with pytest.raises(Prepared):
         verify_module.handle(ReadContext.open(cfg), None, assessment=assessment_ref,
                              code=str(code), entrypoint=entrypoint)
+
+
+def _forbid_engines(monkeypatch):
+    from beliefs import boundary as boundary_module
+
+    def _never_engine(*args, **kwargs):
+        raise AssertionError("engine must not launch when staged input digest check refuses")
+
+    monkeypatch.setattr(boundary_module, "run_engine", _never_engine)
+    monkeypatch.setattr(boundary_module, "launch_confined", _never_engine)
+
+
+def test_verify_refuses_corrupted_store_bytes_before_execution_and_closes_invocation(rig, monkeypatch):
+    from beliefs import stored
+
+    d, ctx, assessment_ref, (code, entrypoint, _) = rig
+    assessment = stored.assessment_value(ctx.write_view().get(assessment_ref), profile=ctx.config.profile)
+    spec_ref = stored.typed_ref("analysis-spec", assessment.spec)
+    (role,) = stored.analysis_spec_value(ctx.write_view().get(spec_ref), profile=ctx.config.profile).input_roles
+    ctx.held_path(role.dataset).write_bytes(b"corrupted-after-run\n")
+    _forbid_engines(monkeypatch)
+
+    with pytest.raises(Refused) as caught:
+        d.invoke("verify", {"assessment": assessment_ref, "code": str(code), "entrypoint": entrypoint},
+                 invocation_id="D" * 8)
+    assert caught.value.refusal.code == "kernel-refused"
+    assert "does not match expected" in caught.value.refusal.data["reason"]
+    view = ctx.write_view()
+    assert sum(1 for n in view.iter_stored() if n.kind == "run") == 1
+    assert not any(n.kind == "verification" for n in view.iter_stored())
+
+    with pytest.raises(Refused) as again:
+        d.invoke("verify", {"assessment": assessment_ref, "code": str(code), "entrypoint": entrypoint},
+                 invocation_id="D" * 8)
+    assert again.value.refusal == caught.value.refusal
+
+
+def test_verify_refuses_when_run_closure_recorded_corrupted_digest_and_holding_is_restored(
+    certified_work, monkeypatch
+):
+    from science.config import ReadContext
+
+    cfg = build_belief_world(certified_work)
+    ref = hold_fixture_dataset(cfg, "data.txt", b"declared\n", "expression", **OBSERVED)
+    bundle = fixture_bundle(certified_work, "supported")
+    held_file = ReadContext.open(cfg).held_path(ref)
+
+    with open_rig(cfg, ("spec", "assess", "verify")) as (d, ctx):
+        spec_ref = next(
+            t for t in d.invoke("spec", dict(SPEC_FIELDS, target="proposition:p1", dataset=ref)).text.split()
+            if t.startswith("analysis-spec:")
+        )
+        held_file.write_bytes(b"corrupted\n")
+        run_ref = mint_fixture_run(cfg, spec_ref, ref, bundle, expected_inputs=None)
+        assessment_ref = next(
+            t for t in d.invoke("assess", {"run": run_ref}).text.split()
+            if t.startswith("assessment:")
+        )
+        held_file.write_bytes(b"declared\n")
+
+        _forbid_engines(monkeypatch)
+        code, entrypoint, _ = bundle
+        with pytest.raises(Refused) as caught:
+            d.invoke("verify", {"assessment": assessment_ref, "code": str(code), "entrypoint": entrypoint})
+        assert caught.value.refusal.code == "kernel-refused"
+        assert "does not match recipe input" in caught.value.refusal.data["reason"]
+        view = ctx.write_view()
+        assert sum(1 for n in view.iter_stored() if n.kind == "run") == 1
+        assert not any(n.kind == "verification" for n in view.iter_stored())
+
+
+def test_verify_refuses_multi_input_spec_cleanly_as_invalid_input(rig):
+    from beliefs import stored
+    from beliefs.root import open_corpus
+    from beliefs.rules import REFERENCE_RULES
+    from beliefs.spec import Deterministic, SpecDraft, SpecInput, freeze
+    from helpers.world import FIXTURE_AUTHORITY
+
+    d, ctx, assessment_ref, (code, entrypoint, _) = rig
+    view = ctx.write_view()
+    existing_assessment = stored.assessment_value(view.get(assessment_ref), profile=ctx.config.profile)
+    existing_spec = stored.analysis_spec_value(
+        view.get(stored.typed_ref("analysis-spec", existing_assessment.spec)),
+        profile=ctx.config.profile,
+    )
+    other_ref = hold_fixture_dataset(ctx.config, "aux.txt", b"aux\n", "auxiliary")
+    two_role_spec = freeze(
+        SpecDraft(
+            target=existing_spec.target,
+            estimand=existing_spec.estimand,
+            method=existing_spec.method,
+            assumptions=existing_spec.assumptions,
+            falsification=existing_spec.falsification,
+            input_roles=(
+                existing_spec.input_roles[0],
+                SpecInput(role="reads", dataset=other_ref),
+            ),
+            applicability=existing_spec.applicability,
+            interpretation_rule=existing_spec.interpretation_rule,
+            equivalence_rule=existing_spec.equivalence_rule,
+            parameters=existing_spec.parameters,
+            nondeterminism=Deterministic(),
+        ),
+        held_rules=REFERENCE_RULES,
+    )
+    writer = open_corpus(ctx.config.write_root, authority=FIXTURE_AUTHORITY, profile=ctx.config.profile)
+    writer.add(stored.analysis_spec_node(two_role_spec))
+    synthetic_assessment = writer.add(stored.assessment_node(
+        "multiinput000001",
+        title="synthetic multi-input assessment",
+        spec=two_role_spec.identity,
+        run=stored.typed_ref("run", existing_assessment.run),
+        proposition=existing_assessment.proposition,
+        outcome=existing_assessment.outcome,
+        interpretation_rule=existing_assessment.interpretation_rule,
+        estimand=existing_assessment.estimand,
+        applicability=existing_assessment.applicability,
+    )).id
+
+    with pytest.raises(Refused) as caught:
+        d.invoke("verify", {"assessment": synthetic_assessment, "code": str(code), "entrypoint": entrypoint})
+    assert caught.value.refusal.code == "invalid-input"
+    assert "declares 2 input roles; single-file staging requires 1" in caught.value.refusal.message
+

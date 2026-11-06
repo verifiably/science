@@ -29,9 +29,15 @@ def handle(ctx, writer, *, assessment, code, entrypoint, cores=None) -> Report:
         _refuse(f"{assessment}: {caught}")
     run_ref = stored.typed_ref("run", value.run)
     spec_ref = stored.typed_ref("analysis-spec", value.spec)
-    original = decode_run_closure(ctx.cited(run_ref).view.get(run_ref))
-    (role,) = stored.analysis_spec_value(ctx.cited(spec_ref).view.get(spec_ref),
-                                         profile=ctx.config.profile).input_roles
+    try:
+        original = decode_run_closure(ctx.cited(run_ref).view.get(run_ref))
+        spec_value = stored.analysis_spec_value(ctx.cited(spec_ref).view.get(spec_ref),
+                                                profile=ctx.config.profile)
+    except MalformedRecord as caught:
+        _refuse(str(caught))
+    if len(spec_value.input_roles) != 1:
+        _refuse(f"{spec_ref} declares {len(spec_value.input_roles)} input roles; single-file staging requires 1")
+    (role,) = spec_value.input_roles
     # The session's corpora, as every citation reads.
     found = dataset_at(tuple((mount.corpus_id, mount.view) for mount in ctx.session_mounts()), role.dataset)
     if found is None:

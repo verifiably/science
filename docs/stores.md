@@ -30,8 +30,9 @@ vocabulary digest mismatch does not cause a retry from another copy. A
 vocabulary with found observations but no configured carrier refuses, including
 through evaluation and input gathering. Missing declarations or found
 observations, and a selected vocabulary's digest mismatch, remain unreadable.
-Lifecycle admission does not attest payload bytes on every use. Run/verify
-staging records a digest but does not compare it with the dataset declaration.
+Lifecycle admission does not attest payload bytes on every store open. When
+`run` or `verify` stages a held input, the boundary hashes the staged copy and
+refuses if its digest does not match the dataset declaration.
 
 ## Relocating a world
 

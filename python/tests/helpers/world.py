@@ -526,7 +526,10 @@ def fixture_bundle(work: Path, outcome: str = "supported", *, varying: bool = Fa
     return code, "analysis/workflow/Snakefile", ("outputs/stats.tsv", "outputs/outcome.txt")
 
 
-def mint_fixture_run(cfg: ScienceConfig, spec_ref: str, dataset_ref: str, bundle) -> str:
+_UNSET = object()
+
+
+def mint_fixture_run(cfg: ScienceConfig, spec_ref: str, dataset_ref: str, bundle, *, expected_inputs=_UNSET) -> str:
     """One assessment run under MINIMAL_POLICY through the kernel library, so
     assess/verify/belief/next tests have a run on hosts without bubblewrap."""
     import socket
@@ -542,14 +545,18 @@ def mint_fixture_run(cfg: ScienceConfig, spec_ref: str, dataset_ref: str, bundle
     code, entrypoint, targets = bundle
     ctx = ReadContext.open(cfg)
     spec = stored.analysis_spec_value(ctx.cited(spec_ref).view.get(spec_ref), profile=cfg.profile)
-    address = dataset_address(stored.dataset_declaration(ctx.cited(dataset_ref).view.get(dataset_ref)))
+    declaration = stored.dataset_declaration(ctx.cited(dataset_ref).view.get(dataset_ref))
+    address = dataset_address(declaration)
+    assert address is not None
+    (resource,) = declaration.resources
+    expected = {address: resource.digest} if expected_inputs is _UNSET else expected_inputs
     root = cfg.write_root
     outcome = execute_assessment_run(
         spec=spec, port=durable_operation_port(root, FIXTURE_AUTHORITY, profile=cfg.profile),
         boundary_policy=MINIMAL_POLICY,
         definition=WorkflowDefinition(snakefile=(code / "workflow" / "Snakefile").read_bytes(), family_streams={}),
-        code_roots=(code,), held_inputs={address: ctx.held_path(address)}, entrypoint=entrypoint,
-        targets=targets, declared_outputs=targets, observer="fixture",
+        code_roots=(code,), held_inputs={address: ctx.held_path(address)}, expected_inputs=expected,
+        entrypoint=entrypoint, targets=targets, declared_outputs=targets, observer="fixture",
         started_at=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         host_realization=socket.gethostname(), scratch_base=cfg.operations_root / "scratch" / "fixture")
     assert isinstance(outcome, RunMinted), outcome

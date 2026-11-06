@@ -36,11 +36,17 @@ def prepare(ctx, spec_ref: str, dataset_ref: str, code: str, entrypoint: str, ta
     spec_view, dataset_view = ctx.cited(spec_ref).view, ctx.cited(dataset_ref).view
     try:
         spec = stored.analysis_spec_value(spec_view.get(spec_ref), profile=ctx.config.profile)
-        address = dataset_address(stored.dataset_declaration(dataset_view.get(dataset_ref)))
+        declaration = stored.dataset_declaration(dataset_view.get(dataset_ref))
+        address = dataset_address(declaration)
     except MalformedRecord as caught:
         _refuse(str(caught))
     if address is None or all(role.dataset != address for role in spec.input_roles):
         _refuse(f"{dataset_ref} is not the dataset the spec observes")
+    if len(declaration.resources) != 1:
+        _refuse(f"{dataset_ref} declares {len(declaration.resources)} resources; single-file staging requires 1")
+    if any(role.dataset != address for role in spec.input_roles):
+        _refuse(f"{spec_ref} observes datasets other than {dataset_ref}")
+    (resource,) = declaration.resources
     code_root = Path(code)
     if not code_root.is_dir():
         _refuse(f"code {code!r} is not a directory")
@@ -54,6 +60,7 @@ def prepare(ctx, spec_ref: str, dataset_ref: str, code: str, entrypoint: str, ta
         "definition": WorkflowDefinition(snakefile=snakefile.read_bytes(), family_streams={}),
         "code_roots": (code_root,),
         "held_inputs": {address: ctx.held_path(address)},
+        "expected_inputs": {address: resource.digest},
         "entrypoint": entrypoint,
         "targets": tuple(targets),
         "declared_outputs": tuple(targets),
