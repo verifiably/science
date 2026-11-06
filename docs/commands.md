@@ -64,9 +64,11 @@ to `None` (the dispatcher applies declared defaults before the call).
 
 A handler returns a tuple of typed report blocks. Read reports can use `Heading`,
 `KeyVals`, `Finding`, `Text` and record detail. Corpus-write reports contain only
-`RecordBlock`s for records minted by that invocation. The dispatcher audits them,
-then rebuilds the full canonical report from ledger-bound `(uid, record_id)` pairs,
-sorted by that pair. An invented block or missing act coverage is a handler defect.
+`RecordBlock`s for records minted by that invocation. The audit rejects non-record
+blocks and identities not minted by the invocation; it does not require the handler
+to include every minted record. The dispatcher rebuilds the full canonical report
+from all ledger-bound `(uid, record_id)` pairs, sorted by that pair, regardless of
+the subset supplied by the handler.
 Session reports contain exactly one `SelectionBlock` matching the selection line.
 Sharing handlers return only `KeyVals`/`Finding` commentary; the dispatcher prepends
 all `PinBlock`s derived from that invocation's sharing lines.
