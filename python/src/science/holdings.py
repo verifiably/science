@@ -1,4 +1,4 @@
-"""Store reads for the belief path (design §5.4), through the kernel's
+"""Store reads for the belief path, through the kernel's
 holdings reduction: the reduced answer per dataset address, the held path
 for an address, and the admission check."""
 from __future__ import annotations

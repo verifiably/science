@@ -69,7 +69,7 @@ def test_the_verb_builds_over_exactly_the_session_corpora(shared):
 
 
 def test_a_rerun_with_nothing_changed_builds_nothing(shared):
-    """Review round 1, P2 3: a second build would anchor a moved chain head and
+    """a second build would anchor a moved chain head and
     mint a new identity, so the verb reuses a current epoch. Production-backed:
     no chain head is injected."""
     first = publish_session_epoch(shared)
@@ -94,7 +94,7 @@ def test_a_write_root_write_makes_it_stale_and_the_verb_rebuilds(shared):
 
 
 def test_a_coordination_write_after_the_epoch_makes_it_stale(shared):
-    """Strict drift (plan review round 1, P1): nothing proves a coordination
+    """Strict drift: nothing proves a coordination
     write left mapped content unchanged, so it is drift like any other."""
     publish_session_epoch(shared)
     with open_rig(shared, ("project",)) as (d, _):
@@ -137,7 +137,7 @@ def test_a_mapped_facet_change_beside_a_coordination_write_is_stale(shared):
 
 
 def test_contention_while_checking_an_existing_epoch_is_a_named_refusal(shared, monkeypatch):
-    """Plan review round 1, P2: opening the view takes every covered corpus's
+    """opening the view takes every covered corpus's
     capture hold, so a busy corpus refuses here too, never internal-error."""
     publish_session_epoch(shared)
 
@@ -193,7 +193,7 @@ def test_coverage_missing_a_session_corpus_is_stale(shared):
 
 
 def test_coverage_with_an_extra_corpus_is_stale_and_the_verb_rebuilds_exactly(shared, certified_work):
-    """Review round 1, P2 2: an epoch another configuration published over a
+    """an epoch another configuration published over a
     superset would read the extra corpus as absent and answer
     unavailable-corpus-absent."""
     extra_root = certified_work / "extra"

@@ -1,4 +1,4 @@
-"""Spec §6: `write_root` and `read_contracts` (coordination part 3)."""
+"""`write_root` and `read_contracts` with distinct writer and read-mount contracts."""
 import shutil
 from pathlib import Path
 

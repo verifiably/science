@@ -1,4 +1,4 @@
-"""The accept policy (commons spec §9): which mounted records count toward the reader's belief.
+"""The accept policy: which mounted records count toward the reader's belief.
 
 The kernel consults `counts(corpus_id, address)` for every assessment, verification and retraction before any of
 their effects; this module computes that predicate from the reader's own roots, its `accept` configuration, the
@@ -84,7 +84,7 @@ def acceptance_inputs(ctx) -> AcceptanceInputs:
     """The policy's inputs for a read context. Every configured mount is read: with coordination on that is the
     session, and with it off a corpus-local read of a non-write root is still decided here. A root under the
     sharing registry (any pin's, whatever its state) is never the reader's own; a hand-listed root is its own
-    only while it holds no marker (plan Deviation 6)."""
+    only while it holds no marker."""
     config = ctx.config
     registry = None if config.sharing_root is None else SharingRegistry(config.sharing_root)
     pins = {} if registry is None else {pin.corpus_id: pin for pin in registry.pins() if pin.state == "mounted"}
@@ -114,7 +114,7 @@ def acceptance_inputs(ctx) -> AcceptanceInputs:
 def _origin_holds(inputs: AcceptanceInputs, origin: str, origin_marker: str, address: str) -> bool:
     """The Carried branch: the origin publication is pinned at the attributed marker, origin-confirmed, of an
     accepted world, mounted, and its own marker selects the record as its own: an origin that itself carries the
-    record is an intermediary, and an honest marker names the first origin (spec §4.8)."""
+    record is an intermediary, and an honest marker names the first origin."""
     pin = inputs.pins.get(origin)
     carrier = inputs.carriers.get(origin)
     return (pin is not None and pin.marker == origin_marker and pin.origin_confirmed(inputs.bindings)
@@ -182,7 +182,7 @@ def _world_of(inputs: AcceptanceInputs, corpus_id: str, address: str) -> str:
 
 def explain(context: AcceptanceContext, inputs: AcceptanceInputs,
             holders_of: Callable[[str], tuple[str, ...]]) -> tuple[tuple[str, str], ...]:
-    """What belief selected by (spec §9 item 4): the verifier set, each mounted pin's source and standing, and
+    """What belief selected by: the verifier set, each mounted pin's source and standing, and
     every excluded copy with a counting session holder or its provenance world."""
     pairs = [("policy", POLICY), ("verifiers", ", ".join(sorted(inputs.verifiers)))]
     for corpus_id, pin in sorted(inputs.pins.items()):

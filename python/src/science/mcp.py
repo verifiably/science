@@ -399,7 +399,7 @@ def serve(config_path: Path, stdin=None, stdout=None, stderr=None, project=None)
                 session=session,
                 selection=selection,
             )
-            # One live session per world (projects design §5.1a): CLI writes and, in
+            # One live session per world: CLI writes and, in
             # part 2, the selection query reach this session over the same socket
             # `science serve` would bind, and a second launcher refuses on it.
             server = service_server(dispatcher, config.service_socket, on_close=lambda: None)

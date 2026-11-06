@@ -1,4 +1,4 @@
-"""`provider-inspect` and `provider-bind` (commons 1a, Task 7): B reads the world A's publication claims at A's
+"""`provider-inspect` and `provider-bind`: B reads the world A's publication claims at A's
 location, and binds that location to A's world when B passes the same world id."""
 import dataclasses
 

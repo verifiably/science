@@ -1,4 +1,4 @@
-"""Generate the Claude Code plugin from the command tree (spec §10)."""
+"""Generate the Claude Code plugin from the command tree."""
 from __future__ import annotations
 
 import json

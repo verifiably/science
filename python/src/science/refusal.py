@@ -1,4 +1,4 @@
-"""The structured refusal envelope (spec §6.3) and protocol identifier bounds."""
+"""The structured refusal envelope  and protocol identifier bounds."""
 from __future__ import annotations
 
 import re
@@ -41,7 +41,7 @@ class Refused(Exception):
 
 
 def envelope(refusal: Refusal) -> dict:
-    """The one wire form of a refusal: exactly the spec §6.3 triple."""
+    """The one wire form of a refusal: exactly the  triple."""
     return {"code": refusal.code, "message": refusal.message, "data": dict(refusal.data)}
 
 

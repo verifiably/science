@@ -1,4 +1,4 @@
-"""task: an open task under the current project (spec §3.3)."""
+"""task: an open task under the current project."""
 from __future__ import annotations
 
 from science.coordination import now

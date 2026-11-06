@@ -1,4 +1,4 @@
-"""reuse: the same-query mint, one act (spec §3.5, decision 7)."""
+"""reuse: the same-query mint, one act."""
 from __future__ import annotations
 
 from science.coordination import content_of, now, parse_unpinned, resolve_one

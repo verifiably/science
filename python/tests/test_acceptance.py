@@ -1,4 +1,4 @@
-"""The accept policy (commons spec §9, plan Task 10): which mounted records count toward the reader's belief.
+"""The accept policy: which mounted records count toward the reader's belief.
 
 `counts` is first applicable branch decides: Own (the write root, and a configured root holding no marker), then
 no carrier, then Carried, then Own adopted back through a binding, then the carrier's own. The `INPUTS_*` values

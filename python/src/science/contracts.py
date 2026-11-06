@@ -1,9 +1,8 @@
-"""Corpus-local contract documents (belief-path design §5.2).
+"""Corpus-local contract documents.
 
 A document carries a domain contract and optionally the operator plan that
 maps authored claim terms to that contract. The plan is launcher input and is
-not covered by the contract identity. This is superseded when the kernel gives
-contracts a home (belief-path design ruling 5).
+not covered by the contract identity; it remains explicit launcher input.
 """
 from __future__ import annotations
 

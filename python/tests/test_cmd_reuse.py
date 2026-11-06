@@ -88,7 +88,7 @@ class _DivergedResolver:
 
 
 def test_reuse_of_a_source_with_several_standing_tips_refuses_naming_them(certified_work, monkeypatch):
-    """A source cannot diverge in one root under the lock (coordination §4.3), so
+    """A source cannot diverge in one root under the lock, so
     the resolver is stubbed to report a divergence, the way test_cmd_revise.py
     stubs one for `revise`: `resolve_one`'s divergent-tips branch has no other way
     to be exercised here."""

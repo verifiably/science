@@ -1,5 +1,5 @@
-"""belief: evaluate science.belief.v1 over one proposition (§4.7), under the reader's accept policy, which the
-report explains (commons spec §9)."""
+"""belief: evaluate science.belief.v1 over one proposition, under the reader's accept policy, which the
+report explains."""
 from __future__ import annotations
 
 from beliefs.belief import Belief, NoBelief

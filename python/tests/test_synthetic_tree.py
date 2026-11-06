@@ -20,7 +20,7 @@ def test_synthetic_tree_loads():
 
 def test_a_publishes_class_command_reaches_its_handler_under_an_attended_session(certified_work):
     """An attended session's ceiling is the full permit, which covers the
-    publication requirement, so the handler runs (sci-498acb)."""
+    publication requirement, so the handler runs."""
     from science.session import open_session
     from science.config import ReadContext
     from science.dispatch import Dispatcher

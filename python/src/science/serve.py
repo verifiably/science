@@ -1,4 +1,4 @@
-"""The CLI's service process: one attended session behind a Unix socket (spec §9.2)."""
+"""The CLI's service process: one attended session behind a Unix socket."""
 from __future__ import annotations
 
 import json
@@ -62,7 +62,7 @@ def check_socket_path(socket_path: Path) -> None:
 
 
 def _answer_query(dispatcher, query) -> dict:
-    """The selection query (coordination design §5.2 step 2): answered from the
+    """The selection query: answered from the
     endpoint's state — no invocation, no ledger line, no dispatcher lock."""
     if query != "selection":
         raise Refused(Refusal("invalid-input", f"unknown query {query!r}; the service answers `selection`"))
@@ -116,7 +116,7 @@ def service_server(dispatcher, socket_path: Path, on_close):
         # (`server_close`); an idle reader dies with the process. A write the
         # process dies inside is a designed-for state: the invocation stays
         # claimed and unclosed, so a retry replays as `outcome-unknown`
-        # (spec §5.2).
+
         daemon_threads = True
         # None until `server_bind` succeeds. `TCPServer.__init__` calls
         # `server_close` on a `server_bind` failure (a lost bind race — something
@@ -182,7 +182,7 @@ def service_server(dispatcher, socket_path: Path, on_close):
 
 
 def initial_selection(config: ScienceConfig, read_context: ReadContext, project: str | None):
-    """The session's selection at open (projects design §5.1): the launcher's
+    """The session's selection at open: the launcher's
     `--project`, by name or address, else the configuration's `default_project`,
     else none."""
     if project is None:

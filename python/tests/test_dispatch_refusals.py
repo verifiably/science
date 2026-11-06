@@ -1,4 +1,4 @@
-"""Spec §6.3: a surface refusal raised by a write handler closes the invocation."""
+"""a surface refusal raised by a write handler closes the invocation."""
 from pathlib import Path
 
 import pytest
@@ -188,7 +188,7 @@ def test_a_boundary_refusal_after_a_committed_act_closes_done_and_is_an_internal
     lambda: __import__("beliefs.errors", fromlist=["x"]).BuildContended("read mount /m: build-contended"),
 ], ids=["CitationContractMismatch", "BuildContended"])
 def test_a_citation_error_from_the_writer_is_a_named_kernel_refusal(certified_work, raised):
-    """Consumer spec decision 5: these are not WriteRefused, and would
+    """these are not WriteRefused, and would
     otherwise escape as internal errors."""
     from science.session import open_session
     from science.config import ReadContext
@@ -241,7 +241,7 @@ def test_a_duplicate_citation_from_the_writer_is_a_named_kernel_refusal(certifie
 
 @pytest.mark.parametrize("tips", [("b" * 32, "a" * 32), ()], ids=["divergent", "unknown"])
 def test_project_not_resolvable_carries_its_tips_in_the_refusal(certified_work, tips):
-    """Coordination spec §4.3: a client reconciles a diverged project from the
+    """A client reconciles a diverged project from the
     tips the kernel named; a project with none carries no `tips` key. A replay
     returns the same data from the closed invocation."""
     from beliefs.errors import ProjectNotResolvable
@@ -272,7 +272,7 @@ def test_project_not_resolvable_carries_its_tips_in_the_refusal(certified_work, 
 def test_minting_under_a_diverged_selected_project_refuses_with_its_tips(certified_work, monkeypatch):
     """The same refusal on the real path: the kernel's mint resolves the
     selected project and finds it divergent. Two tips cannot arise in one root
-    (coordination §4.3), so the resolver is stubbed to report them for the
+  , so the resolver is stubbed to report them for the
     project, as test_cmd_projects.py's `_diverge` does."""
     from beliefs.coordination import CoordinationRefused
     from beliefs.corpus import CoordinationResolver

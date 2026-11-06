@@ -21,7 +21,7 @@ from beliefs.world import Fresh, WorldConfig
 from science.config import ScienceConfig
 
 # Fixture worlds are built by tests, which hold the full permit the way the beliefs
-# test helper does; science code itself never constructs one (design §4.2).
+# test helper does; science code itself never constructs one.
 FIXTURE_AUTHORITY = Authority(WritePermit.full(), "fixture")
 
 DOMAINS = ("biology",)
@@ -266,7 +266,7 @@ def fixture_contract_document(work: Path) -> Path:
 
 def archive_contract_document(work: Path) -> Path:
     """A second corpus-local contract, `archive`: the test contract under
-    another namespace, for a read mount the writer never activates (spec §9)."""
+    another namespace, for a read mount the writer never activates."""
     path = work / "archive.yaml"
     path.write_text((TEST_CONTRACT % {"concepts": concept_list_address().removeprefix("dataset:"),
                                       "levels": level_list_address().removeprefix("dataset:")})
@@ -311,7 +311,7 @@ def build_fixture_world_with_contract(work: Path, *, hold_concepts: bool = True,
 
 
 def build_two_corpus_world(work: Path) -> ScienceConfig:
-    """Spec §9's two corpora: the write root `corpus` (base, biology, the
+    """the write root `corpus` (base, biology, the
     `testing` contract and coordination) and the read mount `archive` (base,
     biology and the corpus-local `archive` contract, no coordination — the mm30
     shape), in one world and one store. The archive holds the vocabulary lists
@@ -643,7 +643,7 @@ def build_shared_contract_world(work: Path) -> ScienceConfig:
     """Two corpora pinning `testing` at one identity: the write root `corpus`
     (with coordination) and the read mount `shared`, which holds the vocabulary
     lists and proposition:shared. The shape a working corpus citing mm30 takes
-    (mount citations consumer spec, decision 2)."""
+   ."""
     from beliefs.claim import Referent, build_claim
     from beliefs.projection import project_claim
     from science.contracts import load_contract_document

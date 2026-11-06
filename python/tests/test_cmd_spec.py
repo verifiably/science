@@ -109,7 +109,7 @@ def test_applicability_qualifier_is_typed_and_accepted(rig):
 def test_applicability_authoring_errors_refuse_and_replay_exactly(rig, entry):
     """Not ESTIMAND_ERRORS: build_applicability raises the claim grammar's
     ClaimError subclasses. Escaping the handler would leave the invocation
-    open and a retry would read outcome-unknown (design §4.3)."""
+    open and a retry would read outcome-unknown."""
     d, ctx, ref = rig
     inputs = dict(FIELDS, target="proposition:p1", dataset=ref, applicability=[entry])
     with pytest.raises(Refused) as first:
@@ -160,7 +160,7 @@ def test_malformed_parameter_refuses(rig):
 
 def test_supersedes_a_bare_identity_refuses_and_replays(rig):
     """A bare identity, the form `next` and the record display, is no ref: it
-    refuses before any act, and the refusal replays (review finding 1)."""
+    refuses before any act, and the refusal replays."""
     d, ctx, ref = rig
     inputs = dict(FIELDS, target="proposition:p1", dataset=ref, supersedes="86aaa1a8a8edda82")
     with pytest.raises(Refused) as first:
@@ -191,7 +191,7 @@ def test_supersedes_a_held_spec_mints_the_successor(rig):
 def test_an_unheld_vocabulary_under_an_applicability_restriction_refuses(certified_work):
     """testing/stage restricts on the dataset-bound level sort; with the level
     list unheld, the applicability receipt reads not-available and the spec
-    refuses naming the list (review finding 3). A continuous contrast keeps the
+    refuses naming the list. A continuous contrast keeps the
     estimand itself free of level terms, so only the applicability check can
     refuse."""
     cfg = build_belief_world(certified_work, hold_levels=False)
@@ -210,7 +210,7 @@ def test_an_unheld_vocabulary_under_an_applicability_restriction_refuses(certifi
 def test_an_unheld_vocabulary_under_a_conditioning_term_refuses(certified_work):
     """conditioning_sort is the dataset-bound concept sort; with the concept
     list unheld, the conditioning referent reads not-available and the spec
-    refuses naming the list (review finding 3)."""
+    refuses naming the list."""
     from helpers.world import concept_list_address
     cfg = build_belief_world(certified_work, hold_concepts=False)
     ref = hold_fixture_dataset(cfg, "data.txt", b"x\n", "expression")

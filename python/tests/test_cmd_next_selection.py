@@ -1,4 +1,4 @@
-"""Spec §5.5 and P5: next through the selected project's query, evaluated live."""
+"""next through the selected project's query, evaluated live."""
 import json
 import re
 
@@ -73,7 +73,7 @@ def test_unselected_next_equals_next_under_a_whole_world_project(world):
 
 
 def test_belief_answers_for_its_proposition_whatever_is_selected(certified_work):
-    """P5 and decision 4: selection scopes enumeration, never lookup by identity."""
+    """selection scopes enumeration, never lookup by identity."""
     ask = {"proposition": "proposition:p1"}
     with open_rig(build_belief_world(certified_work), NAMES) as (d, _):
         _project(d, "empty", json.dumps({"version": VERSION, "clauses": []}))
@@ -86,7 +86,7 @@ def test_belief_answers_for_its_proposition_whatever_is_selected(certified_work)
 
 
 def test_a_proposition_minted_after_selecting_appears_without_republishing(certified_work):
-    """Decision 3: the queue is attention, evaluated live; no epoch mediates it."""
+    """the queue is attention, evaluated live; no epoch mediates it."""
     cfg = build_fixture_world(certified_work)
     with open_rig(cfg, NAMES) as (d, _):
         _project(d, "claims", _kinds(["proposition"]))

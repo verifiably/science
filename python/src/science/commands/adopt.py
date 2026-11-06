@@ -1,6 +1,6 @@
 """adopt: fetch a publication from a provider's bound location, verify it, source it, check its layout and
-conflicts, then admit and mount it (commons spec §4.3 step 3, §10). Every registry write follows the sharing line
-that is its evidence, and nothing survives a refusal before `fetched` (plan Deviation 9): the copy is deleted and
+conflicts, then admit and mount it. Every registry write follows the sharing line
+that is its evidence, and nothing survives a refusal before `fetched`: the copy is deleted and
 no pin is written."""
 from __future__ import annotations
 

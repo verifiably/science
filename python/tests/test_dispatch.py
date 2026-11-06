@@ -155,7 +155,7 @@ def test_malformed_cursor_refusal_carries_invocation_id():
 
 
 def test_write_on_a_sessionless_surface_refuses_before_the_handler():
-    """A CLI read invocation opens no session (spec §9.2); a write there is
+    """A CLI read invocation opens no session; a write there is
     refused, not executed against a missing one."""
     executed = []
     write = make_decl("write", write_class="coordination")
@@ -174,7 +174,7 @@ def test_write_on_a_sessionless_surface_refuses_before_the_handler():
 
 
 def test_publishes_class_requires_the_publication_permit():
-    """sci-498acb: the publish act family has landed, so the permit decides;
+    """the publish act family has landed, so the permit decides;
     no declaration-time refusal remains."""
     from beliefs.permit import RequiredCapabilities
     publish = make_decl("pub", write_class="publishes")

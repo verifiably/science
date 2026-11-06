@@ -1,4 +1,4 @@
-"""next: the derived queue of layer §4.4, computed at read time (§4.8)."""
+"""next: the derived work queue, computed at read time."""
 from __future__ import annotations
 
 from beliefs import stored
@@ -18,14 +18,14 @@ CLASSES = ("ready", "not-ready", "assessed-unevaluated", "assessed-not-admitted"
 
 def _targeting_specs(mounts, proposition):
     """Every session corpus's specs targeting `proposition`, each decoded under
-    its holder's profile (consumer spec decision 9)."""
+    its holder's profile."""
     return [spec for mount in mounts for node in mount.view.iter_stored() if node.kind == "analysis-spec"
             for spec in (stored.analysis_spec_value(node, profile=mount.profile),) if spec.target == proposition]
 
 
 def _assessed(ctx, mounts, proposition) -> bool:
     """Whether an assessment the reader's accept policy counts assesses `proposition`: an assessment belief
-    never reads leaves the proposition as unassessed as it finds it (commons spec §9)."""
+    never reads leaves the proposition as unassessed as it finds it."""
     inputs = acceptance_inputs(ctx)
     return any(node.kind == "assessment" and counts(inputs, mount.corpus_id, node.id)
                and stored.assessment_value(node, profile=mount.profile).proposition == proposition
@@ -36,7 +36,7 @@ def _inputs_held(ctx, mounts, spec) -> bool:
     observations = ctx.observations()
     views = tuple((mount.corpus_id, mount.view) for mount in mounts)
     for role in spec.input_roles:
-        # One world record, in whichever mount declared it (spec §5.5).
+        # One world record, in whichever mount declared it.
         found = dataset_at(views, role.dataset)
         if found is None:
             return False
@@ -47,8 +47,8 @@ def _inputs_held(ctx, mounts, spec) -> bool:
 
 
 def _classify(ctx, proposition: str) -> tuple[str, str | None]:
-    """The class rule, and the reason an assessed row is unevaluated (consumer
-    spec decision 9). A mounted session scans every session corpus and judges
+    """The class rule, and the reason an assessed row is unevaluated.
+    A mounted session scans every session corpus and judges
     admission at the current epoch. Without read mounts the rule is today's,
     over the proposition's own corpus."""
     holder = ctx.mount_holding(proposition)  # refuses an absent proposition or differing copies
@@ -65,7 +65,7 @@ def _classify(ctx, proposition: str) -> tuple[str, str | None]:
         raise
     except InputOutsideCorpus:
         # Cross-corpus evidence read where the session has no read mounts
-        # (decision 6): the corpus-local read cannot see its lineage.
+        # cannot see the lineage through the corpus-local read.
         return "assessed-unevaluated", "input-outside-corpus"
     observations = ctx.observations()
     for assessment in inputs.assessments:
@@ -111,7 +111,7 @@ def _unmounted(ctx, refs) -> Refused:
 def _capture(ctx, project):
     """The live selection. The capture reads the world through the configured
     roots, so an address in an admitted corpus `corpus_roots` does not mount is
-    unknown to it: that refusal is the configuration's, and says so (spec §5.5).
+    unknown to it: that refusal is the configuration's, and says so.
     Every other kernel refusal passes through."""
     try:
         return live_selection(ctx, project)
@@ -131,8 +131,7 @@ def handle(ctx, *, limit=None) -> Report:
                  if node.kind == "proposition"}.values()
     else:
         # The project's query, denoted over the world as it stands: no epoch
-        # mediates seeing a proposition just minted (coordination design
-        # decision 3).
+        # mediates seeing a proposition just minted.
         live = _capture(ctx, project)
         # Opened after the capture, never before it: a read view indexes the
         # corpus as it stood when it was opened, so an earlier one would not hold

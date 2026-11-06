@@ -2,6 +2,8 @@
 
 Type: guide; document types 1. For scientists and agents using the CLI, MCP or
 Python dispatcher to follow an analysis from held data to a checked belief.
+[Configuration](configuration.md), [commands](commands.md), [sessions](sessions.md)
+and [sharing](sharing.md) specify the fields and protocols used below.
 
 ## Prepare a world
 

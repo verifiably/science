@@ -1,4 +1,4 @@
-"""Spec §3.8: projects and project-show."""
+"""projects and project-show."""
 import re
 
 import pytest
@@ -31,7 +31,7 @@ def _twin(node, title):
 
 
 def _diverge(monkeypatch, kind, address, real, twin):
-    """Two tips cannot arise in one root (coordination §4.3), so the resolver's
+    """Two tips cannot arise in one root, so the resolver's
     enumeration is stubbed to report them for one address."""
     from beliefs.coordination import CoordinationRefused
     from beliefs.corpus import CoordinationResolver
@@ -98,7 +98,7 @@ def test_project_show_renders_the_selection_in_section_order(certified_work):
     titles = ["open tasks:", "questions:", "hypotheses:", "decisions:", "closed tasks:"]
     positions = [text.index("\n" + title) for title in titles]
     assert positions == sorted(positions)
-    assert text.endswith(f"closed tasks:\n  {run}: done: run\n")  # a `done` revision moved it (spec §9)
+    assert text.endswith(f"closed tasks:\n  {run}: done: run\n")  # a `done` revision moved it
     assert ": Does PHF19 track stage?\n" in text and ": Use the coarse query\n" in text
 
 
@@ -176,7 +176,7 @@ def test_without_coordination_both_reads_refuse_naming_the_setting(certified_wor
 
 
 def test_the_project_reads_render_identically_through_the_cli_and_mcp(certified_work, capsys):
-    """Framework §9.4: each new read, byte for byte, through both transports."""
+    """each new read, byte for byte, through both transports."""
     from helpers.world import mint_projects, write_cli_config
     from science.cli import main
     from science.config import ReadContext, load_config

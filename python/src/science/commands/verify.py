@@ -1,4 +1,4 @@
-"""verify: replay the assessment's run and mint the verification (§4.6)."""
+"""verify: replay the assessment's run and mint the verification."""
 from __future__ import annotations
 
 from beliefs import stored
@@ -32,7 +32,7 @@ def handle(ctx, writer, *, assessment, code, entrypoint, cores=None) -> Report:
     original = decode_run_closure(ctx.cited(run_ref).view.get(run_ref))
     (role,) = stored.analysis_spec_value(ctx.cited(spec_ref).view.get(spec_ref),
                                          profile=ctx.config.profile).input_roles
-    # The session's corpora, as every citation reads (consumer spec decision 1).
+    # The session's corpora, as every citation reads.
     found = dataset_at(tuple((mount.corpus_id, mount.view) for mount in ctx.session_mounts()), role.dataset)
     if found is None:
         # A configured corpus outside the session may declare it: `cited`
@@ -62,7 +62,7 @@ def handle(ctx, writer, *, assessment, code, entrypoint, cores=None) -> Report:
     assert isinstance(outcome, RunMinted)
     # Both runs in their stored form, as the audit re-derives the verdict: an
     # in-memory result keeps the workflow's target order while the stored one is
-    # sorted, and the equivalence rule compares them as tuples (beliefs-97075f).
+    # sorted, and the equivalence rule compares them as tuples.
     view = ctx.write_view()
     replayed = decode_run_closure(view.get(run_ref_of(outcome.run.address())))
     derive_scope(original, replayed, certification=None)

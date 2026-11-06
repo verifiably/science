@@ -1,4 +1,4 @@
-"""project-show: one project and its subordinate records (spec §3.8)."""
+"""project-show: one project and its subordinate records."""
 from __future__ import annotations
 
 import json

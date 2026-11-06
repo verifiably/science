@@ -1,4 +1,4 @@
-"""Shared reads and input parsing for the coordination commands (spec §3)."""
+"""Shared reads and input parsing for the coordination commands."""
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -91,7 +91,7 @@ def refuse_coordination(address, reason: str, tips, *,
                         remedy: str = "revise it with `repair` to reconcile them") -> NoReturn:
     """Refuse a coordination resolution as every kernel refusal arrives: the
     kernel's class in `data.kind`, its reason code (`divergent-view`) in
-    `data.reason`, and every standing tip (spec §4.3)."""
+    `data.reason`, and every standing tip."""
     raise Refused(Refusal(
         "kernel-refused",
         f"{address} has {len(tips)} standing tips; {remedy}",
@@ -124,8 +124,8 @@ def query_digest(node) -> str:
 
 
 def resolve_project_ref(ctx, text: str):
-    """A project's name or `coord:<project>` address, as its unpinned address
-    (spec §3.7, §5.2). A name matches a standing tip's name exactly; names are
+    """A project's name or `coord:<project>` address, as its unpinned address.
+    A name matches a standing tip's name exactly; names are
     content, so none refuses `unknown-project` and two refuse `ambiguous-project`.
     A divergent project's address is returned: whoever reads through it refuses."""
     from beliefs.coordination import CoordinationRefused
@@ -159,7 +159,7 @@ def resolve_project_ref(ctx, text: str):
 def selected_project(ctx):
     """The selection's one standing tip, or None with nothing selected. A
     selection that no longer resolves to a project refuses `unknown-project`;
-    one that diverged refuses `divergent-view` naming every tip (spec §7)."""
+    one that diverged refuses `divergent-view` naming every tip."""
     from beliefs.coordination import CoordinationRefused
 
     if ctx.selection is None:

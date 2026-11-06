@@ -1,4 +1,4 @@
-"""claim: type a proposition under the profile and mint it (belief-path §4.1)."""
+"""claim: type a proposition under the profile and mint it."""
 from __future__ import annotations
 
 import re

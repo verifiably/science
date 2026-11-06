@@ -13,7 +13,7 @@ from test_mcp import rpc
 @contextmanager
 def _service(cfg_path, socket_path):
     """The CLI's launcher, bound only for the segment that needs it: one socket
-    admits one launcher at a time (decision 6), and `mcp_call` binds the same
+    admits one launcher at a time, and `mcp_call` binds the same
     path for the span of its own call."""
     from science.config import load_config
     from science.serve import serve
@@ -137,9 +137,9 @@ def test_every_write_reaches_its_transport_and_renders_the_canonical_report(worl
     service: each write's text contains every record minted by its invocation,
     rebuilt from the corpus in (uid, record_id) order. Uids are minted per
     world, so writes are compared to the corpus, not byte-for-byte across
-    transports (design §7). Verify through the service is split out below, on
+    transports. Verify through the service is split out below, on
     the verify-rig world: each replay is a workflow execution, and one test
-    holding all three set the suite's critical path (sci-97727a)."""
+    holding all three set the suite's critical path."""
     import science.commands.run as run_module
     from beliefs.confinement import host_prerequisites
     from beliefs.recipe import MINIMAL_POLICY
@@ -160,7 +160,7 @@ def test_every_write_reaches_its_transport_and_renders_the_canonical_report(worl
     prop = _ref_in(prop_text, "proposition:")
     assert prop_text == _canonical(cfg, result["structuredContent"]["invocation_id"])
     # `mcp serve` now binds this same socket for the span of each `mcp_call`
-    # (decision 6), so the CLI's own launcher is bound only around the
+    #, so the CLI's own launcher is bound only around the
     # segments that need it, never while an `mcp_call` is in flight.
     with _service(cfg_path, named):
         assert main(["dataset", "--config", str(cfg_path), "--path", str(data), "--title", "expression",

@@ -1,4 +1,4 @@
-"""project: mint a project, the root of its own address space (spec §3.1)."""
+"""project: mint a project, the root of its own address space."""
 from __future__ import annotations
 
 from science.coordination import now, parse_query_text

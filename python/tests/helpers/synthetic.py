@@ -1,6 +1,6 @@
 """The one definition of the synthetic declarations and handlers.
 
-Task 13 extends this module with the fixture-tree loader. Real contract kinds
+The fixture-tree loader lives here. Real contract kinds
 only: `proposition` is the simplest mintable kind, and `source` is the foreign
 kind the lying handler reaches for.
 """
@@ -81,5 +81,5 @@ def synthetic_decls_and_handlers():
                               contract_kinds=frozenset(kind_acts))
 
     handlers = dict(HANDLERS)
-    handlers["pub-view"] = lambda ctx, writer, **inputs: ()  # the permit decides (sci-498acb)
+    handlers["pub-view"] = lambda ctx, writer, **inputs: ()  # the permit decides
     return decls, handlers

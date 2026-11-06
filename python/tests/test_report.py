@@ -74,7 +74,7 @@ def test_a_pin_block_serializes_its_facts_and_a_mount_says_when_it_takes_effect(
     assert mounted.endswith("verdict: validated\ntakes effect at the next session open\n")
 
 
-# --- holdings detail lines (sci-409235) -------------------------------------
+# --- holdings detail lines  -------------------------------------
 
 STORE = "c" * 32
 LOCATION = f"store:{STORE}:{'d' * 64}/x.txt"

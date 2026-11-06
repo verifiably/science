@@ -1,5 +1,9 @@
 # Reading inherited stores beside a writable store
 
+Type: guide; document types 1. Operator procedures for inherited carriers,
+relocation and unsettled holdings; see [configuration](configuration.md) for
+fields and [sessions](sessions.md) for attended writes.
+
 Science writes holdings only to the required `store_root`. Optional
 `read_store_roots` adds carriers for inherited observations:
 
@@ -31,9 +35,8 @@ staging records a digest but does not compare it with the dataset declaration.
 
 ## Relocating a world
 
-These are explicit operator actions. Landing the read-store support does not
-perform or authorize live initialization, migration, configuration changes or
-holding writes.
+These are explicit operator actions: initialize and admit roots through the
+kernel, then update the configuration and verify the holdings it can read.
 
 1. Stop the world's writer through its owner and retain the old config. Record
    the inherited store identity and holdings to check afterward. Retain its
@@ -85,7 +88,7 @@ PY
    store while the inherited payload, chain and metadata remain unchanged.
    A blocked location for a declared digest blocks the entire dataset, even
    beside a healthy copy of the same bytes. This configuration cannot repair
-   or route around that block. Before declaring the mm-62e2da pilot ready,
+   or route around that block. Before using the relocated world,
    inspect its actual reduction and settle any unsettled location as
    [Settling an unsettled location](#settling-an-unsettled-location) describes.
 
@@ -140,11 +143,11 @@ needs the person's authorization first.
 
 ## Existing stores without admission
 
-Inventory each configured write and read store before rollout. An older
-single-store world can now refuse reads if its root lacks admission. Record
+Inventory each configured write and read store before use. A
+single-store world refuses reads if its root lacks admission. Record
 its identity, lifecycle state or inspection error, and whether the config is
 active or archived; retain evidence for archived or deleted worlds. Unknown
-or inaccessible active roots require resolution before rollout.
+or inaccessible active roots require resolution before use.
 
 Beliefs provides `migrate_root_to_lifecycle_v3` for the exact pre-lifecycle v2
 store. Calling it is the operator's attestation that this host originally

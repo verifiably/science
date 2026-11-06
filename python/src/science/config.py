@@ -22,7 +22,7 @@ from beliefs.profile import (
     shipped_domain_contract,
 )
 from beliefs.root import LifecycleState, open_world_read, read_lifecycle_state, store_identity
-# shortcut: internal lifecycle error import pending public exports in beliefs-1dfd8c; remove when landed.
+# shortcut: internal lifecycle error import pending public exports; remove when landed.
 from beliefs.root import AtomsError
 from beliefs.world import WorldConfig
 from beliefs.world.registry import content_identity, load_manifest
@@ -57,7 +57,7 @@ class ScienceConfig:
     service_socket: Path
     store_root: Path
     coordination: int | None
-    # The one configured root the session writes (spec §6); the others are
+    # The one configured root the session writes; the others are
     # read mounts.
     write_root: Path
     plans: tuple[OperatorPlan, ...] = ()
@@ -121,7 +121,7 @@ def configured_stores(config: ScienceConfig) -> dict[str, Path]:
 
 def _project_address(value: object):
     """`default_project` is an address, never a name: names are content and may
-    collide or change (coordination design §6)."""
+    collide or change."""
     from beliefs.coordination import CoordinationAddress
 
     try:
@@ -251,7 +251,7 @@ def load_config(path: Path) -> ScienceConfig:
 
     def located(value: str) -> Path:
         # Relative paths name places beside the configuration file, never the
-        # process's working directory (projects design P1); an absolute value
+        # process's working directory ; an absolute value
         # is unchanged by the join.
         return (base_dir / value).resolve()
 
@@ -347,7 +347,7 @@ def resolve_config_path(cli_value: str | None, env: Mapping[str, str] | None = N
 
 
 def require_write_root_pins(config: ScienceConfig) -> None:
-    """Spec §6: the writer's stated profile must be exactly what the write
+    """the writer's stated profile must be exactly what the write
     root's manifest pins, and a configuration that disagrees is refused by name.
     Only the write root is checked: a read mount is mounted under whatever it
     pins. The kernel would refuse the same state as a bare pin mismatch, which
@@ -393,7 +393,7 @@ class Mount:
 
 
 def mount_profiles(config: ScienceConfig) -> dict[Path, ProfileSpec]:
-    """Every configured root under the profile its own manifest pins (spec §6):
+    """Every configured root under the profile its own manifest pins:
     the write root under the writer's stated profile, every other root compiled
     from its pins against the shipped packs and the available documents.
     Availability never becomes activation."""
@@ -455,7 +455,7 @@ class ReadContext:
     def current_project(self):
         """The selected project's unpinned address, or refuse: a subordinate
         record's address is (project identity, local id), and with nothing
-        selected there is no project identity to bind (projects design §5.3)."""
+        selected there is no project identity to bind."""
         if self.selection is None:
             raise Refused(Refusal(
                 "no-current-project",
@@ -467,7 +467,7 @@ class ReadContext:
     @cached_property
     def _profiles(self) -> dict[Path, ProfileSpec]:
         # Compiled once per context; a dispatcher's per-invocation `replace`
-        # builds a fresh context, so a command compiles once (kernel decision 9).
+        # builds a fresh context, so a command compiles once.
         return mount_profiles(self.config)
 
     @cached_property
@@ -506,7 +506,7 @@ class ReadContext:
     def write_view(self) -> ReadView:
         """The write root's view, opened now, never the context's cached one:
         what a write command reads the records it is given in, after its own
-        writes (spec §5.5, part 3)."""
+        writes."""
         return ReadView.opened_at(self.config.write_root)
 
     def dataset_at(self, address: str):
@@ -550,14 +550,14 @@ class ReadContext:
 
     def coordination(self):
         """A live resolver over every configured root, each under its own
-        manifest's profile (coordination §6.2; spec §6)."""
+        manifest's profile."""
         from beliefs.corpus import CoordinationResolver
 
         if self.config.coordination is None:
             raise Refused(Refusal("invalid-input",
                                   "coordination = false in this configuration; there is no resolver to ask"))
         # Every root's manifest read by name first: a resolver over a root
-        # without one would stop at a bare ManifestMissing (spec §5.5).
+        # without one would stop at a bare ManifestMissing.
         for root in self.config.world.corpus_roots:
             corpus_id_at(root)
         require_write_root_pins(self.config)
@@ -603,7 +603,7 @@ class ReadContext:
             ))
 
     def session_mounts(self) -> tuple[Mount, ...]:
-        """The corpora a write may cite (consumer spec decision 1): the write
+        """The corpora a write may cite: the write
         root, plus every read mount when coordination is on, which is exactly
         what `open_session` hands the kernel writer as its read mounts."""
         mounts = self.mounts()
@@ -620,7 +620,7 @@ class ReadContext:
     @cached_property
     def _world_read(self):
         """The session's epoch currency, computed once per context: a `Current`,
-        or the `Refused` saying why there is none (consumer spec decision 7)."""
+        or the `Refused` saying why there is none."""
         from science.world_belief import epoch_currency
         try:
             return epoch_currency(self.world, self.session_ids())
@@ -665,7 +665,7 @@ class ReadContext:
 
     def own(self, ref: str) -> ReadView:
         """The write root's view, holding `ref`: a record a command changes is
-        the write root's own (decision 3, kernel decision 1)."""
+        the write root's own."""
         view = self.write_view()
         if view.holds(ref):
             return view
@@ -692,7 +692,7 @@ class ReadContext:
                                 node_corpus=node_corpus)
 
     def gather_inputs(self, proposition: str):
-        """The proposition's belief inputs, every record selected by the reader's accept policy (commons §9)."""
+        """The proposition's belief inputs, every record selected by the reader's accept policy."""
         from science.acceptance import policy
         from science.closure import gather_inputs
         mount = self.mount_holding(proposition)

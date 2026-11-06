@@ -1,4 +1,4 @@
-"""Decision 6: both launchers serve the whole service protocol on the socket."""
+"""both launchers serve the whole service protocol on the socket."""
 import io
 import json
 import os

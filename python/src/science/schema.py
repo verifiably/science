@@ -1,4 +1,4 @@
-"""Command declarations: the schema every command must fit (spec §3)."""
+"""Command declarations: the schema every command must fit."""
 from __future__ import annotations
 
 import re
@@ -59,7 +59,7 @@ class Declaration:
     reads: tuple[str, ...]
     directory: Path
     # The command enumerates through the current project (coordination design
-    # §4.2): it reads the selection and accepts the `project` protocol field.
+    # ): it reads the selection and accepts the `project` protocol field.
     selects: bool = False
 
 

@@ -179,7 +179,7 @@ def test_missing_prompt_refusal_preserves_existing_output(tmp_path):
 
 
 def test_preamble_states_the_selected_project_rule(tmp_path):
-    """Coordination design §4.4: selection landed, so the preamble states the
+    """selection landed, so the preamble states the
     rule itself — how the project is chosen, what reads through it, and what
     needs one."""
     from science.adapters import build_adapter

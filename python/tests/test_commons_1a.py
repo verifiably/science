@@ -1,4 +1,4 @@
-"""Milestone 1a's decisive cases end to end (commons 1a, Task 12; spec §12 part 1a): B reproduces A's assessment,
+"""Sharing's decisive cases end to end: B reproduces A's assessment,
 derives a changed analysis over A's mounted records without redeclaring any, publishes it with attributions to
 A, its belief honours `accept`, and a publish retried after a partial push converges."""
 import secrets
@@ -128,7 +128,7 @@ def test_belief_excludes_a_under_empty_accept_and_includes_it_under_accept_a(der
 
 
 def test_publish_retried_after_a_partial_push_converges(fresh):
-    """Spec §12's transport case over the real git remote: the push lands and the publish then faults; a fresh
+    """the push lands and the publish then faults; a fresh
     attempt is blocked naming the unfinished one; resuming it finds every file present, commits nothing new and
     leaves the remote's content as the partial push wrote it."""
     bare = Remotes(fresh.remotes).bare("a")

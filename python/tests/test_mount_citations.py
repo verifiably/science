@@ -121,7 +121,7 @@ def test_an_unheld_ref_refuses_without_a_hint(shared):
 
 
 def test_spec_run_and_assess_in_the_write_root_cite_the_mount(shared, certified_work):
-    """Decision 1: the second-project shape. Every new record lands in the
+    """the second-project shape. Every new record lands in the
     write root, and every record it cites stays in the mount."""
     cfg, mounted = shared
     with open_rig(cfg, ("spec",)) as (d, _):
@@ -268,7 +268,7 @@ def test_cross_corpus_evidence_read_without_mounts_is_the_kernels_input_outside_
 
 
 def test_a_write_root_spec_on_a_mounted_proposition_makes_it_ready(shared, certified_work):
-    """Review round 1, P2 1: readiness reads specs in every session corpus.
+    """readiness reads specs in every session corpus.
     proposition:fresh is mounted with no evidence anywhere until the write root
     writes a spec on it."""
     cfg, mounted = shared
@@ -291,7 +291,7 @@ def test_next_marks_mounted_evidence_unevaluated_without_an_epoch_and_judges_it_
 
 
 def test_with_coordination_off_next_classifies_from_the_holders_own_corpus(shared, certified_work):
-    """Plan review round 1, P2 4: no read mounts means today's holder-local
+    """no read mounts means today's holder-local
     rule. The mount's proposition keeps the spec and assessment its own corpus
     holds, and no epoch is asked for."""
     cfg, _ = shared
@@ -301,7 +301,7 @@ def test_with_coordination_off_next_classifies_from_the_holders_own_corpus(share
 
 
 def test_cross_corpus_evidence_read_without_mounts_is_an_unevaluated_row(shared, certified_work):
-    """Plan review round 1, P2 5: authored normally, then read with
+    """authored normally, then read with
     coordination off, the corpus-local gather raises InputOutsideCorpus. The
     row says so; next neither fails internally nor blanks every row."""
     cfg, mounted = shared

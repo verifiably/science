@@ -98,7 +98,7 @@ class _RecordingWriter:
 
 
 def test_divergence_refuses_without_repair(certified_work, monkeypatch):
-    """Two tips cannot arise in one root under the lock (coordination §4.3), so
+    """Two tips cannot arise in one root under the lock, so
     the resolver is stubbed to report them. Part 3's two-corpus fixture exercises
     a real divergence end to end."""
     import science.commands.revise as revise_module

@@ -1,4 +1,4 @@
-"""`publish` and `publish-preview` (commons 1a, Task 6): A publishes its project's view to a git remote through
+"""`publish` and `publish-preview`: A publishes its project's view to a git remote through
 the kernel's session publish door; the preview is the same step 0, read-only."""
 import secrets
 

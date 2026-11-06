@@ -1,4 +1,4 @@
-"""status: the shipped read exemplar (spec §11)."""
+"""status: the shipped read exemplar."""
 from __future__ import annotations
 
 from collections import Counter

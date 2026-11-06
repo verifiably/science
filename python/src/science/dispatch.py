@@ -1,4 +1,4 @@
-"""The dispatcher: the one path every invocation takes (spec §6.1, §7.3)."""
+"""The dispatcher: the one path every invocation takes."""
 from __future__ import annotations
 
 import dataclasses
@@ -26,7 +26,7 @@ from science.schema import Declaration
 # A boundary refusal (`KernelRefusalValue`) records its own refusal `act-report`
 # through the operation port; with no other act recorded, it closes refused too.
 # A kernel refusal after a published prior act closes `done` with that act, as a
-# surface refusal after an act does (framework design §6.1, amended 2026-10-31).
+# surface refusal after an act does.
 KERNEL_REFUSALS = (PermitExceeded, KernelRefusalValue, WriteRefused,
                    CitationContractMismatch, AddressMapConflict, BuildContended,
                    StoreWriteRefused)
@@ -37,7 +37,7 @@ class HandlerContractViolation(RuntimeError):
     session handler broke its one-selection contract, or a sharing handler acted
     on a corpus.
 
-    Validation precedes the first act (belief-path design §6.3). The acts
+    Validation precedes the first act. The acts
     committed are truth, so the invocation closes `done` with them; the
     refusal is not a refusal any more but a defect in the handler.
     """
@@ -51,7 +51,7 @@ class Outcome:
 
 class SessionPort:
     """What a `session`-class handler receives in place of a scoped writer
-    (coordination design §4.1): one method, and no way to act on a corpus."""
+  : one method, and no way to act on a corpus."""
 
     def __init__(self, select: Callable) -> None:
         self._select = select
@@ -76,7 +76,7 @@ class Dispatcher:
 
     @property
     def selection(self):
-        """The endpoint's current project: an unpinned address, or None (spec §5.1)."""
+        """The endpoint's current project: an unpinned address, or None."""
         return self._selection
 
     def _context(self):
@@ -86,7 +86,7 @@ class Dispatcher:
 
     def _read_context(self, decl: Declaration, project):
         """The context a read handler receives. `project` is the invocation's
-        protocol field (spec §4.2): offered on `selects` commands only, resolved
+        protocol field: offered on `selects` commands only, resolved
         here, and binding this invocation alone — the endpoint's selection is
         untouched, and the handler never sees the raw value."""
         if project is None:
@@ -285,7 +285,7 @@ class Dispatcher:
             # success the handler's report is only the audited *claim* — what
             # renders is the canonical ledger-rebuilt report, first response
             # and replay alike, so authored text around a real identity pair
-            # has no path out (spec §7.4).
+            # has no path out.
             canonical_report = self._minted_report(sorted(minted))
             return Outcome(
                 self._render_write(decl.output_budget, canonical_report, iid, (0, 0)), iid
@@ -304,7 +304,7 @@ class Dispatcher:
         ledger sharing lines, and a pin report rebuilt from those lines.
 
         Unlike an act, a sharing line may precede a refusal: it is evidence of
-        state the handler leaves behind by design (commons spec §10, "a refusal
+        state the handler leaves behind by design (, "a refusal
         at this stage leaves the candidate fetched"), so a refusal closes
         refused whether or not lines were written. An act is never this class's
         to make."""
@@ -358,13 +358,13 @@ class Dispatcher:
     def _select(self, iid: str, address):
         # The ledger line first, the endpoint's state after it: a line that did
         # not append changed nothing, and a line that did is live even if this
-        # invocation never closes (beliefs selection-ledger design decision 4).
+        # invocation never closes.
         pinned = self._session.select_project(iid, address)
         self._selection = None if pinned is None else pinned.unpinned()
         return pinned
 
     def _invoke_session(self, decl: Declaration, canonical: Mapping[str, object], iid: str) -> Outcome:
-        """A `session`-class invocation (coordination design §4.1): the write
+        """A `session`-class invocation: the write
         protocol's claim, open and close, a port instead of a writer, and one
         selection block rebuilt from the ledger as its report."""
         from beliefs.errors import SessionProtocolError

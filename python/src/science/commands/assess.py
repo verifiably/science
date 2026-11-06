@@ -1,4 +1,4 @@
-"""assess: derive the assessment a run supports and mint it (§4.5)."""
+"""assess: derive the assessment a run supports and mint it."""
 from __future__ import annotations
 
 from beliefs import stored
@@ -32,7 +32,7 @@ def handle(ctx, writer, *, run) -> Report:
     if isinstance(derived, AssessmentFinding):
         _refuse(f"assessment finding: {derived.reason}")
     # The estimand and applicability are required: the derived assessment
-    # carries the frozen spec's typed pair (design §4.5, amended 2026-09-23).
+    # carries the frozen spec's typed pair.
     optional = {k: v for k, v in (("estimate", derived.estimate), ("uncertainty", derived.uncertainty))
                 if v is not None}
     node = writer.add(stored.assessment_node(

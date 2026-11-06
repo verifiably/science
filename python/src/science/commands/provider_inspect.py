@@ -1,5 +1,5 @@
 """provider-inspect: the world a publication at a provider's location claims, read from a scratch copy that is
-evaluated, granting nothing, and deleted (commons spec §4.4 layer 3; plan Deviation 2). Records nothing."""
+evaluated, granting nothing, and deleted. Records nothing."""
 from __future__ import annotations
 
 import secrets

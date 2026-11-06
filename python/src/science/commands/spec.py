@@ -1,9 +1,8 @@
-"""spec: freeze an analysis spec against the kernel's reference rules (§4.3).
+"""freeze an analysis spec against the kernel's reference rules.
 
 The estimand is typed against the claim it answers: the target's operator
 fixes every sort through its contract's `estimands:` declaration, so the
-surface takes terms and numbers only, never a sort (design §4.3, amended
-2026-09-23)."""
+surface takes terms and numbers only, never a sort."""
 from __future__ import annotations
 
 from decimal import Decimal, InvalidOperation
@@ -24,7 +23,7 @@ from science.report import Report, record_block
 from science.vocabulary import dataset_bound_sorts
 
 # Every authoring error the kernel raises on this path: kept whole so none
-# escapes the handler and leaves the invocation open (design §4.3).
+# escapes the handler and leaves the invocation open.
 AUTHORING_ERRORS = (*ESTIMAND_ERRORS, ClaimError, DecodeError, ProfileError)
 UNRESOLVED = (TermOutcome.NOT_CONSULTED, TermOutcome.NOT_AVAILABLE)
 
@@ -101,7 +100,7 @@ def _qualifiers(profile, entries) -> dict[str, Qualifier]:
 
 
 def _require_held(profile, receipt, referents: dict[str, Referent]) -> None:
-    """The kernel refuses only not-member; §5.2 requires a dataset-bound
+    """The kernel refuses only not-member; science requires a dataset-bound
     vocabulary to be held, so an unresolved outcome under one refuses here."""
     bound = dataset_bound_sorts(profile)
     for label, referent in referents.items():
@@ -132,7 +131,7 @@ def handle(ctx, writer, *, target, dataset, contrast, slot, measure, scale, refe
             superseded = stored.local_id("analysis-spec", supersedes)
         except MalformedRecord as caught:
             _refuse(f"supersedes {supersedes!r} is not an analysis-spec ref: {caught}")
-        ctx.own(supersedes)  # a mutation target is the write root's (decision 3)
+        ctx.own(supersedes)  # a mutation target is the write root's
     held_rules = {interpretation_rule: _rule(interpretation_rule), equivalence_rule: _rule(equivalence_rule)}
     snapshot = ctx.snapshot()
     try:

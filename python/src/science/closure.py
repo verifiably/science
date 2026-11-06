@@ -1,7 +1,7 @@
-"""Belief evaluation in one call (design §4.7, §5.5): the availability and
+"""Belief evaluation in one call: the availability and
 supplied context the evaluator does not compute itself, built from the
 world, then `evaluate_over` under the shipped policy and the reader's accept
-policy (commons spec §9)."""
+policy."""
 from __future__ import annotations
 
 from beliefs.belief import AcceptancePolicy, Availability, SuppliedContext

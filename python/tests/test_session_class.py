@@ -1,4 +1,4 @@
-"""Spec §4.1: the `session` write class, its port, and the selection block."""
+"""the `session` write class, its port, and the selection block."""
 import json
 from pathlib import Path
 

@@ -103,7 +103,7 @@ def test_attested_by_is_the_session_actor(rig, tmp_path):
 
 
 def test_bytes_held_with_no_record_are_re_held_superseding_the_earlier_observation(rig, tmp_path):
-    """The crash-recovery path (design §7): the store write and its Found
+    """The crash-recovery path: the store write and its Found
     observation landed, the record did not. `dataset` re-holds the same bytes at
     the same content-derived location, the earlier observation standing, and
     mints the record; the reduction shows one head for the address (review
@@ -140,7 +140,7 @@ def test_bytes_held_with_no_record_are_re_held_superseding_the_earlier_observati
 
 def test_a_url_observation_in_the_write_root_does_not_block_holding_bytes(rig, tmp_path, monkeypatch):
     """`dataset` chooses the observations its store write supersedes by the whole store locator; a URL observation
-    has no store path and is not one of them (sci-f5903e)."""
+    has no store path and is not one of them."""
     from helpers.world import record_url_observation
     d, ctx = rig
     content = b"gene\tv\nPHF19\t1\n"

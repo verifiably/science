@@ -1,4 +1,4 @@
-"""project-select: the session's current project (spec §3.7)."""
+"""project-select: the session's current project."""
 from __future__ import annotations
 
 from science.coordination import resolve_one, resolve_project_ref

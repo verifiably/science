@@ -1,4 +1,4 @@
-"""Spec §5.5 (part 3 amendment): the write commands read the write root, and
+"""the write commands read the write root, and
 share the one store's holdings and vocabularies with every mount."""
 import pytest
 
@@ -32,7 +32,7 @@ def test_a_spec_in_the_write_root_reads_its_dataset_there(two):
 
 
 def test_a_spec_over_a_read_mount_dataset_is_minted(two):
-    """Consumer spec decision 1 lifts part 3's refusal: the kernel now judges
+    """lifts part 3's refusal: the kernel now judges
     an assessment's observed dataset over the session's corpora."""
     data = hold_fixture_dataset(archive_config(two), "data.txt", b"y\n", "expression", **OBSERVED)
     with open_rig(two, ("claim", "spec")) as (d, ctx):
@@ -43,7 +43,7 @@ def test_a_spec_over_a_read_mount_dataset_is_minted(two):
 
 
 def test_a_spec_on_a_proposition_only_the_mount_can_decode_refuses(two):
-    """Consumer spec decision 2: proposition:archived uses the archive's
+    """proposition:archived uses the archive's
     corpus-local contract, which the writer does not pin, so the writer's own
     decode refuses, the mm30 case the second-project corpus must pin around."""
     data = hold_fixture_dataset(archive_config(two), "data.txt", b"y\n", "expression", **OBSERVED)
@@ -55,7 +55,7 @@ def test_a_spec_on_a_proposition_only_the_mount_can_decode_refuses(two):
 
 
 def test_holding_bytes_a_read_mount_declares_refuses_naming_its_record(two, certified_work):
-    """Review round 1, P1: a second record would put one content-derived
+    """a second record would put one content-derived
     address in two corpora, and every selected `next` would refuse
     duplicate-location. The refusal names the record to use instead."""
     data = hold_fixture_dataset(archive_config(two), "data.txt", b"z\n", "expression", **OBSERVED)
@@ -71,7 +71,7 @@ def test_holding_bytes_a_read_mount_declares_refuses_naming_its_record(two, cert
 
 
 def test_run_given_a_mounted_dataset_the_spec_does_not_observe_refuses_before_any_act(two, monkeypatch, certified_work):
-    """A mounted dataset is citable (consumer spec decision 1), but one the
+    """A mounted dataset is citable, but one the
     spec does not observe refuses as `invalid-input` naming that mismatch,
     before the boundary runs anything and with no run minted."""
     import science.commands.run as run_module

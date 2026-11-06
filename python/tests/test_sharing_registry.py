@@ -198,7 +198,7 @@ def _sharing(invocation: str, transition: str, at: str) -> dict:
 
 def _write_session(operations_root: Path, session_id: str, *invocations) -> None:
     """One closed session ledger written through the kernel's own ledger writer, which
-    validates every line; each invocation is (id, [(transition, at), ...])."""
+    validates every line; each invocation is (id, [(transition, at),...])."""
     path = ledger_path(operations_root, session_id)
     path.parent.mkdir(parents=True)
     writer = LedgerWriter(path)

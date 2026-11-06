@@ -118,7 +118,7 @@ class Remotes:
         return str(self.bare(destination.locator[len(prefix):]))
 
 
-# The two-installation fixture (commons 1a plan, Task 5): A publishes a reproducible view, B binds A's location and
+# The two-installation fixture: A publishes a reproducible view, B binds A's location and
 # adopts it. Every builder returns a snapshot-storable dict; a pytest fixture wraps it with `Installations.of`.
 QUERY_1A = "version: science.view-query.v1\nclauses:\n  - all:\n      - kinds: [proposition, dataset, analysis-spec, run, assessment]\n"
 DATA_A = b"gene\tvalue\nPHF19\t1\n"
@@ -615,7 +615,7 @@ def step_equal_holders(work: Path, value: dict):
 
 def step_spec_drop(work: Path, value: dict):
     """`VERIFIED`, then A republishes to LOC_A a successor that keeps its assessment and run and drops their
-    spec: B's unpublished verification replays through that spec (§5.9 item 6, the spec-drop case)."""
+    B's unpublished verification replays through that spec."""
     _publish_update(Installations.of(value), ("proposition", "dataset", "run", "assessment"))
     return value
 
@@ -623,7 +623,7 @@ def step_spec_drop(work: Path, value: dict):
 def step_spec_only(work: Path, value: dict):
     """`REOPENED`, then B fetches A's datasets and authors a spec of its own over A's proposition and dataset,
     with no run or assessment; A republishes to LOC_A a successor that keeps the dataset and drops the proposition
-    with everything that relates to it (§5.9 item 6, the spec-only case)."""
+    with everything that relates to it."""
     installations = Installations.of(value)
     ids = a_identity(installations.a)
     with open_rig(installations.b, ("fetch", "spec")) as (d, _):
@@ -633,7 +633,7 @@ def step_spec_only(work: Path, value: dict):
     return value
 
 
-# The commons lineage (lineages spec §2.4): every snapshot builds in FRESH's directory from its base's image.
+# The commons lineage: every snapshot builds in FRESH's directory from its base's image.
 # Names are the snapshot names the fixtures used before lineages, so build timings stay comparable.
 FRESH = Root("commons-1a-fresh", build_fresh)
 FRESH_NO_EPOCH = Root("commons-1a-fresh-no-epoch", build_fresh_no_epoch)

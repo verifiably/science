@@ -1,4 +1,4 @@
-"""dataset: hold a local file and mint the dataset record (belief-path §4.2)."""
+"""dataset: hold a local file and mint the dataset record."""
 from __future__ import annotations
 
 from hashlib import sha256
@@ -63,7 +63,7 @@ def handle(ctx, writer, *, path, title, locator=None, facets=None) -> Report:
     )
     # The record is built and validated BEFORE the first act: a facet the
     # profile does not know, or a payload it refuses, must leave no bytes in
-    # the store and no observation behind (design §6.3, validate before act).
+    # the store and no observation behind.
     empirical = None
     if locator is not None:
         empirical = {"locator": locator, "attested_by": writer.actor}

@@ -13,9 +13,9 @@ from helpers.world import short_socket
 from uncertified_host import capability_unavailable_from, uncertified_host
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-# The main checkout, which a worktree's own root is not: a worktree under .worktrees/
+# The main checkout, which a worktree's own root is not: a worktree under.worktrees/
 # resolves onto a volume whose mount options fail atoms' durability allowlist, so the
-# certified test root always lives beside the main checkout's .git.
+# certified test root always lives beside the main checkout's.git.
 MAIN_ROOT = Path(subprocess.run(
     ["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
     cwd=REPO_ROOT, check=True, capture_output=True, text=True,
@@ -72,7 +72,7 @@ def _no_thread_left_running():
 
 @pytest.fixture(autouse=True)
 def _one_live_world_per_lineage():
-    """Each test starts with no live snapshot world (lineages spec §2.3)."""
+    """Each test starts with no live snapshot world."""
     yield
     from helpers.snapshot import clear_live
     clear_live()

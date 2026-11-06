@@ -1,4 +1,4 @@
-"""`fetch` (commons 1a, Task 9): B holds a mounted dataset's bytes from a path or URL, only after the bytes match the
+"""`fetch`: B holds a mounted dataset's bytes from a path or URL, only after the bytes match the
 declared digest; every refusal comes before the one act. Nothing here touches the network: `retrieve` is mocked."""
 from dataclasses import replace
 from hashlib import sha256
@@ -111,7 +111,7 @@ def test_fetch_never_redeclares_the_dataset(reopened, fetching):
 
 def test_fetch_after_a_url_observation_in_the_write_root_holds_the_bytes(reopened, fetching, monkeypatch):
     """A URL observation has no store path; the observations a store write supersedes are chosen by the whole
-    store locator, so it neither crashes the selection nor is superseded (sci-f5903e)."""
+    store locator, so it neither crashes the selection nor is superseded."""
     invoke, dataset, cfg = fetching
     record_url_observation(cfg.write_root, cfg.store_root, cfg.profile, DATA_A, "https://data.test/previous.txt",
                            cfg.operations_root / "scratch" / "url-look", monkeypatch)
@@ -120,7 +120,7 @@ def test_fetch_after_a_url_observation_in_the_write_root_holds_the_bytes(reopene
 
 
 def test_fetch_leaves_another_stores_observation_of_the_same_path_standing(reopened, fetching):
-    """An observation of the same relative path in another store is not this write's to supersede (sci-f5903e)."""
+    """An observation of the same relative path in another store is not this write's to supersede."""
     from beliefs.holdings.boundary import ActContext, write
     from beliefs.holdings.records import StoreLocator
     from beliefs.root import holdings_seam, init_store_root
@@ -140,3 +140,38 @@ def test_fetch_leaves_another_stores_observation_of_the_same_path_standing(reope
     relative = f"{DECLARED.removeprefix('sha256:')}/data.txt"
     assert {f"store:{other_store}:{relative}",
             f"store:{store_identity(cfg.store_root)}:{relative}"} <= locations
+
+
+def test_fetch_resource_count_refusal_has_no_private_reference(monkeypatch):
+    from types import SimpleNamespace
+    from beliefs.dataset import DatasetDeclaration, ResourceDeclaration
+    from science.refusal import Refused
+
+    dataset = "dataset:sha256:two-resources"
+    declaration = DatasetDeclaration((ResourceDeclaration("a.txt", "sha256:aa"),
+                                      ResourceDeclaration("b.txt", "sha256:bb")))
+    node = object()
+
+    def get(address):
+        assert address == dataset
+        return node
+
+    def decode(value):
+        assert value is node
+        return declaration
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("resource-count refusal must precede source reads and writes")
+
+    class UnusedWriter:
+        def __getattr__(self, name):
+            forbidden()
+
+    ctx = SimpleNamespace(config=SimpleNamespace(fetch=FetchPolicy("fetch", 0)),
+                          cited=lambda address: SimpleNamespace(view=SimpleNamespace(get=get)))
+    monkeypatch.setattr(fetch_module.stored, "dataset_declaration", decode)
+    monkeypatch.setattr(fetch_module, "_bytes_of", forbidden)
+    with pytest.raises(Refused) as caught:
+        fetch_module.handle(ctx, UnusedWriter(), dataset=dataset, source="https://data.test/input")
+    assert caught.value.refusal.code == "invalid-input"
+    assert caught.value.refusal.message == "dataset:sha256:two-resources declares 2 resources; fetch holds one"

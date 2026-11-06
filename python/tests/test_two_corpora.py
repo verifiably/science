@@ -1,4 +1,4 @@
-"""Spec §9, the two-corpus check: each proposition's evidence in its own
+"""each proposition's evidence in its own
 corpus, each corpus decoded under its own manifest's profile."""
 import dataclasses
 import json
@@ -69,7 +69,7 @@ def test_the_unselected_session_reads_both_corpora_as_a_project_of_every_kind_do
 
 
 def test_next_opens_each_root_once_and_reduces_observations_once_however_many_rows(world, monkeypatch):
-    """sci-d92797: a read command's context opens every configured root once
+    """a read command's context opens every configured root once
     and reduces the holdings once, rather than per row and per spec."""
     import science.config
     import science.holdings
@@ -253,7 +253,7 @@ def test_identical_copies_in_two_corpora_allow_selected_next_for_another_record(
 
 
 def test_a_read_mount_without_a_manifest_refuses_at_the_read_entry_points(two_corpora):
-    """Review round 1, P2: sessionless `belief` and unselected `next` name the
+    """sessionless `belief` and unselected `next` name the
     root, never an internal error."""
     world = two_corpora
     from science.commands.belief import handle as belief

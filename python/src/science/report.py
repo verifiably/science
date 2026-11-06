@@ -1,4 +1,4 @@
-"""Typed report blocks: what handlers return instead of prose (spec §7.1)."""
+"""Typed report blocks: what handlers return instead of prose."""
 from __future__ import annotations
 
 import json
@@ -50,7 +50,7 @@ def _recheck_entry(entry) -> str:
 
 def _detail(node) -> tuple[str, ...]:
     """What the kernel observed, read from the stored record: a holdings
-    observation's outcome and a re-check report's entries (framework §7.4)."""
+    observation's outcome and a re-check report's entries."""
     from beliefs import stored
     if node.kind == "holdings-observation":
         return _observation_detail(node)
@@ -78,7 +78,7 @@ class Text:
 
 @dataclass(frozen=True)
 class SelectionBlock:
-    """What a `session` invocation reports (coordination design §4.1): the
+    """What a `session` invocation reports: the
     selection it recorded, as the project's address pinned to the revision it
     resolved to and the name that revision carries, or nothing selected."""
     address: str | None
@@ -132,7 +132,7 @@ def serialize_block(block: Block) -> str:
                      ("source", source), ("location", location), ("verdict", verdict))
             lines = [f"[pin] {corpus_id} {transition}"] + [f"{k}: {v}" for k, v in facts]
             if transition == "mounted":
-                # A session's mounts are fixed at open (commons spec §5).
+                # A session's mounts are fixed at open.
                 lines.append("takes effect at the next session open")
             return "\n".join(lines) + "\n"
     raise TypeError(f"not a block: {block!r}")

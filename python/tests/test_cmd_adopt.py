@@ -1,4 +1,4 @@
-"""`adopt` (commons 1a, Task 8): B fetches A's publication from a bound location, verifies it, sources it, checks
+"""`adopt`: B fetches A's publication from a bound location, verifies it, sources it, checks
 its layout and conflicts, then admits and mounts it. Every registry write follows the sharing line that is its
 evidence, and nothing survives a refusal before `fetched`."""
 import pytest

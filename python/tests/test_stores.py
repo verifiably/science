@@ -148,7 +148,7 @@ def test_admission_inspection_never_changes_disk(certified_work, kind):
 @pytest.mark.parametrize("stage", ["store_identity", "read_lifecycle_state"])
 @pytest.mark.parametrize("kind", ["os", "metadata"])
 def test_store_inspection_error_retains_cause_and_creates_no_ledger(store_config, monkeypatch, stage, kind):
-    # shortcut: internal lifecycle error import pending public exports in beliefs-1dfd8c.
+    # shortcut: internal lifecycle error import pending public exports.
     from beliefs.root import MetadataStoreInvalid
     error = PermissionError("unreadable") if kind == "os" else MetadataStoreInvalid("broken metadata")
     def fail(root):
@@ -332,7 +332,7 @@ def test_blocked_digest_is_not_rescued_by_fresh_store(relocated_store, monkeypat
         ReadContext.open(cfg).held_path(address)
     assert caught.value.refusal.code == "invalid-input"
     assert "blocked" in caught.value.refusal.message
-    # Each location on its own line, spelled as `recheck` takes it (sci-409235).
+    # Each location on its own line, spelled as `recheck` takes it.
     assert caught.value.refusal.message.splitlines()[1:] == [inherited_location]
 
 

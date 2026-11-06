@@ -1,10 +1,6 @@
-"""Build a test world once per process and restore it per test (spec
-docs/specs/2026-10-02-world-fixture-snapshots-design.md), deriving a world from
-its base's image rather than from scratch (spec
-docs/specs/2026-10-31-snapshot-lineages-design.md). A world records its absolute
-path in atoms' metadata and in run records, so it is restored to the directory it
-was built in, never moved: every declaration of one lineage builds in its root's
-directory."""
+"""Build a world once per process and restore it per test; derive each world
+from its base image in the same absolute directory. See docs/development.md.
+Engine metadata and run records bind that directory, so images never relocate."""
 import shutil
 import stat
 from collections.abc import Callable
@@ -88,7 +84,7 @@ def _refuse_another_live_world(work: Path, declaration: Declaration) -> None:
 
 def check_value(value: object, where: str = "value") -> None:
     """Data only: a snapshot outlives the files under it, so it must not hold a
-    session, dispatcher or context (spec §2.4a). `ScienceConfig` is trusted
+    session, dispatcher or context. `ScienceConfig` is trusted
     whole; around it only containers of plain leaves pass."""
     if isinstance(value, _LEAVES):
         return
@@ -107,7 +103,7 @@ def check_value(value: object, where: str = "value") -> None:
 
 def copy_value(value: object) -> object:
     """A copy whose containers are new and whose immutable leaves are shared: `copy.deepcopy` cannot copy a
-    `ScienceConfig`, whose compiled profile holds mapping proxies (lineages spec §2.2)."""
+    `ScienceConfig`, whose compiled profile holds mapping proxies."""
     if isinstance(value, _LEAVES):
         return value
     kind = type(value)

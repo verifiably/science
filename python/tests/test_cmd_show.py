@@ -1,4 +1,4 @@
-"""`show` (commons 1a, Task 11): one pin's state, source, kernel status, acceptance and verification picture,
+"""`show`: one pin's state, source, kernel status, acceptance and verification picture,
 reading B's registry, the kernel's registry and the session's records; it writes nothing."""
 from dataclasses import replace
 from types import SimpleNamespace
@@ -43,8 +43,9 @@ def test_show_a_mounted_origin_confirmed_pin(adopted):
                  f"location: {LOC_A}", f"at: {pin.fetch.at}", f"verdict: {pin.fetch.verdict}",
                  # B opened before the adopt: the kernel admitted the corpus, B's configuration carries no root of it.
                  "known: yes", "live: yes", "present: no",
-                 "independence: not exposed by the kernel's inputs (Deviation 8)"):
+                 "independence: not exposed by the kernel's inputs"):
         assert line in text, line
+    assert "Deviation 8" not in text
     assert LAG not in text
 
 

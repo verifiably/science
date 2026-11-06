@@ -1,4 +1,4 @@
-"""Spec §5.2, §5.3 and P8: a read in any process finds the live session's selection."""
+"""a read in any process finds the live session's selection."""
 import io
 import json
 import re
@@ -190,7 +190,7 @@ def test_a_live_sessions_null_is_the_answer_not_the_default(certified_work, shor
     b'{"project": "coord:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/cccccccccccccccccccccccccccccccc"}\n',
 ])
 def test_a_listener_that_answers_something_else_is_an_internal_error(certified_work, short_tmp, capsys, answer):
-    """A live session the read could not ask is not an absent one (spec §5.2)."""
+    """A live session the read could not ask is not an absent one."""
     from science.cli import main
 
     sock = short_tmp / "service.sock"

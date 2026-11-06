@@ -1,4 +1,4 @@
-"""revise: a whole new revision naming its predecessors (spec §3.6)."""
+"""revise: a whole new revision naming its predecessors."""
 from __future__ import annotations
 
 from science.coordination import (content_of, now, parse_query_text, parse_unpinned, refuse_coordination,

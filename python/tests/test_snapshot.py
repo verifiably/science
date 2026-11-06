@@ -1,4 +1,4 @@
-"""Spec §4.3: a restore discards a test's writes, evicts beliefs' registries,
+"""a restore discards a test's writes, evicts beliefs' registries,
 keeps sandbox links as links, and a snapshot holds data only."""
 import collections
 import os
@@ -42,7 +42,7 @@ def test_a_restore_discards_the_previous_tests_writes(certified_worker_work):
 
 def test_the_same_write_succeeds_after_every_restore(certified_worker_work):
     """Without eviction the second write is CollisionRefused: the open corpus
-    still indexes the first test's dataset (spec §2.2)."""
+    still indexes the first test's dataset."""
     snap = snapshot(certified_worker_work, "snapshot-check", _belief_world)
     for _ in range(2):
         snap.restore()
@@ -99,7 +99,7 @@ def test_a_name_reused_with_another_builder_is_refused(certified_worker_work):
         snapshot(certified_worker_work, "snapshot-check", build_belief_world)
 
 
-# Lineages (spec docs/specs/2026-10-31-snapshot-lineages-design.md §2.5): toy declarations over plain files,
+# toy declarations over plain files,
 # each named afresh so another test's built snapshots cannot satisfy it.
 
 

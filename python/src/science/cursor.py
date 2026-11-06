@@ -1,4 +1,4 @@
-"""Bounded, versioned cursor encoding (spec §7.3, §3.2 constants)."""
+"""Bounded, versioned cursor encoding."""
 from __future__ import annotations
 
 import base64

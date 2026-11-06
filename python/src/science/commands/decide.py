@@ -1,4 +1,4 @@
-"""decide: a decision and its reasoning under the current project (spec §3.4)."""
+"""decide: a decision and its reasoning under the current project."""
 from __future__ import annotations
 
 from science.coordination import now

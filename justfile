@@ -5,7 +5,7 @@
 # The git hooks in .githooks/ call `hook-pre-commit` and `hook-pre-push`, which run
 # hygiene under their own target names and delegate broad suites so the report and
 # `.tt.toml` policy can price and govern them separately.
-# Design: ops docs/specs/2026-10-29-test-execution-policy-design.md.
+# Broad-test policy is validated by tools/tt; see docs/development.md.
 
 set quiet
 set positional-arguments
@@ -20,7 +20,7 @@ tt := "python3 tools/tt"
 # CPU: 8 workers with work-stealing took the suite from 626 s to 79 s on 2026-09-23,
 # and 16 workers bought nothing more. The worker count is the host's budget: test runs go
 # through `host-budget run` (ops), which sets PYTEST_XDIST_AUTO_NUM_WORKERS for `-n auto`
-# (design: ops docs/specs/2026-09-24-host-budget-design.md). Worktree runs need no
+# as configured by the shared host-budget tool. Worktree runs need no
 # SCIENCE_TEST_ROOT: conftest resolves the certified test root through the main checkout.
 xdist := "-n auto --dist worksteal"
 fast_cmd := "cd python && uv run pytest --testmon " + xdist

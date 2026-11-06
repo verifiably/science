@@ -48,7 +48,7 @@ def test_without_coordination_a_project_mint_is_unavailable(certified_work):
 
 
 def test_coordination_asked_of_a_corpus_that_does_not_pin_it_refuses_at_open(certified_work):
-    """Spec §6: every pre-coordination config takes this path once it is
+    """every pre-coordination config takes this path once it is
     upgraded with `coordination = 2`, so the refusal names the root and the
     remedy, before any session exists."""
     from dataclasses import replace

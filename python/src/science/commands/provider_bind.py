@@ -1,5 +1,5 @@
 """provider-bind: bind a provider's location to the world its publication claims, when the reader passes that
-same world id (commons spec §4.4 layer 3). The `bound` sharing line is the evidence; the registry's binding
+same world id. The `bound` sharing line is the evidence; the registry's binding
 follows it, and `sharing.replay` restores a binding the line outlived."""
 from __future__ import annotations
 

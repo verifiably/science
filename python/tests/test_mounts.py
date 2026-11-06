@@ -1,4 +1,4 @@
-"""Spec §6: every mount under its own manifest's profile, in the session and
+"""every mount under its own manifest's profile, in the session and
 in the sessionless read context alike."""
 import dataclasses
 
@@ -58,7 +58,7 @@ def test_the_session_refuses_an_unresolvable_read_mount_pin_at_open(two):
 
 
 def test_a_read_mount_without_a_manifest_refuses_naming_the_root(two):
-    """Review round 1, P2: through the read context's own methods, not only
+    """through the read context's own methods, not only
     `mount_profiles` — `mounts()` must not reach a raw ManifestMissing."""
     empty = two.world.world_root.parent / "empty"
     empty.mkdir()
@@ -71,7 +71,7 @@ def test_a_read_mount_without_a_manifest_refuses_naming_the_root(two):
 
 def test_a_write_root_without_a_manifest_refuses_naming_it_through_coordination(two):
     """Final review: a sessionless `--project` read asks for the resolver, which
-    must refuse by name rather than reach a bare ManifestMissing (spec §5.5)."""
+    must refuse by name rather than reach a bare ManifestMissing."""
     ctx = ReadContext.open(two)
     (two.write_root / "corpus.yaml").rename(two.write_root / "corpus.yaml.moved")
     assert str(two.write_root) in _refused(ctx.coordination)

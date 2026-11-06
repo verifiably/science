@@ -1,4 +1,4 @@
-"""Spec §3.7: project-select."""
+"""project-select."""
 import io
 import json
 import re
@@ -130,7 +130,7 @@ def test_a_session_handler_must_lead_with_ctx_and_port(monkeypatch):
 
 
 def test_over_mcp_stdio_a_selection_replays_and_a_refusal_carries_its_envelope(certified_work, short_tmp):
-    """Framework §9.4: the new write through one transport, with replay and
+    """the new write through one transport, with replay and
     the refusal envelope."""
     from helpers.world import write_cli_config
     from science.mcp import serve

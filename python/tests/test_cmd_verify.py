@@ -59,7 +59,7 @@ def test_a_recipe_changed_between_run_and_replay_is_refused(rig, certified_work)
 def test_a_disagreeing_replay_under_one_recipe_yields_failed_and_still_mints(certified_work):
     """One recipe whose stats.tsv differs on every execution: the replay
     disagrees, the equivalence rule answers failed, and the verification is a
-    record either way (design §7; review finding 4)."""
+    record either way."""
     cfg = build_belief_world(certified_work)
     ref = hold_fixture_dataset(cfg, "data.txt", b"x\n", "expression", **OBSERVED)
     bundle = fixture_bundle(certified_work, "supported", varying=True)
@@ -80,7 +80,7 @@ def test_a_disagreeing_replay_under_one_recipe_yields_failed_and_still_mints(cer
 def test_verify_refuses_before_the_replay_when_the_equivalence_implementation_changed(rig, monkeypatch):
     """The original run bound the equivalence rule to one implementation; if the
     rule now resolves to another, build_verification would raise RuleUnbound
-    after the replay act. The handler refuses before it (review finding 2)."""
+    after the replay act. The handler refuses before it."""
     import science.commands.verify as verify_module
     from beliefs.replay import EquivalenceImplementation
     from beliefs.rules import CONTENT_IDENTITY_RULE, REFERENCE_RULES

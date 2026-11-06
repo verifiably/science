@@ -1,5 +1,5 @@
 """recheck: re-check one store location through the kernel's session route,
-settling an unmatched holdings intent (sci-409235)."""
+settling an unmatched holdings intent."""
 from __future__ import annotations
 
 from beliefs import stored

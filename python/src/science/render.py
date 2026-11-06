@@ -1,4 +1,4 @@
-"""The one budgeted renderer (spec §7): budget, progress, audit."""
+"""The one budgeted renderer: budget, progress, audit."""
 from __future__ import annotations
 
 import hashlib
@@ -40,7 +40,7 @@ def audit_write_report(report: Report, minted: frozenset[tuple[str, str]]) -> No
 
 
 def audit_session_report(report: Report, recorded: str | None) -> None:
-    """Coordination design §4.1: a `session` report is exactly one selection
+    """a `session` report is exactly one selection
     block naming what the ledger recorded — the pinned address, or None."""
     if len(report) != 1 or type(report[0]) is not SelectionBlock:
         raise AuditViolation("a session report is exactly one selection block")

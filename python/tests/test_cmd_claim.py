@@ -43,7 +43,7 @@ def test_unheld_vocabulary_under_the_dataset_bound_sort_refuses_naming_the_addre
 
 def test_namespace_bound_sort_resolves_not_consulted_and_is_accepted(certified_work):
     """The protein slot is HGNC-bound by namespace and release; no release is
-    held; the kernel's permissive reading stands (design §4.1)."""
+    held; the kernel's permissive reading stands."""
     with open_rig(build_fixture_world_with_contract(certified_work), ("claim",)) as (d, _):
         out = d.invoke("claim", dict(BASE, object="protein:ANYTHING", slug="any"))
         assert "proposition:any" in out.text

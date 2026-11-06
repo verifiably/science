@@ -1,11 +1,14 @@
 # What this project is. `tools/ops-docs write` renders it into the identity region of
 # README.md and AGENTS.md; `tools/ops-docs check` refuses a commit while they differ.
-# Design: ops docs/specs/2026-09-22-project-guides-design.md §3.
+# Public command and invocation authority; generated guide regions follow it.
 name = "science"
 aliases = []
 purpose = "The daily surface of verifiably: the layer people and agents use"
 abstract = """
 The commands a researcher or a coding agent runs in place of a folder of scripts and result tables: state a question as a typed claim, hold the data, declare the analysis, run it sealed, verify it from scratch, and read what the checked results add up to. Its scientific records live in a beliefs corpus, checked by the kernel, so the work stays traceable whoever did it. A CLI and an MCP server.
 """
-authority = ["docs/specs/2026-08-31-command-framework-design.md"]
+authority = ["docs/commands.md", "docs/sessions.md"]
 subsystems = []
+
+[documents]
+standard = 1

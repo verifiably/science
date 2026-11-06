@@ -1,4 +1,4 @@
-"""Spec §5.1, §6: the launcher's initial selection and `default_project`."""
+"""the launcher's initial selection and `default_project`."""
 import io
 import json
 import socket

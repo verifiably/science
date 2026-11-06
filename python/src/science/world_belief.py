@@ -23,8 +23,8 @@ EPOCH_CODES = frozenset({"no-epoch", "epoch-stale"})
 REMEDY = "run `science epoch` to publish one over the session's corpora"
 
 # Which derivation each shipped rule's symbol fills. The rules store is keyed by
-# identity and knows nothing of kinds, so the join is the caller's (beliefs
-# epoch design §7.5); a symbol missing here is a KeyError, never a guess.
+# identity and knows nothing of kinds, so the join is the caller's; a missing
+# symbol is a KeyError, never a guess.
 SYMBOL_FIELDS = {
     "derive_producer_snapshot": "producer",
     "enumerate_retractions_v2": "retraction",
@@ -83,8 +83,8 @@ def epoch_currency(world, session_ids: frozenset[str]) -> Current:
         # science names them rather than re-scanning for them.
         raise _kernel_refused(caught, remedy=True) from None
     # Strict on any move: every write after the epoch, coordination writes
-    # included, changes the corpus state identity, so no drift is presumed inert
-    # (plan review round 1, P1). Records the epoch left unmapped at an unchanged
+    # included, changes the corpus state identity, so no drift is presumed inert.
+    # Records the epoch left unmapped at an unchanged
     # state are kinds it excludes by design (only world kinds are mapped), not drift.
     drifted = sorted(report.corpus_id for report in view.drift()
                      if report.published_state != report.captured_state)

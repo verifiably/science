@@ -1,4 +1,4 @@
-"""The science CLI: sessionless reads, service-routed writes (spec §9.2)."""
+"""The science CLI: sessionless reads, service-routed writes."""
 from __future__ import annotations
 
 import argparse
@@ -23,7 +23,7 @@ _LAUNCHER_PROJECT_HELP = "Open the session under this project, by name or coord:
 
 # A declared input named for a shared CLI vocabulary option takes the
 # vocabulary's short names too, so the generated surface is the shared option
-# (ops docs/specs/2026-09-20-cli-conventions-design.md; tools/cli.toml).
+# See tools/cli.toml for the parser inventory.
 _VOCABULARY_ALIASES = {"limit": ("-n",)}
 
 
@@ -116,7 +116,7 @@ _SELECTION_TIMEOUT_SECONDS = 5
 
 
 def _ambient_selection(config):
-    """Coordination design §5.2 steps 2–4: the live session's selection, asked
+    """the live session's selection, asked
     over the service socket, and the configuration's `default_project` only
     when no session is live. A live session's null is the answer. Any failure
     but "nothing listens" propagates: a live session this read could not ask

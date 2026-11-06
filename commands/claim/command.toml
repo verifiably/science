@@ -30,4 +30,4 @@ required = false
 doc = "Record id; absent, derived from the three terms as the driver derives it."
 
 [reads]
-families = ["corpus-stored", "holdings"]   # holdings: the resolution snapshot (§5.3)
+families = ["corpus-stored", "holdings"]   # holdings: the held-vocabulary resolution snapshot

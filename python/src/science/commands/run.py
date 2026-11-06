@@ -1,4 +1,4 @@
-"""run: execute a frozen spec's analysis once under confinement (§4.4)."""
+"""run: execute a frozen spec's analysis once under confinement."""
 from __future__ import annotations
 
 import socket
@@ -32,7 +32,7 @@ def now() -> str:
 def prepare(ctx, spec_ref: str, dataset_ref: str, code: str, entrypoint: str, targets) -> dict:
     """Everything the boundary needs, validated; shared with verify. The spec
     and dataset are cited from whichever session corpus holds them, decoded
-    under the writer's profile (consumer spec decision 2)."""
+    under the writer's profile."""
     spec_view, dataset_view = ctx.cited(spec_ref).view, ctx.cited(dataset_ref).view
     try:
         spec = stored.analysis_spec_value(spec_view.get(spec_ref), profile=ctx.config.profile)
@@ -74,7 +74,7 @@ def handle(ctx, writer, *, spec, dataset, code, entrypoint, targets, cores=None)
     if isinstance(outcome, RunRefused):
         # A kernel refusal, through the kernel path: the boundary may already
         # have written its act-report through the port, so this is never a
-        # surface `Refused` (Task 1 would call that a handler defect). The
+        # surface `Refused`. The
         # dispatcher normalizes it to `kernel-refused` carrying the reason.
         raise KernelRefusalValue(outcome)
     assert isinstance(outcome, RunMinted)

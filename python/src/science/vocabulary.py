@@ -1,4 +1,4 @@
-"""The resolution snapshot over held vocabularies (belief-path design §5.3)."""
+"""The resolution snapshot over held vocabularies."""
 from __future__ import annotations
 
 from collections.abc import Mapping

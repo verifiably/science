@@ -72,7 +72,7 @@ def resolve_handlers(declarations) -> dict:
             shape_error("no *args, **kwargs, or positional-only parameters")
         kind = declaration.write_class.kind
         # A session handler gets a session port, never a kernel writer
-        # (coordination design §4.1); the name says which it was handed.
+        #; the name says which it was handed.
         lead = {"read-only": ["ctx"], "session": ["ctx", "port"]}.get(kind, ["ctx", "writer"])
         if [parameter.name for parameter in parameters[: len(lead)]] != lead or any(
             parameter.kind is not positional_or_keyword

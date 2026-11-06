@@ -1,4 +1,4 @@
-"""P1 (projects design §10): no configuration is discovered from the working
+"""P1: no configuration is discovered from the working
 directory, and a configuration's relative paths resolve against the file."""
 import io
 import json

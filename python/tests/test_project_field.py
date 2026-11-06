@@ -1,4 +1,4 @@
-"""Spec §4.2: the `selects` key and the `project` protocol field."""
+"""the `selects` key and the `project` protocol field."""
 from pathlib import Path
 
 import pytest
@@ -38,7 +38,7 @@ def _refused(call, code):
 def test_project_binds_one_invocation_and_leaves_the_endpoint_selection(certified_work):
     with coordination_rig(certified_work, NAMES, extra=EXTRA) as (d, _):
         health, cancer = mint_project(d, "health"), mint_project(d, "cancer")
-        d._selection = health  # project-select sets this through the session port (Task 2)
+        d._selection = health  # project-select sets this through the session port
         assert d.invoke("peek", {}, project=str(cancer)).text == f"selection={cancer}\n"
         assert d.invoke("peek", {}, project="cancer").text == f"selection={cancer}\n"
         assert d.invoke("peek", {}).text == f"selection={health}\n"
@@ -125,7 +125,7 @@ def test_selected_project_reads_the_selections_one_tip(certified_work):
 
 
 def test_a_divergent_selection_refuses_with_every_tip(certified_work, monkeypatch):
-    """Two tips cannot arise in one root (coordination §4.3), so the resolver
+    """Two tips cannot arise in one root, so the resolver
     is stubbed to report them, as `test_cmd_revise.py` does."""
     from dataclasses import replace
 

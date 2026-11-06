@@ -1,5 +1,4 @@
-"""show: one pin's state, source, kernel status, acceptance and verification picture (commons spec §4.5, §11
-step 2). The evidence picture is read from the records, not from the kernel's belief inputs: those drop a
+"""show: one pin's state, source, kernel status, acceptance and verification picture. The evidence picture is read from the records, not from the kernel's belief inputs: those drop a
 verification whose assessment the policy excluded, and `show` must list it. Writes nothing."""
 from __future__ import annotations
 
@@ -161,7 +160,7 @@ def handle(ctx, *, corpus_id) -> Report:
                                ("counts as evidence",
                                 _yes(counts(inputs, corpus_id, assessments[0])) if assessments else "n/a"))),
         KeyVals("evidence", _evidence(ctx, inputs, corpus_id, assessments)),
-        Text("independence: not exposed by the kernel's inputs (Deviation 8)"),
+        Text("independence: not exposed by the kernel's inputs"),
     ]
     blocks.extend(_supersession(ctx, registry, pin, status))
     if status.known and status.live and STATE_ORDER.index(pin.state) < STATE_ORDER.index("mounted"):

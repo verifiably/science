@@ -1,4 +1,4 @@
-"""hypothesis: a view minted under the current project (spec §3.2)."""
+"""hypothesis: a view minted under the current project."""
 from __future__ import annotations
 
 from science.coordination import now, parse_query_text

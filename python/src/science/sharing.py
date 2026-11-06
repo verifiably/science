@@ -294,7 +294,7 @@ def sharing_lines(operations_root: Path) -> tuple[SharingLine, ...]:
 
 
 def replay(registry: SharingRegistry, operations_root: Path) -> tuple[SharingLine, ...]:
-    """Rebuild the registry from replay-ordered ledger sharing lines (spec §7.4).
+    """Rebuild the registry from replay-ordered ledger sharing lines.
 
     Fold through `apply_line`; return only the lines that wrote."""
     return tuple(line for line in sharing_lines(operations_root) if apply_line(registry, line))

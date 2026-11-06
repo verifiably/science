@@ -804,7 +804,7 @@ def test_cli_mcp_serve_resolves_config_and_starts_server(monkeypatch):
 
 
 def test_a_subordinate_mint_without_a_selection_refuses_over_stdio_and_replays(certified_work, short_tmp):
-    """Spec §9's transport arm of P2: through `serve`'s stdio loop, `question`
+    """through `serve`'s stdio loop, `question`
     with nothing selected refuses `no-current-project`, and the same
     invocation id replays the refusal."""
     from helpers.world import QUERY, write_cli_config

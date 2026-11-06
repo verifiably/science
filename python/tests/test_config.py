@@ -367,15 +367,9 @@ def test_resolution_order(tmp_path):
 
 
 def test_nothing_is_discovered_from_the_working_directory(tmp_path, monkeypatch):
-    """Design 2026-09-23 §5.2, guarantee P1: the launcher takes the world from
-    --config or SCIENCE_CONFIG only. A predecessor manifest, a workspace
-    config and a stray corpus manifest in cwd change nothing.
-
-    Scope: the configuration here names absolute paths. Relative paths
-    *inside* a config file still resolve against the process's cwd
-    (test_load_config_resolves_relative_operations_root pins that), so the
-    same file can name different worlds from different directories. That
-    is a known P1 gap, tracked on sci-c5528e; this test does not cover it."""
+    """Only --config or SCIENCE_CONFIG chooses the world; unrelated cwd files
+    do not affect discovery. Relative paths inside the chosen file resolve
+    beside that configuration, covered by the relative-path tests."""
     explicit_dir = tmp_path / "explicit"
     explicit_dir.mkdir()
     cfg = write_config(explicit_dir)

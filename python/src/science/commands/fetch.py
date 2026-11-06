@@ -1,4 +1,4 @@
-"""fetch: hold a mounted dataset's bytes from a path or URL after checking the declared digest (commons spec §7.4)."""
+"""fetch: hold a mounted dataset's bytes from a path or URL after checking the declared digest."""
 from __future__ import annotations
 
 import sys
@@ -50,7 +50,7 @@ def handle(ctx, writer, *, dataset, source) -> Report:
     mount = ctx.cited(dataset)
     resources = stored.dataset_declaration(mount.view.get(dataset)).resources
     if len(resources) != 1:
-        _refuse(f"{dataset} declares {len(resources)} resources; fetch holds one (sci-d1e874)")
+        _refuse(f"{dataset} declares {len(resources)} resources; fetch holds one")
     (resource,) = resources
     digest, name = resource.digest, resource.name
     if digest is None:

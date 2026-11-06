@@ -1,4 +1,4 @@
-"""projects: every standing project, and which one is selected (spec §3.8)."""
+"""projects: every standing project, and which one is selected."""
 from __future__ import annotations
 
 from science.coordination import tip_nodes

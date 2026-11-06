@@ -92,4 +92,4 @@ required = false
 doc = "The analysis-spec ref this one supersedes."
 
 [reads]
-families = ["corpus-stored", "holdings"]   # holdings: the typed estimand resolves against the §5.3 snapshot
+families = ["corpus-stored", "holdings"]   # holdings: the typed estimand resolves against the held-vocabulary snapshot

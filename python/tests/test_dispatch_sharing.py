@@ -1,5 +1,5 @@
 """The `sharing` write class: ledger sharing lines through kernel doors, and a pin
-report rebuilt from them (commons 1a, Task 4)."""
+report rebuilt from them."""
 import dataclasses
 import json
 
