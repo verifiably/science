@@ -90,16 +90,17 @@ def test_a_kernel_refusal_after_an_act_closes_done_and_is_an_internal_error(rig)
 
 def _refusing_boundary_call(writer, scratch_base: Path):
     from beliefs.boundary import execute_production_run
-    from beliefs.recipe import CONFINED_POLICY
+    from beliefs.recipe import CONFINED_POLICY, RecipeInput
+    dataset = "dataset:sha256:" + "0" * 64
     return execute_production_run(
-        inputs=(),
+        inputs=(RecipeInput(role="transforms", dataset=dataset, content="sha256:" + "0" * 64),),
         port=writer.operation_port(),
         boundary_policy=CONFINED_POLICY,
         parameters={},
         nondeterminism=None,  # type: ignore[arg-type] — refuses on missing code root before nondeterminism
         definition=None,  # type: ignore[arg-type]
         code_roots=(scratch_base / "missing-bundle",),
-        held_inputs={},
+        held_inputs={dataset: scratch_base},
         entrypoint="workflow/Snakefile",
         targets=(),
         declared_outputs=(),
@@ -121,7 +122,8 @@ def test_a_boundary_refusal_recording_only_an_act_report_closes_refused_and_repl
 
     boundary_refusing = Declaration(
         "boundary-refusing", "fixture",
-        WriteClass("mints", ("run", "act-report"), {"run": "run", "act-report": "run"}),
+        WriteClass("mints", ("run", "dataset", "act-report"),
+                   {"run": "run", "dataset": "corpus-write", "act-report": "run"}),
         MIN_OUTPUT_BUDGET, (), (), Path("."))
 
     def handler(ctx, writer):
@@ -159,8 +161,8 @@ def test_a_boundary_refusal_after_a_committed_act_closes_done_and_is_an_internal
 
     mixed = Declaration(
         "mixed", "fixture",
-        WriteClass("mints", ("proposition", "run", "act-report"),
-                   {"proposition": "corpus-write", "run": "run", "act-report": "run"}),
+        WriteClass("mints", ("proposition", "run", "dataset", "act-report"),
+                   {"proposition": "corpus-write", "run": "run", "dataset": "corpus-write", "act-report": "run"}),
         MIN_OUTPUT_BUDGET, (InputSpec("slug", "string", True, "d"),), (), Path("."))
 
     def handler(ctx, writer, *, slug):
