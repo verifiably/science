@@ -1,6 +1,7 @@
-"""dataset: hold a local file and mint the dataset record."""
+"""dataset: hold a local file or directory and mint the dataset record."""
 from __future__ import annotations
 
+import os
 from hashlib import sha256
 from pathlib import Path
 
@@ -38,29 +39,102 @@ def _parse_facets(entries) -> dict[str, dict[str, str]]:
     return facets
 
 
-def handle(ctx, writer, *, path, title, locator=None, facets=None) -> Report:
+def _validate_locator_name(store_id: str, rel: str) -> None:
+    try:
+        StoreLocator(store_id, f"{'0' * 64}/{rel}")
+    except MalformedRecord as caught:
+        _refuse(str(caught))
+
+
+def _read_entries(source: Path, store_id: str, path: str, resources) -> list[tuple[str, bytes, str]]:
+    if source.is_symlink() or not (source.is_file() or source.is_dir()):
+        _refuse(f"{path} is not a regular file or directory")
+    if source.is_file():
+        if resources is not None:
+            _refuse("--resources requires --path to be a directory")
+        _validate_locator_name(store_id, source.name)
+        content = source.read_bytes()
+        digest = "sha256:" + sha256(content).hexdigest()
+        return [(source.name, content, digest)]
+
+    root_resolved = source.resolve()
+    if resources is not None:
+        if len(resources) == 0:
+            _refuse("--resources must not be empty")
+        if len(set(resources)) != len(resources):
+            _refuse("--resources must not contain duplicates")
+        for rel in resources:
+            _validate_locator_name(store_id, rel)
+            current = source
+            for part in Path(rel).parts:
+                current = current / part
+                if current.is_symlink():
+                    _refuse(f"resource {rel!r} traverses a symlink at {current}")
+            candidate = source / rel
+            if (
+                candidate.is_symlink()
+                or not candidate.resolve().is_relative_to(root_resolved)
+                or not candidate.is_file()
+            ):
+                _refuse(f"resource {rel!r} is not a regular file inside {path}")
+        rel_names = sorted(resources)
+    else:
+        collected: list[str] = []
+        for dirpath, dirnames, filenames in os.walk(source, followlinks=False):
+            for dirname in dirnames:
+                entry = Path(dirpath, dirname)
+                if entry.is_symlink() or not entry.is_dir():
+                    _refuse(f"{entry} is a symlink or non-directory")
+            for filename in filenames:
+                entry = Path(dirpath, filename)
+                if entry.is_symlink() or not entry.is_file():
+                    _refuse(f"{entry} is a symlink or non-regular file")
+                collected.append(entry.relative_to(source).as_posix())
+        if not collected:
+            _refuse(f"{path} contains no regular files")
+        for rel in collected:
+            _validate_locator_name(store_id, rel)
+        rel_names = sorted(collected)
+
+    entries: list[tuple[str, bytes, str]] = []
+    for rel in rel_names:
+        content = (source / rel).read_bytes()
+        digest = "sha256:" + sha256(content).hexdigest()
+        entries.append((rel, content, digest))
+    return entries
+
+
+def handle(ctx, writer, *, path, title, locator=None, facets=None, resources=None) -> Report:
+    holdings = writer.holdings_context(instrument=INSTRUMENT)
     source = Path(path)
-    if not source.is_file():
-        _refuse(f"{path} is not a regular file")
+    entries = _read_entries(source, writer.store_id, path, resources)
     domain_facets = _parse_facets(facets)
-    content = source.read_bytes()
-    digest = "sha256:" + sha256(content).hexdigest()
-    declaration = DatasetDeclaration(resources=(ResourceDeclaration(name=source.name, digest=digest),))
+    declaration = DatasetDeclaration(
+        resources=tuple(ResourceDeclaration(name=name, digest=digest) for name, _, digest in entries)
+    )
     address = dataset_address(declaration)
     found = ctx.dataset_at(address)
     if found is not None:
         corpus_id, node = found
-        _refuse(f"these bytes are already declared as {node.id} in corpus {corpus_id}; a dataset is one "
-                "world record, and a second would be a duplicate location")
+        _refuse(
+            f"these bytes are already declared as {node.id} in corpus {corpus_id}; a dataset is one "
+            "world record, and a second would be a duplicate location"
+        )
     view = ctx.write_view()
-    relative = f"{digest.removeprefix('sha256:')}/{source.name}"
-    location = StoreLocator(writer.store_id, relative)
-    standing = tuple(
-        stored.holdings_observation_value(node)
-        for node in view.iter_stored()
-        if node.kind == "holdings-observation"
-        and stored.holdings_observation_value(node).location == location
-    )
+    planned_writes = []
+    for name, content, digest in entries:
+        relative = f"{digest.removeprefix('sha256:')}/{name}"
+        try:
+            location = StoreLocator(writer.store_id, relative)
+        except MalformedRecord as caught:
+            _refuse(str(caught))
+        standing = tuple(
+            stored.holdings_observation_value(node)
+            for node in view.iter_stored()
+            if node.kind == "holdings-observation"
+            and stored.holdings_observation_value(node).location == location
+        )
+        planned_writes.append((location, standing, content, digest))
     # The record is built and validated BEFORE the first act: a facet the
     # profile does not know, or a payload it refuses, must leave no bytes in
     # the store and no observation behind.
@@ -70,7 +144,7 @@ def handle(ctx, writer, *, path, title, locator=None, facets=None) -> Report:
     try:
         proposed = stored.dataset_node(
             title=title,
-            resources=[{"name": source.name, "digest": digest}],
+            resources=[{"name": name, "digest": digest} for name, _, digest in entries],
             empirical_observation=empirical, domain_facets=domain_facets or None,
         )
     except MalformedRecord as caught:
@@ -102,15 +176,21 @@ def handle(ctx, writer, *, path, title, locator=None, facets=None) -> Report:
         reason = validity_refusal(view, proposed, profile)
         if reason is not None:
             _refuse(f"locator refused: {reason}")
-    # --- first act: the holdings write ---------------------------------------
-    holdings = writer.holdings_context(instrument=INSTRUMENT)
-    published = write(holdings, location, content, expected=digest,
-                      standing=standing)
+    # --- first act: the holdings writes --------------------------------------
+    observations: list[ByteObservation] = []
+    seen_locations: set[StoreLocator] = set()
+    for location, standing, content, digest in planned_writes:
+        if location in seen_locations:
+            continue
+        seen_locations.add(location)
+        published = write(holdings, location, content, expected=digest, standing=standing)
+        outcome = published.record.outcome
+        assert isinstance(outcome, Found)
+        observations.append(
+            ByteObservation(digest=outcome.digest, location=published.record.location.canonical())
+        )
     node = writer.add(proposed)
-    outcome = published.record.outcome
-    assert isinstance(outcome, Found)
-    verdict = admission_state(stored.dataset_declaration(node),
-                              (ByteObservation(digest=outcome.digest, location=published.record.location.canonical()),))
+    verdict = admission_state(stored.dataset_declaration(node), tuple(observations))
     if not isinstance(verdict, Held):
         raise RuntimeError(f"held bytes with a matching digest did not read Held: {verdict!r}")
     return (record_block(node),)

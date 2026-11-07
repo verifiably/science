@@ -295,6 +295,7 @@ path = []
 options = [
   { shared = "chdir", value = "path" },
   { names = ["--headers"], value = "none" },
+  { names = ["--no-headers"], value = "none" },
 ]
 
 [[cli.tasks.commands]]
@@ -1325,6 +1326,59 @@ options = [
   { names = ["--verify", "--no-verify"], value = "none", default = "true" },
 ]
 
+[[cli.lit.commands]]
+path = ["questions"]
+summary = "Extract, cluster, and rank scientific questions from held article texts"
+options = [
+  { shared = "config", value = "path", default = "lit.toml" },
+]
+
+[[cli.lit.commands]]
+path = ["questions", "prepare"]
+summary = "Sample held arXiv/PubMed records, join world, and extract passages"
+options = [
+  { names = ["--mode"], value = "string", default = "pilot" },
+  { names = ["--arxiv-json"], value = "path" },
+  { names = ["--pubmed-xml-dir"], value = "path" },
+  { names = ["--world-dir"], value = "path" },
+  { names = ["--output-dir"], value = "path" },
+  { shared = "seed", value = "int", default = "20261106" },
+  { names = ["--allowed-tier"], value = "string" },
+  { names = ["--exclude-ids"], value = "path" },
+  { names = ["--max-date"], value = "string" },
+  { names = ["--benchmark-manifest"], value = "path" },
+]
+
+[[cli.lit.commands]]
+path = ["questions", "run"]
+summary = "Run Method A and Method B question extraction, clustering, and topic mapping"
+options = [
+  { names = ["--mode"], value = "string", default = "pilot" },
+  { names = ["--output-dir"], value = "path" },
+  { names = ["--world-dir"], value = "path" },
+  { names = ["--allowed-tier"], value = "string" },
+  { names = ["--max-date"], value = "string" },
+]
+
+[[cli.lit.commands]]
+path = ["questions", "evaluate"]
+summary = "Score extracted spans, clusters, and full-text yield against frozen benchmarks"
+options = [
+  { names = ["--mode"], value = "string", default = "pilot" },
+  { names = ["--output-dir"], value = "path" },
+  { names = ["--allowed-tier"], value = "string" },
+  { names = ["--benchmark"], value = "path" },
+  { names = ["--judgments"], value = "path" },
+]
+
+[[cli.lit.commands]]
+path = ["questions", "describe"]
+summary = "Render the human-readable pilot diagnostics and evaluation report"
+options = [
+  { names = ["--mode"], value = "string", default = "pilot" },
+  { names = ["--output-dir"], value = "path" },
+]
+
 # ---- quarry
 
 [[cli.quarry.commands]]
@@ -1487,13 +1541,14 @@ options = [
 
 [[cli.science.commands]]
 path = ["dataset"]
-summary = "Hold a local file in the store and mint the dataset record under its content address"
+summary = "Hold a local file or directory in the store and mint the dataset record under its content address"
 options = [
   { shared = "config", value = "path" },
   { names = ["--invocation-id"], value = "string" },
   { names = ["--continue"], value = "string" },
   { names = ["--path"], value = "string", required = true },
   { names = ["--title"], value = "string", required = true },
+  { names = ["--resources"], value = "string", repeatable = true },
   { names = ["--locator"], value = "string" },
   { names = ["--facets"], value = "string", repeatable = true },
 ]
@@ -3095,9 +3150,9 @@ args = [{ name = "mode", value = "enum", values = ["here", "away"], required = f
 
 [[cli.relay.commands]]
 path = ["model"]
-summary = "The model a Codex tool call's turn runs, read from its rollout"
+summary = "The model and effort of a Codex or agy tool call, read from the harness's own record"
 options = [
-  { shared = "harness", role = "select", value = "enum", values = ["codex"], required = true, repeatable = false },
+  { shared = "harness", role = "select", value = "enum", values = ["codex", "agy"], required = true, repeatable = false },
 ]
 
 # Minimal adoption surface; existing ops-projects commands remain outside this inventory.
@@ -3120,6 +3175,13 @@ options = [
   {names = ["--purpose"], value = "string", required = true},
   {names = ["--name"], value = "string"},
   {names = ["--explain"], value = "none"},
+]
+
+[[cli.ops-projects.commands]]
+path = ["atlas"]
+summary = "Render the cross-project document of purposes, abstracts, subsystems and goal status"
+options = [
+  {names = ["--out"], value = "path"},
 ]
 
 # Minimal adoption surface; existing doc-review options remain outside this inventory.

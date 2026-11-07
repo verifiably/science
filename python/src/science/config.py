@@ -544,6 +544,11 @@ class ReadContext:
         from science.holdings import held_path
         return held_path(self.read_views(), self.world, self._stores, address)
 
+    def held_resources(self, address: str) -> dict[str, Path]:
+        from science.holdings import held_resources
+
+        return held_resources(self.read_views(), self.world, self._stores, address)
+
     def is_held(self, node) -> bool:
         from science.holdings import is_held
         return is_held(self.read_views(), self.world, node)

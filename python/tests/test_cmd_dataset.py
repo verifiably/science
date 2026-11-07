@@ -217,3 +217,184 @@ def test_a_kernel_refused_record_after_held_bytes_closes_done_with_the_holding(r
     assert "holdings-observation" in out.text
     view = ctx.write_view()
     assert not any(n.kind == "dataset" and n.title == "expression" for n in view.iter_stored())
+
+
+def test_dataset_directory_auto_discovers_all_regular_files_including_datapackage_json(rig, tmp_path):
+    from beliefs import stored
+
+    d, ctx = rig
+    pkg_dir = tmp_path / "pkg"
+    (pkg_dir / "tables").mkdir(parents=True)
+    files = {
+        "datapackage.json": b'{"name": "gse24080"}\n',
+        "tables/clinical.tsv": b"patient\tage\nP1\t62\n",
+        "tables/expression.tsv": b"gene\tP1\nPHF19\t4.2\n",
+    }
+    for rel, content in files.items():
+        (pkg_dir / rel).write_bytes(content)
+
+    out = d.invoke("dataset", {"path": str(pkg_dir), "title": "GSE24080 curated"})
+    assert "[dataset] dataset:sha256:" in out.text
+    view = ctx.write_view()
+    node = next(n for n in view.iter_stored() if n.kind == "dataset" and n.title == "GSE24080 curated")
+    decl = stored.dataset_declaration(node)
+    assert tuple(r.name for r in decl.resources) == (
+        "datapackage.json",
+        "tables/clinical.tsv",
+        "tables/expression.tsv",
+    )
+    assert ctx.is_held(node)
+    resolved = ctx.held_resources(node.id)
+    assert set(resolved) == set(files)
+    for rel, content in files.items():
+        assert resolved[rel].read_bytes() == content
+
+
+def test_dataset_directory_with_explicit_resources_admits_named_subset(rig, tmp_path):
+    from beliefs import stored
+
+    d, ctx = rig
+    pkg_dir = tmp_path / "pkg_subset"
+    (pkg_dir / "tables").mkdir(parents=True)
+    (pkg_dir / "datapackage.json").write_bytes(b'{"name": "gse24080"}\n')
+    (pkg_dir / "tables" / "expression.tsv").write_bytes(b"gene\tP1\nPHF19\t4.2\n")
+    (pkg_dir / "tables" / "clinical.tsv").write_bytes(b"patient\tage\nP1\t62\n")
+
+    out = d.invoke(
+        "dataset",
+        {
+            "path": str(pkg_dir),
+            "title": "GSE24080 tables only",
+            "resources": ["tables/expression.tsv", "tables/clinical.tsv"],
+        },
+    )
+    assert "[dataset] dataset:sha256:" in out.text
+    view = ctx.write_view()
+    node = next(n for n in view.iter_stored() if n.kind == "dataset" and n.title == "GSE24080 tables only")
+    decl = stored.dataset_declaration(node)
+    assert tuple(r.name for r in decl.resources) == (
+        "tables/clinical.tsv",
+        "tables/expression.tsv",
+    )
+    assert ctx.is_held(node)
+    resolved = ctx.held_resources(node.id)
+    assert set(resolved) == {"tables/clinical.tsv", "tables/expression.tsv"}
+
+
+def test_dataset_directory_refuses_symlinks_scratch_sigils_empty_and_escaping_resources(rig, tmp_path):
+    d, ctx = rig
+    before_nodes = {n.id for n in ctx.write_view().iter_stored()}
+    before_store_entries = set(ctx.config.store_root.iterdir())
+
+    # 1. Empty directory
+    empty_dir = tmp_path / "empty"
+    empty_dir.mkdir()
+    with pytest.raises(Refused) as caught:
+        d.invoke("dataset", {"path": str(empty_dir), "title": "empty"})
+    assert caught.value.refusal.code == "invalid-input"
+
+    # 2. Directory with a symlink
+    sym_dir = tmp_path / "sym_dir"
+    sym_dir.mkdir()
+    outside = tmp_path / "outside.tsv"
+    outside.write_bytes(b"x\n")
+    (sym_dir / "good.tsv").write_bytes(b"y\n")
+    (sym_dir / "link.tsv").symlink_to(outside)
+    with pytest.raises(Refused) as caught:
+        d.invoke("dataset", {"path": str(sym_dir), "title": "sym"})
+    assert caught.value.refusal.code == "invalid-input"
+
+    # 3. Directory with .#~scratch file
+    scratch_dir = tmp_path / "scratch_dir"
+    scratch_dir.mkdir()
+    (scratch_dir / ".#~scratch").write_bytes(b"s\n")
+    with pytest.raises(Refused) as caught:
+        d.invoke("dataset", {"path": str(scratch_dir), "title": "scratch"})
+    assert caught.value.refusal.code == "invalid-input"
+
+    # 4. --resources ["../escape.tsv"]
+    valid_dir = tmp_path / "valid_dir"
+    valid_dir.mkdir()
+    (valid_dir / "dup.tsv").write_bytes(b"d\n")
+    with pytest.raises(Refused) as caught:
+        d.invoke(
+            "dataset",
+            {"path": str(valid_dir), "title": "escape", "resources": ["../outside.tsv"]},
+        )
+    assert caught.value.refusal.code == "invalid-input"
+
+    # 5. --resources ["dup.tsv", "dup.tsv"]
+    with pytest.raises(Refused) as caught:
+        d.invoke(
+            "dataset",
+            {"path": str(valid_dir), "title": "dup", "resources": ["dup.tsv", "dup.tsv"]},
+        )
+    assert caught.value.refusal.code == "invalid-input"
+
+    # 6. --path <file> --resources [...]
+    with pytest.raises(Refused) as caught:
+        d.invoke(
+            "dataset",
+            {"path": str(outside), "title": "file-with-resources", "resources": ["outside.tsv"]},
+        )
+    assert caught.value.refusal.code == "invalid-input"
+
+    assert {n.id for n in ctx.write_view().iter_stored()} == before_nodes
+    assert set(ctx.config.store_root.iterdir()) == before_store_entries
+
+
+def test_dataset_reads_each_admitted_file_exactly_once(rig, tmp_path, monkeypatch):
+    from hashlib import sha256
+    from pathlib import Path
+    from beliefs import stored
+
+    d, ctx = rig
+    single_file = tmp_path / "single.tsv"
+    single_bytes = b"gene\tval\nPHF19\t1\n"
+    single_file.write_bytes(single_bytes)
+
+    pkg_dir = tmp_path / "pkg_once"
+    (pkg_dir / "tables").mkdir(parents=True)
+    file_a = pkg_dir / "datapackage.json"
+    bytes_a = b'{"name": "once"}\n'
+    file_a.write_bytes(bytes_a)
+    file_b = pkg_dir / "tables" / "data.tsv"
+    bytes_b = b"id\tx\n1\t2\n"
+    file_b.write_bytes(bytes_b)
+
+    tracked = {single_file.resolve(), file_a.resolve(), file_b.resolve()}
+    counts: dict[Path, int] = {p: 0 for p in tracked}
+    orig_read_bytes = Path.read_bytes
+
+    def counting_read_bytes(self: Path) -> bytes:
+        resolved = self.resolve()
+        data = orig_read_bytes(self)
+        if resolved in counts:
+            counts[resolved] += 1
+            if counts[resolved] > 1:
+                return data + b"MUTATED"
+        return data
+
+    monkeypatch.setattr(Path, "read_bytes", counting_read_bytes)
+
+    d.invoke("dataset", {"path": str(single_file), "title": "single once"})
+    d.invoke("dataset", {"path": str(pkg_dir), "title": "pkg once"})
+
+    assert counts == {p: 1 for p in tracked}
+    view = ctx.write_view()
+    single_node = next(n for n in view.iter_stored() if n.kind == "dataset" and n.title == "single once")
+    (single_res,) = stored.dataset_declaration(single_node).resources
+    assert single_res.digest == "sha256:" + sha256(single_bytes).hexdigest()
+    assert orig_read_bytes(ctx.held_path(single_node.id)) == single_bytes
+
+    pkg_node = next(n for n in view.iter_stored() if n.kind == "dataset" and n.title == "pkg once")
+    pkg_decl = stored.dataset_declaration(pkg_node)
+    expected_digests = {
+        "datapackage.json": "sha256:" + sha256(bytes_a).hexdigest(),
+        "tables/data.tsv": "sha256:" + sha256(bytes_b).hexdigest(),
+    }
+    assert {r.name: r.digest for r in pkg_decl.resources} == expected_digests
+    held_map = ctx.held_resources(pkg_node.id)
+    assert orig_read_bytes(held_map["datapackage.json"]) == bytes_a
+    assert orig_read_bytes(held_map["tables/data.tsv"]) == bytes_b
+

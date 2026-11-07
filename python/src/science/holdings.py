@@ -92,6 +92,44 @@ def held_path_for(stores: Mapping[str, Path], observations: tuple[ByteObservatio
                           f"{sorted(o.location for o in observations)}"))
 
 
+def _in_configured_store(stores: Mapping[str, Path], observation: ByteObservation) -> bool:
+    parts = observation.location.split(":", 2)
+    return len(parts) == 3 and parts[0] == "store" and parts[1] in stores
+
+
+def held_resources(views, world, stores: Mapping[str, Path], address: str) -> dict[str, Path]:
+    found = dataset_at(views, address)
+    if found is None:
+        raise Refused(Refusal("invalid-input", f"{address} is not declared in the mounted corpora"))
+    declaration = stored.dataset_declaration(found[1])
+    answer = reduced_observations(views, world).get(address)
+    if isinstance(answer, DatasetBlocked):
+        raise Refused(
+            Refusal(
+                "invalid-input",
+                f"{address} is blocked ({', '.join(answer.reasons)}) at:\n"
+                + "\n".join(answer.locations),
+            )
+        )
+    if not isinstance(answer, DatasetAnswer) or not isinstance(admission_state(declaration, answer.observations), Held):
+        raise Refused(Refusal("invalid-input", f"{address} is not held in the configured stores"))
+    resolved: dict[str, Path] = {}
+    for resource in declaration.resources:
+        digest_matches = tuple(
+            obs for obs in answer.observations if obs.digest == resource.digest
+        )
+        configured = tuple(
+            obs for obs in digest_matches if _in_configured_store(stores, obs)
+        )
+        named = tuple(
+            obs for obs in configured if obs.location.endswith(f"/{resource.name}")
+        )
+        resolved[resource.name] = held_path_for(
+            stores, named or configured or digest_matches
+        )
+    return resolved
+
+
 def held_path(views, world, stores: Mapping[str, Path], address: str) -> Path:
     answer = reduced_observations(views, world).get(address)
     if isinstance(answer, DatasetBlocked):
