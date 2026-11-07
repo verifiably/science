@@ -127,26 +127,41 @@ Exact current inputs, defaults and prompts are the public files under
   must be in that plan. It types, then decodes against a held-vocabulary snapshot.
   Dataset-bound vocabulary must be held even when the kernel's permissive reader
   would return not-consulted/not-available. A not-member outcome refuses authoring.
-- `dataset` accepts a regular local file, fingerprints and holds its bytes before
-  minting the declaration/observation evidence. A declaration already held in a
-  configured mount refuses rather than redeclaring it locally. Identical titles
-  or basenames do not define a dataset's identity or storage directory.
+- `dataset` accepts a regular local file or a directory package (auto-discovering
+  every regular file under the directory, or admitting the explicit relative
+  member paths named by `--resources`), fingerprints and holds each resource's
+  bytes before minting the declaration/observation evidence. A declaration
+  already held in a configured mount refuses rather than redeclaring it locally.
+  Identical titles or basenames do not define a dataset's identity or storage
+  directory.
+- `derive` executes a dataset-production workflow under confinement over a primary
+  `--dataset` (`transforms` role) and optional `--reads` auxiliary datasets (`reads`
+  role), with optional `KEY=VALUE` `--parameters`. It stages each input dataset's
+  resources under `inputs/<resource.name>`, exports and holds every declared
+  `--targets` output in the store, and mints the production `run` and derived
+  `dataset` records (with its stamped `lineage-basis`).
 - `spec` derives every estimand sort from its target operator's contract declaration,
   rather than taking authored sort names. Decimal fields must be finite; contrast
   and applicability terms must type and resolve, including dataset-bound lists.
   Current specs have one observed dataset and deterministic nondeterminism. Seeded
   and stochastic authoring are not exposed. Rules must be shipped reference rules.
   A superseded spec must resolve in the write root before the first act.
-- `run` requires the spec's declared observed dataset, a code directory, an existing
-  entrypoint relative to its parent, and at least one output target. Host confinement
-  prerequisites are checked before the run act. The kernel captures the recipe,
-  environment, inputs, outputs and closure; refusal evidence is retained.
+- `run` requires the spec's declared observed dataset (and stages any `reads` role
+  datasets declared on the spec), a code directory, an existing entrypoint relative
+  to its parent, and at least one output target. Both single-resource and
+  multi-resource dataset packages stage under `inputs/<resource.name>`. Host
+  confinement prerequisites and staged-path collisions are checked before the run
+  act. The kernel captures the recipe, environment, inputs, outputs and closure;
+  refusal evidence is retained.
 - `assess` restores the run's frozen spec and interpretation rule; the caller cannot
-  choose a new outcome or estimand after seeing the result. `verify` resolves the
-  original equivalence implementation before replay, uses the original targets,
-  rereads stored run closures, derives scope and mints comparison evidence. Supplied
-  code/environment must match the captured recipe; no publication marker supplies
-  the workspace checkout for you. Execution materials are obtained separately.
+  choose a new outcome or estimand after seeing the result. `verify` accepts
+  exactly one of `--assessment` (replaying an assessment's run) or `--run`
+  (replaying a dataset-production run), resolves the original equivalence
+  implementation (`REFERENCE_RULES` or `DATASET_CONTENT_EQUALITY`) before replay,
+  uses the original targets, rereads stored run closures, derives scope and mints
+  comparison evidence. Supplied code/environment must match the captured recipe;
+  no publication marker supplies the workspace checkout for you. Execution
+  materials are obtained separately.
 - `belief` chooses corpus-local evaluation with no read mounts, or epoch-bound
   evaluation across session mounts. Multi-corpus coverage must equal the session's
   corpus ids and no corpus may have moved; even a coordination write stales it.

@@ -1,0 +1,47 @@
+schema_version = 1
+name = "derive"
+purpose = "Execute a dataset-production workflow under confinement, hold its outputs, and mint the run and derived dataset records."
+write_class = "mints:run,dataset,act-report,holdings-observation"
+output_budget = 4096
+
+[write.routes]
+run = "run"
+act-report = "run"
+holdings-observation = "holdings"
+
+[inputs.dataset]
+type = "string"
+required = true
+doc = "Ref of the primary input dataset (transforms role)."
+[inputs.reads]
+type = "list-of-string"
+required = false
+doc = "Refs of auxiliary input datasets (reads role)."
+[inputs.code]
+type = "string"
+required = true
+doc = "Code root directory containing the workflow."
+[inputs.entrypoint]
+type = "string"
+required = true
+doc = "Workflow entrypoint path relative to the code root's parent."
+[inputs.targets]
+type = "list-of-string"
+required = true
+doc = "Relative output paths produced by the workflow."
+[inputs.title]
+type = "string"
+required = true
+doc = "Title for the derived dataset record."
+[inputs.parameters]
+type = "list-of-string"
+required = false
+doc = "Workflow parameter bindings as KEY=VALUE."
+[inputs.cores]
+type = "int"
+required = false
+default = 1
+doc = "Core count passed to the workflow engine."
+
+[reads]
+families = ["corpus-stored", "holdings"]

@@ -1,7 +1,7 @@
 schema_version = 1
 name = "verify"
-purpose = "Replay an assessment's run, derive scope and verdict, and mint the verification."
-write_class = "mints:run,act-report,verification"
+purpose = "Replay an assessment or dataset-production run, derive scope and verdict, and mint the verification."
+write_class = "mints:run,dataset,act-report,verification"
 output_budget = 4096
 
 [write.routes]
@@ -11,8 +11,12 @@ act-report = "run"
 
 [inputs.assessment]
 type = "string"
-required = true
-doc = "The assessment ref."
+required = false
+doc = "Ref of the assessment whose run is replayed (mutually exclusive with --run)."
+[inputs.run]
+type = "string"
+required = false
+doc = "Ref of the dataset-production run to replay (mutually exclusive with --assessment)."
 [inputs.code]
 type = "string"
 required = true

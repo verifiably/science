@@ -119,7 +119,11 @@ def test_verify_preparation_consumes_inherited_inputs(rig, monkeypatch):
     def stop_after_prepare(*args, **kwargs):
         prepared = real_prepare(*args, **kwargs)
         assert prepared["held_inputs"]
-        assert all(path.is_relative_to(inherited) for path in prepared["held_inputs"].values())
+        assert all(
+            path.is_relative_to(inherited)
+            for mapping in prepared["held_inputs"].values()
+            for path in mapping.values()
+        )
         raise Prepared
     monkeypatch.setattr(verify_module, "prepare", stop_after_prepare)
     with pytest.raises(Prepared):
@@ -196,7 +200,7 @@ def test_verify_refuses_when_run_closure_recorded_corrupted_digest_and_holding_i
         assert not any(n.kind == "verification" for n in view.iter_stored())
 
 
-def test_verify_refuses_multi_input_spec_cleanly_as_invalid_input(rig):
+def test_verify_refuses_colliding_multi_input_spec_cleanly_as_invalid_input(rig):
     from beliefs import stored
     from beliefs.root import open_corpus
     from beliefs.rules import REFERENCE_RULES
@@ -210,7 +214,7 @@ def test_verify_refuses_multi_input_spec_cleanly_as_invalid_input(rig):
         view.get(stored.typed_ref("analysis-spec", existing_assessment.spec)),
         profile=ctx.config.profile,
     )
-    other_ref = hold_fixture_dataset(ctx.config, "aux.txt", b"aux\n", "auxiliary")
+    other_ref = hold_fixture_dataset(ctx.config, "data.txt", b"colliding\n", "colliding")
     two_role_spec = freeze(
         SpecDraft(
             target=existing_spec.target,
@@ -247,5 +251,213 @@ def test_verify_refuses_multi_input_spec_cleanly_as_invalid_input(rig):
     with pytest.raises(Refused) as caught:
         d.invoke("verify", {"assessment": synthetic_assessment, "code": str(code), "entrypoint": entrypoint})
     assert caught.value.refusal.code == "invalid-input"
-    assert "declares 2 input roles; single-file staging requires 1" in caught.value.refusal.message
+    assert "collision" in caught.value.refusal.message
+
+
+def test_verify_run_replays_production_run_and_mints_verification(certified_work, tmp_path):
+    from beliefs import stored
+
+    cfg = build_belief_world(certified_work)
+    with open_rig(cfg, ("dataset", "derive", "verify")) as (d, ctx):
+        # 1. Multi-resource derive run
+        raw_dir = tmp_path / "raw_multi"
+        (raw_dir / "raw").mkdir(parents=True)
+        (raw_dir / "raw" / "series_matrix.txt").write_bytes(b"PHF19\t4.2\n")
+        (raw_dir / "raw" / "probe_map.tsv").write_bytes(b"p1\tPHF19\n")
+        raw_id = next(
+            t for t in d.invoke("dataset", {"path": str(raw_dir), "title": "raw multi"}).text.split()
+            if t.startswith("dataset:")
+        )
+
+        code_multi = certified_work / "derive_multi_verify"
+        (code_multi / "workflow").mkdir(parents=True, exist_ok=True)
+        (code_multi / "workflow" / "Snakefile").write_text(
+            'rule build_pkg:\n'
+            '    input: "inputs/raw/series_matrix.txt", "inputs/raw/probe_map.tsv"\n'
+            '    output: "tables/expression.tsv", "tables/clinical.tsv"\n'
+            '    run:\n'
+            '        import pathlib\n'
+            '        m = pathlib.Path(input[0]).read_text()\n'
+            '        p = pathlib.Path(input[1]).read_text()\n'
+            '        pathlib.Path(output[0]).parent.mkdir(parents=True, exist_ok=True)\n'
+            '        pathlib.Path(output[0]).write_text(m)\n'
+            '        pathlib.Path(output[1]).write_text(p)\n'
+        )
+        derive_out = d.invoke(
+            "derive",
+            {
+                "dataset": raw_id,
+                "code": str(code_multi),
+                "entrypoint": "derive_multi_verify/workflow/Snakefile",
+                "targets": ["tables/expression.tsv", "tables/clinical.tsv"],
+                "title": "curated multi",
+            },
+        )
+        derive_run_id = next(t for t in derive_out.text.split() if t.startswith("run:"))
+
+        verify_out = d.invoke(
+            "verify",
+            {
+                "run": derive_run_id,
+                "code": str(code_multi),
+                "entrypoint": "derive_multi_verify/workflow/Snakefile",
+            },
+        )
+        assert "[verification] verification:" in verify_out.text
+        verify_ref = next(t for t in verify_out.text.split() if t.startswith("verification:"))
+        view = ctx.write_view()
+        node = view.get(verify_ref)
+        facet = node.facets["verification"]
+        assert facet["verdict"] == "passed"
+        assert facet["scope"] == "clean-environment"
+        orig_ref, replayed_ref = stored.verification_derivation(node)
+        assert orig_ref == derive_run_id
+        assert replayed_ref != derive_run_id
+        assert view.holds(replayed_ref)
+
+        # 2. Single-resource nested-member derive run
+        nested_dir = tmp_path / "raw_nested"
+        (nested_dir / "tables").mkdir(parents=True)
+        (nested_dir / "tables" / "raw_clinical.tsv").write_bytes(b"patient\tage\nP1\t62\n")
+        nested_id = next(
+            t for t in d.invoke("dataset", {"path": str(nested_dir), "title": "raw nested"}).text.split()
+            if t.startswith("dataset:")
+        )
+
+        code_nested = certified_work / "derive_nested_verify"
+        (code_nested / "workflow").mkdir(parents=True, exist_ok=True)
+        (code_nested / "workflow" / "Snakefile").write_text(
+            'rule clean_nested:\n'
+            '    input: "inputs/tables/raw_clinical.tsv"\n'
+            '    output: "tables/clinical.tsv"\n'
+            '    run:\n'
+            '        import pathlib\n'
+            '        t = pathlib.Path(input[0]).read_text()\n'
+            '        pathlib.Path(output[0]).parent.mkdir(parents=True, exist_ok=True)\n'
+            '        pathlib.Path(output[0]).write_text(t)\n'
+        )
+        derive_nested_out = d.invoke(
+            "derive",
+            {
+                "dataset": nested_id,
+                "code": str(code_nested),
+                "entrypoint": "derive_nested_verify/workflow/Snakefile",
+                "targets": ["tables/clinical.tsv"],
+                "title": "curated nested",
+            },
+        )
+        derive_nested_run_id = next(t for t in derive_nested_out.text.split() if t.startswith("run:"))
+
+        verify_nested_out = d.invoke(
+            "verify",
+            {
+                "run": derive_nested_run_id,
+                "code": str(code_nested),
+                "entrypoint": "derive_nested_verify/workflow/Snakefile",
+            },
+        )
+        verify_nested_ref = next(t for t in verify_nested_out.text.split() if t.startswith("verification:"))
+        view = ctx.write_view()
+        nested_node = view.get(verify_nested_ref)
+        assert nested_node.facets["verification"]["verdict"] == "passed"
+        assert nested_node.facets["verification"]["scope"] == "clean-environment"
+        orig_nested, replayed_nested = stored.verification_derivation(nested_node)
+        assert orig_nested == derive_nested_run_id
+        assert replayed_nested != derive_nested_run_id
+
+
+def test_verify_refuses_when_both_or_neither_assessment_and_run_are_given(rig):
+    from beliefs import stored
+
+    d, ctx, assessment_ref, (code, entrypoint, _) = rig
+    view = ctx.write_view()
+    existing_assessment = stored.assessment_value(view.get(assessment_ref), profile=ctx.config.profile)
+    assessment_run_ref = stored.typed_ref("run", existing_assessment.run)
+    runs_before = sum(1 for n in view.iter_stored() if n.kind == "run")
+
+    # 1. Neither --assessment nor --run
+    with pytest.raises(Refused) as caught_neither:
+        d.invoke("verify", {"code": str(code), "entrypoint": entrypoint})
+    assert caught_neither.value.refusal.code == "invalid-input"
+
+    # 2. Both --assessment and --run
+    with pytest.raises(Refused) as caught_both:
+        d.invoke(
+            "verify",
+            {"assessment": assessment_ref, "run": assessment_run_ref, "code": str(code), "entrypoint": entrypoint},
+        )
+    assert caught_both.value.refusal.code == "invalid-input"
+
+    # 3. Assessment run passed to --run
+    with pytest.raises(Refused) as caught_shape:
+        d.invoke("verify", {"run": assessment_run_ref, "code": str(code), "entrypoint": entrypoint})
+    assert caught_shape.value.refusal.code == "invalid-input"
+    assert "dataset-production" in caught_shape.value.refusal.message
+
+    assert sum(1 for n in ctx.write_view().iter_stored() if n.kind == "run") == runs_before
+
+
+def test_produced_package_assessment_remains_gated_until_beliefs_8ecbb5(certified_work, tmp_path):
+    cfg = build_belief_world(certified_work)
+    raw_file = tmp_path / "raw.tsv"
+    raw_file.write_bytes(b"gene\tval\nPHF19\t1\n")
+
+    derive_code = certified_work / "derive_for_assess"
+    (derive_code / "workflow").mkdir(parents=True, exist_ok=True)
+    (derive_code / "workflow" / "Snakefile").write_text(
+        'rule produce:\n'
+        '    input: "inputs/raw.tsv"\n'
+        '    output: "data.txt"\n'
+        '    run:\n'
+        '        import pathlib\n'
+        '        pathlib.Path(output[0]).write_text(pathlib.Path(input[0]).read_text() + "derived\\n")\n'
+    )
+    bundle = fixture_bundle(certified_work, "supported")
+    code, entrypoint, targets = bundle
+
+    with open_rig(cfg, ("dataset", "derive", "spec", "run", "assess")) as (d, ctx):
+        raw_id = next(
+            t for t in d.invoke(
+                "dataset", {"path": str(raw_file), "title": "raw", "locator": "accession:GSE1"}
+            ).text.split()
+            if t.startswith("dataset:")
+        )
+        d.invoke(
+            "derive",
+            {
+                "dataset": raw_id,
+                "code": str(derive_code),
+                "entrypoint": "derive_for_assess/workflow/Snakefile",
+                "targets": ["data.txt"],
+                "title": "derived package",
+            },
+        )
+        derived_node = next(
+            n for n in ctx.write_view().iter_stored() if n.kind == "dataset" and n.title == "derived package"
+        )
+        spec_ref = next(
+            t for t in d.invoke(
+                "spec", dict(SPEC_FIELDS, target="proposition:p1", dataset=derived_node.id)
+            ).text.split()
+            if t.startswith("analysis-spec:")
+        )
+        run_ref = next(
+            t for t in d.invoke(
+                "run",
+                {
+                    "spec": spec_ref,
+                    "dataset": derived_node.id,
+                    "code": str(code),
+                    "entrypoint": entrypoint,
+                    "targets": list(targets),
+                },
+            ).text.split()
+            if t.startswith("run:")
+        )
+        with pytest.raises(Refused) as caught:
+            d.invoke("assess", {"run": run_ref})
+        assert caught.value.refusal.code == "kernel-refused"
+        assert caught.value.refusal.data["kind"] == "EligibilityUnmet"
+        assert "no-empirical-observation-facet" in caught.value.refusal.message
+
 

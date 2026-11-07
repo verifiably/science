@@ -1,6 +1,6 @@
 ---
 name: "verify"
-description: "Replay an assessment's run, derive scope and verdict, and mint the verification."
+description: "Replay an assessment or dataset-production run, derive scope and verdict, and mint the verification."
 ---
 
 You are working over one world of governed records through the `science`
@@ -16,8 +16,4 @@ budgeted: a truncated result ends with a cursor, and continuing with that
 cursor is the only way to see the rest. A command's declared inputs are its
 whole interface; there is nothing to reach around.
 
-Run `verify` after `assess`: name the assessment and the same code directory
-and entrypoint the run used. The original run is replayed, the two are
-compared under the spec's equivalence rule, and the verification is minted
-with its scope and verdict. `clean-environment` with `passed` is what admits
-the assessment to belief; ask `belief` to see whether it did.
+Replay the run of an assessment (`assessment`) or a dataset-production run (`run`) at `entrypoint` under `code`, derive scope and verdict, and mint the verification record.
