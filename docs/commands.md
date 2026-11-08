@@ -154,7 +154,11 @@ Exact current inputs, defaults and prompts are the public files under
   act. The kernel captures the recipe, environment, inputs, outputs and closure;
   refusal evidence is retained.
 - `assess` restores the run's frozen spec and interpretation rule; the caller cannot
-  choose a new outcome or estimand after seeing the result. `verify` accepts
+  choose a new outcome or estimand after seeing the result. The run's observed
+  dataset needs empirical standing: an acquired dataset carries it directly, and a
+  `derive` package inherits it through a complete, undiverged `lineage-basis`
+  chain to an acquired ancestor (the kernel's rule is in beliefs'
+  `docs/records.md`); without standing, `assess` refuses. `verify` accepts
   exactly one of `--assessment` (replaying an assessment's run) or `--run`
   (replaying a dataset-production run), resolves the original equivalence
   implementation (`REFERENCE_RULES` or `DATASET_CONTENT_EQUALITY`) before replay,

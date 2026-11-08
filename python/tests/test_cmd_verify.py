@@ -397,7 +397,12 @@ def test_verify_refuses_when_both_or_neither_assessment_and_run_are_given(rig):
     assert sum(1 for n in ctx.write_view().iter_stored() if n.kind == "run") == runs_before
 
 
-def test_produced_package_assessment_remains_gated_until_beliefs_8ecbb5(certified_work, tmp_path):
+def test_a_derived_package_is_assessed_and_verified_through_lineage_standing(certified_work, tmp_path):
+    """derive -> spec -> run -> assess -> verify --assessment over a derived package:
+    the package carries no empirical-observation facet of its own and inherits
+    standing through its lineage-basis from the acquired raw dataset."""
+    from beliefs import stored
+
     cfg = build_belief_world(certified_work)
     raw_file = tmp_path / "raw.tsv"
     raw_file.write_bytes(b"gene\tval\nPHF19\t1\n")
@@ -415,7 +420,7 @@ def test_produced_package_assessment_remains_gated_until_beliefs_8ecbb5(certifie
     bundle = fixture_bundle(certified_work, "supported")
     code, entrypoint, targets = bundle
 
-    with open_rig(cfg, ("dataset", "derive", "spec", "run", "assess")) as (d, ctx):
+    with open_rig(cfg, ("dataset", "derive", "spec", "run", "assess", "verify")) as (d, ctx):
         raw_id = next(
             t for t in d.invoke(
                 "dataset", {"path": str(raw_file), "title": "raw", "locator": "accession:GSE1"}
@@ -454,10 +459,23 @@ def test_produced_package_assessment_remains_gated_until_beliefs_8ecbb5(certifie
             ).text.split()
             if t.startswith("run:")
         )
-        with pytest.raises(Refused) as caught:
-            d.invoke("assess", {"run": run_ref})
-        assert caught.value.refusal.code == "kernel-refused"
-        assert caught.value.refusal.data["kind"] == "EligibilityUnmet"
-        assert "no-empirical-observation-facet" in caught.value.refusal.message
+        assert "empirical-observation" not in derived_node.facets
+        assert "lineage-basis" in derived_node.facets
+
+        assess_out = d.invoke("assess", {"run": run_ref})
+        assessment_ref = next(t for t in assess_out.text.split() if t.startswith("assessment:"))
+        view = ctx.write_view()
+        assessment = stored.assessment_value(view.get(assessment_ref), profile=ctx.config.profile)
+        assert stored.typed_ref("run", assessment.run) == run_ref
+
+        verify_out = d.invoke("verify", {"assessment": assessment_ref, "code": str(code), "entrypoint": entrypoint})
+        assert "[verification] verification:" in verify_out.text
+        verify_ref = next(t for t in verify_out.text.split() if t.startswith("verification:"))
+        node = ctx.write_view().get(verify_ref)
+        assert node.facets["verification"]["verdict"] == "passed"
+        assert any(r.target == assessment_ref for r in node.relations)
+        original, replayed = stored.verification_derivation(node)
+        assert original == run_ref
+        assert replayed != run_ref
 
 
