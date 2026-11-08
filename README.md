@@ -89,7 +89,7 @@ the adapter build includes them in the harness plugin.
 
 ## Documentation
 
-- [Guide](docs/guide.md) — setup, analysis, selection, sharing and refusals.
+- [Guide](docs/guide.md) — setup, analysis, building for a program, selection, sharing and refusals.
 - [Configuration](docs/configuration.md) — keys, paths, contracts and mount profiles.
 - [Commands](docs/commands.md) — declaration schema, handlers, reports and cursors.
 - [Sessions](docs/sessions.md) — launch, invocation, replay and transports.

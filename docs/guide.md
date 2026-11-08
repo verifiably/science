@@ -171,6 +171,29 @@ the same ID and inputs replays it; changing inputs under that ID refuses.
 Record addresses identify records; invocation IDs identify calls. A continuation
 cursor is an opaque page token, not either kind of identity.
 
+## Building for a research program
+
+A research program keeps its workflows, scripts, environments, notebooks and
+prose in a workspace repository of its own; its claims, datasets, specs and runs
+are minted through `science` into the world. The workspace is the program's, but
+the epistemic and methodological components it needs usually are not. Before
+building one — a record kind, a cohort or overlap model, a prior-exposure or
+validation-reservation ledger, an independence rule, a reader for a shared
+resource — ask whether the problem is general to the domain or to every program.
+If it is, file it upstream first and build it there: `beliefs` owns record kinds
+and belief policy, `science` owns the surface and the skills it ships, and
+`quarry` owns access to scientific resources. When the program cannot wait for
+the upstream release, build a stopgap and have its own record (its guide,
+protocol section or module docstring) name the upstream task and the release
+that retires it, so the next program finds a plan rather than a second local
+copy to extract.
+
+The rule comes from the multiple-myeloma program, which defined cohort nodes,
+overlap groups, prior exposure, validation reservation, catchments and assumed
+disjointness in its phase-1 protocol and a roster package of about 3,000 lines
+because neither `beliefs` nor `science` had them; lifting them out afterwards
+took four separate upstream tasks.
+
 ## Selection and sharing
 
 A project is a view over records, not a new corpus. `project` creates one from a
