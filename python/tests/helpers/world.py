@@ -838,7 +838,7 @@ def record_url_observation(write_root: Path, store_root: Path, profile, content:
     act = boundary.ActContext(write_root, store_root, "fixture", "fixture/look.v1", FIXTURE_AUTHORITY,
                               holdings_seam(), profile=profile)
     with monkeypatch.context() as patch:
-        patch.setattr(boundary, "retrieve", lambda *a, **k: Retrieved(digest, len(content), downloaded))
+        patch.setattr(boundary, "retrieve", lambda *a, **k: Retrieved(digest, len(content), downloaded, 200, ()))
         looked = boundary.look(act, url_locator(url), bounds=RetrievalBounds(10, 1024, 1), seam=url_seam(),
                                scratch=scratch)
     assert type(looked) is boundary.PublishedLook

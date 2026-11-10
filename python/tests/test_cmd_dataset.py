@@ -211,8 +211,9 @@ def test_a_kernel_refused_record_after_held_bytes_closes_done_with_the_holding(r
     payload = {"path": str(data), "title": "expression"}
     with pytest.raises(HandlerContractViolation, match="kernel-refused"):
         d.invoke("dataset", payload, invocation_id="D" * 8)
-    acts = d._session.invocation_acts("D" * 8)
-    assert len(acts) == 1
+    (stored, act) = d._session.invocation_acts("D" * 8)
+    assert (stored.corpus, stored.intent, stored.record_ids) == (d._session.store_id, act.intent, ())
+    assert act.corpus == d._session.corpus_id
     out = d.invoke("dataset", payload, invocation_id="D" * 8)
     assert "holdings-observation" in out.text
     view = ctx.write_view()

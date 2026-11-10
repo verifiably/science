@@ -1,6 +1,7 @@
 """Real publication/update walks: overlap, acceptance, retention and missing ancestry."""
 import json
 from dataclasses import replace
+from types import SimpleNamespace
 
 import pytest
 
@@ -177,12 +178,13 @@ def test_two_sessions_mounting_a_gaps_ends_in_one_second_order_by_session_id(lat
     installations, first, missing, last = late_chain_unadopted
     early, late = (first, last) if arrival == "oldest-first" else (last, first)
     monkeypatch.setattr("beliefs.session.writer.utc_now", lambda: "2026-10-28T00:00:00Z")
-    # Open both first, then adopt in reverse id order to distinguish sorting from wall-clock arrival.
-    with with_remotes(installations), open_rig(installations.b, ("adopt",)) as (one, _), \
-            open_rig(installations.b, ("adopt",)) as (two, _):
-        ordered = sorted((one, two), key=lambda d: d._session.session_id)
-        for d, corpus in ((ordered[1], early), (ordered[0], late)):
-            d.invoke("adopt", {"location": LOC_A, "corpus_id": corpus})
+    ids = iter(("b" * 32, "a" * 32))
+    monkeypatch.setattr("beliefs.session.secrets", SimpleNamespace(token_hex=lambda _n: next(ids)))
+    # Adopt in reverse session-id order across two sequential sessions in the same second.
+    with with_remotes(installations):
+        for corpus in (early, late):
+            with open_rig(installations.b, ("adopt",)) as (d, _):
+                d.invoke("adopt", {"location": LOC_A, "corpus_id": corpus})
     registry = SharingRegistry(installations.b.sharing_root)
     lines = sharing_lines(installations.b.operations_root)
     mounted = [line for line in lines if line.transition == "mounted"]
