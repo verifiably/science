@@ -5,6 +5,6 @@
 # emptied by ops `tt-report`; never committed.
 .tt/
 # pytest-testmon selection data for `just test-fast`; per checkout, never committed.
-python/.testmondata
+.testmondata*
 # Measurement work directories (worlds, corpora, stores) beside the main checkout.
 .work/
