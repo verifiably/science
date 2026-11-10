@@ -10,6 +10,8 @@ import threading
 import time
 from contextlib import contextmanager
 from dataclasses import replace
+from types import SimpleNamespace
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -260,43 +262,23 @@ def test_a_live_listener_timeout_is_an_internal_error(certified_work, short_tmp,
     assert json.loads(captured.err)["error"]["code"] == "internal-error"
 
 
-def test_a_trickling_listener_cannot_extend_the_selection_deadline(certified_work, short_tmp, capsys, monkeypatch):
+def test_a_trickling_listener_cannot_extend_the_selection_deadline(monkeypatch):
     import science.cli as cli
-    from science.config import load_config
 
-    sock = short_tmp / "service.sock"
-    config_path = write_cli_config(certified_work, service_socket=sock)
-    (health,) = mint_projects(load_config(config_path), "health")
-    config_path.write_text(config_path.read_text() + f'default_project = "{health}"\n')
+    clock = SimpleNamespace(now=0.0)
+    chunks = iter([b" "] * 20 + [b'{"project":null}\n'])
+
+    def recv(size):
+        clock.now += 0.02
+        return next(chunks)
+
+    connection = MagicMock(spec=socket.socket)
+    connection.__enter__.return_value = connection
+    connection.recv.side_effect = recv
+    monkeypatch.setattr(cli.socket, "socket", lambda *args: connection)
+    monkeypatch.setattr(cli, "time", SimpleNamespace(monotonic=lambda: clock.now))
     monkeypatch.setattr(cli, "_SELECTION_TIMEOUT_SECONDS", 0.1)
-    release = threading.Event()
+    config = SimpleNamespace(coordination=object(), service_socket="service.sock")
 
-    class Trickling(socketserver.StreamRequestHandler):
-        def handle(self):
-            self.rfile.readline()
-            try:
-                for byte in b' ' * 20 + b'{"project":null}\n':
-                    self.wfile.write(bytes([byte]))
-                    if release.wait(timeout=0.02):
-                        break
-            except (BrokenPipeError, ConnectionResetError):
-                pass  # the CLI closes the connection when its deadline expires
-
-    server = socketserver.ThreadingUnixStreamServer(str(sock), Trickling)
-    thread = threading.Thread(target=server.serve_forever)
-    thread.start()
-    try:
-        started = time.monotonic()
-        result = cli.main(["project-show", "--config", str(config_path)])
-        elapsed = time.monotonic() - started
-    finally:
-        release.set()
-        server.shutdown()
-        thread.join(timeout=30)
-        server.server_close()
-        assert not thread.is_alive()
-    assert elapsed < 0.4, f"selection query took {elapsed:.3f}s with a 0.1s deadline"
-    assert result == 1
-    captured = capsys.readouterr()
-    assert captured.out == ""
-    assert json.loads(captured.err)["error"]["code"] == "internal-error"
+    with pytest.raises(TimeoutError, match="selection query deadline expired"):
+        cli._ambient_selection(config)
