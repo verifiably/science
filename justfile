@@ -23,6 +23,7 @@ tt := "python3 tools/tt"
 # as configured by the shared host-budget tool. Worktree runs need no
 # SCIENCE_TEST_ROOT: conftest resolves the certified test root through the main checkout.
 xdist := "-n auto --dist worksteal"
+# Requires pytest-testmon >=2.3.0; run one --testmon process per .testmondata at a time.
 fast_cmd := "cd python && uv run pytest --testmon " + xdist
 test_cmd := "cd python && uv run pytest " + xdist
 one_cmd := "cd python && uv run pytest"

@@ -17,7 +17,8 @@ science = "science.cli:main"
 [dependency-groups]
 dev = [
     "pytest>=8",
-    "pytest-testmon>=2.2.0",
+    # xdist collection race: tarpas/pytest-testmon@af5ba5c26d43a4b07b8afecc96ed2bcfc8773e92.
+    "pytest-testmon>=2.3.0",
     "pytest-xdist>=3.6",
 ]
 
