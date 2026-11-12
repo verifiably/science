@@ -235,6 +235,10 @@ contract:
     randomized:
       definition: Synthetic fixture intervention identification.
       licenses_layers: [causal]
+  procedure_kinds:
+    model:
+      definition: Synthetic fixture model requiring held inputs.
+      fills_within_model: true
   measurements:
     protein: [general/relative-abundance]
   facets:
