@@ -9,7 +9,7 @@ from beliefs.world.registry import content_identity
 from science import publication, supersession
 from science.acceptance import AcceptanceInputs, acceptance_inputs, counts
 from science.config import live_mounts
-from science.retention import required
+from science.retention import live_observations, required
 from science.refusal import Refusal, Refused
 from science.report import Finding, Heading, KeyVals, Report, Text
 from science.sharing import STATE_ORDER, Pin, SharingRegistry, sharing_lines
@@ -113,7 +113,8 @@ def _supersession(ctx, registry, pin, status) -> Report:
                        mounted=tuple(item for items in groups.values() for item in items
                                      if item.state == "mounted" and item.corpus_id in live_ids),
                        write_root=(write.corpus_id, write.view, write.profile),
-                       live=tuple((mount.corpus_id, mount.view, mount.profile) for mount in mounts if mount != write))
+                       live=tuple((mount.corpus_id, mount.view, mount.profile) for mount in mounts if mount != write),
+                       observations=live_observations(ctx.config.world, mounts))
     rows = []
     for reason in reasons:
         if reason.kind == "configuration":

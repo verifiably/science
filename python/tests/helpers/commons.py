@@ -158,8 +158,13 @@ def build_installation(work: Path, name: str, *, hold_vocabulary: bool) -> Scien
     if hold_vocabulary:
         hold_fixture_dataset(cfg, "concepts.txt", CONCEPTS, "concept vocabulary")
         hold_fixture_dataset(cfg, "levels.txt", LEVELS, "level vocabulary")
+    from helpers.analysis import analysis_nodes
+    # Coordination v3 permits these native records by address, not by kind selector.
+    query = QUERY_1A
+    if hold_vocabulary:
+        query += "  - all:\n      - addresses: [" + ", ".join(node.id for node in analysis_nodes(profile)) + "]\n"
     with open_rig(cfg, ("project",)) as (d, _):
-        d.invoke("project", {"name": name, "query": QUERY_1A})
+        d.invoke("project", {"name": name, "query": query})
     return cfg
 
 
@@ -394,8 +399,10 @@ def derive_changed_analysis(installations: Installations) -> dict[str, str]:
     A's dataset with one changed input (the fixture method override), a run of it from B's own copy of the fixture
     bundle (minted under MINIMAL_POLICY, as `mint_fixture_run` does), and its assessment. B must hold the
     dataset's bytes (`VERIFIED` fetched them). Returns the spec, run and assessment refs."""
-    b = installations.b
+    from dataclasses import replace
     ids = a_identity(installations.a)
+    # Authoring accepts the upstream prerequisites; later read-policy fixtures stay unchanged.
+    b = replace(installations.b, accept=tuple(sorted(set((*installations.b.accept, ids["world"])))))
     with open_rig(b, ("spec",)) as (d, _):
         spec = _minted_ref(d.invoke("spec", spec_inputs(b, method="rank comparison, working corpus", target=ids["proposition"],
                                                  dataset=ids["dataset"])).text, "analysis-spec")
@@ -501,6 +508,11 @@ def restore(copy: Path, installation_home: Path) -> None:
 
 def step_published_b(work: Path, value: dict) -> dict:
     from science.world_belief import publish_session_epoch
+    from helpers.analysis import analysis_nodes
+    from science.coordination import resolve_project_ref
+    query = QUERY_1A + "  - all:\n      - addresses: [" + ", ".join(node.id for node in analysis_nodes(value["b"].profile)) + "]\n"
+    with open_rig(value["b"], ("revise",)) as (d, ctx):
+        d.invoke("revise", {"address": str(resolve_project_ref(ctx, "b")), "query": query})
     publish_session_epoch(value["b"])
     with with_remotes(Installations.of(value)), open_rig(value["b"], ("publish",)) as (d, _):
         d.invoke("publish", {"target": "b", "to": LOC_B})
@@ -536,6 +548,8 @@ def _publish_update(installations: Installations, keys=("proposition", "dataset"
     from science.coordination import resolve_project_ref
     ids = a_identity(installations.a)
     addresses = [ids[key] for key in keys]
+    from helpers.analysis import analysis_nodes
+    addresses += [node.id for node in analysis_nodes(installations.a.profile)]
     addresses += [_list_address(CONCEPTS, "concepts.txt"), _list_address(LEVELS, "levels.txt")]
     with open_rig(installations.a, ("revise",)) as (d, ctx):
         d.invoke("revise", {"address": str(resolve_project_ref(ctx, "a")),
@@ -611,7 +625,9 @@ def step_spec_only(work: Path, value: dict):
     with everything that relates to it."""
     installations = Installations.of(value)
     ids = a_identity(installations.a)
-    with open_rig(installations.b, ("fetch", "spec")) as (d, _):
+    from dataclasses import replace
+    authoring = replace(installations.b, accept=tuple(sorted(set((*installations.b.accept, ids["world"])))))
+    with open_rig(authoring, ("fetch", "spec")) as (d, _):
         _fetch_a_datasets(installations, d)
         d.invoke("spec", spec_inputs(installations.b, method="rank comparison, working corpus", target=ids["proposition"], dataset=ids["dataset"]))
     _publish_update(installations, ("dataset",))

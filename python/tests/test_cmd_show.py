@@ -29,7 +29,7 @@ def test_show_is_read_only_over_its_declared_reads():
     from science.loader import production_tree
     decl = next(d for d in production_tree() if d.name == "show")
     assert decl.write_class.kind == "read-only"
-    assert set(decl.reads) == {"registry", "corpus-stored"}
+    assert set(decl.reads) == {"registry", "corpus-stored", "holdings"}
 
 
 def test_show_a_mounted_origin_confirmed_pin(adopted):
@@ -74,7 +74,7 @@ def test_b_resolves_the_vocabulary_from_fetched_bytes_without_redeclaring(verifi
     assert ctx.cited(level_list_address()).corpus_id == ids["corpus_id"]
     assert ctx.held_path(level_list_address()).read_bytes() == LEVELS
     assert not any(node.kind == "dataset" for node in ctx.write_view().iter_stored())
-    with open_rig(verified.b, ("spec",)) as (d, _):
+    with open_rig(replace(verified.b, accept=(ids["world"],)), ("spec",)) as (d, _):
         text = d.invoke("spec", spec_inputs(verified.b, method="rank comparison, working corpus", target=ids["proposition"], dataset=ids["dataset"])).text
     spec_b = _minted_ref(text, "analysis-spec")
     assert ReadContext.open(verified.b).own(spec_b)

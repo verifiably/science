@@ -1,5 +1,5 @@
 """Retirement preserves live inputs, attribution origins and their held chains."""
-from helpers.analysis import spec_inputs
+from helpers.analysis import analysis_nodes, spec_inputs
 from helpers.analysis import refreeze_spec
 from dataclasses import replace
 from pathlib import Path
@@ -64,8 +64,8 @@ def test_dependency_closure_reaches_a_verifications_target_and_its_runs_spec_thr
     write = holder(certified_work / "write", verification)
     successor = holder(certified_work / "successor", assessment, run, profile=profile)
     predecessor = holder(certified_work / "predecessor", spec, dataset, proposition, replay, profile=profile)
-    assert dependency_closure(write, (successor, predecessor)) == frozenset({
-        verification.id, assessment.id, run.id, replay.id, spec.id, dataset.id, proposition.id})
+    assert dependency_closure(write, (successor, predecessor), observations={}).addresses == frozenset({
+        verification.id, assessment.id, run.id, replay.id, spec.id, dataset.id, proposition.id} | {n.id for n in analysis_nodes(profile)})
 
 
 def test_dependency_closure_reaches_a_specs_target_proposition(certified_work, graph):
@@ -73,7 +73,7 @@ def test_dependency_closure_reaches_a_specs_target_proposition(certified_work, g
     profile = config.profile
     write = holder(certified_work / "write", spec, profile=profile)
     predecessor = holder(certified_work / "predecessor", dataset, proposition)
-    assert dependency_closure(write, (predecessor,)) == frozenset({spec.id, dataset.id, proposition.id})
+    assert dependency_closure(write, (predecessor,), observations={}).addresses == frozenset({spec.id, dataset.id, proposition.id} | {n.id for n in analysis_nodes(profile)})
 
 
 def test_dependency_closure_does_not_follow_supersedes_fields(certified_work, graph):
@@ -85,7 +85,7 @@ def test_dependency_closure_does_not_follow_supersedes_fields(certified_work, gr
         "v", title="verification", assessment="identity", assessment_ref=assessment.id,
         scope="replay", verdict="passed", supersedes="verification:old")
     write = holder(certified_work / "write", spec, verification, profile=profile)
-    assert dependency_closure(write, ()) == frozenset({spec.id, verification.id, dataset.id, proposition.id, assessment.id})
+    assert dependency_closure(write, (), observations={}).addresses == frozenset({spec.id, verification.id, dataset.id, proposition.id, assessment.id} | {n.id for n in analysis_nodes(profile)})
 
 
 def test_dependency_closure_keeps_missing_addresses_and_stops_on_cycles(certified_work):
@@ -93,7 +93,7 @@ def test_dependency_closure_keeps_missing_addresses_and_stops_on_cycles(certifie
     second = stored.run_node("second", title="second", spec="missing", reads=(first.id,))
     write = holder(certified_work / "write", first)
     other = holder(certified_work / "other", second)
-    assert dependency_closure(write, (other,)) == frozenset({first.id, second.id, "analysis-spec:missing"})
+    assert dependency_closure(write, (other,), observations={}).addresses == frozenset({first.id, second.id, "analysis-spec:missing"})
 
 
 @pytest.mark.parametrize("arm", ["node", "route"])
@@ -104,22 +104,24 @@ def test_dependency_closure_follows_correction_record_targets(certified_work, ar
     correction = stored.retraction_node(title="correction", target=target, reason="authored-error",
         rationale="incorrect", grounds=("source:grounds",), actor="fixture", event_token="event")
     write = holder(certified_work / "write", correction)
-    assert dependency_closure(write, ()) == frozenset({correction.id, address, "source:grounds"})
+    assert dependency_closure(write, (), observations={}).addresses == frozenset({correction.id, address, "source:grounds"})
 
 
 def test_required_by_dependency_lists_only_addresses_no_other_live_corpus_holds_equal(certified_work, graph):
     config, spec, dataset, proposition, assessment, run, replay, verification = graph
     profile = config.profile
-    write = holder(certified_work / "write", verification)
+    write = holder(certified_work / "write", verification, *analysis_nodes(profile), profile=profile)
     predecessor = holder(certified_work / "predecessor", spec, dataset, proposition, assessment, run, replay, profile=profile)
     successor = holder(certified_work / "successor", dataset, proposition, assessment, run, replay, profile=profile)
     p1 = replace(held(1, root=certified_work / "predecessor"), corpus_id=predecessor[0])
-    args = dict(keep=(), group_chain=(p1,), tip=("p2", "m2"), mounted=(p1,), write_root=write)
+    args = dict(keep=(), group_chain=(p1,), tip=("p2", "m2"), mounted=(p1,), write_root=write, observations={})
     assert required(p1, live=(predecessor, successor), **args) == (Reason("dependency", (spec.id,)),)
     equal = holder(certified_work / "equal", spec, profile=profile)
     assert required(p1, live=(predecessor, successor, equal), **args) == ()
-    differing = holder(certified_work / "differing", spec.model_copy(update={"title": "different"}), profile=profile)
-    assert required(p1, live=(predecessor, successor, differing), **args) == (Reason("dependency", (spec.id,)),)
+    differing = holder(certified_work / "differing", stored.stamp_semantic_identity(spec.model_copy(update={"title": "different"}, deep=True)), profile=profile)
+    conflict = required(p1, live=(predecessor, successor, differing), **args)
+    assert conflict and any(spec.id in " ".join(reason.detail) for reason in conflict)
+    assert "unresolved-copy" in " ".join(detail for reason in conflict for detail in reason.detail)
 
 
 @pytest.fixture
@@ -129,7 +131,7 @@ def empty_write(certified_work):
 
 def reasons(predecessor, write, *, keep=(), chain_items=None, mounted=(), live=()):
     return required(predecessor, keep=keep, group_chain=chain_items or (predecessor,),
-                    tip=("p4", "m4"), mounted=mounted, write_root=write, live=live)
+                    tip=("p4", "m4"), mounted=mounted, write_root=write, live=live, observations={})
 
 
 def test_required_by_configuration(empty_write):
@@ -154,7 +156,7 @@ def test_chain_retention_keeps_every_publication_between_a_kept_one_and_the_tip(
     mounted = (held(8, attributions={node.id: (p1.corpus_id, "m1")}),) if older_reason == "attribution" else ()
     write = empty_write
     if older_reason == "dependency":
-        run = stored.run_node("local", title="local", spec="missing", reads=(node.id,))
+        run = stored.run_node("local", title="local", spec="", reads=(node.id,))
         write = holder(certified_work / "dependent", run)
     for predecessor in (p2, p3):
         assert reasons(predecessor, write, keep=keep, chain_items=items, mounted=mounted, live=(source,)) == (
@@ -165,7 +167,7 @@ def test_required_returns_all_reasons_in_kind_order_with_sorted_dependencies(cer
     a = stored.proposition_node("a", title="a", claim={"operator": "affects"})
     z = stored.proposition_node("z", title="z", claim={"operator": "affects"})
     source = holder(certified_work / "source", z, a)
-    run = stored.run_node("local", title="local", spec="missing", reads=(z.id, a.id))
+    run = stored.run_node("local", title="local", spec="", reads=(z.id, a.id))
     write = holder(certified_work / "write", run)
     p0 = held(0)
     p1 = replace(held(1, 0), corpus_id=source[0])
