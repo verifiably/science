@@ -9,7 +9,7 @@ from beliefs.decode import WireClaim, decode_claim
 from beliefs.errors import ScienceError, UnboundReferent
 from beliefs.projection import project_claim
 
-from science.refusal import Refusal, Refused
+from science.refusal import AUTHORING_INPUT_ERRORS, Refusal, Refused, kernel_refusal
 from science.report import Report, record_block
 from science.vocabulary import require_performed
 from science.authoring_records import session_records
@@ -64,9 +64,11 @@ def handle(ctx, writer, *, subject, predicate, object, layer, polarity, slug=Non
             require_performed(ctx.config.profile, receipt, referents)
     except UnboundReferent as caught:
         _refuse(f"membership refused (not-member): {caught}")
-    except ScienceError as caught:
+    except AUTHORING_INPUT_ERRORS as caught:
         raise Refused(Refusal("invalid-input", f"claim refused: {caught}",
                               {"kind": type(caught).__name__})) from caught
+    except ScienceError as caught:
+        raise Refused(kernel_refusal(caught)) from caught
     node = writer.add(stored.proposition_node(
         slug or _slug(subject, predicate, object), title=f"{subject} {predicate} {object}",
         claim=projection, display_statement=f"{subject} {predicate} {object}"))

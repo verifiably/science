@@ -17,7 +17,7 @@ from beliefs.rules import REFERENCE_RULES
 from beliefs.spec import Deterministic, SpecDraft, SpecInput, freeze
 from science.authoring_records import session_records
 from science.estimand_input import read_estimand_input
-from science.refusal import Refusal, Refused
+from science.refusal import AUTHORING_INPUT_ERRORS, Refusal, Refused, kernel_refusal
 from science.report import Report, record_block
 from science.vocabulary import require_performed
 
@@ -124,9 +124,11 @@ def handle(ctx, writer, *, target, dataset, estimand, standing, evidence_mode, r
             spec = freeze(draft, held_rules=held_rules, rule_procedures=bindings, profile=profile,
                           claim=claim, records=records, assessment_dependency=records.assessment_dependency,
                           supersedes=superseded)
-    except ScienceError as caught:
+    except AUTHORING_INPUT_ERRORS as caught:
         raise Refused(Refusal("invalid-input", f"spec authoring refused: {caught}",
                               {"kind": type(caught).__name__})) from caught
+    except ScienceError as caught:
+        raise Refused(kernel_refusal(caught)) from caught
     # Input captures are released before the writer obtains its mint authority.
     node = writer.add(stored.analysis_spec_node(spec))
     return (record_block(node),)
