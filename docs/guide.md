@@ -38,106 +38,79 @@ The launcher refuses absent configuration and unknown configuration keys.
 
 ## A synthetic source-checkout demonstration
 
-This example uses public test helpers for operator-time bootstrap only: they
-initialize a disposable world, adopt the testing contract, hold its concept and
-level lists, and install the holdings reducer. This is a source-checkout example,
-not an initialization API for a scientific deployment. The testing workflow reads
-`x\n` and writes canned `supported` output. An admitted result here demonstrates
-plumbing and reproducibility; it is not a biological finding about PHF19.
+The complete [demo script](../python/tests/fixtures/analysis/demo.py) uses explicit
+kernel fixture authority to initialize a disposable world and hold its concept
+and level lists, two procedures and a classification rule. It copies the full
+[estimand authoring document](../python/tests/fixtures/analysis/estimand.json) into
+that world, then uses production declarations and an attended session for every
+analysis act. The session closes even when an invocation fails.
 
-Choose a **new, empty path on certified storage**, outside any real corpus or
-store, and an empty disposable home. Run from `science/python` after the frozen
-install. The environment below deliberately supplies no credentials or private
-study paths. Set `SCIENCE_DEMO_ROOT` to that new path; the script refuses an
-existing one. Keep the transcript and the directory if you need its evidence.
+Choose a new absolute directory on certified storage and a disposable home. From
+`science/python`, after the frozen install:
 
 ```sh
 export SCIENCE_DEMO_ROOT=/absolute/certified/storage/science-demo
-mkdir -p "$SCIENCE_DEMO_ROOT-home"
-env -i PATH="$PATH" HOME="$SCIENCE_DEMO_ROOT-home" \
-  SCIENCE_DEMO_ROOT="$SCIENCE_DEMO_ROOT" PYTHONPATH=tests \
-  .venv/bin/python - <<'PY'
-import json
-import os
-from pathlib import Path
-
-from helpers.world import build_fixture_world_with_contract, fixture_bundle, write_config_for
-from science.config import ReadContext, load_config
-from science.dispatch import Dispatcher
-from science.loader import production_tree, resolve_handlers
-from science.session import open_session
-
-work = Path(os.environ["SCIENCE_DEMO_ROOT"])
-assert work.is_absolute(), "choose an absolute path on certified storage"
-work.mkdir()  # exclusive: never reuse another world's directory
-cfg = build_fixture_world_with_contract(work)
-config_path = write_config_for(cfg)
-cfg = load_config(config_path)
-print("configuration:", config_path)
-code, entrypoint, targets = fixture_bundle(work, "supported")
-data = work / "data.txt"
-data.write_bytes(b"x\n")
-declarations = production_tree()
-session = open_session(cfg)
-d = Dispatcher(declarations, resolve_handlers(declarations), ReadContext.open(cfg), session=session)
-
-def invoke(name, inputs):
-    print("COMMAND", name, json.dumps(inputs, sort_keys=True))
-    result = d.invoke(name, inputs)
-    print("INVOCATION", result.invocation_id)
-    print(result.text)
-    return result.text
-
-def record(text, kind):
-    return next(word for word in text.split() if word.startswith(kind + ":"))
-
-try:
-    dataset = record(invoke("dataset", {
-        "path": str(data), "title": "expression", "locator": "accession:GSE-FIXTURE",
-    }), "dataset")
-    proposition = record(invoke("claim", {
-        "subject": "concept:disease-stage", "predicate": "affects",
-        "object": "protein:PHF19", "layer": "causal", "polarity": "positive",
-    }), "proposition")
-    spec = record(invoke("spec", {
-        "target": proposition, "dataset": dataset,
-        "contrast": "levels", "slot": 0, "baseline": "level:early", "comparison": "level:late",
-        "measure": "measure:tpm", "scale": "additive", "reference": "0",
-        "identification": "identification:observational", "method": "rank comparison",
-        "assumptions": "independent samples", "falsification": "no difference at alpha",
-        "interpretation_rule": "beliefs/outcome-file/v1",
-        "equivalence_rule": "beliefs/content-identity-equality/v1",
-    }), "analysis-spec")
-    run = record(invoke("run", {
-        "spec": spec, "dataset": dataset, "code": str(code),
-        "entrypoint": entrypoint, "targets": list(targets),
-    }), "run")
-    assessment = record(invoke("assess", {"run": run}), "assessment")
-    invoke("verify", {"assessment": assessment, "code": str(code), "entrypoint": entrypoint})
-    invoke("belief", {"proposition": proposition})
-    invoke("next", {})
-finally:
-    session.close()
-PY
+mkdir -p "${SCIENCE_DEMO_ROOT}-home"
+env -i PATH="$PATH" HOME="${SCIENCE_DEMO_ROOT}-home" PYTHONPATH=tests \
+  .venv/bin/python tests/fixtures/analysis/demo.py "$SCIENCE_DEMO_ROOT"
 ```
 
-Every `invoke` goes through production declarations, validation, permits and the
-attended session. The example creates no service and closes its session even on
-failure. Its `science.toml` exposes the exact bootstrap paths and contract; inspect
-it before using the same world through another transport.
+The script refuses an existing directory. Its transcript prints the configuration,
+held prerequisite addresses, command inputs, invocation ids and minted records.
+It runs claim → dataset → spec → run → assess → verify → belief, including the
+selected target key, then prints the queue. Expected: a passed clean-environment
+verification, `Belief` and an admitted queue row. Inspect a refusal or `NoBelief`
+before treating the demonstration as successful.
 
-Expected: `dataset`, `claim`, `spec`, `run`, `assess` and `verify` each report their
-minted records. Save the returned addresses, rather than guessing a title or digest.
-Verification should be `passed` with `clean-environment` scope; the final answer
-should be `Belief` and the proposition classified as `admitted`. A refusal or
-`NoBelief` must be explained before treating the demonstration as successful.
-Generated IDs depend on the new world and execution and are not portable constants.
+This source-checkout example writes a canned supported outcome after reading
+synthetic bytes. It tests plumbing and reproducibility; it is not a biological
+finding about PHF19. The outcome-file rule produces no numerical estimate, and
+none is invented from the estimand reference. The bootstrap helpers are not an
+initialization API for a scientific deployment.
+
+## Author a native estimand
+
+`spec` takes `--estimand PATH`, required `--standing` and `--evidence-mode`, and
+repeatable `--rule-procedures rule-identity=procedure-id`, along with the target,
+observed dataset, method, assumptions prose, falsification and two rule identities.
+The [complete example JSON](../python/tests/fixtures/analysis/estimand.json)
+authors form, functional, named bindings, output specifications, reference,
+control, uncertainty and typed assumptions. `schema_version` is integer `1`.
+The kernel derives claim/operator identities and frozen dependencies; they are
+not authoring fields. The old contrast/slot/measure scalar flags are removed.
+
+Reference values, null-region bounds and increment values use JSON numbers:
+`0`, `1` and `0.5` become exact Decimal values. Booleans, non-finite numbers,
+strings at those numeric positions, duplicate keys, unknown fields and stored-only
+fields refuse before a spec is minted. Native restriction bounds retain their
+kernel string encoding. Typed JSON assumptions are distinct from `--assumptions`
+prose; an explicit empty list asserts no additional typed assumptions.
+
+Every measurement procedure, classification rule, mapping, proxy, register and
+calibration basis must actually be held and pass the native authoring checks.
+A model route also requires its explicit held model and the claim's within-model
+binding. Foreign prerequisites must be accepted by the author's configuration.
+`--registers` may be omitted for an empty register list; it does not manufacture
+one. Evidence modes are observation, annotation, simulation, derivation and
+literature-extraction; standing is empirical, model or calibrated-model.
+
+The retained `--applicability dimension=quantifier:term` input accepts only
+dimensions placed in applicability with term restrictions. For the demo contract,
+`--applicability testing/stage=generic:level:early` is well typed. Interval, union,
+time-interval, rule and claim-placed dimensions refuse through this command form.
+Spec authoring uses live accepted session records and needs no epoch, including
+with read mounts. Belief evaluation across mounts still needs a current epoch.
+
+The CLI resolves the estimand file relative to the caller before sending its
+absolute path to the service. For MCP or direct dispatcher calls, supply an
+absolute path accessible to that process. The file is parsed once per invocation;
+validation finishes and input captures close before the single mint.
 
 ## Your own analysis
 
 Replace the demonstration with an operator-admitted world and your own contract,
 held vocabulary, empirical data and workflow. The contract must declare your
-operator, argument sorts, qualifiers and estimand; `claim` refuses a combination
+operator, role sorts, applicability dimensions, measurement declarations and estimand; `claim` refuses a combination
 with no matching plan row. A locator attests the source of data; it does not prove
 its scientific quality. Do not present the fixture's invented accession as yours.
 
@@ -145,7 +118,7 @@ its scientific quality. Do not present the fixture's invented accession as yours
    locator. Preserve the returned `dataset:sha256:…` address.
 2. `claim` records a typed question. Its title is prose; its typed meaning defines
    identity. Save the `proposition:…` address.
-3. `spec` freezes the target, estimand, method, assumptions, input roles and rules.
+3. `spec` freezes the typed target, standing, dependencies, method, assumptions, input modes and rule procedures.
    Choose rules that actually interpret and compare your workflow's outputs.
 4. `run` captures code, environment and held inputs and executes under confinement.
    `entrypoint` is relative to the code root's parent; targets name output paths.

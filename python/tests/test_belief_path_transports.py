@@ -96,7 +96,7 @@ def test_cli_write_routes_through_the_service_and_refuses_with_the_json_line(wor
         data = tmp_path / "m.txt"
         data.write_bytes(b"x\n")
         assert main(["dataset", "--config", str(cfg_path), "--path", str(data), "--title", "m",
-                     "--facets", "biology/gene-axis=axis:rows,namespace:HGNC"]) == 0
+                     "--facets", "testing/gene-axis=axis:rows,namespace:HGNC"]) == 0
         out = capsys.readouterr()
         assert "[dataset] dataset:sha256:" in out.out
         assert json.loads(out.err)["invocation_id"]
@@ -243,3 +243,20 @@ def test_reads_render_identically_through_mcp_and_cli(world, capsys):
         text = mcp_call(cfg_path, name, arguments)["content"][0]["text"]
         assert main([name, "--config", str(cfg_path), *argv]) == 0
         assert capsys.readouterr().out == text
+
+
+def test_mcp_replays_invalid_native_estimand_before_minting(certified_work):
+    from pathlib import Path
+    from helpers.world import build_belief_world, hold_fixture_dataset
+    from science.config import ReadContext
+    cfg = build_belief_world(certified_work)
+    data = hold_fixture_dataset(cfg, "data.txt", b"observations\n", "observations")
+    inputs = spec_inputs(cfg, target="proposition:p1", dataset=data)
+    path = Path(inputs["estimand"])
+    document = json.loads(path.read_text())
+    document["reference"]["value"] = True
+    path.write_text(json.dumps(document))
+    first, again = mcp_calls(write_config_for(cfg), [("spec", inputs, "invalid-native"), ("spec", inputs, "invalid-native")])
+    assert first == again and first["isError"] is True
+    assert first["structuredContent"]["refusal"]["code"] == "invalid-input"
+    assert not any(n.kind == "analysis-spec" for n in ReadContext.open(cfg).write_view().iter_stored())

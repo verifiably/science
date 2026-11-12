@@ -38,16 +38,19 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           repository: verifiably/beliefs
+          ref: dadc5fb763a47c8c10333633fb5a26b099d5fe15
           path: beliefs
       - name: Check out atoms
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           repository: verifiably/atoms
+          ref: a4d414b924c0f939056c4f63b3c902e7e5c4809d
           path: atoms
       - name: Check out nodes
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           repository: verifiably/nodes
+          ref: d8c73b2321e30bc563782fbab517630bae1d631a
           path: nodes
       - name: Set up uv and Python
         uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990

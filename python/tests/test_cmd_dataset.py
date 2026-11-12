@@ -15,7 +15,7 @@ def test_dataset_holds_bytes_and_mints_the_record(rig, tmp_path):
     data = tmp_path / "matrix.txt"
     data.write_bytes(b"gene\tv\nPHF19\t1\n")
     out = d.invoke("dataset", {"path": str(data), "title": "expression", "locator": "accession:GSE1",
-                               "facets": ["biology/gene-axis=axis:rows,namespace:HGNC"]})
+                               "facets": ["testing/gene-axis=axis:rows,namespace:HGNC"]})
     assert "[dataset] dataset:sha256:" in out.text
     view = ctx.write_view()
     node = next(n for n in view.iter_stored() if n.kind == "dataset" and n.title == "expression")

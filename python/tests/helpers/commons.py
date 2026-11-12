@@ -128,7 +128,7 @@ class Installations:
 
 
 def build_installation(work: Path, name: str, *, hold_vocabulary: bool) -> ScienceConfig:
-    """One installation under `work/<name>`: the shipped base and biology packs plus the test contract document
+    """One installation under `work/<name>`: the shipped base and general pack plus the test contract document
     (`work/testing.yaml`, shared by every installation so their pins agree), compiled with coordination v3; the
     holdings reducer installed; a project `<name>` carrying QUERY_1A. The vocabulary lists are held only when
     `hold_vocabulary`. The sharing root is configured and left uncreated: its first write creates it."""

@@ -333,9 +333,9 @@ def build_fixture_world_with_contract(work: Path, *, hold_concepts: bool = True,
 
 
 def build_two_corpus_world(work: Path) -> ScienceConfig:
-    """the write root `corpus` (base, biology, the
+    """the write root `corpus` (base, general, the
     `testing` contract and coordination) and the read mount `archive` (base,
-    biology and the corpus-local `archive` contract, no coordination — the mm30
+    general and the corpus-local `archive` contract, no coordination — the mm30
     shape), in one world and one store. The archive holds the vocabulary lists
     and proposition:archived; `archive` reaches the mount through
     read_contracts alone."""
@@ -345,9 +345,9 @@ def build_two_corpus_world(work: Path) -> ScienceConfig:
     base = shipped_base_contract()
     testing, testing_plan = load_contract_document(fixture_contract_document(work), base)
     archive, archive_plan = load_contract_document(archive_contract_document(work), base)
-    biology = [shipped_domain_contract(ns) for ns in DOMAINS]
-    writer_profile = compile_profile(base, biology + [testing], coordination=shipped_coordination(COORDINATION))
-    archive_profile = compile_profile(base, biology + [archive])
+    domain_packs = [shipped_domain_contract(ns) for ns in DOMAINS]
+    writer_profile = compile_profile(base, domain_packs + [testing], coordination=shipped_coordination(COORDINATION))
+    archive_profile = compile_profile(base, domain_packs + [archive])
     archive_root, corpus_root = work / "archive", work / "corpus"
     config = WorldConfig(work / "world", secrets.token_hex(16), (archive_root, corpus_root))
     init_world_root(config, authority=FIXTURE_AUTHORITY)
@@ -678,9 +678,9 @@ def build_shared_contract_world(work: Path) -> ScienceConfig:
     from science.contracts import load_contract_document
     base = shipped_base_contract()
     testing, plan = load_contract_document(fixture_contract_document(work), base)
-    biology = [shipped_domain_contract(ns) for ns in DOMAINS]
-    writer_profile = compile_profile(base, biology + [testing], coordination=shipped_coordination(COORDINATION))
-    mount_profile = compile_profile(base, biology + [testing])
+    domain_packs = [shipped_domain_contract(ns) for ns in DOMAINS]
+    writer_profile = compile_profile(base, domain_packs + [testing], coordination=shipped_coordination(COORDINATION))
+    mount_profile = compile_profile(base, domain_packs + [testing])
     mount_root, corpus_root = work / "shared", work / "corpus"
     config = WorldConfig(work / "world", secrets.token_hex(16), (mount_root, corpus_root))
     init_world_root(config, authority=FIXTURE_AUTHORITY)

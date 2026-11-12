@@ -358,7 +358,6 @@ def test_inherited_and_write_stores_refuse_corrupted_bytes_in_run_and_verify_wit
     from beliefs.recipe import MINIMAL_POLICY
     from helpers.world import (
         OBSERVED,
-        SPEC_FIELDS,
         STORE_IDS,
         build_belief_world,
         fixture_bundle,

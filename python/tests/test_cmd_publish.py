@@ -9,6 +9,7 @@ from beliefs.permit import RequiredCapabilities, scoped_authority
 from beliefs.publish import pending_publishes
 from beliefs.publish_request import decode_snapshot
 from beliefs.root import moment_seam, open_corpus, open_world
+from helpers.analysis import analysis_nodes
 from helpers.commons import (
     LOC_A,
     Remotes,
@@ -52,9 +53,10 @@ def test_preview_lists_selection_closure_and_uncarried_inputs(fresh):
     # A's vocabulary lists are datasets too: the query selects all three.
     datasets = sorted((ids["dataset"], concept_list_address(), level_list_address()))
     selection = _section(text, "selection")
-    assert selection[:5] == ["analysis-spec: 1", "assessment: 1", "dataset: 3", "proposition: 1", "run: 1"]
-    assert sorted(selection[5:]) == sorted(
-        f"record: {ref}" for ref in (*datasets, *(ids[key] for key in ("proposition", "spec", "run", "assessment"))))
+    assert selection[:7] == ["analysis-spec: 1", "assessment: 1", "classification-rule: 1", "dataset: 3", "procedure: 2", "proposition: 1", "run: 1"]
+    assert sorted(selection[7:]) == sorted(
+        f"record: {ref}" for ref in (*datasets, *(ids[key] for key in ("proposition", "spec", "run", "assessment")),
+                   *(node.id for node in analysis_nodes(fresh.a.profile))))
     assert _section(text, "closure") == ["status: complete"]
     assert "attribution: every selected record is this world's own" in text
     assert sorted(_section(text, "inputs the destination will not carry")) == [

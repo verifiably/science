@@ -158,3 +158,59 @@ def test_a_launcher_opens_under_the_selection_the_file_names_from_a_decoy_direct
     monkeypatch.chdir(_decoy(tmp_path / "decoy"))
     with launcher(kind, config, sock):
         assert _request(sock, {"query": "selection"}) == {"project": str(health)}
+
+
+def test_cli_spec_reads_the_client_source_path_with_service_in_another_directory(
+        certified_work, short_tmp, tmp_path, monkeypatch, capsys):
+    import os
+    import signal
+    import subprocess
+    import sys
+    import time
+    from decimal import Decimal
+    from beliefs import stored
+    from helpers.analysis import spec_inputs
+    from helpers.world import build_belief_world, hold_fixture_dataset, write_config_for
+    from science.cli import main
+    from science.config import ReadContext
+    from test_launcher_stop import _wait_for_socket
+
+    cfg = build_belief_world(certified_work)
+    data = hold_fixture_dataset(cfg, "data.txt", b"observations\n", "observations")
+    inputs = spec_inputs(cfg, target="proposition:p1", dataset=data)
+    client, server, home = (tmp_path / name for name in ("client", "server", "child-home"))
+    for directory in (client, server, home):
+        directory.mkdir()
+    filename = "authoring.json"
+    (client / filename).write_bytes(Path(inputs["estimand"]).read_bytes())
+    (server / filename).write_text('{"schema_version": false}')
+    inputs["estimand"] = filename
+    sock = short_tmp / "service.sock"
+    config = write_config_for(cfg, service_socket=sock)
+    # No inherited environment or credentials enter the service process.
+    environment = {"PATH": os.environ["PATH"], "HOME": str(home), "PYTHONDONTWRITEBYTECODE": "1"}
+    child = subprocess.Popen([sys.executable, "-m", "science.cli", "serve", "--config", str(config)],
+        cwd=server, env=environment, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    try:
+        _wait_for_socket(child, sock, time.monotonic() + 30)
+        monkeypatch.chdir(client)
+        argv = ["spec", "--config", str(config)]
+        for key, value in inputs.items():
+            for item in value if isinstance(value, list) else [value]:
+                argv.extend(("--" + key.replace("_", "-"), str(item)))
+        assert main(argv) == 0, capsys.readouterr().err
+        text = capsys.readouterr().out
+        assert "[analysis-spec]" in text
+    finally:
+        if child.poll() is None:
+            child.send_signal(signal.SIGTERM)
+        try:
+            _, stderr = child.communicate(timeout=15)
+        finally:
+            if child.poll() is None:
+                child.kill()
+                child.communicate()
+    assert child.returncode == 128 + signal.SIGTERM, stderr.decode()
+    assert not sock.exists()
+    spec, = [n for n in ReadContext.open(cfg).write_view().iter_stored() if n.kind == "analysis-spec"]
+    assert stored.analysis_spec_value(spec, profile=cfg.profile).estimand.reference.value == Decimal("0.5")

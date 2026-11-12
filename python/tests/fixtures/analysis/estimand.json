@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "form": "contrast",
+  "functional": "general/probability-of-superiority",
+  "bindings": {
+    "response": {
+      "role": "response",
+      "measure": {
+        "observable": {
+          "quantity_kind": "general/relative-abundance",
+          "bearer_sort": "testing/protein"
+        },
+        "level": "ratio",
+        "value_type": "level",
+        "transformation": "general/identity",
+        "procedure": "procedure:261e9df0f74ed0af4ec8ab3b4ec3dff86f63d56ebd90a288efc850e87a73e175",
+        "scale": "procedure:261e9df0f74ed0af4ec8ab3b4ec3dff86f63d56ebd90a288efc850e87a73e175"
+      }
+    },
+    "grouping": {
+      "source": "rule-classes",
+      "rule": "classification-rule:17890baa44c60575b4261612300d358cdfa8e05185bc0a4336a79b208e509908",
+      "classes": [
+        {
+          "sort": "testing/level",
+          "term": "level:early"
+        },
+        {
+          "sort": "testing/level",
+          "term": "level:late"
+        }
+      ]
+    }
+  },
+  "outputs": {
+    "estimate": {
+      "typing": "dimensionless",
+      "domain": "unit-interval"
+    }
+  },
+  "reference": {
+    "kind": "value",
+    "value": 0.5
+  },
+  "control": {
+    "identification": "testing/randomized",
+    "conditioning": [],
+    "design": "general/independent-groups",
+    "selection": "general/cohort-enrolment"
+  },
+  "uncertainty": "interval",
+  "assumptions": []
+}

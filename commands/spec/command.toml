@@ -13,20 +13,10 @@ type = "string"
 required = true
 doc = "The dataset ref the analysis observes (role observes)."
 
-
-
-
-
-
-
-
-
-
-
 [inputs.estimand]
 type = "string"
 required = true
-doc = "Path to a UTF-8 schema_version 1 native estimand JSON authoring document."
+doc = "UTF-8 schema_version 1 native estimand JSON path. CLI resolves relative to its caller; MCP should supply an absolute service-accessible path."
 [inputs.standing]
 type = "enum"
 choices = ["empirical", "model", "calibrated-model"]

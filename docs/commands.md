@@ -84,7 +84,7 @@ Record addresses, corpus identities, invocation IDs and page cursors are distinc
 Codes: `unknown-command`, `invalid-input`, `permit-exceeded`, `outcome-unknown`,
 `unknown-cursor`, `stale-cursor`, `input-mismatch`, `kernel-refused`,
 `no-current-project`, `unknown-project`, `ambiguous-project`, `no-epoch`,
-`epoch-stale`, `pin-unsourced`, `world-mismatch`, `adopt-conflict`, `corpus-retired`,
+`epoch-stale`, `multiple-assessed-propositions`, `pin-unsourced`, `world-mismatch`, `adopt-conflict`, `corpus-retired`,
 `divergent-publication`, `config-stale`. Kernel normalization preserves the named
 kind/reason or permit requirement/capability in `data`; callers should use codes
 and detail instead of parsing prose. These are refusals, not evidence of a run.
@@ -122,11 +122,12 @@ commentary can stale the cursor.
 Exact current inputs, defaults and prompts are the public files under
 [`commands/`](../commands/); CLI help and MCP schemas derive from them.
 
-- `claim` uses the first configured operator plan. Term kind prefixes resolve
-  argument sorts and the predicate row resolves the operator; layers and polarities
-  must be in that plan. It types, then decodes against a held-vocabulary snapshot.
-  Dataset-bound vocabulary must be held even when the kernel's permissive reader
-  would return not-consulted/not-available. A not-member outcome refuses authoring.
+- `claim` uses the first activated operator plan, mapping subject/object into
+  named roles. Two one roles or two canonical many-role members are supported.
+  Dataset, selection and run-output vocabulary bindings must resolve against held
+  text vocabulary; world-kind bindings consult accepted live canonical records.
+  Not-member and unperformed held-vocabulary checks refuse authoring. Release
+  bindings retain the kernel's permissive reading when not consulted.
 - `dataset` accepts a regular local file or a directory package (auto-discovering
   every regular file under the directory, or admitting the explicit relative
   member paths named by `--resources`), fingerprints and holds each resource's
@@ -140,12 +141,17 @@ Exact current inputs, defaults and prompts are the public files under
   resources under `inputs/<resource.name>`, exports and holds every declared
   `--targets` output in the store, and mints the production `run` and derived
   `dataset` records (with its stamped `lineage-basis`).
-- `spec` derives every estimand sort from its target operator's contract declaration,
-  rather than taking authored sort names. Decimal fields must be finite; contrast
-  and applicability terms must type and resolve, including dataset-bound lists.
-  Current specs have one observed dataset and deterministic nondeterminism. Seeded
-  and stochastic authoring are not exposed. Rules must be shipped reference rules.
-  A superseded spec must resolve in the write root before the first act.
+- `spec` reads a strict UTF-8 schema-version-1 estimand JSON document, required
+  standing/evidence mode and explicit rule-procedure bindings. Native named
+  measures, outputs, control, references, assumptions and calibration are checked
+  against the target claim and held prerequisites before freezing. Numeric JSON
+  literals become exact finite Decimals; booleans/NaN/Infinity, duplicate/unknown
+  keys and frozen-only fields refuse. Applicability flags support term restrictions
+  on applicability-placed dimensions only. Authoring reads accepted live session
+  records and cross-mount retractions without requiring an epoch. One observes
+  dataset and deterministic nondeterminism remain the command's authoring scope;
+  supersedes must resolve in the write root before effects. See the complete
+  [example and field rules](guide.md#author-a-native-estimand).
 - `run` requires the spec's declared observed dataset (and stages any `reads` role
   datasets declared on the spec), a code directory, an existing entrypoint relative
   to its parent, and at least one output target. Both single-resource and
@@ -154,7 +160,9 @@ Exact current inputs, defaults and prompts are the public files under
   act. The kernel captures the recipe, environment, inputs, outputs and closure;
   refusal evidence is retained.
 - `assess` restores the run's frozen spec and interpretation rule; the caller cannot
-  choose a new outcome or estimand after seeing the result. The run's observed
+  choose a new outcome or target after seeing the result. It persists the exact
+  derived target, named estimates, uncertainty and curves, with a full native
+  assessment identity address. The run's observed
   dataset needs empirical standing: an acquired dataset carries it directly, and a
   `derive` package inherits it through a complete, undiverged `lineage-basis`
   chain to an acquired ancestor (the kernel's rule is in beliefs'
@@ -166,14 +174,21 @@ Exact current inputs, defaults and prompts are the public files under
   comparison evidence. Supplied code/environment must match the captured recipe;
   no publication marker supplies the workspace checkout for you. Execution
   materials are obtained separately.
-- `belief` chooses corpus-local evaluation with no read mounts, or epoch-bound
-  evaluation across session mounts. Multi-corpus coverage must equal the session's
-  corpus ids and no corpus may have moved; even a coordination write stales it.
-  Unavailable epochs refuse `no-epoch`/`epoch-stale`, never silently evaluate an
-  incomplete pool. Publish a fresh epoch with `science epoch`.
-- `next` reads attention live. Its classes are ready, not-ready, assessed-unevaluated,
-  assessed-not-admitted and admitted. The unevaluated row names a missing/stale
-  epoch or input-outside-corpus; one such row does not hide every other proposition.
+- `belief` evaluates one accepted, unretracted assessed target key. `--key` is
+  optional for exactly one key, which the report includes. No assessments yields
+  NoBelief without an invented key. An unmatched key refuses `invalid-input`;
+  several keys without a selection refuse `multiple-assessed-propositions` with
+  sorted available keys and an explicit-key remedy. Keys never pool evidence.
+  Reads are corpus-local without read mounts and epoch-bound across session
+  mounts; coverage must match and no corpus may have moved. Missing/stale epochs
+  refuse `no-epoch`/`epoch-stale`; publish a fresh epoch with `science epoch`.
+- `next` reads attention live and keeps one row per proposition. Unassessed rows
+  retain ready/not-ready input-heldness rules. An assessed row with several keys
+  is assessed-unevaluated (`multiple-assessed-propositions`), listing sorted keys
+  and a `science belief --proposition <id> --key <key>` remedy, even when individual
+  keys admit. A single key is admitted only when a matching assessment passes the
+  native dependency-aware admission gate. Missing/stale epochs or unavailable
+  inputs remain row-level unevaluated reasons; one row never hides the others.
 - `recheck` observes the named store location without writing its bytes and publishes
   governed observation/act-report evidence; a failed or inconclusive retrieval does
   not assume absence or clear an unsettled block. See [stores](stores.md).

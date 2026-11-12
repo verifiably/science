@@ -35,6 +35,34 @@ fixture authority; production commands obtain scoped authority from their sessio
 Read mounts use their own pinned profiles. Mutation stays in the write root;
 equal copies may resolve but differing content must refuse.
 
+## Kernel source revisions
+
+CI checks out these exact sibling sources beside science. Local editable installs
+must resolve to the same clean revisions; an unrelated sibling HEAD does not
+reproduce this build.
+
+| Sibling | Git revision |
+| --- | --- |
+| beliefs | `dadc5fb763a47c8c10333633fb5a26b099d5fe15` |
+| atoms | `a4d414b924c0f939056c4f63b3c902e7e5c4809d` |
+| nodes | `d8c73b2321e30bc563782fbab517630bae1d631a` |
+
+To upgrade, choose and record a replacement tuple, align the local sibling
+checkouts (isolated sibling worktrees are supported), then run `uv sync --frozen`
+from `python/`. Confirm installed editable source paths and Git revisions before
+using test results. Update all three CI refs together, run affected focused checks,
+hygiene and the required certified fast/full routes below, then obtain passing
+Python 3.11 and 3.13 hosted evidence for that exact science build and tuple. Do not
+substitute floating HEADs or widen host skips when contract behavior fails.
+
+The command migration is a direct cutover: local plans use named role mappings,
+`spec` uses the native JSON authoring input and explicit standing/procedure facts,
+and assessments persist full native targets and payloads. There is no positional
+plan or retired scalar-flag compatibility route. Synthetic fixtures must declare
+every sort, dimension and facet they exercise and explicitly hold their normative
+prerequisites. Coordination v3 can select measurement prerequisites by their
+addresses, although its kind-selector vocabulary predates them.
+
 ## Tests and mandatory checks
 
 Run every test through the just front door; never invoke pytest directly.
