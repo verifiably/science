@@ -169,7 +169,9 @@ def test_a_step_internal_restore_records_nothing(tmp_path):
     assert snapshot_module._LIVE == {} and (snap.image / "sub" / "f").read_text() == "1"
 
 
-def test_copy_value_rebuilds_containers_and_keeps_leaves(fresh_value):
+def test_copy_value_rebuilds_containers_and_keeps_leaves(certified_work):
+    from helpers.world import build_fixture_world
+    fresh_value = {"a": build_fixture_world(certified_work)}
     copied = copy_value(fresh_value)
     assert copied == fresh_value and copied is not fresh_value
     assert copied["a"] is fresh_value["a"]  # a ScienceConfig leaf, shared

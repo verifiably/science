@@ -24,7 +24,7 @@ from science.config import ScienceConfig
 # test helper does; science code itself never constructs one.
 FIXTURE_AUTHORITY = Authority(WritePermit.full(), "fixture")
 
-DOMAINS = ("biology",)
+DOMAINS = ("general",)
 COORDINATION = 2
 PROFILE = compile_profile(
     shipped_base_contract(),
@@ -193,50 +193,67 @@ contract:
   lineage: genesis
   sorts:
     concept:
-      vocabulary: "dataset:%(concepts)s"
+      binding: {kind: dataset, dataset: "dataset:%(concepts)s"}
+      identifier_class: {prefix: concept, pattern: 'concept:.+'}
     protein:
-      vocabulary: {namespace: HGNC, release: "2026-07-01"}
+      binding: {kind: release, namespace: HGNC, release: "2026-07-01"}
+      identifier_class: {prefix: protein, pattern: 'protein:.+'}
     level:
-      vocabulary: "dataset:%(levels)s"
-    measure:
-      vocabulary: {namespace: testing-measures, release: "1"}
-    identification:
-      vocabulary: {namespace: testing-identification, release: "1"}
+      binding: {kind: dataset, dataset: "dataset:%(levels)s"}
+      identifier_class: {prefix: level, pattern: 'level:.+'}
     cohort:
-      vocabulary: {namespace: testing-cohorts, release: "1"}
+      binding: {kind: release, namespace: testing-cohorts, release: "1"}
+      identifier_class: {prefix: cohort, pattern: 'cohort:.+'}
   dimensions:
     scope:
       restriction_sort: cohort
+      placement: applicability
+      restriction: {form: term, sort: cohort}
+      applies_to: [general/changes-under-intervention]
     setting:
       restriction_sort: cohort
+      placement: applicability
+      restriction: {form: term, sort: cohort}
+      applies_to: [general/changes-under-intervention]
     stage:
       restriction_sort: level
-  operators:
+      placement: applicability
+      restriction: {form: term, sort: level}
+      applies_to: [general/changes-under-intervention]
+  instantiations:
     affects-concept-protein:
-      arity: 2
-      arg_sorts: [concept, protein]
-      sign_apt: true
-      layers: [causal]
-      dimensions: [scope, stage]
+      template: general/changes-under-intervention
+      roles: {intervention: [concept], response: [protein]}
     affects-concept-concept:
-      arity: 2
-      arg_sorts: [concept, concept]
-      sign_apt: true
-      layers: [causal]
-      dimensions: []
+      template: general/changes-under-intervention
+      roles: {intervention: [concept], response: [concept]}
   estimands:
-    affects-concept-protein:
-      level_sorts: {"0": level}
-      measure_sort: measure
-      identification_sort: identification
-      conditioning_sort: concept
+    instantiation:affects-concept-protein:
+      forms: [contrast]
+      conditioning_sorts: [concept]
+  identification_classes:
+    randomized:
+      definition: Synthetic fixture intervention identification.
+      licenses_layers: [causal]
+  measurements:
+    protein: [general/relative-abundance]
+  facets:
+    gene-axis:
+      attaches_to: [dataset]
+      fields:
+        axis: {type: string, required: true}
+        namespace: {type: string, required: true}
+    annotation:
+      attaches_to: [dataset, proposition]
+      fields:
+        note: {type: string, required: true}
 plan:
   sorts: {concept: concept, protein: protein}
   layers: {causal: causal}
   polarities: {positive: positive, negative: negative, not_applicable: null}
   operators:
-    - {predicate: affects, subject: concept, object: protein, operator: affects-concept-protein}
-    - {predicate: affects, subject: concept, object: concept, operator: affects-concept-concept}
+    - {predicate: affects, subject: concept, object: protein, operator: general/changes-under-intervention, roles: {subject: intervention, object: response}}
+    - {predicate: affects, subject: concept, object: concept, operator: general/changes-under-intervention, roles: {subject: intervention, object: response}}
 '''
 CONCEPTS = b"concept:disease-stage\nconcept:remission\n"
 LEVELS = b"level:early\nlevel:late\n"
@@ -346,9 +363,9 @@ def build_two_corpus_world(work: Path) -> ScienceConfig:
     archived = archive_config(cfg)
     hold_fixture_dataset(archived, "concepts.txt", CONCEPTS, "concept vocabulary")
     hold_fixture_dataset(archived, "levels.txt", LEVELS, "level vocabulary")
-    claim = build_claim(archive_profile, operator=archive_plan.operator_for("affects", "concept", "protein"),
-                        args=(Referent(sort=archive_plan.sort_for("concept"), term="concept:disease-stage"),
-                              Referent(sort=archive_plan.sort_for("protein"), term="protein:PHF19")),
+    claim = build_claim(archive_profile, operator=archive_plan.row_for("affects", "concept", "protein").operator,
+                        roles={"intervention": Referent(sort=archive_plan.sort_for("concept"), term="concept:disease-stage"),
+                               "response": Referent(sort=archive_plan.sort_for("protein"), term="protein:PHF19")},
                         layer="causal", polarity="positive")
     open_corpus(archive_root, authority=FIXTURE_AUTHORITY, profile=archive_profile).add(stored.proposition_node(
         "archived", title="archived", claim=project_claim(claim),
@@ -493,10 +510,12 @@ def build_belief_world(work: Path, **holds: bool) -> ScienceConfig:
     from beliefs.claim import Referent, build_claim
     from beliefs.projection import project_claim
     cfg = build_fixture_world_with_contract(work, **holds)
+    from helpers.analysis import bootstrap_analysis
+    bootstrap_analysis(cfg)
     (plan,) = cfg.plans
-    claim = build_claim(cfg.profile, operator=plan.operator_for("affects", "concept", "protein"),
-                        args=(Referent(sort=plan.sort_for("concept"), term="concept:disease-stage"),
-                              Referent(sort=plan.sort_for("protein"), term="protein:PHF19")),
+    claim = build_claim(cfg.profile, operator=plan.row_for("affects", "concept", "protein").operator,
+                        roles={"intervention": Referent(sort=plan.sort_for("concept"), term="concept:disease-stage"),
+                               "response": Referent(sort=plan.sort_for("protein"), term="protein:PHF19")},
                         layer="causal", polarity="positive")
     node = stored.proposition_node("p1", title="p1", claim=project_claim(claim),
                                    display_statement="concept:disease-stage affects protein:PHF19")
@@ -679,16 +698,16 @@ def build_shared_contract_world(work: Path) -> ScienceConfig:
     mounted = mount_config(cfg)
     hold_fixture_dataset(mounted, "concepts.txt", CONCEPTS, "concept vocabulary")
     hold_fixture_dataset(mounted, "levels.txt", LEVELS, "level vocabulary")
-    claim = build_claim(mount_profile, operator=plan.operator_for("affects", "concept", "protein"),
-                        args=(Referent(sort=plan.sort_for("concept"), term="concept:disease-stage"),
-                              Referent(sort=plan.sort_for("protein"), term="protein:PHF19")),
+    claim = build_claim(mount_profile, operator=plan.row_for("affects", "concept", "protein").operator,
+                        roles={"intervention": Referent(sort=plan.sort_for("concept"), term="concept:disease-stage"),
+                               "response": Referent(sort=plan.sort_for("protein"), term="protein:PHF19")},
                         layer="causal", polarity="positive")
     mount = open_corpus(mount_root, authority=FIXTURE_AUTHORITY, profile=mount_profile)
     mount.add(stored.proposition_node(
         "shared", title="shared", claim=project_claim(claim),
         display_statement="concept:disease-stage affects protein:PHF19 (shared)"))
     # A second mounted proposition with no evidence anywhere: `next`'s readiness case.
-    fresh = build_claim(mount_profile, operator=plan.operator_for("affects", "concept", "protein"),
+    fresh = build_claim(mount_profile, operator=plan.row_for("affects", "concept", "protein").operator,
                         args=(Referent(sort=plan.sort_for("concept"), term="concept:disease-stage"),
                               Referent(sort=plan.sort_for("protein"), term="protein:EZH2")),
                         layer="causal", polarity="positive")

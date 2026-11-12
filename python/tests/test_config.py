@@ -107,11 +107,11 @@ def test_service_socket_must_be_a_string(tmp_path):
 def test_domains_compile_the_profile_the_session_binds(tmp_path):
     from beliefs.profile import shipped_base_contract
 
-    cfg = load_config(write_config(tmp_path, domains='["biology"]', coordination="false"))
+    cfg = load_config(write_config(tmp_path, domains='["general"]', coordination="false"))
     assert cfg.profile.base_contract_identity == shipped_base_contract().content_identity
-    assert set(cfg.profile.activated_contracts) == {"biology"}
+    assert set(cfg.profile.activated_contracts) == {"general"}
     # The operators the pack contributes are what activation is *for*.
-    assert any(name.startswith("biology/") for name in cfg.profile.operators)
+    assert any(name.startswith("general/") for name in cfg.profile.templates)
 
 
 def test_empty_domains_compile_the_shipped_base_alone(tmp_path):
@@ -198,7 +198,7 @@ def test_contracts_compile_into_the_profile(tmp_path):
     assert "testing" in cfg.profile.activated_contracts
     assert cfg.store_root == tmp_path / "store"
     (plan,) = cfg.plans
-    assert plan.operator_for("affects", "concept", "concept") == "testing/affects-concept-concept"
+    assert plan.row_for("affects", "concept", "concept").operator == "testing/affects-concept-concept"
 
 
 def _write_chain(tmp_path: Path) -> tuple[Path, Path, str]:
@@ -212,17 +212,15 @@ def _write_chain(tmp_path: Path) -> tuple[Path, Path, str]:
     genesis = parse_domain_contract(
         yaml.safe_load(v1_text)["contract"], source="v1", base=base, predecessor=None
     )
-    v2_text = v1_text.replace(
-        "  lineage: genesis\n", f'  lineage: {{successor: "{genesis.content_identity}"}}\n'
-    ).replace(
-        "  operators:\n    affects-concept-concept:",
-        "  operators:\n    regulates-concept-concept: {arity: 2, arg_sorts: [concept, concept], "
-        "sign_apt: true, layers: [causal], dimensions: []}\n    affects-concept-concept:",
-    ).replace(
-        "  operators:\n    - {predicate: affects",
-        "  operators:\n    - {predicate: regulates, subject: concept, object: concept, "
-        "operator: regulates-concept-concept}\n    - {predicate: affects",
-    )
+    document = yaml.safe_load(v1_text)
+    document["contract"]["lineage"] = {"successor": genesis.content_identity}
+    document["contract"]["templates"]["regulates-concept-concept"] = {
+        "roles": {"intervention": {"arity": "one"}, "response": {"arity": "one"}},
+        "sign_apt": True, "layers": ["causal"], "forms": ["polar"]}
+    document["plan"]["operators"].append({"predicate": "regulates", "subject": "concept",
+        "object": "concept", "operator": "regulates-concept-concept",
+        "roles": {"subject": "intervention", "object": "response"}})
+    v2_text = yaml.safe_dump(document)
     successor = parse_domain_contract(
         yaml.safe_load(v2_text)["contract"], source="v2", base=base, predecessor=genesis
     )
@@ -237,7 +235,7 @@ def test_a_contract_chain_compiles_to_the_successor_identity(tmp_path):
     cfg = load_config(write_config(tmp_path, contracts=f'[{{ document = "{v2}", predecessors = ["{v1}"] }}]'))
     assert cfg.profile.activated_contracts["testing"] == expected
     (plan,) = cfg.plans
-    assert plan.operator_for("regulates", "concept", "concept") == "testing/regulates-concept-concept"
+    assert plan.row_for("regulates", "concept", "concept").operator == "testing/regulates-concept-concept"
 
 
 def test_a_chain_listed_newest_first_refuses_by_name(tmp_path):
@@ -286,14 +284,12 @@ def _extend_chain(tmp_path: Path, v1: Path, v2: Path) -> tuple[Path, str]:
         previous = parse_domain_contract(
             yaml.safe_load(path.read_text())["contract"], source=str(path), base=base, predecessor=previous
         )
-    lineage = f"  lineage: {{successor: \"{previous.predecessor}\"}}\n"
-    v3_text = v2.read_text().replace(lineage, f'  lineage: {{successor: "{previous.content_identity}"}}\n')
-    assert v3_text != v2.read_text()
-    v3_text = v3_text.replace(
-        "  operators:\n    regulates-concept-concept:",
-        "  operators:\n    inhibits-concept-concept: {arity: 2, arg_sorts: [concept, concept], "
-        "sign_apt: true, layers: [causal], dimensions: []}\n    regulates-concept-concept:",
-    )
+    document = yaml.safe_load(v2.read_text())
+    document["contract"]["lineage"] = {"successor": previous.content_identity}
+    document["contract"]["templates"]["inhibits-concept-concept"] = {
+        "roles": {"intervention": {"arity": "one"}, "response": {"arity": "one"}},
+        "sign_apt": True, "layers": ["causal"], "forms": ["polar"]}
+    v3_text = yaml.safe_dump(document)
     successor = parse_domain_contract(
         yaml.safe_load(v3_text)["contract"], source="v3", base=base, predecessor=previous
     )
@@ -463,3 +459,16 @@ def test_read_store_roots_reject_resolved_duplicates(tmp_path, paths):
     refusal = assert_invalid_config(write_config(tmp_path, read_store_roots=paths))
     assert "read_store_roots" in refusal.message
     assert str(tmp_path) in refusal.message
+
+
+def test_only_activated_plans_are_profile_validated(tmp_path):
+    import yaml
+    from test_contracts import DOCUMENT
+    doc = yaml.safe_load(DOCUMENT % ("0" * 64))
+    doc["plan"]["operators"][0]["roles"] = {"subject": "missing", "object": "response"}
+    path = tmp_path / "reading.yaml"
+    path.write_text(yaml.safe_dump(doc))
+    cfg = load_config(write_config(tmp_path, extra=f'read_contracts = ["{path}"]\n'))
+    assert not cfg.plans
+    assert "testing" not in cfg.profile.activated_contracts
+    assert "roles" in assert_invalid_config(write_config(tmp_path, contracts=f'["{path}"]')).message

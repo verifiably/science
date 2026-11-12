@@ -28,7 +28,7 @@ from beliefs.world import WorldConfig
 from beliefs.world.registry import content_identity, load_manifest
 
 from science.refusal import Refusal, Refused, kernel_refusal
-from science.contracts import OperatorPlan, load_contract_chain, load_contract_document
+from science.contracts import OperatorPlan, validate_plan, load_contract_chain, load_contract_document
 from science.sharing import SharingRegistry, SharingRegistryMalformed
 
 _WORLD_ID_RE = re.compile(r"[0-9a-f]{32}")
@@ -279,6 +279,8 @@ def load_config(path: Path) -> ScienceConfig:
     except ProfileError as caught:
         _refuse(f"config contracts do not compile: {caught}")
     plans = tuple(plan for _, plan in local if plan is not None)
+    for plan in plans:
+        validate_plan(plan, profile)
     corpus_roots = tuple(located(value) for value in raw["corpus_roots"])
     if "write_root" in raw:
         write_root = located(raw["write_root"])

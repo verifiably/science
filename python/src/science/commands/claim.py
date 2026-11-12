@@ -36,7 +36,7 @@ def handle(ctx, writer, *, subject, predicate, object, layer, polarity, slug=Non
         _refuse("the config names no contract document with a plan; claim needs one")
     (plan,) = plans[:1]
     subject_kind, object_kind = _kind(subject), _kind(object)
-    operator = plan.operator_for(predicate, subject_kind, object_kind)
+    operator = plan.row_for(predicate, subject_kind, object_kind).operator
     if layer not in plan.layers:
         _refuse(f"layer {layer!r} is not in the plan")
     if polarity not in plan.polarities:
