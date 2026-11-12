@@ -271,8 +271,8 @@ def test_relocated_store_reads_and_new_dataset_write(relocated_store, certified_
     assert write_id != inherited_id
     before = store_snapshot(restored)
     ctx = ReadContext.open(cfg)
-    binding = cfg.profile.sorts["testing/concept"].vocabulary
-    assert ctx.snapshot().resolve(binding, "concept:disease-stage") is TermOutcome.MEMBER
+    binding = cfg.profile.sorts["testing/concept"]
+    assert ctx.snapshot(nodes=ctx.write_view().iter_stored(), observations=ctx.observations()).resolve(binding, "concept:disease-stage") is TermOutcome.MEMBER
     assert ctx.held_path(old_address).read_bytes() == old_bytes
     source = certified_work / "new.txt"
     source.write_bytes(b"new expression\n")
@@ -283,7 +283,7 @@ def test_relocated_store_reads_and_new_dataset_write(relocated_store, certified_
     assert ctx.held_path(new_address).is_relative_to(cfg.store_root)
     assert ctx.held_path(new_address).read_bytes() == source.read_bytes()
     assert all(o.location.startswith(f"store:{write_id}:") for o in ctx.observations()[new_address])
-    assert ctx.snapshot().resolve(binding, "concept:disease-stage") is TermOutcome.MEMBER
+    assert ctx.snapshot(nodes=ctx.write_view().iter_stored(), observations=ctx.observations()).resolve(binding, "concept:disease-stage") is TermOutcome.MEMBER
     assert ctx.held_path(old_address).read_bytes() == old_bytes
     assert store_snapshot(restored) == before
 

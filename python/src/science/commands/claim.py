@@ -4,15 +4,15 @@ from __future__ import annotations
 import re
 
 from beliefs import stored
-from beliefs.claim import Referent, build_claim
+from beliefs.claim import Member, Referent, build_claim
 from beliefs.decode import WireClaim, decode_claim
-from beliefs.errors import ClaimError, DecodeError, UnboundReferent
+from beliefs.errors import ScienceError, UnboundReferent
 from beliefs.projection import project_claim
-from beliefs.resolution import TermOutcome
 
 from science.refusal import Refusal, Refused
 from science.report import Report, record_block
-from science.vocabulary import dataset_bound_sorts
+from science.vocabulary import require_performed
+from science.authoring_records import session_records
 
 
 def _refuse(message: str):
@@ -36,7 +36,7 @@ def handle(ctx, writer, *, subject, predicate, object, layer, polarity, slug=Non
         _refuse("the config names no contract document with a plan; claim needs one")
     (plan,) = plans[:1]
     subject_kind, object_kind = _kind(subject), _kind(object)
-    operator = plan.row_for(predicate, subject_kind, object_kind).operator
+    row = plan.row_for(predicate, subject_kind, object_kind)
     if layer not in plan.layers:
         _refuse(f"layer {layer!r} is not in the plan")
     if polarity not in plan.polarities:
@@ -44,29 +44,29 @@ def handle(ctx, writer, *, subject, predicate, object, layer, polarity, slug=Non
     layer_term = plan.layers[layer]
     polarity_term = plan.polarities[polarity]  # None for a sign-inapt operator's not_applicable
     try:
-        claim = build_claim(ctx.config.profile, operator=operator,
-                            args=(Referent(sort=plan.sort_for(subject_kind), term=subject),
-                                  Referent(sort=plan.sort_for(object_kind), term=object)),
+        subject_ref = Referent(sort=plan.sort_for(subject_kind), term=subject)
+        object_ref = Referent(sort=plan.sort_for(object_kind), term=object)
+        subject_role, object_role = row.roles["subject"], row.roles["object"]
+        roles = ({subject_role: (Member(subject_ref), Member(object_ref))} if subject_role == object_role
+                 else {subject_role: subject_ref, object_role: object_ref})
+        claim = build_claim(ctx.config.profile, operator=row.operator, roles=roles,
                             layer=layer_term, polarity=polarity_term)
-    except ClaimError as caught:
-        _refuse(f"build_claim refused: {caught}")
-    projection = project_claim(claim)
-    snapshot = ctx.snapshot()
-    try:
-        _, receipt = decode_claim(WireClaim(**projection), profile=ctx.config.profile, snapshot=snapshot)
-    except UnboundReferent as caught:  # the one resolution outcome that refuses
+        projection = project_claim(claim)
+        with session_records(ctx) as records:
+            snapshot = ctx.authoring_snapshot(records=records)
+            _, receipt = decode_claim(WireClaim(**projection), profile=ctx.config.profile, snapshot=snapshot)
+            referents = {}
+            for name, value in claim.roles.items():
+                if isinstance(value, Referent):
+                    referents[f"role:{name}"] = value
+                else:
+                    referents.update({f"role:{name}[{i}]": member.referent for i, member in enumerate(value)})
+            require_performed(ctx.config.profile, receipt, referents)
+    except UnboundReferent as caught:
         _refuse(f"membership refused (not-member): {caught}")
-    except (ClaimError, DecodeError) as caught:
-        _refuse(f"claim refused at decode: {caught}")
-    bound = dataset_bound_sorts(ctx.config.profile)
-    for label, outcome in receipt.outcomes.items():
-        # Labels are `argument:<slot>` or `restriction:<dimension>`; only
-        # argument slots carry a sort from the plan.
-        role, _, where = label.partition(":")
-        sort = claim.args[int(where)].sort if role == "argument" else None
-        if sort in bound and outcome in (TermOutcome.NOT_CONSULTED, TermOutcome.NOT_AVAILABLE):
-            _refuse(f"sort {sort} binds vocabulary dataset:{bound[sort].dataset_identity}, which is not "
-                    "held here; hold it with `dataset` before typing a claim under it")
+    except ScienceError as caught:
+        raise Refused(Refusal("invalid-input", f"claim refused: {caught}",
+                              {"kind": type(caught).__name__})) from caught
     node = writer.add(stored.proposition_node(
         slug or _slug(subject, predicate, object), title=f"{subject} {predicate} {object}",
         claim=projection, display_statement=f"{subject} {predicate} {object}"))

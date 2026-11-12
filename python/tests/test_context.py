@@ -76,8 +76,8 @@ def test_mount_holding_refuses_a_record_no_mount_holds(certified_work):
 def test_snapshot_resolves_the_held_concept_vocabulary(certified_work):
     cfg = build_belief_world(certified_work)
     ctx = ReadContext.open(cfg)
-    snapshot = ctx.snapshot()
-    binding = cfg.profile.sorts["testing/concept"].vocabulary
+    snapshot = ctx.snapshot(nodes=ctx.write_view().iter_stored(), observations=ctx.observations())
+    binding = cfg.profile.sorts["testing/concept"]
     assert snapshot.resolve(binding, "concept:disease-stage") is TermOutcome.MEMBER
     assert snapshot.resolve(binding, "concept:absent") is TermOutcome.NOT_MEMBER
 
@@ -86,8 +86,9 @@ def test_snapshot_omits_a_vocabulary_that_is_not_held(certified_work):
     """The binding names a dataset; nothing holds it; the snapshot says so."""
     from helpers.world import build_fixture_world_with_contract
     cfg = build_fixture_world_with_contract(certified_work, hold_concepts=False)
-    snapshot = ReadContext.open(cfg).snapshot()
-    binding = cfg.profile.sorts["testing/concept"].vocabulary
+    ctx = ReadContext.open(cfg)
+    snapshot = ctx.snapshot(nodes=ctx.write_view().iter_stored(), observations=ctx.observations())
+    binding = cfg.profile.sorts["testing/concept"]
     assert snapshot.resolve(binding, "concept:disease-stage") is TermOutcome.NOT_AVAILABLE
 
 
@@ -207,8 +208,8 @@ def test_context_reads_inherited_store_and_keeps_write_identity(certified_work):
     ctx = ReadContext.open(cfg)
     assert ctx.store_id() == write_id != store_identity(inherited)
     assert ctx.held_path(concept_list_address()).is_relative_to(inherited)
-    binding = cfg.profile.sorts["testing/concept"].vocabulary
-    assert ctx.snapshot().resolve(binding, "concept:disease-stage") is TermOutcome.MEMBER
+    binding = cfg.profile.sorts["testing/concept"]
+    assert ctx.snapshot(nodes=ctx.write_view().iter_stored(), observations=ctx.observations()).resolve(binding, "concept:disease-stage") is TermOutcome.MEMBER
 
 
 @pytest.mark.parametrize("method", ["snapshot", "evaluate", "gather_inputs"])
@@ -255,16 +256,101 @@ def test_snapshot_does_not_fall_back_after_bad_copy(certified_work, monkeypatch,
     monkeypatch.setattr(Path, "read_bytes", read_without_fallback)
     stores = {"1" * 32: bad, "2" * 32: cfg.store_root}
     if damage == "io":
-        with pytest.raises(FileNotFoundError):
-            snapshot(cfg.profile, ctx.read_views(), stores, observations)
+        with pytest.raises(Refused):
+            snapshot(cfg.profile, ctx.write_view().iter_stored(), stores, observations)
     else:
-        result = snapshot(cfg.profile, ctx.read_views(), stores, observations)
-        binding = cfg.profile.sorts["testing/concept"].vocabulary
+        result = snapshot(cfg.profile, ctx.write_view().iter_stored(), stores, observations)
+        binding = cfg.profile.sorts["testing/concept"]
         assert result.resolve(binding, "concept:disease-stage") is TermOutcome.NOT_AVAILABLE
 
 
 def test_snapshot_without_found_observations_is_unreadable(certified_work):
     cfg = build_belief_world(certified_work)
-    binding = cfg.profile.sorts["testing/concept"].vocabulary
-    assert ReadContext.open(cfg).snapshot(observations={}).resolve(
+    binding = cfg.profile.sorts["testing/concept"]
+    ctx = ReadContext.open(cfg)
+    assert ctx.snapshot(nodes=ctx.write_view().iter_stored(), observations={}).resolve(
         binding, "concept:disease-stage") is TermOutcome.NOT_AVAILABLE
+
+
+def _world_kind_contract(monkeypatch):
+    import helpers.world as world
+    monkeypatch.setattr(world, "TEST_CONTRACT", world.TEST_CONTRACT.replace(
+        "  sorts:\n", "  sorts:\n    witness:\n      binding: {kind: world-kind, world_kind: procedure}\n", 1))
+
+
+@pytest.mark.parametrize("excluded", ["retired", "rejected", "unmounted"])
+def test_authoring_snapshot_scope_excludes_non_session_holders(certified_work, monkeypatch, excluded):
+    from beliefs.root import open_corpus, open_world
+    from helpers.analysis import analysis_nodes
+    from helpers.world import FIXTURE_AUTHORITY, build_two_corpus_world, archive_config
+    from science.authoring_records import session_records
+    _world_kind_contract(monkeypatch)
+    cfg = build_two_corpus_world(certified_work)
+    archive = archive_config(cfg)
+    node = open_corpus(archive.write_root, authority=FIXTURE_AUTHORITY, profile=archive.profile).add(analysis_nodes(archive.profile)[0])
+    other = ReadContext.open(cfg).mount_holding(node.id).corpus_id
+    if excluded == "retired":
+        open_world(cfg.world, authority=FIXTURE_AUTHORITY).retire(other)
+    elif excluded == "rejected":
+        from beliefs.coordination import CoordinationAddress
+        from beliefs.intents.publish import Destination, PublishIntent
+        from beliefs.publication import marker_record
+        from beliefs.publication_arrival import require_publication_layout
+        from beliefs.root import init_corpus_root
+        from beliefs.world import Fresh
+        from nodes.core.corpus import Corpus
+        root = certified_work / "publication"
+        init_corpus_root(root, authority=FIXTURE_AUTHORITY)
+        writer = open_corpus(root, authority=FIXTURE_AUTHORITY, profile=cfg.profile)
+        writer.adopt_manifest(profile=ReadContext.open(cfg).pins())
+        open_world(cfg.world, authority=FIXTURE_AUTHORITY).admit(root, provenance=Fresh())
+        node = writer.add(analysis_nodes(cfg.profile)[0])
+        intent = PublishIntent("publish", "a" * 32, "fixture", "2026-11-12T00:00:00Z",
+            CoordinationAddress("b" * 32, revision="c" * 32), Destination.local(str(root)), (), (), ())
+        marker = marker_record(intent, world_id="d" * 32, epoch="e" * 64, selection=(node.id,))
+        Corpus(root).add(marker)
+        require_publication_layout(tuple(ReadContext.open(dataclasses.replace(cfg, write_root=root,
+            world=dataclasses.replace(cfg.world, corpus_roots=(root,)))).write_view().iter_stored()))
+        cfg = dataclasses.replace(cfg, world=dataclasses.replace(cfg.world,
+            corpus_roots=cfg.world.corpus_roots + (root,)))
+    else:
+        cfg = dataclasses.replace(cfg, coordination=None)
+    ctx = ReadContext.open(cfg)
+    with session_records(ctx) as records:
+        result = ctx.authoring_snapshot(records=records)
+        assert result.resolve(cfg.profile.sorts["testing/witness"], node.id) is TermOutcome.NOT_MEMBER
+    if excluded == "rejected":
+        # An accepted equal copy can supply membership despite the rejected carrier.
+        Corpus(cfg.write_root).add(node)
+        ctx = ReadContext.open(cfg)
+        with session_records(ctx) as records:
+            assert ctx.authoring_snapshot(records=records).resolve(
+                cfg.profile.sorts["testing/witness"], node.id) is TermOutcome.MEMBER
+
+
+def test_read_snapshot_scope_uses_only_selected_capture(certified_work, monkeypatch):
+    from beliefs.root import open_corpus
+    from helpers.analysis import bootstrap_analysis, analysis_nodes
+    from helpers.world import FIXTURE_AUTHORITY, build_two_corpus_world
+    from science.world_belief import publish_session_epoch
+    _world_kind_contract(monkeypatch)
+    cfg = build_two_corpus_world(certified_work)
+    bootstrap_analysis(cfg)
+    candidate = analysis_nodes(cfg.profile)[0].id
+    # Stop after actual context/snapshot construction until Task 6's keyed seam.
+    monkeypatch.setattr("science.closure.evaluate", lambda view, prop, **kw: kw["resolution"])
+    local = dataclasses.replace(cfg, coordination=None)
+    result = ReadContext.open(local).evaluate("proposition:archived")
+    assert result.resolve(cfg.profile.sorts["testing/witness"], candidate) is TermOutcome.NOT_MEMBER
+    publish_session_epoch(cfg)
+    result = ReadContext.open(cfg).evaluate("proposition:archived")
+    assert result.resolve(cfg.profile.sorts["testing/witness"], candidate) is TermOutcome.MEMBER
+    from dataclasses import replace
+    from beliefs import stored
+    from beliefs.procedure import procedure_from_stored
+    later = stored.procedure_node(replace(procedure_from_stored(analysis_nodes(cfg.profile)[0]), name="Later"))
+    open_corpus(cfg.write_root, authority=FIXTURE_AUTHORITY, profile=cfg.profile).add(later)
+    assert result.resolve(cfg.profile.sorts["testing/witness"], later.id) is TermOutcome.NOT_MEMBER
+    with pytest.raises(Refused) as caught:
+        ReadContext.open(cfg).evaluate("proposition:archived")
+    assert caught.value.refusal.code == "epoch-stale"
