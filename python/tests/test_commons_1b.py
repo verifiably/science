@@ -65,7 +65,7 @@ def test_belief_under_empty_accept_lists_two_excluded_lines(overlapping):
         f"excluded {own['assessment']} ({carrier.corpus_id})":
             f"corpus {carrier.corpus_id}; world {overlapping.b.world.world_id}",
     }
-    gathered = ReadContext.open(overlapping.a).gather_inputs(ids["proposition"])
+    gathered = ReadContext.open(overlapping.a).gather_inputs(ids["proposition"], key=ids["key"])
     assert [item.identity() for item in gathered.assessments] == [_identity(overlapping.a, ids["assessment"])]
 
 
@@ -79,7 +79,7 @@ def test_belief_under_accept_b_counts_as_own_assessment_through_the_write_root(o
         f"excluded {ids['assessment']} ({carrier.corpus_id})":
             f"corpus {carrier.corpus_id}; copy of a record that counts through corpus {corpus_id_at(accepting.write_root)}",
     }
-    gathered = ReadContext.open(accepting).gather_inputs(ids["proposition"])
+    gathered = ReadContext.open(accepting).gather_inputs(ids["proposition"], key=ids["key"])
     assert sorted(item.identity() for item in gathered.assessments) == sorted([
         _identity(accepting, ids["assessment"]), _identity(accepting, own["assessment"]),
     ])
@@ -108,7 +108,7 @@ def test_b_adopting_the_update_keeps_p1_by_dependency_and_show_says_why(b_update
     accepting = replace(b_updated.b, accept=(ids["world"],))
     ctx = ReadContext.open(accepting)
     assert ctx.cited(ids["assessment"]).corpus_id == first.corpus_id
-    gathered = ctx.gather_inputs(ids["proposition"])
+    gathered = ctx.gather_inputs(ids["proposition"], key=ids["key"])
     assessment = _identity(accepting, ids["assessment"])
     assert sum(item.identity() == assessment for item in gathered.assessments) == 1
     assert sum(item.assessment == assessment for item in gathered.verifications) == 1
@@ -143,7 +143,7 @@ def test_both_sides_gather_equal_identities_for_the_shared_records(b_updated):
         world = ctx.world_read().view
         contents.append({address: content_identity(world.get(address)) for address in _shared(ids)})
         assert all(len(world.holders_of(address)) == 2 for address in _shared(ids))
-        gathered = ctx.gather_inputs(ids["proposition"])
+        gathered = ctx.gather_inputs(ids["proposition"], key=ids["key"])
         assessments.append(sorted(item.identity() for item in gathered.assessments))
         for key in ("dataset", "run"):
             assert gathered.node_corpus[ids[key]] == world.holders_of(ids[key])

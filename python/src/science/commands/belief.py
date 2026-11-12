@@ -5,12 +5,13 @@ from __future__ import annotations
 from beliefs.belief import Belief, NoBelief
 
 from science.acceptance import acceptance_inputs, explain
+from science.closure import select_answer
 from science.report import Heading, KeyVals, Report
 
 
 def handle(ctx, *, proposition, key=None) -> Report:
     ctx.mount_holding(proposition)  # refuses an absent proposition or differing copies
-    answer = ctx.evaluate(proposition, key=key)
+    selected, answer = select_answer(ctx.claim_view(proposition), key)
     if isinstance(answer, Belief):
         pairs = (("kind", "Belief"), ("value", str(answer.value)),
                  ("belief_input_digest", answer.belief_input_digest),
@@ -19,6 +20,8 @@ def handle(ctx, *, proposition, key=None) -> Report:
         pairs = (("kind", "NoBelief"), ("reason", answer.reason), ("detail", answer.detail))
     else:
         pairs = (("kind", "Refused"), ("reason", answer.reason))
+    if selected is not None:
+        pairs = (("key", selected), *pairs)
     report = (Heading(f"Belief: {proposition}"), KeyVals("answer", pairs))
     if answer.acceptance is None:
         return report

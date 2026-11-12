@@ -104,3 +104,17 @@ def refreeze_spec(cfg: ScienceConfig, spec, *, supersedes=None, **overrides):
             rule_procedures={b.rule: b.procedure for b in spec.rule_bindings if b.procedure is not None},
             profile=cfg.profile, claim=claim, records=records,
             assessment_dependency=records.assessment_dependency, supersedes=supersedes)
+
+
+def assess_target(cfg, work, *, reference=Decimal("0.5"), target="proposition:p1", outcome="supported"):
+    """A real spec and completed minimal-policy run, then the public assessment command."""
+    from helpers.world import hold_fixture_dataset, fixture_bundle, mint_fixture_run, open_rig, OBSERVED
+    data = hold_fixture_dataset(cfg, "data.txt", f"{reference} {outcome}\n".encode(), "expression", **OBSERVED)
+    inputs = spec_inputs(cfg, target=target, dataset=data)
+    inputs["estimand"] = str(write_estimand_document(cfg, reference=reference))
+    with open_rig(cfg, ("spec",)) as (d, _):
+        spec = next(t for t in d.invoke("spec", inputs).text.split() if t.startswith("analysis-spec:"))
+    run = mint_fixture_run(cfg, spec, data, fixture_bundle(work, outcome))
+    with open_rig(cfg, ("assess",)) as (d, ctx):
+        ref = next(t for t in d.invoke("assess", {"run": run}).text.split() if t.startswith("assessment:"))
+        return ref, stored.assessment_value(ctx.write_view().get(ref), profile=cfg.profile)

@@ -219,7 +219,7 @@ def test_verify_refuses_colliding_multi_input_spec_cleanly_as_invalid_input(rig)
             ))
     writer = open_corpus(ctx.config.write_root, authority=FIXTURE_AUTHORITY, profile=ctx.config.profile)
     writer.add(stored.analysis_spec_node(two_role_spec))
-    synthetic_assessment = writer.add(stored.assessment_node(
+    synthetic = stored.assessment_node(
         "multiinput000001",
         title="synthetic multi-input assessment",
         spec=two_role_spec.identity,
@@ -227,9 +227,16 @@ def test_verify_refuses_colliding_multi_input_spec_cleanly_as_invalid_input(rig)
         proposition=existing_assessment.proposition,
         outcome=existing_assessment.outcome,
         interpretation_rule=existing_assessment.interpretation_rule,
-        estimand=existing_assessment.estimand,
-        applicability=existing_assessment.applicability,
-    )).id
+        target=two_role_spec.assessed_target,
+    )
+    from beliefs.errors import EligibilityUnmet
+    from nodes.core.corpus import Corpus
+    # The native authoring gate correctly rejects this spec/run mismatch.
+    # Raw audit evidence still exercises verify's pre-execution collision guard.
+    with pytest.raises(EligibilityUnmet, match="standing-route-mismatch"):
+        writer.add(synthetic)
+    Corpus(ctx.config.write_root).add(synthetic)
+    synthetic_assessment = synthetic.id
 
     with pytest.raises(Refused) as caught:
         d.invoke("verify", {"assessment": synthetic_assessment, "code": str(code), "entrypoint": entrypoint})

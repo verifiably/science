@@ -46,7 +46,7 @@ def _inputs_held(ctx, mounts, spec) -> bool:
     return True
 
 
-def _classify(ctx, proposition: str) -> tuple[str, str | None]:
+def _classify(ctx, proposition: str) -> tuple[str, str | None, tuple[str, ...]]:
     """The class rule, and the reason an assessed row is unevaluated.
     A mounted session scans every session corpus and judges
     admission at the current epoch. Without read mounts the rule is today's,
@@ -56,23 +56,31 @@ def _classify(ctx, proposition: str) -> tuple[str, str | None]:
     if not _assessed(ctx, mounts, proposition):
         everywhere = ctx.mounts()
         held = any(_inputs_held(ctx, everywhere, spec) for spec in _targeting_specs(mounts, proposition))
-        return ("ready" if held else "not-ready"), None
+        return ("ready" if held else "not-ready"), None, ()
     try:
-        inputs = ctx.gather_inputs(proposition)
+        discovered = ctx.claim_view(proposition)
+        keys = tuple(sorted(discovered.beliefs))
+        if len(keys) > 1:
+            return "assessed-unevaluated", "multiple-assessed-propositions", keys
+        if not keys:
+            if discovered.claim_answer is not None and discovered.claim_answer.reason.startswith(("unavailable-", "input-outside-corpus")):
+                return "assessed-unevaluated", discovered.claim_answer.reason, ()
+            return "assessed-not-admitted", None, ()
+        inputs = ctx.gather_inputs(proposition, key=keys[0])
     except Refused as caught:
         if caught.refusal.code in EPOCH_CODES:
-            return "assessed-unevaluated", caught.refusal.code
+            return "assessed-unevaluated", caught.refusal.code, ()
         raise
     except InputOutsideCorpus:
         # Cross-corpus evidence read where the session has no read mounts
         # cannot see the lineage through the corpus-local read.
-        return "assessed-unevaluated", "input-outside-corpus"
-    observations = ctx.observations()
+        return "assessed-unevaluated", "input-outside-corpus", ()
+    observations = ctx.evaluation_observations(proposition)
     for assessment in inputs.assessments:
         run = inputs.runs.get(assessment.run)
-        if run is not None and isinstance(admit(assessment, run, observations, inputs.verifications), Admitted):
-            return "admitted", None
-    return "assessed-not-admitted", None
+        if run is not None and isinstance(admit(assessment, run, observations, inputs.verifications, inputs.dependencies), Admitted):
+            return "admitted", None, ()
+    return "assessed-not-admitted", None, ()
 
 
 def classify(ctx, proposition: str) -> str:
@@ -148,11 +156,11 @@ def handle(ctx, *, limit=None) -> Report:
         # A selected record that is not a proposition is not a row.
         nodes = [node for node in (next(m.view.get(ref) for m in mounts if m.view.holds(ref))
                                    for ref in live.selected) if node.kind == "proposition"]
-    rows = sorted((CLASSES.index(cls), node.id, stored.display_statement(node) or node.title, reason)
-                  for node in nodes for cls, reason in (_classify(ctx, node.id),))
+    rows = sorted((CLASSES.index(cls), node.id, stored.display_statement(node) or node.title, reason, keys)
+                  for node in nodes for cls, reason, keys in (_classify(ctx, node.id),))
     shown = rows[: (limit or 10)]
     blocks.append(KeyVals("propositions",
-                          tuple((pid, f"{CLASSES[c]} ({reason}): {statement}" if reason
-                                 else f"{CLASSES[c]}: {statement}") for c, pid, statement, reason in shown)
+                          tuple((pid, f"{CLASSES[c]} ({reason}): {statement}" + (f"; keys: {', '.join(keys)}; inspect science belief --proposition {pid} --key <key>" if keys else "") if reason
+                                 else f"{CLASSES[c]}: {statement}") for c, pid, statement, reason, keys in shown)
                           or (("none", "no propositions"),)))
     return tuple(blocks)

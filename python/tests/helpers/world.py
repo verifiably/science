@@ -796,6 +796,8 @@ def walk_belief_path(work: Path, *, confined: bool) -> tuple[ScienceConfig, str]
             monkeypatch.setattr(run_module, "POLICY", MINIMAL_POLICY)
             monkeypatch.setattr(run_module, "host_prerequisites", lambda: None)
         cfg = build_fixture_world_with_contract(work)
+        from helpers.analysis import bootstrap_analysis
+        bootstrap_analysis(cfg)
         code, entrypoint, targets = fixture_bundle(work, "supported")
         data = work / "data.txt"
         data.write_bytes(b"x\n")

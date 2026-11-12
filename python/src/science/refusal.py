@@ -14,7 +14,7 @@ CODES = frozenset({
     "unknown-command", "invalid-input", "permit-exceeded", "outcome-unknown",
     "unknown-cursor", "stale-cursor", "input-mismatch", "kernel-refused",
     "no-current-project", "unknown-project", "ambiguous-project",
-    "no-epoch", "epoch-stale",
+    "no-epoch", "epoch-stale", "multiple-assessed-propositions",
     "pin-unsourced", "world-mismatch", "adopt-conflict", "corpus-retired", "divergent-publication", "config-stale",
 })
 INVOCATION_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")

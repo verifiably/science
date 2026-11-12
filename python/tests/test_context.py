@@ -221,7 +221,12 @@ def test_snapshot_refuses_unconfigured_observation(certified_work, method):
     init_store_root(fresh, authority=FIXTURE_AUTHORITY)
     ctx = ReadContext.open(dataclasses.replace(cfg, store_root=fresh))
     with pytest.raises(Refused) as caught:
-        getattr(ctx, method)(*(() if method == "snapshot" else ("proposition:p1",)))
+        if method == "snapshot":
+            ctx.snapshot(nodes=ctx.write_view().iter_stored(), observations=ctx.observations())
+        elif method == "gather_inputs":
+            ctx.gather_inputs("proposition:p1", key="explicit-unmatched")
+        else:
+            ctx.evaluate("proposition:p1")
     assert caught.value.refusal.code == "invalid-input"
 
 
@@ -331,19 +336,35 @@ def test_authoring_snapshot_scope_excludes_non_session_holders(certified_work, m
 def test_read_snapshot_scope_uses_only_selected_capture(certified_work, monkeypatch):
     from beliefs.root import open_corpus
     from helpers.analysis import bootstrap_analysis, analysis_nodes
-    from helpers.world import FIXTURE_AUTHORITY, build_two_corpus_world
+    from helpers.world import FIXTURE_AUTHORITY, build_two_corpus_world, archive_config
     from science.world_belief import publish_session_epoch
     _world_kind_contract(monkeypatch)
     cfg = build_two_corpus_world(certified_work)
     bootstrap_analysis(cfg)
     candidate = analysis_nodes(cfg.profile)[0].id
-    # Stop after actual context/snapshot construction until Task 6's keyed seam.
-    monkeypatch.setattr("science.closure.evaluate", lambda view, prop, **kw: kw["resolution"])
+    from helpers.analysis import assess_target
+    archive = archive_config(cfg)
+    bootstrap_analysis(archive)
+    _, assessment = assess_target(archive, certified_work, target="proposition:archived")
+    import science.closure as closure
+    gather = closure.gather_inputs
+    captures = []
+    def captured(view, proposition, **arguments):
+        result = gather(view, proposition, **arguments)
+        captures.append(arguments["resolution"])
+        return result
+    monkeypatch.setattr(closure, "gather_inputs", captured)
     local = dataclasses.replace(cfg, coordination=None)
-    result = ReadContext.open(local).evaluate("proposition:archived")
+    ctx = ReadContext.open(local)
+    ctx.gather_inputs("proposition:archived", key=assessment.key())
+    assert ctx.evaluate("proposition:archived", key=assessment.key()).reason == "no-eligible-assessment"
+    result = captures[-1]
     assert result.resolve(cfg.profile.sorts["testing/witness"], candidate) is TermOutcome.NOT_MEMBER
     publish_session_epoch(cfg)
-    result = ReadContext.open(cfg).evaluate("proposition:archived")
+    ctx = ReadContext.open(cfg)
+    ctx.gather_inputs("proposition:archived", key=assessment.key())
+    assert ctx.evaluate("proposition:archived", key=assessment.key()).reason == "no-eligible-assessment"
+    result = captures[-1]
     assert result.resolve(cfg.profile.sorts["testing/witness"], candidate) is TermOutcome.MEMBER
     from dataclasses import replace
     from beliefs import stored

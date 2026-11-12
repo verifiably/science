@@ -191,7 +191,8 @@ def test_at_a_current_epoch_belief_counts_the_write_roots_assessment_of_a_mounte
     assessment = _walk(cfg, mounted, certified_work)
     publish_session_epoch(cfg)
     ctx = ReadContext.open(cfg)
-    inputs = ctx.gather_inputs("proposition:shared")
+    key = stored.assessment_value(ctx.write_view().get(assessment), profile=cfg.profile).key()
+    inputs = ctx.gather_inputs("proposition:shared", key=key)
     local = stored.assessment_value(ctx.write_view().get(assessment), profile=cfg.profile).identity()
     held = stored.assessment_value(ctx.cited(mounted["assessment"]).view.get(mounted["assessment"]),
                                    profile=cfg.profile).identity()
@@ -205,18 +206,18 @@ def test_a_world_read_finds_the_observations_once_per_context(shared, monkeypatc
     are one computation per context, however many propositions it evaluates."""
     cfg, _ = shared
     publish_session_epoch(cfg)
-    found = ReadContext.observations
+    import science.holdings as holdings
+    found = holdings.found_observations
     calls = []
-
-    def counted(self):
+    def counted(views, world):
         calls.append(None)
-        return found(self)
-
-    monkeypatch.setattr(ReadContext, "observations", counted)
+        return found(views, world)
+    monkeypatch.setattr(holdings, "found_observations", counted)
     ctx = ReadContext.open(cfg)
     for proposition in ("proposition:shared", "proposition:fresh"):
         ctx.evaluate(proposition)
-        ctx.gather_inputs(proposition)
+        for key in ctx.claim_view(proposition).beliefs:
+            ctx.gather_inputs(proposition, key=key)
     assert len(calls) == 1
 
 

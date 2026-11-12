@@ -68,9 +68,9 @@ def test_the_unselected_session_reads_both_corpora_as_a_project_of_every_kind_do
     assert unselected == selected and "proposition:archived" in unselected
 
 
-def test_next_opens_each_root_once_and_reduces_observations_once_however_many_rows(world, monkeypatch):
+def test_next_opens_each_root_once_and_reduces_each_capture_once_however_many_rows(world, monkeypatch):
     """a read command's context opens every configured root once
-    and reduces the holdings once, rather than per row and per spec."""
+    and reduces live queue inputs and captured epoch inputs once each."""
     import science.config
     import science.holdings
     from beliefs.corpus import ReadView
@@ -99,7 +99,7 @@ def test_next_opens_each_root_once_and_reduces_observations_once_however_many_ro
                 patch.setattr(science.holdings, "reduced_observations", counting_reduce)
                 assert _rows(d.invoke("next", {}).text).count("\n") == 3
             assert sorted(map(str, opened)) == sorted(map(str, world.world.corpus_roots))
-            assert reduced == [2]
+            assert reduced == [2, 2]
 
 
 def test_belief_answers_for_each_corpus_proposition_whatever_is_selected(world):
@@ -113,7 +113,9 @@ def test_belief_answers_for_each_corpus_proposition_whatever_is_selected(world):
     for proposition in ("proposition:archived", "proposition:claimed"):
         report = belief(ctx, proposition=proposition)
         assert report[0].text == f"Belief: {proposition}"
-        assert dict(report[1].pairs) == {"kind": "NoBelief", "reason": "no-eligible-assessment", "detail": ""}
+        answer = dict(report[1].pairs)
+        (key,) = ctx.claim_view(proposition).beliefs
+        assert answer == {"key": key, "kind": "NoBelief", "reason": "no-eligible-assessment", "detail": ""}
 
 
 def test_the_walked_write_path_minted_every_record_in_the_write_root(world):
@@ -274,6 +276,7 @@ def test_each_corpus_lineage_reaches_the_evaluator(world):
     from beliefs.dataset import dataset_address
     ctx = ReadContext.open(world)
     for proposition in ("proposition:archived", "proposition:claimed"):
-        inputs = ctx.gather_inputs(proposition)
+        (key,) = ctx.claim_view(proposition).beliefs
+        inputs = ctx.gather_inputs(proposition, key=key)
         read = {dataset_address(i.dataset) for run in inputs.runs.values() for i in run.inputs}
         assert read and read <= set(inputs.snapshot.roots)

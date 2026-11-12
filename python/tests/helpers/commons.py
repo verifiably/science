@@ -13,6 +13,7 @@ from pathlib import Path
 
 import pytest
 
+from beliefs import stored
 from beliefs.consulted import CorpusPins
 from beliefs.profile import compile_profile, shipped_base_contract, shipped_coordination, shipped_domain_contract
 from beliefs.root import init_corpus_root, init_store_root, init_world_root, open_corpus, open_world
@@ -261,6 +262,7 @@ def a_identity(a: ScienceConfig, *, binding_destination: str | None = None) -> d
     assert view.holds(dataset), f"A holds no dataset {dataset}"
     ids = {"proposition": only("proposition"), "dataset": dataset, "spec": only("analysis-spec"),
            "run": only("run"), "assessment": only("assessment"), "world": a.world.world_id}
+    ids["key"] = stored.assessment_value(view.get(ids["assessment"]), profile=a.profile).key()
     from science.coordination import tip_nodes
     resolver = ReadContext.open(a).coordination()
     bindings = [node for resolved in resolver.standing("publication-binding").values()
