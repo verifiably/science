@@ -44,10 +44,12 @@ reproduce this build.
 | Sibling | Git revision |
 | --- | --- |
 | beliefs | `dadc5fb763a47c8c10333633fb5a26b099d5fe15` |
-| atoms | `a4d414b924c0f939056c4f63b3c902e7e5c4809d` |
-| nodes | `d8c73b2321e30bc563782fbab517630bae1d631a` |
+| atoms | `2329cc1773bf4479e369c02e34160e824ae2b541` |
+| nodes | `e1cc8d6aa2baa6cb941c25c758fd99e074353491` |
 
-To upgrade, choose and record a replacement tuple, align the local sibling
+To upgrade, choose and record a replacement tuple. Verify that each exact commit
+is published and resolvable in its GitHub repository before accepting the tuple;
+a local commit alone cannot supply a hosted checkout. Align the local sibling
 checkouts (isolated sibling worktrees are supported), then run `uv sync --frozen`
 from `python/`. Confirm installed editable source paths and Git revisions before
 using test results. Update all three CI refs together, run affected focused checks,
