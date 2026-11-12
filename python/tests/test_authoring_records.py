@@ -246,3 +246,28 @@ def test_model_eligibility_checks_actual_input_content_digests(certified_work, m
     with session_records(ReadContext.open(cfg)) as records:
         verdict = closure_eligibility((node.id,), records, cfg.profile).verdicts[node.id]
         assert isinstance(verdict, Eligible if missing is None else Ineligible)
+
+
+def test_crosswalk_lookup_supports_both_scale_directions(certified_work, monkeypatch):
+    from fractions import Fraction
+    import helpers.world as world
+    from beliefs.assumptions import AssumptionInstance
+    from beliefs.measurement import Observable
+    from beliefs.procedure import procedure_from_stored, Scale
+    from beliefs.proxy_model import ProxyModel, ProxySource, ProxyTarget, Crosswalk, Conversion, Error
+    from beliefs.root import open_corpus
+    from science.authoring_records import session_records
+    monkeypatch.setattr(world, "TEST_CONTRACT", world.TEST_CONTRACT.replace(
+        "  measurements:\n", "  assumption_kinds:\n    crosswalk-validity:\n      collapses: Synthetic crosswalk validity.\n      particulars: [record]\n  measurements:\n"))
+    cfg = build_belief_world(certified_work)
+    writer = open_corpus(cfg.write_root, authority=FIXTURE_AUTHORITY, profile=cfg.profile)
+    first = analysis_nodes(cfg.profile)[0]
+    second = writer.add(stored.procedure_node(replace(procedure_from_stored(first), name="Other scale",
+        scale=Scale(Fraction(0), Fraction(10), "higher-is-more"))))
+    obs = Observable("general/relative-abundance", "testing/protein")
+    proxy = writer.add(stored.proxy_model_node(ProxyModel(ProxySource(obs, first.id), ProxyTarget(None, second.id), {},
+        AssumptionInstance("testing/crosswalk-validity", {"record": "synthetic"}),
+        Crosswalk({"population": "synthetic"}, Conversion("multiplicative", Fraction(10), None), Error("absolute", Fraction(0))))))
+    with session_records(ReadContext.open(cfg)) as records:
+        assert records.crosswalks(first.id, second.id) == (proxy.id,)
+        assert records.crosswalks(second.id, first.id) == (proxy.id,)

@@ -137,3 +137,8 @@ def test_restriction_reader_keeps_native_string_bounds(source):
         {"unit": "testing/hour", "low": 1.25, "low_closed": True, "high_closed": False}]}}
     with pytest.raises(ScienceError):
         read(source)
+
+
+def test_named_output_reference_can_be_named_kind(source):
+    source[2]["reference"] = {"kind": {"kind": "value", "value": 0}}
+    assert read(source).reference == {"kind": ValueReference(Decimal(0))}

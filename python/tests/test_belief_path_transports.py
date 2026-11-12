@@ -1,3 +1,4 @@
+from helpers.analysis import spec_inputs
 import io
 import json
 import socket
@@ -6,7 +7,7 @@ from contextlib import contextmanager
 
 import pytest
 
-from helpers.world import SPEC_FIELDS, build_fixture_world_with_contract, write_config_for
+from helpers.world import (build_fixture_world_with_contract, write_config_for)
 from test_mcp import rpc
 
 
@@ -85,6 +86,8 @@ def test_cli_write_routes_through_the_service_and_refuses_with_the_json_line(wor
     from science.serve import serve
     from science.config import load_config
     cfg, _ = world
+    from helpers.analysis import bootstrap_analysis
+    bootstrap_analysis(cfg)
     named = tmp_path / "svc.sock"
     cfg_path = write_config_for(cfg, service_socket=named)
     server = serve(load_config(cfg_path), named)
@@ -149,6 +152,8 @@ def test_every_write_reaches_its_transport_and_renders_the_canonical_report(worl
         monkeypatch.setattr(run_module, "POLICY", MINIMAL_POLICY)
         monkeypatch.setattr(run_module, "host_prerequisites", lambda: None)
     cfg, _ = world
+    from helpers.analysis import bootstrap_analysis
+    bootstrap_analysis(cfg)
     named = tmp_path / "svc.sock"
     cfg_path = write_config_for(cfg, service_socket=named)
     code, entrypoint, targets = fixture_bundle(tmp_path, "supported")
@@ -168,7 +173,7 @@ def test_every_write_reaches_its_transport_and_renders_the_canonical_report(worl
         output = capsys.readouterr()
         dataset = _ref_in(output.out, "dataset:")
         assert output.out == _canonical(cfg, json.loads(output.err)["invocation_id"])
-    result = mcp_call(cfg_path, "spec", dict(SPEC_FIELDS, target=prop, dataset=dataset))
+    result = mcp_call(cfg_path, "spec", spec_inputs(cfg, target=prop, dataset=dataset))
     spec_text = result["content"][0]["text"]
     spec = _ref_in(spec_text, "analysis-spec:")
     assert spec_text == _canonical(cfg, result["structuredContent"]["invocation_id"])
@@ -184,7 +189,7 @@ def test_every_write_reaches_its_transport_and_renders_the_canonical_report(worl
     _ref_in(assess_text, "assessment:")
     assert assess_text == _canonical(cfg, result["structuredContent"]["invocation_id"])
     # spec's refusal through MCP.
-    result = mcp_call(cfg_path, "spec", dict(SPEC_FIELDS, target=prop, dataset=dataset, interpretation_rule="nope/v9"))
+    result = mcp_call(cfg_path, "spec", spec_inputs(cfg, target=prop, dataset=dataset, interpretation_rule="nope/v9"))
     assert result["isError"] is True and result["structuredContent"]["refusal"]["code"] == "invalid-input"
 
 

@@ -1,3 +1,4 @@
+from helpers.analysis import spec_inputs
 import hashlib
 import json
 import secrets
@@ -438,13 +439,7 @@ def unhold_fixture_dataset(cfg: ScienceConfig, ref: str) -> None:
 OBSERVED = {"empirical_observation": {"locator": "accession:GSE-FIXTURE", "attested_by": "fixture"}}
 
 
-SPEC_FIELDS = {"contrast": "levels", "slot": 0, "baseline": "level:early", "comparison": "level:late",
-               "measure": "measure:tpm", "scale": "additive", "reference": "0",
-               "identification": "identification:observational",
-               "method": "rank comparison", "assumptions": "independent samples",
-               "falsification": "no difference at alpha",
-               "interpretation_rule": "beliefs/outcome-file/v1",
-               "equivalence_rule": "beliefs/content-identity-equality/v1"}
+
 
 
 @contextmanager
@@ -597,9 +592,11 @@ def add_archived_assessment(cfg: ScienceConfig, work: Path) -> None:
     with the archive as write root. `next` then reads it assessed-not-admitted.
     """
     archived = archive_config(cfg)
+    from helpers.analysis import bootstrap_analysis
+    bootstrap_analysis(archived)
     data = hold_fixture_dataset(archived, "data.txt", b"x\n", "expression", **OBSERVED)
     with open_rig(archived, ("spec",)) as (d, _):
-        out = d.invoke("spec", dict(SPEC_FIELDS, target="proposition:archived", dataset=data))
+        out = d.invoke("spec", spec_inputs(archived, target="proposition:archived", dataset=data))
     spec = _minted_ref(out.text, "analysis-spec")
     run = mint_fixture_run(archived, spec, data, fixture_bundle(work))
     with open_rig(archived, ("assess",)) as (d, _):
@@ -626,15 +623,17 @@ def build_two_corpus_walked_world(work: Path) -> ScienceConfig:
         if host_prerequisites() is not None:
             monkeypatch.setattr(run_module, "POLICY", MINIMAL_POLICY)
         cfg = build_two_corpus_world(work)
+        from helpers.analysis import bootstrap_analysis
+        bootstrap_analysis(cfg)
         add_archived_assessment(cfg, work)
         data = hold_fixture_dataset(cfg, "data.txt", b"y\n", "expression", **OBSERVED)
         bundle = fixture_bundle(work)
         with open_rig(cfg, ("claim", "spec")) as (d, _):
             d.invoke("claim", claim)
             d.invoke("claim", queued)
-            spec = _minted_ref(d.invoke("spec", dict(SPEC_FIELDS, target="proposition:claimed", dataset=data)).text,
+            spec = _minted_ref(d.invoke("spec", spec_inputs(cfg, target="proposition:claimed", dataset=data)).text,
                                "analysis-spec")
-            d.invoke("spec", dict(SPEC_FIELDS, target="proposition:queued", dataset=data))
+            d.invoke("spec", spec_inputs(cfg, target="proposition:queued", dataset=data))
         run = mint_fixture_run(cfg, spec, data, bundle)
         code, entrypoint, _ = bundle
         with open_rig(cfg, ("assess", "verify")) as (d, _):
@@ -712,8 +711,8 @@ def build_shared_contract_world(work: Path) -> ScienceConfig:
         display_statement="concept:disease-stage affects protein:PHF19 (shared)"))
     # A second mounted proposition with no evidence anywhere: `next`'s readiness case.
     fresh = build_claim(mount_profile, operator=plan.row_for("affects", "concept", "protein").operator,
-                        args=(Referent(sort=plan.sort_for("concept"), term="concept:disease-stage"),
-                              Referent(sort=plan.sort_for("protein"), term="protein:EZH2")),
+                        roles={"intervention": Referent(sort=plan.sort_for("concept"), term="concept:disease-stage"),
+                               "response": Referent(sort=plan.sort_for("protein"), term="protein:EZH2")},
                         layer="causal", polarity="positive")
     mount.add(stored.proposition_node(
         "fresh", title="fresh", claim=project_claim(fresh),
@@ -741,9 +740,8 @@ service_socket = "{cfg.service_socket}"
     return path
 
 
-WORKING_FIELDS = dict(SPEC_FIELDS, method="rank comparison, working corpus")
-"""Spec fields distinct from the mount's content-addressed `SPEC_FIELDS` spec
-over the same target and dataset, so the write root authors its own spec."""
+
+
 
 
 def mount_config(cfg: ScienceConfig) -> ScienceConfig:
@@ -762,9 +760,11 @@ def add_mounted_evidence(cfg: ScienceConfig, work: Path) -> dict[str, str]:
     one run and its assessment (unverified), written through the commands with
     the mount as write root."""
     mounted = mount_config(cfg)
+    from helpers.analysis import bootstrap_analysis
+    bootstrap_analysis(mounted)
     data = hold_fixture_dataset(mounted, "data.txt", b"z\n", "expression", **OBSERVED)
     with open_rig(mounted, ("spec",)) as (d, _):
-        spec = _minted_ref(d.invoke("spec", dict(SPEC_FIELDS, target="proposition:shared", dataset=data)).text,
+        spec = _minted_ref(d.invoke("spec", spec_inputs(mounted, target="proposition:shared", dataset=data)).text,
                            "analysis-spec")
     run = mint_fixture_run(mounted, spec, data, fixture_bundle(work))
     with open_rig(mounted, ("assess",)) as (d, _):
@@ -805,7 +805,7 @@ def walk_belief_path(work: Path, *, confined: bool) -> tuple[ScienceConfig, str]
                                           "polarity": "positive"}).text, "proposition:")
             dataset = ref(d.invoke("dataset", {"path": str(data), "title": "expression",
                                                "locator": "accession:GSE-FIXTURE"}).text, "dataset:")
-            spec = ref(d.invoke("spec", dict(SPEC_FIELDS, target=prop, dataset=dataset)).text, "analysis-spec:")
+            spec = ref(d.invoke("spec", spec_inputs(cfg, target=prop, dataset=dataset)).text, "analysis-spec:")
             run = ref(d.invoke("run", {"spec": spec, "dataset": dataset, "code": str(code),
                                        "entrypoint": entrypoint, "targets": list(targets)}).text, "run:")
             assessment = ref(d.invoke("assess", {"run": run}).text, "assessment:")
@@ -828,7 +828,7 @@ def build_verify_rig_world(work: Path) -> tuple[ScienceConfig, str, tuple[Path, 
     ref = hold_fixture_dataset(cfg, "data.txt", b"x\n", "expression", **OBSERVED)
     bundle = fixture_bundle(work, "supported")
     with open_rig(cfg, ("spec", "assess")) as (d, _):
-        spec_ref = _minted_ref(d.invoke("spec", dict(SPEC_FIELDS, target="proposition:p1", dataset=ref)).text,
+        spec_ref = _minted_ref(d.invoke("spec", spec_inputs(cfg, target="proposition:p1", dataset=ref)).text,
                                "analysis-spec")
         run_ref = mint_fixture_run(cfg, spec_ref, ref, bundle)
         assessment_ref = _minted_ref(d.invoke("assess", {"run": run_ref}).text, "assessment")

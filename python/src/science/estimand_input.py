@@ -182,7 +182,7 @@ def read_estimand_input(path: Path, *, profile: ProfileSpec) -> EstimandInput:
             outputs[_text(name)] = OutputSpec(**{key: _text(v) for key, v in row.items()})
         control = _shape(body["control"], {"identification", "conditioning", "design", "selection"})
         reference = _mapping(body["reference"])
-        reference = (_reference(reference) if "kind" in reference else
+        reference = (_reference(reference) if type(reference.get("kind")) is str else
                      MappingProxyType({_text(k): _reference(v) for k, v in reference.items()}))
         return EstimandInput(
             _text(body["form"]), _text(body["functional"]),

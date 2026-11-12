@@ -104,7 +104,7 @@ class SessionRecords:
         for node in self.iter_stored():
             if node.kind == "proxy-model":
                 value = proxy_from_stored(node)
-                if value.crosswalk is not None and value.source.procedure == a and value.target.scale_of == b:
+                if value.crosswalk is not None and {value.source.procedure, value.target.scale_of} == {a, b}:
                     found.append(node.id)
         return tuple(sorted(found))
 

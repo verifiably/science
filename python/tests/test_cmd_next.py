@@ -1,7 +1,8 @@
+from helpers.analysis import spec_inputs
 from science.commands.next import classify, handle
 from science.config import ReadContext
 from science.report import KeyVals
-from helpers.world import SPEC_FIELDS, build_belief_world, hold_fixture_dataset, open_rig
+from helpers.world import (build_belief_world, hold_fixture_dataset, open_rig)
 
 
 def test_a_proposition_no_spec_targets_is_not_ready_however_much_is_held(certified_work):
@@ -14,7 +15,7 @@ def test_a_spec_whose_inputs_are_held_makes_it_ready(certified_work):
     cfg = build_belief_world(certified_work)
     ref = hold_fixture_dataset(cfg, "data.txt", b"x\n", "expression")
     with open_rig(cfg, ("spec",)) as (d, ctx):
-        d.invoke("spec", dict(SPEC_FIELDS, target="proposition:p1", dataset=ref))
+        d.invoke("spec", spec_inputs(cfg, target="proposition:p1", dataset=ref))
         assert classify(ctx, "proposition:p1") == "ready"
 
 
@@ -23,7 +24,7 @@ def test_a_later_absent_observation_moves_it_back_to_not_ready(certified_work):
     cfg = build_belief_world(certified_work)
     ref = hold_fixture_dataset(cfg, "data.txt", b"x\n", "expression")
     with open_rig(cfg, ("spec",)) as (d, _):
-        d.invoke("spec", dict(SPEC_FIELDS, target="proposition:p1", dataset=ref))
+        d.invoke("spec", spec_inputs(cfg, target="proposition:p1", dataset=ref))
     assert classify(ReadContext.open(cfg), "proposition:p1") == "ready"
     unhold_fixture_dataset(cfg, ref)
     assert classify(ReadContext.open(cfg), "proposition:p1") == "not-ready"

@@ -1,13 +1,16 @@
-Run `spec` to freeze the analysis that will assess a proposition. Give the
-target proposition and the dataset it observes; the estimand as its parts —
-a `levels` contrast (slot, baseline and comparison levels) or a
-`continuous` one (slot, quantity and increment), the measure and its scale,
-the reference value on that scale, the identification strategy, and any
-conditioning terms, each term kind-prefixed as the contract's vocabularies
-spell it; applicability as dimension=quantifier:term entries, if the
-analysis is narrower than the claim; the method, assumptions and
-falsification condition in the user's words; and the interpretation and
-equivalence rule identities the kernel ships. Parameters are name=value
-pairs. Nothing is defaulted: ask the user rather than guess a reference or
-a scale. The frozen spec's identity is what `run` executes and `verify`
-compares under; it cannot be edited, only superseded.
+Run `spec` to freeze an analysis for a proposition and its one observes dataset.
+Supply a UTF-8 native estimand JSON document, explicit standing and evidence mode,
+and rule-identity=procedure-id bindings for held procedures. The interpretation
+rule must have a binding. Supply a held model or assumptions registers when the
+scientific route requires them; absent registers means an empty list.
+
+The document declares form, functional, named bindings, typed outputs, reference,
+control, uncertainty and assumptions with schema_version 1. Decimal positions
+use JSON numbers; restriction bounds use their native strings. The target claim
+and held records determine frozen identities and dependencies. Missing scientific
+facts or prerequisites refuse; never infer them or create records automatically.
+
+Give method, assumptions and falsification in the user's words, and the shipped
+interpretation/equivalence rule identities. Parameters are name=value decimals.
+Applicability accepts dimension=quantifier:term only for declared applicability
+term restrictions. A frozen spec can only be superseded.

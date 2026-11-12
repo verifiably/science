@@ -18,7 +18,7 @@ from beliefs.profile import ProfileSpec
 from beliefs.root import open_corpus
 from science.config import ScienceConfig
 
-__all__ = ["analysis_nodes", "bootstrap_analysis", "write_estimand_document"]
+__all__ = ["analysis_nodes", "bootstrap_analysis", "write_estimand_document", "spec_inputs", "refreeze_spec"]
 
 
 def _namespace(profile: ProfileSpec) -> str:
@@ -35,8 +35,10 @@ def analysis_nodes(profile: ProfileSpec) -> tuple[Node, ...]:
     estimator = Procedure("general/estimator", "Fixture verdict reader",
                           "Read the explicit outcome-file verdict without estimating a statistic.",
                           (), None, {}, (), (), None, None, {}, None)
-    return (stored.procedure_node(assay), stored.classification_rule_node(classes),
-            stored.procedure_node(estimator))
+    nodes = (stored.procedure_node(assay), stored.classification_rule_node(classes),
+             stored.procedure_node(estimator))
+    # A pure fixture source must produce equal copies across independent corpora.
+    return tuple(node.model_copy(update={"uid": node.id.partition(":")[2][:32]}) for node in nodes)
 
 
 def bootstrap_analysis(cfg: ScienceConfig) -> None:
@@ -70,3 +72,35 @@ def write_estimand_document(cfg: ScienceConfig, *, reference: Decimal = Decimal(
     path = cfg.world.world_root.parent / "estimand.json"
     path.write_text(json.dumps(document, indent=2).replace('"EXACT_DECIMAL"', str(reference)) + "\n")
     return path
+
+
+def spec_inputs(cfg: ScienceConfig, *, target: str, dataset: str, **overrides) -> dict:
+    """One explicit native fixture input; prerequisite holdings are separate."""
+    values = {
+        "target": target, "dataset": dataset, "estimand": str(write_estimand_document(cfg)),
+        "standing": "empirical", "evidence_mode": "observation",
+        "rule_procedures": ["beliefs/outcome-file/v1=" + analysis_nodes(cfg.profile)[2].id],
+        "method": "rank comparison", "assumptions": "independent samples",
+        "falsification": "no difference at alpha", "interpretation_rule": "beliefs/outcome-file/v1",
+        "equivalence_rule": "beliefs/content-identity-equality/v1",
+    }
+    return values | overrides
+
+
+def refreeze_spec(cfg: ScienceConfig, spec, *, supersedes=None, **overrides):
+    """Vary a native frozen fixture through the public authoring/freeze context."""
+    from dataclasses import fields
+    from beliefs.decode import claim_from_stored
+    from beliefs.rules import REFERENCE_RULES
+    from beliefs.spec import SpecDraft, freeze
+    from science.authoring_records import session_records
+    from science.config import ReadContext
+    ctx = ReadContext.open(cfg)
+    with session_records(ctx) as records:
+        claim, _ = claim_from_stored(records.read(spec.target), profile=cfg.profile,
+                                     snapshot=ctx.authoring_snapshot(records=records))
+        draft = SpecDraft(**({f.name: getattr(spec, f.name) for f in fields(SpecDraft)} | overrides))
+        return freeze(draft, held_rules=REFERENCE_RULES,
+            rule_procedures={b.rule: b.procedure for b in spec.rule_bindings if b.procedure is not None},
+            profile=cfg.profile, claim=claim, records=records,
+            assessment_dependency=records.assessment_dependency, supersedes=supersedes)

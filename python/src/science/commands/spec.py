@@ -1,31 +1,25 @@
-"""freeze an analysis spec against the kernel's reference rules.
-
-The estimand is typed against the claim it answers: the target's operator
-fixes every sort through its contract's `estimands:` declaration, so the
-surface takes terms and numbers only, never a sort."""
+"""Freeze a typed estimand against accepted session-held prerequisites."""
 from __future__ import annotations
 
+from dataclasses import fields
 from decimal import Decimal, InvalidOperation
+from pathlib import Path
 
 from beliefs import stored
-from beliefs.claim import Qualifier, Referent
+from beliefs.applicability import ScopedRestriction, build_applicability
+from beliefs.claim import Referent
 from beliefs.dataset import dataset_address
 from beliefs.decode import claim_from_stored
-from beliefs.errors import ClaimError, DecodeError, MalformedRecord, ProfileError
-from beliefs.estimand import (ESTIMAND_ERRORS, ContinuousContrast, Control, LevelsContrast, Measure,
-                              build_applicability, build_estimand)
-from beliefs.resolution import ReferentPosition, TermOutcome
+from beliefs.errors import ScienceError
+from beliefs.estimand import build_estimand, estimand_referents
+from beliefs.restriction import TermRestriction
 from beliefs.rules import REFERENCE_RULES
-from beliefs.spec import Deterministic, MalformedSpec, SpecDraft, SpecInput, UnfreezableSpec, freeze
-
+from beliefs.spec import Deterministic, SpecDraft, SpecInput, freeze
+from science.authoring_records import session_records
+from science.estimand_input import read_estimand_input
 from science.refusal import Refusal, Refused
 from science.report import Report, record_block
-from science.vocabulary import dataset_bound_sorts
-
-# Every authoring error the kernel raises on this path: kept whole so none
-# escapes the handler and leaves the invocation open.
-AUTHORING_ERRORS = (*ESTIMAND_ERRORS, ClaimError, DecodeError, ProfileError)
-UNRESOLVED = (TermOutcome.NOT_CONSULTED, TermOutcome.NOT_AVAILABLE)
+from science.vocabulary import require_performed
 
 
 def _refuse(message: str):
@@ -43,7 +37,7 @@ def _decimal(name: str, value: str) -> Decimal:
 
 
 def parse_parameters(entries) -> dict[str, Decimal]:
-    parameters: dict[str, Decimal] = {}
+    parameters = {}
     for entry in entries or ():
         name, sep, value = entry.partition("=")
         if not sep or not name:
@@ -59,33 +53,20 @@ def _rule(identity: str):
     return implementation
 
 
-def _contrast(decl, contrast, slot, baseline, comparison, quantity, increment):
-    """(contrast value, {receipt label: referent}) — or refuse. Nothing is
-    defaulted: an input of the other kind, or a missing one of this kind,
-    refuses."""
-    kinds = {"levels": {"baseline": baseline, "comparison": comparison},
-             "continuous": {"quantity": quantity, "increment": increment}}
-    stray = sorted(k for kind, given in kinds.items() if kind != contrast for k, v in given.items() if v is not None)
-    if stray:
-        _refuse(f"{', '.join(stray)} belong to the other contrast kind, not {contrast}")
-    missing = sorted(k for k, v in kinds[contrast].items() if v is None)
-    if missing:
-        _refuse(f"a {contrast} contrast needs {', '.join(missing)}")
-    if contrast == "levels":
-        sort = decl.level_sorts.get(str(slot))
-        if sort is None:
-            _refuse(f"{decl.operator} declares no level sort for slot {slot}; "
-                    f"its levels are declared for slots {sorted(decl.level_sorts, key=int)}")
-        low, high = Referent(sort, baseline), Referent(sort, comparison)
-        return (LevelsContrast(slot=slot, baseline=low, comparison=high),
-                {"contrast.baseline": low, "contrast.comparison": high})
-    along = Referent(decl.measure_sort, quantity)
-    return (ContinuousContrast(slot=slot, quantity=along, increment=_decimal("increment", increment)),
-            {"contrast.quantity": along})
+def _rule_procedures(entries):
+    bindings = {}
+    for entry in entries:
+        name, sep, procedure = entry.partition("=")
+        if not sep or not name or not procedure:
+            _refuse(f"rule procedure {entry!r} must be rule-identity=procedure-id")
+        if name in bindings:
+            _refuse(f"duplicate rule procedure binding {name!r}")
+        bindings[name] = procedure
+    return bindings
 
 
-def _qualifiers(profile, entries) -> dict[str, Qualifier]:
-    qualifiers: dict[str, Qualifier] = {}
+def _applicability(profile, entries):
+    scoped, referents = {}, {}
     for entry in entries or ():
         dimension, sep, rest = entry.partition("=")
         quantifier, colon, term = rest.partition(":")
@@ -93,78 +74,59 @@ def _qualifiers(profile, entries) -> dict[str, Qualifier]:
             _refuse(f"applicability {entry!r} is not dimension=quantifier:term")
         declared = profile.dimensions.get(dimension)
         if declared is None:
-            _refuse(f"applicability {entry!r}: no dimension {dimension!r} in this profile; "
-                    f"it declares {sorted(profile.dimensions)}")
-        qualifiers[dimension] = Qualifier(quantifier, Referent(declared.restriction_sort, term))
-    return qualifiers
+            _refuse(f"applicability has no dimension {dimension!r}")
+        restriction = declared.restriction
+        form = None if restriction is None else restriction.form
+        if declared.placement != "applicability" or form != "term":
+            _refuse(f"applicability dimension {dimension!r} has incompatible placement {declared.placement!r} / form {form!r}; this input requires applicability term restrictions")
+        scoped[dimension] = ScopedRestriction(quantifier, TermRestriction(restriction.sort, term))
+        referents[f"restriction:{dimension}"] = Referent(restriction.sort, term)
+    return scoped, referents
 
 
-def _require_held(profile, receipt, referents: dict[str, Referent]) -> None:
-    """The kernel refuses only not-member; science requires a dataset-bound
-    vocabulary to be held, so an unresolved outcome under one refuses here."""
-    bound = dataset_bound_sorts(profile)
-    for label, referent in referents.items():
-        outcome = receipt.outcomes[label]
-        if referent.sort in bound and outcome in UNRESOLVED:
-            _refuse(f"{referent.term} ({label}): sort {referent.sort} binds vocabulary "
-                    f"dataset:{bound[referent.sort].dataset_identity}, which is not held here ({outcome.value}); "
-                    "hold it with `dataset` before freezing a spec under it")
-
-
-def handle(ctx, writer, *, target, dataset, contrast, slot, measure, scale, reference, identification,
+def handle(ctx, writer, *, target, dataset, estimand, standing, evidence_mode, rule_procedures,
            method, assumptions, falsification, interpretation_rule, equivalence_rule,
-           baseline=None, comparison=None, quantity=None, increment=None, conditioning=None,
-           applicability=None, parameters=None, supersedes=None) -> Report:
+           model=None, registers=None, applicability=None, parameters=None, supersedes=None) -> Report:
     profile = ctx.config.profile
-    target_view, dataset_view = ctx.cited(target).view, ctx.cited(dataset).view
     try:
-        address = dataset_address(stored.dataset_declaration(dataset_view.get(dataset)))
-    except MalformedRecord as caught:
-        _refuse(f"{dataset}: {caught}")
-    if address is None:
-        _refuse(f"{dataset} declares no content identity")
-    superseded = None
-    if supersedes is not None:
-        # A record ref the corpus holds, resolved before any act: a bare identity
-        # or an unheld spec refuses here rather than escaping as MalformedRecord.
-        try:
+        document = read_estimand_input(Path(estimand), profile=profile)
+        superseded = None
+        if supersedes is not None:
             superseded = stored.local_id("analysis-spec", supersedes)
-        except MalformedRecord as caught:
-            _refuse(f"supersedes {supersedes!r} is not an analysis-spec ref: {caught}")
-        ctx.own(supersedes)  # a mutation target is the write root's
-    held_rules = {interpretation_rule: _rule(interpretation_rule), equivalence_rule: _rule(equivalence_rule)}
-    snapshot = ctx.snapshot()
-    try:
-        claim, _ = claim_from_stored(target_view.get(target), profile=profile, snapshot=snapshot)
-        decl = profile.estimand(claim.operator)
-        contrast_value, referents = _contrast(decl, contrast, slot, baseline, comparison, quantity, increment)
-        referents["measure.quantity"] = Referent(decl.measure_sort, measure)
-        referents["control.identification"] = Referent(decl.identification_sort, identification)
-        conditioned = tuple(Referent(decl.conditioning_sort, term) for term in conditioning or ())
-        for index, member in enumerate(conditioned):
-            referents[f"control.conditioning[{index}]"] = member
-        estimand, estimand_receipt = build_estimand(
-            profile, claim, snapshot=snapshot, contrast=contrast_value,
-            measure=Measure(quantity=referents["measure.quantity"], scale=scale),
-            reference=_decimal("reference", reference),
-            control=Control(identification=referents["control.identification"], conditioning=conditioned))
-        qualifiers = _qualifiers(profile, applicability)
-        scoped, applicability_receipt = build_applicability(profile, claim, qualifiers, snapshot=snapshot)
-    except AUTHORING_ERRORS as caught:
-        _refuse(f"estimand refused: {caught}")
-    _require_held(profile, estimand_receipt,
-                  {ReferentPosition.estimand(part).label(): r for part, r in referents.items()})
-    _require_held(profile, applicability_receipt,
-                  {ReferentPosition.restriction(d).label(): q.restriction for d, q in qualifiers.items()})
-    draft = SpecDraft(target=target, estimand=estimand, method=method, assumptions=assumptions,
-                      falsification=falsification,
-                      input_roles=(SpecInput(role="observes", dataset=address),),
-                      applicability=scoped, interpretation_rule=interpretation_rule,
-                      equivalence_rule=equivalence_rule, parameters=parse_parameters(parameters),
-                      nondeterminism=Deterministic())
-    try:
-        spec = freeze(draft, held_rules=held_rules, supersedes=superseded)
-    except (MalformedSpec, UnfreezableSpec) as caught:
-        _refuse(f"freeze refused: {caught}")
+            ctx.own(supersedes)
+        held_rules = {interpretation_rule: _rule(interpretation_rule), equivalence_rule: _rule(equivalence_rule)}
+        bindings = _rule_procedures(rule_procedures)
+        with session_records(ctx) as records:
+            # Keep the established missing/outside-session citation diagnostic;
+            # accepted equal copies are chosen by the captured session reader.
+            for ref in (target, dataset):
+                if not records.holds(ref):
+                    ctx.cited(ref)
+            target_node, dataset_node = records.read(target), records.read(dataset)
+            address = dataset_address(stored.dataset_declaration(dataset_node))
+            if address is None:
+                _refuse(f"{dataset} declares no content identity")
+            snapshot = ctx.authoring_snapshot(records=records)
+            claim, _ = claim_from_stored(target_node, profile=profile, snapshot=snapshot)
+            scoped, scope_refs = _applicability(profile, applicability)
+            scoped, scope_receipt = build_applicability(profile, claim, scoped, snapshot=snapshot)
+            value, receipt = build_estimand(profile, claim,
+                **{f.name: getattr(document, f.name) for f in fields(document)},
+                applicability=scoped, snapshot=snapshot, records=records,
+                assessment_dependency=records.assessment_dependency)
+            require_performed(profile, receipt, {f"estimand:{label}": ref for label, ref in estimand_referents(value).items()})
+            require_performed(profile, scope_receipt, scope_refs)
+            draft = SpecDraft(target=target_node.id, estimand=value, method=method, assumptions=assumptions,
+                falsification=falsification, input_roles=(SpecInput(role="observes", dataset=address, mode=evidence_mode),),
+                applicability=scoped, interpretation_rule=interpretation_rule, equivalence_rule=equivalence_rule,
+                parameters=parse_parameters(parameters), nondeterminism=Deterministic(),
+                standing=standing, model=model, registers=tuple(registers or ()))
+            spec = freeze(draft, held_rules=held_rules, rule_procedures=bindings, profile=profile,
+                          claim=claim, records=records, assessment_dependency=records.assessment_dependency,
+                          supersedes=superseded)
+    except ScienceError as caught:
+        raise Refused(Refusal("invalid-input", f"spec authoring refused: {caught}",
+                              {"kind": type(caught).__name__})) from caught
+    # Input captures are released before the writer obtains its mint authority.
     node = writer.add(stored.analysis_spec_node(spec))
     return (record_block(node),)

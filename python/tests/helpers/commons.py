@@ -1,5 +1,6 @@
 """Helpers for the commons (sharing) tests."""
 from __future__ import annotations
+from helpers.analysis import spec_inputs
 
 import os
 import secrets
@@ -18,27 +19,7 @@ from beliefs.root import init_corpus_root, init_store_root, init_world_root, ope
 from beliefs.world import Fresh, WorldConfig
 
 from helpers.snapshot import Derived, Root
-from helpers.world import (
-    CONCEPTS,
-    COORDINATION_V3,
-    DOMAINS,
-    FIXTURE_AUTHORITY,
-    LEVELS,
-    OBSERVED,
-    SPEC_FIELDS,
-    STORE_IDS,
-    WORKING_FIELDS,
-    _install_holdings_reducer,
-    _list_address,
-    _minted_ref,
-    concept_list_address,
-    fixture_bundle,
-    fixture_contract_document,
-    hold_fixture_dataset,
-    level_list_address,
-    mint_fixture_run,
-    open_rig,
-)
+from helpers.world import (CONCEPTS, COORDINATION_V3, DOMAINS, FIXTURE_AUTHORITY, LEVELS, OBSERVED, STORE_IDS, _install_holdings_reducer, _list_address, _minted_ref, concept_list_address, fixture_bundle, fixture_contract_document, hold_fixture_dataset, level_list_address, mint_fixture_run, open_rig)
 from science.config import FetchPolicy, ReadContext, ScienceConfig, load_config
 from science.contracts import load_contract_document
 from science.dispatch import Dispatcher
@@ -183,12 +164,14 @@ def build_installation(work: Path, name: str, *, hold_vocabulary: bool) -> Scien
 
 def _add_a_evidence(a: ScienceConfig, work: Path) -> None:
     """proposition:p1, the observed dataset DATA_A, a spec on p1 over it, one run and its assessment."""
+    from helpers.analysis import bootstrap_analysis
+    bootstrap_analysis(a)
     with open_rig(a, ("claim", "spec")) as (d, _):
         d.invoke("claim", {"subject": "concept:disease-stage", "predicate": "affects", "object": "protein:PHF19",
                            "layer": "causal", "polarity": "positive", "slug": "p1"})
         # Held as `data.txt`, the input FIXTURE_SNAKEFILE reads; `data_dir()/a.txt` is only a source of its bytes.
         data = hold_fixture_dataset(a, "data.txt", DATA_A, "expression", **OBSERVED)
-        spec = _minted_ref(d.invoke("spec", dict(SPEC_FIELDS, target="proposition:p1", dataset=data)).text,
+        spec = _minted_ref(d.invoke("spec", spec_inputs(a, target="proposition:p1", dataset=data)).text,
                            "analysis-spec")
     run = mint_fixture_run(a, spec, data, fixture_bundle(work))
     with open_rig(a, ("assess",)) as (d, _):
@@ -406,13 +389,13 @@ def closure_input_addresses(closure) -> frozenset[str]:
 
 def derive_changed_analysis(installations: Installations) -> dict[str, str]:
     """B's changed analysis over A's mounted records, declaring none of them: a `spec` on A's proposition over
-    A's dataset with one changed input (WORKING_FIELDS' method), a run of it from B's own copy of the fixture
+    A's dataset with one changed input (the fixture method override), a run of it from B's own copy of the fixture
     bundle (minted under MINIMAL_POLICY, as `mint_fixture_run` does), and its assessment. B must hold the
     dataset's bytes (`VERIFIED` fetched them). Returns the spec, run and assessment refs."""
     b = installations.b
     ids = a_identity(installations.a)
     with open_rig(b, ("spec",)) as (d, _):
-        spec = _minted_ref(d.invoke("spec", dict(WORKING_FIELDS, target=ids["proposition"],
+        spec = _minted_ref(d.invoke("spec", spec_inputs(b, method="rank comparison, working corpus", target=ids["proposition"],
                                                  dataset=ids["dataset"])).text, "analysis-spec")
     run = mint_fixture_run(b, spec, ids["dataset"], fixture_bundle(installations.remotes.parent / "b"))
     with open_rig(b, ("assess",)) as (d, _):
@@ -628,7 +611,7 @@ def step_spec_only(work: Path, value: dict):
     ids = a_identity(installations.a)
     with open_rig(installations.b, ("fetch", "spec")) as (d, _):
         _fetch_a_datasets(installations, d)
-        d.invoke("spec", dict(WORKING_FIELDS, target=ids["proposition"], dataset=ids["dataset"]))
+        d.invoke("spec", spec_inputs(installations.b, method="rank comparison, working corpus", target=ids["proposition"], dataset=ids["dataset"]))
     _publish_update(installations, ("dataset",))
     return value
 

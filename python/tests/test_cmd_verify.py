@@ -1,11 +1,10 @@
+from helpers.analysis import refreeze_spec
+from helpers.analysis import spec_inputs
 import pytest
 
 from science.refusal import Refused
 from helpers.snapshot import snapshot
-from helpers.world import (
-    OBSERVED, SPEC_FIELDS, build_belief_world, build_verify_rig_world, fixture_bundle, hold_fixture_dataset,
-    mint_fixture_run, open_rig,
-)
+from helpers.world import (OBSERVED, build_belief_world, build_verify_rig_world, fixture_bundle, hold_fixture_dataset, mint_fixture_run, open_rig)
 
 
 @pytest.fixture
@@ -64,7 +63,7 @@ def test_a_disagreeing_replay_under_one_recipe_yields_failed_and_still_mints(cer
     ref = hold_fixture_dataset(cfg, "data.txt", b"x\n", "expression", **OBSERVED)
     bundle = fixture_bundle(certified_work, "supported", varying=True)
     with open_rig(cfg, ("spec", "assess", "verify")) as (d, ctx):
-        spec_ref = next(t for t in d.invoke("spec", dict(SPEC_FIELDS, target="proposition:p1", dataset=ref)).text.split()
+        spec_ref = next(t for t in d.invoke("spec", spec_inputs(cfg, target="proposition:p1", dataset=ref)).text.split()
                         if t.startswith("analysis-spec:"))
         run_ref = mint_fixture_run(cfg, spec_ref, ref, bundle)
         assessment_ref = next(t for t in d.invoke("assess", {"run": run_ref}).text.split() if t.startswith("assessment:"))
@@ -178,7 +177,7 @@ def test_verify_refuses_when_run_closure_recorded_corrupted_digest_and_holding_i
 
     with open_rig(cfg, ("spec", "assess", "verify")) as (d, ctx):
         spec_ref = next(
-            t for t in d.invoke("spec", dict(SPEC_FIELDS, target="proposition:p1", dataset=ref)).text.split()
+            t for t in d.invoke("spec", spec_inputs(cfg, target="proposition:p1", dataset=ref)).text.split()
             if t.startswith("analysis-spec:")
         )
         held_file.write_bytes(b"corrupted\n")
@@ -203,8 +202,7 @@ def test_verify_refuses_when_run_closure_recorded_corrupted_digest_and_holding_i
 def test_verify_refuses_colliding_multi_input_spec_cleanly_as_invalid_input(rig):
     from beliefs import stored
     from beliefs.root import open_corpus
-    from beliefs.rules import REFERENCE_RULES
-    from beliefs.spec import Deterministic, SpecDraft, SpecInput, freeze
+    from beliefs.spec import SpecInput
     from helpers.world import FIXTURE_AUTHORITY
 
     d, ctx, assessment_ref, (code, entrypoint, _) = rig
@@ -215,25 +213,10 @@ def test_verify_refuses_colliding_multi_input_spec_cleanly_as_invalid_input(rig)
         profile=ctx.config.profile,
     )
     other_ref = hold_fixture_dataset(ctx.config, "data.txt", b"colliding\n", "colliding")
-    two_role_spec = freeze(
-        SpecDraft(
-            target=existing_spec.target,
-            estimand=existing_spec.estimand,
-            method=existing_spec.method,
-            assumptions=existing_spec.assumptions,
-            falsification=existing_spec.falsification,
-            input_roles=(
+    two_role_spec = refreeze_spec(ctx.config, existing_spec, input_roles=(
                 existing_spec.input_roles[0],
-                SpecInput(role="reads", dataset=other_ref),
-            ),
-            applicability=existing_spec.applicability,
-            interpretation_rule=existing_spec.interpretation_rule,
-            equivalence_rule=existing_spec.equivalence_rule,
-            parameters=existing_spec.parameters,
-            nondeterminism=Deterministic(),
-        ),
-        held_rules=REFERENCE_RULES,
-    )
+                SpecInput(role="reads", dataset=other_ref, mode="annotation"),
+            ))
     writer = open_corpus(ctx.config.write_root, authority=FIXTURE_AUTHORITY, profile=ctx.config.profile)
     writer.add(stored.analysis_spec_node(two_role_spec))
     synthetic_assessment = writer.add(stored.assessment_node(
@@ -442,7 +425,7 @@ def test_a_derived_package_is_assessed_and_verified_through_lineage_standing(cer
         )
         spec_ref = next(
             t for t in d.invoke(
-                "spec", dict(SPEC_FIELDS, target="proposition:p1", dataset=derived_node.id)
+                "spec", spec_inputs(cfg, target="proposition:p1", dataset=derived_node.id)
             ).text.split()
             if t.startswith("analysis-spec:")
         )

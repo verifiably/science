@@ -192,6 +192,7 @@ def test_analysis_prerequisites_are_real_held_records(certified_work):
     cfg = build_fixture_world_with_contract(certified_work)
     bootstrap_analysis(cfg)
     nodes = analysis_nodes(cfg.profile)
+    assert nodes == analysis_nodes(cfg.profile)
     assert [node.kind for node in nodes] == ["procedure", "classification-rule", "procedure"]
     view = ReadContext.open(cfg).write_view()
     assert all(view.holds(node.id) for node in nodes)

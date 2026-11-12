@@ -1,7 +1,8 @@
+from helpers.analysis import spec_inputs
 import pytest
 
 from science.refusal import Refused
-from helpers.world import OBSERVED, SPEC_FIELDS, build_belief_world, fixture_bundle, hold_fixture_dataset, mint_fixture_run, open_rig
+from helpers.world import (OBSERVED, build_belief_world, fixture_bundle, hold_fixture_dataset, mint_fixture_run, open_rig)
 
 
 @pytest.fixture
@@ -9,7 +10,7 @@ def rig(certified_work):
     cfg = build_belief_world(certified_work)
     ref = hold_fixture_dataset(cfg, "data.txt", b"x\n", "expression", **OBSERVED)
     with open_rig(cfg, ("spec",)) as (d, _):
-        spec_ref = next(t for t in d.invoke("spec", dict(SPEC_FIELDS, target="proposition:p1", dataset=ref)).text.split()
+        spec_ref = next(t for t in d.invoke("spec", spec_inputs(cfg, target="proposition:p1", dataset=ref)).text.split()
                         if t.startswith("analysis-spec:"))
     # The fixture run is minted outside any session, so no attended session
     # may be open across it: a session's writer is the corpus's one writer.

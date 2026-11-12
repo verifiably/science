@@ -1,5 +1,7 @@
 """Retirement preserves live inputs, attribution origins and their held chains."""
-from dataclasses import fields, replace
+from helpers.analysis import spec_inputs
+from helpers.analysis import refreeze_spec
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -9,9 +11,7 @@ from beliefs.corpus import ReadView
 from beliefs.intents.publish import Destination
 from beliefs.publish_request import pins_of
 from beliefs.root import init_corpus_root, open_corpus
-from beliefs.rules import REFERENCE_RULES
-from beliefs.spec import SpecDraft, freeze
-from helpers.world import FIXTURE_AUTHORITY, PROFILE, SPEC_FIELDS, build_spec_rig_world, open_rig
+from helpers.world import (FIXTURE_AUTHORITY, PROFILE, build_spec_rig_world, open_rig)
 
 from science.publication import MarkerFields
 from science.retention import Reason, dependency_closure, required
@@ -42,24 +42,25 @@ def graph(certified_work):
     (certified_work / "origin").mkdir()
     cfg, dataset = build_spec_rig_world(certified_work / "origin")
     with open_rig(cfg, ("spec",)) as (dispatcher, ctx):
-        dispatcher.invoke("spec", dict(SPEC_FIELDS, target="proposition:p1", dataset=dataset))
+        dispatcher.invoke("spec", spec_inputs(cfg, target="proposition:p1", dataset=dataset))
         spec_node, = [n for n in ctx.write_view().iter_stored() if n.kind == "analysis-spec"]
     spec = stored.analysis_spec_value(spec_node, profile=cfg.profile)
     assessment = stored.assessment_node(
         "a", title="assessment", spec=spec.identity, run="run:original", proposition="proposition:p1",
         outcome="supported", interpretation_rule=spec.interpretation_rule,
-        estimand=spec.estimand, applicability=spec.applicability)
+        target=spec.assessed_target)
     run = stored.run_node("original", title="original", spec=spec.identity)
     replay = stored.run_node("replayed", title="replayed", spec=spec.identity)
     verification = stored.verification_node(
         "v", title="verification", assessment="identity", assessment_ref=assessment.id,
         scope="replay", verdict="passed", derivation=(run.id, replay.id))
     origin = ReadView.opened_at(cfg.write_root)
-    return cfg.profile, spec_node, origin.get(dataset), origin.get("proposition:p1"), assessment, run, replay, verification
+    return cfg, spec_node, origin.get(dataset), origin.get("proposition:p1"), assessment, run, replay, verification
 
 
 def test_dependency_closure_reaches_a_verifications_target_and_its_runs_spec_through_facets(certified_work, graph):
-    profile, spec, dataset, proposition, assessment, run, replay, verification = graph
+    config, spec, dataset, proposition, assessment, run, replay, verification = graph
+    profile = config.profile
     write = holder(certified_work / "write", verification)
     successor = holder(certified_work / "successor", assessment, run, profile=profile)
     predecessor = holder(certified_work / "predecessor", spec, dataset, proposition, replay, profile=profile)
@@ -68,17 +69,18 @@ def test_dependency_closure_reaches_a_verifications_target_and_its_runs_spec_thr
 
 
 def test_dependency_closure_reaches_a_specs_target_proposition(certified_work, graph):
-    profile, spec, dataset, proposition, *_ = graph
+    config, spec, dataset, proposition, *_ = graph
+    profile = config.profile
     write = holder(certified_work / "write", spec, profile=profile)
     predecessor = holder(certified_work / "predecessor", dataset, proposition)
     assert dependency_closure(write, (predecessor,)) == frozenset({spec.id, dataset.id, proposition.id})
 
 
 def test_dependency_closure_does_not_follow_supersedes_fields(certified_work, graph):
-    profile, old_spec, dataset, proposition, assessment, run, replay, verification = graph
+    config, old_spec, dataset, proposition, assessment, run, replay, verification = graph
+    profile = config.profile
     value = stored.analysis_spec_value(old_spec, profile=profile)
-    draft = SpecDraft(**{field.name: getattr(value, field.name) for field in fields(SpecDraft)})
-    spec = stored.analysis_spec_node(freeze(draft, held_rules=REFERENCE_RULES, supersedes=value.identity))
+    spec = stored.analysis_spec_node(refreeze_spec(config, value, supersedes=value.identity))
     verification = stored.verification_node(
         "v", title="verification", assessment="identity", assessment_ref=assessment.id,
         scope="replay", verdict="passed", supersedes="verification:old")
@@ -106,7 +108,8 @@ def test_dependency_closure_follows_correction_record_targets(certified_work, ar
 
 
 def test_required_by_dependency_lists_only_addresses_no_other_live_corpus_holds_equal(certified_work, graph):
-    profile, spec, dataset, proposition, assessment, run, replay, verification = graph
+    config, spec, dataset, proposition, assessment, run, replay, verification = graph
+    profile = config.profile
     write = holder(certified_work / "write", verification)
     predecessor = holder(certified_work / "predecessor", spec, dataset, proposition, assessment, run, replay, profile=profile)
     successor = holder(certified_work / "successor", dataset, proposition, assessment, run, replay, profile=profile)

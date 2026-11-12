@@ -12,52 +12,43 @@ doc = "The proposition ref this spec assesses."
 type = "string"
 required = true
 doc = "The dataset ref the analysis observes (role observes)."
-[inputs.contrast]
+
+
+
+
+
+
+
+
+
+
+
+[inputs.estimand]
+type = "string"
+required = true
+doc = "Path to a UTF-8 schema_version 1 native estimand JSON authoring document."
+[inputs.standing]
 type = "enum"
-choices = ["levels", "continuous"]
+choices = ["empirical", "model", "calibrated-model"]
 required = true
-doc = "What the estimand contrasts: two levels of an argument, or an increment along a quantity."
-[inputs.slot]
-type = "int"
-required = true
-doc = "The claim argument position the contrast varies (0-based)."
-[inputs.baseline]
-type = "string"
-required = false
-doc = "levels only: the baseline level, a kind-prefixed term, e.g. level:ndmm."
-[inputs.comparison]
-type = "string"
-required = false
-doc = "levels only: the comparison level, a kind-prefixed term."
-[inputs.quantity]
-type = "string"
-required = false
-doc = "continuous only: the quantity the increment is taken along, a kind-prefixed term."
-[inputs.increment]
-type = "string"
-required = false
-doc = "continuous only: the increment, a decimal."
-[inputs.measure]
-type = "string"
-required = true
-doc = "The measured quantity, a kind-prefixed term, e.g. measure:rna-seq-tpm."
-[inputs.scale]
+doc = "The explicitly declared evidence standing."
+[inputs.evidence_mode]
 type = "enum"
-choices = ["additive", "multiplicative"]
+choices = ["observation", "annotation", "simulation", "derivation", "literature-extraction"]
 required = true
-doc = "The scale the effect is expressed on."
-[inputs.reference]
+doc = "The evidence mode of the one observes dataset."
+[inputs.rule_procedures]
+type = "list-of-string"
+required = true
+doc = "rule-identity=procedure-id entries, including the interpretation rule's held procedure. Duplicate rules refuse."
+[inputs.model]
 type = "string"
-required = true
-doc = "The null value on that scale, a decimal (0 additive, 1 multiplicative is typical, never assumed)."
-[inputs.identification]
-type = "string"
-required = true
-doc = "The identification strategy, a kind-prefixed term, e.g. identification:observational."
-[inputs.conditioning]
+required = false
+doc = "Held model procedure id, according to the declared standing route."
+[inputs.registers]
 type = "list-of-string"
 required = false
-doc = "Kind-prefixed terms the estimate conditions on; absent, none."
+doc = "Held assumptions-register ids. Absent means an explicit empty list."
 [inputs.method]
 type = "string"
 required = true

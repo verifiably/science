@@ -3,6 +3,8 @@ errors follow the CLI vocabulary. science is a protocol CLI: its envelope and ex
 refusals are covered by test_cli.py and are not under the general output contract."""
 import importlib.util
 import io
+import os
+import tempfile
 import subprocess
 import sys
 from pathlib import Path
@@ -22,7 +24,9 @@ COMMANDS = sorted(row[1] for row in cli_surface.table_rows(TABLE, "science") if 
 
 
 def run(*args):
-    return subprocess.run([sys.executable, "-m", "science.cli", *args], capture_output=True, text=True)
+    with tempfile.TemporaryDirectory() as home:
+        return subprocess.run([sys.executable, "-m", "science.cli", *args], capture_output=True, text=True,
+                              env={"PATH": os.environ["PATH"], "HOME": home, "PYTHONDONTWRITEBYTECODE": "1"})
 
 
 def invoke(capsys, *args):
@@ -79,3 +83,28 @@ def test_enum_baselines_cover_every_enum_row(certified_work, monkeypatch, capsys
         bad = list(argv); bad[len(path)] = "__not_in_set__"
         out = invoke(capsys, *bad)
         assert out.returncode == 2 and "mode" in out.stderr and "__not_in_set__" in out.stderr, bad
+
+
+def test_native_spec_inputs_and_belief_key_parse_with_required_repeating_fields():
+    parser = build_parser(production_tree())
+    base = ["spec", "--target", "proposition:p1", "--dataset", "dataset:d1", "--estimand", "estimand.json",
+            "--standing", "empirical", "--evidence-mode", "observation", "--rule-procedures", "rule=procedure:p1",
+            "--method", "fit", "--assumptions", "iid", "--falsification", "null", "--interpretation-rule", "rule",
+            "--equivalence-rule", "equivalence"]
+    namespace = parser.parse_args(base + ["--rule-procedures", "equivalence=procedure:p2",
+                                        "--registers", "register:a", "--registers", "register:b"])
+    assert namespace.estimand == "estimand.json"
+    assert namespace.rule_procedures == ["rule=procedure:p1", "equivalence=procedure:p2"]
+    assert namespace.registers == ["register:a", "register:b"]
+    for flag in ("--estimand", "--standing", "--evidence-mode", "--rule-procedures"):
+        missing = base.copy()
+        index = missing.index(flag)
+        del missing[index:index+2]
+        with pytest.raises(SystemExit) as caught:
+            parser.parse_args(missing)
+        assert caught.value.code == 2
+    for mode in ("observation", "annotation", "simulation", "derivation", "literature-extraction"):
+        args = base.copy()
+        args[args.index("--evidence-mode") + 1] = mode
+        assert parser.parse_args(args).evidence_mode == mode
+    assert parser.parse_args(["belief", "--proposition", "proposition:p1", "--key", "target-key"]).key == "target-key"
