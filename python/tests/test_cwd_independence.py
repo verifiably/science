@@ -168,6 +168,8 @@ def test_cli_spec_reads_the_client_source_path_with_service_in_another_directory
     import sys
     import time
     from decimal import Decimal
+    import beliefs
+    import science
     from beliefs import stored
     from helpers.analysis import spec_inputs
     from helpers.world import build_belief_world, hold_fixture_dataset, write_config_for
@@ -188,7 +190,11 @@ def test_cli_spec_reads_the_client_source_path_with_service_in_another_directory
     sock = short_tmp / "service.sock"
     config = write_config_for(cfg, service_socket=sock)
     # No inherited environment or credentials enter the service process.
-    environment = {"PATH": os.environ["PATH"], "HOME": str(home), "PYTHONDONTWRITEBYTECODE": "1"}
+    environment = {
+        "PATH": os.environ["PATH"], "HOME": str(home), "PYTHONDONTWRITEBYTECODE": "1",
+        "PYTHONPATH": os.pathsep.join(str(Path(package.__file__).resolve().parents[1])
+                                    for package in (science, beliefs)),
+    }
     child = subprocess.Popen([sys.executable, "-m", "science.cli", "serve", "--config", str(config)],
         cwd=server, env=environment, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
     try:

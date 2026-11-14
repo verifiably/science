@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from beliefs import stored
+from beliefs.contract.domain import DomainContract
 from beliefs.consulted import CorpusPins
 from beliefs.permit import Authority, WritePermit
 from beliefs.profile import (
@@ -297,14 +298,15 @@ def archive_contract_document(work: Path) -> Path:
 
 
 def build_fixture_world_with_contract(work: Path, *, hold_concepts: bool = True,
-                                      hold_levels: bool = True) -> ScienceConfig:
+                                      hold_levels: bool = True,
+                                      extra_contracts: tuple[DomainContract, ...] = ()) -> ScienceConfig:
     """A world whose profile compiles the test contract, with the concept and
     level lists held (or not)."""
     from beliefs.profile import shipped_base_contract
     from science.contracts import load_contract_document
     base = shipped_base_contract()
     contract, plan = load_contract_document(fixture_contract_document(work), base)
-    profile = compile_profile(base, [shipped_domain_contract(ns) for ns in DOMAINS] + [contract],
+    profile = compile_profile(base, [shipped_domain_contract(ns) for ns in DOMAINS] + [contract, *extra_contracts],
                               coordination=shipped_coordination(COORDINATION))
     pins = CorpusPins(
         science_contract="science:" + profile.base_contract_identity,
@@ -324,7 +326,7 @@ def build_fixture_world_with_contract(work: Path, *, hold_concepts: bool = True,
     cfg = ScienceConfig(world=config, operations_root=work / "ops", profile=profile,
                         service_socket=short_socket(work), store_root=work / "store",
                         coordination=COORDINATION, write_root=corpus_root,
-                        plans=(plan,), available_contracts=(contract,))
+                        plans=(plan,), available_contracts=(contract, *extra_contracts))
     if hold_concepts:
         hold_fixture_dataset(cfg, "concepts.txt", CONCEPTS, "concept vocabulary")
     if hold_levels:
@@ -502,13 +504,14 @@ def mint_projects(cfg: ScienceConfig, *names: str) -> list:
         return [mint_project(dispatcher, name) for name in names]
 
 
-def build_belief_world(work: Path, **holds: bool) -> ScienceConfig:
+def build_belief_world(work: Path, *, extra_contracts: tuple[DomainContract, ...] = (),
+                       **holds: bool) -> ScienceConfig:
     """The contract world plus one proposition typed under the plan: the
     starting state for claim/spec/run/assess/verify/belief/next tests."""
     from beliefs import stored
     from beliefs.claim import Referent, build_claim
     from beliefs.projection import project_claim
-    cfg = build_fixture_world_with_contract(work, **holds)
+    cfg = build_fixture_world_with_contract(work, extra_contracts=extra_contracts, **holds)
     from helpers.analysis import bootstrap_analysis
     bootstrap_analysis(cfg)
     (plan,) = cfg.plans

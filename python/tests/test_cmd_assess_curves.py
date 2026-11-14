@@ -10,18 +10,18 @@ def test_assess_preserves_native_event_curves(certified_work, monkeypatch):
     import science.commands.spec as spec_module
     import science.commands.assess as assess_module
     from beliefs import stored
+    from beliefs.profile import shipped_base_contract
     from beliefs.assess import build_assessment
     from beliefs.assessment_payload import CurvePoint, Interval
     from beliefs.runrecord import decode_run_closure
     from beliefs.spec import RuleImplementation, RuleFixture
     from helpers.analysis import spec_inputs
     from science.config import ReadContext
+    from science.contracts import load_contract_document
 
     contract = yaml.safe_load(world.TEST_CONTRACT)
     body = contract["contract"]
     body["estimands"]["instantiation:affects-concept-protein"]["forms"].append("event-locked")
-    body["quantity_kinds"] = {"duration": {"dimension": {"T": 1}, "definition": "Elapsed fixture time."}}
-    body["units"] = {"second": {"symbol": "s", "quantity_kind": "duration", "definition": "A second."}}
     body["functionals"] = {"event-response": {
         "definition": "Synthetic normalized response after a classified event.",
         "form": "event-locked", "arity": "two", "response_transformation": "invariant-strictly-increasing",
@@ -36,7 +36,9 @@ def test_assess_preserves_native_event_curves(certified_work, monkeypatch):
     implementations = dict(spec_module.REFERENCE_RULES) | {"beliefs/outcome-file/v1": rule}
     monkeypatch.setattr(spec_module, "REFERENCE_RULES", implementations)
     monkeypatch.setattr(assess_module, "REFERENCE_RULES", implementations)
-    cfg = world.build_belief_world(certified_work)
+    time_contract, _ = load_contract_document(
+        Path(__file__).parent / "fixtures" / "series_time.yaml", shipped_base_contract())
+    cfg = world.build_belief_world(certified_work, extra_contracts=(time_contract,))
     data = world.hold_fixture_dataset(cfg, "data.txt", b"event\n", "event observations", **world.OBSERVED)
     inputs = spec_inputs(cfg, target="proposition:p1", dataset=data)
     path = Path(inputs["estimand"])
@@ -44,7 +46,7 @@ def test_assess_preserves_native_event_curves(certified_work, monkeypatch):
     grouping = document["bindings"].pop("grouping")
     grouping.pop("source")
     document.update(form="event-locked", functional="testing/event-response")
-    document["bindings"].update(anchor=grouping, lag={"unit": "testing/second", "windows": []})
+    document["bindings"].update(anchor=grouping, lag={"unit": "si-brochure/second", "windows": []})
     path.write_text(json.dumps(document))
     with world.open_rig(cfg, ("spec",)) as (d, _):
         spec_ref = next(t for t in d.invoke("spec", inputs).text.split() if t.startswith("analysis-spec:"))
