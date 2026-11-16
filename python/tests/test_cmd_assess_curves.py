@@ -21,6 +21,20 @@ def test_assess_preserves_native_event_curves(certified_work, monkeypatch):
 
     contract = yaml.safe_load(world.TEST_CONTRACT)
     body = contract["contract"]
+    # The early/late event classes are independent of the concept/protein claim roles.
+    body["templates"] = {"event-curve-change": {
+        "definition": "Synthetic intervention response grouped by independent event classes.",
+        "roles": {"intervention": {"arity": "one"}, "response": {"arity": "one"}},
+        "sign_apt": True, "layers": ["causal"], "forms": ["polar", "null"],
+        "edge": {"cause": "intervention", "effect": "response"},
+        "event_anchor": {"independent": True}}}
+    template = "event-curve-change"
+    body["instantiations"]["affects-concept-protein"]["template"] = template
+    for dimension in body["dimensions"].values():
+        dimension["applies_to"].append(template)
+    for operator in contract["plan"]["operators"]:
+        if operator["predicate"] == "affects" and operator["object"] == "protein":
+            operator["operator"] = f"testing/{template}"
     body["estimands"]["instantiation:affects-concept-protein"]["forms"].append("event-locked")
     body["functionals"] = {"event-response": {
         "definition": "Synthetic normalized response after a classified event.",
