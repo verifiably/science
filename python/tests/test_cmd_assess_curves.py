@@ -26,8 +26,7 @@ def test_assess_preserves_native_event_curves(certified_work, monkeypatch):
         "definition": "Synthetic intervention response grouped by independent event classes.",
         "roles": {"intervention": {"arity": "one"}, "response": {"arity": "one"}},
         "sign_apt": True, "layers": ["causal"], "forms": ["polar", "null"],
-        "edge": {"cause": "intervention", "effect": "response"},
-        "event_anchor": {"independent": True}}}
+        "edge": {"cause": "intervention", "effect": "response"}}}
     template = "event-curve-change"
     body["instantiations"]["affects-concept-protein"]["template"] = template
     for dimension in body["dimensions"].values():
