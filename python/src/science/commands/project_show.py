@@ -10,7 +10,8 @@ from science.coordination import selected_project, tip_nodes
 from science.refusal import Refusal, Refused
 from science.report import Heading, KeyVals, Report, Text
 
-_VIEWS = (("question", "questions"), ("hypothesis", "hypotheses"), ("decision", "decisions"))
+_VIEWS = (("question", "questions"), ("hypothesis", "hypotheses"), ("decision", "decisions"),
+          ("topic", "topics"), ("note", "notes"))
 
 
 def _entries(resolver, kind: str, project) -> list:
@@ -74,5 +75,5 @@ def handle(ctx) -> Report:
             blocks.append(KeyVals(title, tuple((address, _label(tips, describe))
                                                for _, address, tips in entries)))
     if len(blocks) == 2:
-        blocks.append(Text("No questions, hypotheses, tasks or decisions yet."))
+        blocks.append(Text("No questions, hypotheses, tasks, decisions, topics or notes yet."))
     return tuple(blocks)

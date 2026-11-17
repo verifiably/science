@@ -1,0 +1,1 @@
+Show a record with exactly one way of naming it: an address, or one or more source identifiers. No match by identifier is an answer. For a source, read `correctable here` before considering `source-correct`. Use the unpinned coordination address with `revise`.

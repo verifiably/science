@@ -59,7 +59,8 @@ The command surface is recorded in `tools/cli.toml`:
 
 - Analysis: `dataset`, `claim`, `spec`, `run`, `assess`, `verify`, `belief`, `next`, `recheck`.
 - Coordination: `project`, `question`, `hypothesis`, `task`, `decide`, `revise`,
-  `reuse`, `project-select`, `projects`, `project-show`.
+  `reuse`, `project-select`, `projects`, `project-show` (including topics and notes).
+- Record reading: `record`, by world or coordination address, or source identifier.
 - Sharing: `publish`, `publish-preview`, `provider-inspect`, `provider-bind`,
   `adopt`, `fetch`, `show`.
 - World and tooling: `status`, `build`, `epoch`, `serve`, `mcp`, `adapters`.

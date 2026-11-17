@@ -1,0 +1,30 @@
+schema_version = 1
+name = "record"
+purpose = "Show one record in full: by address, or a source by identifier."
+write_class = "read-only"
+selects = true
+output_budget = 16384
+
+[inputs.address]
+type = "string"
+required = false
+doc = "A world address, a coord: address optionally pinned to a revision, or a coordination record's id as a write reply prints it."
+[inputs.doi]
+type = "string"
+required = false
+doc = "Find the source carrying this DOI."
+[inputs.pmid]
+type = "string"
+required = false
+doc = "Find the source carrying this PubMed id."
+[inputs.isbn]
+type = "string"
+required = false
+doc = "Find the source carrying this ISBN."
+[inputs.accession]
+type = "string"
+required = false
+doc = "Find the source carrying this accession."
+
+[reads]
+families = ["coordination", "corpus-stored"]

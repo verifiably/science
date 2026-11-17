@@ -105,7 +105,7 @@ def test_project_show_renders_the_selection_in_section_order(certified_work):
 def test_a_project_with_no_records_says_so(certified_work):
     with coordination_rig(certified_work, NAMES) as (d, _):
         d.invoke("project-select", {"target": str(mint_project(d, "health"))})
-        assert d.invoke("project-show", {}).text.endswith("No questions, hypotheses, tasks or decisions yet.\n")
+        assert d.invoke("project-show", {}).text.endswith("No questions, hypotheses, tasks, decisions, topics or notes yet.\n")
 
 
 def test_project_binds_this_show_only(certified_work):
@@ -199,3 +199,17 @@ def test_the_project_reads_render_identically_through_the_cli_and_mcp(certified_
         mcp_text = handle_request(rpc("tools/call", {"name": name, "arguments": arguments}),
                                   dispatcher, declarations)["result"]["content"][0]["text"]
         assert cli_text == mcp_text and "health" in cli_text
+
+
+def test_topics_and_notes_are_listed(certified_work):
+    from helpers.research import MINT_COORDINATION, mint_coordination_handler, research_rig
+    from helpers.world import build_two_corpus_world
+    with research_rig(build_two_corpus_world(certified_work), NAMES,
+                      extra=((MINT_COORDINATION, mint_coordination_handler),)) as (d, _):
+        d._selection = mint_project(d)
+        d.invoke("mint-coordination", {"kind": "topic", "name": "Synthesis", "body": "Topic", "query": QUERY})
+        d.invoke("mint-coordination", {"kind": "note", "name": "Reading", "body": "Note"})
+        text = d.invoke("project-show", {}).text
+    assert "topics:\n" in text and ": Synthesis\n" in text
+    assert "notes:\n" in text and ": Reading\n" in text
+    assert text.index("topics:\n") < text.index("notes:\n")

@@ -122,6 +122,14 @@ commentary can stale the cursor.
 Exact current inputs, defaults and prompts are the public files under
 [`commands/`](../commands/); CLI help and MCP schemas derive from them.
 
+- `record` reads a world address, a coordination address (optionally pinned), or
+  the stored coordination id printed by a write reply. Alternatively, give one
+  or more source identifiers; no match is a finding, and multiple matches print
+  separately because they may be one work. It shows full fields and body,
+  source holders and whether correction is possible here. With a selected
+  project it lists notes about the world record, following source redirects.
+- `project-show` shows the selected or explicitly named project's query, open
+  tasks, questions, hypotheses, decisions, topics, notes and closed tasks.
 - `claim` uses the first activated operator plan, mapping subject/object into
   named roles. Two one roles or two canonical many-role members are supported.
   Dataset, selection and run-output vocabulary bindings must resolve against held
