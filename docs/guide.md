@@ -167,6 +167,28 @@ disjointness in its phase-1 protocol and a roster package of about 3,000 lines
 because neither `beliefs` nor `science` had them; lifting them out afterwards
 took four separate upstream tasks.
 
+## Reading and discussing research
+
+With the generated science plugin installed, `/science:research-paper` reads one
+paper at a time and records a world source plus a project reading note, including
+reading depth, exact-byte digest and quoted statements. `/science:research-topic`
+records a background synthesis as a topic whose query names its sources.
+`/science:discuss` records a critical discussion as a project note. Select a
+project with `project-select` before writing notes or topics.
+
+Each article should have one source across projects. Look it up with every
+confirmed identifier together: a DOI-only lookup cannot find a record carrying
+only a different identifier. Complete a source's identifiers before it is first
+published, because a source held by another corpus cannot be corrected here.
+Deduplication by shared identifier reduces duplicates; it cannot connect disjoint
+identifiers, and existing duplicates are not merged. The skills disclose that
+limit when minting after a single-identifier lookup.
+
+Readings obey the workspace's exposure policy. Abstract-only reading is marked
+and supports no durable conclusion; unavailable text is not summarized from
+memory. The [command reference](commands.md) defines `source`, `source-correct`,
+`record`, `note` and `topic` and their write boundaries.
+
 ## Selection and sharing
 
 A project is a view over records, not a new corpus. `project` creates one from a

@@ -83,6 +83,11 @@ are dated statements, with world citations checked before writing.
 sources, and records a complete topic with its source query. Overlapping topics
 are supplemented only when the person chooses; a source-free topic is never minted.
 
+`/science:research-paper` reads one paper at a time, reuses or records its world
+source, and writes a project reading note with exact quotations, reading depth
+and the digest of what was read. See [reading and discussing research](docs/guide.md#reading-and-discussing-research)
+for the shared-identifier limit and publication precautions.
+
 With the generated science plugin installed, `/science:sweep-assumptions`
 compares research questions across explicitly named permitted inputs. It preserves
 discovery before feasibility assessment in an eight-part report. It makes no
