@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from beliefs.errors import IdentifierMalformed
 from beliefs.source import normalized_identifiers
 from beliefs.stored import SOURCE_FACET
-from beliefs.world.registry import content_identity
 from nodes.core.node import Node
 
 from science.config import _retired
@@ -57,11 +56,7 @@ def _live(ctx, mounts):
 def _located(ctx, holders, ref):
     if not holders:
         return None
-    if len({content_identity(mount.view.get(ref)) for mount in holders}) > 1:
-        raise Refused(Refusal("invalid-input",
-                             f"{ref!r} is held by corpora {', '.join(m.corpus_id for m in holders)}; "
-                             "the copies differ"))
-    preferred = min(holders, key=lambda mount: (mount.root != ctx.config.write_root, mount.corpus_id))
+    preferred = ctx._holder_among(holders, ref)
     return Located(preferred.view.get(ref), tuple(sorted({mount.corpus_id for mount in holders})))
 
 
