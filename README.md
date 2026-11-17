@@ -58,7 +58,7 @@ provides the same command dispatcher over stdio. See [sessions](docs/sessions.md
 The command surface is recorded in `tools/cli.toml`:
 
 - Analysis: `dataset`, `claim`, `spec`, `run`, `assess`, `verify`, `belief`, `next`, `recheck`.
-- Coordination: `project`, `question`, `hypothesis`, `task`, `decide`, `revise`,
+- Coordination: `project`, `question`, `hypothesis`, `task`, `decide`, `note`, `revise`,
   `reuse`, `project-select`, `projects`, `project-show` (including topics and notes).
 - Record reading: `record`, by world or coordination address, or source identifier.
 - Sharing: `publish`, `publish-preview`, `provider-inspect`, `provider-bind`,
@@ -72,6 +72,10 @@ replay. [Sharing](docs/sharing.md) explains acceptance and those retention costs
 `belief` computes its answer: honest `NoBelief` is distinct from zero or a refusal.
 
 ### Research skills
+
+`/science:discuss` critically examines one focus and records a project note.
+It supports Standard, Q&A and explicitly requested double-blind reasoning; notes
+are dated statements, with world citations checked before writing.
 
 With the generated science plugin installed, `/science:sweep-assumptions`
 compares research questions across explicitly named permitted inputs. It preserves

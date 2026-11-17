@@ -136,3 +136,27 @@ the mandated forced final checks for shared changes. Do not assume a small fast
 selection covers a changed lineage. The snapshot/helper tests cover cold deep
 construction, dirty-base isolation, data copy, declaration collisions and both
 halves of the live-world refusal.
+
+## Authored skills
+
+Author skills as `skills/<name>/SKILL.md` with `name` and `description`
+frontmatter; the name matches its directory. Put supporting ordinary files beside
+it and link them relatively. Each skill is self-contained and never links into
+another skill's directory. If rules are shared, keep one copy in each skill and
+hold the copies byte-equal with a test.
+
+The adapter copies authored files byte for byte and does not prepend the command
+preamble. Each skill therefore states its own write boundaries. It names commands
+by declaration name, without a transport, and writes records only through those
+commands: no repository files or commits. Existing records change only where the
+workflow expressly allows it: `research-topic` may revise the topic it was asked
+to supplement, and either research skill may add or replace a source identifier
+with `source-correct`. Nothing else is changed. Check command reachability and selected-project
+preconditions before writes; tell the person to use `project-select` rather than
+selecting for them. Check quarry runs when needed, without locating or installing
+it. Follow a workspace's exposure policy before reading results.
+
+Packaging and frontmatter checks live in `python/tests/test_research_skills.py`;
+adapter regeneration is checked by `python/tests/test_adapters.py`. Behavioral
+acceptance exercises real commands in a disposable world, including refusal and
+record-order boundaries, separately from byte-for-byte packaging checks.

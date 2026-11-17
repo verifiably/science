@@ -16,6 +16,12 @@ def _refuse(message: str):
     raise Refused(Refusal("invalid-input", message))
 
 
+def require_body(body: str) -> None:
+    """Refuse an empty statement before a coordination act."""
+    if not body.strip():
+        raise Refused(Refusal("invalid-input", "body must not be empty", {"field": "body"}))
+
+
 def now() -> str:
     return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 

@@ -1,0 +1,21 @@
+schema_version = 1
+name = "note"
+purpose = "Record a note in the current project: a name, a body, and the world records it is about."
+write_class = "coordination"
+output_budget = 4096
+
+[inputs.name]
+type = "string"
+required = true
+doc = "What the note is, as a person would title it."
+[inputs.body]
+type = "string"
+required = true
+doc = "The note's text."
+[inputs.about]
+type = "list-of-string"
+required = false
+doc = "A world address the note is about (a source, proposition or dataset); repeatable."
+
+[reads]
+families = ["coordination", "corpus-stored"]

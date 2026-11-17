@@ -1777,6 +1777,18 @@ options = [
 ]
 
 [[cli.science.commands]]
+path = ["note"]
+summary = "Record a note in the current project: a name, a body, and the world records it is about"
+options = [
+  { shared = "config", value = "path" },
+  { names = ["--invocation-id"], value = "string" },
+  { names = ["--continue"], value = "string" },
+  { names = ["--name"], value = "string", required = true },
+  { names = ["--body"], value = "string", required = true },
+  { names = ["--about"], value = "string", repeatable = true },
+]
+
+[[cli.science.commands]]
 path = ["project"]
 summary = "Start a project: a name and a query over the world"
 options = [

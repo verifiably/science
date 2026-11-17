@@ -211,6 +211,16 @@ parsed and validated before effects; it selects world records, not coordination
 records. Publication closure and query graph traversal are separate operations:
 a query must explicitly include every required closure record.
 
+`note` records a dated statement in the selected project, with a required name
+and non-empty body. Optional repeated `about` values name world records held by
+live session corpora, including read mounts and redirects. Every citation is
+checked before the first act; unresolved ones refuse `invalid-input` with
+`data.unresolved`, and a blank body refuses with `data.field = "body"`. Exact
+duplicates are removed while preserving order and the supplied address spelling.
+Citing is not believing: acceptance and retraction do not filter citations. Notes
+cannot be revised; a correction is a new note naming the old one's pinned address
+in its text. A citation may stop resolving if its only holder later leaves the world.
+
 `reuse` copies a question/hypothesis query into the selected project as one new
 mint, preserving a pinned source pointer in prose; it does not bridge address
 spaces. `revise` writes a whole new revision naming its predecessors, carries over
