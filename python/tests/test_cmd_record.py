@@ -1,5 +1,6 @@
 """Full record reads preserve identity and work without a selection."""
 import re
+from dataclasses import replace
 
 import pytest
 from beliefs.coordination import CoordinationAddress, CoordinationRefused
@@ -20,11 +21,12 @@ def refused(d, arguments):
     with pytest.raises(Refused) as caught:
         d.invoke("record", arguments)
     assert caught.value.refusal.code == "invalid-input"
+    return caught.value.refusal
 
 
 def test_exactly_one_way_of_naming(certified_work):
     with research_rig(build_two_corpus_world(certified_work), NAMES) as (d, _):
-        refused(d, {})
+        assert refused(d, {}).data == {"kind": "BasisMissing"}
         refused(d, {"address": "source:missing", "pmid": "123"})
 
 
@@ -149,4 +151,15 @@ def test_without_coordination_a_world_record_still_prints(certified_work):
     with research_rig(cfg, NAMES) as (d, _):
         for args in ({"address": node.id}, {"pmid": "123"}):
             assert "source:\n" in d.invoke("record", args).text
+        refused(d, {"address": "coord:" + "f" * 32})
+
+
+def test_without_coordination_an_identifier_finds_a_configured_read_corpus(certified_work):
+    cfg = replace(build_two_corpus_world(certified_work), coordination=None)
+    node = add_source(cfg, "archive", "Read-mounted paper", pmid="456")
+    with research_rig(cfg, NAMES) as (d, _):
+        for args in ({"address": node.id}, {"pmid": "456"}):
+            text = d.invoke("record", args).text
+            assert f"address: {node.id}" in text and "source:\n" in text
+            assert "correctable here: no" in text
         refused(d, {"address": "coord:" + "f" * 32})

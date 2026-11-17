@@ -67,7 +67,10 @@ def _world_blocks(ctx, found):
 
 def handle(ctx, *, address=None, doi=None, pmid=None, isbn=None, accession=None) -> Report:
     by_identifier = any(value is not None for value in (doi, pmid, isbn, accession))
-    if (address is not None) == by_identifier:
+    if address is None and not by_identifier:
+        raise Refused(Refusal("invalid-input", "give an address or one or more identifiers",
+                              {"kind": "BasisMissing"}))
+    if address is not None and by_identifier:
         raise Refused(Refusal("invalid-input", "give an address or one or more identifiers, exclusively"))
     if address is None:
         found = sources_carrying(ctx, identifiers(doi=doi, pmid=pmid, isbn=isbn, accession=accession))
