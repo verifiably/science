@@ -238,6 +238,19 @@ Citing is not believing: acceptance and retraction do not filter citations. Note
 cannot be revised; a correction is a new note naming the old one's pinned address
 in its text. A citation may stop resolving if its only holder later leaves the world.
 
+`topic` records a complete background synthesis in the selected project: a name,
+non-empty body and YAML/JSON query. The query must have an `addresses` predicate
+(`invalid-input`, `data.reason = "no-addresses"` otherwise). Every addresses value
+and closure anchor must resolve in live session corpora; all misses appear in
+`data.unresolved`. A non-mapping query refuses `invalid-input`; malformed query
+language is left to the kernel (`kernel-refused`). A topic is never an empty stub
+or a vocabulary referent. Its citations can outlive their holders, as notes can.
+
+`revise` edits topics' name, body and query, taking an unpinned address. The
+resulting body must remain non-empty; query references are checked only when a
+new query is supplied. A rename carries the query without rechecking references
+that may have stopped resolving.
+
 `reuse` copies a question/hypothesis query into the selected project as one new
 mint, preserving a pinned source pointer in prose; it does not bridge address
 spaces. `revise` writes a whole new revision naming its predecessors, carries over

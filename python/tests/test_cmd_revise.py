@@ -157,3 +157,74 @@ def test_repair_on_one_standing_tip_still_takes_every_field(certified_work):
         revise_module.handle(ctx, writer, address=str(project), name="x", body="", query=QUERY, repair=True)
     ((kind, _, predecessors, _),) = writer.calls
     assert kind == "project" and predecessors == [tip.node.uid]
+
+
+def _topic(d, *, query=None):
+    from test_cmd_topic import query as view_query
+    out = d.invoke("mint-coordination", {"kind": "topic", "name": "Methods", "body": "Synthesis",
+                                         "query": query or view_query({"addresses": ["proposition:archived"]})})
+    project, local = re.search(r"topic:([0-9a-f]{32})\.([0-9a-f]{32})\.", out.text).groups()
+    return f"coord:{project}/{local}"
+
+
+def topic_rig(work):
+    from helpers.research import MINT_COORDINATION, mint_coordination_handler, research_rig
+    from helpers.world import build_two_corpus_world
+    return research_rig(build_two_corpus_world(work), NAMES,
+                        extra=((MINT_COORDINATION, mint_coordination_handler),))
+
+
+def test_a_topic_is_revised(certified_work):
+    from beliefs.coordination import CoordinationAddress
+    from test_cmd_topic import query
+    with topic_rig(certified_work) as (d, ctx):
+        d.invoke("project-select", {"target": str(mint_project(d))})
+        address = _topic(d)
+        new_query = query({"addresses": ["proposition:archived"]}, {"kinds": ["proposition"]})
+        d.invoke("revise", {"address": address, "name": "Narrow methods", "body": "Expanded synthesis", "query": new_query})
+        node = ctx.coordination().resolve(CoordinationAddress.parse(address))
+        assert node.title == "Narrow methods" and node.body == "Expanded synthesis"
+        assert node.facets["coordination"]["query"]["clauses"][0]["all"][1] == {"kinds": ["proposition"]}
+
+
+def test_a_topic_body_cannot_be_blanked(certified_work):
+    from beliefs.coordination import CoordinationAddress
+    with topic_rig(certified_work) as (d, ctx):
+        d.invoke("project-select", {"target": str(mint_project(d))})
+        address = _topic(d)
+        before = ctx.coordination().tips(CoordinationAddress.parse(address))
+        with pytest.raises(Refused) as caught:
+            d.invoke("revise", {"address": address, "body": "  \n"})
+        assert caught.value.refusal.data == {"field": "body"}
+        assert ctx.coordination().tips(CoordinationAddress.parse(address)) == before
+
+
+@pytest.mark.parametrize("predicate, data", [({"kinds": ["proposition"]}, {"reason": "no-addresses"}),
+                                           ({"addresses": ["source:missing"]}, {"unresolved": ["source:missing"]})])
+def test_a_new_query_is_checked(certified_work, predicate, data):
+    from test_cmd_topic import query
+    with topic_rig(certified_work) as (d, _):
+        d.invoke("project-select", {"target": str(mint_project(d))})
+        address = _topic(d)
+        with pytest.raises(Refused) as caught:
+            d.invoke("revise", {"address": address, "query": query(predicate)})
+        assert caught.value.refusal.code == "invalid-input"
+        assert caught.value.refusal.data == data
+
+
+def test_a_carried_query_is_not_rechecked(certified_work):
+    from test_cmd_topic import query
+    with topic_rig(certified_work) as (d, _):
+        d.invoke("project-select", {"target": str(mint_project(d))})
+        address = _topic(d, query=query({"addresses": ["source:missing"]}))
+        assert "[topic]" in d.invoke("revise", {"address": address, "name": "Renamed"}).text
+
+
+def test_a_pinned_address_refuses(certified_work):
+    from beliefs.coordination import CoordinationAddress
+    with topic_rig(certified_work) as (d, ctx):
+        d.invoke("project-select", {"target": str(mint_project(d))})
+        address = _topic(d)
+        node = ctx.coordination().resolve(CoordinationAddress.parse(address))
+        with pytest.raises(Refused, match="name the address unpinned"):
+            d.invoke("revise", {"address": address + "@" + node.uid, "name": "Renamed"})

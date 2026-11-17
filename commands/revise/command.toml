@@ -1,6 +1,6 @@
 schema_version = 1
 name = "revise"
-purpose = "Revise a project, question, hypothesis, task or decision."
+purpose = "Revise a project, question, hypothesis, task, decision or topic."
 write_class = "coordination"
 output_budget = 4096
 
@@ -19,7 +19,7 @@ doc = "A new body."
 [inputs.query]
 type = "string"
 required = false
-doc = "A new view query (projects, questions, hypotheses), YAML or JSON text."
+doc = "A new view query (projects, questions, hypotheses, topics), YAML or JSON text."
 [inputs.status]
 type = "enum"
 required = false
@@ -41,4 +41,4 @@ default = false
 doc = "Supersede every standing tip of a divergent address; every content field must then be given."
 
 [reads]
-families = ["coordination"]
+families = ["coordination", "corpus-stored"]

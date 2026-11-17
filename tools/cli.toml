@@ -1893,7 +1893,7 @@ options = [
 
 [[cli.science.commands]]
 path = ["revise"]
-summary = "Revise a project, question, hypothesis, task or decision"
+summary = "Revise a project, question, hypothesis, task, decision or topic"
 options = [
   { shared = "config", value = "path" },
   { names = ["--invocation-id"], value = "string" },
@@ -2035,6 +2035,18 @@ options = [
   { names = ["--invocation-id"], value = "string" },
   { names = ["--continue"], value = "string" },
   { names = ["--corpus-id"], value = "string", required = true },
+]
+
+[[cli.science.commands]]
+path = ["topic"]
+summary = "Record a topic in the current project: a background synthesis and the world records it draws on"
+options = [
+  { shared = "config", value = "path" },
+  { names = ["--invocation-id"], value = "string" },
+  { names = ["--continue"], value = "string" },
+  { names = ["--name"], value = "string", required = true },
+  { names = ["--body"], value = "string", required = true },
+  { names = ["--query"], value = "string", required = true },
 ]
 
 [[cli.science.commands]]

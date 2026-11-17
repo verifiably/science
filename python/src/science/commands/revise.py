@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from science.coordination import (content_of, now, parse_query_text, parse_unpinned, refuse_coordination,
+                                 require_body, require_topic_query,
                                  standing_tips)
 from science.refusal import Refusal, Refused
 from science.report import Report, record_block
@@ -9,7 +10,7 @@ from science.report import Report, record_block
 # The content fields each kind carries beyond name and body (coordination v2 contract).
 _FIELDS = {
     "project": {"query"}, "question": {"query"}, "hypothesis": {"query"},
-    "task": {"status", "depends"}, "decision": set(),
+    "task": {"status", "depends"}, "decision": set(), "topic": {"query"},
 }
 
 
@@ -51,6 +52,10 @@ def handle(ctx, writer, *, address, name=None, body=None, query=None, status=Non
         content = dict(given)
     else:
         content = {**content_of(tips[0].node), **given}
+    if kind == "topic":
+        require_body(content["body"])
+        if "query" in given:
+            require_topic_query(ctx, content["query"])
     content.update(author=writer.actor, at=now())
     node = writer.revise_coordination(kind, parsed, predecessors=[tip.node.uid for tip in tips],
                                       content=content)

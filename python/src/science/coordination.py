@@ -22,6 +22,25 @@ def require_body(body: str) -> None:
         raise Refused(Refusal("invalid-input", "body must not be empty", {"field": "body"}))
 
 
+def require_topic_query(ctx, query: dict) -> None:
+    """Check a valid topic query's references; leave malformed queries to the act."""
+    from beliefs.view_query import Addresses, parse_view_query
+    from science.lookup import unresolved_citations
+
+    try:
+        parsed = parse_view_query(query)
+    except ValueError:
+        return
+    if not any(isinstance(predicate, Addresses)
+               for clause in parsed.clauses for predicate in clause.predicates):
+        raise Refused(Refusal("invalid-input", "a topic query must name addresses",
+                              {"reason": "no-addresses"}))
+    unresolved = unresolved_citations(ctx, parsed.addresses())
+    if unresolved:
+        raise Refused(Refusal("invalid-input", "query names unresolved world records",
+                              {"unresolved": unresolved}))
+
+
 def now() -> str:
     return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 

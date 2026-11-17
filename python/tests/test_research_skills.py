@@ -19,3 +19,13 @@ def test_skill_frontmatter_names_match_directories():
         text = path.read_text()
         assert text.startswith("---\n")
         assert yaml.safe_load(text.split("---", 2)[1])["name"] == path.parent.name
+
+
+def test_research_topic_is_packaged_byte_for_byte(tmp_path):
+    from science.adapters import build_adapter
+    build_adapter(production_tree(), COMMANDS_ROOT, REPO_ROOT / "skills", tmp_path)
+    for name in ("SKILL.md", "literature-evaluation.md"):
+        source = REPO_ROOT / "skills" / "research-topic" / name
+        packaged = tmp_path / "skills" / "research-topic" / name
+        assert source.is_file() and packaged.is_file()
+        assert source.read_bytes() == packaged.read_bytes()

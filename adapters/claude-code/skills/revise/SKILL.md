@@ -1,6 +1,6 @@
 ---
 name: "revise"
-description: "Revise a project, question, hypothesis, task or decision."
+description: "Revise a project, question, hypothesis, task, decision or topic."
 ---
 
 You are working over one world of governed records through the `science`
@@ -16,8 +16,10 @@ budgeted: a truncated result ends with a cursor, and continuing with that
 cursor is the only way to see the rest. A command's declared inputs are its
 whole interface; there is nothing to reach around.
 
-Run `revise` to change a project, question, hypothesis, task or decision
-by address. Fields not given carry over from the current revision; a
+Run `revise` to change a project, question, hypothesis, task, decision or topic
+by unpinned address. A topic must retain a non-empty body; a new query must
+name at least one resolving address and have every closure anchor resolve.
+Carried queries are not rechecked when renaming or editing prose. Fields not given carry over from the current revision; a
 field the record's kind lacks refuses. Closing a task is `status` `done`
 or `dropped`; `depends` replaces a task's dependencies and `clear_depends`
 empties them. An address whose record has diverged into several standing

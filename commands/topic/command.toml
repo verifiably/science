@@ -1,0 +1,21 @@
+schema_version = 1
+name = "topic"
+purpose = "Record a topic in the current project: a background synthesis and the world records it draws on."
+write_class = "coordination"
+output_budget = 4096
+
+[inputs.name]
+type = "string"
+required = true
+doc = "The topic, as a person would name it."
+[inputs.body]
+type = "string"
+required = true
+doc = "The synthesis text."
+[inputs.query]
+type = "string"
+required = true
+doc = "The records the synthesis draws on, as a view query in YAML or JSON text naming at least one address."
+
+[reads]
+families = ["coordination", "corpus-stored"]
