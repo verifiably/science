@@ -139,6 +139,14 @@ Exact current inputs, defaults and prompts are the public files under
   refuse. Look up every confirmed identifier together with `record` first; never
   retry a refusal with fewer identifiers. Disjoint identifier sets can still mint
   two sources for one work: this is deduplication by shared identifier.
+- `source-correct` adds or replaces identifiers on a write-root source, with
+  `--address` and `--grounds`. Supplied schemes replace those schemes; other
+  identifiers remain. A source held by another live corpus refuses, as do
+  unchanged identifiers and collisions with another record. When its basis
+  changes, the reply shows its new address and the old address keeps resolving,
+  including earlier notes. Identifiers cannot be removed without a replacement;
+  retired addresses remain taken.
+
 - `claim` uses the first activated operator plan, mapping subject/object into
   named roles. Two one roles or two canonical many-role members are supported.
   Dataset, selection and run-output vocabulary bindings must resolve against held

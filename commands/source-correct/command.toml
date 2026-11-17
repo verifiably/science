@@ -1,0 +1,33 @@
+schema_version = 1
+name = "source-correct"
+purpose = "Add or replace an identifier on a source; its address follows its identifiers."
+write_class = "mints:source"
+output_budget = 4096
+
+[inputs.address]
+type = "string"
+required = true
+doc = "The source to correct."
+[inputs.grounds]
+type = "string"
+required = true
+doc = "Where the identifier comes from, for example the index record that lists it."
+[inputs.doi]
+type = "string"
+required = false
+doc = "Its DOI."
+[inputs.pmid]
+type = "string"
+required = false
+doc = "Its PubMed id."
+[inputs.isbn]
+type = "string"
+required = false
+doc = "Its ISBN."
+[inputs.accession]
+type = "string"
+required = false
+doc = "An accession."
+
+[reads]
+families = ["corpus-stored"]

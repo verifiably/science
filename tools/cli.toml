@@ -1699,6 +1699,21 @@ options = [
 ]
 
 [[cli.science.commands]]
+path = ["source-correct"]
+summary = "Add or replace an identifier on a source; its address follows its identifiers"
+options = [
+  { shared = "config", value = "path" },
+  { names = ["--invocation-id"], value = "string" },
+  { names = ["--continue"], value = "string" },
+  { names = ["--address"], value = "string", required = true },
+  { names = ["--grounds"], value = "string", required = true },
+  { names = ["--doi"], value = "string" },
+  { names = ["--pmid"], value = "string" },
+  { names = ["--isbn"], value = "string" },
+  { names = ["--accession"], value = "string" },
+]
+
+[[cli.science.commands]]
 path = ["spec"]
 summary = "Freeze an analysis spec against the kernel's reference rules and mint its record"
 options = [
