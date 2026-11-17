@@ -1,4 +1,5 @@
 """Admission and identity boundaries for the stores that supply held bytes."""
+from helpers.analysis import spec_inputs
 from dataclasses import replace
 from hashlib import sha256
 from pathlib import Path
@@ -271,8 +272,8 @@ def test_relocated_store_reads_and_new_dataset_write(relocated_store, certified_
     assert write_id != inherited_id
     before = store_snapshot(restored)
     ctx = ReadContext.open(cfg)
-    binding = cfg.profile.sorts["testing/concept"].vocabulary
-    assert ctx.snapshot().resolve(binding, "concept:disease-stage") is TermOutcome.MEMBER
+    binding = cfg.profile.sorts["testing/concept"]
+    assert ctx.snapshot(nodes=ctx.write_view().iter_stored(), observations=ctx.observations()).resolve(binding, "concept:disease-stage") is TermOutcome.MEMBER
     assert ctx.held_path(old_address).read_bytes() == old_bytes
     source = certified_work / "new.txt"
     source.write_bytes(b"new expression\n")
@@ -283,7 +284,7 @@ def test_relocated_store_reads_and_new_dataset_write(relocated_store, certified_
     assert ctx.held_path(new_address).is_relative_to(cfg.store_root)
     assert ctx.held_path(new_address).read_bytes() == source.read_bytes()
     assert all(o.location.startswith(f"store:{write_id}:") for o in ctx.observations()[new_address])
-    assert ctx.snapshot().resolve(binding, "concept:disease-stage") is TermOutcome.MEMBER
+    assert ctx.snapshot(nodes=ctx.write_view().iter_stored(), observations=ctx.observations()).resolve(binding, "concept:disease-stage") is TermOutcome.MEMBER
     assert ctx.held_path(old_address).read_bytes() == old_bytes
     assert store_snapshot(restored) == before
 
@@ -357,7 +358,6 @@ def test_inherited_and_write_stores_refuse_corrupted_bytes_in_run_and_verify_wit
     from beliefs.recipe import MINIMAL_POLICY
     from helpers.world import (
         OBSERVED,
-        SPEC_FIELDS,
         STORE_IDS,
         build_belief_world,
         fixture_bundle,
@@ -395,7 +395,7 @@ def test_inherited_and_write_stores_refuse_corrupted_bytes_in_run_and_verify_wit
 
     # (a) Unchanged inherited holding succeeds through run, assess, and verify.
     with open_rig(cfg, ("spec", "run", "assess", "verify")) as (d, ctx):
-        spec_out = d.invoke("spec", dict(SPEC_FIELDS, target="proposition:p1", dataset=inherited_ref))
+        spec_out = d.invoke("spec", spec_inputs(cfg, target="proposition:p1", dataset=inherited_ref))
         spec_ref = next(t for t in spec_out.text.split() if t.startswith("analysis-spec:"))
         run_out = d.invoke("run", {"spec": spec_ref, "dataset": inherited_ref, "code": str(code),
                                    "entrypoint": entrypoint, "targets": list(targets)})
@@ -438,7 +438,7 @@ def test_inherited_and_write_stores_refuse_corrupted_bytes_in_run_and_verify_wit
     write_bytes = b"write-store-expression\n"
     write_ref = hold_fixture_dataset(cfg, "data.txt", write_bytes, "writable", **OBSERVED)
     with open_rig(cfg, ("spec", "run", "assess")) as (d, _):
-        w_spec_out = d.invoke("spec", dict(SPEC_FIELDS, target="proposition:p1", dataset=write_ref))
+        w_spec_out = d.invoke("spec", spec_inputs(cfg, target="proposition:p1", dataset=write_ref))
         w_spec_ref = next(t for t in w_spec_out.text.split() if t.startswith("analysis-spec:"))
         w_run_out = d.invoke("run", {"spec": w_spec_ref, "dataset": write_ref, "code": str(code),
                                      "entrypoint": entrypoint, "targets": list(targets)})

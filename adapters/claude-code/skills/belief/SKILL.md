@@ -16,7 +16,8 @@ budgeted: a truncated result ends with a cursor, and continuing with that
 cursor is the only way to see the rest. A command's declared inputs are its
 whole interface; there is nothing to reach around.
 
-Run `belief` to see what the shipped policy believes about one proposition
-and why: `Belief` with its value, input digest and policy binding; `NoBelief`
-with the reason (no eligible assessment, no directional outcome); or
-`Refused` with the kernel's reason. Nothing is written.
+Run `belief` to inspect one proposition under the shipped policy. Supply `key`
+when several assessed targets exist; an unkeyed read lists the ambiguity instead
+of choosing or pooling targets. With one assessed target, the key is optional.
+The report explains Belief, NoBelief or the kernel's refusal and acceptance policy.
+Nothing is written.

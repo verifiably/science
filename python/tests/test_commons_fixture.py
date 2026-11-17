@@ -38,7 +38,7 @@ def test_only_a_holds_the_vocabulary_lists(fresh):
 def test_a_holds_the_reproducible_evidence_and_a_current_epoch(fresh):
     ids = a_identity(fresh.a)
     ctx = ReadContext.open(fresh.a)
-    assert set(ids) == {"proposition", "dataset", "spec", "run", "assessment", "world"}
+    assert set(ids) == {"proposition", "dataset", "spec", "run", "assessment", "world", "key"}
     assert ids["world"] == fresh.a.world.world_id
     for key in ("proposition", "dataset", "spec", "run", "assessment"):
         assert ctx.cited(ids[key]).root == fresh.a.write_root

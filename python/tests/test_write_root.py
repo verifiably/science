@@ -1,9 +1,10 @@
 """the write commands read the write root, and
 share the one store's holdings and vocabularies with every mount."""
+from helpers.analysis import spec_inputs
 import pytest
 
 from beliefs.corpus import ReadView
-from helpers.world import OBSERVED, SPEC_FIELDS, archive_config, build_two_corpus_world, hold_fixture_dataset, open_rig
+from helpers.world import (OBSERVED, archive_config, build_two_corpus_world, hold_fixture_dataset, open_rig)
 from science.config import ReadContext
 from science.refusal import Refused
 
@@ -13,7 +14,10 @@ CLAIM = {"subject": "concept:disease-stage", "predicate": "affects", "object": "
 
 @pytest.fixture
 def two(certified_work):
-    return build_two_corpus_world(certified_work)
+    from helpers.analysis import bootstrap_analysis
+    cfg = build_two_corpus_world(certified_work)
+    bootstrap_analysis(cfg)
+    return cfg
 
 
 def test_claim_types_through_a_vocabulary_held_in_the_read_mount(two):
@@ -27,7 +31,7 @@ def test_a_spec_in_the_write_root_reads_its_dataset_there(two):
     data = hold_fixture_dataset(two, "data.txt", b"y\n", "expression", **OBSERVED)
     with open_rig(two, ("claim", "spec")) as (d, _):
         d.invoke("claim", CLAIM)
-        out = d.invoke("spec", dict(SPEC_FIELDS, target="proposition:claimed", dataset=data))
+        out = d.invoke("spec", spec_inputs(two, target="proposition:claimed", dataset=data))
         assert "analysis-spec:" in out.text
 
 
@@ -37,7 +41,7 @@ def test_a_spec_over_a_read_mount_dataset_is_minted(two):
     data = hold_fixture_dataset(archive_config(two), "data.txt", b"y\n", "expression", **OBSERVED)
     with open_rig(two, ("claim", "spec")) as (d, ctx):
         d.invoke("claim", CLAIM)
-        out = d.invoke("spec", dict(SPEC_FIELDS, target="proposition:claimed", dataset=data))
+        out = d.invoke("spec", spec_inputs(two, target="proposition:claimed", dataset=data))
         assert "analysis-spec:" in out.text
         assert not ctx.write_view().holds(data)
 
@@ -49,7 +53,7 @@ def test_a_spec_on_a_proposition_only_the_mount_can_decode_refuses(two):
     data = hold_fixture_dataset(archive_config(two), "data.txt", b"y\n", "expression", **OBSERVED)
     with open_rig(two, ("spec",)) as (d, ctx):
         with pytest.raises(Refused) as caught:
-            d.invoke("spec", dict(SPEC_FIELDS, target="proposition:archived", dataset=data))
+            d.invoke("spec", spec_inputs(two, target="proposition:archived", dataset=data))
         assert not any(n.kind == "analysis-spec" for n in ctx.write_view().iter_stored())
     assert caught.value.refusal.code == "invalid-input"
 
@@ -85,7 +89,7 @@ def test_run_given_a_mounted_dataset_the_spec_does_not_observe_refuses_before_an
     code, entrypoint, targets = fixture_bundle(certified_work)
     with open_rig(two, ("claim", "spec", "run")) as (d, ctx):
         d.invoke("claim", CLAIM)
-        out = d.invoke("spec", dict(SPEC_FIELDS, target="proposition:claimed", dataset=data))
+        out = d.invoke("spec", spec_inputs(two, target="proposition:claimed", dataset=data))
         spec = _minted_ref(out.text, "analysis-spec")
         with pytest.raises(Refused) as caught:
             d.invoke("run", {"spec": spec, "dataset": archived, "code": str(code),

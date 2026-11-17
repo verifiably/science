@@ -1,5 +1,6 @@
 """`show`: one pin's state, source, kernel status, acceptance and verification picture,
 reading B's registry, the kernel's registry and the session's records; it writes nothing."""
+from helpers.analysis import spec_inputs
 from dataclasses import replace
 from types import SimpleNamespace
 
@@ -12,9 +13,7 @@ from nodes.core.corpus import Corpus
 
 from helpers.commons import LOC_A, LOC_A2, a_identity, publish_again, read_rig, refused, write_commons_config
 from test_cmd_adopt import _adopt, bound_fetched_only
-from helpers.world import (
-    LEVELS, PROFILE, WORKING_FIELDS, _minted_ref, concept_list_address, level_list_address, open_rig,
-)
+from helpers.world import (LEVELS, PROFILE, _minted_ref, concept_list_address, level_list_address, open_rig)
 
 from science.config import ReadContext, load_config
 from science.sharing import SharingRegistry
@@ -30,7 +29,7 @@ def test_show_is_read_only_over_its_declared_reads():
     from science.loader import production_tree
     decl = next(d for d in production_tree() if d.name == "show")
     assert decl.write_class.kind == "read-only"
-    assert set(decl.reads) == {"registry", "corpus-stored"}
+    assert set(decl.reads) == {"registry", "corpus-stored", "holdings"}
 
 
 def test_show_a_mounted_origin_confirmed_pin(adopted):
@@ -75,8 +74,8 @@ def test_b_resolves_the_vocabulary_from_fetched_bytes_without_redeclaring(verifi
     assert ctx.cited(level_list_address()).corpus_id == ids["corpus_id"]
     assert ctx.held_path(level_list_address()).read_bytes() == LEVELS
     assert not any(node.kind == "dataset" for node in ctx.write_view().iter_stored())
-    with open_rig(verified.b, ("spec",)) as (d, _):
-        text = d.invoke("spec", dict(WORKING_FIELDS, target=ids["proposition"], dataset=ids["dataset"])).text
+    with open_rig(replace(verified.b, accept=(ids["world"],)), ("spec",)) as (d, _):
+        text = d.invoke("spec", spec_inputs(verified.b, method="rank comparison, working corpus", target=ids["proposition"], dataset=ids["dataset"])).text
     spec_b = _minted_ref(text, "analysis-spec")
     assert ReadContext.open(verified.b).own(spec_b)
 

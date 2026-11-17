@@ -32,7 +32,13 @@ def _not_held(cfg, dataset):
 
 
 def _retrieved(path, content: bytes) -> Retrieved:
-    return Retrieved(digest="sha256:" + sha256(content).hexdigest(), size=len(content), path=path)
+    return Retrieved(
+        digest="sha256:" + sha256(content).hexdigest(),
+        size=len(content),
+        path=path,
+        status=200,
+        headers=(),
+    )
 
 
 def test_fetch_from_a_path_holds_the_mounted_dataset_bytes(reopened, fetching, tmp_path):
@@ -80,7 +86,7 @@ def test_fetch_from_a_url_stores_matching_bytes(reopened, fetching, tmp_path, mo
 
 def test_fetch_from_a_url_that_fails_refuses_with_the_reason(reopened, fetching, monkeypatch):
     invoke, dataset, cfg = fetching
-    monkeypatch.setattr(fetch_module, "retrieve", lambda *a, **k: Failed("timeout"))
+    monkeypatch.setattr(fetch_module, "retrieve", lambda *a, **k: Failed("timeout", "timeout"))
     refusal = refused(lambda: invoke(URL))
     assert refusal.code == "invalid-input" and "timeout" in refusal.message
     _not_held(cfg, dataset)

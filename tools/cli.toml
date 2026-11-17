@@ -10,12 +10,14 @@
 # its implementation. Never hand-copy a table.
 #
 # Row shapes (spec "The table"):
-#   option: names | shared (+ role), value, values, default, arity, repeatable, required, exception
-#   arg:    name, value, values, required, variadic
+#   header:  project, tier, default_output, env, protocol, exception, commands
+#   option:  names | shared (+ role), value, values, default, arity, repeatable, required, exception
+#   arg:     name, value, values, required, variadic
 #   command: path, summary, verb, output, protocol, exception, args, options
-# `exception` carries the reason wherever a row departs from the vocabulary on purpose: on a
-# command row for its verb, on a shared option row for a value kind that differs from the
-# vocabulary entry's or for a repeatable filter whose repeats narrow instead of widening.
+# `exception` carries the reason wherever a CLI or row departs from the vocabulary on purpose:
+# on a CLI header for a CLI-wide departure such as third-party service credential environment
+# names, on a command row for its verb, on a shared option row for a value kind that differs
+# from the vocabulary entry's or for a repeatable filter whose repeats narrow instead of widening.
 # Any other key on a row is a validation error.
 # --json, --pretty, -h/--help, -V/--version, and --color on typed CLIs are implied by the
 # CLI header and never rows; a protocol CLI implies only the help and version ones. The
@@ -236,12 +238,6 @@ tier = "typed"
 default_output = "pretty"
 env = "FAMILIAR"
 
-[cli.forge]
-project = "forge"
-tier = "automation"
-default_output = "pretty"
-env = "FORGE"
-
 [cli.relay]
 project = "relay"
 tier = "automation"
@@ -260,14 +256,12 @@ tier = "automation"
 default_output = "pretty"
 env = "LIT"
 
-# quarry reads service credential variables under each service's own name (NCBI_API_KEY and
-# the like): an exception to <NAME>_<OPTION>, recorded here because a CLI header has no
-# `exception` field (ops-1aa74e).
 [cli.quarry]
 project = "quarry"
 tier = "automation"
 default_output = "pretty"
 env = "QUARRY"
+exception = "reads service credential variables under each service's own name (NCBI_API_KEY and the like)"
 
 [cli.science]
 project = "sci"
@@ -397,6 +391,21 @@ summary = "The project, canonical id, or live prefix for an id, prefix, or path,
 args = [{ name = "inputs", value = "string", required = false, variadic = true }]
 options = [
   { names = ["--stdin"], value = "none" },
+  { shared = "all", value = "none" },
+  { names = ["--freshness"], value = "none" },
+]
+
+[[cli.tasks.commands]]
+path = ["identity"]
+summary = "The identity snapshot in each records entry"
+
+[[cli.tasks.commands]]
+path = ["identity", "refresh"]
+summary = "Refresh records-entry identity snapshots from each registered root's committed identity.toml"
+args = [{ name = "prefixes", value = "string", required = false, variadic = true }]
+options = [
+  { shared = "all", value = "none" },
+  { names = ["--from"], value = "path" },
 ]
 
 [[cli.tasks.commands]]
@@ -421,6 +430,7 @@ options = [
   { shared = "tag", role = "set", value = "string", repeatable = true },
   { names = ["--need"], value = "string", repeatable = true },
   { names = ["--depends"], value = "ref", repeatable = true },
+  { names = ["--related"], value = "ref", repeatable = true },
   { names = ["--ref"], value = "string", repeatable = true },
   { names = ["--spec"], value = "string" },
   { names = ["--plan"], value = "string" },
@@ -612,6 +622,8 @@ options = [
   { names = ["--rm-ref"], value = "string", repeatable = true },
   { names = ["--no-refs"], value = "none" },
   { names = ["--no-depends"], value = "none" },
+  { names = ["--rm-related"], value = "ref", repeatable = true },
+  { names = ["--no-related"], value = "none" },
   { names = ["--body", "-b"], value = "string" },
   { names = ["--priority", "-p"], value = "enum", values = ["0", "1", "2", "3", "4"] },
   { names = ["--size"], value = "enum", values = ["xs", "s", "m", "l", "xl"] },
@@ -626,6 +638,7 @@ options = [
   { shared = "tag", role = "set", value = "string", repeatable = true },
   { names = ["--need"], value = "string", repeatable = true },
   { names = ["--depends"], value = "ref", repeatable = true },
+  { names = ["--related"], value = "ref", repeatable = true },
   { names = ["--ref"], value = "string", repeatable = true },
   { names = ["--spec"], value = "string" },
   { names = ["--plan"], value = "string" },
@@ -789,9 +802,13 @@ options = [
 
 [[cli.tasks.commands]]
 path = ["commit"]
-summary = "Commit every uncommitted file under tasks/ in one commit"
+summary = "Commit uncommitted task records or records-relative paths in one commit"
+args = [
+  { name = "targets", value = "string", required = false, variadic = true },
+]
 options = [
   { shared = "project", role = "select", value = "string", repeatable = false },
+  { names = ["--message", "-m"], value = "string" },
 ]
 
 [[cli.tasks.commands]]
@@ -866,6 +883,8 @@ options = [
 path = ["goals"]
 summary = "The goals you asked for across projects: progress, recent activity, and what needs attention"
 options = [
+  { shared = "sort", role = "select", value = "enum", values = ["project", "activity", "priority"], default = "project" },
+  { shared = "reverse", value = "none" },
   { shared = "project", role = "select", value = "string", repeatable = false },
   { shared = "all_projects", value = "none" },
   { names = ["--group"], value = "string" },
@@ -1059,7 +1078,7 @@ path = ["index"]
 summary = "index local harness transcripts"
 options = [
   { names = ["--full"], value = "none" },
-  { names = ["--replay"], value = "path", repeatable = true },
+  { names = ["--replay"], value = "path", arity = "2", repeatable = true },
   { shared = "harness", role = "filter", value = "enum", values = ["claude-code", "codex"], repeatable = false },
   { shared = "project", role = "select", value = "string", repeatable = false },
 ]
@@ -1136,8 +1155,32 @@ options = [
 
 [[cli.obs.commands]]
 path = ["dashboard", "summary"]
-summary = "print live attention and the snapshot's headline numbers"
+summary = "print the health view: a typical session per harness and model against its 30-day normal"
 options = [
+  { names = ["--window"], value = "enum", values = ["24h", "7d", "30d"], default = "24h" },
+  { names = ["--out"], value = "path" },
+]
+
+[[cli.obs.commands]]
+path = ["dashboard", "tasks"]
+summary = "print missed recurrences, aged doc findings and long-doing tasks"
+options = [
+  { names = ["--out"], value = "path" },
+]
+
+[[cli.obs.commands]]
+path = ["dashboard", "attention"]
+summary = "print live findings and grouped drift findings"
+options = [
+  { shared = "all", value = "none" },
+  { names = ["--out"], value = "path" },
+]
+
+[[cli.obs.commands]]
+path = ["dashboard", "changes"]
+summary = "print change markers and integrated tooling commits"
+options = [
+  { names = ["--window"], value = "enum", values = ["7d", "30d"], default = "7d" },
   { names = ["--out"], value = "path" },
 ]
 
@@ -1575,6 +1618,7 @@ options = [
   { shared = "config", value = "path" },
   { names = ["--invocation-id"], value = "string" },
   { names = ["--continue"], value = "string" },
+  { names = ["--key"], value = "string" },
   { names = ["--proposition"], value = "string", required = true },
 ]
 
@@ -1587,23 +1631,18 @@ options = [
   { names = ["--continue"], value = "string" },
   { names = ["--applicability"], value = "string", repeatable = true },
   { names = ["--assumptions"], value = "string", required = true },
-  { names = ["--baseline"], value = "string" },
-  { names = ["--comparison"], value = "string" },
-  { names = ["--conditioning"], value = "string", repeatable = true },
-  { names = ["--contrast"], value = "enum", values = ["levels", "continuous"], required = true },
+  { names = ["--estimand"], value = "string", required = true },
+  { names = ["--standing"], value = "enum", values = ["empirical", "model", "calibrated-model"], required = true },
+  { names = ["--evidence-mode"], value = "enum", values = ["observation", "annotation", "simulation", "derivation", "literature-extraction"], required = true },
+  { names = ["--rule-procedures"], value = "string", repeatable = true, required = true },
+  { names = ["--model"], value = "string" },
+  { names = ["--registers"], value = "string", repeatable = true },
   { names = ["--dataset"], value = "string", required = true },
   { names = ["--equivalence-rule"], value = "string", required = true },
   { names = ["--falsification"], value = "string", required = true },
-  { names = ["--identification"], value = "string", required = true },
-  { names = ["--increment"], value = "string" },
   { names = ["--interpretation-rule"], value = "string", required = true },
-  { names = ["--measure"], value = "string", required = true },
   { names = ["--method"], value = "string", required = true },
   { names = ["--parameters"], value = "string", repeatable = true },
-  { names = ["--quantity"], value = "string" },
-  { names = ["--reference"], value = "string", required = true },
-  { names = ["--scale"], value = "enum", values = ["additive", "multiplicative"], required = true },
-  { names = ["--slot"], value = "int", required = true },
   { names = ["--supersedes"], value = "string" },
   { names = ["--target"], value = "string", required = true },
 ]
@@ -3006,52 +3045,16 @@ output = "none"
 summary = "Focus a Niri workspace by its stable ID"
 args = [{ name = "id", value = "string", required = true }]
 
-# ---- forge
-
-[[cli.forge.commands]]
-path = ["graph"]
-summary = "Project the graph, or check committed records"
-options = [
-  { names = ["--check"], value = "none" },
-  { names = ["--partition"], value = "string", default = "all" },
-  { names = ["--theme-graph"], value = "path" },
-  { names = ["--sync-theme"], value = "none" },
-]
-exception = "check is a flag on the projection command rather than a verb, because the check re-derives the same graph"
-
-[[cli.forge.commands]]
-path = ["show"]
-verb = "show"
-summary = "Show one committed graph node"
-args = [{ name = "node", value = "ref", required = true }]
-options = [
-  { names = ["--theme-graph"], value = "path" },
-]
-
-[[cli.forge.commands]]
-path = ["seed"]
-summary = "Seed a new exploration flow from a committed node"
-args = [{ name = "dest-flow-dir", value = "path", required = true }]
-options = [
-  { names = ["--from"], value = "ref", required = true },
-  { names = ["--member"], value = "string", required = true },
-  { names = ["--goal"], value = "string", required = true },
-  { names = ["--family"], value = "string", required = true },
-  { names = ["--riff"], value = "string", required = true },
-  { names = ["--namespace"], value = "string", required = true },
-  { names = ["--model"], value = "string", default = "gpt-image" },
-  { names = ["--floor-rows"], value = "int", default = "12" },
-  { names = ["--body-plan"], value = "string", default = "cat" },
-  { names = ["--reason"], value = "string" },
-  { names = ["--theme-graph"], value = "path" },
-]
-
 # ---- relay
 
 [[cli.relay.commands]]
 path = ["list"]
 verb = "list"
 summary = "The live-agent registry"
+
+[[cli.relay.commands]]
+path = ["whoami"]
+summary = "The agent session this process belongs to"
 
 [[cli.relay.commands]]
 path = ["reap"]

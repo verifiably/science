@@ -9,5 +9,10 @@ type = "string"
 required = true
 doc = "The proposition's record id, e.g. proposition:p1."
 
+[inputs.key]
+type = "string"
+required = false
+doc = "The assessed target key; required when the proposition has multiple assessed keys."
+
 [reads]
 families = ["corpus-stored", "holdings", "epoch", "registry"]

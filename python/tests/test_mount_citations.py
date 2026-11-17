@@ -1,5 +1,6 @@
 """Mount citations consumer spec, decisions 1–3: a write cites a record any
 session corpus holds; a mutation target stays in the write root."""
+from helpers.analysis import spec_inputs
 import dataclasses
 
 import pytest
@@ -7,10 +8,7 @@ import pytest
 from beliefs import stored
 from beliefs.root import open_corpus
 from helpers.snapshot import snapshot
-from helpers.world import (
-    FIXTURE_AUTHORITY, SPEC_FIELDS, WORKING_FIELDS, _minted_ref, build_shared_world_with_evidence,
-    fixture_bundle, mint_fixture_run, mount_config, open_rig,
-)
+from helpers.world import (FIXTURE_AUTHORITY, _minted_ref, build_shared_world_with_evidence, fixture_bundle, mint_fixture_run, mount_config, open_rig)
 from science.commands.next import classify, handle as next_handle
 from science.config import ReadContext
 from science.refusal import Refused
@@ -125,7 +123,7 @@ def test_spec_run_and_assess_in_the_write_root_cite_the_mount(shared, certified_
     write root, and every record it cites stays in the mount."""
     cfg, mounted = shared
     with open_rig(cfg, ("spec",)) as (d, _):
-        spec = _minted_ref(d.invoke("spec", dict(WORKING_FIELDS, target="proposition:shared",
+        spec = _minted_ref(d.invoke("spec", spec_inputs(cfg, method="rank comparison, working corpus", target="proposition:shared",
                                                  dataset=mounted["data"])).text, "analysis-spec")
     assert spec != mounted["spec"]
     run = mint_fixture_run(cfg, spec, mounted["data"], fixture_bundle(certified_work))
@@ -158,7 +156,7 @@ def test_supersedes_names_a_write_root_spec_only(shared):
     cfg, mounted = shared
     with open_rig(cfg, ("spec",)) as (d, _):
         with pytest.raises(Refused) as caught:
-            d.invoke("spec", dict(SPEC_FIELDS, target="proposition:shared", dataset=mounted["data"],
+            d.invoke("spec", spec_inputs(cfg, target="proposition:shared", dataset=mounted["data"],
                                   supersedes=mounted["spec"]))
     assert caught.value.refusal.code == "invalid-input"
     assert _ids(cfg)["shared"] in caught.value.refusal.message
@@ -169,7 +167,7 @@ def _walk(cfg, mounted, work) -> str:
     """spec → run → assess in the write root over the mount's proposition and
     data; returns the assessment ref."""
     with open_rig(cfg, ("spec",)) as (d, _):
-        spec = _minted_ref(d.invoke("spec", dict(WORKING_FIELDS, target="proposition:shared",
+        spec = _minted_ref(d.invoke("spec", spec_inputs(cfg, method="rank comparison, working corpus", target="proposition:shared",
                                                  dataset=mounted["data"])).text, "analysis-spec")
     run = mint_fixture_run(cfg, spec, mounted["data"], fixture_bundle(work))
     with open_rig(cfg, ("assess",)) as (d, _):
@@ -193,7 +191,8 @@ def test_at_a_current_epoch_belief_counts_the_write_roots_assessment_of_a_mounte
     assessment = _walk(cfg, mounted, certified_work)
     publish_session_epoch(cfg)
     ctx = ReadContext.open(cfg)
-    inputs = ctx.gather_inputs("proposition:shared")
+    key = stored.assessment_value(ctx.write_view().get(assessment), profile=cfg.profile).key()
+    inputs = ctx.gather_inputs("proposition:shared", key=key)
     local = stored.assessment_value(ctx.write_view().get(assessment), profile=cfg.profile).identity()
     held = stored.assessment_value(ctx.cited(mounted["assessment"]).view.get(mounted["assessment"]),
                                    profile=cfg.profile).identity()
@@ -207,18 +206,18 @@ def test_a_world_read_finds_the_observations_once_per_context(shared, monkeypatc
     are one computation per context, however many propositions it evaluates."""
     cfg, _ = shared
     publish_session_epoch(cfg)
-    found = ReadContext.observations
+    import science.holdings as holdings
+    found = holdings.found_observations
     calls = []
-
-    def counted(self):
+    def counted(views, world):
         calls.append(None)
-        return found(self)
-
-    monkeypatch.setattr(ReadContext, "observations", counted)
+        return found(views, world)
+    monkeypatch.setattr(holdings, "found_observations", counted)
     ctx = ReadContext.open(cfg)
     for proposition in ("proposition:shared", "proposition:fresh"):
         ctx.evaluate(proposition)
-        ctx.gather_inputs(proposition)
+        for key in ctx.claim_view(proposition).beliefs:
+            ctx.gather_inputs(proposition, key=key)
     assert len(calls) == 1
 
 
@@ -250,7 +249,7 @@ def _local_walk(cfg, mounted, work) -> str:
     proposition over the mount's dataset; returns the assessment ref."""
     with open_rig(cfg, ("claim", "spec")) as (d, _):
         d.invoke("claim", LOCAL)
-        spec = _minted_ref(d.invoke("spec", dict(WORKING_FIELDS, target="proposition:local",
+        spec = _minted_ref(d.invoke("spec", spec_inputs(cfg, method="rank comparison, working corpus", target="proposition:local",
                                                  dataset=mounted["data"])).text, "analysis-spec")
     run = mint_fixture_run(cfg, spec, mounted["data"], fixture_bundle(work))
     with open_rig(cfg, ("assess",)) as (d, _):
@@ -274,7 +273,7 @@ def test_a_write_root_spec_on_a_mounted_proposition_makes_it_ready(shared, certi
     cfg, mounted = shared
     assert classify(ReadContext.open(cfg), "proposition:fresh") == "not-ready"
     with open_rig(cfg, ("spec",)) as (d, _):
-        d.invoke("spec", dict(WORKING_FIELDS, target="proposition:fresh", dataset=mounted["data"]))
+        d.invoke("spec", spec_inputs(cfg, method="rank comparison, working corpus", target="proposition:fresh", dataset=mounted["data"]))
     assert classify(ReadContext.open(cfg), "proposition:fresh") == "ready"
 
 

@@ -25,7 +25,7 @@ doc = "An empirical-observation locator, e.g. accession:GSE179929; absent, the r
 [inputs.facets]
 type = "list-of-string"
 required = false
-doc = "Domain facets as name=key:value,key:value, e.g. biology/gene-axis=axis:rows,namespace:HGNC."
+doc = "Declared local domain facets as name=key:value,key:value, e.g. local/gene-axis=axis:rows,namespace:HGNC."
 
 [inputs.resources]
 type = "list-of-string"

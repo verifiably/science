@@ -1,3 +1,4 @@
+from helpers.analysis import spec_inputs
 import hashlib
 import json
 import secrets
@@ -7,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from beliefs import stored
+from beliefs.contract.domain import DomainContract
 from beliefs.consulted import CorpusPins
 from beliefs.permit import Authority, WritePermit
 from beliefs.profile import (
@@ -24,7 +26,7 @@ from science.config import ScienceConfig
 # test helper does; science code itself never constructs one.
 FIXTURE_AUTHORITY = Authority(WritePermit.full(), "fixture")
 
-DOMAINS = ("biology",)
+DOMAINS = ("general",)
 COORDINATION = 2
 PROFILE = compile_profile(
     shipped_base_contract(),
@@ -193,50 +195,71 @@ contract:
   lineage: genesis
   sorts:
     concept:
-      vocabulary: "dataset:%(concepts)s"
+      binding: {kind: dataset, dataset: "dataset:%(concepts)s"}
+      identifier_class: {prefix: concept, pattern: 'concept:.+'}
     protein:
-      vocabulary: {namespace: HGNC, release: "2026-07-01"}
+      binding: {kind: release, namespace: HGNC, release: "2026-07-01"}
+      identifier_class: {prefix: protein, pattern: 'protein:.+'}
     level:
-      vocabulary: "dataset:%(levels)s"
-    measure:
-      vocabulary: {namespace: testing-measures, release: "1"}
-    identification:
-      vocabulary: {namespace: testing-identification, release: "1"}
+      binding: {kind: dataset, dataset: "dataset:%(levels)s"}
+      identifier_class: {prefix: level, pattern: 'level:.+'}
     cohort:
-      vocabulary: {namespace: testing-cohorts, release: "1"}
+      binding: {kind: release, namespace: testing-cohorts, release: "1"}
+      identifier_class: {prefix: cohort, pattern: 'cohort:.+'}
   dimensions:
     scope:
       restriction_sort: cohort
+      placement: applicability
+      restriction: {form: term, sort: cohort}
+      applies_to: [general/changes-under-intervention]
     setting:
       restriction_sort: cohort
+      placement: applicability
+      restriction: {form: term, sort: cohort}
+      applies_to: [general/changes-under-intervention]
     stage:
       restriction_sort: level
-  operators:
+      placement: applicability
+      restriction: {form: term, sort: level}
+      applies_to: [general/changes-under-intervention]
+  instantiations:
     affects-concept-protein:
-      arity: 2
-      arg_sorts: [concept, protein]
-      sign_apt: true
-      layers: [causal]
-      dimensions: [scope, stage]
+      template: general/changes-under-intervention
+      roles: {intervention: [concept], response: [protein]}
     affects-concept-concept:
-      arity: 2
-      arg_sorts: [concept, concept]
-      sign_apt: true
-      layers: [causal]
-      dimensions: []
+      template: general/changes-under-intervention
+      roles: {intervention: [concept], response: [concept]}
   estimands:
-    affects-concept-protein:
-      level_sorts: {"0": level}
-      measure_sort: measure
-      identification_sort: identification
-      conditioning_sort: concept
+    instantiation:affects-concept-protein:
+      forms: [contrast]
+      conditioning_sorts: [concept]
+  identification_classes:
+    randomized:
+      definition: Synthetic fixture intervention identification.
+      licenses_layers: [causal]
+  procedure_kinds:
+    model:
+      definition: Synthetic fixture model requiring held inputs.
+      fills_within_model: true
+  measurements:
+    protein: [general/relative-abundance]
+  facets:
+    gene-axis:
+      attaches_to: [dataset]
+      fields:
+        axis: {type: string, required: true}
+        namespace: {type: string, required: true}
+    annotation:
+      attaches_to: [dataset, proposition]
+      fields:
+        note: {type: string, required: true}
 plan:
   sorts: {concept: concept, protein: protein}
   layers: {causal: causal}
   polarities: {positive: positive, negative: negative, not_applicable: null}
   operators:
-    - {predicate: affects, subject: concept, object: protein, operator: affects-concept-protein}
-    - {predicate: affects, subject: concept, object: concept, operator: affects-concept-concept}
+    - {predicate: affects, subject: concept, object: protein, operator: general/changes-under-intervention, roles: {subject: intervention, object: response}}
+    - {predicate: affects, subject: concept, object: concept, operator: general/changes-under-intervention, roles: {subject: intervention, object: response}}
 '''
 CONCEPTS = b"concept:disease-stage\nconcept:remission\n"
 LEVELS = b"level:early\nlevel:late\n"
@@ -275,14 +298,15 @@ def archive_contract_document(work: Path) -> Path:
 
 
 def build_fixture_world_with_contract(work: Path, *, hold_concepts: bool = True,
-                                      hold_levels: bool = True) -> ScienceConfig:
+                                      hold_levels: bool = True,
+                                      extra_contracts: tuple[DomainContract, ...] = ()) -> ScienceConfig:
     """A world whose profile compiles the test contract, with the concept and
     level lists held (or not)."""
     from beliefs.profile import shipped_base_contract
     from science.contracts import load_contract_document
     base = shipped_base_contract()
     contract, plan = load_contract_document(fixture_contract_document(work), base)
-    profile = compile_profile(base, [shipped_domain_contract(ns) for ns in DOMAINS] + [contract],
+    profile = compile_profile(base, [shipped_domain_contract(ns) for ns in DOMAINS] + [contract, *extra_contracts],
                               coordination=shipped_coordination(COORDINATION))
     pins = CorpusPins(
         science_contract="science:" + profile.base_contract_identity,
@@ -302,7 +326,7 @@ def build_fixture_world_with_contract(work: Path, *, hold_concepts: bool = True,
     cfg = ScienceConfig(world=config, operations_root=work / "ops", profile=profile,
                         service_socket=short_socket(work), store_root=work / "store",
                         coordination=COORDINATION, write_root=corpus_root,
-                        plans=(plan,), available_contracts=(contract,))
+                        plans=(plan,), available_contracts=(contract, *extra_contracts))
     if hold_concepts:
         hold_fixture_dataset(cfg, "concepts.txt", CONCEPTS, "concept vocabulary")
     if hold_levels:
@@ -311,9 +335,9 @@ def build_fixture_world_with_contract(work: Path, *, hold_concepts: bool = True,
 
 
 def build_two_corpus_world(work: Path) -> ScienceConfig:
-    """the write root `corpus` (base, biology, the
+    """the write root `corpus` (base, general, the
     `testing` contract and coordination) and the read mount `archive` (base,
-    biology and the corpus-local `archive` contract, no coordination — the mm30
+    general and the corpus-local `archive` contract, no coordination — the mm30
     shape), in one world and one store. The archive holds the vocabulary lists
     and proposition:archived; `archive` reaches the mount through
     read_contracts alone."""
@@ -323,9 +347,9 @@ def build_two_corpus_world(work: Path) -> ScienceConfig:
     base = shipped_base_contract()
     testing, testing_plan = load_contract_document(fixture_contract_document(work), base)
     archive, archive_plan = load_contract_document(archive_contract_document(work), base)
-    biology = [shipped_domain_contract(ns) for ns in DOMAINS]
-    writer_profile = compile_profile(base, biology + [testing], coordination=shipped_coordination(COORDINATION))
-    archive_profile = compile_profile(base, biology + [archive])
+    domain_packs = [shipped_domain_contract(ns) for ns in DOMAINS]
+    writer_profile = compile_profile(base, domain_packs + [testing], coordination=shipped_coordination(COORDINATION))
+    archive_profile = compile_profile(base, domain_packs + [archive])
     archive_root, corpus_root = work / "archive", work / "corpus"
     config = WorldConfig(work / "world", secrets.token_hex(16), (archive_root, corpus_root))
     init_world_root(config, authority=FIXTURE_AUTHORITY)
@@ -346,9 +370,9 @@ def build_two_corpus_world(work: Path) -> ScienceConfig:
     archived = archive_config(cfg)
     hold_fixture_dataset(archived, "concepts.txt", CONCEPTS, "concept vocabulary")
     hold_fixture_dataset(archived, "levels.txt", LEVELS, "level vocabulary")
-    claim = build_claim(archive_profile, operator=archive_plan.operator_for("affects", "concept", "protein"),
-                        args=(Referent(sort=archive_plan.sort_for("concept"), term="concept:disease-stage"),
-                              Referent(sort=archive_plan.sort_for("protein"), term="protein:PHF19")),
+    claim = build_claim(archive_profile, operator=archive_plan.row_for("affects", "concept", "protein").operator,
+                        roles={"intervention": Referent(sort=archive_plan.sort_for("concept"), term="concept:disease-stage"),
+                               "response": Referent(sort=archive_plan.sort_for("protein"), term="protein:PHF19")},
                         layer="causal", polarity="positive")
     open_corpus(archive_root, authority=FIXTURE_AUTHORITY, profile=archive_profile).add(stored.proposition_node(
         "archived", title="archived", claim=project_claim(claim),
@@ -417,13 +441,7 @@ def unhold_fixture_dataset(cfg: ScienceConfig, ref: str) -> None:
 OBSERVED = {"empirical_observation": {"locator": "accession:GSE-FIXTURE", "attested_by": "fixture"}}
 
 
-SPEC_FIELDS = {"contrast": "levels", "slot": 0, "baseline": "level:early", "comparison": "level:late",
-               "measure": "measure:tpm", "scale": "additive", "reference": "0",
-               "identification": "identification:observational",
-               "method": "rank comparison", "assumptions": "independent samples",
-               "falsification": "no difference at alpha",
-               "interpretation_rule": "beliefs/outcome-file/v1",
-               "equivalence_rule": "beliefs/content-identity-equality/v1"}
+
 
 
 @contextmanager
@@ -486,17 +504,20 @@ def mint_projects(cfg: ScienceConfig, *names: str) -> list:
         return [mint_project(dispatcher, name) for name in names]
 
 
-def build_belief_world(work: Path, **holds: bool) -> ScienceConfig:
+def build_belief_world(work: Path, *, extra_contracts: tuple[DomainContract, ...] = (),
+                       **holds: bool) -> ScienceConfig:
     """The contract world plus one proposition typed under the plan: the
     starting state for claim/spec/run/assess/verify/belief/next tests."""
     from beliefs import stored
     from beliefs.claim import Referent, build_claim
     from beliefs.projection import project_claim
-    cfg = build_fixture_world_with_contract(work, **holds)
+    cfg = build_fixture_world_with_contract(work, extra_contracts=extra_contracts, **holds)
+    from helpers.analysis import bootstrap_analysis
+    bootstrap_analysis(cfg)
     (plan,) = cfg.plans
-    claim = build_claim(cfg.profile, operator=plan.operator_for("affects", "concept", "protein"),
-                        args=(Referent(sort=plan.sort_for("concept"), term="concept:disease-stage"),
-                              Referent(sort=plan.sort_for("protein"), term="protein:PHF19")),
+    claim = build_claim(cfg.profile, operator=plan.row_for("affects", "concept", "protein").operator,
+                        roles={"intervention": Referent(sort=plan.sort_for("concept"), term="concept:disease-stage"),
+                               "response": Referent(sort=plan.sort_for("protein"), term="protein:PHF19")},
                         layer="causal", polarity="positive")
     node = stored.proposition_node("p1", title="p1", claim=project_claim(claim),
                                    display_statement="concept:disease-stage affects protein:PHF19")
@@ -574,9 +595,11 @@ def add_archived_assessment(cfg: ScienceConfig, work: Path) -> None:
     with the archive as write root. `next` then reads it assessed-not-admitted.
     """
     archived = archive_config(cfg)
+    from helpers.analysis import bootstrap_analysis
+    bootstrap_analysis(archived)
     data = hold_fixture_dataset(archived, "data.txt", b"x\n", "expression", **OBSERVED)
     with open_rig(archived, ("spec",)) as (d, _):
-        out = d.invoke("spec", dict(SPEC_FIELDS, target="proposition:archived", dataset=data))
+        out = d.invoke("spec", spec_inputs(archived, target="proposition:archived", dataset=data))
     spec = _minted_ref(out.text, "analysis-spec")
     run = mint_fixture_run(archived, spec, data, fixture_bundle(work))
     with open_rig(archived, ("assess",)) as (d, _):
@@ -603,15 +626,17 @@ def build_two_corpus_walked_world(work: Path) -> ScienceConfig:
         if host_prerequisites() is not None:
             monkeypatch.setattr(run_module, "POLICY", MINIMAL_POLICY)
         cfg = build_two_corpus_world(work)
+        from helpers.analysis import bootstrap_analysis
+        bootstrap_analysis(cfg)
         add_archived_assessment(cfg, work)
         data = hold_fixture_dataset(cfg, "data.txt", b"y\n", "expression", **OBSERVED)
         bundle = fixture_bundle(work)
         with open_rig(cfg, ("claim", "spec")) as (d, _):
             d.invoke("claim", claim)
             d.invoke("claim", queued)
-            spec = _minted_ref(d.invoke("spec", dict(SPEC_FIELDS, target="proposition:claimed", dataset=data)).text,
+            spec = _minted_ref(d.invoke("spec", spec_inputs(cfg, target="proposition:claimed", dataset=data)).text,
                                "analysis-spec")
-            d.invoke("spec", dict(SPEC_FIELDS, target="proposition:queued", dataset=data))
+            d.invoke("spec", spec_inputs(cfg, target="proposition:queued", dataset=data))
         run = mint_fixture_run(cfg, spec, data, bundle)
         code, entrypoint, _ = bundle
         with open_rig(cfg, ("assess", "verify")) as (d, _):
@@ -656,9 +681,9 @@ def build_shared_contract_world(work: Path) -> ScienceConfig:
     from science.contracts import load_contract_document
     base = shipped_base_contract()
     testing, plan = load_contract_document(fixture_contract_document(work), base)
-    biology = [shipped_domain_contract(ns) for ns in DOMAINS]
-    writer_profile = compile_profile(base, biology + [testing], coordination=shipped_coordination(COORDINATION))
-    mount_profile = compile_profile(base, biology + [testing])
+    domain_packs = [shipped_domain_contract(ns) for ns in DOMAINS]
+    writer_profile = compile_profile(base, domain_packs + [testing], coordination=shipped_coordination(COORDINATION))
+    mount_profile = compile_profile(base, domain_packs + [testing])
     mount_root, corpus_root = work / "shared", work / "corpus"
     config = WorldConfig(work / "world", secrets.token_hex(16), (mount_root, corpus_root))
     init_world_root(config, authority=FIXTURE_AUTHORITY)
@@ -679,18 +704,18 @@ def build_shared_contract_world(work: Path) -> ScienceConfig:
     mounted = mount_config(cfg)
     hold_fixture_dataset(mounted, "concepts.txt", CONCEPTS, "concept vocabulary")
     hold_fixture_dataset(mounted, "levels.txt", LEVELS, "level vocabulary")
-    claim = build_claim(mount_profile, operator=plan.operator_for("affects", "concept", "protein"),
-                        args=(Referent(sort=plan.sort_for("concept"), term="concept:disease-stage"),
-                              Referent(sort=plan.sort_for("protein"), term="protein:PHF19")),
+    claim = build_claim(mount_profile, operator=plan.row_for("affects", "concept", "protein").operator,
+                        roles={"intervention": Referent(sort=plan.sort_for("concept"), term="concept:disease-stage"),
+                               "response": Referent(sort=plan.sort_for("protein"), term="protein:PHF19")},
                         layer="causal", polarity="positive")
     mount = open_corpus(mount_root, authority=FIXTURE_AUTHORITY, profile=mount_profile)
     mount.add(stored.proposition_node(
         "shared", title="shared", claim=project_claim(claim),
         display_statement="concept:disease-stage affects protein:PHF19 (shared)"))
     # A second mounted proposition with no evidence anywhere: `next`'s readiness case.
-    fresh = build_claim(mount_profile, operator=plan.operator_for("affects", "concept", "protein"),
-                        args=(Referent(sort=plan.sort_for("concept"), term="concept:disease-stage"),
-                              Referent(sort=plan.sort_for("protein"), term="protein:EZH2")),
+    fresh = build_claim(mount_profile, operator=plan.row_for("affects", "concept", "protein").operator,
+                        roles={"intervention": Referent(sort=plan.sort_for("concept"), term="concept:disease-stage"),
+                               "response": Referent(sort=plan.sort_for("protein"), term="protein:EZH2")},
                         layer="causal", polarity="positive")
     mount.add(stored.proposition_node(
         "fresh", title="fresh", claim=project_claim(fresh),
@@ -718,9 +743,8 @@ service_socket = "{cfg.service_socket}"
     return path
 
 
-WORKING_FIELDS = dict(SPEC_FIELDS, method="rank comparison, working corpus")
-"""Spec fields distinct from the mount's content-addressed `SPEC_FIELDS` spec
-over the same target and dataset, so the write root authors its own spec."""
+
+
 
 
 def mount_config(cfg: ScienceConfig) -> ScienceConfig:
@@ -739,9 +763,11 @@ def add_mounted_evidence(cfg: ScienceConfig, work: Path) -> dict[str, str]:
     one run and its assessment (unverified), written through the commands with
     the mount as write root."""
     mounted = mount_config(cfg)
+    from helpers.analysis import bootstrap_analysis
+    bootstrap_analysis(mounted)
     data = hold_fixture_dataset(mounted, "data.txt", b"z\n", "expression", **OBSERVED)
     with open_rig(mounted, ("spec",)) as (d, _):
-        spec = _minted_ref(d.invoke("spec", dict(SPEC_FIELDS, target="proposition:shared", dataset=data)).text,
+        spec = _minted_ref(d.invoke("spec", spec_inputs(mounted, target="proposition:shared", dataset=data)).text,
                            "analysis-spec")
     run = mint_fixture_run(mounted, spec, data, fixture_bundle(work))
     with open_rig(mounted, ("assess",)) as (d, _):
@@ -773,6 +799,8 @@ def walk_belief_path(work: Path, *, confined: bool) -> tuple[ScienceConfig, str]
             monkeypatch.setattr(run_module, "POLICY", MINIMAL_POLICY)
             monkeypatch.setattr(run_module, "host_prerequisites", lambda: None)
         cfg = build_fixture_world_with_contract(work)
+        from helpers.analysis import bootstrap_analysis
+        bootstrap_analysis(cfg)
         code, entrypoint, targets = fixture_bundle(work, "supported")
         data = work / "data.txt"
         data.write_bytes(b"x\n")
@@ -782,7 +810,7 @@ def walk_belief_path(work: Path, *, confined: bool) -> tuple[ScienceConfig, str]
                                           "polarity": "positive"}).text, "proposition:")
             dataset = ref(d.invoke("dataset", {"path": str(data), "title": "expression",
                                                "locator": "accession:GSE-FIXTURE"}).text, "dataset:")
-            spec = ref(d.invoke("spec", dict(SPEC_FIELDS, target=prop, dataset=dataset)).text, "analysis-spec:")
+            spec = ref(d.invoke("spec", spec_inputs(cfg, target=prop, dataset=dataset)).text, "analysis-spec:")
             run = ref(d.invoke("run", {"spec": spec, "dataset": dataset, "code": str(code),
                                        "entrypoint": entrypoint, "targets": list(targets)}).text, "run:")
             assessment = ref(d.invoke("assess", {"run": run}).text, "assessment:")
@@ -805,7 +833,7 @@ def build_verify_rig_world(work: Path) -> tuple[ScienceConfig, str, tuple[Path, 
     ref = hold_fixture_dataset(cfg, "data.txt", b"x\n", "expression", **OBSERVED)
     bundle = fixture_bundle(work, "supported")
     with open_rig(cfg, ("spec", "assess")) as (d, _):
-        spec_ref = _minted_ref(d.invoke("spec", dict(SPEC_FIELDS, target="proposition:p1", dataset=ref)).text,
+        spec_ref = _minted_ref(d.invoke("spec", spec_inputs(cfg, target="proposition:p1", dataset=ref)).text,
                                "analysis-spec")
         run_ref = mint_fixture_run(cfg, spec_ref, ref, bundle)
         assessment_ref = _minted_ref(d.invoke("assess", {"run": run_ref}).text, "assessment")
@@ -838,7 +866,7 @@ def record_url_observation(write_root: Path, store_root: Path, profile, content:
     act = boundary.ActContext(write_root, store_root, "fixture", "fixture/look.v1", FIXTURE_AUTHORITY,
                               holdings_seam(), profile=profile)
     with monkeypatch.context() as patch:
-        patch.setattr(boundary, "retrieve", lambda *a, **k: Retrieved(digest, len(content), downloaded))
+        patch.setattr(boundary, "retrieve", lambda *a, **k: Retrieved(digest, len(content), downloaded, 200, ()))
         looked = boundary.look(act, url_locator(url), bounds=RetrievalBounds(10, 1024, 1), seam=url_seam(),
                                scratch=scratch)
     assert type(looked) is boundary.PublishedLook

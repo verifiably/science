@@ -21,6 +21,9 @@ def test_startup_findings(certified_work, short_tmp, state):
     if state != "clean":
         peer = open_session(cfg)
         peer.claim_invocation("unfinished", "test-command", "a" * 64)
+        peer.close()
+        peer_ledger = cfg.operations_root / "sessions" / peer.session_id / "ledger.v1"
+        peer_ledger.write_text("".join(peer_ledger.read_text().splitlines(keepends=True)[:-1]))
 
     class FailingStream:
         def write(self, text):
@@ -28,32 +31,28 @@ def test_startup_findings(certified_work, short_tmp, state):
 
     stderr = FailingStream() if state == "failing-stream" else io.StringIO()
     socket_path = short_tmp / "service.sock"
-    try:
-        if state == "failing-stream":
-            with pytest.raises(OSError, match="stderr unavailable"):
-                serve(cfg, socket_path, stderr=stderr)
-            assert not socket_path.exists()
-        else:
-            server = serve(cfg, socket_path, stderr=stderr)
-            try:
-                if peer is None:
-                    assert stderr.getvalue() == ""
-                else:
-                    (line,) = stderr.getvalue().splitlines()
-                    finding = json.loads(line)
-                    assert finding["code"] == "session-unclosed"
-                    assert finding["ref"] == peer.session_id
-                    assert "unfinished" in finding["detail"]
-                    assert re.fullmatch(r"[0-9a-f]{32}", finding["reported_by"])
-                    assert finding["reported_by"] != peer.session_id
-            finally:
-                server.server_close()
-        (ledger,) = [path for path in (cfg.operations_root / "sessions").glob("*/ledger.v1")
-                     if peer is None or path.parent.name != peer.session_id]
-        assert json.loads(ledger.read_text().splitlines()[-1])["line"] == "session-close"
-    finally:
-        if peer is not None:
-            peer.close()
+    if state == "failing-stream":
+        with pytest.raises(OSError, match="stderr unavailable"):
+            serve(cfg, socket_path, stderr=stderr)
+        assert not socket_path.exists()
+    else:
+        server = serve(cfg, socket_path, stderr=stderr)
+        try:
+            if peer is None:
+                assert stderr.getvalue() == ""
+            else:
+                (line,) = stderr.getvalue().splitlines()
+                finding = json.loads(line)
+                assert finding["code"] == "session-unclosed"
+                assert finding["ref"] == peer.session_id
+                assert "unfinished" in finding["detail"]
+                assert re.fullmatch(r"[0-9a-f]{32}", finding["reported_by"])
+                assert finding["reported_by"] != peer.session_id
+        finally:
+            server.server_close()
+    (ledger,) = [path for path in (cfg.operations_root / "sessions").glob("*/ledger.v1")
+                 if peer is None or path.parent.name != peer.session_id]
+    assert json.loads(ledger.read_text().splitlines()[-1])["line"] == "session-close"
 
 
 # The certified work root is long and AF_UNIX caps the socket path at 107

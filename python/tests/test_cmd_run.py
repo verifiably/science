@@ -1,7 +1,9 @@
+from helpers.analysis import refreeze_spec
+from helpers.analysis import spec_inputs
 import pytest
 
 from science.refusal import Refused
-from helpers.world import SPEC_FIELDS, build_belief_world, fixture_bundle, hold_fixture_dataset, open_rig
+from helpers.world import (build_belief_world, fixture_bundle, hold_fixture_dataset, open_rig)
 
 
 @pytest.fixture
@@ -15,7 +17,7 @@ def rig(certified_work, monkeypatch):
     cfg = build_belief_world(certified_work)
     ref = hold_fixture_dataset(cfg, "data.txt", b"x\n", "expression")
     with open_rig(cfg, ("spec", "run")) as (d, ctx):
-        spec_out = d.invoke("spec", dict(SPEC_FIELDS, target="proposition:p1", dataset=ref))
+        spec_out = d.invoke("spec", spec_inputs(cfg, target="proposition:p1", dataset=ref))
         spec_ref = next(t for t in spec_out.text.split() if t.startswith("analysis-spec:"))
         yield d, ctx, spec_ref, ref
 
@@ -156,8 +158,7 @@ def test_run_checks_staged_bytes_when_source_mutates_during_copy(rig, certified_
 def test_run_refuses_mismatched_observes_or_staged_path_collision_before_any_act(rig, certified_work):
     from beliefs import stored
     from beliefs.root import open_corpus
-    from beliefs.rules import REFERENCE_RULES
-    from beliefs.spec import Deterministic, SpecDraft, SpecInput, freeze
+    from beliefs.spec import SpecInput
     from helpers.world import FIXTURE_AUTHORITY
 
     d, ctx, spec_ref, ref = rig
@@ -174,25 +175,10 @@ def test_run_refuses_mismatched_observes_or_staged_path_collision_before_any_act
     assert sum(1 for n in ctx.write_view().iter_stored() if n.kind == "act-report") == act_reports_before
 
     colliding_ref = hold_fixture_dataset(ctx.config, "data.txt", b"colliding\n", "colliding")
-    colliding_spec = freeze(
-        SpecDraft(
-            target=existing_spec.target,
-            estimand=existing_spec.estimand,
-            method=existing_spec.method,
-            assumptions=existing_spec.assumptions,
-            falsification=existing_spec.falsification,
-            input_roles=(
-                SpecInput(role="observes", dataset=ref),
-                SpecInput(role="reads", dataset=colliding_ref),
-            ),
-            applicability=existing_spec.applicability,
-            interpretation_rule=existing_spec.interpretation_rule,
-            equivalence_rule=existing_spec.equivalence_rule,
-            parameters=existing_spec.parameters,
-            nondeterminism=Deterministic(),
-        ),
-        held_rules=REFERENCE_RULES,
-    )
+    colliding_spec = refreeze_spec(ctx.config, existing_spec, input_roles=(
+                SpecInput(role="observes", dataset=ref, mode="observation"),
+                SpecInput(role="reads", dataset=colliding_ref, mode="annotation"),
+            ))
     colliding_spec_ref = writer.add(stored.analysis_spec_node(colliding_spec)).id
 
     with pytest.raises(Refused) as caught_col:
@@ -241,7 +227,7 @@ def test_run_executes_spec_over_multi_resource_package(certified_work, tmp_path,
             {"path": str(pkg_dir), "title": "GSE24080 package", "locator": "accession:GSE24080"},
         )
         ds_ref = next(t for t in ds_out.text.split() if t.startswith("dataset:"))
-        spec_out = d.invoke("spec", dict(SPEC_FIELDS, target="proposition:p1", dataset=ds_ref))
+        spec_out = d.invoke("spec", spec_inputs(cfg, target="proposition:p1", dataset=ds_ref))
         spec_ref = next(t for t in spec_out.text.split() if t.startswith("analysis-spec:"))
 
         run_out = d.invoke(
@@ -309,7 +295,7 @@ def test_run_preserves_nested_member_path_for_single_resource_package(certified_
             {"path": str(pkg_dir), "title": "nested single", "locator": "accession:GSE24080"},
         )
         ds_ref = next(t for t in ds_out.text.split() if t.startswith("dataset:"))
-        spec_out = d.invoke("spec", dict(SPEC_FIELDS, target="proposition:p1", dataset=ds_ref))
+        spec_out = d.invoke("spec", spec_inputs(cfg, target="proposition:p1", dataset=ds_ref))
         spec_ref = next(t for t in spec_out.text.split() if t.startswith("analysis-spec:"))
 
         run_out = d.invoke(
@@ -335,8 +321,7 @@ def test_run_stages_reads_roles_on_multi_role_spec(certified_work, monkeypatch):
     from beliefs.confinement import host_prerequisites
     from beliefs.recipe import MINIMAL_POLICY
     from beliefs.root import open_corpus
-    from beliefs.rules import REFERENCE_RULES
-    from beliefs.spec import Deterministic, SpecDraft, SpecInput, freeze
+    from beliefs.spec import SpecInput
     from helpers.world import FIXTURE_AUTHORITY, OBSERVED
 
     if host_prerequisites() is not None:
@@ -364,28 +349,13 @@ def test_run_stages_reads_roles_on_multi_role_spec(certified_work, monkeypatch):
     )
 
     with open_rig(cfg, ("spec", "run", "assess", "verify")) as (d, ctx):
-        base_spec_out = d.invoke("spec", dict(SPEC_FIELDS, target="proposition:p1", dataset=obs_ref))
+        base_spec_out = d.invoke("spec", spec_inputs(cfg, target="proposition:p1", dataset=obs_ref))
         base_spec_ref = next(t for t in base_spec_out.text.split() if t.startswith("analysis-spec:"))
         existing_spec = stored.analysis_spec_value(ctx.write_view().get(base_spec_ref), profile=cfg.profile)
-        multi_role_spec = freeze(
-            SpecDraft(
-                target=existing_spec.target,
-                estimand=existing_spec.estimand,
-                method=existing_spec.method,
-                assumptions=existing_spec.assumptions,
-                falsification=existing_spec.falsification,
-                input_roles=(
-                    SpecInput(role="observes", dataset=obs_ref),
-                    SpecInput(role="reads", dataset=aux_ref),
-                ),
-                applicability=existing_spec.applicability,
-                interpretation_rule=existing_spec.interpretation_rule,
-                equivalence_rule=existing_spec.equivalence_rule,
-                parameters=existing_spec.parameters,
-                nondeterminism=Deterministic(),
-            ),
-            held_rules=REFERENCE_RULES,
-        )
+        multi_role_spec = refreeze_spec(cfg, existing_spec, input_roles=(
+                    SpecInput(role="observes", dataset=obs_ref, mode="observation"),
+                    SpecInput(role="reads", dataset=aux_ref, mode="annotation"),
+                ))
         writer = open_corpus(cfg.write_root, authority=FIXTURE_AUTHORITY, profile=cfg.profile)
         spec_ref = writer.add(stored.analysis_spec_node(multi_role_spec)).id
 

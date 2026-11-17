@@ -28,7 +28,7 @@ from beliefs.world import WorldConfig
 from beliefs.world.registry import content_identity, load_manifest
 
 from science.refusal import Refusal, Refused, kernel_refusal
-from science.contracts import OperatorPlan, load_contract_chain, load_contract_document
+from science.contracts import OperatorPlan, validate_plan, load_contract_chain, load_contract_document
 from science.sharing import SharingRegistry, SharingRegistryMalformed
 
 _WORLD_ID_RE = re.compile(r"[0-9a-f]{32}")
@@ -279,6 +279,8 @@ def load_config(path: Path) -> ScienceConfig:
     except ProfileError as caught:
         _refuse(f"config contracts do not compile: {caught}")
     plans = tuple(plan for _, plan in local if plan is not None)
+    for plan in plans:
+        validate_plan(plan, profile)
     corpus_roots = tuple(located(value) for value in raw["corpus_roots"])
     if "write_root" in raw:
         write_root = located(raw["write_root"])
@@ -514,13 +516,14 @@ class ReadContext:
         return dataset_at([(cid, view) for cid, view in self.read_views()
                            if not _retired(self.world.status(cid))], address)
 
-    def snapshot(self, profile: ProfileSpec | None = None, *, observations=None):
-        """The resolution snapshot; `observations` passes ones the caller
-        already found, so a world read finds them once."""
+    def snapshot(self, profile: ProfileSpec | None = None, *, nodes, observations):
+        """Resolution over the caller's selected local or epoch capture."""
         from science.vocabulary import snapshot
-        return snapshot(self.config.profile if profile is None else profile, self.read_views(),
-                        self._stores,
-                        self.observations() if observations is None else observations)
+        return snapshot(self.config.profile if profile is None else profile, nodes, self._stores, observations)
+
+    def authoring_snapshot(self, profile: ProfileSpec | None = None, *, records):
+        """Resolution over the same accepted live session used for dependencies."""
+        return self.snapshot(profile, nodes=records.iter_stored(), observations=records.observations)
 
     @cached_property
     def _observations(self):
@@ -645,7 +648,8 @@ class ReadContext:
         A context without a current epoch refuses on every access, uncached."""
         from science.world_belief import world_context
         current = self.world_read()
-        observations = self.observations()
+        from science.holdings import found_observations
+        observations = found_observations([(cid, current.view) for cid in self.session_ids()], self.world)
         pins = {mount.corpus_id: self.pins(mount.root) for mount in self.session_mounts()}
         return current, observations, world_context(current, observations, pins)
 
@@ -696,31 +700,41 @@ class ReadContext:
                                 epoch_identity=self.epoch_identity(), observations=declared,
                                 node_corpus=node_corpus)
 
-    def gather_inputs(self, proposition: str):
-        """The proposition's belief inputs, every record selected by the reader's accept policy."""
-        from science.acceptance import policy
-        from science.closure import gather_inputs
-        mount = self.mount_holding(proposition)
+    def evaluation_observations(self, proposition: str):
+        """Observations from the same holder or current epoch as belief inputs."""
         if self.has_read_mounts():
-            current, observations, context = self._world_inputs
-            return gather_inputs(current.view, proposition, context=context, profile=mount.profile,
-                                 resolution=self.snapshot(mount.profile, observations=observations),
-                                 acceptance=policy(self))
-        observations = self.observations()
-        return gather_inputs(mount.view, proposition, context=self._context(mount, observations, proposition),
-                             profile=mount.profile, resolution=self.snapshot(mount.profile), acceptance=policy(self))
+            return self._world_inputs[1]
+        from science.holdings import found_observations
+        mount = self.mount_holding(proposition)
+        return found_observations(((mount.corpus_id, mount.view),), self.world)
 
-    def evaluate(self, proposition: str):
-        """The proposition's belief under the reader's accept policy, whose context the answer carries."""
+    def _evaluation_context(self, proposition: str):
         from science.acceptance import policy
-        from science.closure import evaluate
         mount = self.mount_holding(proposition)
         if self.has_read_mounts():
             current, observations, context = self._world_inputs
-            return evaluate(current.view, proposition, observations=observations, context=context,
-                            profile=mount.profile, resolution=self.snapshot(mount.profile, observations=observations),
-                            acceptance=policy(self))
-        observations = self.observations()
-        return evaluate(mount.view, proposition, observations=observations,
-                        context=self._context(mount, observations, proposition),
-                        profile=mount.profile, resolution=self.snapshot(mount.profile), acceptance=policy(self))
+            view = current.view
+        else:
+            view = mount.view
+            observations = self.evaluation_observations(proposition)
+            context = self._context(mount, observations, proposition)
+        return view, dict(observations=observations, context=context, profile=mount.profile,
+            resolution=self.snapshot(mount.profile, nodes=view.iter_stored(), observations=observations),
+            acceptance=policy(self))
+
+    def gather_inputs(self, proposition: str, *, key: str):
+        """Accepted, unretracted evidence for exactly one assessed target key."""
+        from science.closure import gather_inputs
+        view, arguments = self._evaluation_context(proposition)
+        return gather_inputs(view, proposition, key=key, **arguments)
+
+    def claim_view(self, proposition: str):
+        """Discover and evaluate native target keys under one captured read."""
+        from science.closure import claim_view
+        view, arguments = self._evaluation_context(proposition)
+        return claim_view(view, proposition, **arguments)
+
+    def evaluate(self, proposition: str, *, key: str | None = None):
+        from science.closure import evaluate
+        view, arguments = self._evaluation_context(proposition)
+        return evaluate(view, proposition, key=key, **arguments)

@@ -10,4 +10,4 @@ required = true
 doc = "The pinned publication's corpus id, 32 lowercase hex digits."
 
 [reads]
-families = ["registry", "corpus-stored"]
+families = ["registry", "corpus-stored", "holdings"]

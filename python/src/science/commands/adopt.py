@@ -26,7 +26,7 @@ from science.config import live_mounts
 from science.refusal import Refusal, Refused
 from science.report import Finding, KeyVals, Report
 from science.overlap import conflicts
-from science.retention import required
+from science.retention import live_observations, required
 from science.sharing import Pin, PinSource, SharingRegistry, apply_line, replay, sharing_lines
 
 
@@ -161,7 +161,8 @@ def _required(ctx, predecessor, held, tip, groups, mounts):
     return required(predecessor, keep=ctx.config.keep, group_chain=held, tip=tip,
                     mounted=tuple(item for group in groups.values() for item in group
                                   if item.state == "mounted" and item.corpus_id in live_ids),
-                    write_root=(write.corpus_id, write.view, write.profile), live=holders)
+                    write_root=(write.corpus_id, write.view, write.profile), live=holders,
+                    observations=live_observations(ctx.config.world, mounts))
 
 
 def _reevaluate(ctx, writer, registry, record):

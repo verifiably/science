@@ -70,9 +70,12 @@ Read assertions and all scope locations: qualifiers, applicability, contrast,
 method, source population and timing. Preserve exact authored statements separately
 from paraphrases. Classify scope as explicitly broad, restricted elsewhere, not
 recorded and/or not expressible under the active contract, with evidence for each.
-Empty scope maps do not prove author pooling. `co_scoped` means “declared scope maps
-match”; judge adequacy separately. `commensurable` compares same-claim estimands
-without identification, not arbitrary related propositions.
+Empty scope maps do not prove author pooling. Use the kernel's current target
+comparisons: `convertibility` records explicit output maps and their assumptions;
+`synthesis` may be permitted, permitted-under assumptions, refused, not-convertible
+or unknown. Preserve each comparison's snapshot, reason and assumptions. Unknown
+is not permission to pool, and declared scope compatibility does not establish
+scope adequacy or comparability of arbitrary related propositions.
 
 Inventory questions and premises across the chosen families before feasibility
 screening. Give premises exact text, scope, source/revision and provenance:

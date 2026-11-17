@@ -31,14 +31,10 @@ def handle(ctx, writer, *, run) -> Report:
     derived = build_assessment(closure, specs={spec.identity: spec}, implementations={rule.identity: rule})
     if isinstance(derived, AssessmentFinding):
         _refuse(f"assessment finding: {derived.reason}")
-    # The estimand and applicability are required: the derived assessment
-    # carries the frozen spec's typed pair.
-    optional = {k: v for k, v in (("estimate", derived.estimate), ("uncertainty", derived.uncertainty))
-                if v is not None}
     node = writer.add(stored.assessment_node(
-        derived.identity()[:16], title=f"assessment of {spec.target}", spec=spec.identity, run=run,
-        proposition=spec.target, outcome=derived.outcome, interpretation_rule=derived.interpretation_rule,
-        estimand=derived.estimand, applicability=derived.applicability, **optional))
+        derived.identity(), title=f"assessment of {spec.target}", spec=spec.identity, run=run,
+        proposition=derived.proposition, outcome=derived.outcome, interpretation_rule=derived.interpretation_rule,
+        target=derived.target, estimates=derived.estimates, uncertainty=derived.uncertainty, curves=derived.curves))
     stored_identity = stored.assessment_value(node, profile=ctx.config.profile).identity()
     if stored_identity != derived.identity():
         raise RuntimeError(f"stored assessment identity {stored_identity} differs from derived {derived.identity()}")

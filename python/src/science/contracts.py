@@ -13,7 +13,8 @@ from pathlib import Path
 import yaml
 
 from beliefs.contract.domain import DomainContract, parse_domain_contract
-from beliefs.errors import MalformedContract, SuccessionViolation
+from beliefs.errors import MalformedContract, SuccessionViolation, ProfileError
+from beliefs.profile import ProfileSpec
 
 from science.refusal import Refusal, Refused
 
@@ -23,14 +24,20 @@ def _refuse(message: str) -> None:
 
 
 @dataclass(frozen=True)
+class PlanRow:
+    operator: str
+    roles: Mapping[str, str]
+
+
+@dataclass(frozen=True)
 class OperatorPlan:
     namespace: str
-    operators: Mapping[tuple[str, str | None, str | None], str]
+    operators: Mapping[tuple[str, str | None, str | None], PlanRow]
     sorts: Mapping[str, str]
     layers: Mapping[str, str]
     polarities: Mapping[str, str | None]
 
-    def operator_for(self, predicate: str, subject_kind: str, object_kind: str) -> str:
+    def row_for(self, predicate: str, subject_kind: str, object_kind: str) -> PlanRow:
         operator = self.operators.get((predicate, subject_kind, object_kind))
         if operator is None:
             operator = self.operators.get((predicate, None, None))
@@ -68,7 +75,7 @@ def _plan(raw: object, domain: DomainContract) -> OperatorPlan:
     rows_raw = raw.get("operators", [])
     if not isinstance(rows_raw, list):
         _refuse("plan.operators must be a list of rows")
-    rows: dict[tuple[str, str | None, str | None], str] = {}
+    rows: dict[tuple[str, str | None, str | None], PlanRow] = {}
     for row in rows_raw:
         if not isinstance(row, dict):
             _refuse("each plan row must be a table")
@@ -82,7 +89,16 @@ def _plan(raw: object, domain: DomainContract) -> OperatorPlan:
             _refuse("a plan row subject must be a string when present")
         if object_ is not None and type(object_) is not str:
             _refuse("a plan row object must be a string when present")
-        rows[(predicate, subject, object_)] = _term(domain, operator)
+        if (subject is None) != (object_ is None):
+            _refuse("a plan row specifies both subject and object, or neither for a wildcard")
+        roles = row.get("roles")
+        if (not isinstance(roles, dict) or set(roles) != {"subject", "object"}
+                or any(type(value) is not str or not value for value in roles.values())):
+            _refuse("each plan row requires roles with exactly subject and object string mappings; migrate positional plans explicitly")
+        key = (predicate, subject, object_)
+        if key in rows:
+            _refuse(f"duplicate plan row {key}")
+        rows[key] = PlanRow(_term(domain, operator), dict(roles))
     sorts = _string_table(raw, "sorts")
     layers = _string_table(raw, "layers")
     polarities = _string_table(raw, "polarities", nullable=True)
@@ -93,6 +109,25 @@ def _plan(raw: object, domain: DomainContract) -> OperatorPlan:
         layers=layers,
         polarities=polarities,
     )
+
+
+def validate_plan(plan: OperatorPlan, profile: ProfileSpec) -> None:
+    """Validate activated binary mappings after profile composition."""
+    for row in plan.operators.values():
+        try:
+            template = profile.template_of(profile.operator(row.operator))
+        except ProfileError as caught:
+            _refuse(f"plan operator {row.operator!r} is unavailable: {caught}")
+        names = set(row.roles.values())
+        if names != set(template.roles):
+            _refuse(f"plan roles for {row.operator} must fill exactly {sorted(template.roles)}")
+        if len(names) == 2:
+            valid = all(template.roles[name].arity == "one" for name in names)
+        else:
+            role = template.roles[next(iter(names))]
+            valid = role.arity == "many" and role.min <= 2 and (role.max is None or role.max >= 2)
+        if not valid:
+            _refuse(f"plan roles for {row.operator} do not support two binary inputs")
 
 
 def load_contract_document(

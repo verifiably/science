@@ -269,6 +269,8 @@ def _via_service(namespace, declaration: Declaration, inputs: dict[str, object])
     """Any write-class command goes over the service socket, preserving the
     read path's public wire: text on stdout, one JSON line on stderr."""
     invocation_id = namespace.invocation_id or mint_token()
+    if declaration.name == "spec" and "estimand" in inputs:
+        inputs = {**inputs, "estimand": str(Path(inputs["estimand"]).absolute())}
     try:
         config = load_config(resolve_config_path(namespace.config))
         with socket.socket(socket.AF_UNIX) as connection:

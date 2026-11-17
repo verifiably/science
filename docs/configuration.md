@@ -32,12 +32,15 @@ world_root = "world"
 world_id = "0123456789abcdef0123456789abcdef"
 corpus_roots = ["corpus"]
 operations_root = "operations"
-domains = ["biology"]
+domains = ["general"]
 contracts = []
 store_root = "store"
 coordination = 2
 ```
 
+The shipped `general` contract declares no sorts, dimensions or dataset facets.
+Add an explicit local contract for a program's vocabulary, measurement and
+`--facets` inputs; `local/gene-axis` must be declared there before use.
 That illustrative id is not a usable world identity. Read the actual bootstrap
 configuration rather than assigning a new id to an existing world.
 
@@ -110,12 +113,32 @@ required `contract` and optional `plan`. The kernel parses the domain contract
 and its lineage; see its [contracts](https://github.com/verifiably/beliefs/blob/main/docs/contracts.md).
 The plan is launcher input and is not covered by that contract's content identity.
 
-`plan` is a table with string mappings `sorts` (term kind prefix to contract sort),
-`layers` and `polarities` (the latter permits null for sign-inapt operators), plus
-`operators`, a list of rows. A row requires string `predicate` and `operator` and
-optional string `subject`/`object` kind prefixes. Unqualified operator/sort names
-resolve within the local contract namespace. Claim authoring first looks for the
-exact `(predicate, subject, object)` row, then `(predicate, None, None)`; no row or
-sort mapping refuses. Repeated row keys currently take the last row. The parser
-checks these values' shapes but does not reject extra plan/row keys. `claim` uses
-the first activated document that carries a plan; do not assume plans are merged.
+`plan` is a table with string mappings `sorts` (term kind prefix to contract
+sort), `layers` and `polarities` (null is allowed for sign-inapt operators), plus
+an `operators` list. Every row requires `predicate`, `operator` and exactly
+`roles: {subject: <role>, object: <role>}`. Optional `subject` and `object` kind
+prefixes must occur together; omitting both declares a wildcard row.
+
+For local concept/protein sorts, a row mapping the binary CLI onto the shipped
+named-role operator is:
+
+```yaml
+predicate: affects
+subject: concept
+object: protein
+operator: general/changes-under-intervention
+roles: {subject: intervention, object: response}
+```
+
+Unqualified operator/sort names resolve within the local contract namespace.
+Claim authoring tries the exact `(predicate, subject, object)` row, then the
+wildcard; no row or sort mapping refuses. Duplicate row keys refuse. After profile
+composition, activated `contracts` plans must fill either two distinct one roles
+or one many role admitting two unit-coefficient members, without an unfilled
+ordinary role. Many-role receipt indexes follow the kernel's canonical member
+order, which may differ from CLI subject/object order.
+
+`read_contracts` documents have their plan shapes parsed but do not activate plans
+or validate their operators against the writer's profile. `claim` uses the first
+activated document carrying a plan; plans are not merged. Positional plans must
+be rewritten explicitly with named roles.

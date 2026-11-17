@@ -100,11 +100,28 @@ not a new ancestry link. Same-second adoptions in different sessions can affect
 that display order. Publishing one view to two destinations creates two groups;
 an unlinked attributed origin can still make publication attribution ambiguous.
 
+A publication selection must explicitly include the native prerequisites its
+analysis records freeze. Coordination v3 permits procedures, classification rules
+and other measurement records in an `addresses` clause even though its kind
+selector vocabulary does not list them. Include their actual held addresses and
+required dataset declarations; selecting only the older analysis kinds does not
+invent or export these prerequisites. Data bytes still require separate holding.
+
 Adoption reevaluates mounted predecessors. Retirement is blocked by explicit
-`keep`, a needed intermediate chain, attribution from mounted publications, or a
-live dependency with no equal-content alternative holder. The dependency closure
-includes assessment/spec/run/proposition inputs, verification derivations,
-retractions and kernel closure. Retention reasons are reported individually.
+keep entries, required supersession chains, publication attributions, or live
+provenance with no equal-content surviving holder. The closure includes world
+relations, spec/run/assessment/verification references, frozen target dependencies,
+model and rule procedures, registers, calibration assessments, measurement-record
+references and observed enrichment/procedure-input digests. All matching dataset
+carriers count; no dataset address is invented from an unresolved content digest.
+
+Custody is independent of scientific acceptance and retraction: rejected or
+retracted evidence can remain frozen provenance. Differing copies, malformed or
+missing references and unresolvable digests produce named dependency uncertainty
+and block automatic retirement. An identical surviving copy can permit retirement.
+`adopt` recomputes holdings over its current live mounts after each transition;
+a not-yet-admitted candidate supplies no carrier. `show` uses the same live inputs
+and reports the same retention reasons.
 A changed captured configuration refuses `config-stale` before retirement; an
 already completed adoption stands. Restart with the current config and rerun adopt.
 Terminal/departed corpus reconciliation records or reports the actual state rather

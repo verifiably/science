@@ -1,3 +1,4 @@
+from helpers.analysis import spec_inputs
 import io
 import json
 import socket
@@ -6,7 +7,7 @@ from contextlib import contextmanager
 
 import pytest
 
-from helpers.world import SPEC_FIELDS, build_fixture_world_with_contract, write_config_for
+from helpers.world import (build_fixture_world_with_contract, write_config_for)
 from test_mcp import rpc
 
 
@@ -85,6 +86,8 @@ def test_cli_write_routes_through_the_service_and_refuses_with_the_json_line(wor
     from science.serve import serve
     from science.config import load_config
     cfg, _ = world
+    from helpers.analysis import bootstrap_analysis
+    bootstrap_analysis(cfg)
     named = tmp_path / "svc.sock"
     cfg_path = write_config_for(cfg, service_socket=named)
     server = serve(load_config(cfg_path), named)
@@ -93,7 +96,7 @@ def test_cli_write_routes_through_the_service_and_refuses_with_the_json_line(wor
         data = tmp_path / "m.txt"
         data.write_bytes(b"x\n")
         assert main(["dataset", "--config", str(cfg_path), "--path", str(data), "--title", "m",
-                     "--facets", "biology/gene-axis=axis:rows,namespace:HGNC"]) == 0
+                     "--facets", "testing/gene-axis=axis:rows,namespace:HGNC"]) == 0
         out = capsys.readouterr()
         assert "[dataset] dataset:sha256:" in out.out
         assert json.loads(out.err)["invocation_id"]
@@ -149,6 +152,8 @@ def test_every_write_reaches_its_transport_and_renders_the_canonical_report(worl
         monkeypatch.setattr(run_module, "POLICY", MINIMAL_POLICY)
         monkeypatch.setattr(run_module, "host_prerequisites", lambda: None)
     cfg, _ = world
+    from helpers.analysis import bootstrap_analysis
+    bootstrap_analysis(cfg)
     named = tmp_path / "svc.sock"
     cfg_path = write_config_for(cfg, service_socket=named)
     code, entrypoint, targets = fixture_bundle(tmp_path, "supported")
@@ -168,7 +173,7 @@ def test_every_write_reaches_its_transport_and_renders_the_canonical_report(worl
         output = capsys.readouterr()
         dataset = _ref_in(output.out, "dataset:")
         assert output.out == _canonical(cfg, json.loads(output.err)["invocation_id"])
-    result = mcp_call(cfg_path, "spec", dict(SPEC_FIELDS, target=prop, dataset=dataset))
+    result = mcp_call(cfg_path, "spec", spec_inputs(cfg, target=prop, dataset=dataset))
     spec_text = result["content"][0]["text"]
     spec = _ref_in(spec_text, "analysis-spec:")
     assert spec_text == _canonical(cfg, result["structuredContent"]["invocation_id"])
@@ -184,7 +189,7 @@ def test_every_write_reaches_its_transport_and_renders_the_canonical_report(worl
     _ref_in(assess_text, "assessment:")
     assert assess_text == _canonical(cfg, result["structuredContent"]["invocation_id"])
     # spec's refusal through MCP.
-    result = mcp_call(cfg_path, "spec", dict(SPEC_FIELDS, target=prop, dataset=dataset, interpretation_rule="nope/v9"))
+    result = mcp_call(cfg_path, "spec", spec_inputs(cfg, target=prop, dataset=dataset, interpretation_rule="nope/v9"))
     assert result["isError"] is True and result["structuredContent"]["refusal"]["code"] == "invalid-input"
 
 
@@ -238,3 +243,20 @@ def test_reads_render_identically_through_mcp_and_cli(world, capsys):
         text = mcp_call(cfg_path, name, arguments)["content"][0]["text"]
         assert main([name, "--config", str(cfg_path), *argv]) == 0
         assert capsys.readouterr().out == text
+
+
+def test_mcp_replays_invalid_native_estimand_before_minting(certified_work):
+    from pathlib import Path
+    from helpers.world import build_belief_world, hold_fixture_dataset
+    from science.config import ReadContext
+    cfg = build_belief_world(certified_work)
+    data = hold_fixture_dataset(cfg, "data.txt", b"observations\n", "observations")
+    inputs = spec_inputs(cfg, target="proposition:p1", dataset=data)
+    path = Path(inputs["estimand"])
+    document = json.loads(path.read_text())
+    document["reference"]["value"] = True
+    path.write_text(json.dumps(document))
+    first, again = mcp_calls(write_config_for(cfg), [("spec", inputs, "invalid-native"), ("spec", inputs, "invalid-native")])
+    assert first == again and first["isError"] is True
+    assert first["structuredContent"]["refusal"]["code"] == "invalid-input"
+    assert not any(n.kind == "analysis-spec" for n in ReadContext.open(cfg).write_view().iter_stored())
