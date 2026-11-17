@@ -1,0 +1,29 @@
+schema_version = 1
+name = "source"
+purpose = "Record a published work as a source, addressed by its identifier."
+write_class = "mints:source"
+output_budget = 4096
+
+[inputs.title]
+type = "string"
+required = true
+doc = "The work's title, as its publisher gives it."
+[inputs.doi]
+type = "string"
+required = false
+doc = "Its DOI."
+[inputs.pmid]
+type = "string"
+required = false
+doc = "Its PubMed id."
+[inputs.isbn]
+type = "string"
+required = false
+doc = "Its ISBN."
+[inputs.accession]
+type = "string"
+required = false
+doc = "An accession, when the work has no DOI, PMID or ISBN."
+
+[reads]
+families = ["corpus-stored"]

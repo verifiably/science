@@ -1685,6 +1685,20 @@ options = [
 ]
 
 [[cli.science.commands]]
+path = ["source"]
+summary = "Record a published work as a source, addressed by its identifier"
+options = [
+  { shared = "config", value = "path" },
+  { names = ["--invocation-id"], value = "string" },
+  { names = ["--continue"], value = "string" },
+  { names = ["--title"], value = "string", required = true },
+  { names = ["--doi"], value = "string" },
+  { names = ["--pmid"], value = "string" },
+  { names = ["--isbn"], value = "string" },
+  { names = ["--accession"], value = "string" },
+]
+
+[[cli.science.commands]]
 path = ["spec"]
 summary = "Freeze an analysis spec against the kernel's reference rules and mint its record"
 options = [

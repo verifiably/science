@@ -130,6 +130,15 @@ Exact current inputs, defaults and prompts are the public files under
   project it lists notes about the world record, following source redirects.
 - `project-show` shows the selected or explicitly named project's query, open
   tasks, questions, hypotheses, decisions, topics, notes and closed tasks.
+- `source` mints a world source without a project selection, with a publisher
+  title and at least one DOI, PMID, ISBN or accession. Identifiers are normalised
+  before lookup across all configured live corpora. Any shared identifier refuses
+  before an act, with `data.existing` naming the matching records and their holders;
+  an exclusive write-root record can gain an identifier through `source-correct`.
+  A source held elsewhere is used as it stands. Retired redirect addresses also
+  refuse. Look up every confirmed identifier together with `record` first; never
+  retry a refusal with fewer identifiers. Disjoint identifier sets can still mint
+  two sources for one work: this is deduplication by shared identifier.
 - `claim` uses the first activated operator plan, mapping subject/object into
   named roles. Two one roles or two canonical many-role members are supported.
   Dataset, selection and run-output vocabulary bindings must resolve against held
