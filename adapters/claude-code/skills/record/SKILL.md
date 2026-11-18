@@ -16,4 +16,4 @@ budgeted: a truncated result ends with a cursor, and continuing with that
 cursor is the only way to see the rest. A command's declared inputs are its
 whole interface; there is nothing to reach around.
 
-Show a record with exactly one way of naming it: an address, or one or more source identifiers. No match by identifier is an answer. For a source, read `correctable here` before considering `source-correct`. Use the unpinned coordination address with `revise`.
+Show a record with exactly one way of naming it: an address, or one or more source identifiers. No match by identifier is an answer. For a source, read `correctable here` before considering `source-correct`. On a `source` or `proposition`, `source assertions` lists stored attributed readings across configured live corpora (inert in `belief`). Use the unpinned coordination address with `revise`.

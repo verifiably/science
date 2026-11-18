@@ -3,13 +3,19 @@ import json
 from dataclasses import replace
 
 import pytest
+from beliefs import stored
+from beliefs.source_assertion import Bearing, Reading, Representation, SourceAssertion, Span
 from nodes.core.corpus import Corpus
+from nodes.core.relations import Relation
 from helpers.world import build_two_corpus_world
 from science.config import ReadContext, corpus_id_at
-from science.lookup import (identifiers, require_identifiers, sources_carrying,
-                            world_record, shared_with, write_root_only, unresolved_citations)
+from science.lookup import (decode_source_assertion, identifiers, require_identifiers,
+                            session_record, shared_with, source_assertions,
+                            sources_carrying, unresolved_citations, world_record,
+                            write_root_only)
 from science.refusal import Refused
-from helpers.research import add_source, add_shared_source, correct_source
+from helpers.research import (add_shared_source, add_source, add_source_assertion,
+                              correct_source, raw_write_node)
 
 
 def test_identifiers_normalise_and_refuse():
@@ -122,3 +128,71 @@ def test_research_rig_mints_coordination_with_selected_project(certified_work):
         d._selection = mint_project(d)
         result = d.invoke("mint-coordination", {"kind": "note", "name": "Reading", "body": "Read", "about": ["source:missing"]})
         assert "[note]" in result.text
+
+
+def test_lookup_and_decode_convert_stale_stamp_malformed_and_edge_mismatch_to_kernel_refused(certified_work):
+    val = SourceAssertion(
+        source="source:" + "b" * 64,
+        read=Reading(
+            representation=Representation(sha256="a" * 64, media_type="text/markdown", extent="full"),
+            span=Span(quote="Quoted span.", locator="Results, [1]"),
+            extracted_by="agent:reader",
+        ),
+        bears_on=Bearing(sign="asserts", proposition="proposition:archived"),
+        recorded_by="fixture",
+    )
+    node = stored.source_assertion_node(val, title="Paraphrase.")
+    assert decode_source_assertion(node) == val
+
+    cfg = build_two_corpus_world(certified_work)
+    stale = node.model_copy(deep=True)
+    del stale.facets[stored.SOURCE_ASSERTION_FACET]["recorded_by"]
+    raw_write_node(cfg.write_root, stale)
+    ctx = ReadContext.open(cfg)
+    assert session_record(ctx, "proposition:archived").address == "proposition:archived"
+    assert session_record(ReadContext.open(replace(cfg, coordination=None)), "proposition:archived") is None
+    for read in (
+        lambda: world_record(ctx, val.id),
+        lambda: session_record(ctx, val.id),
+        lambda: source_assertions(ctx),
+    ):
+        with pytest.raises(Refused) as caught:
+            read()
+        assert caught.value.refusal.code == "kernel-refused"
+        assert caught.value.refusal.data == {"kind": "SemanticHashStale"}
+
+    malformed = node.model_copy(deep=True)
+    del malformed.facets[stored.SOURCE_ASSERTION_FACET]["recorded_by"]
+    stored.stamp_semantic_identity(malformed)
+    with pytest.raises(Refused) as caught:
+        decode_source_assertion(malformed)
+    assert caught.value.refusal.code == "kernel-refused"
+    assert caught.value.refusal.data == {"kind": "MalformedRecord"}
+
+    edge_mismatch = node.model_copy(
+        deep=True,
+        update={
+            "relations": [
+                Relation(source=val.id, predicate="anchored_in", target=val.source),
+                Relation(source=val.id, predicate="assesses", target=val.bears_on.proposition),
+            ]
+        },
+    )
+    stored.stamp_semantic_identity(edge_mismatch)
+    assert stored.source_assertion_value(edge_mismatch) == val
+    with pytest.raises(Refused) as caught:
+        decode_source_assertion(edge_mismatch)
+    assert caught.value.refusal.code == "kernel-refused"
+    assert caught.value.refusal.data == {"kind": "SourceAssertionRefused"}
+
+
+def test_source_assertions_deduplicates_equal_replicas_without_coordination(certified_work):
+    cfg = build_two_corpus_world(certified_work)
+    src = add_source(cfg, "corpus", "Paper", pmid="123")
+    node = add_source_assertion(cfg, "corpus", source=src.id, proposition="proposition:archived")
+    raw_write_node(certified_work / "archive", node)
+    (located, decoded), = source_assertions(ReadContext.open(replace(cfg, coordination=None)))
+    assert located.node == node
+    assert located.corpora == tuple(sorted(corpus_id_at(root) for root in cfg.world.corpus_roots))
+    assert decoded.source == src.id
+    assert decoded.bears_on.proposition == "proposition:archived"

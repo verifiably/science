@@ -6,13 +6,20 @@ from beliefs import stored
 from beliefs.coordination import CoordinationAddress
 
 from science.coordination import content_of, selected_project, tip_nodes
-from science.lookup import identifiers, sources_carrying, world_record, write_root_only
+from science.lookup import (decode_source_assertion, identifiers, source_assertions,
+                            sources_carrying, world_record, write_root_only)
 from science.refusal import Refusal, Refused
 from science.report import Finding, KeyVals, Report, Text
+
+__all__ = ["handle"]
 
 
 def _yaml(value):
     return yaml.safe_dump(value, sort_keys=True).rstrip()
+
+
+def _relation_dicts(relations):
+    return [{"source": r.source, "predicate": r.predicate, "target": r.target} for r in relations]
 
 
 def _coord_address(node):
@@ -51,6 +58,50 @@ def _notes(ctx, node):
     return [KeyVals("notes about this record", tuple(sorted(set(entries))))]
 
 
+def _source_assertions(ctx, node):
+    if node.kind == "source":
+        matches = [
+            (located, val)
+            for located, val in source_assertions(ctx)
+            if (target := world_record(ctx, val.source)) is not None and target.node.uid == node.uid
+        ]
+        if not matches:
+            return []
+        return [
+            KeyVals(
+                "source assertions",
+                tuple(
+                    (
+                        located.address,
+                        f"{val.bears_on.sign} {val.bears_on.proposition} (extracted by {val.read.extracted_by}) — {located.node.title}",
+                    )
+                    for located, val in matches
+                ),
+            )
+        ]
+    if node.kind == "proposition":
+        matches = [
+            (located, val)
+            for located, val in source_assertions(ctx)
+            if (target := world_record(ctx, val.bears_on.proposition)) is not None and target.node.uid == node.uid
+        ]
+        if not matches:
+            return []
+        return [
+            KeyVals(
+                "source assertions",
+                tuple(
+                    (
+                        located.address,
+                        f"{val.bears_on.sign} in {val.source} (extracted by {val.read.extracted_by}) — {located.node.title}",
+                    )
+                    for located, val in matches
+                ),
+            )
+        ]
+    return []
+
+
 def _world_blocks(ctx, found):
     node = found.node
     pairs = [("address", node.id), ("uid", node.uid), ("title", node.title)]
@@ -61,8 +112,10 @@ def _world_blocks(ctx, found):
         pairs += [("held by", ", ".join(found.corpora)),
                   ("correctable here", "yes" if write_root_only(ctx, found) else "no")]
     else:
-        pairs += [("relations", _yaml(node.relations)), ("facets", _yaml(node.facets))]
-    return [KeyVals(node.kind, tuple(pairs)), Text(node.body), *_notes(ctx, node)]
+        if node.kind == "source-assertion":
+            decode_source_assertion(node)
+        pairs += [("relations", _yaml(_relation_dicts(node.relations))), ("facets", _yaml(node.facets))]
+    return [KeyVals(node.kind, tuple(pairs)), Text(node.body), *_source_assertions(ctx, node), *_notes(ctx, node)]
 
 
 def handle(ctx, *, address=None, doi=None, pmid=None, isbn=None, accession=None) -> Report:

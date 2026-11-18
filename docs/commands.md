@@ -126,8 +126,11 @@ Exact current inputs, defaults and prompts are the public files under
   the stored coordination id printed by a write reply. Alternatively, give one
   or more source identifiers; no match is a finding, and multiple matches print
   separately because they may be one work. It shows full fields and body,
-  source holders and whether correction is possible here. With a selected
-  project it lists notes about the world record, following source redirects.
+  source holders and whether correction is possible here. On a `source` or
+  `proposition` it lists stored `source assertions` across configured live
+  corpora (following source redirects; attributed readings inert in `belief`).
+  With a selected project it lists notes about the world record, following
+  source redirects.
 - `project-show` shows the selected or explicitly named project's query, open
   tasks, questions, hypotheses, decisions, topics, notes and closed tasks.
 - `source` mints a world source without a project selection, with a publisher

@@ -4,13 +4,29 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 
-from beliefs.errors import IdentifierMalformed
+from beliefs.errors import IdentifierMalformed, MalformedRecord, ScienceError, SourceAssertionRefused
+from beliefs.reservation import UNREAD
 from beliefs.source import normalized_identifiers
-from beliefs.stored import SOURCE_FACET
+from beliefs.source_assertion import SourceAssertion, source_assertion_refusal
+from beliefs.stored import SOURCE_FACET, source_assertion_value
 from nodes.core.node import Node
 
 from science.config import _retired
-from science.refusal import Refusal, Refused
+from science.refusal import Refusal, Refused, kernel_refusal
+
+__all__ = [
+    "Located",
+    "decode_source_assertion",
+    "identifiers",
+    "require_identifiers",
+    "session_record",
+    "shared_with",
+    "source_assertions",
+    "sources_carrying",
+    "unresolved_citations",
+    "world_record",
+    "write_root_only",
+]
 
 
 def identifiers(*, doi=None, pmid=None, isbn=None, accession=None) -> dict[str, str]:
@@ -56,12 +72,62 @@ def _live(ctx, mounts):
 def _located(ctx, holders, ref):
     if not holders:
         return None
-    preferred = ctx._holder_among(holders, ref)
-    return Located(preferred.view.get(ref), tuple(sorted({mount.corpus_id for mount in holders})))
+    try:
+        preferred = ctx._holder_among(holders, ref)
+        node = preferred.view.get(ref)
+    except ScienceError as caught:
+        raise Refused(kernel_refusal(caught)) from caught
+    return Located(node, tuple(sorted({mount.corpus_id for mount in holders})))
 
 
 def world_record(ctx, ref: str) -> Located | None:
     return _located(ctx, [mount for mount in _live(ctx, ctx.mounts()) if mount.view.holds(ref)], ref)
+
+
+def session_record(ctx, ref: str) -> Located | None:
+    """The record `ref` resolves to, live or through a redirect, across
+    session-mounted non-retired corpora (`_live(ctx, ctx.session_mounts())`).
+    Differing copies refuse `invalid-input` as `world_record` does; corrupt
+    stored nodes (`ScienceError` from `ReadView.get`) refuse `kernel-refused`."""
+    return _located(ctx, [mount for mount in _live(ctx, ctx.session_mounts()) if mount.view.holds(ref)], ref)
+
+
+def decode_source_assertion(node: Node) -> SourceAssertion:
+    """Validate `node` with `stored.source_assertion_value(node)` followed by
+    `source_assertion_refusal(value, node.relations, kind_of=lambda _ref: UNREAD)`,
+    raising `SourceAssertionRefused(refusal.code, f"{node.id}: {refusal.detail}")`
+    when `refusal is not None`, and catching `(MalformedRecord,
+    SourceAssertionRefused) as caught` to raise `Refused(kernel_refusal(caught))
+    from caught` (`code == "kernel-refused"`)."""
+    try:
+        value = source_assertion_value(node)
+        refusal = source_assertion_refusal(value, node.relations, kind_of=lambda _ref: UNREAD)
+        if refusal is not None:
+            raise SourceAssertionRefused(refusal.code, f"{node.id}: {refusal.detail}")
+        return value
+    except (MalformedRecord, SourceAssertionRefused) as caught:
+        raise Refused(kernel_refusal(caught)) from caught
+
+
+def source_assertions(ctx) -> tuple[tuple[Located, SourceAssertion], ...]:
+    """Every stored `source-assertion` across configured non-retired corpora
+    (`_live(ctx, ctx.mounts())`), deduplicated by canonical address via
+    `_located` (so differing replicas refuse `invalid-input` and stale/missing
+    stamps refuse `kernel-refused` as `world_record` does), sorted by `address`,
+    each decoded with `decode_source_assertion`."""
+    mounts = _live(ctx, ctx.mounts())
+    addresses = {
+        node.id
+        for mount in mounts
+        for node in mount.view.iter_stored()
+        if node.kind == "source-assertion"
+    }
+    by_address: dict[str, tuple[Located, SourceAssertion]] = {}
+    for ref in sorted(addresses):
+        located = _located(ctx, [mount for mount in mounts if mount.view.holds(ref)], ref)
+        if located is not None and located.address not in by_address:
+            by_address[located.address] = (located, decode_source_assertion(located.node))
+    return tuple(by_address[address] for address in sorted(by_address))
 
 
 def sources_carrying(ctx, given: Mapping[str, str]) -> tuple[Located, ...]:
