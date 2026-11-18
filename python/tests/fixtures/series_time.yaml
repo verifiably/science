@@ -3,6 +3,8 @@ contract:
   contract: si-brochure
   version: 1
   lineage: genesis
+  defining_source:
+    id: urn:beliefs:source:bipm-si-brochure
   sorts: {}
   dimensions: {}
   quantity_kinds:

@@ -43,9 +43,9 @@ reproduce this build.
 
 | Sibling | Git revision |
 | --- | --- |
-| beliefs | `dadc5fb763a47c8c10333633fb5a26b099d5fe15` |
-| atoms | `2329cc1773bf4479e369c02e34160e824ae2b541` |
-| nodes | `e1cc8d6aa2baa6cb941c25c758fd99e074353491` |
+| beliefs | `be34f5775fee164adc256ee8f1fe6d99a7fb0acf` |
+| atoms | `a4d414b924c0f939056c4f63b3c902e7e5c4809d` |
+| nodes | `d8c73b2321e30bc563782fbab517630bae1d631a` |
 
 To upgrade, choose and record a replacement tuple. Verify that each exact commit
 is published and resolvable in its GitHub repository before accepting the tuple;

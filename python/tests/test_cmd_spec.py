@@ -139,6 +139,7 @@ def test_non_term_or_claim_side_dimensions_refuse(certified_work, monkeypatch, f
         dim["restriction"] = {"form": form}
         if form == "union": dim["restriction"]["of"] = {"form": "term", "sort": "cohort"}
         if form == "interval": dim["restriction"]["quantity_kind"] = "general/relative-abundance"
+        if form == "time-interval": dim.pop("restriction_sort")
         if form == "rule": dim["restriction"]["classes"] = "level"
     monkeypatch.setattr(world, "TEST_CONTRACT", yaml.safe_dump(document))
     cfg = build_belief_world(certified_work)
