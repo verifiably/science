@@ -41,6 +41,16 @@ def test_research_paper_is_packaged_byte_for_byte(tmp_path):
         assert source.read_bytes() == packaged.read_bytes()
 
 
+def test_research_paper_frontmatter_describes_promotion():
+    text = (REPO_ROOT / "skills" / "research-paper" / "SKILL.md").read_text()
+    assert text.startswith("---\n")
+    frontmatter = yaml.safe_load(text.split("---", 2)[1])
+    assert frontmatter["name"] == "research-paper"
+    description = frontmatter["description"]
+    assert isinstance(description, str) and description.strip()
+    assert "promote" in description.lower() and "without re-reading" in description.lower()
+
+
 def test_shared_rule_files_are_byte_equal():
     root = REPO_ROOT / "skills"
     assert (root / "research-topic/literature-evaluation.md").read_bytes() == (

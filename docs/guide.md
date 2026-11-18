@@ -170,11 +170,18 @@ took four separate upstream tasks.
 ## Reading and discussing research
 
 With the generated science plugin installed, `/science:research-paper` reads one
-paper at a time and records a world source plus a project reading note, including
-reading depth, exact-byte digest and quoted statements. `/science:research-topic`
-records a background synthesis as a topic whose query names its sources.
-`/science:discuss` records a critical discussion as a project note. Select a
-project with `project-select` before writing notes or topics.
+paper at a time and records a world source plus a project reading note (including
+reading depth, media type, exact-byte digest, reader and quoted statements),
+minting a world `source-assertion` directly for any statement paired with an
+existing proposition; it can also promote statements from an earlier reading note
+into `source-assertion` records offline without re-reading the paper or revising
+the note. Source assertions are attributed readings and are inert in `belief`.
+`/science:research-topic` records a background synthesis as a topic whose query
+names its sources. `/science:discuss` records a critical discussion as a project
+note. Select a project with `project-select` before writing notes or topics, or
+before discovering earlier reading notes through a project; direct promotion of a
+named reading note (`coord:` address or stored `note:` id) writes only world
+`source-assertion` records and needs no selected project.
 
 Each article should have one source across projects. Look it up with every
 confirmed identifier together: a DOI-only lookup cannot find a record carrying
@@ -187,7 +194,7 @@ limit when minting after a single-identifier lookup.
 Readings obey the workspace's exposure policy. Abstract-only reading is marked
 and supports no durable conclusion; unavailable text is not summarized from
 memory. The [command reference](commands.md) defines `source`, `source-correct`,
-`record`, `note` and `topic` and their write boundaries.
+`source-assertion`, `record`, `note` and `topic` and their write boundaries.
 
 ## Selection and sharing
 

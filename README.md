@@ -85,8 +85,12 @@ sources, and records a complete topic with its source query. Overlapping topics
 are supplemented only when the person chooses; a source-free topic is never minted.
 
 `/science:research-paper` reads one paper at a time, reuses or records its world
-source, and writes a project reading note with exact quotations, reading depth
-and the digest of what was read. See [reading and discussing research](docs/guide.md#reading-and-discussing-research)
+source, mints `source-assertion` records for quoted statements paired with an
+existing proposition, and writes a project reading note with exact quotations,
+reading depth, media type and the digest of what was read; it also promotes
+statements from earlier reading notes into `source-assertion` records offline
+without re-reading (attributed readings, inert in `belief`). See
+[reading and discussing research](docs/guide.md#reading-and-discussing-research)
 for the shared-identifier limit and publication precautions.
 
 With the generated science plugin installed, `/science:sweep-assumptions`

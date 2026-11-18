@@ -1,24 +1,38 @@
 ---
 name: research-paper
-description: Use when asked to read one paper, or a list of papers one at a time, and record its source and a reading note in a science project.
+description: Use when asked to read one paper, or a list of papers one at a time, and record its source, a reading note, and any proposition-paired source assertions in a science project, or to promote statements from an earlier reading note into source-assertion records without re-reading.
 ---
 
 # Read a research paper
 
 Read [literature-evaluation.md](literature-evaluation.md) and
-[statement-extraction.md](statement-extraction.md) before reading and extracting.
+[statement-extraction.md](statement-extraction.md) before reading, extracting or
+promoting statements.
 
 ## Boundaries and preconditions
 
-Write records only through science commands, named here by declaration name.
-Write no repository file and make no commit. The only existing record this
-workflow edits is a source's identifiers through `source-correct`; edit nothing
-else. It adds no source-assertion records and promotes no extraction into belief.
+Write records only through science commands, named here by declaration name
+(`record`, `source`, `source-correct`, `source-assertion`, `note`, `question`,
+`project-select`). Write no repository file and make no commit. This workflow
+mints world `source-assertion` records (attributed readings inert in `belief`)
+for statements paired with an existing `proposition:<id>`, and when adding a
+reading may edit a write-root source's identifiers through `source-correct`;
+edit no other existing record. Never call `claim`, never search the world for
+propositions unprompted, and never revise reading notes.
 
-First check that science commands are reachable and a project is selected when
-writing notes. Tell the person to run `project-select` when needed; never select
-one yourself. Check that `quarry` runs when needed. If a precondition fails, stop
-with a plain explanation. Do not locate or install quarry; the session environment
+First check that science commands are reachable. When invoked directly on an
+existing reading note's `coord:` address (`coord:<project>/<local>` or
+`coord:<project>/<local>@<revision>`) or stored `note:` id
+(`note:<project>.<local>.<uid>`), skip steps 0–4 and go straight to **Promote an
+earlier reading**: no selected project is required (promotion writes only world
+`source-assertion` records), and no `quarry`, external metadata fetch, `source`
+or `source-correct` call runs. Every other invocation (discovering an earlier
+reading note through a project's notes on `record`, or writing a new reading
+note) requires a selected project: check that one is selected, tell the person
+to run `project-select` when needed, and never select one yourself. Check that
+`quarry` runs when a step below needs it (never needed for direct promotion or
+when step 0 promotes from local records). If a precondition fails, stop with a
+plain explanation. Do not locate or install quarry; the session environment
 supplies it.
 
 Before reading any text reporting results, follow the exposure policy declared in
@@ -50,28 +64,83 @@ writer's own reasoning or recollection, labelled as such. Memory is orientation
 only and never attributed to a paper. Hedge to match evidence; store no strength
 or confidence grade.
 
-Sources belong to the world; reading notes belong to the selected project.
-Deduplication works by shared identifier, not proof of one record per article:
-disjoint identifiers can still produce two records. Look up every confirmed
-identifier and mint with all of them. Complete identifiers before first publication:
-a source held by another corpus cannot be corrected here. Existing duplicates
-stay separate; no command merges them. A preprint and published version with
-different DOIs are different works. A corrected source's old address keeps
-redirecting, including after a wrong identifier is replaced. A note's citation
-may stop resolving if its source's last holder is retired; these workflows add no
-retention guarantee. Titles are fixed at minting and are not identity.
+Sources and source assertions belong to the world; reading notes belong to the
+selected project. Deduplication works by shared identifier, not proof of one
+record per article: disjoint identifiers can still produce two records. Look up
+every confirmed identifier and mint with all of them. Complete identifiers before
+first publication: a source held by another corpus cannot be corrected here.
+Existing duplicates stay separate; no command merges them. If two distinct
+`source` records share byte-identical representation material and an identical
+extraction, `source-assertion` refuses the second anchor with
+`data.anchor_conflict` rather than reusing the first. A preprint and published
+version with different DOIs are different works. A corrected source's old address
+keeps redirecting, including after a wrong identifier is replaced, and
+`source-assertion` resolves cited source redirects when checking same-source
+reuse. A note's citation may stop resolving if its source's last holder is
+retired; these workflows add no retention guarantee. Titles are fixed at minting
+and are not identity.
 
 ## Workflow
 
-One paper, read and recorded. A list is handled one paper at a time, each finished
-before the next.
+One paper, read and recorded — or an existing reading note's statements promoted
+into `source-assertion` records without re-reading the paper. A list is handled
+one paper at a time, each finished before the next. When invoked directly on an
+existing reading note's `coord:` address (unpinned or `@<revision>`) or stored
+`note:` id (`note:<project>.<local>.<uid>`), skip steps 0–4 and go straight to
+**Promote an earlier reading**.
 
+0. **Check local records first when given a `source:` address or identifier.**
+   Whenever the caller supplies a `source:` address or one or more accepted
+   identifiers (`doi`, `pmid`, `isbn`, `accession`), call `record` locally
+   first — before any `quarry` lookup, `doi.org` metadata fetch, `source`, or
+   `source-correct` call (`record` resolves redirects, matches on *any* shared
+   identifier, and lists the selected project's notes about each matching source
+   and any `source assertions` already anchored in it). Compare every supplied
+   identifier (in canonical form) and any supplied title (normalised as above)
+   against what `record` returns before offering promotion, since `record`
+   matches on *any* shared identifier and a valid DOI paired with a conflicting
+   PMID still returns the DOI's source:
+   - **Direct conflict with a single local source:** if `record` returns one
+     local `source` and any supplied identifier scheme already present on that
+     `source` has a different canonical value
+     (`scheme in held and held[scheme] != value`), or any supplied title
+     disagrees with that `source`'s normalised title, stop immediately for that
+     paper and report the conflict — neither promote nor read.
+   - **Verified single local match:** if `record` returns one local `source`
+     where *every* supplied identifier matches `held`
+     (`all(held.get(scheme) == value for scheme, value in given.items())`), any
+     supplied title agrees, and `record` lists at least one earlier reading note
+     in the selected project, offer **promote statements from an earlier reading
+     (without external metadata fetches, `source-correct`, or re-reading), add a
+     further reading, or stop** right here (unless the person already asked to
+     promote or to add a further reading). When several reading notes exist on
+     that `source`, list each note's address and name and require an explicit
+     note choice from the person before entering **Promote an earlier reading**.
+   - **Incomplete or multi-source local match:** if `record` returns several
+     local sources, or returns one local `source` lacking one of the supplied
+     schemes (`scheme not in held`, such as a PMID-only source when given both
+     DOI and PMID), local state alone has not verified that all supplied
+     identifiers name one work — proceed to step 1 instead of promoting here.
+   Only choosing **add a further reading** — or finding no verified local
+   reading note, or starting from a bare title, URL or supplied file whose
+   identifiers are not yet known — enters step 1.
 1. **Identify the paper before reading it.** From a DOI, PMID, title, URL or file,
    confirm its identity by the identity order above. Check that DOI and PMID agree with
    each other and that the title matches; a conflict stops the skill for that
    paper. The reading note records which route confirmed the identity.
-2. **Find or record the source.** `record` by every confirmed identifier
-   together.
+   - **Pre-step-2 promotion check:** once step 1 confirms that all supplied
+     identifiers and title agree, call `record` across all confirmed identifiers
+     together *before* calling `source` or `source-correct` in step 2. If any
+     matched local source carries an earlier reading note in the selected project
+     not already offered in step 0, offer **promote statements from an earlier
+     reading (leaving the `source` record untouched, without `source-correct` or
+     re-reading), add a further reading, or stop** (unless the person already
+     specified which to run). Whenever several matching sources or several
+     reading notes exist, list each candidate note with its name and cited
+     `source:` address and require an explicit note choice from the person before
+     entering **Promote an earlier reading**.
+2. **Find or record the source (when adding a reading).** `record` by every
+   confirmed identifier together.
    - Absent: `source`. When the lookup ran on a single identifier, the skill
      says so to the person and in the reading note: a record of the same work
      under a different identifier could not be ruled out.
@@ -86,16 +155,19 @@ before the next.
      highest-ranked identifier (DOI, then PMID, ISBN, accession), and names the
      other address in the reading note. No command merges them.
 3. **Check for an earlier reading.** `record` on the source lists this project's
-   notes about it, including notes written against an address the source has
-   since left. With one present, the person chooses: add a further reading or
-   stop.
+   notes about it (including notes written against an address the source has
+   since left) and any `source assertions` already anchored in it. With any
+   earlier reading note not already handled in step 0 or step 1 (such as inputs
+   whose identifiers were unknown before step 1), the person chooses: **promote
+   statements from the earlier reading (requiring an explicit note choice when
+   several exist, without re-reading)**, **add a further reading**, or **stop**.
 4. **Obtain text,** in this order, under the exposure rule:
    1. a file the person supplies;
    2. open-access full text at a location quarry lists for the record;
    3. an abstract: from the index's structured record for the work (PubMed's
-      E-utilities record, Europe PMC's core record), or, for a work the indexes
-      do not hold, from the DOI registry's metadata record when it carries one.
-      Reading depth `abstract`;
+     E-utilities record, Europe PMC's core record), or, for a work the indexes
+     do not hold, from the DOI registry's metadata record when it carries one.
+     Reading depth `abstract`;
    4. nothing reachable: the source stays recorded, no reading note is written,
       and the skill says the paper was not read.
 
@@ -113,36 +185,137 @@ before the next.
    model memory standing in for text.
 5. **Read** the abstract, introduction, methods, results and discussion, to the
    depth available.
-6. **Write the reading note** with `note`, `about` the source. Its parts:
-   - *Reading.* Source address and identifiers; what was read (kind of
-     representation, where it came from, its sha256, the date); the depth, `full
-     text` or `abstract`; whether the work is primary or secondary; and,
-     separately, its publication status (peer-reviewed, preprint, other); who read
-     it (the person, or the model and version).
+6. **Mint any direct source assertions and write the reading note.** For
+   statements paired with an existing proposition, call `source-assertion`
+   *before* calling `note` (`about` the source), since notes are never revised.
+   Its parts:
+   - *Reading.* Source address and identifiers; what was read — both
+     representation kind and explicit MIME `media_type` (`application/xml` for
+     PMC JATS XML or PubMed abstract XML, `application/json` for BioC JSON or
+     DOI registry JSON, `application/pdf` for PDF, `text/markdown` for Markdown,
+     `text/html` for HTML, `text/plain` for plain text), where it came from, its
+     exact 64-lowercase-hex `sha256`, and the date; the depth, `full text` or
+     `abstract`; whether the work is primary or secondary; and, separately, its
+     publication status (peer-reviewed, preprint, other); and a clean
+     `Reader: <actor>` identifier naming the person or model-and-version who read
+     it (keep any transport or relay commentary separate rather than appending
+     clauses onto `Reader:`).
    - *Contribution, methods, findings, limitations,* each in the reader's words
      and marked as the reader's summary of the paper.
-   - *Statements.* What the paper itself says, in the form stage two will promote:
+   - *Statements.* What the paper itself says:
 
      ```
      1. stance: asserts | denies | hypothesizes
-        span: "<verbatim text from the representation read>"
+        span: "<verbatim text from the representation read, in Unicode NFC>"
         where: <section, page or paragraph in that representation>
         paraphrase: <one sentence, the reader's wording>
-        proposition: <address>   (optional)
+        attributed_to: <annotator within the source>   (optional)
+        proposition: <address>                         (optional)
+        source_assertion: <address>                    (present when minted or reused)
      ```
 
-     A span is copied exactly or it is not a statement. Text that cannot be quoted
-     exactly belongs in the summary. From an abstract-only reading, statements are
-     limited to what the abstract says, and numbers, cohort definitions and method
-     parameters are left out. `proposition` is given only when the reader already
-     has a proposition in the world that the statement concerns, such as the one
-     under discussion; the skill neither searches for one nor mints one while
-     reading.
+     Normalise `span`, `where`, `media_type` and optional `attributed_to` to
+     Unicode NFC (if the source representation yielded decomposed characters)
+     while preserving exact wording, whitespace, case and punctuation, so the
+     note text and `source-assertion` inputs are byte-identical NFC strings. A
+     span is copied verbatim or it is not a statement; text that cannot be quoted
+     exactly belongs in the summary. From an abstract-only reading, statements
+     are limited to what the abstract says, and numbers, cohort definitions and
+     method parameters are left out. `proposition` is given only when the reader
+     already has an existing `proposition:<id>` in the world that the statement
+     concerns (such as one supplied by the person or under discussion), verified
+     first with `record` to have `kind == "proposition"`; never call `claim` and
+     never search the world for propositions unprompted while reading.
+
+     For each statement carrying a verified `proposition: proposition:<id>`,
+     call `source-assertion` before `note` (`source` = the source address,
+     `proposition`, `sign` = `stance`, `quote` = `span`, `locator` = `where`,
+     `sha256`, `media_type`, `extent` = `full` for `full text` or `abstract` for
+     `abstract`, `extracted_by` = the clean `Reader:` actor, optional
+     `attributed_to`, and `title` = single-line `paraphrase`). Decide reuse from
+     the refusal `data` payload alone:
+     - If `source-assertion` succeeds, record its minted address on
+       `source_assertion: <address>`.
+     - If `source-assertion` refuses with `"existing"` in `data`
+       (`data.existing`, same resolved `source`, including across
+       `source-correct` redirects), reuse `data.existing[0].address` and record
+       `source_assertion: <address>` on that statement in the note.
+     - If `source-assertion` refuses with `data.anchor_conflict` (identical
+       extraction from byte-identical material already anchored in a distinct
+       `source` record) or `data.occupied` (wrong-kind occupancy at that
+       address), never reuse that address: omit `source_assertion:`, keep the
+       statement in the reading note, and disclose the conflict to the person.
+     Keep every proposition-less statement in the reading note without
+     `proposition:` or `source_assertion:`.
    - *Reader's commentary,* labelled as the reader's own and never as the paper's.
    - *Relevance to the project* and proposed follow-ups.
 7. **Offer follow-up questions for confirmation.** Offer `question` records;
-   mint only those the person confirms. End by listing minted addresses and
-   anything that could not be done.
+   mint only those the person confirms. End by listing minted addresses, any
+   reused same-source `source-assertion` addresses, any conflicts, and anything
+   that could not be done.
 
-The statements are one reader's extraction and the note says so: unadjudicated,
+The statements and any source assertions minted from them are one reader's
+attributed extraction and the note says so: unadjudicated, inert in `belief`,
 and not to be used as an independent check of the same reader's summary.
+
+## Promote an earlier reading
+
+Given an existing reading note (by `coord:` address, unpinned or `@<revision>`;
+by stored `note:<project>.<local>.<uid>` id; or explicitly chosen in step 0,
+step 1 or step 3), promote statements into world `source-assertion` records
+without re-reading the paper:
+
+1. **Read local records only.** Read the note in full with `record`, and read its
+   cited `source:` address with `record` (which resolves through `source-correct`
+   redirects to the live `source` and lists `source assertions` already anchored
+   in it). Make zero `quarry` calls, `doi.org` or external metadata fetches,
+   `source` or `source-correct` calls, or paper-file reads.
+2. **Extract reading provenance strictly from the note's *Reading* section.**
+   - `source`: the `source:` address cited in the note (pass as cited;
+     `source-assertion` resolves `source-correct` redirects to the live `source`).
+   - `sha256`: the 64 lowercase hex digits recorded in the note.
+   - `extent`: `full` for `full text`, or `abstract` for `abstract`.
+   - `extracted_by`: the actor identifier from the note's `Reader:` field,
+     stripping any trailing provenance clauses such as `, observed through ...`,
+     and never substituting the promoting session's own model (`recorded_by` is
+     stamped automatically from the session writer).
+   - `media_type`: the explicit MIME type when the note names one, or mapped from
+     unambiguous representation descriptions: `PMC JATS XML` or
+     `PubMed abstract XML` → `application/xml`, `BioC JSON` or
+     `DOI registry JSON` → `application/json`, `PDF` → `application/pdf`,
+     `Markdown` → `text/markdown`, `HTML` → `text/html`, plain text →
+     `text/plain`. If the note's description leaves `media_type` ambiguous,
+     confirm it with the person rather than guessing.
+   If any required provenance field (`source`, `sha256`, depth, `Reader`) or a
+   promoted statement's `span`, `where` or `paraphrase` is missing from the
+   note, stop and name what is missing rather than guessing or re-reading
+   silently.
+3. **Verify propositions and signs.**
+   - A statement that already carries `proposition: proposition:<id>` uses that
+     `proposition` and its recorded `stance` as `sign`, after verifying with
+     `record` that `proposition:<id>` resolves to a record of
+     `kind == "proposition"`.
+   - A statement lacking a `proposition:` line is promoted only when the person
+     supplies or confirms both an existing `proposition:<id>` (verified with
+     `record` to have `kind == "proposition"`) and the statement's `sign`
+     (`asserts`, `denies`, `hypothesizes`) on *that* proposition, since a
+     sentence asserted in prose may `deny` an oppositely polarised proposition.
+     Never call `claim` or search world propositions unprompted.
+   - Statements with no proposition remain in the reading note and are reported
+     as unpromoted for lack of a proposition.
+4. **Normalise and mint without revising the note.** For each statement to
+   promote, normalise `span`, `where`, `media_type` and optional `attributed_to`
+   to Unicode NFC if decomposed, and call `source-assertion` with `title` set to
+   the single-line `paraphrase`. Decide reuse from `record` on the note's
+   resolved `source` (verifying full `read` and `bears_on` equality if reusing
+   before calling `source-assertion`) or `"existing"` in `source-assertion`'s
+   refusal `data` payload alone: if that exact assertion is already recorded on
+   the same resolved `source` (including when `source-assertion` refuses with
+   `data.existing`), treat it as idempotently present and report
+   `data.existing[0].address` (or the verified existing address). Never reuse
+   `data.anchor_conflict` (distinct `source` anchor) or `data.occupied`
+   (wrong-kind occupancy): leave the statement in the reading note and disclose
+   the conflict. Never revise the reading note. End by reporting newly minted
+   `source-assertion` addresses, reused same-source addresses, any
+   `data.anchor_conflict` or `data.occupied` conflicts, and unpromoted statements
+   left in the note.
