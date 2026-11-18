@@ -61,7 +61,8 @@ The command surface is recorded in `tools/cli.toml`:
 - Coordination: `project`, `question`, `hypothesis`, `task`, `decide`, `note`, `topic`, `revise`,
   `reuse`, `project-select`, `projects`, `project-show` (including topics and notes).
 - Published works: `source`, deduplicated across live corpora by shared identifier;
-  `source-correct` adds or replaces identifiers on sources held only in the write root.
+  `source-correct` adds or replaces identifiers on sources held only in the write root;
+  `source-assertion` records that a source asserts, denies or hypothesizes a proposition at a quoted span.
 - Record reading: `record`, by world or coordination address, or source identifier.
 - Sharing: `publish`, `publish-preview`, `provider-inspect`, `provider-bind`,
   `adopt`, `fetch`, `show`.

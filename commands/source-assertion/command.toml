@@ -1,0 +1,59 @@
+schema_version = 1
+name = "source-assertion"
+purpose = "Record that a source asserts, denies or hypothesizes a proposition at a quoted span."
+write_class = "mints:source-assertion"
+output_budget = 4096
+
+[inputs.source]
+type = "string"
+required = true
+doc = "The source address to anchor in (resolves through identifier-correction redirects)."
+[inputs.proposition]
+type = "string"
+required = true
+doc = "The proposition address this statement bears on."
+[inputs.sign]
+type = "enum"
+choices = ["asserts", "denies", "hypothesizes"]
+required = true
+doc = "The source's stance on the proposition."
+[inputs.quote]
+type = "string"
+required = true
+doc = "Verbatim text copied from the representation read, in Unicode NFC."
+[inputs.locator]
+type = "string"
+required = true
+doc = "Where the quote occurs in the representation (section, page, paragraph, or record key), in Unicode NFC."
+[inputs.sha256]
+type = "string"
+required = true
+doc = "SHA-256 of the exact representation bytes read (64 lowercase hex digits)."
+[inputs.media_type]
+type = "string"
+required = true
+doc = "Media type of the representation read (for example application/xml, application/pdf, text/markdown), in Unicode NFC."
+[inputs.extent]
+type = "enum"
+choices = ["full", "abstract"]
+required = true
+doc = "How much of the representation was read."
+[inputs.extracted_by]
+type = "string"
+required = true
+doc = "Who extracted the statement (a person, or a model and version), distinct from the source's authors."
+[inputs.attributed_to]
+type = "string"
+required = false
+doc = "Who within the source made the statement (for example an annotation curator or module), when not the source's own."
+[inputs.title]
+type = "string"
+required = true
+doc = "One-line summary or paraphrase of the statement in the reader's words."
+[inputs.body]
+type = "string"
+required = false
+doc = "Optional further reader notes, outside the assertion's identity."
+
+[reads]
+families = ["corpus-stored"]

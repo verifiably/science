@@ -149,6 +149,19 @@ Exact current inputs, defaults and prompts are the public files under
   changes, the reply shows its new address and the old address keeps resolving,
   including earlier notes. Identifiers cannot be removed without a replacement;
   retired addresses remain taken.
+- `source-assertion` mints a world `source-assertion` without a project selection,
+  anchoring an extracted span (`asserts`, `denies` or `hypothesizes`) from a
+  `source` representation (`sha256`, `media_type`, `extent`, NFC `quote` and
+  `locator`, `extracted_by`, optional `attributed_to`, single-line `title` and
+  optional `body`) onto a `proposition`, with `recorded_by` bound to the session
+  actor. Text inputs are never silently NFC-normalised. Before acting, it checks
+  all configured live corpora at the derived address: same-source matches
+  (including across `source-correct` redirects) refuse with `data.existing`,
+  distinct-source collisions refuse with `data.anchor_conflict`, and non-assertion
+  occupants refuse with `data.occupied`. Both `source` and `proposition` must
+  resolve by kind in the session's live corpora (`data.unresolved`, plus
+  `data.unmounted` when `coordination = false`, or `data.wrong_kind`). Source
+  assertions are attributed readings and are inert in `belief`.
 
 - `claim` uses the first activated operator plan, mapping subject/object into
   named roles. Two one roles or two canonical many-role members are supported.

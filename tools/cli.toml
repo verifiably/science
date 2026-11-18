@@ -194,6 +194,7 @@ args = [{ name = "id", value = "ref", required = true }]
 options = [
   { names = ["--at"], value = "string" },
   { names = ["--host"], value = "string" },
+  { shared = "all_projects", value = "none" },
 ]
 
 [[cli.tasks.commands]]
@@ -432,6 +433,7 @@ options = [
   { names = ["--depends"], value = "ref", repeatable = true },
   { names = ["--related"], value = "ref", repeatable = true },
   { names = ["--follows"], value = "ref", repeatable = true },
+  { names = ["--piece"], value = "ref", repeatable = true },
   { names = ["--ref"], value = "string", repeatable = true },
   { names = ["--spec"], value = "string" },
   { names = ["--plan"], value = "string" },
@@ -628,6 +630,8 @@ options = [
   { names = ["--no-related"], value = "none" },
   { names = ["--rm-follows"], value = "ref", repeatable = true },
   { names = ["--no-follows"], value = "none" },
+  { names = ["--rm-piece"], value = "ref", repeatable = true },
+  { names = ["--no-pieces"], value = "none" },
   { names = ["--body", "-b"], value = "string" },
   { names = ["--priority", "-p"], value = "enum", values = ["0", "1", "2", "3", "4"] },
   { names = ["--size"], value = "enum", values = ["xs", "s", "m", "l", "xl"] },
@@ -644,6 +648,7 @@ options = [
   { names = ["--depends"], value = "ref", repeatable = true },
   { names = ["--related"], value = "ref", repeatable = true },
   { names = ["--follows"], value = "ref", repeatable = true },
+  { names = ["--piece"], value = "ref", repeatable = true },
   { names = ["--ref"], value = "string", repeatable = true },
   { names = ["--spec"], value = "string" },
   { names = ["--plan"], value = "string" },
@@ -1100,7 +1105,7 @@ summary = "index local harness transcripts"
 options = [
   { names = ["--full"], value = "none" },
   { names = ["--replay"], value = "path", arity = "2", repeatable = true },
-  { shared = "harness", role = "filter", value = "enum", values = ["claude-code", "codex"], repeatable = false },
+  { shared = "harness", role = "filter", value = "enum", values = ["claude-code", "codex", "agy"], repeatable = false },
   { shared = "project", role = "select", value = "string", repeatable = false },
 ]
 
@@ -1114,7 +1119,7 @@ summary = "query context, growth, cache, calibration, skills, cost, quiet, hooks
 args = [{ name = "view", value = "enum", values = ["context", "growth", "cache", "calibration", "skills", "cost", "quiet", "hooks", "tests", "recurrences", "doc_findings", "long_doing", "profile", "usage-trend"], required = true }]
 options = [
   { shared = "project", role = "select", value = "string", repeatable = false },
-  { shared = "harness", role = "filter", value = "enum", values = ["claude-code", "codex"], repeatable = false },
+  { shared = "harness", role = "filter", value = "enum", values = ["claude-code", "codex", "agy"], repeatable = false },
   { shared = "since", role = "bound", value = "when", repeatable = false },
   { shared = "until", role = "bound", value = "when", repeatable = false },
   { names = ["--task"], value = "string" },
@@ -1711,6 +1716,27 @@ options = [
   { names = ["--pmid"], value = "string" },
   { names = ["--isbn"], value = "string" },
   { names = ["--accession"], value = "string" },
+]
+
+[[cli.science.commands]]
+path = ["source-assertion"]
+summary = "Record that a source asserts, denies or hypothesizes a proposition at a quoted span"
+options = [
+  { shared = "config", value = "path" },
+  { names = ["--invocation-id"], value = "string" },
+  { names = ["--continue"], value = "string" },
+  { names = ["--source"], value = "string", required = true },
+  { names = ["--proposition"], value = "string", required = true },
+  { names = ["--sign"], value = "enum", values = ["asserts", "denies", "hypothesizes"], required = true },
+  { names = ["--quote"], value = "string", required = true },
+  { names = ["--locator"], value = "string", required = true },
+  { names = ["--sha256"], value = "string", required = true },
+  { names = ["--media-type"], value = "string", required = true },
+  { names = ["--extent"], value = "enum", values = ["full", "abstract"], required = true },
+  { names = ["--extracted-by"], value = "string", required = true },
+  { names = ["--attributed-to"], value = "string" },
+  { names = ["--title"], value = "string", required = true },
+  { names = ["--body"], value = "string" },
 ]
 
 [[cli.science.commands]]
