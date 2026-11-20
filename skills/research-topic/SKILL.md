@@ -13,7 +13,8 @@ Produce one background synthesis grounded in identified sources. Read
 Write scientific records only through science commands, named here by their
 declaration names. Write no repository file and make no commit. Edit only the
 topic the person asks to supplement with `revise`, and source identifiers through
-`source-correct` as below. Do not edit other existing records.
+`source-correct` as below. Leave signing any coreference attestation to the
+person. Do not edit other existing records.
 
 First check that science commands are reachable, that a project is selected, and
 that `quarry` runs. If any check fails, stop with a plain explanation. Ask the
@@ -63,9 +64,29 @@ for that paper and say so. An accessible abstract is not permission to read it.
      it, including a read mount or the write root plus a publication): use it as it
      stands and state the further identifier in the synthesis. Never correct or
      duplicate it; `source-correct` would refuse.
-   - Several matches: tell the person two records may be one work. Continue on
-     the match carrying the highest-ranked identifier: DOI, then PMID, ISBN,
-     accession. Name the other address in the synthesis. No command merges them.
+   - Several matches: identify the version represented by the material using
+     title, identifiers and independent version evidence. Read the `source
+     coreference (live evidence)` rows. Only a `positive` row on two exact
+     current sources attests that specific pair. `historical-redirect` and
+     `unavailable` give context. Linked neighbors are navigation targets.
+     A missing peer adds no candidate, and the sole independently identified
+     live source remains eligible.
+   - If an exact pair is `unassessed`, disclose the possible duplicate and
+     use the confirmed-identifier rank (DOI, PMID, ISBN, accession) after
+     independent identity checks succeed. For `contested` or `negative`,
+     disclose the disagreement and keep the records separate.
+   - Different verified versions remain separate. If a positive link joins
+     verified different versions, such as a preprint and final article with
+     different DOIs, disclose the disagreement and cite each version
+     independently at its own reading depth.
+
+   If the material leaves the citable version unresolved, ask which version
+   was read before citing or counting that item. If two confirmed distinct
+   revisions resolve to one source UID (such as two arXiv revisions with only
+   their base DOI), explain that the UID cannot identify the version read.
+   Seek an independently identifiable source before citing or counting that
+   item. Continue on the other sources and record this item in coverage
+   limitations.
 
    Only DOI, PMID, ISBN and accession are accepted. Use an arXiv paper's
    `10.48550/arxiv.<id>` DOI, not an arXiv, PMCID or URL scheme. A candidate with no
@@ -95,6 +116,14 @@ for that paper and say so. An accessible abstract is not permission to read it.
      - all:
          - addresses: ["source:<digest>", "source:<digest>"]
    ```
+
+   Count each confirmed citable version once when the source records used
+   are directly positive for every pair. Check this across separate identifier
+   lookups as well as a single lookup, and disclose the other linked addresses.
+   Keep overlapping groups unresolved when any required pair is absent or its
+   version is unconfirmed. Cite the source for each passage actually read.
+   If passages came from two addresses for one confirmed version, keep both
+   actual addresses in the query and prose while counting one version.
 
    The body contains scope; what is established; what is uncertain or contested
    (the disagreement and what it turns on); gaps; relevance to the project; open

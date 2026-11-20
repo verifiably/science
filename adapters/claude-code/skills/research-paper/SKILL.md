@@ -72,13 +72,33 @@ first publication: a source held by another corpus cannot be corrected here.
 Existing duplicates stay separate; no command merges them. If two distinct
 `source` records share byte-identical representation material and an identical
 extraction, `source-assertion` refuses the second anchor with
-`data.anchor_conflict` rather than reusing the first. A preprint and published
-version with different DOIs are different works. A corrected source's old address
+`data.anchor_conflict` rather than reusing the first. Keep separately citable
+versions distinct. Separate DOIs for a preprint and its final article identify
+different versions. If a positive pair contradicts verified version evidence,
+disclose the disagreement and cite the version actually read. A corrected source's old address
 keeps redirecting, including after a wrong identifier is replaced, and
 `source-assertion` resolves cited source redirects when checking same-source
 reuse. A note's citation may stop resolving if its source's last holder is
 retired; these workflows add no retention guarantee. Titles are fixed at minting
 and are not identity.
+
+Use the `source coreference (live evidence)` rows in `record`. A `positive`
+row on two exact current addresses attests that specific pair. Confirm the
+version independently from the material, title and identifiers. A historical or
+unavailable row is context. The sole independently identified live source
+remains eligible when a peer is unavailable. Linked neighbors are navigation
+targets and do not become direct hits. Report `contested` or `negative` evidence
+and keep those sources separate. An `unassessed` pair remains a possible
+duplicate. Leave overlapping groups unresolved unless each pair in the specific
+group is directly positive and independently version-confirmed. Leave signing
+any attestation to the person.
+
+If confirmed distinct revisions resolve to one source UID under their available
+identifiers (such as two arXiv revisions sharing only the base DOI), explain
+that the address cannot distinguish those revisions. Seek a separately
+identifiable source for the version read before writing a citation, reading note
+or assertion for it. If the material leaves the citable version unresolved, ask
+which version was read before writing or promoting.
 
 ## Workflow
 
@@ -114,13 +134,14 @@ existing reading note's `coord:` address (unpinned or `@<revision>`) or stored
      (without external metadata fetches, `source-correct`, or re-reading), add a
      further reading, or stop** right here (unless the person already asked to
      promote or to add a further reading). When several reading notes exist on
-     that `source`, list each note's address and name and require an explicit
-     note choice from the person before entering **Promote an earlier reading**.
+     that `source`, list each note's address and name beside its cited source
+     address and require an explicit note choice from the person before entering **Promote an earlier reading**.
    - **Incomplete or multi-source local match:** if `record` returns several
      local sources, or returns one local `source` lacking one of the supplied
      schemes (`scheme not in held`, such as a PMID-only source when given both
      DOI and PMID), local state alone has not verified that all supplied
-     identifiers name one work — proceed to step 1 instead of promoting here.
+     identifiers identify one version. Proceed to step 1 for an external
+     cross-check before offering promotion, even when a direct pair is positive.
    Only choosing **add a further reading** — or finding no verified local
    reading note, or starting from a bare title, URL or supplied file whose
    identifiers are not yet known — enters step 1.
@@ -150,17 +171,24 @@ existing reading note's `coord:` address (unpinned or `@<revision>`) or stored
    - Found under fewer identifiers, held by any other corpus (a read mount, or
      the write root and a publication of it): use it as it stands and state the
      further identifier in the reading note. `source-correct` would refuse.
-   - Several matches: two records already exist for what may be one work. The
-     skill tells the person, continues on the match that carries the
-     highest-ranked identifier (DOI, then PMID, ISBN, accession), and names the
-     other address in the reading note. No command merges them.
+   - Several matches: identify which source describes the citable version
+     represented by the material. When the version is independently confirmed
+     and all pairs in that set are directly positive, disclose the link and
+     name the other addresses in the reading note. If several addresses fit
+     the material equally well, rank confirmed identifiers (DOI, PMID, ISBN,
+     accession), then use lexical address for equivalent ties. For an
+     unassessed pair, disclose the possible duplicate and use the confirmed
+     identifier rank once independent identity checks succeed. For contrary
+     evidence or different versions, keep them separate and use the source
+     for the material read.
 3. **Check for an earlier reading.** `record` on the source lists this project's
    notes about it (including notes written against an address the source has
    since left) and any `source assertions` already anchored in it. With any
    earlier reading note not already handled in step 0 or step 1 (such as inputs
    whose identifiers were unknown before step 1), the person chooses: **promote
-   statements from the earlier reading (requiring an explicit note choice when
-   several exist, without re-reading)**, **add a further reading**, or **stop**.
+   statements from the earlier reading (without re-reading)**, **add a further
+   reading**, or **stop**. Show the cited source address beside each offered
+   note and require an explicit note choice when several match.
 4. **Obtain text,** in this order, under the exposure rule:
    1. a file the person supplies;
    2. open-access full text at a location quarry lists for the record;
@@ -184,7 +212,10 @@ existing reading note's `coord:` address (unpinned or `@<revision>`) or stored
    Never: a publisher landing page fetched to judge access, a pirated copy, or
    model memory standing in for text.
 5. **Read** the abstract, introduction, methods, results and discussion, to the
-   depth available.
+   depth available. Check the material actually read against the source chosen
+   in step 2 before recording it. Cite that source in the note and each
+   assertion, including when another linked address carries a higher-ranked
+   identifier.
 6. **Mint any direct source assertions and write the reading note.** For
    statements paired with an existing proposition, call `source-assertion`
    *before* calling `note` (`about` the source), since notes are never revised.
@@ -268,7 +299,8 @@ without re-reading the paper:
 1. **Read local records only.** Read the note in full with `record`, and read its
    cited `source:` address with `record` (which resolves through `source-correct`
    redirects to the live `source` and lists `source assertions` already anchored
-   in it). Make zero `quarry` calls, `doi.org` or external metadata fetches,
+   in it). Keep the note's own resolved source UID as the anchor, including
+   when it has a positive link. Make zero `quarry` calls, `doi.org` or external metadata fetches,
    `source` or `source-correct` calls, or paper-file reads.
 2. **Extract reading provenance strictly from the note's *Reading* section.**
    - `source`: the `source:` address cited in the note (pass as cited;
