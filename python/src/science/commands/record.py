@@ -189,7 +189,8 @@ def _read(ctx, *, address, doi, pmid, isbn, accession) -> Report:
     else:
         found = world_record(ctx, address)
         if found is not None:
-            if stored.COORDINATION_FACET in found.node.facets:
+            if (found.node.kind != "coreference-attestation" and
+                    stored.COORDINATION_FACET in found.node.facets):
                 ctx.coordination()
                 return tuple(_coord_blocks(found.node))
             if found.node.kind == "source":

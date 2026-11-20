@@ -393,7 +393,7 @@ def test_missing_peer_is_unavailable_and_retired_event_holder_is_ignored(corefer
 
 
 @pytest.mark.parametrize("problem", ["mixed", "inadmissible", "untyped", "empty-local", "actor",
-                                     "id", "facets", "relations", "wrong-kind", "unstamped", "stale"])
+                                     "id", "facets", "coord-facet", "relations", "wrong-kind", "unstamped", "stale"])
 def test_coreference_corruption_refuses_both_read_paths(coreference_world, problem):
     cfg, a, b, _ = coreference_world
     endpoints = {
@@ -412,6 +412,8 @@ def test_coreference_corruption_refuses_both_read_paths(coreference_world, probl
         event = event.model_copy(update={"id": "coreference-attestation:" + "a" * 64})
     elif problem == "facets":
         event.facets["invented"] = {"value": True}
+    elif problem == "coord-facet":
+        event.facets[stored.COORDINATION_FACET] = {"project": "a" * 32}
     elif problem == "relations":
         event.relations.append(Relation(source=event.id, predicate="assesses", target=a))
     elif problem == "wrong-kind":
