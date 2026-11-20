@@ -2,6 +2,8 @@
 verification whose assessment the policy excluded, and `show` must list it. Writes nothing."""
 from __future__ import annotations
 
+from functools import partial
+
 from beliefs import stored
 from beliefs.corpus import ReadView
 from beliefs.world.registry import content_identity
@@ -114,7 +116,7 @@ def _supersession(ctx, registry, pin, status) -> Report:
                                      if item.state == "mounted" and item.corpus_id in live_ids),
                        write_root=(write.corpus_id, write.view, write.profile),
                        live=tuple((mount.corpus_id, mount.view, mount.profile) for mount in mounts if mount != write),
-                       observations=live_observations(ctx.config.world, mounts))
+                       observations=partial(live_observations, ctx.config.world, mounts))
     rows = []
     for reason in reasons:
         if reason.kind == "configuration":

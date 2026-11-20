@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from collections import Counter, defaultdict
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, replace
 from typing import Literal
 
@@ -49,6 +49,7 @@ class Reason:
 
 
 Holder = tuple[str, ReadView, ProfileSpec]
+_Observations = Mapping[str, tuple[ByteObservation, ...]]
 
 
 @dataclass(frozen=True)
@@ -57,7 +58,7 @@ class DependencyClosure:
     unresolved: tuple[str, ...]
 
 
-def live_observations(world_config, mounts):
+def live_observations(world_config, mounts) -> _Observations:
     """Reduce the supplied live carriers, including publications admitted this invocation."""
     current = open_world_read(replace(world_config, corpus_roots=tuple(m.root for m in mounts)))
     return found_observations([(m.corpus_id, m.view) for m in mounts], current)
@@ -274,14 +275,19 @@ def _holder_identities(
 
 
 def _dependency_details(
-    write_root: Holder, live: Sequence[Holder], observations: Mapping[str, tuple[ByteObservation, ...]],
+    write_root: Holder, live: Sequence[Holder], observations: _Observations | Callable[[], _Observations],
 ) -> tuple[dict[str, set[str]], tuple[str, ...]]:
     distinct: dict[str, Holder] = {}
     for holder in (write_root, *live):
         distinct.setdefault(holder[0], holder)
     holders = tuple(distinct.values())
-    closure = dependency_closure(write_root, holders[1:], observations=observations)
     citations, unresolved = _local_citations(write_root)
+    try:
+        known_observations = observations() if callable(observations) else observations
+    except _DEPENDENCY_ERRORS as error:
+        unresolved.add(f"provenance observations ({type(error).__name__})")
+        known_observations = {}
+    closure = dependency_closure(write_root, holders[1:], observations=known_observations)
     unresolved.update(closure.unresolved)
     if unresolved:
         return {}, tuple(sorted(unresolved))
@@ -313,7 +319,7 @@ def _dependency_details(
 
 def required(predecessor: Held, *, keep: Sequence[str], group_chain: Sequence[Held], tip: tuple[str, str],
              mounted: Sequence[Held], write_root: Holder, live: Sequence[Holder],
-             observations: Mapping[str, tuple[ByteObservation, ...]]) -> tuple[Reason, ...]:
+             observations: _Observations | Callable[[], _Observations]) -> tuple[Reason, ...]:
     dependencies, unresolved = _dependency_details(write_root, live, observations)
 
     def direct(item: Held) -> tuple[Reason, ...]:

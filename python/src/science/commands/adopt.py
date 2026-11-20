@@ -5,6 +5,7 @@ no pin is written."""
 from __future__ import annotations
 
 import shutil
+from functools import partial
 from hashlib import sha256
 
 from beliefs.corpus import ReadView
@@ -162,7 +163,7 @@ def _required(ctx, predecessor, held, tip, groups, mounts):
                     mounted=tuple(item for group in groups.values() for item in group
                                   if item.state == "mounted" and item.corpus_id in live_ids),
                     write_root=(write.corpus_id, write.view, write.profile), live=holders,
-                    observations=live_observations(ctx.config.world, mounts))
+                    observations=partial(live_observations, ctx.config.world, mounts))
 
 
 def _reevaluate(ctx, writer, registry, record):

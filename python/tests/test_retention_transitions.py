@@ -189,3 +189,38 @@ def test_citation_read_failure_keeps_committed_adopt_effects_reportable(adopted,
     assert f"retention:\n  kept: {expected}" in _show(adopted.b, second)
     assert "retention:\n  retired: yes" in _show(adopted.b, first)
     assert _sharing_lines(adopted.b) == lines
+
+
+@pytest.mark.parametrize("conflicting", [False, True])
+def test_retirement_holdings_failure_is_a_global_dependency(adopted, monkeypatch, conflicting):
+    from science import retention
+
+    ids = a_identity(adopted.a)
+    first = ids["corpus_id"]
+    if conflicting:
+        writer = open_corpus(adopted.a.write_root, authority=FIXTURE_AUTHORITY, profile=adopted.a.profile)
+        proposition = writer.read_view.get(ids["proposition"])
+        writer.revise(proposition.model_copy(update={"title": "Changed proposition"}))
+        tip = publish_again(adopted, LOC_A)
+    else:
+        tip = _publish_update(adopted)
+
+    def unreadable(_views, _world):
+        raise OSError("retirement holdings could not be read")
+
+    monkeypatch.setattr(retention, "found_observations", unreadable)
+    expected = "dependency (provenance observations (OSError))"
+    registry = SharingRegistry(adopted.b.sharing_root)
+    if conflicting:
+        failure = refused(lambda: _adopt(adopted, LOC_A, tip))
+        assert failure.code == "adopt-conflict"
+        assert f"required predecessor: {expected}" in failure.message
+        assert registry.pin(tip).state == "fetched"
+        return
+
+    text = _adopt(adopted, LOC_A, tip).text
+    assert f"retention {first}:\n  kept: {expected}" in text
+    assert [registry.pin(cid).state for cid in (first, tip)] == ["mounted", "mounted"]
+    lines = _sharing_lines(adopted.b)
+    assert f"retention:\n  kept: {expected}" in _show(adopted.b, first)
+    assert _sharing_lines(adopted.b) == lines
