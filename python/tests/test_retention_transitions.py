@@ -16,7 +16,8 @@ from helpers.world import FIXTURE_AUTHORITY, concept_list_address, level_list_ad
 from nodes.core.corpus import Corpus
 from science.config import ReadContext
 from science.sharing import SharingRegistry
-from test_cmd_adopt import _adopt
+from test_citation_retention import note
+from test_cmd_adopt import _adopt, _sharing_lines
 from test_cmd_show import _show
 
 
@@ -112,3 +113,79 @@ def test_pre_admission_conflict_cannot_use_the_candidates_identical_copy(adopted
     assert failure.code == "adopt-conflict"
     assert "required predecessor: dependency" in failure.message and ids["dataset"] in failure.message
     assert not ReadContext.open(adopted.b).world.status(successor).known
+
+
+def test_adopt_conflict_cites_the_required_predecessor(adopted):
+    ids = a_identity(adopted.a)
+    first, cited = ids["corpus_id"], ids["assessment"]
+    Corpus(adopted.b.write_root).add(note(cited))
+    writer = open_corpus(adopted.a.write_root, authority=FIXTURE_AUTHORITY, profile=adopted.a.profile)
+    proposition = writer.read_view.get(ids["proposition"])
+    writer.revise(proposition.model_copy(update={"title": "Changed proposition"}))
+    successor = publish_again(adopted, LOC_A)
+
+    failure = refused(lambda: _adopt(adopted, LOC_A, successor))
+    assert failure.code == "adopt-conflict"
+    assert failure.data["corpus"] == first
+    assert f"required predecessor: dependency ({cited})" in failure.message
+    assert not ReadContext.open(adopted.b).world.status(successor).known
+    assert SharingRegistry(adopted.b.sharing_root).pin(successor).state == "fetched"
+
+
+@pytest.mark.parametrize("intermediate_lacks_citation", [False, True])
+def test_adopt_and_show_keep_the_last_live_citation_holder(adopted, intermediate_lacks_citation):
+    ids = a_identity(adopted.a)
+    first, cited = ids["corpus_id"], ids["assessment"]
+    second = _publish_update(adopted) if intermediate_lacks_citation else publish_again(adopted, LOC_A)
+    _adopt(replace(adopted, b=replace(adopted.b, keep=(first,))), LOC_A, second)
+    Corpus(adopted.b.write_root).add(note(cited))
+    tip = publish_again(adopted, LOC_A) if intermediate_lacks_citation else _publish_update(adopted)
+
+    text = _adopt(adopted, LOC_A, tip).text
+    registry = SharingRegistry(adopted.b.sharing_root)
+    assert registry.pin(tip).state == "mounted"
+    assert registry.pin(second).state == "mounted"
+    holder = first if intermediate_lacks_citation else second
+    assert f"retention {holder}:\n  kept: dependency ({cited})" in text
+    lines = _sharing_lines(adopted.b)
+    assert f"retention:\n  kept: dependency ({cited})" in _show(adopted.b, holder)
+    if intermediate_lacks_citation:
+        assert registry.pin(first).state == "mounted"
+        assert f"retention {second}:\n  kept: chain (for {first})" in text
+        assert f"retention:\n  kept: chain (for {first})" in _show(adopted.b, second)
+    else:
+        assert registry.pin(first).state == "retired"
+        assert f"[pin] {first} retired" in text
+    assert _sharing_lines(adopted.b) == lines
+
+
+def test_citation_read_failure_keeps_committed_adopt_effects_reportable(adopted, monkeypatch):
+    first = a_identity(adopted.a)["corpus_id"]
+    source = stored.source_node(title="Only held in the second publication",
+                                identifiers={"doi": "10.1234/held-in-second"})
+    open_corpus(adopted.a.write_root, authority=FIXTURE_AUTHORITY, profile=adopted.a.profile).add(source)
+    second = publish_addresses(adopted, [source.id])
+    _adopt(replace(adopted, b=replace(adopted.b, keep=(first,))), LOC_A, second)
+    Corpus(adopted.b.write_root).add(note(source.id))
+    tip = _publish_update(adopted, keys=())
+    get = ReadView.get
+
+    def unreadable(view, address):
+        if address == source.id and view.corpus_id == second:
+            raise OSError("fixture citation read failed")
+        return get(view, address)
+
+    monkeypatch.setattr(ReadView, "get", unreadable)
+    expected = f"dependency (citation {source.id} holder {second} read (OSError))"
+    text = _adopt(adopted, LOC_A, tip).text
+    assert f"[pin] {tip} mounted" in text
+    assert f"[pin] {first} retired" in text
+    assert f"retention {second}:\n  kept: {expected}" in text
+    registry = SharingRegistry(adopted.b.sharing_root)
+    assert [registry.pin(cid).state for cid in (first, second, tip)] == ["retired", "mounted", "mounted"]
+    world = ReadContext.open(adopted.b).world
+    assert [world.status(cid).live for cid in (first, second, tip)] == [False, True, True]
+    lines = _sharing_lines(adopted.b)
+    assert f"retention:\n  kept: {expected}" in _show(adopted.b, second)
+    assert "retention:\n  retired: yes" in _show(adopted.b, first)
+    assert _sharing_lines(adopted.b) == lines

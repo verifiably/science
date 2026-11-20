@@ -108,20 +108,39 @@ required dataset declarations; selecting only the older analysis kinds does not
 invent or export these prerequisites. Data bytes still require separate holding.
 
 Adoption reevaluates mounted predecessors. Retirement is blocked by explicit
-keep entries, required supersession chains, publication attributions, or live
-provenance with no equal-content surviving holder. The closure includes world
-relations, spec/run/assessment/verification references, frozen target dependencies,
-model and rule procedures, registers, calibration assessments, measurement-record
-references and observed enrichment/procedure-input digests. All matching dataset
-carriers count; no dataset address is invented from an unresolved content digest.
+keep entries, required supersession chains, publication attributions, live
+provenance or citations that require records in a predecessor. The provenance
+closure includes world relations, spec/run/assessment/verification references,
+frozen target dependencies, model and rule procedures, registers, calibration
+assessments, measurement-record references and observed enrichment/procedure-input
+digests. All matching dataset carriers count. Missing scientific references,
+conflicting copies and unresolvable digests produce named dependency uncertainty
+that blocks every predecessor's retirement. Rejected or retracted evidence can
+remain part of frozen provenance.
 
-Custody is independent of scientific acceptance and retraction: rejected or
-retracted evidence can remain frozen provenance. Differing copies, malformed or
-missing references and unresolvable digests produce named dependency uncertainty
-and block automatic retirement. An identical surviving copy can permit retirement.
-`adopt` recomputes holdings over its current live mounts after each transition;
-a not-yet-admitted candidate supplies no carrier. `show` uses the same live inputs
-and reports the same retention reasons.
+Citation custody starts in the write corpus. A note's `about` addresses and
+both endpoints of every coreference attestation count for the life of the
+stored record. This includes negative and counterbalanced attestations. For
+projects, questions, hypotheses, topics and themes, explicit query addresses
+and closure anchors count from every standing local tip. A superseding local
+revision can release a citation it drops. Divergent tips preserve their union
+until repaired. A supersedes edge held only in a read mount does not release a
+local tip for custody, even when the authoring resolver can see a newer standing
+revision through that mount.
+
+A citation keeps its addressed record readable. Reproducing a scientific
+result or a view's selection needs separate provenance. Retirement checks the
+stored spelling across the live corpora, including deprecated-ID resolution.
+Two surviving copies agree when that spelling resolves to the same current
+ID and record content in both. A spelling absent from every live corpus adds
+no dependency. When a read fails or copies disagree, the reason names the
+spelling and affected corpora and protects every predecessor that resolves
+that spelling or whose own resolution failed. A malformed local citing record
+or incomplete local scan blocks retirement globally.
+
+`adopt` recomputes custody over its current live mounts after each transition.
+A candidate can supply a copy after admission and mounting. `show` uses the
+same live inputs and reports the same retention reasons.
 A changed captured configuration refuses `config-stale` before retirement; an
 already completed adoption stands. Restart with the current config and rerun adopt.
 Terminal/departed corpus reconciliation records or reports the actual state rather
