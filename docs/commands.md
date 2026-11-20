@@ -161,7 +161,13 @@ Exact current inputs, defaults and prompts are the public files under
   The attended session signs the statement. No project selection is required.
   Two exact sources held in the write root can be attested before the first
   epoch, including when a live mount holds an equal copy. The write leaves the
-  source records and their citations intact.
+  source records and their citations intact. A pair spanning mounts requires a
+  current publication over all configured live corpora. For `no-epoch` or
+  coverage/state drift, run `science epoch` and use a fresh invocation. With
+  `config-stale`, correct the listed roots/read mounts and reopen before
+  publishing. Restore absent carriers or correct the configuration. A captured
+  endpoint disagreement calls for rereading the source and checking its address.
+  Post-claim refusals replay with the same invocation ID and payload.
 - `source-assertion` mints a world `source-assertion` without a project selection,
   anchoring an extracted span (`asserts`, `denies` or `hypothesizes`) from a
   `source` representation (`sha256`, `media_type`, `extent`, NFC `quote` and

@@ -47,8 +47,8 @@ class Published:
     coverage: tuple[tuple[str, str], ...]
 
 
-def _stale(message: str, *, missing=(), extra=(), drifted=()) -> Refused:
-    return Refused(Refusal("epoch-stale", f"{message}; {REMEDY}",
+def _stale(message: str, *, remedy, missing=(), extra=(), drifted=()) -> Refused:
+    return Refused(Refusal("epoch-stale", f"{message}; {REMEDY}" if remedy else message,
                            {"missing": sorted(missing), "extra": sorted(extra), "drifted": sorted(drifted)}))
 
 
@@ -61,18 +61,21 @@ def _kernel_refused(caught: Exception, *, remedy: bool = False) -> Refused:
     return Refused(Refusal("kernel-refused", message, {"kind": type(caught).__name__}))
 
 
-def epoch_currency(world, session_ids: frozenset[str]) -> Current:
+def epoch_currency(world, session_ids: frozenset[str], *, require_present: bool = False) -> Current:
     """The current epoch and its view, when that epoch is current for the
-    session; otherwise `no-epoch` or `epoch-stale`, naming the corpora."""
+    session; otherwise `no-epoch` or `epoch-stale`, naming the corpora.
+    Mounted writes require every covered carrier and supply their own publication remedy.
+    """
     try:
         published = current_epoch(world)
     except EpochUnknown:
-        raise Refused(Refusal("no-epoch", f"this world has published no epoch; {REMEDY}")) from None
+        message = "this world has published no epoch"
+        raise Refused(Refusal("no-epoch", message if require_present else f"{message}; {REMEDY}")) from None
     covered = frozenset(corpus_id for corpus_id, _ in published.coverage)
     missing, extra = session_ids - covered, covered - session_ids
     if missing or extra:
         raise _stale(f"epoch {published.packaging_identity} covers {', '.join(sorted(covered))}, not exactly the "
-                     f"session's {', '.join(sorted(session_ids))}", missing=missing, extra=extra)
+                     f"session's {', '.join(sorted(session_ids))}", remedy=not require_present, missing=missing, extra=extra)
     try:
         view = open_world_view(world, published)
     except BuildContended as caught:
@@ -81,7 +84,12 @@ def epoch_currency(world, session_ids: frozenset[str]) -> Current:
         # A uid held by two corpora (W8b), or a mapped record its carrier no
         # longer holds at the mapped address: the kernel judges both, and
         # science names them rather than re-scanning for them.
-        raise _kernel_refused(caught, remedy=True) from None
+        raise _kernel_refused(caught, remedy=not require_present) from None
+    if require_present and (absent := sorted(view.absent())):
+        raise Refused(Refusal("kernel-refused",
+                              f"covered carriers are absent: {', '.join(absent)}; restore them or correct "
+                              "the configured roots and reopen the session",
+                              {"kind": "AbsentCarrier", "absent": absent}))
     # Strict on any move: every write after the epoch, coordination writes
     # included, changes the corpus state identity, so no drift is presumed inert.
     # Records the epoch left unmapped at an unchanged
@@ -90,7 +98,7 @@ def epoch_currency(world, session_ids: frozenset[str]) -> Current:
                      if report.published_state != report.captured_state)
     if drifted:
         raise _stale(f"corpora {', '.join(drifted)} have moved since epoch {published.packaging_identity}",
-                     drifted=drifted)
+                     remedy=not require_present, drifted=drifted)
     return Current(published, view)
 
 

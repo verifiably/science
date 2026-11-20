@@ -443,3 +443,78 @@ def test_source_coreference_cli_and_refusal_replay(certified_work, short_tmp, ca
     assert [line["line"] for line in lines if line.get("invocation") == "cli-mint"] == [
         "invocation-open", "act", "invocation-close",
     ]
+
+
+def test_mounted_source_coreference_refusals_close_and_replay_after_repair(certified_work, short_tmp, monkeypatch):
+    from beliefs.errors import BuildHold, ResolutionRefused, SemanticHashStale
+    from beliefs.session import ScopedWriter
+    from beliefs.world.view import WorldReadView
+    from helpers.research import add_source
+    from helpers.world import build_two_corpus_world
+    from science import world_belief
+    from science.config import ReadContext
+
+    cfg = build_two_corpus_world(certified_work)
+    left = add_source(cfg, "corpus", "Publisher record", doi="10.1000/example").id
+    right = add_source(cfg, "archive", "Index record", pmid="123").id
+    sock = short_tmp / "service.sock"
+    server = _running(cfg, sock)
+    attempts = {}
+
+    def request(iid):
+        return {"command": "source-coreference", "invocation_id": iid, "inputs": {
+            "left": left, "right": right, "stance": "same", "grounds": "Publisher and index agree.",
+        }}
+
+    try:
+        manifest = certified_work / "archive" / "corpus.yaml"
+        hidden = manifest.with_suffix(".bak")
+        manifest.rename(hidden)
+        try:
+            attempts["manifest"] = _ask(sock, request("manifest"))
+        finally:
+            hidden.rename(manifest)
+        assert attempts["manifest"]["refusal"]["code"] == "invalid-input"
+        assert str(manifest.parent) in attempts["manifest"]["refusal"]["message"]
+        assert _ask(sock, request("manifest")) == attempts["manifest"]
+
+        attempts["publication"] = _ask(sock, request("publication"))
+        assert attempts["publication"]["refusal"]["code"] == "no-epoch"
+        assert attempts["publication"]["refusal"]["data"] == {}
+        world_belief.publish_session_epoch(cfg)
+        assert _ask(sock, request("publication")) == attempts["publication"]
+
+        for owner, method, failure in [
+            (world_belief, "open_world_view", ResolutionRefused),
+            (WorldReadView, "get", SemanticHashStale),
+            (ScopedWriter, "attest_coreference", BuildHold),
+        ]:
+            iid = failure.__name__
+
+            def fail(*args, **kwargs):
+                raise failure("fault at mounted command boundary")
+
+            with monkeypatch.context() as inject:
+                inject.setattr(owner, method, fail)
+                attempts[iid] = _ask(sock, request(iid))
+            assert attempts[iid]["refusal"] == {
+                "code": "kernel-refused", "message": "fault at mounted command boundary", "data": {"kind": iid},
+            }
+            assert _ask(sock, request(iid)) == attempts[iid]
+
+        for iid, reply in attempts.items():
+            assert reply["ok"] is False and reply["invocation_id"] == iid
+        assert not any(node.kind == "coreference-attestation"
+                       for node in ReadContext.open(cfg).write_view().iter_stored())
+        succeeded = _ask(sock, request("fresh-mounted"))
+        assert succeeded["ok"] and "[coreference-attestation]" in succeeded["text"]
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    (ledger,) = (cfg.operations_root / "sessions").glob("*/ledger.v1")
+    lines = [json.loads(line) for line in ledger.read_text().splitlines()]
+    for iid, reply in attempts.items():
+        invocation = [line for line in lines if line.get("invocation") == iid]
+        assert [line["line"] for line in invocation] == ["invocation-open", "invocation-close"]
+        assert invocation[-1]["outcome"] == {"refusal": reply["refusal"]}

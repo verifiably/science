@@ -1,10 +1,14 @@
 """Sign a statement about two exact source addresses."""
 from __future__ import annotations
 
+from typing import NoReturn
+
 from beliefs import stored
 from beliefs.errors import BuildHold, MalformedRecord, ScienceError
+from beliefs.world.view import WorldReadView
 from nodes.core.errors import NodesError
 
+from science import world_belief
 from science.config import corpus_id_at
 from science.lookup import Located, _live, _located
 from science.refusal import Refusal, Refused, kernel_refusal
@@ -13,7 +17,7 @@ from science.report import Report, record_block
 __all__ = ["handle"]
 
 
-def _refuse_endpoint(field: str, address: str, reason: str, found: Located | None = None) -> None:
+def _refuse_endpoint(field: str, address: str, reason: str, found: Located | None = None) -> NoReturn:
     messages = {
         "unresolved": "does not identify a source in a live configured corpus",
         "wrong-kind": "identifies a record of a different kind",
@@ -60,6 +64,47 @@ def _statement(writer, left: str, right: str, stance: str, grounds: str):
         raise Refused(invalid) from caught
 
 
+def _mounted_view(ctx, mounts, first: Located, second: Located) -> WorldReadView:
+    live_ids = frozenset(mount.corpus_id for mount in mounts)
+    session_ids = ctx.session_ids()
+    try:
+        view = world_belief.epoch_currency(ctx.world, live_ids, require_present=True).view
+    except Refused as caught:
+        refusal = caught.refusal
+        needs_publication = refusal.code == "no-epoch" or (
+            refusal.code == "epoch-stale" and refusal.data.keys() == {"missing", "extra", "drifted"}
+        )
+        if not needs_publication:
+            raise
+        if session_ids != live_ids:
+            raise Refused(Refusal(
+                "config-stale", "correct the listed roots/read mounts and reopen the session, then publish "
+                "over the live set",
+                {"session_only": sorted(session_ids - live_ids), "live_only": sorted(live_ids - session_ids)},
+            )) from caught
+        raise Refused(Refusal(
+            refusal.code, f"{refusal.message}; run `science epoch` to publish over the live mounts, "
+            "then use a fresh invocation", refusal.data,
+        )) from caught
+
+    for field, expected in (("left", first), ("right", second)):
+        address = view.resolve(expected.address)
+        uid = None
+        if address is not None:
+            node = view.get(expected.address)
+            if node.kind != "source":
+                raise MalformedRecord(f"{expected.address} resolves to a {node.kind} in the captured view")
+            uid = node.uid
+        if address != expected.address or uid != expected.node.uid:
+            raise Refused(Refusal(
+                "epoch-stale", f"the captured {field} source differs from the live record; reread the source "
+                "by address and verify which exact record to name",
+                {"field": field, "address": expected.address, "expected_uid": expected.node.uid,
+                 "resolved_address": address, "resolved_uid": uid},
+            ))
+    return view
+
+
 def handle(ctx, writer, *, left: str, right: str, stance: str, grounds: str) -> Report:
     try:
         mounts = _live(ctx, ctx.mounts())
@@ -78,10 +123,12 @@ def handle(ctx, writer, *, left: str, right: str, stance: str, grounds: str) -> 
         raise Refused(kernel_refusal(caught)) from caught
 
     node = _statement(writer, first.address, second.address, stance, grounds)
-    if not local:
-        raise Refused(Refusal("no-epoch", "a mounted source pair requires a checked published view"))
     try:
-        minted = writer.attest_coreference(node)
+        view = None if local else _mounted_view(ctx, mounts, first, second)
+    except (ScienceError, NodesError, OSError) as caught:
+        raise Refused(kernel_refusal(caught)) from caught
+    try:
+        minted = writer.attest_coreference(node) if view is None else writer.attest_coreference(node, view=view)
     except BuildHold as caught:
         raise Refused(kernel_refusal(caught)) from caught
     return (record_block(minted),)
