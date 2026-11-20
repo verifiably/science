@@ -584,3 +584,22 @@ def test_source_assertions_are_inert_in_belief_evaluation(certified_work, certif
             digest_after = ReadContext.open(cfg_b).evaluate(prop).belief_input_digest
             assert after_b == before_b
             assert digest_after == digest_before
+
+
+def test_positive_coreference_keeps_the_extractions_original_anchor(certified_work):
+    cfg = build_two_corpus_world(certified_work)
+    left = add_source(cfg, "corpus", "Publisher", doi="10.1234/here")
+    right = add_source(cfg, "corpus", "Index", pmid="222")
+    with research_rig(cfg, (*NAMES, "source-coreference")) as (dispatch, ctx):
+        dispatch.invoke("source-coreference", {
+            "left": left.id, "right": right.id, "stance": "same", "grounds": "Same journal version.",
+        })
+        assert "state: positive" in dispatch.invoke("record", {"address": right.id}).text
+        dispatch.invoke("source-assertion", _assertion_inputs(source=left.id))
+        with pytest.raises(Refused) as caught:
+            dispatch.invoke("source-assertion", _assertion_inputs(source=right.id), invocation_id="linked-anchor")
+        assert caught.value.refusal.code == "invalid-input"
+        conflict = caught.value.refusal.data["anchor_conflict"]
+        assert conflict["existing_source"] == left.id and conflict["requested_source"] == right.id
+        assert dispatch._session.invocation_acts("linked-anchor") == ()
+        assert ctx.write_view().get(conflict["address"]).uid == conflict["uid"]

@@ -1,15 +1,20 @@
 """Read full stored records, with project-local notes about world identities."""
 from __future__ import annotations
 
+from itertools import combinations
+
 import yaml
 from beliefs import stored
 from beliefs.coordination import CoordinationAddress
+from beliefs.errors import ScienceError
+from nodes.core.errors import NodesError
 
 from science.coordination import content_of, selected_project, tip_nodes
-from science.lookup import (decode_source_assertion, identifiers, source_assertions,
-                            sources_carrying, world_record, write_root_only)
-from science.refusal import Refusal, Refused
-from science.report import Finding, KeyVals, Report, Text
+from science.lookup import (CoreferencePair, decode_source_assertion, identifiers, source_assertions,
+                            source_coreference, sources_carrying, validate_coreference_attestation,
+                            world_record, write_root_only)
+from science.refusal import Refusal, Refused, kernel_refusal
+from science.report import Finding, Heading, KeyVals, Report, Text
 
 __all__ = ["handle"]
 
@@ -102,7 +107,7 @@ def _source_assertions(ctx, node):
     return []
 
 
-def _world_blocks(ctx, found):
+def _world_blocks(ctx, found, incident=()):
     node = found.node
     pairs = [("address", node.id), ("uid", node.uid), ("title", node.title)]
     if node.kind == "source":
@@ -114,11 +119,53 @@ def _world_blocks(ctx, found):
     else:
         if node.kind == "source-assertion":
             decode_source_assertion(node)
+        elif node.kind == "coreference-attestation":
+            validate_coreference_attestation(ctx, node)
         pairs += [("relations", _yaml(_relation_dicts(node.relations))), ("facets", _yaml(node.facets))]
-    return [KeyVals(node.kind, tuple(pairs)), Text(node.body), *_source_assertions(ctx, node), *_notes(ctx, node)]
+    blocks = [KeyVals(node.kind, tuple(pairs)), Text(node.body), *_source_assertions(ctx, node), *_notes(ctx, node)]
+    if incident:
+        blocks.append(Heading("source coreference (live evidence)"))
+        blocks.extend(_pair_block(pair) for pair in incident)
+    return blocks
 
 
-def handle(ctx, *, address=None, doi=None, pmid=None, isbn=None, accession=None) -> Report:
+def _pair_block(pair: CoreferencePair) -> KeyVals:
+    endpoints = []
+    for address, item in zip(pair.addresses, pair.resolved, strict=True):
+        if item is None:
+            status = "unavailable"
+        elif item.address == address:
+            status = "exact"
+        else:
+            status = f"redirected to {item.address}"
+        endpoints.append(f"{address} ({status})")
+    return KeyVals("coreference pair", (
+        ("left", endpoints[0]), ("right", endpoints[1]), ("state", pair.state),
+        ("balance", str(pair.balance)), ("distinct_key_count", str(pair.distinct_key_count)),
+        ("attestations", ", ".join(pair.attestations)),
+    ))
+
+
+def _source_blocks(ctx, hits):
+    evidence = source_coreference(ctx)
+    current_pairs = {pair.addresses for pair in evidence if pair.state in {"positive", "contested", "negative"}}
+    unassessed = [
+        CoreferencePair((first.address, second.address), (first, second), 0, 0, ())
+        for first, second in combinations(hits, 2)
+        if (first.address, second.address) not in current_pairs
+    ]
+    blocks = []
+    for hit in hits:
+        uid = hit.node.uid
+        incident = [(peer, pair) for pair in (*evidence, *unassessed) if (peer := pair.other_address(uid)) is not None]
+        incident.sort(key=lambda item: (item[0], item[1].addresses))
+        blocks.extend(_world_blocks(ctx, hit, [pair for _, pair in incident]))
+    blocks.extend(Finding(f"These records may be one work: {pair.addresses[0]} and {pair.addresses[1]}.")
+                  for pair in unassessed)
+    return tuple(blocks)
+
+
+def _read(ctx, *, address, doi, pmid, isbn, accession) -> Report:
     by_identifier = any(value is not None for value in (doi, pmid, isbn, accession))
     if address is None and not by_identifier:
         raise Refused(Refusal("invalid-input", "give an address or one or more identifiers",
@@ -129,10 +176,7 @@ def handle(ctx, *, address=None, doi=None, pmid=None, isbn=None, accession=None)
         found = sources_carrying(ctx, identifiers(doi=doi, pmid=pmid, isbn=isbn, accession=accession))
         if not found:
             return (Finding("No source carries these identifiers."),)
-        blocks = [block for record in found for block in _world_blocks(ctx, record)]
-        if len(found) > 1:
-            blocks.append(Finding("These records may be one work."))
-        return tuple(blocks)
+        return _source_blocks(ctx, found)
     if address.startswith("coord:"):
         resolver = ctx.coordination()
         try:
@@ -148,6 +192,8 @@ def handle(ctx, *, address=None, doi=None, pmid=None, isbn=None, accession=None)
             if stored.COORDINATION_FACET in found.node.facets:
                 ctx.coordination()
                 return tuple(_coord_blocks(found.node))
+            if found.node.kind == "source":
+                return _source_blocks(ctx, (found,))
             return tuple(_world_blocks(ctx, found))
         # Stored coordination ids name an exact revision, including superseded ones.
         parts = address.split(":", 1)
@@ -157,3 +203,12 @@ def handle(ctx, *, address=None, doi=None, pmid=None, isbn=None, accession=None)
             if node is not None and node.id == address:
                 return tuple(_coord_blocks(node))
     raise Refused(Refusal("invalid-input", f"{address} names no record in the configured corpora"))
+
+
+def handle(ctx, *, address=None, doi=None, pmid=None, isbn=None, accession=None) -> Report:
+    try:
+        return _read(ctx, address=address, doi=doi, pmid=pmid, isbn=isbn, accession=accession)
+    except (ScienceError, NodesError, OSError) as caught:
+        if address is None or address.startswith(("source:", "coreference-attestation:")):
+            raise Refused(kernel_refusal(caught)) from caught
+        raise

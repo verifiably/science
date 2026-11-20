@@ -278,3 +278,255 @@ def test_damaged_source_assertion_refuses_kernel_refused(certified_work, damage,
                 d.invoke("record", {"address": target})
             assert caught.value.refusal.code == "kernel-refused"
             assert caught.value.refusal.data == {"kind": expected_kind}
+
+
+def _attestation(cfg, left, right, token, *, stance=1, actor="fixture", grounds="Same edition.", root=None):
+    event = stored.coreference_attestation_node(
+        title="Signed source comparison", endpoints=(left, right), stance=stance,
+        actor=actor, grounds=grounds, event_token=token,
+    )
+    raw_write_node(cfg.write_root if root is None else root, event)
+    return event
+
+
+def _build_coreference_world(work):
+    cfg = build_two_corpus_world(work)
+    a = add_source(cfg, "corpus", "Publisher", doi="10.1234/article")
+    b = add_source(cfg, "archive", "Index", pmid="123")
+    c = add_source(cfg, "corpus", "Repository", accession="ARTICLE_1")
+    return cfg, a.id, b.id, c.id
+
+
+@pytest.fixture
+def coreference_world(certified_worker_work):
+    from helpers.snapshot import snapshot
+
+    saved = snapshot(certified_worker_work, "source-coreference-read", _build_coreference_world)
+    saved.restore()
+    return saved.value
+
+
+def test_coreference_is_direct_and_counts_each_distinct_unit(coreference_world, monkeypatch):
+    from science.commands import record
+
+    cfg, a, b, c = coreference_world
+    first = _attestation(cfg, b, a, "first")
+    raw_write_node(cfg.write_root.parent / "archive", first)
+    later = _attestation(cfg, a, b, "repeat")
+    next_pair = _attestation(cfg, b, c, "second-pair")
+
+    with research_rig(cfg, NAMES) as (dispatch, _):
+        for args in ({"address": a}, {"doi": "10.1234/article"}):
+            text = dispatch.invoke("record", args).text
+            assert "source coreference" in text
+            assert "state: positive" in text
+            assert "balance: 1" in text and "distinct_key_count: 1" in text
+            evidence = sorted((first.id, later.id))
+            assert f"attestations: {', '.join(evidence)}" in text
+            assert c not in text and next_pair.id not in text
+        event_text = dispatch.invoke("record", {"address": first.id}).text
+        assert "Same edition." in event_text and a in event_text and b in event_text
+
+        scans = []
+        original = record.source_coreference
+
+        def scan(ctx):
+            scans.append(ctx)
+            return original(ctx)
+
+        monkeypatch.setattr(record, "source_coreference", scan)
+        text = dispatch.invoke("record", {"doi": "10.1234/article", "accession": "ARTICLE_1"}).text
+        assert len(scans) == 1
+        assert text.count("source:\n") == 2
+        assert text.count("state: positive") == 2
+        assert "state: unassessed" in text and "may be one work" in text
+        assert b in text and next_pair.id in text
+
+    _attestation(cfg, a, b, "second-actor", actor="other")
+    _attestation(cfg, a, b, "further-grounds", grounds="Independent catalog cross-check.")
+    for count in range(1, 5):
+        _attestation(cfg, a, b, f"counter-{count}", stance=-1, grounds=f"Contrary evidence {count}.")
+        if count in (3, 4):
+            with research_rig(cfg, NAMES) as (dispatch, _):
+                text = dispatch.invoke("record", {"address": a}).text
+                assert f"state: {'contested' if count == 3 else 'negative'}" in text
+                assert f"balance: {3 - count}" in text
+                assert f"distinct_key_count: {3 + count}" in text
+
+
+def test_historical_redirect_leaves_exact_pair_unassessed_and_marks_missing_peer(coreference_world):
+    from beliefs.root import open_world
+    from helpers.world import FIXTURE_AUTHORITY
+
+    cfg, a, b, _ = coreference_world
+    event = _attestation(cfg, a, b, "before-correction")
+    corrected = correct_source(cfg, a, doi="10.1234/corrected")
+    with research_rig(cfg, NAMES) as (dispatch, _):
+        text = dispatch.invoke("record", {"doi": "10.1234/corrected", "pmid": "123"}).text
+        assert "state: historical-redirect" in text and "state: unassessed" in text
+        assert "state: positive" not in text
+        assert f"{a} (redirected to {corrected.id})" in text and event.id in text
+
+    archive = cfg.write_root.parent / "archive"
+    open_world(cfg.world, authority=FIXTURE_AUTHORITY).retire(corpus_id_at(archive))
+    with research_rig(cfg, NAMES) as (dispatch, _):
+        text = dispatch.invoke("record", {"address": corrected.id}).text
+        assert "state: historical-redirect" in text and f"{b} (unavailable)" in text
+        direct = dispatch.invoke("record", {"address": event.id}).text
+        assert "Same edition." in direct and b in direct
+
+
+def test_missing_peer_is_unavailable_and_retired_event_holder_is_ignored(coreference_world):
+    from beliefs.root import open_world
+    from helpers.world import FIXTURE_AUTHORITY
+
+    cfg, a, b, c = coreference_world
+    archive = cfg.write_root.parent / "archive"
+    held = _attestation(cfg, a, b, "held")
+    retired = _attestation(cfg, a, c, "retired", root=archive)
+    open_world(cfg.world, authority=FIXTURE_AUTHORITY).retire(corpus_id_at(archive))
+    with research_rig(cfg, NAMES) as (dispatch, _):
+        text = dispatch.invoke("record", {"address": a}).text
+        assert "state: unavailable" in text and f"{b} (unavailable)" in text
+        assert held.id in text and retired.id not in text
+        assert f"{a} (exact)" in text
+
+
+@pytest.mark.parametrize("problem", ["mixed", "inadmissible", "untyped", "empty-local", "actor",
+                                     "id", "facets", "relations", "wrong-kind", "unstamped", "stale"])
+def test_coreference_corruption_refuses_both_read_paths(coreference_world, problem):
+    cfg, a, b, _ = coreference_world
+    endpoints = {
+        "mixed": ("source:unmounted", "proposition:unmounted"),
+        "inadmissible": ("policy:first", "policy:second"),
+        "untyped": ("source", "source:second"),
+        "empty-local": ("source:", "source:second"),
+        "wrong-kind": (a, "source:redirected"),
+    }.get(problem, (a, b))
+    event = stored.coreference_attestation_node(
+        title="Signed", endpoints=endpoints, stance=1, actor="fixture", grounds="Grounds", event_token="bad",
+    )
+    if problem == "actor":
+        event.facets[stored.COREFERENCE_ATTESTATION_FACET]["actor"] = ""
+    elif problem == "id":
+        event = event.model_copy(update={"id": "coreference-attestation:" + "a" * 64})
+    elif problem == "facets":
+        event.facets["invented"] = {"value": True}
+    elif problem == "relations":
+        event.relations.append(Relation(source=event.id, predicate="assesses", target=a))
+    elif problem == "wrong-kind":
+        node = stored.proposition_node("redirected", title="Wrong kind", claim={}, display_statement="Wrong kind")
+        raw_write_node(cfg.write_root, node.model_copy(update={"deprecated_ids": ["source:redirected"]}))
+    if problem == "unstamped":
+        event.facets.pop(stored.SEMANTIC_IDENTITY_FACET)
+    elif problem == "stale":
+        event.facets[stored.COREFERENCE_ATTESTATION_FACET]["grounds"] = "Tampered"
+    else:
+        stored.stamp_semantic_identity(event)
+    raw_write_node(cfg.write_root, event)
+    with research_rig(cfg, NAMES) as (dispatch, _):
+        paths = ({"address": event.id}, {"address": a}, {"doi": "10.1234/article"})
+        for args in paths:
+            with pytest.raises(Refused) as caught:
+                dispatch.invoke("record", args)
+            refusal = caught.value.refusal
+            assert refusal.code == "kernel-refused"
+            assert refusal.data == {
+                "kind": {"unstamped": "SemanticHashMissing", "stale": "SemanticHashStale"}.get(
+                    problem, "MalformedRecord"),
+            }
+            assert event.id in refusal.message
+
+
+def test_valid_other_kind_attestation_is_inspectable_and_omitted_from_source_report(coreference_world):
+    cfg, a, _, _ = coreference_world
+    event = _attestation(cfg, "proposition:absent", "proposition:archived", "other-kind")
+    with research_rig(cfg, NAMES) as (dispatch, _):
+        text = dispatch.invoke("record", {"address": event.id}).text
+        assert "proposition:archived" in text and "Same edition." in text
+        text = dispatch.invoke("record", {"address": a}).text
+        assert "source coreference" not in text and event.id not in text
+
+
+def test_differing_attestation_replicas_refuse_both_read_paths(coreference_world):
+    cfg, a, b, _ = coreference_world
+    event = _attestation(cfg, a, b, "replicated")
+    archive = cfg.write_root.parent / "archive"
+    raw_write_node(archive, event.model_copy(update={"title": "Different title"}))
+    with research_rig(cfg, NAMES) as (dispatch, _):
+        for address in (a, event.id):
+            refusal = refused(dispatch, {"address": address})
+            assert "copies differ" in refusal.message
+            assert all(corpus_id_at(root) in refusal.message for root in (archive, cfg.write_root))
+
+
+def test_coreference_pages_reassemble_the_full_ordered_report(coreference_world):
+    from science.cursor import MIN_OUTPUT_BUDGET
+
+    cfg, a, b, c = coreference_world
+    for count in range(17):
+        _attestation(cfg, a, b, f"one-{count}")
+        _attestation(cfg, a, c, f"two-{count}")
+    args = {"doi": "10.1234/article", "pmid": "123"}
+    with research_rig(cfg, NAMES) as (dispatch, _):
+        full = dispatch.invoke("record", args).text
+        assert full.count("state: positive") == 3
+        dispatch._decls["record"] = replace(dispatch._decls["record"], output_budget=MIN_OUTPUT_BUDGET + 300)
+        page = dispatch.invoke("record", args).text
+        pieces = []
+        while match := re.search(r"\n… truncated at \d+ bytes; continue with cursor (\S+)\n$", page):
+            pieces.append(page[:match.start()])
+            assert len(pieces) < 30
+            page = dispatch.invoke("record", args, cursor=match[1]).text
+        assert pieces and "".join([*pieces, page]) == full
+
+
+def test_coreference_endpoint_read_fault_is_a_refusal_on_both_paths(coreference_world, monkeypatch):
+    from nodes.core.errors import RefError
+    from science import lookup
+
+    cfg, a, b, _ = coreference_world
+    event = _attestation(cfg, a, b, "read-fault")
+    resolve = lookup.world_record
+
+    def read(ctx, ref):
+        if ref == b:
+            raise RefError("held peer could not be read")
+        return resolve(ctx, ref)
+
+    monkeypatch.setattr(lookup, "world_record", read)
+    with research_rig(cfg, NAMES) as (dispatch, _):
+        for args in ({"address": event.id}, {"address": a}, {"doi": "10.1234/article"}):
+            with pytest.raises(Refused) as caught:
+                dispatch.invoke("record", args)
+            assert caught.value.refusal.code == "kernel-refused"
+            assert caught.value.refusal.data == {"kind": "RefError"}
+            assert "held peer could not be read" in caught.value.refusal.message
+
+
+def test_coreference_keeps_each_projects_notes_and_each_sources_assertions(coreference_world):
+    cfg, a, b, _ = coreference_world
+    _attestation(cfg, a, b, "linked")
+    left = add_source_assertion(cfg, "corpus", source=a, proposition="proposition:archived",
+                                quote="A distinct passage from the publisher.")
+    right = add_source_assertion(cfg, "archive", source=b, proposition="proposition:archived",
+                                 quote="A distinct passage from the index.")
+    with research_rig(cfg, NAMES, extra=EXTRA) as (dispatch, _):
+        for name, address in (("publisher-project", a), ("index-project", b)):
+            mint_project(dispatch, name)
+            dispatch.invoke("project-select", {"target": name})
+            dispatch.invoke("mint-coordination", {
+                "kind": "note", "name": f"Reading for {name}", "body": "Read", "about": [address],
+            })
+        for name, chosen in (("publisher-project", a), ("index-project", b)):
+            dispatch.invoke("project-select", {"target": name})
+            for address, assertion, other in ((a, left, right), (b, right, left)):
+                text = dispatch.invoke("record", {"address": address}).text
+                assert "state: positive" in text
+                assert assertion.id in text and other.id not in text
+                assert (f"Reading for {name}" in text) == (address == chosen)
+        text = dispatch.invoke("record", {"doi": "10.1234/article", "pmid": "123"}).text
+        assert text.count("source:\n") == 2
+        assert text.count("state: positive") == 2
+        assert "state: unassessed" not in text
+        assert left.id in text and right.id in text

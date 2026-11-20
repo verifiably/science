@@ -124,9 +124,17 @@ Exact current inputs, defaults and prompts are the public files under
 
 - `record` reads a world address, a coordination address (optionally pinned), or
   the stored coordination id printed by a write reply. Alternatively, give one
-  or more source identifiers; no match is a finding, and multiple matches print
-  separately because they may be one work. It shows full fields and body,
-  source holders and whether correction is possible here. On a `source` or
+  or more source identifiers. No match is a finding, and every direct match
+  prints its own fields, body, holders and whether correction is possible here.
+  Source reads show incident coreference pairs from configured live corpora.
+  Each row retains the stored pair, signed balance, count of distinct
+  (stance, actor, grounds) units, and addresses of the held attestations.
+  Open an attestation by address to read its actor and grounds. Endpoint
+  availability is shown independently. Two exact endpoints can be `positive`,
+  `contested` or `negative`; missing peers are `unavailable`, and any redirect
+  gives `historical-redirect`. An exact pair of identifier hits without current
+  evidence is `unassessed` and produces a possible-duplicate finding. These
+  are direct live links and carry no published epoch receipt. On a `source` or
   `proposition` it lists stored `source assertions` across configured live
   corpora (following source redirects; attributed readings inert in `belief`).
   With a selected project it lists notes about the world record, following
