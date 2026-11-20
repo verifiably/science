@@ -109,6 +109,10 @@ existing reading note's `coord:` address (unpinned or `@<revision>`) or stored
 `note:` id (`note:<project>.<local>.<uid>`), skip steps 0–4 and go straight to
 **Promote an earlier reading**.
 
+For every promotion offer, show each note's name and address beside the
+`source:` address it cites. When several notes match, get the person's explicit
+choice before promoting.
+
 0. **Check local records first when given a `source:` address or identifier.**
    Whenever the caller supplies a `source:` address or one or more accepted
    identifiers (`doi`, `pmid`, `isbn`, `accession`), call `record` locally
