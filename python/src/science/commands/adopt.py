@@ -5,6 +5,7 @@ no pin is written."""
 from __future__ import annotations
 
 import shutil
+from dataclasses import replace
 from functools import partial
 from hashlib import sha256
 
@@ -188,6 +189,9 @@ def _reevaluate(ctx, writer, registry, record):
             else:
                 _require_current_config(config)
                 tail.append(_retire(ctx, writer, registry, registry.pin(predecessor.corpus_id), record))
+                # Keep the committed marker for traversal and its current state for reasons.
+                held = tuple(replace(item, state="retired") if item.corpus_id == predecessor.corpus_id else item
+                             for item in held)
     return tail
 
 

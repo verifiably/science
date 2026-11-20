@@ -224,3 +224,33 @@ def test_retirement_holdings_failure_is_a_global_dependency(adopted, monkeypatch
     lines = _sharing_lines(adopted.b)
     assert f"retention:\n  kept: {expected}" in _show(adopted.b, first)
     assert _sharing_lines(adopted.b) == lines
+
+
+def test_retired_predecessor_does_not_require_a_chain_after_holdings_fail(adopted, monkeypatch):
+    from science import retention
+
+    ids = a_identity(adopted.a)
+    first, cited = ids["corpus_id"], ids["assessment"]
+    second = publish_again(adopted, LOC_A)
+    _adopt(replace(adopted, b=replace(adopted.b, keep=(first,))), LOC_A, second)
+    Corpus(adopted.b.write_root).add(note(cited))
+    tip = _publish_update(adopted)
+    found = retention.found_observations
+
+    def fail_after_retirement(views, world):
+        if first not in {corpus for corpus, _ in views}:
+            raise OSError("retirement holdings became unreadable")
+        return found(views, world)
+
+    monkeypatch.setattr(retention, "found_observations", fail_after_retirement)
+    text = _adopt(adopted, LOC_A, tip).text
+    registry = SharingRegistry(adopted.b.sharing_root)
+    assert [registry.pin(cid).state for cid in (first, second, tip)] == ["retired", "mounted", "mounted"]
+    assert f"[pin] {first} retired" in text
+
+    expected = "  kept: dependency (provenance observations (OSError))"
+    shown = _show(adopted.b, second)
+    assert f"retention:\n{expected}\n" in shown
+    assert f"retention {second}:\n{expected}\n" in text
+    assert f"chain (for {first})" not in shown
+    assert f"chain (for {first})" not in text
