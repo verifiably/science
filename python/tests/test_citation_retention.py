@@ -420,3 +420,16 @@ def test_provenance_walk_read_and_digest_failures_are_global(certified_work, gra
     assert "unresolved-reference analysis-spec:departed" in reason.detail
     expected_class = "NodesError" if operation == "get" else "OSError"
     assert any(origin[0] in detail and expected_class in detail for detail in reason.detail)
+
+
+@pytest.mark.parametrize("other_tip", [False, True])
+def test_cyclic_local_view_history_blocks_every_predecessor(certified_work, other_tip):
+    target = fixture_proposition_node("cited")
+    view = revision("topic", 1, query=query(({"addresses": [target.id]},)))
+    cyclic = revision("topic", 1, predecessors=(view,), query=query(({"addresses": [target.id]},)))
+    records = (cyclic, revision("topic", 2, query=query())) if other_tip else (cyclic,)
+    write = holder(certified_work / "write", *records)
+    carrier = holder(certified_work / "carrier", target)
+    diagnostic = f"write corpus {write[0]} validate coordination history {cyclic.id} (coordination-supersession-cycle)"
+    for predecessor in (pin(carrier), held(2)):
+        assert reasons(predecessor, write, live=(carrier,)) == (Reason("dependency", (diagnostic,)),)

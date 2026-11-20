@@ -4,6 +4,7 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, replace
+from graphlib import CycleError, TopologicalSorter
 from typing import Literal
 
 from beliefs import stored
@@ -175,6 +176,14 @@ def _local_citations(write_root: Holder) -> tuple[set[str], set[str]]:
         except _DEPENDENCY_ERRORS as error:
             unresolved.add(f"write corpus {corpus} {operation} {entry.id} ({type(error).__name__})")
     for history in histories.values():
+        predecessors = {revision.node.id: revision.predecessors
+                        for revision in sorted(history, key=lambda revision: revision.node.id)}
+        try:
+            TopologicalSorter(predecessors).prepare()
+        except CycleError as error:
+            cycle = ", ".join(sorted(set(error.args[1])))
+            unresolved.add(f"write corpus {corpus} validate coordination history {cycle} (coordination-supersession-cycle)")
+            continue
         if history and history[0].node.kind in VIEW_KINDS:
             for tip in standing_tips(history):
                 citations.update(queries[tip.node.id])
