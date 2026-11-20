@@ -20,6 +20,7 @@ from science.refusal import Refusal, Refused, kernel_refusal
 __all__ = [
     "CoreferencePair",
     "Located",
+    "coreference_attestation_shape",
     "decode_source_assertion",
     "identifiers",
     "require_identifiers",
@@ -201,7 +202,10 @@ class CoreferencePair:
         return None
 
 
-def _validated_coreference(node, resolve_source):
+def coreference_attestation_shape(node: Node) -> stored.CoreferenceAttestation:
+    """Validate the controlled event independently of its endpoint holdings."""
+    if node.kind != "coreference-attestation":
+        raise MalformedRecord(f"{node.id}: expected a coreference-attestation, found {node.kind}")
     try:
         value = stored.coreference_attestation_value(node)
         expected = stored.coreference_attestation_node(
@@ -221,7 +225,12 @@ def _validated_coreference(node, resolve_source):
         kinds.append(kind)
     if kinds[0] != kinds[1]:
         raise MalformedRecord(f"{node.id}: coreference endpoints have different kinds")
-    if kinds[0] != "source":
+    return value
+
+
+def _validated_coreference(node, resolve_source):
+    value = coreference_attestation_shape(node)
+    if not value.endpoints[0].startswith("source:"):
         return value, None
 
     left, right = (resolve_source(address) for address in value.endpoints)
