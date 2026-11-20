@@ -108,3 +108,15 @@ def test_native_spec_inputs_and_belief_key_parse_with_required_repeating_fields(
         args[args.index("--evidence-mode") + 1] = mode
         assert parser.parse_args(args).evidence_mode == mode
     assert parser.parse_args(["belief", "--proposition", "proposition:p1", "--key", "target-key"]).key == "target-key"
+
+
+def test_source_coreference_requires_addresses_stance_and_grounds():
+    parser = build_parser(production_tree())
+    args = ["source-coreference", "--left", "source:left", "--right", "source:right",
+            "--stance", "same", "--grounds", "Publisher and index agree"]
+    assert parser.parse_args(args).stance == "same"
+    assert parser.parse_args([*args[:6], "distinct", *args[7:]]).stance == "distinct"
+    for index in (1, 3, 5, 7):
+        with pytest.raises(SystemExit) as caught:
+            parser.parse_args(args[:index] + args[index + 2:])
+        assert caught.value.code == 2

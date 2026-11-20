@@ -390,3 +390,56 @@ def test_close_waits_for_an_in_flight_write_and_refuses_what_arrives_after(certi
               if line["line"] == "invocation-close" and line["invocation"] == "F" * 8]
     assert closes and lines[-1]["line"] == "session-close" and closes[0] < len(lines) - 1
     assert "Traceback" not in capsys.readouterr().err
+
+
+def test_source_coreference_cli_and_refusal_replay(certified_work, short_tmp, capsys):
+    from beliefs import stored
+    from beliefs.root import open_corpus
+    from helpers.world import FIXTURE_AUTHORITY, write_cli_config
+    from science.cli import main
+    from science.config import ReadContext, load_config
+
+    sock = short_tmp / "service.sock"
+    path = write_cli_config(certified_work, service_socket=sock)
+    cfg = load_config(path)
+    corpus = open_corpus(cfg.write_root, authority=FIXTURE_AUTHORITY, profile=cfg.profile)
+    left = corpus.add(stored.source_node(title="Publisher record", identifiers={"doi": "10.1000/example"})).id
+    right = corpus.add(stored.source_node(title="Index record", identifiers={"pmid": "123"})).id
+    server = _running(cfg, sock)
+    try:
+        for iid, grounds in [("blank", "  "), ("non-nfc", "cafe\u0301"), ("surrogate", "\ud800")]:
+            request = {
+                "command": "source-coreference", "invocation_id": iid,
+                "inputs": {"left": left, "right": right, "stance": "same", "grounds": grounds},
+            }
+            first = _ask(sock, request)  # json.dumps escapes the surrogate on the wire.
+            assert not first["ok"] and first["invocation_id"] == iid
+            assert first["refusal"]["code"] == "invalid-input"
+            assert first["refusal"]["data"] == {"field": "grounds", "reason": "invalid-text"}
+            assert _ask(sock, request) == first
+        assert not any(node.kind == "coreference-attestation"
+                       for node in ReadContext.open(cfg).write_view().iter_stored())
+
+        argv = ["source-coreference", "--config", str(path), "--left", left, "--right", right,
+                "--stance", "same", "--grounds", "Publisher and index agree.", "--invocation-id", "cli-mint"]
+        assert main(argv) == 0
+        first = capsys.readouterr().out
+        assert main(argv) == 0
+        assert capsys.readouterr().out == first
+        (event,) = [node for node in ReadContext.open(cfg).write_view().iter_stored()
+                    if node.kind == "coreference-attestation"]
+        assert event.id in first
+        assert stored.coreference_attestation_value(event).event_token == "cli-mint"
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    (ledger,) = (cfg.operations_root / "sessions").glob("*/ledger.v1")
+    lines = [json.loads(line) for line in ledger.read_text().splitlines()]
+    for iid in ("blank", "non-nfc", "surrogate"):
+        attempts = [line for line in lines if line.get("invocation") == iid]
+        assert [line["line"] for line in attempts] == ["invocation-open", "invocation-close"]
+        assert attempts[-1]["outcome"]["refusal"]["data"] == {"field": "grounds", "reason": "invalid-text"}
+    assert [line["line"] for line in lines if line.get("invocation") == "cli-mint"] == [
+        "invocation-open", "act", "invocation-close",
+    ]

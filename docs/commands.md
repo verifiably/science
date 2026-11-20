@@ -149,6 +149,19 @@ Exact current inputs, defaults and prompts are the public files under
   changes, the reply shows its new address and the old address keeps resolving,
   including earlier notes. Identifiers cannot be removed without a replacement;
   retired addresses remain taken.
+- `source-coreference` attests whether two current source addresses describe the
+  same citable version. Supply `--left`, `--right`, `--stance same|distinct`, and
+  nonblank NFC `--grounds`. For example:
+
+  ```sh
+  science source-coreference --left "$doi_record" --right "$pmid_record" \
+    --stance same --grounds "The publisher and PubMed identify the same journal version."
+  ```
+
+  The attended session signs the statement. No project selection is required.
+  Two exact sources held in the write root can be attested before the first
+  epoch, including when a live mount holds an equal copy. The write leaves the
+  source records and their citations intact.
 - `source-assertion` mints a world `source-assertion` without a project selection,
   anchoring an extracted span (`asserts`, `denies` or `hypothesizes`) from a
   `source` representation (`sha256`, `media_type`, `extent`, NFC `quote` and

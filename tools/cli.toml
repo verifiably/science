@@ -1740,6 +1740,19 @@ options = [
 ]
 
 [[cli.science.commands]]
+path = ["source-coreference"]
+summary = "Attest whether two source records identify the same citable version"
+options = [
+  { shared = "config", value = "path" },
+  { names = ["--invocation-id"], value = "string" },
+  { names = ["--continue"], value = "string" },
+  { names = ["--left"], value = "string", required = true },
+  { names = ["--right"], value = "string", required = true },
+  { names = ["--stance"], value = "enum", values = ["same", "distinct"], required = true },
+  { names = ["--grounds"], value = "string", required = true },
+]
+
+[[cli.science.commands]]
 path = ["spec"]
 summary = "Freeze an analysis spec against the kernel's reference rules and mint its record"
 options = [

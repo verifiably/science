@@ -1,0 +1,29 @@
+schema_version = 1
+name = "source-coreference"
+purpose = "Attest whether two source records identify the same citable version"
+write_class = "mints:coreference-attestation"
+output_budget = 4096
+
+[inputs.left]
+type = "string"
+required = true
+doc = "Current address of the first source."
+
+[inputs.right]
+type = "string"
+required = true
+doc = "Current address of the second source."
+
+[inputs.stance]
+type = "enum"
+choices = ["same", "distinct"]
+required = true
+doc = "Whether the addresses describe the same citable version or distinct sources."
+
+[inputs.grounds]
+type = "string"
+required = true
+doc = "Evidence for the stance, as nonblank text in Unicode NFC."
+
+[reads]
+families = ["corpus-stored", "registry", "epoch"]
