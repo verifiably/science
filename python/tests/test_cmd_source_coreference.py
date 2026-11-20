@@ -235,16 +235,6 @@ def _call_refused(dispatch, args, iid):
     return caught.value.refusal
 
 
-def _check_replay(dispatch, ctx, args, iid, refusal):
-    assert _call_refused(dispatch, args, iid) == refusal
-    assert dispatch._session.invocation_acts(iid) == ()
-    assert _events(ctx) == []
-    ledger = ctx.config.operations_root / "sessions" / dispatch._session.session_id / "ledger.v1"
-    lines = [json.loads(line) for line in ledger.read_text().splitlines()]
-    attempt = [line for line in lines if line.get("invocation") == iid]
-    assert [line["line"] for line in attempt] == ["invocation-open", "invocation-close"]
-    assert attempt[-1]["outcome"] == {"refusal": envelope(refusal)}
-
 
 @pytest.mark.parametrize("retired", [False, True])
 def test_mounted_write_reuses_one_view_opened_before_the_act(mounted_pair, monkeypatch, retired):
@@ -278,14 +268,15 @@ def test_mounted_write_reuses_one_view_opened_before_the_act(mounted_pair, monke
         assert seen[0][1] is seen[1][1]
         (event,) = _events(ctx)
         assert event.id in reply.text
-        assert left in dispatch.invoke("record", {"address": left}).text
-        assert right in dispatch.invoke("record", {"address": right}).text
+        for address in (left, right):
+            text = dispatch.invoke("record", {"address": address}).text
+            assert address in text and "state: positive" in text and event.id in text
         assert world_belief.current_epoch(ctx.world).packaging_identity == built.packaging_identity
 
 
-@pytest.mark.parametrize("condition", ["no-epoch", "coverage", "drift", "scope-no-epoch",
+@pytest.mark.parametrize("condition", ["no-epoch", "coverage", "extra-coverage", "drift", "scope-no-epoch",
                                       "scope-coverage", "scope-drift", "absent-before-drift"])
-def test_mounted_preflight_reports_first_failure_and_replays(mounted_pair, monkeypatch, condition):
+def test_mounted_preflight_reports_first_failure_and_replays(mounted_pair, short_tmp, monkeypatch, condition):
     cfg, left, right, extra = mounted_pair
     ctx = ReadContext.open(cfg)
     extra_id = corpus_id_at(extra)
@@ -294,13 +285,19 @@ def test_mounted_preflight_reports_first_failure_and_replays(mounted_pair, monke
     if condition.startswith("scope-"):
         open_world(cfg.world, authority=FIXTURE_AUTHORITY).retire(extra_id)
         live_ids -= {extra_id}
-    if condition.endswith("coverage"):
+    if condition == "extra-coverage":
+        world_belief.build_over(cfg, live_ids)
+        cfg = replace(cfg, world=replace(cfg.world, corpus_roots=tuple(
+            root for root in cfg.world.corpus_roots if root != extra
+        )))
+        live_ids -= {extra_id}
+    elif condition.endswith("coverage"):
         world_belief.build_over(cfg, live_ids - {left_id})
     elif not condition.endswith("no-epoch"):
         world_belief.build_over(cfg, live_ids)
         add_source(cfg, "corpus", "Later source", pmid="456")
 
-    with research_rig(cfg, (COMMAND,)) as (dispatch, ctx):
+    with _attended(cfg, short_tmp) as sock:
         args = _inputs(left, right)
         if condition == "absent-before-drift":
             capture = world_belief.open_world_view
@@ -315,13 +312,13 @@ def test_mounted_preflight_reports_first_failure_and_replays(mounted_pair, monke
 
             with monkeypatch.context() as inject:
                 inject.setattr(world_belief, "open_world_view", absent)
-                refusal = _call_refused(dispatch, args, "currency")
+                refusal = _wire_refusal(sock, args, "currency")
             assert (refusal.code, refusal.data) == ("kernel-refused", {
                 "kind": "AbsentCarrier", "absent": [extra_id],
             })
             assert "restore" in refusal.message.lower() and "science epoch" not in refusal.message
         else:
-            refusal = _call_refused(dispatch, args, "currency")
+            refusal = _wire_refusal(sock, args, "currency")
             if condition.startswith("scope-"):
                 assert (refusal.code, refusal.data) == (
                     "config-stale", {"session_only": [extra_id], "live_only": []},
@@ -334,14 +331,15 @@ def test_mounted_preflight_reports_first_failure_and_replays(mounted_pair, monke
                 else:
                     assert (refusal.code, refusal.data) == ("epoch-stale", {
                         "missing": [left_id] if condition == "coverage" else [],
-                        "extra": [],
+                        "extra": [extra_id] if condition == "extra-coverage" else [],
                         "drifted": [left_id] if condition == "drift" else [],
                     })
-        _check_replay(dispatch, ctx, args, "currency", refusal)
+        world_belief.build_over(cfg, live_ids)
+        _check_wire_replay(cfg, sock, args, "currency", refusal)
 
 
 @pytest.mark.parametrize("change", ["missing", "address", "uid", "kind"])
-def test_mounted_capture_rechecks_exact_identity(mounted_pair, monkeypatch, change):
+def test_mounted_capture_rechecks_exact_identity(mounted_pair, short_tmp, monkeypatch, change):
     cfg, left, right, _ = mounted_pair
     world_belief.publish_session_epoch(cfg)
     resolve = WorldReadView.resolve
@@ -361,13 +359,13 @@ def test_mounted_capture_rechecks_exact_identity(mounted_pair, monkeypatch, chan
             return node.model_copy(update={"kind": "proposition"})
         return node.model_copy(update={"uid": new_uid}) if change == "uid" else node
 
-    with research_rig(cfg, (COMMAND,)) as (dispatch, ctx):
-        expected_uid = ctx.write_view().get(left).uid
+    with _attended(cfg, short_tmp) as sock:
+        expected_uid = ReadContext.open(cfg).write_view().get(left).uid
         args = _inputs(left, right)
         with monkeypatch.context() as inject:
             inject.setattr(WorldReadView, "resolve", resolve_left)
             inject.setattr(WorldReadView, "get", get_left)
-            refusal = _call_refused(dispatch, args, "moved")
+            refusal = _wire_refusal(sock, args, "moved")
         if change == "kind":
             assert (refusal.code, refusal.data) == ("kernel-refused", {"kind": "MalformedRecord"})
         else:
@@ -377,7 +375,7 @@ def test_mounted_capture_rechecks_exact_identity(mounted_pair, monkeypatch, chan
                 "resolved_uid": {"missing": None, "uid": new_uid}.get(change, expected_uid),
             })
             assert "reread" in refusal.message.lower()
-        _check_replay(dispatch, ctx, args, "moved", refusal)
+        _check_wire_replay(cfg, sock, args, "moved", refusal)
 
 
 @pytest.mark.parametrize(("site", "failure"), [
@@ -395,7 +393,7 @@ def test_mounted_capture_rechecks_exact_identity(mounted_pair, monkeypatch, chan
     ("get", errors.RecordNotPresent),
     ("act", errors.BuildHold),
 ])
-def test_mounted_faults_close_with_original_kernel_type(mounted_pair, monkeypatch, site, failure):
+def test_mounted_faults_close_with_original_kernel_type(mounted_pair, short_tmp, monkeypatch, site, failure):
     cfg, left, right, _ = mounted_pair
     world_belief.publish_session_epoch(cfg)
     owner, method = {
@@ -412,14 +410,14 @@ def test_mounted_faults_close_with_original_kernel_type(mounted_pair, monkeypatc
             raise failure(args[1], corpus_id_at(cfg.write_root), args[0].stamp)
         raise failure("injected read or hold failure")
 
-    with research_rig(cfg, (COMMAND,)) as (dispatch, ctx):
+    with _attended(cfg, short_tmp) as sock:
         args = _inputs(left, right)
         with monkeypatch.context() as inject:
             inject.setattr(owner, method, fail)
-            refusal = _call_refused(dispatch, args, "fault")
+            refusal = _wire_refusal(sock, args, "fault")
         assert refusal.code == "kernel-refused" and refusal.data == {"kind": failure.__name__}
         assert "science epoch" not in refusal.message
-        _check_replay(dispatch, ctx, args, "fault", refusal)
+        _check_wire_replay(cfg, sock, args, "fault", refusal)
 
 
 def test_storage_error_after_commit_does_not_close_as_a_refusal(local_pair, monkeypatch):

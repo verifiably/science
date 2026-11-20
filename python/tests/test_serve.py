@@ -475,6 +475,7 @@ def test_mounted_source_coreference_refusals_close_and_replay_after_repair(certi
         finally:
             hidden.rename(manifest)
         assert attempts["manifest"]["refusal"]["code"] == "invalid-input"
+        assert attempts["manifest"]["refusal"]["data"] == {}
         assert str(manifest.parent) in attempts["manifest"]["refusal"]["message"]
         assert _ask(sock, request("manifest")) == attempts["manifest"]
 
