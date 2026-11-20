@@ -1,5 +1,6 @@
 """Attended source attestations keep both endpoints and invocation evidence intact."""
 import json
+from contextlib import contextmanager
 from dataclasses import replace
 
 import pytest
@@ -10,7 +11,7 @@ from beliefs.root import init_corpus_root, open_corpus, open_world
 from beliefs.session import ScopedWriter, open_run_session
 from beliefs.world import Fresh
 from beliefs.world.view import WorldReadView
-from helpers.research import add_shared_source, add_source, correct_source, research_rig
+from helpers.research import add_shared_source, add_source, correct_source, raw_write_node, research_rig
 from helpers.snapshot import snapshot
 from helpers.world import FIXTURE_AUTHORITY, build_two_corpus_world
 from nodes.core.corpus import Corpus
@@ -18,8 +19,9 @@ from nodes.core.errors import RefError
 from science.config import ReadContext, corpus_id_at
 from science.dispatch import Dispatcher
 from science.loader import production_tree, resolve_handlers
-from science.refusal import Refused, envelope
+from science.refusal import Refusal, Refused, envelope
 from science import world_belief
+from test_serve import _ask, _running
 
 COMMAND = "source-coreference"
 
@@ -44,6 +46,34 @@ def _inputs(left, right, *, stance="same", grounds="Both records name the publis
 
 def _events(ctx):
     return [node for node in ctx.write_view().iter_stored() if node.kind == "coreference-attestation"]
+
+
+@contextmanager
+def _attended(cfg, short_tmp):
+    sock = short_tmp / "coreference.sock"
+    server = _running(cfg, sock)
+    try:
+        yield sock
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
+def _wire_refusal(sock, args, iid):
+    reply = _ask(sock, {"command": COMMAND, "inputs": args, "invocation_id": iid})
+    assert set(reply) == {"ok", "invocation_id", "refusal"}
+    assert reply["ok"] is False and reply["invocation_id"] == iid
+    return Refusal(**reply["refusal"])
+
+
+def _check_wire_replay(cfg, sock, args, iid, refusal):
+    assert _wire_refusal(sock, args, iid) == refusal
+    assert _events(ReadContext.open(cfg)) == []
+    (ledger,) = (cfg.operations_root / "sessions").glob("*/ledger.v1")
+    lines = [json.loads(line) for line in ledger.read_text().splitlines()]
+    attempt = [line for line in lines if line.get("invocation") == iid]
+    assert [line["line"] for line in attempt] == ["invocation-open", "invocation-close"]
+    assert attempt[-1]["outcome"] == {"refusal": envelope(refusal)}
 
 
 def test_mints_one_local_attestation_with_equal_replica_and_no_epoch(local_pair):
@@ -87,8 +117,10 @@ def test_mints_one_local_attestation_with_equal_replica_and_no_epoch(local_pair)
     ("blank", "grounds", "invalid-text"),
     ("non-nfc", "grounds", "invalid-text"),
     ("surrogate", "grounds", "invalid-text"),
+    ("surrogate-left", "left", "unresolved"),
+    ("surrogate-right", "right", "unresolved"),
 ])
-def test_input_refusal_closes_without_minting_and_replays(local_pair, case, field, reason):
+def test_input_refusal_closes_without_minting_and_replays(local_pair, short_tmp, case, field, reason):
     cfg, left, right = local_pair
     args = _inputs(left, right)
     if case == "unresolved":
@@ -103,31 +135,20 @@ def test_input_refusal_closes_without_minting_and_replays(local_pair, case, fiel
         cfg = replace(cfg, coordination=None)
     elif case == "self-pair":
         args["right"] = left
+    elif case.startswith("surrogate-"):
+        args[field] = "source:\ud800"
     else:
         args["grounds"] = {"blank": " \t", "non-nfc": "cafe\u0301", "surrogate": "\ud800"}[case]
 
-    with research_rig(cfg, (COMMAND,)) as (dispatch, ctx):
-        with pytest.raises(Refused) as first:
-            dispatch.invoke(COMMAND, args, invocation_id="preflight")
-        refusal = first.value.refusal
+    with _attended(cfg, short_tmp) as sock:
+        refusal = _wire_refusal(sock, args, "preflight")
         assert refusal.code == "invalid-input"
         assert refusal.data["field"] == field and refusal.data["reason"] == reason
         if field != "grounds":
-            assert refusal.data["address"] == args[field]
+            assert refusal.data["address"] == args[field].encode("utf-8", "backslashreplace").decode("utf-8")
         if case == "redirect":
             assert refusal.data["current_address"] == corrected.id
-        assert dispatch._session.invocation_acts("preflight") == ()
-        assert _events(ctx) == []
-        with pytest.raises(Refused) as replay:
-            dispatch.invoke(COMMAND, args, invocation_id="preflight")
-        assert replay.value.refusal == refusal
-        ledger = cfg.operations_root / "sessions" / dispatch._session.session_id / "ledger.v1"
-        lines = [json.loads(line) for line in ledger.read_text().splitlines()]
-        lines = [line for line in lines if line.get("invocation") == "preflight"]
-        assert [line["line"] for line in lines] == ["invocation-open", "invocation-close"]
-        assert lines[-1]["outcome"] == {"refusal": {
-            "code": refusal.code, "message": refusal.message, "data": refusal.data,
-        }}
+        _check_wire_replay(cfg, sock, args, "preflight", refusal)
 
 
 def test_permit_denial_rechecks_capability_before_claiming(local_pair, monkeypatch):
@@ -161,7 +182,7 @@ def test_permit_denial_rechecks_capability_before_claiming(local_pair, monkeypat
 
 
 @pytest.mark.parametrize("case", ["differing-copy", "retired-source", "retired-root"])
-def test_holder_faults_refuse_before_act(local_pair, case):
+def test_holder_faults_refuse_before_act(local_pair, short_tmp, case):
     cfg, left, right = local_pair
     archive = cfg.write_root.parent / "archive"
     if case == "differing-copy":
@@ -169,22 +190,21 @@ def test_holder_faults_refuse_before_act(local_pair, case):
     elif case == "retired-source":
         right = add_source(cfg, "archive", "Retiring source", pmid="456").id
 
-    with research_rig(cfg, (COMMAND,)) as (dispatch, ctx):
+    with _attended(cfg, short_tmp) as sock:
         if case != "differing-copy":
             root = cfg.write_root if case == "retired-root" else archive
             open_world(cfg.world, authority=FIXTURE_AUTHORITY).retire(corpus_id_at(root))
-        with pytest.raises(Refused) as caught:
-            dispatch.invoke(COMMAND, _inputs(left, right), invocation_id="holders")
-        refusal = caught.value.refusal
+        args = _inputs(left, right)
+        refusal = _wire_refusal(sock, args, "holders")
         if case == "differing-copy":
             assert refusal.code == "invalid-input" and "copies differ" in refusal.message
+            raw_write_node(archive, ReadContext.open(cfg).write_view().get(right))
         elif case == "retired-source":
             assert refusal.data == {"field": "right", "address": right, "reason": "unresolved"}
         else:
             assert refusal.code == "corpus-retired"
             assert refusal.data == {"corpus": corpus_id_at(cfg.write_root)}
-        assert dispatch._session.invocation_acts("holders") == ()
-        assert _events(ctx) == []
+        _check_wire_replay(cfg, sock, args, "holders", refusal)
 
 
 def _build_mounted_pair(work):

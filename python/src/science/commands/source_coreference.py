@@ -25,7 +25,9 @@ def _refuse_endpoint(field: str, address: str, reason: str, found: Located | Non
         "outside-session": "is held outside the session's live citation mounts",
         "self-pair": "identifies the same source as left",
     }
-    data = {"field": field, "address": address, "reason": reason}
+    # The refusal is persisted in a UTF-8 ledger, even for escaped surrogate input.
+    diagnostic_address = address.encode("utf-8", "backslashreplace").decode("utf-8")
+    data = {"field": field, "address": diagnostic_address, "reason": reason}
     if found is not None:
         data["corpora"] = list(found.corpora)
         if found.address != address:
