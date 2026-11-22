@@ -43,7 +43,7 @@ reproduce this build.
 
 | Sibling | Git revision |
 | --- | --- |
-| beliefs | `ac4081f422c460b7c90d678d9204208b233a3622` |
+| beliefs | `c49e86f61d605b47f69e9813534b1fb3910f7f0a` |
 | atoms | `a4d414b924c0f939056c4f63b3c902e7e5c4809d` |
 | nodes | `d8c73b2321e30bc563782fbab517630bae1d631a` |
 

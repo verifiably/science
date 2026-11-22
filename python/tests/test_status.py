@@ -371,3 +371,21 @@ def test_detached_status_preserves_pending_world(certified_work, monkeypatch):
 
     ReadContext.open(config)
     assert "live=False" in dispatcher.invoke("status", {}).text
+
+
+@pytest.mark.parametrize("contents", [b"invalid", b"0" * 64 + b"\n"], ids=["malformed", "missing-carrier"])
+def test_detached_status_distinguishes_no_epoch_from_bad_pointer(certified_work, contents):
+    from science.dispatch import Dispatcher
+
+    cfg = build_fixture_world(certified_work)
+    decls = production_tree()
+    dispatcher = Dispatcher(decls, resolve_handlers(decls), ReadContext.open_detached(cfg))
+    assert "No current epoch." in dispatcher.invoke("status", {}).text
+    epochs = cfg.world.world_root / "epochs"
+    epochs.mkdir(exist_ok=True)
+    (epochs / "current").write_bytes(contents)
+    with pytest.raises(Refused) as problem:
+        dispatcher.invoke("status", {}, invocation_id="bad-pointer")
+    assert problem.value.invocation_id == "bad-pointer"
+    assert problem.value.refusal.code == "kernel-refused"
+    assert problem.value.refusal.data == {"kind": "WorldReadUnavailable"}

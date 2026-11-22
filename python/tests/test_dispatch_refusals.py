@@ -369,7 +369,6 @@ def test_kernel_refusal_adds_root_context(error, code, message, data):
 
 
 def test_unavailable_world_closes_a_claimed_write(certified_work):
-    from beliefs.errors import WorldReadUnavailable
     from science.config import ReadContext
     from science.session import open_session
 
@@ -377,10 +376,11 @@ def test_unavailable_world_closes_a_claimed_write(certified_work):
 
     def handler(ctx, writer, *, slug):
         calls.append(ctx)
-        raise WorldReadUnavailable("world publication is pending")
+        ctx.world.registry()
 
     cfg = build_fixture_world(certified_work)
     session = open_session(cfg)
+    (cfg.world.world_root / "registry" / "bad.yaml").write_bytes(b"invalid")
     try:
         dispatcher = Dispatcher((REFUSING,), {"refusing": handler}, ReadContext.open_detached(cfg), session=session)
         for _ in range(2):
