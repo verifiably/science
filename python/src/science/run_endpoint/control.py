@@ -22,6 +22,16 @@ def wire(value):
     return json.dumps(value, allow_nan=False, sort_keys=True, separators=(",", ":")).encode() + b"\n"
 
 
+def seal_evidence(cause, tips, basis):
+    """Build the durable file and its control acknowledgement from the same kernel tips."""
+    chains = [
+        {"role": role, "id": tip.chain_id, "genesis": tip.genesis, "tip": tip.tip}
+        for role, tip in (("corpus", tips.corpus), ("store", tips.store)) if tip is not None
+    ]
+    document = {"cause": cause, "sealed_tips": chains, "basis_seal": basis}
+    return document, {"version": "control.v1", "type": "sealed", **document}
+
+
 class Control:
     def __init__(self, stream):
         self.stream = stream
