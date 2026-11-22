@@ -2,12 +2,13 @@
 from __future__ import annotations
 
 import dataclasses
+from contextlib import nullcontext
 import threading
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 
 from beliefs.errors import (AddressMapConflict, BuildContended, CitationContractMismatch,
-                            StoreWriteRefused, WriteRefused)
+                            SessionSealed, StoreWriteRefused, WriteRefused)
 from beliefs.permit import PermitExceeded
 from beliefs.session import KernelRefusalValue
 
@@ -23,8 +24,8 @@ from science.schema import Declaration
 # through `science.refusal.kernel_refusal`, the one normalization path.
 # StoreWriteRefused follows a holdings intent append, but an intent is not an
 # act: nothing published, so the invocation closes refused like any other.
-# A boundary refusal (`KernelRefusalValue`) records its own refusal `act-report`
-# through the operation port; with no other act recorded, it closes refused too.
+# Pre-intent session refusals carry no report. A later boundary refusal can
+# record a refusal report, which by itself still closes refused.
 # A kernel refusal after a published prior act closes `done` with that act, as a
 # surface refusal after an act does.
 KERNEL_REFUSALS = (PermitExceeded, KernelRefusalValue, WriteRefused,
@@ -65,12 +66,13 @@ class SessionPort:
 
 class Dispatcher:
     def __init__(
-        self, declarations, handlers: Mapping[str, Callable], read_context, session=None, selection=None
+        self, declarations, handlers: Mapping[str, Callable], read_context, session=None, selection=None, *, run_inputs=None
     ) -> None:
         self._decls = {decl.name: decl for decl in declarations}
         self._handlers = dict(handlers)
         self._ctx = read_context
         self._session = session
+        self._run_inputs = run_inputs
         self._selection = selection
         self._lock = threading.Lock()  # serializes write-class steps 4-7
 
@@ -118,13 +120,17 @@ class Dispatcher:
                 raise Refused(Refusal("invalid-input", "invocation_id outside its grammar"))
             if type(command) is not str:
                 raise Refused(Refusal("invalid-input", "command must be a string"))
+            if not isinstance(inputs, Mapping):
+                raise Refused(Refusal("invalid-input", "inputs must be a mapping"))
+            if self._run_inputs is not None:
+                from science.run_endpoint.policy import admit
+                self._run_inputs.check()
+                admit(command, inputs)
             decl = None
             if cursor is None:
                 decl = self._decls.get(command)
                 if decl is None:
                     raise Refused(Refusal("unknown-command", f"no command {command!r}"))
-            if not isinstance(inputs, Mapping):
-                raise Refused(Refusal("invalid-input", "inputs must be a mapping"))
             if cursor is not None:
                 return self._continue(command, inputs, decode(cursor), iid, project)
             assert decl is not None
@@ -140,6 +146,8 @@ class Dispatcher:
                 return self._invoke_write(decl, canonical, iid)
             report = self._handlers[decl.name](self._read_context(decl, project), **canonical)
             return Outcome(self._render(decl, canonical, report, (0, 0)), iid)
+        except SessionSealed:
+            raise Refused(Refusal("run-sealed", "The run session was sealed"), iid) from None
         except Refused as error:
             raise Refused(error.refusal, iid) from None
 
@@ -171,6 +179,8 @@ class Dispatcher:
         project: str | None,
     ) -> Outcome:
         if isinstance(cursor, WriteCursor):
+            if self._run_inputs is not None and cursor.session_id != self._session.session_id:
+                raise Refused(Refusal("unknown-cursor", "This cursor belongs to another session"), iid)
             if project is not None:
                 raise Refused(Refusal(
                     "invalid-input", "no write takes `project`; a write binds to the session's selection"))
@@ -212,6 +222,8 @@ class Dispatcher:
         the dispatcher lock."""
         from beliefs.session import ClaimDone, ClaimFresh, ClaimMismatch, ClaimOpen
 
+        if self._run_inputs is not None:
+            self._run_inputs.check()
         claim = self._session.claim_invocation(iid, decl.name, input_digest(canonical))
         if isinstance(claim, ClaimOpen):
             raise Refused(
@@ -243,13 +255,17 @@ class Dispatcher:
             if isinstance(claim, ClaimDone):
                 return Outcome(self._replay_outcome(decl, claim.outcome, iid, (0, 0)), iid)
             try:
-                report = self._handlers[decl.name](self._context(), writer, **canonical)
+                prepared = (self._run_inputs.prepare(decl.name, iid, canonical)
+                            if self._run_inputs is not None else nullcontext(canonical))
+                with prepared as inputs:
+                    report = self._handlers[decl.name](self._context(), writer, **inputs)
+            except SessionSealed as caught:
+                self._close_sealed(iid, caught)
             except (*KERNEL_REFUSALS, Refused) as caught:
                 # A kernel refusal of a later act does not unmake an earlier
                 # one: whichever kind refused, committed acts close `done`.
-                # A boundary refusal (`KernelRefusalValue`) records its own
-                # `act-report` through the operation port as durable evidence
-                # of the refusal; that `act-report` alone is not a prior act.
+                # A pre-intent refusal has no report. A refusal report from a
+                # later phase does not count as an earlier successful act.
                 refusal = caught.refusal if isinstance(caught, Refused) else kernel_refusal(caught)
                 acted = self._session.invocation_acts(iid)
                 prior = (
@@ -291,6 +307,15 @@ class Dispatcher:
                 self._render_write(decl.output_budget, canonical_report, iid, (0, 0)), iid
             )
 
+    def _close_sealed(self, iid, error):
+        refusal = Refusal("run-sealed", "The run session was sealed")
+        acts = self._session.invocation_acts(iid)
+        if acts or self._session.invocation_selection(iid):
+            pairs = sorted({tuple(pair) for act in acts for pair in act.record_ids})
+            self._session.close_invocation(iid, {"done": [list(pair) for pair in pairs]})
+            raise Refused(refusal, iid) from error
+        self._close_refused(iid, refusal)
+
     def _close_acted(self, iid: str, acted, message: str) -> HandlerContractViolation:
         """An invocation whose handler broke its contract after acting: the acts
         committed, so it closes `done` with their pairs, and the handler is the
@@ -325,6 +350,8 @@ class Dispatcher:
                 return Outcome(self._replay_outcome(decl, claim.outcome, iid, (0, 0)), iid)
             try:
                 report = self._handlers[decl.name](self._context(), writer, **canonical)
+            except SessionSealed as caught:
+                self._close_sealed(iid, caught)
             except (*KERNEL_REFUSALS, Refused) as caught:
                 acted = self._session.invocation_acts(iid)
                 if acted:
@@ -381,6 +408,8 @@ class Dispatcher:
             port = SessionPort(lambda address: self._select(iid, address))
             try:
                 report = self._handlers[decl.name](self._context(), port, **canonical)
+            except SessionSealed as caught:
+                self._close_sealed(iid, caught)
             except (WriteRefused, Refused, SessionProtocolError) as caught:
                 if self._session.invocation_selection(iid) is None:
                     if isinstance(caught, SessionProtocolError):

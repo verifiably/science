@@ -132,10 +132,7 @@ def handle(ctx, writer, *, spec, dataset, code, entrypoint, targets, cores=None)
         cores=cores or 1, **prepared,
     )
     if isinstance(outcome, RunRefused):
-        # A kernel refusal, through the kernel path: the boundary may already
-        # have written its act-report through the port, so this is never a
-        # surface `Refused`. The
-        # dispatcher normalizes it to `kernel-refused` carrying the reason.
+        # Both pre-intent refusals and later reported refusals retain the kernel reason.
         raise KernelRefusalValue(outcome)
     assert isinstance(outcome, RunMinted)
     view = ctx.write_view()
