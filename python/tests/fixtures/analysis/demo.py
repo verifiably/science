@@ -2,14 +2,17 @@
 
 `create ROOT` builds a fresh world and stops before any analysis act: the world a
 harness probe hands to its agent. `walk ROOT` creates the same world and runs the
-production claim -> dataset -> spec -> run -> assess -> verify -> belief -> next path.
+production dataset -> claim -> spec -> run -> assess -> verify -> belief -> next path.
 `readback CONFIG` prints what a world's write root records, at any point of that path.
+It opens the world detached: it never settles an interrupted world transaction, and
+refuses (exit 3) while one is pending.
 
 Run from python/ with PYTHONPATH=tests. The helpers hold explicit fixture authority
 only for bootstrap; every analysis act uses the production attended session.
 """
 import argparse
 import json
+import sys
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
@@ -26,6 +29,7 @@ from helpers.world import build_fixture_world_with_contract, fixture_bundle, wri
 from science.config import ReadContext, load_config
 from science.dispatch import Dispatcher
 from science.loader import production_tree, resolve_handlers
+from science.refusal import Refused
 from science.session import open_session
 
 INTERPRETATION_RULE = "beliefs/outcome-file/v1"
@@ -113,9 +117,10 @@ def walk(world: World):
 
 def readback(config: Path) -> dict:
     """The write root's records as a probe compares them with its expected evidence:
-    every proposition, spec, run, assessment and verification, and the count by kind."""
+    every proposition, spec, run, assessment and verification, and the count by kind.
+    Detached, so reading never performs the recovery a resuming agent would."""
     cfg = load_config(config)
-    context = ReadContext.open(cfg)
+    context = ReadContext.open_detached(cfg)
     view = context.write_view()
     nodes = sorted(view.iter_stored(), key=lambda node: (node.kind, node.id))
     snapshot = context.snapshot(nodes=nodes, observations=context.observations())
@@ -137,8 +142,8 @@ def readback(config: Path) -> dict:
                                    "capabilities": list(closure.occurrence.receipt.execution.capabilities),
                                    "outputs": [list(output) for output in closure.result.outputs]})
         elif node.kind == "assessment":
-            facet = node.facets[stored.ASSESSMENT_FACET]
-            result["assessments"].append({"id": node.id, "run": facet["run"], "outcome": facet["outcome"]})
+            value = stored.assessment_value(node, profile=cfg.profile)
+            result["assessments"].append({"id": node.id, "run": value.run, "outcome": value.outcome})
         elif node.kind == "verification":
             value = stored.verification_value(node)
             result["verifications"].append({"id": node.id, "assessment": value.assessment,
@@ -178,4 +183,8 @@ if __name__ == "__main__":
     elif arguments.command == "walk":
         walk(create(arguments.root))
     else:
-        print(render(readback(arguments.config)))
+        try:
+            print(render(readback(arguments.config)))
+        except Refused as refused:
+            print(f"readback refused: {refused}", file=sys.stderr)
+            sys.exit(3)

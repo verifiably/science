@@ -42,7 +42,7 @@ def test_documented_example_reaches_a_verified_keyed_belief(certified_work):
         assert run["policy"] == "boundary-policy/confined-v1"
         assert "network-denied" in run["capabilities"]
         assert [name for name, _ in run["outputs"]] == ["outputs/outcome.txt", "outputs/stats.tsv"]
-    assert assessment["run"] in {run["id"] for run in found["runs"]}
+    assert assessment["run"] in {run["id"].removeprefix("run:") for run in found["runs"]}
     assert assessment["outcome"] == "supported"
     assert checked["assessment"] == assessment["id"].removeprefix("assessment:")
     assert (checked["scope"], checked["verdict"]) == ("clean-environment", "passed")
@@ -50,6 +50,9 @@ def test_documented_example_reaches_a_verified_keyed_belief(certified_work):
     assert {kind: counts[kind] for kind in ("proposition", "analysis-spec", "run", "assessment", "verification")} \
         == {"proposition": 1, "analysis-spec": 1, "run": 2, "assessment": 1, "verification": 1}
     assert found["records"]["total"] == sum(counts.values())
+    printed = example["render"](found).splitlines()
+    assert f"assessment {assessment['id']} run {assessment['run']} outcome supported" in printed
+    assert sum(line.startswith("run run:") for line in printed) == 2
 
 
 def test_created_probe_world_holds_only_its_prerequisites(certified_work, tmp_path):
