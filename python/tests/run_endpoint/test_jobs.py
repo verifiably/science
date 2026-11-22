@@ -29,10 +29,10 @@ def supervisor_signals():
 
 
 @pytest.mark.parametrize("command", ["run", "derive"])
-def test_captured_job_uses_kernel_staging(certified_work, command):
+def test_captured_job_uses_kernel_staging(certified_work, command, monkeypatch):
     reason = host_prerequisites()
     if reason:
-        pytest.skip(f"bwrap confinement is unavailable: {reason}")
+        pytest.skip(f"confinement unavailable: {reason}")
     cfg = build_belief_world(certified_work)
     dataset = hold_fixture_dataset(cfg, "data.txt", b"x\n", "input")
     scratch = certified_work / "actor"
@@ -43,6 +43,16 @@ def test_captured_job_uses_kernel_staging(certified_work, command):
             spec = attended.invoke("spec", spec_inputs(cfg, target="proposition:p1", dataset=dataset))
             inputs["spec"] = next(word for word in spec.text.split() if word.startswith("analysis-spec:"))
     else:
+        from science.commands import derive
+
+        execute = derive.execute_production_run
+
+        def check_export(**kwargs):
+            expected = cfg.operations_root / "scratch" / session.session_id / "kernel-stages"
+            assert kwargs["output_dir"].parent == expected
+            return execute(**kwargs)
+
+        monkeypatch.setattr(derive, "execute_production_run", check_export)
         inputs["title"] = "derived fixture"
         snakefile = code.parent / entry
         # The workload starts a private interpreter in its own sandbox and handles TERM there.

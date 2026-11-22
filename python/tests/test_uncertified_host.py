@@ -6,11 +6,11 @@ from atoms.core.errors import CapabilityUnavailable
 from nodes.core.errors import ExecutionError
 from science.refusal import Refusal, Refused
 
-import conftest
 from uncertified_host import (
     UNCERTIFIED_HOST_VAR,
     capability_unavailable_from,
     uncertified_host,
+    report_missing_capability,
 )
 
 
@@ -52,14 +52,14 @@ def test_report_missing_capability_skips_only_when_enabled(monkeypatch: pytest.M
     wrapped.__cause__ = raw
 
     monkeypatch.delenv(UNCERTIFIED_HOST_VAR, raising=False)
-    conftest._report_missing_capability(raw)
-    conftest._report_missing_capability(wrapped)
+    report_missing_capability(raw)
+    report_missing_capability(wrapped)
 
     monkeypatch.setenv(UNCERTIFIED_HOST_VAR, "0")
-    conftest._report_missing_capability(raw)
+    report_missing_capability(raw)
 
     monkeypatch.setenv(UNCERTIFIED_HOST_VAR, "1")
     with pytest.raises(Skipped, match="certified tuple unavailable on this host: ext4 tuple unavailable"):
-        conftest._report_missing_capability(raw)
+        report_missing_capability(raw)
     with pytest.raises(Skipped, match="certified tuple unavailable on this host: ext4 tuple unavailable"):
-        conftest._report_missing_capability(wrapped)
+        report_missing_capability(wrapped)

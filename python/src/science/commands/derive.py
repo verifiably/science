@@ -129,9 +129,16 @@ def handle(
     _check_staged_collisions(held_inputs)
 
     port = writer.operation_port()
-    scratch_base = None if run_staging_of(port) is not None else ctx.config.operations_root / "scratch" / writer.invocation_id
-    ctx.config.operations_root.mkdir(parents=True, exist_ok=True)
-    export_dir = Path(tempfile.mkdtemp(prefix="export-", dir=ctx.config.operations_root))
+    staging = run_staging_of(port)
+    if staging is None:
+        export_root = ctx.config.operations_root
+        export_root.mkdir(parents=True, exist_ok=True)
+        scratch_base = export_root / "scratch" / writer.invocation_id
+    else:
+        owner, invocation = staging
+        export_root = owner.invocation_dir(invocation)
+        scratch_base = None
+    export_dir = Path(tempfile.mkdtemp(prefix="export-", dir=export_root))
     try:
         outcome = execute_production_run(
             inputs=tuple(recipe_inputs),

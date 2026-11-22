@@ -298,7 +298,14 @@ def test_seal_during_dataset_request_preserves_committed_effects(certified_work,
             request = {"command": "dataset", "invocation_id": "data", "inputs": {"path": str(source), "title": "small table"}}
             worker = threading.Thread(target=lambda: replies.append(actors._dispatch(dispatcher, request)))
             control = Mock(writable=False)
-            control.receive.side_effect = lambda: release.set()
+            kernel_seal = session.seal
+
+            def seal(timeout):
+                tips = kernel_seal(timeout)
+                release.set()
+                return tips
+
+            monkeypatch.setattr(session, "seal", seal)
             basis = open_basis(cfg)
             worker.start()
             try:
@@ -511,3 +518,28 @@ sys.exit(serve_run(launch))
     assert (run / "seal.json").exists() == (fault != "before-rename")
     if fault != "before-rename":
         assert json.loads((run / "seal.json").read_bytes())["sealed_tips"]
+
+
+def test_worker_closing_after_the_deadline_leaves_no_session_close(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from unittest.mock import Mock
+    from beliefs.session.writer import ChainTip, SealedTips
+    from science.run_endpoint import service
+
+    now = [0.0]
+    actors = Mock(can_execute=False)
+    actors.scratch.owned = {}
+    actors.failed.is_set.return_value = False
+    actors.finished.side_effect = lambda: now[0] >= 1.01
+    actors.wait.side_effect = lambda seconds: now.__setitem__(0, 1.01)
+    control = Mock(writable=False)
+    session = Mock(session_id="a"*32, current_invocation=None)
+    session.seal.return_value = SealedTips(ChainTip("a"*32, "1"*64, "1"*64), None)
+    monkeypatch.setattr(service, "seal_basis", lambda *args: None)
+    launch = SimpleNamespace(run_dir=tmp_path, seal_timeout_seconds=1,
+                             config=SimpleNamespace(operations_root=tmp_path))
+    assert service._shutdown(launch, SimpleNamespace(session=session, basis=None), actors,
+                             control, "stop", lambda: now[0]) == 1
+    assert control.queue.call_args.args[0]["type"] == "seal-timeout"
+    session.close.assert_not_called()
+    assert not (tmp_path / "seal.json").exists()

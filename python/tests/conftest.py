@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 from helpers.world import short_socket
-from uncertified_host import capability_unavailable_from, uncertified_host
+from uncertified_host import report_missing_capability
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 # The main checkout, which a worktree's own root is not: a worktree under.worktrees/
@@ -22,18 +22,12 @@ MAIN_ROOT = Path(subprocess.run(
 ).stdout.strip()).parent
 
 
-def _report_missing_capability(error: BaseException) -> None:
-    cause = capability_unavailable_from(error)
-    if cause is not None and uncertified_host(os.environ):
-        pytest.skip(f"certified tuple unavailable on this host: {cause}")
-
-
 @pytest.hookimpl(wrapper=True)
 def pytest_runtest_setup(item):
     try:
         return (yield)
     except Exception as error:
-        _report_missing_capability(error)
+        report_missing_capability(error)
         raise
 
 
@@ -42,7 +36,7 @@ def pytest_runtest_call(item):
     try:
         return (yield)
     except Exception as error:
-        _report_missing_capability(error)
+        report_missing_capability(error)
         raise
 
 
@@ -51,7 +45,7 @@ def pytest_runtest_teardown(item, nextitem):
     try:
         return (yield)
     except Exception as error:
-        _report_missing_capability(error)
+        report_missing_capability(error)
         raise
 
 

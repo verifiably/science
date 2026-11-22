@@ -12,13 +12,16 @@ import tomllib
 from urllib.parse import unquote, urlsplit
 
 from beliefs.errors import ScienceError
+from beliefs.root import AtomsError
 from beliefs.world.registry import load_manifest
+from nodes.core.errors import NodesError
 from packaging.requirements import Requirement
 from packaging.utils import canonicalize_name
 
-from science import closure
-from science.config import ScienceConfig, load_config, mount_profiles
+from science import acceptance, closure
+from science.config import ReadContext, ScienceConfig, load_config, mount_profiles
 from science.refusal import Refusal, Refused
+from science.sharing import SharingRegistryMalformed
 
 _File = tuple[str, str, Path]
 
@@ -96,7 +99,13 @@ def _bindings(config):
         manifest = load_manifest(root)
         mounts.append((manifest.corpus_id, manifest.profile.science_contract, sorted(manifest.profile.domains.items()),
                        profile.compiled_identity, sorted(profile.activated_contracts.items())))
-    return {"policy": [closure.BINDING.rule, closure.BINDING.implementation], "mounts": sorted(mounts)}
+    inputs = acceptance.acceptance_inputs(ReadContext(world=None, config=config))
+    return {
+        "policy": [closure.BINDING.rule, closure.BINDING.implementation],
+        "acceptance": acceptance.statement(inputs),
+        "artifacts": sorted((key, pin.artifact) for key, pin in inputs.pins.items()),
+        "mounts": sorted(mounts),
+    }
 
 
 def _digest(files, config, *, opening):
@@ -118,7 +127,8 @@ def _digest(files, config, *, opening):
     return hashlib.sha256(encoded).hexdigest()
 
 
-_UNMEASURABLE = (OSError, ValueError, KeyError, TypeError, metadata.PackageNotFoundError, ScienceError, Refused)
+_UNMEASURABLE = (OSError, ValueError, KeyError, TypeError, metadata.PackageNotFoundError,
+                 AtomsError, NodesError, ScienceError, SharingRegistryMalformed, Refused)
 
 
 def open_basis(config: ScienceConfig) -> BasisInventory:

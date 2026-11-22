@@ -167,7 +167,8 @@ during open/bind is held until session/socket cleanup owns the new resources.
 
 A run endpoint owns the kernel staging directory at
 `<operations_root>/scratch/<session_id>` and each invocation directory it
-created under `<operations_root>/capture/`. The endpoint reclaims these after
+created under `<operations_root>/capture/`. A derive job keeps its temporary
+exports inside its invocation’s private staging directory. The endpoint reclaims these after
 their users stop. A timeout or abrupt process exit can leave either directory.
 An existing capture reserves its invocation ID until the directory is reclaimed.
 

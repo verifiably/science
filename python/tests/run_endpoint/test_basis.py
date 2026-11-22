@@ -73,3 +73,25 @@ def test_wheel_members_follow_record_and_editable_members_follow_package_trees(t
     (pkg / "__pycache__").mkdir()
     (pkg / "__pycache__/a.pyc").write_bytes(b"cache")
     assert list(_members(dist)) == [("example/rules.json", pkg / "rules.json")]
+
+
+def test_basis_tracks_provider_confirmation_and_verifiers_across_an_ordinary_mint(certified_work):
+    from helpers.world import add_one_more_record
+    from science.run_endpoint.basis import open_basis, seal_basis
+    from science.sharing import FetchRecord, Pin, PinSource, ProviderBinding, SharingRegistry
+
+    config = replace(build_fixture_world(certified_work), sharing_root=certified_work / "sharing")
+    registry = SharingRegistry(config.sharing_root)
+    world, corpus, location = "d" * 32, "c" * 32, "https://example.test/pin"
+    binding = ProviderBinding(world, (location,), "2026-11-22T00:00:00Z", False)
+    registry.write_pin(Pin(corpus, "marker", "artifact", world, "view:x", PinSource("provider", location),
+                           FetchRecord(location, binding.bound_since, "validated"), "mounted"))
+    registry.write_binding(binding)
+    opened = open_basis(config)
+    add_one_more_record(config)
+    assert seal_basis(opened, config) == opened.digest
+    assert seal_basis(opened, replace(config, accept=(world,))) not in (None, opened.digest)
+    registry.write_binding(replace(binding, confirmed=True))
+    assert seal_basis(opened, config) not in (None, opened.digest)
+    (config.sharing_root / "providers" / f"{world}.json").write_text("{")
+    assert seal_basis(opened, config) is None

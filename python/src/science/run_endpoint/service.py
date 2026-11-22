@@ -232,28 +232,12 @@ def _control_loop(control, server, wake, term, actors, dispatcher, lease, expire
                         return "eof"
 
 
-def _shutdown(launch, opened, actors, control, cause, clock):
+def _seal_session(launch, opened, actors, cause, deadline, clock):
     session = opened.session
-    deadline = clock() + launch.seal_timeout_seconds
-    actors.stop()
-
-    def observe_control():
-        try:
-            kind = control.receive()
-            if kind == "renew":
-                _report(control, _message("refused", code="run-sealed"))
-            control.flush()
-        except (OSError, EOFError, Refused):
-            pass
-
-    def done():
-        observe_control()
-        return actors.finished()
-
     sweep = drain.sweep_children if actors.can_execute else lambda: None
     try:
         tips = session.seal(max(0, deadline - clock()))
-        if not drain.drain_workers(done, sweep, deadline, clock=clock, wait=actors.wait):
+        if not drain.drain_workers(actors.finished, sweep, deadline, clock=clock, wait=actors.wait):
             raise SealTimeout("Invocation drain timed out")
         if actors.failed.is_set() or session.current_invocation is not None:
             raise RuntimeError("An invocation failed to close")
@@ -261,18 +245,7 @@ def _shutdown(launch, opened, actors, control, cause, clock):
         document, report = seal_evidence(cause, tips, basis)
         persist_seal(launch.run_dir, document)
         session.close()
-        _report(control, report)
-        while control.writable:
-            remaining = deadline - clock()
-            if remaining <= 0:
-                break
-            try:
-                if not select.select([], [control.stream], [], remaining)[1]:
-                    break
-                control.flush()
-            except (OSError, EOFError):
-                break
-        return 0
+        return 0, report
     except (OSError, RuntimeError, ScienceError) as error:
         try:
             sweep()
@@ -292,7 +265,6 @@ def _shutdown(launch, opened, actors, control, cause, clock):
             cleanup = threading.Thread(target=reclaim, daemon=True)
             cleanup.start()
             cleanup.join(max(0, deadline - clock()))
-        _report(control, _message("seal-timeout" if isinstance(error, SealTimeout) else "seal-failed"))
         stage = launch.config.operations_root / "scratch" / session.session_id
         details = {"session": session.session_id, "error": type(error).__name__, "staging": str(stage),
                    "invocation": session.current_invocation,
@@ -303,7 +275,48 @@ def _shutdown(launch, opened, actors, control, cause, clock):
                 os.write(2, wire(details))
         except OSError:
             pass
-        return 1
+        return 1, _message("seal-timeout" if isinstance(error, SealTimeout) else "seal-failed")
+
+
+def _shutdown(launch, opened, actors, control, cause, clock, *, server=None, dispatcher=None):
+    deadline = clock() + launch.seal_timeout_seconds
+    actors.stop()
+    # Admission is closed. While the main thread seals the kernel and sweeps its
+    # children, one responder owns both sockets and can only return refusals.
+    complete = threading.Event()
+
+    def refuse_requests():
+        while True:
+            if server is not None:
+                actors.accept(server, control.namespace, dispatcher)
+            try:
+                if control.receive() in ("renew", "bind-actor"):
+                    _report(control, _message("refused", code="run-sealed"))
+                control.flush()
+            except (OSError, EOFError, Refused):
+                pass
+            if complete.wait(0.01):
+                return
+
+    responder = threading.Thread(target=refuse_requests)
+    responder.start()
+    try:
+        status, report = _seal_session(launch, opened, actors, cause, deadline, clock)
+    finally:
+        complete.set()
+        responder.join()
+    _report(control, report)
+    while control.writable:
+        remaining = deadline - clock()
+        if remaining <= 0:
+            break
+        try:
+            if not select.select([], [control.stream], [], remaining)[1]:
+                break
+            control.flush()
+        except (OSError, EOFError):
+            break
+    return status
 
 
 def serve_run(launch, *, clock=time.monotonic):
@@ -341,4 +354,4 @@ def serve_run(launch, *, clock=time.monotonic):
                 cause = _control_loop(control, server, wake, term, actors, dispatcher, launch.lease_seconds, expires, clock)
             except OSError:
                 cause = "eof"
-        return _shutdown(launch, opened, actors, control, cause, clock)
+        return _shutdown(launch, opened, actors, control, cause, clock, server=server, dispatcher=dispatcher)

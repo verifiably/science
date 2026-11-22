@@ -1,6 +1,9 @@
 """Opt-in uncertified-host capability gate for hosted verification."""
 
 from collections.abc import Mapping
+import os
+
+import pytest
 
 from atoms.core.errors import CapabilityUnavailable
 
@@ -18,3 +21,9 @@ def capability_unavailable_from(error: BaseException) -> CapabilityUnavailable |
     if isinstance(cause, CapabilityUnavailable):
         return cause
     return None
+
+
+def report_missing_capability(error: BaseException) -> None:
+    cause = capability_unavailable_from(error)
+    if cause is not None and uncertified_host(os.environ):
+        pytest.skip(f"certified tuple unavailable on this host: {cause}")

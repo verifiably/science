@@ -102,7 +102,7 @@ def drain_workers(done, sweep, deadline, *, clock, wait):
         sweep()
         if done():
             sweep()
-            return True
+            return clock() <= deadline
         remaining = deadline - clock()
         if remaining <= 0:
             return False
