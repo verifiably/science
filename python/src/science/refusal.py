@@ -10,7 +10,8 @@ from beliefs.errors import (ClaimError, DecodeError, EstimandError, IdentityErro
                             MalformedRecord, MalformedSpec, MeasurementError,
                             ProjectNotResolvable, ResolutionError, RuleUnbound,
                             StandingRefused, SubclassRefused, UnfreezableSpec,
-                            WithdrawnFromAuthoring)
+                            WithdrawnFromAuthoring, WorldIdMismatch, WorldReadUnavailable,
+                            WorldUninitialized)
 from beliefs.permit import PermitExceeded
 from beliefs.session import KernelRefusalValue
 
@@ -24,6 +25,7 @@ CODES = frozenset({
     "no-epoch", "epoch-stale", "multiple-assessed-propositions",
     "pin-unsourced", "world-mismatch", "adopt-conflict", "corpus-retired", "divergent-publication", "config-stale",
 })
+WORLD_READ_ERRORS = (WorldReadUnavailable, WorldUninitialized, WorldIdMismatch)
 INVOCATION_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 
 # Scientific input validation is distinct from unavailable capture/rule state

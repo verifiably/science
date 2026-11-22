@@ -332,3 +332,60 @@ def test_status_performs_exactly_its_declared_read_families(monkeypatch):
         ).reads
     )
     assert used == declared
+
+
+def test_detached_status_preserves_pending_world(certified_work, monkeypatch):
+    from atoms.coordinator import commit
+    from beliefs.root import WellFormedView, log_seam, open_world
+    from helpers.world import FIXTURE_AUTHORITY
+    from science.dispatch import Dispatcher
+
+    config = build_fixture_world(certified_work)
+    world = open_world(config.world, authority=FIXTURE_AUTHORITY)
+    corpus = world.registry().admissions[0].corpus_id
+    context = ReadContext.open_detached(config)
+    declarations = production_tree()
+    dispatcher = Dispatcher(declarations, resolve_handlers(declarations), context)
+    assert "live=True" in dispatcher.invoke("status", {}).text
+
+    def interrupt_settlement(*args, **kwargs):
+        raise OSError("interrupted settlement append")
+
+    with monkeypatch.context() as fault:
+        fault.setattr(commit, "append_entry", interrupt_settlement)
+        with pytest.raises(Exception, match="interrupted settlement append"):
+            world.retire(corpus)
+
+    inspect = log_seam().inspect_detached
+    pending = inspect(config.world.world_root)
+    assert isinstance(pending, WellFormedView) and pending.pending
+    with pytest.raises(Refused) as during:
+        dispatcher.invoke("status", {}, invocation_id="world-read")
+    assert during.value.invocation_id == "world-read"
+    with pytest.raises(Refused) as opening:
+        ReadContext.open_detached(config)
+    assert during.value.refusal == opening.value.refusal
+    assert during.value.refusal.code == "kernel-refused"
+    assert during.value.refusal.data == {"kind": "WorldReadUnavailable"}
+    assert inspect(config.world.world_root) == pending
+
+    ReadContext.open(config)
+    assert "live=False" in dispatcher.invoke("status", {}).text
+
+
+@pytest.mark.parametrize("contents", [b"invalid", b"0" * 64 + b"\n"], ids=["malformed", "missing-carrier"])
+def test_detached_status_distinguishes_no_epoch_from_bad_pointer(certified_work, contents):
+    from science.dispatch import Dispatcher
+
+    cfg = build_fixture_world(certified_work)
+    decls = production_tree()
+    dispatcher = Dispatcher(decls, resolve_handlers(decls), ReadContext.open_detached(cfg))
+    assert "No current epoch." in dispatcher.invoke("status", {}).text
+    epochs = cfg.world.world_root / "epochs"
+    epochs.mkdir(exist_ok=True)
+    (epochs / "current").write_bytes(contents)
+    with pytest.raises(Refused) as problem:
+        dispatcher.invoke("status", {}, invocation_id="bad-pointer")
+    assert problem.value.invocation_id == "bad-pointer"
+    assert problem.value.refusal.code == "kernel-refused"
+    assert problem.value.refusal.data == {"kind": "WorldReadUnavailable"}

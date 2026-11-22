@@ -21,13 +21,13 @@ from beliefs.profile import (
     shipped_coordination,
     shipped_domain_contract,
 )
-from beliefs.root import LifecycleState, open_world_read, read_lifecycle_state, store_identity
+from beliefs.root import LifecycleState, open_world_detached, open_world_read, read_lifecycle_state, store_identity
 # shortcut: internal lifecycle error import pending public exports; remove when landed.
 from beliefs.root import AtomsError
 from beliefs.world import WorldConfig
 from beliefs.world.registry import content_identity, load_manifest
 
-from science.refusal import Refusal, Refused, kernel_refusal
+from science.refusal import WORLD_READ_ERRORS, Refusal, Refused, kernel_refusal
 from science.contracts import OperatorPlan, validate_plan, load_contract_chain, load_contract_document
 from science.sharing import SharingRegistry, SharingRegistryMalformed
 
@@ -453,6 +453,15 @@ class ReadContext:
     @classmethod
     def open(cls, config: ScienceConfig) -> ReadContext:
         return cls(world=open_world_read(config.world), config=config)
+
+    @classmethod
+    def open_detached(cls, config: ScienceConfig) -> ReadContext:
+        """Open the actor's read context without recovering world transactions."""
+        try:
+            world = open_world_detached(config.world)
+        except WORLD_READ_ERRORS as error:
+            raise Refused(kernel_refusal(error)) from error
+        return cls(world=world, config=config)
 
     def current_project(self):
         """The selected project's unpinned address, or refuse: a subordinate
