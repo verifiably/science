@@ -450,3 +450,64 @@ def test_response_render_after_ledger_close_does_not_hold_the_seal(certified_wor
     finally:
         session.close()
     assert replies[0]["ok"]
+
+
+@pytest.mark.parametrize("fault", ["lost-ack", "before-rename", "after-rename"])
+def test_private_evidence_after_endpoint_exit(launch_file, tmp_path, fault):
+    import socket
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    from science.run_endpoint.control import wire
+
+    source, doc = launch_file
+    control = Path(doc["control_socket"])
+    control.unlink()
+    run = Path(doc["run_dir"])
+    # Interrupt only persistence of this fixture's seal in the child process.
+    child = """
+import os, sys
+from pathlib import Path
+from science.run_endpoint.launch import read_launch
+from science.run_endpoint.service import serve_run
+
+launch = read_launch(Path(sys.argv[1]))
+fault = sys.argv[2]
+sync = os.fsync
+def fsync(fd):
+    path = Path(os.readlink(f"/proc/self/fd/{fd}"))
+    if fault == "before-rename" and path.parent == launch.run_dir and path.name.startswith(".seal-"):
+        raise OSError("fixture seal file fsync")
+    if fault == "after-rename" and path == launch.run_dir and (path / "seal.json").exists():
+        raise OSError("fixture seal directory fsync")
+    sync(fd)
+os.fsync = fsync
+sys.exit(serve_run(launch))
+"""
+    with socket.socket(socket.AF_UNIX) as supervisor, (run / "endpoint.log").open("wb") as log:
+        supervisor.bind(str(control))
+        supervisor.listen(1)
+        supervisor.settimeout(15)
+        with subprocess.Popen(
+            [sys.executable, "-I", "-c", child, str(source), fault],
+            stdin=subprocess.DEVNULL, stdout=log, stderr=log, start_new_session=True,
+            env={"HOME": str(tmp_path), "PATH": os.defpath},
+        ) as endpoint:
+            try:
+                conn, _ = supervisor.accept()
+                with conn, conn.makefile("rb") as stream:
+                    conn.settimeout(15)
+                    opened = json.loads(stream.readline())
+                    if fault != "lost-ack":
+                        conn.sendall(wire({"type": "seal", "version": "control.v1"}))
+                        assert json.loads(stream.readline())["type"] == "seal-failed"
+                assert endpoint.wait(timeout=15) == (0 if fault == "lost-ack" else 1)
+            finally:
+                if endpoint.poll() is None:
+                    endpoint.kill()
+    ledger = [json.loads(line) for line in Path(opened["ledger_path"]).read_bytes().splitlines()]
+    assert (ledger[-1]["line"] == "session-close") == (fault == "lost-ack")
+    assert (run / "seal.json").exists() == (fault != "before-rename")
+    if fault != "before-rename":
+        assert json.loads((run / "seal.json").read_bytes())["sealed_tips"]
