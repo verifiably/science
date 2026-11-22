@@ -9,7 +9,7 @@ description = "The daily surface of Science: commands over the beliefs kernel."
 license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.11"
-dependencies = ["verifiably-beliefs"]
+dependencies = ["verifiably-beliefs", "packaging"]
 
 [project.scripts]
 science = "science.cli:main"

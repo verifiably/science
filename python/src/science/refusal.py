@@ -15,6 +15,7 @@ from beliefs.permit import PermitExceeded
 from beliefs.session import KernelRefusalValue
 
 CODES = frozenset({
+    "tip-unknown", "read-unavailable", "chain-unknown",
     "unknown-command", "invalid-input", "permit-exceeded", "outcome-unknown",
     "unknown-cursor", "stale-cursor", "input-mismatch", "kernel-refused",
     "no-current-project", "unknown-project", "ambiguous-project",
