@@ -70,6 +70,30 @@ def _answer_query(dispatcher, query) -> dict:
     return {"project": None if selection is None else str(selection)}
 
 
+def answer_request(dispatcher, request, *, admit=None):
+    """Answer the same service request on either authenticated or attended transport."""
+    try:
+        if isinstance(request, dict) and set(request) == {"query"}:
+            return _answer_query(dispatcher, request["query"])
+        else:
+            command, inputs, invocation_id, cursor, project = _validated(request)
+            if admit is not None:
+                admit(command, inputs, invocation_id, cursor)
+            out = dispatcher.invoke(command, inputs, invocation_id=invocation_id,
+                                    cursor=cursor, project=project)
+            return {"ok": True, "text": out.text,
+                     "invocation_id": out.invocation_id}
+    except Refused as caught:
+        return refused_reply(caught)
+
+
+def refused_reply(error):
+    reply = {"ok": False, "refusal": envelope(error.refusal)}
+    if error.invocation_id is not None:
+        reply["invocation_id"] = error.invocation_id
+    return reply
+
+
 def service_server(dispatcher, socket_path: Path, on_close):
     """The service protocol for `dispatcher` at `socket_path`. Closing removes the
     socket this server bound — only while the path is still that inode, so a file
@@ -91,21 +115,10 @@ def service_server(dispatcher, socket_path: Path, on_close):
         def _answer(self, line: bytes) -> None:
             try:
                 request = json.loads(line)
-                if isinstance(request, dict) and set(request) == {"query"}:
-                    reply = _answer_query(dispatcher, request["query"])
-                else:
-                    command, inputs, invocation_id, cursor, project = _validated(request)
-                    out = dispatcher.invoke(command, inputs, invocation_id=invocation_id,
-                                            cursor=cursor, project=project)
-                    reply = {"ok": True, "text": out.text,
-                             "invocation_id": out.invocation_id}
+                reply = answer_request(dispatcher, request)
             except json.JSONDecodeError as caught:
                 reply = {"ok": False, "refusal": envelope(
                     Refusal("invalid-input", f"request is not JSON: {caught}"))}
-            except Refused as caught:
-                reply = {"ok": False, "refusal": envelope(caught.refusal)}
-                if caught.invocation_id is not None:
-                    reply["invocation_id"] = caught.invocation_id
             self.wfile.write(json.dumps(reply).encode() + b"\n")
 
     class Server(socketserver.ThreadingUnixStreamServer):
