@@ -19,11 +19,11 @@ doc = "Kind-prefixed term, e.g. protein:PHF19."
 [inputs.layer]
 type = "string"
 required = true
-doc = "A claim layer the plan names, e.g. causal."
+doc = "A claim layer the corpus's contract plan names, e.g. causal; a layer outside the plan refuses naming the plan's layers."
 [inputs.polarity]
 type = "string"
 required = true
-doc = "A polarity the plan names, e.g. positive."
+doc = "A polarity the corpus's contract plan names, e.g. positive; a polarity outside the plan refuses naming the plan's polarities."
 [inputs.slug]
 type = "string"
 required = false

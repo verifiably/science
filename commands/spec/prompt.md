@@ -11,6 +11,6 @@ and held records determine frozen identities and dependencies. Missing scientifi
 facts or prerequisites refuse; never infer them or create records automatically.
 
 Give method, assumptions and falsification in the user's words, and the shipped
-interpretation/equivalence rule identities. Parameters are name=value decimals.
+interpretation/equivalence rule identities their input docs name. Parameters are name=value decimals.
 Applicability accepts dimension=quantifier:term only for declared applicability
 term restrictions. A frozen spec can only be superseded.
