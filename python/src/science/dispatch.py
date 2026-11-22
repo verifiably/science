@@ -122,17 +122,17 @@ class Dispatcher:
                 raise Refused(Refusal("invalid-input", "invocation_id outside its grammar"))
             if type(command) is not str:
                 raise Refused(Refusal("invalid-input", "command must be a string"))
+            decl = None
+            if cursor is None:
+                decl = self._decls.get(command)
+                if decl is None:
+                    raise Refused(Refusal("unknown-command", f"no command {command!r}"))
             if not isinstance(inputs, Mapping):
                 raise Refused(Refusal("invalid-input", "inputs must be a mapping"))
             if self._run_inputs is not None:
                 from science.run_endpoint.policy import admit
                 self._run_inputs.check()
                 admit(command, inputs)
-            decl = None
-            if cursor is None:
-                decl = self._decls.get(command)
-                if decl is None:
-                    raise Refused(Refusal("unknown-command", f"no command {command!r}"))
             if cursor is not None:
                 return self._continue(command, inputs, decode(cursor), iid, project)
             assert decl is not None
