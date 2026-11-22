@@ -189,10 +189,14 @@ class SharingRegistry:
 
     def _read_all(self, directory: str, parse) -> list:
         folder = self._root / directory
-        if not folder.is_dir():
+        try:
+            entries = os.scandir(folder)
+        except FileNotFoundError:
             return []
+        with entries:
+            paths = sorted(folder / entry.name for entry in entries if entry.name.endswith(".json"))
         found = []
-        for path in sorted(folder.glob("*.json")):
+        for path in paths:
             entry = f"{directory}/{path.name}"
             try:
                 found.append(parse(json.loads(path.read_text())))

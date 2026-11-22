@@ -224,8 +224,14 @@ Handle.from_env(os.environ).invoke("derive", json.loads(sys.argv[1]), invocation
             poll = select.poll()
             for fd in fds:
                 poll.register(fd, select.POLLIN)
+            # Numeric discovery precedes pinning. Recheck the marked child, its
+            # immediate parent and the path back to our still-live endpoint.
+            # Only descriptors verified across this observation may receive a signal.
+            assert endpoint.poll() is None
+            assert (pid, parent) in set(_descendants(endpoint.pid))
+            assert marker in Path(f"/proc/{pid}/cmdline").read_bytes().split(b"\0")
+            assert not poll.poll(0)
             try:
-                assert not poll.poll(0)
                 endpoint.kill()
                 endpoint.wait(timeout=5)
                 deadline = time.monotonic() + 5

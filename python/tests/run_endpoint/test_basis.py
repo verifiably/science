@@ -95,3 +95,25 @@ def test_basis_tracks_provider_confirmation_and_verifiers_across_an_ordinary_min
     assert seal_basis(opened, config) not in (None, opened.digest)
     (config.sharing_root / "providers" / f"{world}.json").write_text("{")
     assert seal_basis(opened, config) is None
+
+
+def test_registry_enumeration_failure_refuses_open_and_preserves_null_seal(certified_work, monkeypatch):
+    import os
+    from science.refusal import Refused
+    from science.run_endpoint.basis import open_basis, seal_basis
+
+    cfg = replace(build_fixture_world(certified_work), sharing_root=certified_work / "sharing")
+    folder = cfg.sharing_root / "providers"
+    opened = open_basis(cfg)  # No optional registry directories yet.
+    folder.mkdir(parents=True)
+    scan = os.scandir
+
+    def denied(path):
+        if path == folder or path == str(folder):
+            raise PermissionError("cannot enumerate providers")
+        return scan(path)
+
+    monkeypatch.setattr(os, "scandir", denied)
+    assert seal_basis(opened, cfg) is None
+    with pytest.raises(Refused, match="enumerate providers"):
+        open_basis(cfg)
