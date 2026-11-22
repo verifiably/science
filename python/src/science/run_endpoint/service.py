@@ -15,6 +15,7 @@ import tempfile
 
 from beliefs.errors import SealTimeout, ScienceError
 
+from science.config import ReadContext
 from science.dispatch import Dispatcher
 from science.loader import production_tree, resolve_handlers
 from science.refusal import Refusal, Refused
@@ -305,7 +306,7 @@ def _shutdown(launch, opened, actors, control, cause, clock):
         return 1
 
 
-def serve_run(launch, *, open_context, clock=time.monotonic):
+def serve_run(launch, *, clock=time.monotonic):
     """Run in the endpoint process's main thread; return its exit status."""
     if os.path.lexists(launch.run_dir / "seal.json"):
         raise Refused(Refusal("invalid-input", "This run directory already contains a seal"))
@@ -319,7 +320,7 @@ def serve_run(launch, *, open_context, clock=time.monotonic):
         server = resources.enter_context(_listener(launch.socket))
         declarations = production_tree()
         handlers = resolve_handlers(declarations)
-        ctx = open_context(launch.config)
+        ctx = ReadContext.open_detached(launch.config)
         can_execute = drain.can_control_jobs()
         opened = open_run(launch)
         expires = clock() + launch.lease_seconds

@@ -100,8 +100,7 @@ def test_service_closes_ledger_after_persisting_seal(launch_file, cause):
         peer = threading.Thread(target=supervise)
         peer.start()
         try:
-            from science.config import ReadContext
-            result = serve_run(read_launch(source), open_context=ReadContext.open)
+            result = serve_run(read_launch(source))
         finally:
             peer.join(25)
     assert not peer.is_alive()
@@ -221,7 +220,6 @@ def test_lease_expires_with_an_incomplete_control_frame(launch_file):
     import socket
     import threading
     from pathlib import Path
-    from science.config import ReadContext
     from science.run_endpoint.launch import read_launch
     from science.run_endpoint.service import serve_run
 
@@ -249,7 +247,7 @@ def test_lease_expires_with_an_incomplete_control_frame(launch_file):
         peer = threading.Thread(target=renew)
         peer.start()
         try:
-            assert serve_run(read_launch(source), open_context=ReadContext.open, clock=lambda: now[0]) == 0
+            assert serve_run(read_launch(source), clock=lambda: now[0]) == 0
         finally:
             peer.join(12)
     assert [r["type"] for r in replies] == ["open", "renewed", "sealed"]
