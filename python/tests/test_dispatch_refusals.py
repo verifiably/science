@@ -88,7 +88,7 @@ def test_a_kernel_refusal_after_an_act_closes_done_and_is_an_internal_error(rig)
     assert "proposition:twice" in out.text
 
 
-def _refusing_boundary_call(writer, scratch_base: Path):
+def _refusing_boundary_call(writer, work: Path, *, held=True, kernel_staging=False):
     from beliefs.boundary import execute_production_run
     from beliefs.recipe import CONFINED_POLICY, RecipeInput
     dataset = "dataset:sha256:" + "0" * 64
@@ -99,16 +99,57 @@ def _refusing_boundary_call(writer, scratch_base: Path):
         parameters={},
         nondeterminism=None,  # type: ignore[arg-type] — refuses on missing code root before nondeterminism
         definition=None,  # type: ignore[arg-type]
-        code_roots=(scratch_base / "missing-bundle",),
-        held_inputs={dataset: scratch_base},
+        code_roots=(work / "missing-bundle",),
+        held_inputs={dataset: work} if held else {},
         entrypoint="workflow/Snakefile",
         targets=(),
         declared_outputs=(),
         observer=writer.actor,
         started_at="2026-09-09T00:00:00Z",
         host_realization="linux-x86_64",
-        scratch_base=scratch_base / "scratch",
+        scratch_base=None if kernel_staging else work / "scratch",
     )
+
+
+@pytest.mark.parametrize("run", [False, True], ids=["attended", "run-session"])
+def test_unheld_run_input_closes_refused_without_recording_an_act(certified_work, run):
+    from beliefs.permit import WritePermit
+    from beliefs.session import KernelRefusalValue, open_run_session, reconcile_sessions
+    from science.config import ReadContext
+    from science.session import open_session
+
+    kinds = ("run", "dataset", "act-report")
+    writes = WriteClass("mints", kinds, {"run": "run", "dataset": "corpus-write", "act-report": "run"})
+    command = Declaration("unheld", "fixture", writes, MIN_OUTPUT_BUDGET, (), (), Path("."))
+
+    def handler(ctx, writer):
+        outcome = _refusing_boundary_call(writer, certified_work, held=False, kernel_staging=run)
+        assert outcome.reason == "input-not-held"
+        assert outcome.report is None and outcome.intent is None and outcome.registration is None
+        raise KernelRefusalValue(outcome)
+
+    cfg = build_fixture_world(certified_work)
+    if run:
+        session = open_run_session(
+            cfg.world, cfg.operations_root, write_root=cfg.write_root, profile=cfg.profile,
+            ceiling=WritePermit(frozenset(kinds), frozenset({"run", "corpus-write"})),
+        )
+    else:
+        session = open_session(cfg)
+    iid = "unheld-run"
+    try:
+        dispatcher = Dispatcher((command,), {"unheld": handler}, ReadContext.open(cfg), session=session)
+        with pytest.raises(Refused) as first:
+            dispatcher.invoke("unheld", {}, invocation_id=iid)
+        assert first.value.refusal.code == "kernel-refused"
+        assert first.value.refusal.data == {"kind": "RunRefused", "reason": "input-not-held"}
+        assert session.invocation_acts(iid) == ()
+        with pytest.raises(Refused) as replay:
+            dispatcher.invoke("unheld", {}, invocation_id=iid)
+        assert replay.value.refusal == first.value.refusal
+    finally:
+        session.close()
+    assert reconcile_sessions(cfg.world, cfg.operations_root) == ()
 
 
 def test_a_boundary_refusal_recording_only_an_act_report_closes_refused_and_replays(certified_work):
