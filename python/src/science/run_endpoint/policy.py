@@ -4,7 +4,7 @@ from science.refusal import Refusal, Refused
 ORDINARY = frozenset({
     "assess", "belief", "claim", "decide", "heads", "hypothesis", "log", "next", "note",
     "project", "projects", "project-select", "project-show", "question", "recheck", "record",
-    "reuse", "revise", "source", "source-assertion", "source-coreference", "source-correct",
+    "reuse", "revise", "run-output", "source", "source-assertion", "source-coreference", "source-correct",
     "status", "task", "topic",
 })
 CONFINED = frozenset({"dataset", "derive", "fetch", "run", "spec"})

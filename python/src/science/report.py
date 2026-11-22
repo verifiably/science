@@ -48,10 +48,41 @@ def _recheck_entry(entry) -> str:
     raise RuntimeError(f"a re-check report entry carries outcome type {outcome['type']!r}")
 
 
-def _detail(node) -> tuple[str, ...]:
-    """What the kernel observed, read from the stored record: a holdings
-    observation's outcome and a re-check report's entries."""
+def _assessment_detail(node) -> tuple[str, ...]:
     from beliefs import stored
+    from beliefs.errors import MalformedRecord
+    facet = node.facets.get(stored.ASSESSMENT_FACET)
+    if not isinstance(facet, dict) or type(facet.get("outcome")) is not str or not facet["outcome"]:
+        raise MalformedRecord(f"{node.id}: assessment record carries no outcome")
+    return (f"outcome: {facet['outcome']}",)
+
+
+def _verification_detail(node) -> tuple[str, ...]:
+    from beliefs import stored
+    value = stored.verification_value(node)
+    return (f"scope: {value.scope}", f"verdict: {value.verdict}")
+
+
+def _run_detail(node) -> tuple[str, ...]:
+    from beliefs import stored
+    from beliefs.runrecord import decode_run_closure
+    if stored.RUN_CLOSURE_FACET not in node.facets:
+        return ()
+    closure = decode_run_closure(node)
+    return tuple(f"output: {name} {digest}" for name, digest in closure.result.outputs)
+
+
+def _detail(node) -> tuple[str, ...]:
+    """What the kernel observed, read from the stored record: an assessment's
+    outcome, a verification's scope and verdict, a run's result manifest, a
+    holdings observation's outcome, and a re-check report's entries."""
+    from beliefs import stored
+    if node.kind == "assessment":
+        return _assessment_detail(node)
+    if node.kind == "verification":
+        return _verification_detail(node)
+    if node.kind == "run":
+        return _run_detail(node)
     if node.kind == "holdings-observation":
         return _observation_detail(node)
     if node.kind == "act-report":

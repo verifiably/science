@@ -57,7 +57,7 @@ provides the same command dispatcher over stdio. See [sessions](docs/sessions.md
 
 The command surface is recorded in `tools/cli.toml`:
 
-- Analysis: `dataset`, `claim`, `spec`, `run`, `assess`, `verify`, `belief`, `next`, `recheck`.
+- Analysis: `dataset`, `claim`, `spec`, `run`, `run-output`, `assess`, `verify`, `belief`, `next`, `recheck`.
 - Coordination: `project`, `question`, `hypothesis`, `task`, `decide`, `note`, `topic`, `revise`,
   `reuse`, `project-select`, `projects`, `project-show` (including topics and notes).
 - Published works: `source`, deduplicated across live corpora by shared identifier;

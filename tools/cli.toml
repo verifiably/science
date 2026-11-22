@@ -679,6 +679,8 @@ options = [
   { names = ["--clipboard"], value = "none" },
   { names = ["--name"], value = "string" },
   { names = ["--multipart"], value = "none" },
+  { names = ["--note"], value = "string", repeatable = true },
+  { names = ["--stamp"], value = "none" },
 ]
 
 [[cli.tasks.commands]]
@@ -1573,6 +1575,8 @@ options = [
   { names = ["--in"], value = "string", repeatable = true },
   { names = ["--domain"], value = "string" },
   { names = ["--organism"], value = "string" },
+  { names = ["--during"], value = "string" },
+  { names = ["--at"], value = "string" },
   { names = ["--exact"], value = "none" },
   { names = ["--native"], value = "string" },
   { names = ["--allow-partial"], value = "none" },
@@ -1814,6 +1818,17 @@ options = [
   { names = ["--entrypoint"], value = "string", required = true },
   { names = ["--spec"], value = "string", required = true },
   { names = ["--targets"], value = "string", repeatable = true, required = true },
+]
+
+[[cli.science.commands]]
+path = ["run-output"]
+summary = "Read one declared output of a run from operations scratch after verifying its manifest digest"
+options = [
+  { shared = "config", value = "path" },
+  { names = ["--invocation-id"], value = "string" },
+  { names = ["--continue"], value = "string" },
+  { names = ["--output"], value = "string", required = true },
+  { names = ["--run"], value = "string", required = true },
 ]
 
 [[cli.science.commands]]

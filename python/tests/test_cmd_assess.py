@@ -23,6 +23,7 @@ def test_assess_mints_the_assessment_the_outcome_file_fixes(rig):
     d, ctx, run_ref = rig
     out = d.invoke("assess", {"run": run_ref})
     assert "[assessment] assessment:" in out.text
+    assert "\noutcome: supported\n" in out.text
     view = ctx.write_view()
     from beliefs import stored
     node = next(n for n in view.iter_stored() if n.kind == "assessment")

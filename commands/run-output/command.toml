@@ -1,0 +1,17 @@
+schema_version = 1
+name = "run-output"
+purpose = "Read one declared output of a run from operations scratch after verifying its manifest digest."
+write_class = "read-only"
+output_budget = 16384
+
+[inputs.run]
+type = "string"
+required = true
+doc = "The run ref."
+[inputs.output]
+type = "string"
+required = true
+doc = "The logical output path declared in the run's result manifest."
+
+[reads]
+families = ["corpus-stored"]

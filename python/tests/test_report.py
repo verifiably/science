@@ -135,3 +135,58 @@ def test_four_argument_record_block_still_constructs():
 def test_detail_lines_follow_the_title():
     block = RecordBlock("u", "i", "k", "t", ("one", "two"))
     assert serialize_block(block) == "[k] i uid=u\nt\none\ntwo\n"
+
+
+def test_assessment_verification_and_run_record_blocks_carry_their_minted_details(certified_work):
+    from beliefs import stored
+    from beliefs.errors import MalformedRecord
+    from beliefs.runrecord import decode_run_closure
+    from helpers.analysis import spec_inputs
+    from helpers.world import OBSERVED, build_belief_world, fixture_bundle, hold_fixture_dataset, mint_fixture_run, open_rig
+
+    cfg = build_belief_world(certified_work)
+    ref = hold_fixture_dataset(cfg, "data.txt", b"x\n", "expression", **OBSERVED)
+    bundle = fixture_bundle(certified_work, "inconclusive")
+    code, entrypoint, _ = bundle
+    with open_rig(cfg, ("spec",)) as (d, _):
+        spec_ref = next(
+            t for t in d.invoke("spec", spec_inputs(cfg, target="proposition:p1", dataset=ref)).text.split()
+            if t.startswith("analysis-spec:")
+        )
+    run_ref = mint_fixture_run(cfg, spec_ref, ref, bundle)
+    with open_rig(cfg, ("assess", "verify")) as (d, ctx):
+        assess_out = d.invoke("assess", {"run": run_ref})
+        assessment_ref = next(t for t in assess_out.text.split() if t.startswith("assessment:"))
+        verify_out = d.invoke("verify", {"assessment": assessment_ref, "code": str(code), "entrypoint": entrypoint})
+        verification_ref = next(t for t in verify_out.text.split() if t.startswith("verification:"))
+        view = ctx.write_view()
+
+        run_node = view.get(run_ref)
+        closure = decode_run_closure(run_node)
+        expected_outputs = tuple(f"output: {name} {digest}" for name, digest in closure.result.outputs)
+        assert record_block(run_node).detail == expected_outputs
+        assert expected_outputs
+
+        assessment_node = view.get(assessment_ref)
+        assert record_block(assessment_node).detail == ("outcome: inconclusive",)
+        assert "outcome: inconclusive\n" in assess_out.text
+
+        verification_node = view.get(verification_ref)
+        facet = verification_node.facets["verification"]
+        assert record_block(verification_node).detail == (
+            f"scope: {facet['scope']}",
+            f"verdict: {facet['verdict']}",
+        )
+        assert f"scope: {facet['scope']}\n" in verify_out.text
+        assert f"verdict: {facet['verdict']}\n" in verify_out.text
+
+        # Non-closure run node carries no manifest detail.
+        bare_run = SimpleNamespace(uid="u" * 32, id="run:bare", kind="run", title="bare", facets={})
+        assert record_block(bare_run).detail == ()
+
+        # Malformed assessment node fails early.
+        bad_assessment = SimpleNamespace(
+            uid="u" * 32, id="assessment:bad", kind="assessment", title="bad", facets={stored.ASSESSMENT_FACET: {}}
+        )
+        with pytest.raises(MalformedRecord):
+            record_block(bad_assessment)

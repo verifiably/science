@@ -23,13 +23,18 @@ def rig(certified_work, monkeypatch):
 
 
 def test_run_mints_one_run_record(rig, certified_work):
+    from beliefs.runrecord import decode_run_closure
+
     d, ctx, spec_ref, ref = rig
     code, entrypoint, targets = fixture_bundle(certified_work)
     out = d.invoke("run", {"spec": spec_ref, "dataset": ref, "code": str(code),
                            "entrypoint": entrypoint, "targets": list(targets)})
     assert "[run] run:" in out.text
     view = ctx.write_view()
-    assert sum(1 for n in view.iter_stored() if n.kind == "run") == 1
+    (node,) = [n for n in view.iter_stored() if n.kind == "run"]
+    closure = decode_run_closure(node)
+    for name, digest in closure.result.outputs:
+        assert f"\noutput: {name} {digest}\n" in out.text
 
 
 def test_run_refuses_without_bubblewrap_before_any_act(certified_work, monkeypatch):

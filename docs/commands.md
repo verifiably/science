@@ -226,11 +226,21 @@ Exact current inputs, defaults and prompts are the public files under
   multi-resource dataset packages stage under `inputs/<resource.name>`. Host
   confinement prerequisites and staged-path collisions are checked before the run
   act. The kernel captures the recipe, environment, inputs, outputs and closure;
-  refusal evidence is retained.
+  refusal evidence is retained. Its minted run block renders the result manifest
+  (declared output names and SHA-256 digests).
+- `run-output` reads one declared output of a `run` record from local operations
+  scratch (`--run`, `--output`), confined under `operations_root/scratch` without
+  following symlinks. Before rendering, it hashes the file bytes and requires exact
+  agreement with the run's result manifest digest. The reply prints the run ref,
+  output path, verified digest and byte count ahead of the UTF-8 content, paged
+  within its output budget; missing or reclaimed scratch copies, paths outside
+  operations scratch, and digest mismatches refuse `read-unavailable`, while unknown
+  outputs and non-UTF-8 content refuse `invalid-input`.
 - `assess` restores the run's frozen spec and interpretation rule; the caller cannot
   choose a new outcome or target after seeing the result. It persists the exact
   derived target, named estimates, uncertainty and curves, with a full native
-  assessment identity address. The run's observed
+  assessment identity address, and its minted assessment block renders the derived
+  outcome. The run's observed
   dataset needs empirical standing: an acquired dataset carries it directly, and a
   `derive` package inherits it through a complete, undiverged `lineage-basis`
   chain to an acquired ancestor (the kernel's rule is in beliefs'
@@ -239,7 +249,8 @@ Exact current inputs, defaults and prompts are the public files under
   (replaying a dataset-production run), resolves the original equivalence
   implementation (`REFERENCE_RULES` or `DATASET_CONTENT_EQUALITY`) before replay,
   uses the original targets, rereads stored run closures, derives scope and mints
-  comparison evidence. Supplied code/environment must match the captured recipe;
+  comparison evidence; its reply renders the replayed run's result manifest and
+  the verification's scope and verdict. Supplied code/environment must match the captured recipe;
   no publication marker supplies the workspace checkout for you. Execution
   materials are obtained separately.
 - `belief` evaluates one accepted, unretracted assessed target key. `--key` is

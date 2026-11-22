@@ -29,6 +29,9 @@ def test_verify_mints_a_verification_naming_the_assessment_and_both_runs(rig):
     node = next(n for n in view.iter_stored() if n.kind == "verification")
     facet = node.facets["verification"]
     assert facet["verdict"] == "passed"
+    assert f"\nscope: {facet['scope']}\n" in out.text
+    assert "\nverdict: passed\n" in out.text
+    assert "\noutput: outputs/outcome.txt sha256:" in out.text
     assert facet["derivation"]["original"] != facet["derivation"]["replayed"]
     assert sum(1 for n in view.iter_stored() if n.kind == "run") == 2
     assert any(r.target == assessment_ref for r in node.relations)
