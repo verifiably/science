@@ -19,6 +19,7 @@ from beliefs.holdings.records import StoreLocator
 from beliefs.recipe import CONFINED_POLICY, RecipeInput
 from beliefs.runrecord import run_ref
 from beliefs.session import KernelRefusalValue
+from beliefs.session.routes import run_staging_of
 from beliefs.spec import Deterministic
 
 from science.commands.run import _check_staged_collisions, _stage_binding_for, now
@@ -127,13 +128,14 @@ def handle(
 
     _check_staged_collisions(held_inputs)
 
-    scratch_base = ctx.config.operations_root / "scratch" / writer.invocation_id
+    port = writer.operation_port()
+    scratch_base = None if run_staging_of(port) is not None else ctx.config.operations_root / "scratch" / writer.invocation_id
     ctx.config.operations_root.mkdir(parents=True, exist_ok=True)
     export_dir = Path(tempfile.mkdtemp(prefix="export-", dir=ctx.config.operations_root))
     try:
         outcome = execute_production_run(
             inputs=tuple(recipe_inputs),
-            port=writer.operation_port(),
+            port=port,
             boundary_policy=POLICY,
             expected_inputs=expected_inputs,
             parameters=parsed_params,

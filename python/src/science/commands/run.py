@@ -15,6 +15,7 @@ from beliefs.errors import MalformedRecord
 from beliefs.recipe import CONFINED_POLICY
 from beliefs.runrecord import run_ref
 from beliefs.session import KernelRefusalValue
+from beliefs.session.routes import run_staging_of
 
 from science.holdings import dataset_at
 from science.refusal import Refusal, Refused
@@ -126,9 +127,11 @@ def handle(ctx, writer, *, spec, dataset, code, entrypoint, targets, cores=None)
     if reason is not None:
         _refuse(f"confinement is unavailable on this host: {reason}")
     prepared = prepare(ctx, spec, dataset, code, entrypoint, targets)
+    port = writer.operation_port()
+    scratch_base = None if run_staging_of(port) is not None else ctx.config.operations_root / "scratch" / writer.invocation_id
     outcome = execute_assessment_run(
-        port=writer.operation_port(), boundary_policy=POLICY, observer=writer.actor,
-        started_at=now(), scratch_base=ctx.config.operations_root / "scratch" / writer.invocation_id,
+        port=port, boundary_policy=POLICY, observer=writer.actor,
+        started_at=now(), scratch_base=scratch_base,
         cores=cores or 1, **prepared,
     )
     if isinstance(outcome, RunRefused):

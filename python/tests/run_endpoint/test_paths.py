@@ -190,3 +190,20 @@ def test_dispatch_claim_precedes_capture_and_replay_preserves_original_input_dig
             session.close_invocation("open", {"done": []})
     finally:
         session.close()
+
+
+def test_scratch_descriptor_refuses_an_input_on_a_nested_mount(tmp_path):
+    import os
+    import tempfile
+    from science.run_endpoint.paths import Scratch
+
+    device_root = Path("/dev")
+    shared_memory = device_root / "shm"
+    if not shared_memory.is_mount() or not os.access(shared_memory, os.W_OK):
+        pytest.skip("requires a writable shm mount under /dev")
+    with tempfile.NamedTemporaryFile(dir=shared_memory) as source:
+        with Scratch(device_root, tmp_path, threading.Event()) as confined:
+            with pytest.raises(Refused, match="path-outside-run"):
+                with confined.prepare("fetch", "mount-check", {"source": source.name}):
+                    pytest.fail("cross-mount input admitted")
+        assert not (tmp_path / "capture/mount-check").exists()
