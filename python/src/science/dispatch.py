@@ -66,13 +66,15 @@ class SessionPort:
 
 class Dispatcher:
     def __init__(
-        self, declarations, handlers: Mapping[str, Callable], read_context, session=None, selection=None, *, run_inputs=None
+        self, declarations, handlers: Mapping[str, Callable], read_context, session=None, selection=None, *,
+        run_inputs=None, on_invocation_close=None
     ) -> None:
         self._decls = {decl.name: decl for decl in declarations}
         self._handlers = dict(handlers)
         self._ctx = read_context
         self._session = session
         self._run_inputs = run_inputs
+        self._on_invocation_close = on_invocation_close
         self._selection = selection
         self._lock = threading.Lock()  # serializes write-class steps 4-7
 
@@ -258,6 +260,8 @@ class Dispatcher:
                 prepared = (self._run_inputs.prepare(decl.name, iid, canonical)
                             if self._run_inputs is not None else nullcontext(canonical))
                 with prepared as inputs:
+                    if self._run_inputs is not None and decl.name in ("run", "derive"):
+                        self._run_inputs.retain_staging(writer)
                     report = self._handlers[decl.name](self._context(), writer, **inputs)
             except SessionSealed as caught:
                 self._close_sealed(iid, caught)
@@ -293,7 +297,7 @@ class Dispatcher:
                 # Close FIRST in every case: the ledger records act truth, and
                 # the acts committed whether or not the report survives audit.
                 # The ledger's outcome shape is `[uid, id]` lists, not tuples.
-                self._session.close_invocation(
+                self._close_invocation(
                     iid, {"done": [list(pair) for pair in sorted(minted)]}
                 )
             # An AuditViolation has propagated past the close above as an
@@ -307,12 +311,17 @@ class Dispatcher:
                 self._render_write(decl.output_budget, canonical_report, iid, (0, 0)), iid
             )
 
+    def _close_invocation(self, iid, outcome):
+        self._session.close_invocation(iid, outcome)
+        if self._on_invocation_close is not None:
+            self._on_invocation_close()
+
     def _close_sealed(self, iid, error):
         refusal = Refusal("run-sealed", "The run session was sealed")
         acts = self._session.invocation_acts(iid)
         if acts or self._session.invocation_selection(iid):
             pairs = sorted({tuple(pair) for act in acts for pair in act.record_ids})
-            self._session.close_invocation(iid, {"done": [list(pair) for pair in pairs]})
+            self._close_invocation(iid, {"done": [list(pair) for pair in pairs]})
             raise Refused(refusal, iid) from error
         self._close_refused(iid, refusal)
 
@@ -321,7 +330,7 @@ class Dispatcher:
         committed, so it closes `done` with their pairs, and the handler is the
         defect `message` names."""
         minted = frozenset(tuple(pair) for act in acted for pair in act.record_ids)
-        self._session.close_invocation(iid, {"done": [list(pair) for pair in sorted(minted)]})
+        self._close_invocation(iid, {"done": [list(pair) for pair in sorted(minted)]})
         return HandlerContractViolation(message)
 
     def _invoke_sharing(self, decl: Declaration, canonical: Mapping[str, object], iid: str) -> Outcome:
@@ -369,7 +378,7 @@ class Dispatcher:
             finally:
                 # Close first in every case, as a write does: the lines are
                 # truth whether or not the report survives its audit.
-                self._session.close_invocation(iid, {"done": []})
+                self._close_invocation(iid, {"done": []})
             return Outcome(self._render_write(decl.output_budget, self._pin_report(lines) + report, iid, (0, 0)), iid)
 
     @staticmethod
@@ -421,7 +430,7 @@ class Dispatcher:
                     return self._close_refused(iid, refusal)
                 # A recorded selection is truth, even if the handler then
                 # refuses or breaks the kernel's one-selection protocol.
-                self._session.close_invocation(iid, {"done": []})
+                self._close_invocation(iid, {"done": []})
                 raise HandlerContractViolation(
                     f"{decl.name} failed after selecting: {caught}; "
                     "a session handler validates first and selects exactly once"
@@ -435,7 +444,7 @@ class Dispatcher:
             finally:
                 # Close first in every case, as a write does: the ledger records
                 # what happened whether or not the report survives its audit.
-                self._session.close_invocation(iid, {"done": []})
+                self._close_invocation(iid, {"done": []})
             return Outcome(
                 self._render_write(decl.output_budget, self._selection_report(line), iid, (0, 0)), iid)
 
@@ -462,7 +471,7 @@ class Dispatcher:
     def _close_refused(self, iid: str, refusal: Refusal) -> Outcome:
         from science.refusal import envelope
 
-        self._session.close_invocation(iid, {"refusal": envelope(refusal)})
+        self._close_invocation(iid, {"refusal": envelope(refusal)})
         raise Refused(refusal, iid)
 
     def _render_write(

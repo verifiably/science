@@ -89,3 +89,21 @@ def can_control_jobs() -> bool:
             return killed and probe.wait() == -signal.SIGKILL
     except OSError:
         return False
+
+
+def sweep_children() -> None:
+    for child in children():
+        kill_child(child)
+
+
+def drain_workers(done, sweep, deadline, *, clock, wait):
+    """Keep a fresh child sweep scheduled for the whole ledger drain."""
+    while True:
+        sweep()
+        if done():
+            sweep()
+            return True
+        remaining = deadline - clock()
+        if remaining <= 0:
+            return False
+        wait(min(0.05, remaining))

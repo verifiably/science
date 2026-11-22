@@ -9,6 +9,8 @@ import shutil
 import stat
 
 from atoms.fs.syscalls import linux
+from beliefs.errors import ConfinementNotEstablished
+from beliefs.session.routes import run_staging_of
 from science.refusal import INVOCATION_ID_RE, Refusal, Refused
 
 _RESOLVE = linux.RESOLVE_BENEATH | linux.RESOLVE_NO_XDEV | linux.RESOLVE_NO_MAGICLINKS | linux.RESOLVE_NO_SYMLINKS
@@ -46,6 +48,12 @@ def _identity(info):
     return info.st_dev, info.st_ino
 
 
+def _remove_owned(parent, name, directory):
+    if _identity(os.fstat(directory)) != _identity(os.stat(name, dir_fd=parent, follow_symlinks=False)):
+        raise OSError("Private directory identity changed")
+    shutil.rmtree(name, dir_fd=parent)
+
+
 class Scratch:
     def __init__(self, root: Path, operations: Path, cancelled):
         self.root = root
@@ -53,12 +61,58 @@ class Scratch:
         self.cancelled = cancelled
         self.fd = os.open(root, os.O_PATH | _DIRECTORY)
         self.owned = {}
+        self.staging = None
+        self.quiescent = True
 
     def __enter__(self):
         return self
 
     def __exit__(self, *exc):
-        os.close(self.fd)
+        if self.quiescent:
+            self.cleanup()
+
+    def cleanup(self):
+        try:
+            for iid in tuple(self.owned):
+                self.remove(iid)
+            if self.staging is not None:
+                path, parent, directory = self.staging
+                _remove_owned(parent, path.name, directory)
+        finally:
+            if self.staging is not None:
+                _, parent, directory = self.staging
+                os.close(directory)
+                os.close(parent)
+                self.staging = None
+            for parent, directory in self.owned.values():
+                os.close(directory)
+                os.close(parent)
+            self.owned.clear()
+            os.close(self.fd)
+
+    def retain_staging(self, writer):
+        """Keep the session inode whose exclusive creation the kernel verified."""
+        binding = run_staging_of(writer.operation_port())
+        if binding is None:
+            raise Refused(Refusal("confinement-unavailable", "A captured job requires a run session"))
+        staging, iid = binding
+        try:
+            session_dir = staging.invocation_dir(iid).parent
+            if self.staging is None:
+                parent = os.open(session_dir.parent, os.O_RDONLY | _DIRECTORY)
+                try:
+                    directory = os.open(session_dir.name, os.O_RDONLY | _DIRECTORY, dir_fd=parent)
+                    try:
+                        staging.invocation_dir(iid)  # recheck the kernel anchors after opening our inode
+                    except BaseException:
+                        os.close(directory)
+                        raise
+                except BaseException:
+                    os.close(parent)
+                    raise
+                self.staging = session_dir, parent, directory
+        except (ConfinementNotEstablished, OSError) as error:
+            raise Refused(Refusal("confinement-unavailable", str(error))) from error
 
     def check(self):
         if self.cancelled.is_set():
@@ -89,9 +143,7 @@ class Scratch:
         if owner is None:
             return
         parent, directory = owner
-        if _identity(os.fstat(directory)) != _identity(os.stat(iid, dir_fd=parent, follow_symlinks=False)):
-            raise OSError("Capture directory identity changed")
-        shutil.rmtree(iid, dir_fd=parent)
+        _remove_owned(parent, iid, directory)
         del self.owned[iid]
         os.close(directory)
         os.close(parent)

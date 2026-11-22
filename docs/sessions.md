@@ -162,3 +162,25 @@ Launchers emit session-reconciliation findings as structured stderr lines at
 startup. These are distinct from command refusal metadata; an unfinished intent
 or unverified act needs investigation, not deletion of its ledger. A stop signal
 during open/bind is held until session/socket cleanup owns the new resources.
+
+### Reclaiming a stopped run's private directories
+
+A run endpoint owns the kernel staging directory at
+`<operations_root>/scratch/<session_id>` and each invocation directory it
+created under `<operations_root>/capture/`. The endpoint reclaims these after
+their users stop. A timeout or abrupt process exit can leave either directory.
+An existing capture reserves its invocation ID until the directory is reclaimed.
+
+1. Exclude new launches for this operations root. Stop all endpoints using it
+   and verify with their supervisors that the endpoint processes, request workers
+   and sandbox jobs have exited. A seal file appearing on disk is insufficient.
+2. Inspect the private supervisor logs and session ledgers. Match a staging
+   directory to its session ID and a capture directory to an invocation. A
+   forced exit can leave an orphan without a final log line. Reclaim it only
+   after establishing that the operations root is idle and its owner has gone.
+3. Remove the identified session staging directories and whole orphan invocation
+   capture directories individually. Preserve session ledgers, seal evidence,
+   other sessions' data and the shared `scratch/environments` cache. Leave a
+   directory with uncertain ownership in place for investigation.
+4. Resume launches. A new session can now claim a formerly orphaned invocation
+   ID. Retries within the original session still follow its ledger.
