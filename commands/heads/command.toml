@@ -1,0 +1,14 @@
+schema_version = 1
+name = "heads"
+purpose = "Read the world head, chain tips and pending registrations"
+write_class = "read-only"
+output_budget = 16384
+
+[inputs.resolve]
+type = "bool"
+required = false
+default = false
+doc = "Recover configured chains before reporting their remaining pending registrations."
+
+[reads]
+families = ["chain"]

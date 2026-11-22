@@ -9,6 +9,8 @@ from beliefs.after import AfterUnavailable, read_after
 from beliefs.errors import ScienceError
 from beliefs.intents.shapes import Unrecognized, decode_intent
 from beliefs.root import AtomsError, log_seam
+from beliefs.world.anchors import parse_world_genesis
+from beliefs.world.registry import _load_world_mirror
 from beliefs.world.logmodel import IntentEntryView, RegisteredEntryView, SettledEntryView, WellFormedView
 
 from science.config import configured_stores, corpus_id_at
@@ -45,16 +47,33 @@ def _line(row):
     return Text(json.dumps(row, sort_keys=True, ensure_ascii=False, separators=(",", ":")))
 
 
+def _world(config, *, resolve=False):
+    root = config.world.world_root
+    view = _view(root, False)
+    try:
+        identity = parse_world_genesis(view.genesis.payload)
+    except ValueError as error:
+        raise Refused(Refusal("read-unavailable", f"{root}: malformed world genesis")) from error
+    if identity != config.world.world_id or _load_world_mirror(root) != identity:
+        raise Refused(Refusal("read-unavailable", f"{root}: world genesis, mirror and configuration must agree"))
+    if resolve:
+        recovered = _view(root, True)
+        if recovered.genesis != view.genesis:
+            raise Refused(Refusal("read-unavailable", f"{root}: world genesis changed during recovery"))
+        return recovered
+    return view
+
+
 def heads(config, *, resolve):
     try:
-        world = _view(config.world.world_root, resolve)
+        world = _world(config, resolve=resolve)
         chains = []
         for chain in _chains(config):
             view = _view(chain.root, resolve)
             chains.append(dict(chain.header(view.genesis.digest), tip=view.tip, pending=sorted(view.pending)))
     except (OSError, AtomsError, ScienceError) as error:
         raise Refused(Refusal("read-unavailable", str(error))) from error
-    return (_line({"version": "heads.v1", "world_head": world.tip,
+    return (_line({"version": "heads.v1", "world_head": world.tip, "world_genesis": world.genesis.digest,
                    "world_pending": sorted(world.pending), "chains": chains}),)
 
 
@@ -92,6 +111,7 @@ def _entry(entry):
 
 def chain_log(config, *, chain, after, through):
     try:
+        _world(config)
         registered = _chains(config)
         if chain == "store":
             matches = [c for c in registered if c.role == "store" and c.root == config.store_root]

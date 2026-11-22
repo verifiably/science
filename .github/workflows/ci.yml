@@ -52,6 +52,12 @@ jobs:
           repository: verifiably/nodes
           ref: d8c73b2321e30bc563782fbab517630bae1d631a
           path: nodes
+      - name: Check out the closing-check consumer for conformance tests
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          repository: verifiably/autonomy
+          ref: 4b218474eba454c1d93a10dbde020e9401fd0059
+          path: autonomy
       - name: Set up uv and Python
         uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990
         with:
@@ -70,6 +76,7 @@ jobs:
             printf 'beliefs %s\n' "$(git -C "${GITHUB_WORKSPACE}/beliefs" rev-parse HEAD)"
             printf 'atoms %s\n' "$(git -C "${GITHUB_WORKSPACE}/atoms" rev-parse HEAD)"
             printf 'nodes %s\n' "$(git -C "${GITHUB_WORKSPACE}/nodes" rev-parse HEAD)"
+            printf 'autonomy %s\n' "$(git -C "${GITHUB_WORKSPACE}/autonomy" rev-parse HEAD)"
             printf '\n[test modules]\n'
             find tests -maxdepth 2 -name 'test_*.py' | sort
           } > "${evidence}/module-inventory.txt"

@@ -1,0 +1,1 @@
+Use `log` to return a configured chain interval in JSON Lines. Keep the chain, start digest and explicit end digest the same on each continuation. Discard the partial interval if its cursor goes stale.

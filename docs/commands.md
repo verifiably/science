@@ -302,3 +302,29 @@ tips require explicit `repair`, which supplies every field even if only one tip
 currently stands. `clear_depends` conflicts with explicit `depends`. Project
 selection reports its resolved pinned revision; later reads resolve the current
 tip rather than silently reselecting an obsolete revision.
+
+## Run handles and chain evidence
+
+A supervisor gives an actor `VERIFIABLY_ENDPOINT` and `VERIFIABLY_TOKEN_FILE`.
+With both set, the CLI sends each declared command, including reads and
+continuations, to that endpoint. Supply the same invocation ID, project and
+cursor you would use for an attended call. The token file is private.
+Either path missing or empty, or a handle combined with `--config` or
+`SCIENCE_CONFIG`, returns `handle-incomplete`. Framework commands return
+`handle-mode`, apart from help, version and `science mcp bridge`. The bridge
+serves the same MCP discovery and tool-call protocol over stdio and forwards
+calls through the handle. The supervisor owns the session and its selection.
+
+`science heads` prints a `heads.v1` JSON object with the configured world's
+genesis, head and pending registrations, and each mounted corpus or store's
+identity, root, genesis, tip and pending registrations. The default read
+preserves pending transactions. An operator can request recovery with
+`--resolve`. An actor cannot request recovery.
+
+`science log --chain <corpus-id-or-store> --after <digest> --through <digest>`
+prints a `log.v1` JSON Lines header followed by entries after the first
+digest up to and including the last. Equal bounds produce only a header.
+Use the same explicit end digest on every page. Rejoin the output fragments
+after stripping the continuation trailer. Discard partial output on
+`stale-cursor`. An unknown chain, unknown tip, or unavailable evidence gives
+a structured refusal.

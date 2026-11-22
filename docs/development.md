@@ -160,3 +160,13 @@ Packaging and frontmatter checks live in `python/tests/test_research_skills.py`;
 adapter regeneration is checked by `python/tests/test_adapters.py`. Behavioral
 acceptance exercises real commands in a disposable world, including refusal and
 record-order boundaries, separately from byte-for-byte packaging checks.
+
+### Run endpoint conformance
+
+The endpoint tests import the supervisor's sandbox vocabulary, ledger reader
+and closing check from a test-only checkout of `verifiably/autonomy` at
+`4b218474eba454c1d93a10dbde020e9401fd0059`. Place that checkout beside
+science or set `SCIENCE_TEST_AUTONOMY_ROOT` to its root when testing in a
+worktree. Hosted CI checks out the same revision and records it in the
+module inventory. Running the science application requires only its ordinary
+package dependencies.

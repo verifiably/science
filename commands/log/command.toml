@@ -1,0 +1,21 @@
+schema_version = 1
+name = "log"
+purpose = "Read a bounded interval of a configured chain"
+write_class = "read-only"
+output_budget = 16384
+
+[inputs.chain]
+type = "string"
+required = true
+doc = "A configured corpus ID or store."
+[inputs.after]
+type = "string"
+required = true
+doc = "Start after this chain digest."
+[inputs.through]
+type = "string"
+required = false
+doc = "Include entries through this chain digest."
+
+[reads]
+families = ["chain"]

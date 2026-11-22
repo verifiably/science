@@ -122,6 +122,7 @@ def test_heads_and_log_match_the_shared_wire_examples(monkeypatch):
         genesis = {corpus.root: "1", store.root: "2", cfg.world.world_root: "f"}[root] * 64
         return WellFormedView(GenesisEntryView(genesis, b"", ()), (), end.digest if root == store.root else genesis, ())
     monkeypatch.setattr(reads, "_view", view)
+    monkeypatch.setattr(reads, "_world", lambda cfg, **kw: view(cfg.world.world_root, False))
     monkeypatch.setattr(reads, "read_after", lambda *a, **kw: AfterEntries((registration, end), end.digest, ()))
     fixtures = Path(__file__).resolve().parents[1] / "fixtures/run_endpoint"
     assert render_full(reads.heads(cfg, resolve=False)).encode() == (fixtures / "heads.v1.jsonl").read_bytes()
@@ -182,7 +183,10 @@ def test_substituted_genesis_is_rejected_by_the_interval_read(evidence, monkeypa
     view = log_seam().inspect_detached(cfg.store_root)
     wrong = "0" * 64
     assert wrong != view.genesis.digest
-    monkeypatch.setattr(reads, "_view", lambda path, resolve: replace(view, genesis=replace(view.genesis, digest=wrong)))
+    actual_view = reads._view
+    monkeypatch.setattr(reads, "_view", lambda path, resolve: (
+        replace(view, genesis=replace(view.genesis, digest=wrong)) if path == cfg.store_root else actual_view(path, resolve)
+    ))
     with pytest.raises(Refused) as caught:
         dispatcher.invoke("log", {"chain": "store", "after": view.tip})
     assert caught.value.refusal.code == "read-unavailable"
@@ -202,3 +206,65 @@ def test_resolving_heads_reports_a_still_pending_world_transaction(evidence):
     assert expected
     output = json.loads(dispatcher.invoke("heads", {"resolve": True}).text)
     assert output["world_pending"] == [list(pair) for pair in expected]
+
+
+@pytest.mark.parametrize("command", ["heads", "log"])
+def test_evidence_cli_validates_the_world_without_recovery(certified_work, monkeypatch, capsys, command):
+    from beliefs.root import log_seam
+    from helpers.world import write_cli_config
+    from science import cli
+    from science.config import load_config
+
+    path = write_cli_config(certified_work)
+    cfg = load_config(path)
+    view = log_seam().inspect_detached(cfg.store_root)
+    args = [command, "--config", str(path)]
+    if command == "log":
+        args += ["--chain", "store", "--after", view.tip]
+    monkeypatch.setattr(cli, "_ambient_selection", lambda *_: pytest.fail("asked for session selection"))
+    monkeypatch.setattr(cli.ReadContext, "open", lambda *_: pytest.fail("opened an attended world"))
+    assert cli.main(args) == 0
+    capsys.readouterr()
+    original = path.read_text()
+    assert cfg.world.world_id in original
+    path.write_text(original.replace(cfg.world.world_id, "f" * 32))
+    before = log_seam().inspect_detached(cfg.world.world_root)
+    assert cli.main(args) == cli.EXIT_REFUSED
+    result = capsys.readouterr()
+    assert not result.out
+    assert json.loads(result.err)["refusal"]["code"] == "read-unavailable"
+    assert log_seam().inspect_detached(cfg.world.world_root) == before
+
+
+def test_cli_keeps_pending_world_until_operator_resolves(certified_work, monkeypatch, capsys):
+    from atoms.coordinator import commit
+    from beliefs.root import open_world
+    from helpers.world import FIXTURE_AUTHORITY, write_cli_config
+    from science.cli import main
+    from science.config import load_config
+
+    path = write_cli_config(certified_work)
+    cfg = load_config(path)
+    world = open_world(cfg.world, authority=FIXTURE_AUTHORITY)
+    corpus = world.registry().admissions[0].corpus_id
+
+    def interrupted(*args, **kwargs):
+        raise OSError("fixture interrupted settlement")
+
+    with monkeypatch.context() as fault:
+        fault.setattr(commit, "append_entry", interrupted)
+        with pytest.raises(Exception, match="fixture interrupted settlement"):
+            world.retire(corpus)
+    inspect = log_seam().inspect_detached
+    before = inspect(cfg.world.world_root)
+    assert before.pending
+    assert main(["heads", "--config", str(path)]) == 0
+    detached = json.loads(capsys.readouterr().out)
+    assert detached["world_pending"] == [list(pair) for pair in before.pending]
+    assert detached["world_genesis"] == before.genesis.digest
+    assert main(["log", "--config", str(path), "--chain", "store", "--after", inspect(cfg.store_root).tip]) == 0
+    capsys.readouterr()
+    assert inspect(cfg.world.world_root) == before
+    assert main(["heads", "--resolve", "--config", str(path)]) == 0
+    assert json.loads(capsys.readouterr().out)["world_pending"] == []
+    assert not inspect(cfg.world.world_root).pending

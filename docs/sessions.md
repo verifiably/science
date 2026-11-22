@@ -184,3 +184,20 @@ An existing capture reserves its invocation ID until the directory is reclaimed.
    directory with uncertain ownership in place for investigation.
 4. Resume launches. A new session can now claim a formerly orphaned invocation
    ID. Retries within the original session still follow its ledger.
+
+## Launching a supervised run
+
+The supervisor starts `science serve --run <launch.json>` in its own OS
+session with closed input and a private log. The launch file supplies the
+configuration, exact permit, written roots, scratch directory, handle paths
+and private control socket. The supervisor reads the opening report, sends
+the actor PID namespace descriptor on the control socket, and releases the
+actor after receiving `bound`. A run uses detached world reads. A world
+with a pending transaction requires operator action before actors can read it.
+
+The supervisor renews the lease over the control connection. An explicit
+seal, lease expiry, disconnect or SIGTERM starts shutdown. A successful
+shutdown records the sealed tips, persists the seal file and closes the
+session. On file-only recovery, verify endpoint death and the matching
+session-close line. A reported persistence failure takes precedence over
+a visible seal file.

@@ -367,6 +367,41 @@ def _read_frame(stream):
     return frame
 
 
+def bridge(handle, stdin=None, stdout=None):
+    """Serve the MCP wire protocol over an existing actor handle."""
+    from science.loader import production_tree
+
+    _serve_frames(sys.stdin.buffer if stdin is None else stdin, sys.stdout if stdout is None else stdout,
+                  handle, production_tree())
+
+
+def _serve_frames(stdin, stdout, dispatcher, declarations):
+    while True:
+        frame = _read_frame(stdin)
+        if frame is _END_OF_INPUT:
+            return
+        if frame is _OVERSIZED_FRAME:
+            response = _rpc_error(None, -32600, "Request exceeds maximum size")
+        elif not frame.strip():
+            continue
+        else:
+            try:
+                line = frame.decode("utf-8", errors="strict")
+                request = json.loads(
+                    line,
+                    object_pairs_hook=_object_without_duplicates,
+                    parse_constant=_reject_nonfinite_number,
+                )
+            except (UnicodeDecodeError, ValueError, RecursionError):
+                response = _rpc_error(None, -32700, "Parse error")
+            else:
+                response = handle_request(request, dispatcher, declarations)
+        if response is None:
+            continue
+        stdout.write(json.dumps(response, separators=(",", ":")) + "\n")
+        stdout.flush()
+
+
 def serve(config_path: Path, stdin=None, stdout=None, stderr=None, project=None) -> None:
     from science.config import ReadContext, load_config
     from science.loader import production_tree, resolve_handlers
@@ -406,30 +441,7 @@ def serve(config_path: Path, stdin=None, stdout=None, stderr=None, project=None)
             threading.Thread(target=server.serve_forever, daemon=True).start()
             serving = True
             release()  # the finally below now owns the session, the socket and the serving thread
-            while True:
-                frame = _read_frame(stdin)
-                if frame is _END_OF_INPUT:
-                    return
-                if frame is _OVERSIZED_FRAME:
-                    response = _rpc_error(None, -32600, "Request exceeds maximum size")
-                elif not frame.strip():
-                    continue
-                else:
-                    try:
-                        line = frame.decode("utf-8", errors="strict")
-                        request = json.loads(
-                            line,
-                            object_pairs_hook=_object_without_duplicates,
-                            parse_constant=_reject_nonfinite_number,
-                        )
-                    except (UnicodeDecodeError, ValueError, RecursionError):
-                        response = _rpc_error(None, -32700, "Parse error")
-                    else:
-                        response = handle_request(request, dispatcher, declarations)
-                if response is None:
-                    continue
-                stdout.write(json.dumps(response, separators=(",", ":")) + "\n")
-                stdout.flush()
+            _serve_frames(stdin, stdout, dispatcher, declarations)
         finally:
             with stop_signals_held():
                 try:

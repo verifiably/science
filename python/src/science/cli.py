@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import socket
 import sys
 import time
@@ -12,6 +13,7 @@ from science.config import ReadContext, load_config, resolve_config_path
 from science.dispatch import Dispatcher
 from science.loader import production_tree, resolve_handlers
 from science.refusal import INVOCATION_ID_RE, Refusal, Refused, envelope, mint_token
+from science.run_endpoint.handle import Handle
 from science.schema import Declaration
 from science.stop import stop_signals_exit, stop_signals_held
 
@@ -75,11 +77,12 @@ def build_parser(decls) -> argparse.ArgumentParser:
     subparsers.add_parser("build", help="Build the world from its corpora")
     epoch = subparsers.add_parser("epoch", help="Publish an epoch over the session's corpora, or report the current one")
     epoch.add_argument("--config", type=Path)
-    serve_parser = subparsers.add_parser("serve", help="Serve the world over HTTP")
+    serve_parser = subparsers.add_parser("serve", help="Serve an attended session or launch a supervised run")
+    serve_parser.add_argument("--run", type=Path)
     serve_parser.add_argument("--config", type=Path)
     serve_parser.add_argument("--project", help=_LAUNCHER_PROJECT_HELP)
-    mcp = subparsers.add_parser("mcp", help="Serve the world over MCP on stdio")
-    mcp.add_argument("mode", choices=["serve"])
+    mcp = subparsers.add_parser("mcp", help="Serve commands over MCP on stdio or bridge to a run endpoint")
+    mcp.add_argument("mode", choices=["serve", "bridge"])
     mcp.add_argument("--config", type=Path)
     mcp.add_argument("--project", help=_LAUNCHER_PROJECT_HELP)
     adapters = subparsers.add_parser("adapters", help="Build the corpus adapters")
@@ -168,7 +171,20 @@ def main(argv: list[str] | None = None) -> int:
         if namespace.command == "help":
             build_parser(declarations).parse_args([*namespace.words, "--help"])
             return EXIT_OK
+        handle = Handle.from_env(os.environ, config=getattr(namespace, "config", None))
+        if namespace.command == "mcp" and namespace.mode == "bridge":
+            if handle is None:
+                raise Refused(Refusal("handle-incomplete", "The MCP bridge requires both handle paths"))
+            if namespace.project is not None:
+                raise Refused(Refusal("handle-mode", "The supervisor selects the run project"))
+            from science.mcp import bridge
+
+            with stop_signals_exit():
+                bridge(handle)
+            return EXIT_OK
         if namespace.command in {"mcp", "adapters", "build", "serve", "epoch"}:
+            if handle is not None:
+                raise Refused(Refusal("handle-mode", f"{namespace.command} is unavailable in handle mode"))
             return _framework_verb(namespace)
         invocation_id = _bind_invocation_id(namespace.invocation_id)
         namespace.invocation_id = invocation_id
@@ -178,18 +194,23 @@ def main(argv: list[str] | None = None) -> int:
             for spec in declaration.inputs
             if (value := getattr(namespace, spec.name)) is not None
         }
-        if declaration.write_class.kind != "read-only":
-            return _via_service(namespace, declaration, inputs)
-        config = load_config(resolve_config_path(namespace.config))
         project = getattr(namespace, "project", None)
-        output = Dispatcher(
-            declarations,
-            resolve_handlers(declarations),
-            ReadContext.open(config),
-            # An explicit --project binds this invocation (step 1), so the
-            # session is not asked.
-            selection=None if project is not None else _ambient_selection(config),
-        ).invoke(
+        if handle is not None:
+            dispatcher = handle
+        elif declaration.write_class.kind != "read-only":
+            return _via_service(namespace, declaration, inputs)
+        else:
+            config = load_config(resolve_config_path(namespace.config))
+            if namespace.command in {"heads", "log"}:
+                # These handlers inspect the configured chains themselves. Opening
+                # an attended world here would settle the pending evidence first.
+                ctx = ReadContext(world=None, config=config)
+                selection = None
+            else:
+                ctx = ReadContext.open(config)
+                selection = None if project is not None else _ambient_selection(config)
+            dispatcher = Dispatcher(declarations, resolve_handlers(declarations), ctx, selection=selection)
+        output = dispatcher.invoke(
             namespace.command,
             inputs,
             invocation_id=invocation_id,
@@ -230,6 +251,13 @@ def _framework_verb(namespace) -> int:
         sys.stdout.write(f"ok: {len(declarations)} command(s)\n")
         return EXIT_OK
     if namespace.command == "serve":
+        if namespace.run is not None:
+            if namespace.config is not None or namespace.project is not None or "SCIENCE_CONFIG" in os.environ:
+                raise Refused(Refusal("invalid-input", "Run startup takes its configuration and project from the launch file"))
+            from science.run_endpoint.launch import read_launch
+            from science.run_endpoint.service import serve_run
+
+            return serve_run(read_launch(namespace.run))
         from science.serve import serve as build_server
 
         config = load_config(resolve_config_path(namespace.config))

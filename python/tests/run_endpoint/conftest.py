@@ -34,3 +34,17 @@ def launch_file(certified_work, tmp_path):
         yield source, doc
     finally:
         control.close()
+
+
+@pytest.fixture
+def autonomy_source(monkeypatch):
+    import os
+    from pathlib import Path
+
+    sibling = Path(__file__).resolve().parents[4] / "autonomy"
+    root = Path(os.environ.get("SCIENCE_TEST_AUTONOMY_ROOT", sibling))
+    package = root / "python/src"
+    if not (package / "autonomy/closing.py").is_file():
+        pytest.fail("Conformance tests require the pinned autonomy checkout in docs/development.md")
+    monkeypatch.syspath_prepend(str(package))
+    return root

@@ -2,5 +2,5 @@
 from science.run_endpoint.evidence import heads
 
 
-def handle(ctx, *, resolve=False):
+def handle(ctx, *, resolve=None):
     return heads(ctx.config, resolve=resolve)
