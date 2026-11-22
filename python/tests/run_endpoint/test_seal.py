@@ -394,3 +394,61 @@ def test_hold_deadline_keeps_the_incomplete_ledger_for_recovery(certified_work, 
         session.close_invocation("held", {"done": []})
         session.close()
         scratch.cleanup()
+
+
+def test_response_render_after_ledger_close_does_not_hold_the_seal(certified_work, tmp_path, monkeypatch):
+    import threading
+    from types import SimpleNamespace
+    from unittest.mock import Mock
+    from beliefs.permit import WritePermit
+    from beliefs.session import open_run_session
+    from beliefs.session.ledger import ledger_path
+    from helpers.world import build_fixture_world
+    from science.config import ReadContext
+    from science.dispatch import Dispatcher
+    from science.loader import production_tree, resolve_handlers
+    from science.run_endpoint import service
+    from science.run_endpoint.basis import open_basis
+    from science.run_endpoint.paths import Scratch
+
+    cfg = build_fixture_world(certified_work)
+    decl = next(d for d in production_tree() if d.name == "dataset")
+    permit = WritePermit(frozenset(decl.write_class.kinds), frozenset(decl.write_class.routes.values()))
+    session = open_run_session(cfg.world, cfg.operations_root, write_root=cfg.write_root,
+                               profile=cfg.profile, ceiling=permit, store_root=cfg.store_root)
+    data = tmp_path / "table"
+    data.write_bytes(b"table")
+    rendering, release = threading.Event(), threading.Event()
+    replies = []
+    try:
+        with Scratch(tmp_path, cfg.operations_root, threading.Event()) as scratch:
+            actors = service._Actors(b"", scratch, False, {"dataset"})
+            dispatcher = Dispatcher([decl], resolve_handlers([decl]), ReadContext.open(cfg),
+                                    session=session, run_inputs=scratch, on_invocation_close=actors.complete)
+            real_render = dispatcher._render_write
+
+            def hold_reply(*args):
+                rendering.set()
+                assert release.wait(6)
+                return real_render(*args)
+
+            monkeypatch.setattr(dispatcher, "_render_write", hold_reply)
+            request = {"command": "dataset", "invocation_id": "reply", "inputs": {"title": "table", "path": str(data)}}
+            worker = threading.Thread(target=lambda: replies.append(actors._dispatch(dispatcher, request)))
+            basis = open_basis(cfg)
+            worker.start()
+            try:
+                assert rendering.wait(5)
+                result = service._shutdown(SimpleNamespace(config=cfg, run_dir=tmp_path, seal_timeout_seconds=1),
+                                           SimpleNamespace(session=session, basis=basis), actors, Mock(writable=False),
+                                           "stop", service.time.monotonic)
+                assert result == 0 and worker.is_alive()
+                ledger = ledger_path(cfg.operations_root, session.session_id)
+                assert [json.loads(line)["line"] for line in ledger.read_bytes().splitlines()][-2:] == [
+                    "invocation-close", "session-close"]
+            finally:
+                release.set()
+                worker.join(8)
+    finally:
+        session.close()
+    assert replies[0]["ok"]
