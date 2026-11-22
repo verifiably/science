@@ -24,6 +24,19 @@ def test_shape_with_no_plan_row_refuses_naming_it(certified_work):
         assert "affects protein->concept" in caught.value.refusal.message
 
 
+def test_layer_and_polarity_outside_the_plan_refuse_naming_what_the_plan_names(certified_work):
+    with open_rig(build_fixture_world_with_contract(certified_work), ("claim",)) as (d, _):
+        with pytest.raises(Refused) as caught:
+            d.invoke("claim", dict(BASE, layer="causal_effect"))
+        assert caught.value.refusal.code == "invalid-input"
+        assert caught.value.refusal.message == (
+            "layer 'causal_effect' is not in the plan; the plan names ['causal']")
+        with pytest.raises(Refused) as caught:
+            d.invoke("claim", dict(BASE, polarity="up"))
+        assert caught.value.refusal.message == (
+            "polarity 'up' is not in the plan; the plan names ['negative', 'not_applicable', 'positive']")
+
+
 def test_non_member_under_the_dataset_bound_sort_refuses(certified_work):
     with open_rig(build_fixture_world_with_contract(certified_work), ("claim",)) as (d, _):
         with pytest.raises(Refused) as caught:

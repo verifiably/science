@@ -38,9 +38,9 @@ def handle(ctx, writer, *, subject, predicate, object, layer, polarity, slug=Non
     subject_kind, object_kind = _kind(subject), _kind(object)
     row = plan.row_for(predicate, subject_kind, object_kind)
     if layer not in plan.layers:
-        _refuse(f"layer {layer!r} is not in the plan")
+        _refuse(f"layer {layer!r} is not in the plan; the plan names {sorted(plan.layers)}")
     if polarity not in plan.polarities:
-        _refuse(f"polarity {polarity!r} is not in the plan")
+        _refuse(f"polarity {polarity!r} is not in the plan; the plan names {sorted(plan.polarities)}")
     layer_term = plan.layers[layer]
     polarity_term = plan.polarities[polarity]  # None for a sign-inapt operator's not_applicable
     try:

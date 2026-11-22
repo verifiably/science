@@ -58,11 +58,11 @@ doc = "Scope qualifiers as dimension=quantifier:term; absent, the spec applies w
 [inputs.interpretation_rule]
 type = "string"
 required = true
-doc = "A rule identity the kernel ships a reference implementation for."
+doc = "A rule identity the kernel ships a reference implementation for: `beliefs/outcome-file/v1`, which reads outputs/outcome.txt."
 [inputs.equivalence_rule]
 type = "string"
 required = true
-doc = "A rule identity the kernel ships a reference implementation for, comparing a replay to its original."
+doc = "A rule identity the kernel ships a reference implementation for, comparing a replay to its original: `beliefs/content-identity-equality/v1`."
 [inputs.parameters]
 type = "list-of-string"
 required = false

@@ -314,3 +314,19 @@ def test_model_spec_freezes_an_explicit_held_model_for_a_native_model_claim(cert
         value = stored.analysis_spec_value(specs(ctx)[0], profile=cfg.profile)
         assert value.standing == "model" and value.model == model.id
         assert model.id in {entry.id for entry in value.assessed_target.dependencies}
+
+
+def test_rule_input_docs_name_exactly_the_rules_the_kernel_ships():
+    """An agent learns the rule identities from the input docs, not by asking."""
+    import re
+    from beliefs.replay import EquivalenceImplementation
+    from beliefs.rules import REFERENCE_RULES
+    from science.loader import production_tree
+    decl = next(d for d in production_tree() if d.name == "spec")
+    docs = {spec.name: spec.doc for spec in decl.inputs}
+    shipped = {"interpretation_rule": set(), "equivalence_rule": set()}
+    for identity, implementation in REFERENCE_RULES.items():
+        role = "equivalence_rule" if isinstance(implementation, EquivalenceImplementation) else "interpretation_rule"
+        shipped[role].add(identity)
+    for role, identities in shipped.items():
+        assert set(re.findall(r"`([^`]+)`", docs[role])) == identities, role
