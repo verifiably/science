@@ -106,3 +106,87 @@ def test_cancelled_copy_leaves_no_partial_capture(tmp_path, monkeypatch):
         with pytest.raises(Refused, match="run-sealed"), confined.prepare("fetch", "job", {"source": str(source)}):
             pass
         assert not (tmp_path / "capture/job").exists()
+
+
+@pytest.mark.parametrize("path_kind", ["directory", "file"])
+def test_capture_reads_the_opened_inode(tmp_path, monkeypatch, path_kind):
+    from contextlib import contextmanager
+    from science.run_endpoint import paths
+
+    root = tmp_path / "scratch"
+    root.mkdir()
+    item = root / "item"
+    if path_kind == "directory":
+        item.mkdir()
+        (item / "content").write_bytes(b"first")
+    else:
+        item.write_bytes(b"first")
+    original = paths._opened
+
+    @contextmanager
+    def replace_after_open(parent, name):
+        with original(parent, name) as fd:
+            if name == "item":
+                item.rename(root / "old")
+                if path_kind == "directory":
+                    item.mkdir()
+                    (item / "content").write_bytes(b"second")
+                else:
+                    item.write_bytes(b"second")
+            yield fd
+
+    monkeypatch.setattr(paths, "_opened", replace_after_open)
+    with paths.Scratch(root, tmp_path, threading.Event()) as scratch:
+        with scratch.prepare("dataset", "capture", {"path": str(item)}) as values:
+            captured = Path(values["path"])
+            source = captured / "content" if path_kind == "directory" else captured
+            assert source.read_bytes() == b"first"
+
+
+def test_dispatch_claim_precedes_capture_and_replay_preserves_original_input_digest(certified_work, tmp_path):
+    from beliefs.permit import WritePermit
+    from beliefs.session import open_run_session
+    from helpers.world import build_fixture_world, fixture_proposition_node
+    from science.canonical import input_digest
+    from science.config import ReadContext
+    from science.cursor import MIN_OUTPUT_BUDGET
+    from science.dispatch import Dispatcher
+    from science.report import record_block
+    from science.run_endpoint.paths import Scratch
+    from science.schema import Declaration, InputSpec, WriteClass
+
+    cfg = build_fixture_world(certified_work)
+    ceiling = WritePermit(frozenset({"proposition"}), frozenset({"corpus-write"}))
+    session = open_run_session(cfg.world, cfg.operations_root, write_root=cfg.write_root, profile=cfg.profile, ceiling=ceiling)
+    decl = Declaration("spec", "Test input capture", WriteClass("mints", ("proposition",), {"proposition": "corpus-write"}),
+                       MIN_OUTPUT_BUDGET, (InputSpec("estimand", "string", True, "Path"),), (), Path("."))
+    source = tmp_path / "input"
+    source.write_text("captured")
+    payload = {"estimand": str(source)}
+
+    def handler(ctx, writer, *, estimand):
+        assert Path(estimand) != source
+        node = fixture_proposition_node(Path(estimand).read_text())
+        writer.add(node)
+        return (record_block(ctx.write_view().get(node.id)),)
+
+    try:
+        with Scratch(tmp_path, cfg.operations_root, threading.Event()) as confined:
+            dispatcher = Dispatcher([decl], {"spec": handler}, ReadContext.open(cfg), session=session, run_inputs=confined)
+            first = dispatcher.invoke("spec", payload, invocation_id="first")
+            source.unlink()
+            assert dispatcher.invoke("spec", payload, invocation_id="first") == first
+            existing = cfg.operations_root / "capture/collision"
+            existing.mkdir()
+            marker = existing / "sentinel"
+            marker.write_text("owned by another session")
+            with pytest.raises(Refused, match="capture-exists"):
+                dispatcher.invoke("spec", payload, invocation_id="collision")
+            assert marker.read_text() == "owned by another session"
+            session.claim_invocation("open", "spec", input_digest(payload))
+            with pytest.raises(Refused, match="outcome-unknown"):
+                dispatcher.invoke("spec", payload, invocation_id="open")
+            assert not (existing.parent / "open").exists()
+            session.close_invocation("open", {"done": []})
+    finally:
+        session.close()
