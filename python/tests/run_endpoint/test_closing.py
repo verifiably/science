@@ -92,7 +92,7 @@ def _decode(header, rows, chain, after, through):
     return Chain(chain["id"], chain["role"], True, tuple(entries))
 
 
-@pytest.mark.parametrize("cut", ["complete", "store-ledger", "publication", "corpus-ledger"])
+@pytest.mark.parametrize("cut", ["complete", "independent-operator", "store-ledger", "publication", "corpus-ledger"])
 def test_dataset_interval_reaches_real_closing_check(autonomy_source, launch_file, capsys, monkeypatch, cut):
     from autonomy.closing import close
     from autonomy.evidence import RunEvidence
@@ -115,6 +115,20 @@ def test_dataset_interval_reaches_real_closing_check(autonomy_source, launch_fil
     source.write_text(json.dumps(doc))
     launch = read_launch(source)
     (baseline,), _ = _rows(capsys, config, "heads", "--resolve")
+    normal_close = cut in {"complete", "independent-operator"}
+    if cut == "independent-operator":
+        from science.session import open_session
+
+        # An attended operator legitimately writes after this observation and
+        # releases both claims before the run exists.
+        other = open_session(cfg)
+        try:
+            path = launch.scratch_dir / "operator.txt"
+            path.write_text("independent measurement")
+            operator = Dispatcher(declarations, resolve_handlers(declarations), ReadContext.open(cfg), session=other)
+            operator.invoke("dataset", {"title": "operator", "path": str(path)}, invocation_id="operator")
+        finally:
+            other.close()
     opened = open_run(launch)
     session = opened.session
     report = opened.open_report()
@@ -130,7 +144,7 @@ def test_dataset_interval_reaches_real_closing_check(autonomy_source, launch_fil
         with Scratch(launch.scratch_dir, cfg.operations_root, threading.Event()) as scratch:
             d = Dispatcher(declarations, resolve_handlers(declarations), ReadContext.open_detached(cfg),
                            session=session, run_inputs=scratch)
-            if cut == "complete":
+            if normal_close:
                 d.invoke("dataset", inputs, invocation_id="fixture")
                 tips = session.seal(3)
                 sealed, _ = seal_evidence("stop", tips, opened.basis.digest)
@@ -146,7 +160,7 @@ def test_dataset_interval_reaches_real_closing_check(autonomy_source, launch_fil
                 sealed = None
             ledger = read_ledger(session.session_id, raw_ledger.read_bytes())
             (closing,), _ = _rows(capsys, config, "heads")
-            assert ledger.closed == (cut == "complete")
+            assert ledger.closed == normal_close
     finally:
         if cut == "store-ledger":
             with pytest.raises(SessionLedgerFailed):
@@ -173,9 +187,14 @@ def test_dataset_interval_reaches_real_closing_check(autonomy_source, launch_fil
                            mounts_baseline={}, mounts_closing={}, basis_open=report["basis_open"],
                            basis_seal=sealed["basis_seal"] if sealed else None)
     verdict = close(evidence)
-    expected_acts = {"complete": 3, "store-ledger": 0, "publication": 1, "corpus-ledger": 1}
+    expected_acts = {"complete": 3, "independent-operator": 3, "store-ledger": 0, "publication": 1, "corpus-ledger": 1}
     assert len(ledger.acts) == expected_acts[cut]
     codes = {finding.code for finding in verdict.findings}
+    if cut == "independent-operator":
+        assert verdict.disposition == "quarantined"
+        assert "entry-foreign" in codes and "outcome-unknown" not in codes
+        assert ledger.closed and not ledger.open_invocations
+        return
     assert verdict.disposition == ("clean" if cut == "complete" else "unwired"), verdict.findings
     if cut == "complete":
         assert not codes and verdict.members
