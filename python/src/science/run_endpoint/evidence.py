@@ -54,7 +54,8 @@ def heads(config, *, resolve):
             chains.append(dict(chain.header(view.genesis.digest), tip=view.tip, pending=sorted(view.pending)))
     except (OSError, AtomsError, ScienceError) as error:
         raise Refused(Refusal("read-unavailable", str(error))) from error
-    return (_line({"version": "heads.v1", "world_head": world.tip, "chains": chains}),)
+    return (_line({"version": "heads.v1", "world_head": world.tip,
+                   "world_pending": sorted(world.pending), "chains": chains}),)
 
 
 def _intent(entry):

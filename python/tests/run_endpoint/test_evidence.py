@@ -187,3 +187,18 @@ def test_substituted_genesis_is_rejected_by_the_interval_read(evidence, monkeypa
         dispatcher.invoke("log", {"chain": "store", "after": view.tip})
     assert caught.value.refusal.code == "read-unavailable"
     assert caught.value.refusal.data["reason"] == "genesis-mismatch"
+
+
+def test_resolving_heads_reports_a_still_pending_world_transaction(evidence):
+    from beliefs.world.logmodel import SettledEntryView
+    cfg, dispatcher = evidence
+    root = cfg.world.world_root
+    before = log_seam().inspect_detached(root)
+    assert isinstance(before.entries[-1], SettledEntryView)
+    # Without its recovery evidence this transaction remains pending even after resolution.
+    leaf, = (root / ".#~chain").glob(f"*{before.tip}*")
+    leaf.unlink()
+    expected = log_seam().inspect_detached(root).pending
+    assert expected
+    output = json.loads(dispatcher.invoke("heads", {"resolve": True}).text)
+    assert output["world_pending"] == [list(pair) for pair in expected]
