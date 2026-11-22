@@ -52,15 +52,29 @@ Choose a new absolute directory on certified storage and a disposable home. From
 export SCIENCE_DEMO_ROOT=/absolute/certified/storage/science-demo
 mkdir -p "${SCIENCE_DEMO_ROOT}-home"
 env -i PATH="$PATH" HOME="${SCIENCE_DEMO_ROOT}-home" PYTHONPATH=tests \
-  .venv/bin/python tests/fixtures/analysis/demo.py "$SCIENCE_DEMO_ROOT"
+  .venv/bin/python tests/fixtures/analysis/demo.py walk "$SCIENCE_DEMO_ROOT"
 ```
 
 The script refuses an existing directory. Its transcript prints the configuration,
 held prerequisite addresses, command inputs, invocation ids and minted records.
-It runs claim → dataset → spec → run → assess → verify → belief, including the
+It runs dataset → claim → spec → run → assess → verify → belief, including the
 selected target key, then prints the queue. Expected: a passed clean-environment
 verification, `Belief` and an admitted queue row. Inspect a refusal or `NoBelief`
 before treating the demonstration as successful.
+
+The same invocation with `create` in place of `walk` builds the same world and
+stops before the first command: a fresh world for a harness probe whose agent runs
+the commands itself. It prints the configuration, held prerequisites, the spec's
+rule-procedure binding and the paths of the estimand, data and workflow bundle the
+walk uses. With `readback "$SCIENCE_DEMO_ROOT/science.toml"` in place of
+`walk "$SCIENCE_DEMO_ROOT"`, it prints the write root's records at any point of the
+path. It opens the world without settling an interrupted world transaction, so it
+never performs a resuming agent's recovery, and refuses while one is pending. It
+prints the count by kind, each proposition's claim identity, each spec's identity,
+target and canonical estimand, each run's spec, boundary policy, capabilities and
+output digests, each assessment's run and outcome, and each verification's scope and
+verdict. After the walk it shows two confined runs, a `supported` assessment and a
+passed clean-environment verification.
 
 This source-checkout example writes a canned supported outcome after reading
 synthetic bytes. It tests plumbing and reproducibility; it is not a biological

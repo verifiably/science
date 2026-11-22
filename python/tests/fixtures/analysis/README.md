@@ -1,12 +1,16 @@
 # Synthetic analysis example
 
-`demo.py` initializes a new disposable world using the source checkout's explicit
-kernel fixture authority, holds its vocabulary and measurement prerequisites,
-and runs the production claim → dataset → spec → run → assess → verify → keyed
+`demo.py walk ROOT` initializes a new disposable world using the source checkout's
+explicit kernel fixture authority, holds its vocabulary and measurement prerequisites,
+and runs the production dataset → claim → spec → run → assess → verify → keyed
 belief workflow. It requires a certified volume and production confinement.
+`demo.py create ROOT` builds the same world and stops before the first command, for
+a harness probe whose agent runs the commands; `demo.py readback CONFIG` prints the
+world's records at any point of the path.
 
-Run from `python/` after `uv sync --frozen`, with `PYTHONPATH=tests` and an absolute,
-nonexistent directory argument. The [guide](../../../../docs/guide.md#a-synthetic-source-checkout-demonstration)
+Run from `python/` after `uv sync --frozen`, with `PYTHONPATH=tests`. `create` and
+`walk` take an absolute, nonexistent directory; `readback` takes that world's
+`science.toml` and opens it without settling an interrupted world transaction. The [guide](../../../../docs/guide.md#a-synthetic-source-checkout-demonstration)
 shows the complete invocation. The script closes its attended session before exit.
 
 `estimand.json` is the complete authoring input for this fixture contract. Its
