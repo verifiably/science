@@ -366,3 +366,29 @@ def test_kernel_refusal_adds_root_context(error, code, message, data):
     assert refusal.code == code
     assert refusal.message == f"/store: {message}"
     assert refusal.data == {**data, "root": "/store"}
+
+
+def test_unavailable_world_closes_a_claimed_write(certified_work):
+    from beliefs.errors import WorldReadUnavailable
+    from science.config import ReadContext
+    from science.session import open_session
+
+    calls = []
+
+    def handler(ctx, writer, *, slug):
+        calls.append(ctx)
+        raise WorldReadUnavailable("world publication is pending")
+
+    cfg = build_fixture_world(certified_work)
+    session = open_session(cfg)
+    try:
+        dispatcher = Dispatcher((REFUSING,), {"refusing": handler}, ReadContext.open_detached(cfg), session=session)
+        for _ in range(2):
+            with pytest.raises(Refused) as caught:
+                dispatcher.invoke("refusing", {"slug": "sample"}, invocation_id="pending-world")
+            assert caught.value.refusal.code == "kernel-refused"
+            assert caught.value.refusal.data == {"kind": "WorldReadUnavailable"}
+        assert len(calls) == 1
+        assert not session.invocation_acts("pending-world")
+    finally:
+        session.close()

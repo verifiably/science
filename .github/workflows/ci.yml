@@ -38,7 +38,7 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           repository: verifiably/beliefs
-          ref: d296fe0b047e1f2f90f5284326e39a722648eb70
+          ref: ac4081f422c460b7c90d678d9204208b233a3622
           path: beliefs
       - name: Check out atoms
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0

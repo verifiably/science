@@ -13,7 +13,7 @@ from beliefs.session import KernelRefusalValue
 
 from science.canonical import canonicalize, input_digest
 from science.cursor import ReadCursor, WriteCursor, decode, encode
-from science.refusal import INVOCATION_ID_RE, Refusal, Refused, kernel_refusal, mint_token
+from science.refusal import INVOCATION_ID_RE, WORLD_READ_ERRORS, Refusal, Refused, kernel_refusal, mint_token
 from science.render import render_page, report_digest
 from science.report import Report, SelectionBlock, pin_block, read_tail, serialize_block, write_tail
 from science.schema import Declaration
@@ -29,7 +29,7 @@ from science.schema import Declaration
 # surface refusal after an act does.
 KERNEL_REFUSALS = (PermitExceeded, KernelRefusalValue, WriteRefused,
                    CitationContractMismatch, AddressMapConflict, BuildContended,
-                   StoreWriteRefused)
+                   StoreWriteRefused, *WORLD_READ_ERRORS)
 
 
 class HandlerContractViolation(RuntimeError):
@@ -140,6 +140,8 @@ class Dispatcher:
                 return self._invoke_write(decl, canonical, iid)
             report = self._handlers[decl.name](self._read_context(decl, project), **canonical)
             return Outcome(self._render(decl, canonical, report, (0, 0)), iid)
+        except WORLD_READ_ERRORS as error:
+            raise Refused(kernel_refusal(error), iid) from error
         except Refused as error:
             raise Refused(error.refusal, iid) from None
 
@@ -381,7 +383,7 @@ class Dispatcher:
             port = SessionPort(lambda address: self._select(iid, address))
             try:
                 report = self._handlers[decl.name](self._context(), port, **canonical)
-            except (WriteRefused, Refused, SessionProtocolError) as caught:
+            except (WriteRefused, Refused, SessionProtocolError, *WORLD_READ_ERRORS) as caught:
                 if self._session.invocation_selection(iid) is None:
                     if isinstance(caught, SessionProtocolError):
                         raise
