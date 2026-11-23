@@ -1,0 +1,14 @@
+{
+  "title": "MAQC-II Project: Multiple myeloma (MM) data set",
+  "locator": "accession:geo:GSE24080",
+  "resources": [
+    {
+      "name": "GSE24080_MM_UAMS565_ClinInfo_27Jun2008_LS_clean.xls.gz",
+      "url": "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE24nnn/GSE24080/suppl/GSE24080_MM_UAMS565_ClinInfo_27Jun2008_LS_clean.xls.gz"
+    },
+    {
+      "name": "GSE24080_RAW.tar",
+      "url": "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE24nnn/GSE24080/suppl/GSE24080_RAW.tar"
+    }
+  ]
+}
