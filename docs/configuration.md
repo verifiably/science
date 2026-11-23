@@ -142,3 +142,20 @@ order, which may differ from CLI subject/object order.
 or validate their operators against the writer's profile. `claim` uses the first
 activated document carrying a plan; plans are not merged. Positional plans must
 be rewritten explicitly with named roles.
+
+## Acquisition limits
+
+The optional `[acquire]` table supplies creation defaults. Each static set keeps
+its effective limits for subsequent resumes. Byte limits count file content.
+Two members with identical bytes count twice toward the logical set size.
+
+| Setting | Default | Unit |
+| --- | ---: | --- |
+| `max_response_bytes` | 67108864 | bytes per member |
+| `max_total_bytes` | 4294967296 | bytes across fetched members |
+| `max_requests` | 20000 | requests per set |
+| `attempts` | 3 | completed retryable failures per budget |
+| `min_interval_ms` | 1000 | milliseconds between contacts with one host |
+| `backoff_ms` | 1000 | milliseconds of initial retry delay |
+
+The two durations accept zero. The other settings require positive integers.

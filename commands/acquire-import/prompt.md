@@ -1,0 +1,1 @@
+Accept a converted acquisition log together with its members and original journals. Supply partial acceptance only when the researcher explicitly accepts the missing members. Report the governed dataset and act-report references.

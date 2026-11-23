@@ -4,6 +4,8 @@ from __future__ import annotations
 import socket
 from pathlib import Path
 
+from beliefs.boundary import HeldTree
+
 from beliefs import stored
 from beliefs.adapter import WorkflowDefinition
 from beliefs.boundary import RunMinted, RunRefused
@@ -132,7 +134,7 @@ def handle(ctx, writer, *, assessment=None, run=None, code, entrypoint, cores=No
     snakefile = code_root.parent / entrypoint
     if not snakefile.is_file():
         _refuse(f"entrypoint {entrypoint!r} is not a file under {code_root.parent}")
-    held_inputs: dict[str, dict[str, Path]] = {}
+    held_inputs: dict[str, dict[str, Path | HeldTree]] = {}
     expected_inputs: dict[str, dict[str, str]] = {}
     mounts = tuple((mount.corpus_id, mount.view) for mount in ctx.session_mounts())
     for inp in original.recipe.inputs:

@@ -7,9 +7,10 @@ from collections.abc import Mapping
 from pathlib import Path
 
 from beliefs import stored
+from beliefs.boundary import HeldTree
 from beliefs.dataset import ByteObservation, Held, admission_state, dataset_address
 from beliefs.errors import MalformedRecord
-from beliefs.holdings.records import StoreLocator
+from beliefs.holdings.records import StoreLocator, StoreTreeLocator
 from beliefs.holdings.adapter import DatasetAnswer, DatasetBlocked, dataset_observations
 from beliefs.holdings.receipt import derive_holdings
 from beliefs.holdings.reduce import holdings_rule_bundle
@@ -97,7 +98,7 @@ def _in_configured_store(stores: Mapping[str, Path], observation: ByteObservatio
     return len(parts) == 3 and parts[0] == "store" and parts[1] in stores
 
 
-def held_resources(views, world, stores: Mapping[str, Path], address: str) -> dict[str, Path]:
+def held_resources(views, world, stores: Mapping[str, Path], address: str) -> dict[str, Path | HeldTree]:
     found = dataset_at(views, address)
     if found is None:
         raise Refused(Refusal("invalid-input", f"{address} is not declared in the mounted corpora"))
@@ -113,11 +114,21 @@ def held_resources(views, world, stores: Mapping[str, Path], address: str) -> di
         )
     if not isinstance(answer, DatasetAnswer) or not isinstance(admission_state(declaration, answer.observations), Held):
         raise Refused(Refusal("invalid-input", f"{address} is not held in the configured stores"))
-    resolved: dict[str, Path] = {}
+    resolved: dict[str, Path | HeldTree] = {}
     for resource in declaration.resources:
         digest_matches = tuple(
             obs for obs in answer.observations if obs.digest == resource.digest
         )
+        if resource.digest and resource.digest.startswith("sha256-tree:"):
+            for obs in digest_matches:
+                scheme, store_id, value = (obs.location.split(":", 2) + ["", ""])[:3]
+                if scheme == "store-tree" and store_id in stores and value == resource.digest.split(":")[1]:
+                    locator = StoreTreeLocator(store_id, value)
+                    resolved[resource.name] = HeldTree(stores[store_id], locator.digest())
+                    break
+            else:
+                raise Refused(Refusal("invalid-input", f"no configured store-tree observation for {resource.name}"))
+            continue
         configured = tuple(
             obs for obs in digest_matches if _in_configured_store(stores, obs)
         )

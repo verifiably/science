@@ -1,0 +1,2 @@
+Quarry f90f844c37511c4f5af46af95c52fc89e6c300fe
+quarry.acquisition.build applied to GEO.files using tests/fixtures/geo/files-gse24080.json through Quarry's replay transport.

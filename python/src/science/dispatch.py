@@ -259,6 +259,11 @@ class Dispatcher:
             if isinstance(claim, ClaimDone):
                 return Outcome(self._replay_outcome(decl, claim.outcome, iid, (0, 0)), iid)
             try:
+                if self._run_inputs is not None and decl.name == "fetch":
+                    from beliefs import stored
+                    node = self._context().cited(canonical["dataset"]).view.get(canonical["dataset"])
+                    if any((r.digest or "").startswith("sha256-tree:") for r in stored.dataset_declaration(node).resources):
+                        raise Refused(Refusal("permit-exceeded", "Fetching a tree requires an attended session"))
                 prepared = (self._run_inputs.prepare(decl.name, iid, canonical)
                             if self._run_inputs is not None else nullcontext(canonical))
                 with prepared as inputs:

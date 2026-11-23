@@ -668,6 +668,8 @@ options = [
   { names = ["--reviewed"], value = "none" },
   { names = ["--no-reviewed"], value = "none" },
   { names = ["--awaiting-user"], value = "none" },
+  { names = ["--expect-task-revision"], value = "string" },
+  { names = ["--expect-task-children-revision"], value = "string" },
 ]
 
 [[cli.tasks.commands]]
@@ -681,6 +683,8 @@ options = [
   { names = ["--multipart"], value = "none" },
   { names = ["--note"], value = "string", repeatable = true },
   { names = ["--stamp"], value = "none" },
+  { names = ["--expect-task-revision"], value = "string" },
+  { names = ["--expect-task-children-revision"], value = "string" },
 ]
 
 [[cli.tasks.commands]]
@@ -1254,6 +1258,31 @@ options = [
 ]
 
 [[cli.obs.commands]]
+path = ["eval"]
+summary = "check eval cases, record verdicts and list them"
+
+[[cli.obs.commands]]
+path = ["eval", "check"]
+verb = "check"
+summary = "validate eval case files; print nothing when every file is clean"
+args = [{ name = "paths", value = "path", required = true, variadic = true }]
+
+[[cli.obs.commands]]
+path = ["eval", "record"]
+summary = "record eval verdicts from a JSONL file"
+options = [{ names = ["--input"], value = "path", required = true }]
+
+[[cli.obs.commands]]
+path = ["eval", "list"]
+verb = "list"
+summary = "list eval verdicts by case and subject"
+options = [
+  { shared = "project", role = "select", value = "string", repeatable = false },
+  { names = ["--case"], value = "string" },
+  { names = ["--subject"], value = "string" },
+]
+
+[[cli.obs.commands]]
 path = ["index-state"]
 output = "json"
 summary = "print each indexed file's retention readiness and indexed-byte evidence"
@@ -1577,6 +1606,9 @@ options = [
   { names = ["--organism"], value = "string" },
   { names = ["--during"], value = "string" },
   { names = ["--at"], value = "string" },
+  { names = ["--instrument"], value = "string" },
+  { names = ["--observatory"], value = "string" },
+  { names = ["--measurement"], value = "string" },
   { names = ["--exact"], value = "none" },
   { names = ["--native"], value = "string" },
   { names = ["--allow-partial"], value = "none" },
@@ -1678,12 +1710,73 @@ options = [
 ]
 
 [[cli.science.commands]]
+path = ["acquire"]
+summary = "Retrieve and accept static acquisition sets"
+
+[[cli.science.commands]]
+path = ["acquire", "start"]
+summary = "Retrieve a static acquisition plan into a new resumable set"
+options = [
+  { shared = "config", value = "path" },
+  { names = ["--plan"], value = "path", required = true },
+  { names = ["--max-response-bytes"], value = "int" },
+  { names = ["--max-total-bytes"], value = "int" },
+  { names = ["--max-requests"], value = "int" },
+  { names = ["--attempts"], value = "int" },
+  { names = ["--min-interval-ms"], value = "int" },
+  { names = ["--backoff-ms"], value = "int" },
+]
+
+[[cli.science.commands]]
+path = ["acquire", "resume"]
+summary = "Continue retrieval from a set journal"
+options = [
+  { shared = "config", value = "path" },
+  { names = ["--set"], value = "string", required = true },
+]
+
+[[cli.science.commands]]
+path = ["acquire", "status"]
+summary = "Show request states and accepted dataset references"
+options = [
+  { shared = "config", value = "path" },
+  { names = ["--set"], value = "string", required = true },
+]
+
+[[cli.science.commands]]
+path = ["acquire", "seal"]
+summary = "Accept the retrieved members as a governed dataset"
+options = [
+  { shared = "config", value = "path" },
+  { names = ["--invocation-id"], value = "string" },
+  { names = ["--continue"], value = "string" },
+  { names = ["--accept-partial", "--no-accept-partial"], value = "none" },
+  { names = ["--set"], value = "string", required = true },
+]
+
+[[cli.science.commands]]
+path = ["acquire", "import"]
+summary = "Accept a converted log, member files and original journals"
+options = [
+  { shared = "config", value = "path" },
+  { names = ["--invocation-id"], value = "string" },
+  { names = ["--continue"], value = "string" },
+  { names = ["--accept-partial", "--no-accept-partial"], value = "none" },
+  { names = ["--log"], value = "string", required = true },
+  { names = ["--members"], value = "string", required = true },
+  { names = ["--journals"], value = "string", required = true },
+  { names = ["--title"], value = "string", required = true },
+  { names = ["--locator"], value = "string", required = true },
+]
+
+[[cli.science.commands]]
 path = ["dataset"]
 summary = "Hold a local file or directory in the store and mint the dataset record under its content address"
 options = [
   { shared = "config", value = "path" },
   { names = ["--invocation-id"], value = "string" },
   { names = ["--continue"], value = "string" },
+  { names = ["--tree", "--no-tree"], value = "none" },
   { names = ["--path"], value = "string", required = true },
   { names = ["--title"], value = "string", required = true },
   { names = ["--resources"], value = "string", repeatable = true },

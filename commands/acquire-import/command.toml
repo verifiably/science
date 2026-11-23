@@ -1,0 +1,43 @@
+schema_version = 1
+name = "acquire-import"
+purpose = "Accept a converted log, member files and original journals."
+write_class = "mints:dataset,act-report,holdings-observation"
+output_budget = 4096
+
+[write.routes]
+holdings-observation = "holdings"
+act-report = "corpus-write"
+dataset = "corpus-write"
+
+[inputs.log]
+type = "string"
+required = true
+doc = "Path to the canonical converted log."
+
+[inputs.members]
+type = "string"
+required = true
+doc = "Directory holding its fetched member files."
+
+[inputs.journals]
+type = "string"
+required = true
+doc = "Directory holding the original journals named in the header."
+
+[inputs.title]
+type = "string"
+required = true
+doc = "Title of the accepted dataset."
+
+[inputs.locator]
+type = "string"
+required = true
+doc = "Empirical locator of the accepted dataset."
+
+[inputs.accept_partial]
+type = "bool"
+required = false
+doc = "Explicitly accept a set containing incomplete requests."
+
+[reads]
+families = ["corpus-stored", "holdings"]

@@ -33,8 +33,10 @@ def _add_command(
     subparsers: argparse._SubParsersAction,
     decl: Declaration,
     common: argparse.ArgumentParser,
+    name: str | None = None,
 ) -> None:
-    parser = subparsers.add_parser(decl.name, help=decl.purpose, parents=[common])
+    parser = subparsers.add_parser(name or decl.name, help=decl.purpose, parents=[common])
+    parser.set_defaults(command=decl.name)
     for spec in decl.inputs:
         kwargs: dict[str, object] = {
             "dest": spec.name,
@@ -72,8 +74,15 @@ def build_parser(decls) -> argparse.ArgumentParser:
     parser.add_argument("-V", "--version", action="version", version="science 0.1.0")
     common = _command_options()
     subparsers = parser.add_subparsers(dest="command", required=True, metavar="<command>")
+    from science.acquisition.operator import add_local_parsers
+    acquire = subparsers.add_parser("acquire", help="Retrieve and accept static acquisition sets")
+    verbs = acquire.add_subparsers(required=True, metavar="<operation>")
+    add_local_parsers(verbs)
     for decl in decls:
-        _add_command(subparsers, decl, common)
+        if decl.name in {"acquire-seal", "acquire-import"}:
+            _add_command(verbs, decl, common, decl.name.removeprefix("acquire-"))
+        else:
+            _add_command(subparsers, decl, common)
     subparsers.add_parser("build", help="Build the world from its corpora")
     epoch = subparsers.add_parser("epoch", help="Publish an epoch over the session's corpora, or report the current one")
     epoch.add_argument("--config", type=Path)
@@ -172,6 +181,12 @@ def main(argv: list[str] | None = None) -> int:
             build_parser(declarations).parse_args([*namespace.words, "--help"])
             return EXIT_OK
         handle = Handle.from_env(os.environ, config=getattr(namespace, "config", None))
+        if namespace.command in {"acquire-start", "acquire-resume", "acquire-status"}:
+            if handle is not None:
+                raise Refused(Refusal("handle-mode", "Local acquisition work is unavailable in handle mode"))
+            from science.acquisition.operator import operate
+            operate(namespace)
+            return EXIT_OK
         if namespace.command == "mcp" and namespace.mode == "bridge":
             if handle is None:
                 raise Refused(Refusal("handle-incomplete", "The MCP bridge requires both handle paths"))
@@ -297,6 +312,8 @@ def _via_service(namespace, declaration: Declaration, inputs: dict[str, object])
     """Any write-class command goes over the service socket, preserving the
     read path's public wire: text on stdout, one JSON line on stderr."""
     invocation_id = namespace.invocation_id or mint_token()
+    if declaration.name == "acquire-import":
+        inputs = {**inputs, **{key: str(Path(inputs[key]).absolute()) for key in ("log", "members", "journals")}}
     if declaration.name == "spec" and "estimand" in inputs:
         inputs = {**inputs, "estimand": str(Path(inputs["estimand"]).absolute())}
     try:

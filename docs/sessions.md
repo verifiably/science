@@ -202,3 +202,18 @@ shutdown records the sealed tips, persists the seal file and closes the
 session. On file-only recovery, verify endpoint death and the matching
 session-close line. A reported persistence failure takes precedence over
 a visible seal file.
+
+## Acquisition work areas
+
+Start, resume and status use `operations_root/acquisitions/<token>/`.
+The plan, bounds, write-ahead journal and verified objects survive a stopped
+retrieval. These commands are local operations. Sealing and importing are
+attended service writes, exposed to socket and MCP clients as `acquire-seal`
+and `acquire-import`. They require corpus-write and holdings capabilities.
+Supervised run handles cannot accept sets or write trees.
+
+The attended service takes the set lock without waiting. Partial acceptance
+freezes which members enter the tree. The service binds the canonical log to
+the write corpus, store, session and invocation, then records the committed
+report before releasing member objects. A retry can identify that report even
+if the process stopped before recording its local receipt.

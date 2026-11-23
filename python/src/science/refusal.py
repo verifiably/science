@@ -16,6 +16,7 @@ from beliefs.permit import PermitExceeded
 from beliefs.session import KernelRefusalValue
 
 CODES = frozenset({
+    "set-busy", "retrieval-busy",
     "path-confinement-unavailable", "path-outside-run", "capture-exists",
     "bad-peer", "bad-token", "handle-incomplete", "handle-mode", "confinement-unavailable", "run-sealed",
     "corpus-claimed", "tip-unknown", "read-unavailable", "chain-unknown",

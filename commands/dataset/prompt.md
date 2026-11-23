@@ -5,3 +5,6 @@ relative POSIX file paths within a directory (absent, all regular files under
 the directory are held), `locator` for an accession the record should cite,
 and `facets` for domain facets the contract declares. The output is the minted
 record only; if it refuses, report the refusal and change nothing.
+
+Use `--tree` to hold a directory as one resource named `data`. Its identity
+includes each relative member path. Use `--resources` to select specific files.

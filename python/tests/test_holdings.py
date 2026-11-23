@@ -170,3 +170,17 @@ def test_held_resources_prefers_filename_match_within_configured_stores(
         "tables/clinical.tsv": cfg.store_root / f"{hex_digest}/tables/clinical.tsv"
     }
     assert resolved["tables/clinical.tsv"].read_bytes() == content
+
+
+def test_tree_resource_collision_in_both_orders_and_ordinary_shared_parent(tmp_path):
+    import pytest
+    from beliefs.boundary import HeldTree
+    from science.commands.run import _check_staged_collisions
+    from science.refusal import Refused
+    tree = HeldTree(tmp_path, "sha256-tree:" + "a" * 64)
+    for other in (tree, tmp_path / "file"):
+        for outer, inner in ((tree, other), (other, tree)):
+            for rows in ([{"x": outer}, {"x/y": inner}], [{"x/y": inner}, {"x": outer}]):
+                with pytest.raises(Refused, match="collision"):
+                    _check_staged_collisions(dict(enumerate(rows)))
+        _check_staged_collisions({"one":{"dir/a":tree}, "two":{"dir/b":other}})

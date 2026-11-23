@@ -339,3 +339,34 @@ Use the same explicit end digest on every page. Rejoin the output fragments
 after stripping the continuation trailer. Discard partial output on
 `stale-cursor`. An unknown chain, unknown tip, or unavailable evidence gives
 a structured refusal.
+
+## Static acquisitions
+
+Run `science acquire start --plan FILE` with Quarry's acquisition JSON or a
+static seed plan. Use `-` for standard input. Start validates the plan and
+prints the set token before contacting its first HTTPS host. The six settings
+in [configuration](configuration.md#acquisition-limits) have dashed creation
+flags such as `--max-total-bytes`. A completed retrieval is ready for explicit
+acceptance.
+
+`science acquire status --set TOKEN` reports counts and logical bytes.
+`science acquire resume --set TOKEN` rechecks previously fetched bytes and gives
+each failed request one new budget, including requests whose last attempt met a
+deterministic redirect refusal. One downloader may run per operations root.
+Start and resume refuse immediately if either the root lock or the set lock is busy.
+Within one downloader, redirects obey per-host pacing and retry deadlines.
+
+Use `science acquire seal --set TOKEN` through the attended service. Add
+`--accept-partial` to accept verified members alongside recorded failures and
+abandon the remaining pending requests. At least one member must be held. A
+finished set's status includes its dataset address and acquisition report.
+To accept an external program's converted log, use `science acquire import
+--log FILE --members DIR --journals DIR --title TITLE --locator LOCATOR`.
+Member files and the original journals must match the canonical log.
+The service records the original fetching instrument.
+
+`science dataset --tree --path DIR --title TITLE` holds a local directory as a
+single resource named `data`. A declared tree can also be held using
+`science fetch --dataset REF --source DIR` with an absolute directory and the
+fetch policy enabled. Runs and derivations stage trees under the declared
+resource name and verify each member against its stored digest.
