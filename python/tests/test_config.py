@@ -481,3 +481,11 @@ def test_acquisition_bounds_are_durable_integer_units(tmp_path):
     assert config.acquire.max_response_bytes == 64 * 1024**2
     for invalid in ("attempts=0", "max_requests=true", "backoff_ms=-1", "unknown_limit=4"):
         assert_invalid_config(write_config(tmp_path, extra="[acquire]\n" + invalid))
+
+
+def test_import_evidence_limit_is_configurable(tmp_path):
+    assert load_config(write_config(tmp_path)).max_import_evidence_bytes == 64 * 1024**2
+    key = "[acquire]\nmax_import_evidence_bytes="
+    assert load_config(write_config(tmp_path, extra=key + "33")).max_import_evidence_bytes == 33
+    for value in ("0", "-1", "true"):
+        assert_invalid_config(write_config(tmp_path, extra=key + value))

@@ -3,15 +3,15 @@
 from __future__ import annotations
 
 from beliefs import stored
-from beliefs.dataset import DatasetDeclaration, ResourceDeclaration, dataset_address
 from beliefs.durable import write_create_only
-from beliefs.holdings.acquisition_log import log_summary, render_acquisition_log
+from beliefs.holdings.acquisition_log import render_acquisition_log
 from beliefs.holdings.records import StoreLocator, StoreTreeLocator
 from beliefs.holdings.seal import LOG_NAME, SealRequest
 from beliefs.session.ledger import open_ledger_reader
 
-from science.acquisition.journal import Journal, locked_directory, set_directory, sync_dir, validate_root
-from science.acquisition.retrieve import verified_members
+from science.acquisition.binding import seal_identity
+from science.acquisition.journal import Journal, locked_directory, set_directory, validate_root
+from science.acquisition.retrieve import clean_work_files, verified_members
 from science.acquisition.standing import seal_heads
 from science.config import corpus_id_at
 from science.refusal import Refusal, Refused
@@ -60,12 +60,10 @@ def _recover(ctx, bound):
 
 def accept(ctx, writer, log, title, locator, bound, bind, finish, request_files):
     """Both origins reach this one kernel seal. request_files is needed only before a fresh write."""
-    summary = log_summary(log)
-    tree = StoreTreeLocator(writer.store_id, summary.tree.split(":")[1])
-    address = dataset_address(DatasetDeclaration((ResourceDeclaration("data", summary.tree),)))
-    identity = dict(log=summary.log, tree=summary.tree, store=writer.store_id,
-                    corpus=corpus_id_at(ctx.config.write_root), dataset=address,
-                    origin=log.header.origin, title=title, locator=locator)
+    identity = seal_identity(log, title, locator)
+    identity.update(store=writer.store_id, corpus=corpus_id_at(ctx.config.write_root))
+    address = identity["dataset"]
+    tree = StoreTreeLocator(writer.store_id, identity["tree"].split(":")[1])
     session = writer.actor.removeprefix("session:")
     if bound is not None:
         if any(bound[k] != v for k, v in identity.items()):
@@ -82,7 +80,7 @@ def accept(ctx, writer, log, title, locator, bound, bind, finish, request_files)
     found = ctx.dataset_at(address)
     if found and found[0] != identity["corpus"] and not ctx.write_view().holds(address):
         _refuse(f"dataset {address} is already declared on read mount {found[0]}")
-    location_names = [tree.canonical(), StoreLocator(writer.store_id, summary.log.split(":")[1] + "/" + LOG_NAME).canonical()]
+    location_names = [tree.canonical(), StoreLocator(writer.store_id, identity["log"].split(":")[1] + "/" + LOG_NAME).canonical()]
     for name, digest in log.header.source_journals:
         location_names.append(StoreLocator(writer.store_id, digest.split(":")[1] + "/" + name).canonical())
     standing, unsettled = seal_heads(ctx, location_names)
@@ -98,13 +96,6 @@ def accept(ctx, writer, log, title, locator, bound, bind, finish, request_files)
     return tuple(blocks)
 
 
-def _cleanup(j):
-    for state in j.requests:
-        if state.digest:
-            (j.path / "objects" / state.digest.split(":")[1]).unlink(missing_ok=True)
-    sync_dir(j.path / "objects")
-
-
 def seal_set(ctx, writer, token, partial):
     operations, protected = ctx.config.acquisition_roots()
     validate_root(operations, protected)
@@ -115,7 +106,7 @@ def seal_set(ctx, writer, token, partial):
             if (journal.binding["corpus"] != corpus_id_at(ctx.config.write_root)
                     or journal.binding["store"] != writer.store_id):
                 _refuse("this set was sealed in another destination")
-            _cleanup(journal)
+            clean_work_files(journal)
             _already(journal.receipt)
         if not journal.binding:
             members = verified_members(journal)
@@ -138,7 +129,7 @@ def seal_set(ctx, writer, token, partial):
 
         def finish(receipt):
             journal.append("sealed", **receipt)
-            _cleanup(journal)
+            clean_work_files(journal)
 
         return accept(ctx, writer, log, journal.plan.source["title"], journal.plan.source["locator"], journal.binding,
                       lambda binding: journal.append("sealing", **binding), finish, request_files)

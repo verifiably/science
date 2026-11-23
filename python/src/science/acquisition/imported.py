@@ -48,7 +48,7 @@ def _binding(path, value):
 def import_log(ctx, writer, file, members, originals, title, locator, partial):
     cfg = ctx.config
     policy = cfg.acquire
-    raw = read_regular(file)
+    raw = read_regular(file, max_bytes=cfg.max_import_evidence_bytes)
     log = parse_acquisition_log(raw)
     if log.header.origin != "imported" or render_acquisition_log(log) != raw:
         _invalid("import requires a canonical imported acquisition log")
@@ -77,12 +77,14 @@ def import_log(ctx, writer, file, members, originals, title, locator, partial):
             if len(set(names)) != len(names) or LOG_NAME in names:
                 _invalid("duplicate or reserved source journal name")
             # Each path is opened relative to the supplied journal directory.
+            remaining = cfg.max_import_evidence_bytes - len(raw)
             staged_originals = []
             for i, (name, digest) in enumerate(log.header.source_journals):
                 require_store_relative_path(name)
                 dest = private / f"source-{i}"
                 with dest.open("xb") as output:
-                    actual = copy_regular(originals / name, output)
+                    actual = copy_regular(originals / name, output, max_bytes=remaining)
+                    remaining -= output.tell()
                 if actual != digest:
                     _invalid(f"source journal {name!r} differs from its declared digest")
                 staged_originals.append((name, dest))

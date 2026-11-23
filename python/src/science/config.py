@@ -43,6 +43,7 @@ _OPTIONAL_KEYS = (
     "service_socket", "default_project", "write_root", "read_contracts",
     "sharing_root", "accept", "fetch", "keep", "read_store_roots", "acquire",
 )
+_DEFAULT_IMPORT_EVIDENCE_BYTES = 64 * 1024**2
 _FETCH_POLICIES = ("records-only", "fetch")
 
 
@@ -81,6 +82,7 @@ class ScienceConfig:
     read_store_roots: tuple[Path, ...] = ()
     acquire: AcquisitionBounds = AcquisitionBounds()
     operations_root_redirected: bool = False
+    max_import_evidence_bytes: int = _DEFAULT_IMPORT_EVIDENCE_BYTES
 
     def acquisition_roots(self):
         if self.operations_root_redirected:
@@ -237,6 +239,12 @@ def load_config(path: Path) -> ScienceConfig:
     for entry in keep:
         if type(entry) is not str or not _WORLD_ID_RE.fullmatch(entry):
             _refuse(f"config keep entry {entry!r} must be a corpus id, 32 lowercase hex characters")
+    acquire = raw.get("acquire", {})
+    if not isinstance(acquire, dict):
+        _refuse("config acquire must be a table")
+    evidence_limit = acquire.pop("max_import_evidence_bytes", _DEFAULT_IMPORT_EVIDENCE_BYTES)
+    if type(evidence_limit) is not int or evidence_limit < 1:
+        _refuse("acquire max_import_evidence_bytes must be a positive integer")
     fetch = _fetch_policy(raw["fetch"]) if "fetch" in raw else FetchPolicy("records-only", 0)
     if type(raw["store_root"]) is not str:
         _refuse("config store_root must be a string")
@@ -345,7 +353,8 @@ def load_config(path: Path) -> ScienceConfig:
         sharing_root=sharing_root,
         accept=tuple(accept),
         fetch=fetch,
-        acquire=AcquisitionBounds.from_mapping(raw.get("acquire", {})),
+        acquire=AcquisitionBounds.from_mapping(acquire),
+        max_import_evidence_bytes=evidence_limit,
         keep=tuple(keep),
         source=(path, sha256(contents).hexdigest()),
     )

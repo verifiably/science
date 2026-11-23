@@ -38,3 +38,22 @@ def test_unsealable_trees_refuse_without_reading_special_files(tmp_path, kind):
     selected = ["a", "a"] if kind == "duplicate" else ["../escape"] if kind == "escape" else None
     with pytest.raises(Refused):
         stage_tree(root, stage, bounds, selected=selected)
+
+
+def test_evidence_copy_refuses_growth_at_limit(tmp_path):
+    from io import BytesIO
+    from science.acquisition.staging import copy_regular
+
+    source = tmp_path / "original"
+    source.write_bytes(b"initial")
+
+    class GrowingCopy(BytesIO):
+        def write(self, chunk):
+            with source.open("ab") as handle:
+                handle.write(b"growth")
+            return super().write(chunk)
+
+    output = GrowingCopy()
+    with pytest.raises(Refused, match="grew"):
+        copy_regular(source, output, max_bytes=7)
+    assert output.getvalue() == b"initial"
