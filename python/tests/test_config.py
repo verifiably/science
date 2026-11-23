@@ -472,3 +472,12 @@ def test_only_activated_plans_are_profile_validated(tmp_path):
     assert not cfg.plans
     assert "testing" not in cfg.profile.activated_contracts
     assert "roles" in assert_invalid_config(write_config(tmp_path, contracts=f'["{path}"]')).message
+
+
+def test_acquisition_bounds_are_durable_integer_units(tmp_path):
+    config = load_config(write_config(tmp_path, extra="[acquire]\nattempts=2\nmin_interval_ms=0\n"))
+    assert config.acquire.attempts == 2
+    assert config.acquire.min_interval_ms == 0
+    assert config.acquire.max_response_bytes == 64 * 1024**2
+    for invalid in ("attempts=0", "max_requests=true", "backoff_ms=-1", "unknown_limit=4"):
+        assert_invalid_config(write_config(tmp_path, extra="[acquire]\n" + invalid))

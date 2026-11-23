@@ -27,6 +27,7 @@ from beliefs.root import AtomsError
 from beliefs.world import WorldConfig
 from beliefs.world.registry import content_identity, load_manifest
 
+from science.acquisition.bounds import AcquisitionBounds
 from science.refusal import WORLD_READ_ERRORS, Refusal, Refused, kernel_refusal
 from science.contracts import OperatorPlan, validate_plan, load_contract_chain, load_contract_document
 from science.sharing import SharingRegistry, SharingRegistryMalformed
@@ -38,7 +39,7 @@ _KEYS = (
 )
 _OPTIONAL_KEYS = (
     "service_socket", "default_project", "write_root", "read_contracts",
-    "sharing_root", "accept", "fetch", "keep", "read_store_roots",
+    "sharing_root", "accept", "fetch", "keep", "read_store_roots", "acquire",
 )
 _FETCH_POLICIES = ("records-only", "fetch")
 
@@ -76,6 +77,7 @@ class ScienceConfig:
     keep: tuple[str, ...] = ()
     source: tuple[Path, str] | None = None
     read_store_roots: tuple[Path, ...] = ()
+    acquire: AcquisitionBounds = AcquisitionBounds()
 
 
 def _refuse(message: str) -> NoReturn:
@@ -333,6 +335,7 @@ def load_config(path: Path) -> ScienceConfig:
         sharing_root=sharing_root,
         accept=tuple(accept),
         fetch=fetch,
+        acquire=AcquisitionBounds.from_mapping(raw.get("acquire", {})),
         keep=tuple(keep),
         source=(path, sha256(contents).hexdigest()),
     )
