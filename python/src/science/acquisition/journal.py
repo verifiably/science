@@ -24,7 +24,7 @@ from science.acquisition.plan import StaticPlan, parse_plan
 from science.acquisition.request import RequestState
 from science.refusal import Refusal, Refused
 
-__all__ = ["Journal", "locked_directory", "prepare_root", "sync_dir"]
+__all__ = ["Journal", "locked_directory", "prepare_root", "set_directory", "sync_dir", "validate_root"]
 
 _TOKEN = re.compile("[0-9a-f]{32}")
 INSTRUMENT = "science/acquire.v1 (beliefs transport)"
@@ -64,24 +64,41 @@ def locked_directory(path: Path, busy: str):
         yield
 
 
-def prepare_root(operations: Path, protected: tuple[Path, ...]) -> Path:
+def validate_root(operations: Path, protected: tuple[Path, ...]) -> None:
     _safe(operations)
     for root in protected:
         root = root.resolve()
         if operations.is_relative_to(root) or root.is_relative_to(operations):
             raise _invalid(f"operations root overlaps protected root {root}")
-    existing = operations
+    existing = _safe(operations / "acquisitions")
     while not existing.exists():
         existing = existing.parent
     with _directory(existing) as fd:
         fs = resolve_mount_entry(fd, read_mountinfo()).filesystem_type
         if fs in ("tmpfs", "ramfs"):
             raise _invalid(f"acquisition work area requires persistent storage, found {fs}")
-    ensure_directory(operations)
+
+
+def prepare_root(operations: Path, protected: tuple[Path, ...]) -> Path:
+    validate_root(operations, protected)
+    try:
+        ensure_directory(operations)
+    except FileExistsError:
+        if not operations.is_dir():
+            raise
     root = _safe(operations / "acquisitions")
     root.mkdir(mode=0o700, exist_ok=True)
     sync_dir(operations)
     return root
+
+
+def set_directory(operations, token):
+    if not isinstance(token, str) or not _TOKEN.fullmatch(token):
+        raise _invalid("invalid acquisition set token")
+    path = _safe(operations / "acquisitions" / token)
+    if not path.is_dir():
+        raise _invalid(f"unknown acquisition set {token}")
+    return path
 
 
 def _digest(data: bytes) -> str:
@@ -107,6 +124,10 @@ class Journal:
         self.path, self.plan, self.bounds = path, plan, bounds
         self.requests = [RequestState(seed) for seed in plan.seeds]
         self.position = 1 + len(plan.seeds)
+        self.open_positions = {}
+        self.partial = False
+        self.binding = None
+        self.receipt = None
 
     @classmethod
     def create(cls, operations, raw, bounds, *, protected):
@@ -119,6 +140,7 @@ class Journal:
             policy = v1.encode(asdict(bounds))
             _write_file(path / "plan.json", raw)
             _write_file(path / "bounds.json", policy)
+            _write_file(path / "active", b"")
             for name in ("objects", "scratch"):
                 (path / name).mkdir(mode=0o700)
             header = {"event": "initialized", "set": token, "plan": _digest(raw), "bounds": _digest(policy)}
@@ -134,12 +156,8 @@ class Journal:
 
     @classmethod
     def open(cls, operations, token, *, repair=False):
-        if not isinstance(token, str) or not _TOKEN.fullmatch(token):
-            raise _invalid("invalid acquisition set token")
-        path = _safe(operations / "acquisitions" / token)
-        if not path.is_dir():
-            raise _invalid(f"unknown acquisition set {token}")
-        for name in ("objects", "scratch", "plan.json", "bounds.json", "journal.v1"):
+        path = set_directory(operations, token)
+        for name in ("objects", "scratch", "plan.json", "bounds.json", "journal.v1", "active"):
             item = _safe(path / name)
             mode = item.stat().st_mode
             if not (stat.S_ISDIR(mode) if name in ("objects", "scratch") else stat.S_ISREG(mode)):
@@ -168,25 +186,74 @@ class Journal:
                     row = v1.decode(line[:-1])
                     if not isinstance(row, dict):
                         raise ValueError("event is not an object")
-                    index, next_request = result._next(row)
+                    result._apply(row)
                 except (ValueError, KeyError, TypeError, IdentityError, MalformedRecord) as exc:
                     raise _invalid(f"journal line {result.position + 1}: {exc}") from exc
-                result.requests[index] = next_request
                 result.position += 1
         return result
 
-    def _next(self, row):
-        event, seq = row["event"], row["seq"]
+    def _apply(self, row):
+        event = row["event"]
+        if self.receipt:
+            raise ValueError("event after sealed")
+        if event == "partial" and row.keys() == {"event"} and not self.partial and self.binding is None:
+            self.partial = True
+            return
+        if event == "sealing":
+            keys = {"log", "tree", "store", "corpus", "invocation", "session", "dataset", "origin", "title", "locator"}
+            payload = {key: value for key, value in row.items() if key != "event"}
+            if payload.keys() != keys or not all(isinstance(v, str) and v for v in payload.values()):
+                raise ValueError("invalid seal binding")
+            if self.binding and any(payload[k] != self.binding[k] for k in keys - {"invocation", "session"}):
+                raise ValueError("seal binding changed")
+            self.binding = payload
+            return
+        if event == "sealed":
+            if (row.keys() != {"event", "dataset", "report"} or self.binding is None
+                    or row["dataset"] != self.binding["dataset"]
+                    or not re.fullmatch(r"act-report:[0-9a-f]{64}", row["report"])):
+                raise ValueError("invalid seal receipt")
+            self.receipt = {"dataset": row["dataset"], "report": row["report"]}
+            return
+        if event == "abandoned" and not self.partial:
+            raise ValueError("abandonment requires a partial acceptance decision")
+        if self.binding or self.partial and event != "abandoned":
+            raise ValueError("retrieval after an acceptance decision")
+        seq = row["seq"]
         if type(seq) is not int or not 1 <= seq <= len(self.requests):
             raise ValueError(f"invalid sequence {seq}")
         payload = {key: value for key, value in row.items() if key not in ("event", "seq")}
-        return seq - 1, self.requests[seq - 1].transition(event, payload, self.bounds.attempts)
+        self.requests[seq - 1] = self.requests[seq - 1].transition(event, payload, self.bounds.attempts)
+        if event == "attempt-open":
+            self.open_positions[seq] = self.position + 1
+        else:
+            self.open_positions.pop(seq, None)
 
-    def append(self, event, *, seq, **payload):
-        """The caller owns the per-set directory lock through all mutation."""
-        row = {"event": event, "seq": seq, **payload}
+    @contextmanager
+    def recording(self, seq):
+        """An OS-held marker distinguishes this live open from a previous process's open."""
+        with (self.path / "active").open("r+b", buffering=0) as marker:
+            fcntl.flock(marker, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            marker.truncate(0)
+            marker.write(f"{seq} {self.position + 1}".encode())
+            yield
+
+    def active_seq(self):
+        with (self.path / "active").open("rb") as marker:
+            try:
+                fcntl.flock(marker, fcntl.LOCK_SH | fcntl.LOCK_NB)
+            except BlockingIOError:
+                marker_value = marker.read(64)
+                for seq, position in self.open_positions.items():
+                    if marker_value == f"{seq} {position}".encode():
+                        return seq
+        return None
+
+    def append(self, event, **payload):
+        """The caller owns the set lock. An I/O error ends the operation; reopen for recovery."""
+        row = {"event": event, **payload}
         try:
-            index, next_request = self._next(row)
+            self._apply(row)
         except (ValueError, TypeError, KeyError, MalformedRecord) as exc:
             raise _invalid(f"journal line {self.position + 1}: {exc}") from exc
         with (self.path / "journal.v1").open("ab") as handle:
@@ -194,7 +261,6 @@ class Journal:
             handle.write(v1.encode(row) + b"\n")
             handle.flush()
             os.fsync(handle.fileno())
-        self.requests[index] = next_request
         self.position += 1
 
     def acquisition_log(self):

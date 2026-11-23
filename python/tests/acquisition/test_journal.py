@@ -40,6 +40,7 @@ def test_renewed_budget_and_exact_partial_history(certified_work, cut_open):
         j = Journal.open(certified_work, j.path.name)
         assert j.requests[1].state == "pending"
     with locked_directory(j.path, "set-busy"):
+        j.append("partial")
         j.append("abandoned", seq=2)
     log = j.acquisition_log()
     assert [a.outcome for a in log.lines[1].attempts] == ["failed"] * 4 + (["interrupted"] if cut_open else [])
@@ -81,3 +82,32 @@ def test_invalid_set_and_overlap_refused_before_creation(certified_work):
     with pytest.raises(Refused, match="overlap"):
         Journal.create(certified_work / "store" / "ops", RAW, AcquisitionBounds(), protected=(certified_work / "store",))
     assert not (certified_work / "store").exists()
+
+
+def test_an_unmatched_open_during_seal_is_pending(certified_work):
+    from science.acquisition.operator import _status
+    j = create(certified_work)
+    with locked_directory(j.path, "set-busy"):
+        j.append("attempt-open", seq=1, started_at="lost")
+    with locked_directory(j.path, "set-busy"):
+        status = _status(certified_work, j.path.name)
+        assert status["active"] == 0 and status["pending"] == 2
+
+
+def test_redirected_config_root_refuses_before_creating_set(certified_work, monkeypatch):
+    from science.acquisition.operator import operate
+    monkeypatch.setattr("science.acquisition.operator.retrieve_set", lambda *_: pytest.fail("entered retrieval"))
+    from argparse import Namespace
+    from test_config import write_config
+    true_root = certified_work / "other"
+    true_root.mkdir()
+    alias = certified_work / "alias"
+    alias.symlink_to(true_root)
+    config = write_config(certified_work, operations_root=alias)
+    plan = certified_work / "plan"
+    plan.write_bytes(RAW)
+    args = Namespace(command="acquire-start", config=config, plan=plan,
+                     **dict.fromkeys(AcquisitionBounds.__dataclass_fields__))
+    with pytest.raises(Refused, match="redirect"):
+        operate(args)
+    assert not (true_root / "acquisitions").exists()

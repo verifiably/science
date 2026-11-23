@@ -4,3 +4,6 @@ an absolute path or an https:// URL. The bytes are held only if they match the
 digest the dataset declares, and the configuration's `[fetch]` policy allows it
 (`records-only` refuses). The output is the holdings observation; if it refuses,
 report the refusal and change nothing.
+
+For a declared tree resource, supply an absolute local directory. Fetch verifies
+all member names and bytes against the declared tree digest before writing.

@@ -8,6 +8,8 @@ from collections.abc import Mapping, Sequence
 from hashlib import sha256
 from pathlib import Path
 
+from beliefs.boundary import HeldTree
+
 from beliefs import stored
 from beliefs.adapter import WorkflowDefinition
 from beliefs.boundary import RunMinted, RunRefused, execute_production_run
@@ -97,7 +99,7 @@ def handle(
 
     holdings = writer.holdings_context(instrument=INSTRUMENT)
 
-    held_inputs: dict[str, dict[str, Path]] = {}
+    held_inputs: dict[str, dict[str, Path | HeldTree]] = {}
     expected_inputs: dict[str, dict[str, str]] = {}
     recipe_inputs: list[RecipeInput] = []
     seen_addresses: set[str] = set()

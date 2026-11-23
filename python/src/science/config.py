@@ -9,6 +9,8 @@ from dataclasses import dataclass, replace
 from functools import cached_property
 from hashlib import sha256
 from pathlib import Path
+
+from beliefs.boundary import HeldTree
 from typing import Literal, NoReturn
 
 from beliefs.contract.domain import DomainContract
@@ -78,6 +80,13 @@ class ScienceConfig:
     source: tuple[Path, str] | None = None
     read_store_roots: tuple[Path, ...] = ()
     acquire: AcquisitionBounds = AcquisitionBounds()
+    operations_root_redirected: bool = False
+
+    def acquisition_roots(self):
+        if self.operations_root_redirected:
+            _refuse("configured acquisition operations root redirects through a symbolic link")
+        return self.operations_root, (self.store_root, *self.read_store_roots, *self.world.corpus_roots)
+
 
 
 def _refuse(message: str) -> NoReturn:
@@ -323,6 +332,7 @@ def load_config(path: Path) -> ScienceConfig:
             corpus_roots=corpus_roots,
         ),
         operations_root=operations_root,
+        operations_root_redirected=Path(os.path.abspath(base_dir / raw["operations_root"])) != operations_root,
         profile=profile,
         service_socket=service_socket,
         store_root=store_root,
@@ -559,7 +569,7 @@ class ReadContext:
         from science.holdings import held_path
         return held_path(self.read_views(), self.world, self._stores, address)
 
-    def held_resources(self, address: str) -> dict[str, Path]:
+    def held_resources(self, address: str) -> dict[str, Path | HeldTree]:
         from science.holdings import held_resources
 
         return held_resources(self.read_views(), self.world, self._stores, address)

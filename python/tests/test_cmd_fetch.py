@@ -181,3 +181,24 @@ def test_fetch_resource_count_refusal_has_no_private_reference(monkeypatch):
         fetch_module.handle(ctx, UnusedWriter(), dataset=dataset, source="https://data.test/input")
     assert caught.value.refusal.code == "invalid-input"
     assert caught.value.refusal.message == "dataset:sha256:two-resources declares 2 resources; fetch holds one"
+
+
+def test_tree_fetch_checks_digest_before_writing(certified_work, tmp_path):
+    from beliefs import stored
+    from beliefs.root import open_corpus
+    from beliefs.tree import TreeMember, make_tree, tree_digest
+    from helpers.world import FIXTURE_AUTHORITY, build_belief_world
+    from science.refusal import Refused
+    cfg = replace(build_belief_world(certified_work), fetch=FetchPolicy("fetch", 16))
+    tree = make_tree([TreeMember("value", "sha256:" + sha256(b"ok").hexdigest(), 2)])
+    record = stored.dataset_node(title="outside", resources=[{"name":"my-input", "digest":tree_digest(tree)}])
+    open_corpus(cfg.write_root, authority=FIXTURE_AUTHORITY, profile=cfg.profile).add(record)
+    (tmp_path / "value").write_bytes(b"no")
+    args = dict(dataset=record.id, source=str(tmp_path))
+    with open_rig(cfg, ("fetch",)) as (d, _):
+        with pytest.raises(Refused, match="declared"):
+            d.invoke("fetch", args, invocation_id="mismatch")
+        assert not d._session.invocation_acts("mismatch")
+        (tmp_path / "value").write_bytes(b"ok")
+        assert "[holdings-observation]" in d.invoke("fetch", args).text
+    assert set(ReadContext.open(cfg).held_resources(record.id)) == {"my-input"}

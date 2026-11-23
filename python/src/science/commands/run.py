@@ -6,6 +6,8 @@ from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 
+from beliefs.boundary import HeldTree
+
 from beliefs import stored
 from beliefs.adapter import WorkflowDefinition
 from beliefs.boundary import RunMinted, RunRefused, execute_assessment_run
@@ -34,7 +36,7 @@ def now() -> str:
 
 def _stage_binding_for(
     ctx, address: str, declaration: DatasetDeclaration
-) -> tuple[dict[str, Path], dict[str, str], str]:
+) -> tuple[dict[str, Path | HeldTree], dict[str, str], str]:
     if not declaration.resources:
         _refuse(f"{address} declares no resources")
     computed = dataset_address(declaration)
@@ -50,7 +52,7 @@ def _stage_binding_for(
     return held_entry, expected_entry, content_id
 
 
-def _check_staged_collisions(held_inputs: Mapping[str, Mapping[str, Path]]) -> None:
+def _check_staged_collisions(held_inputs: Mapping[str, Mapping[str, Path | HeldTree]]) -> None:
     files_staged: set[str] = set()
     dirs_staged: set[str] = set()
     for address, source in held_inputs.items():
@@ -77,7 +79,7 @@ def prepare(ctx, spec_ref: str, dataset_ref: str, code: str, entrypoint: str, ta
     observes_addresses = [role.dataset for role in spec.input_roles if role.role == "observes"]
     if address is None or observes_addresses != [address]:
         _refuse(f"{dataset_ref} is not the dataset the spec observes")
-    held_inputs: dict[str, dict[str, Path]] = {}
+    held_inputs: dict[str, dict[str, Path | HeldTree]] = {}
     expected_inputs: dict[str, dict[str, str]] = {}
     mounts = tuple((mount.corpus_id, mount.view) for mount in ctx.session_mounts())
     for role in spec.input_roles:

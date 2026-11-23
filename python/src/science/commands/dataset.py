@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import tempfile
 from hashlib import sha256
 from pathlib import Path
 
@@ -13,6 +14,9 @@ from beliefs.facets import validate_payload
 from beliefs.holdings.boundary import write
 from beliefs.holdings.records import Found, StoreLocator
 
+from science.acquisition.staging import stage_tree
+from science.acquisition.tree_write import hold_tree
+from beliefs.tree import tree_digest
 from science.refusal import Refusal, Refused
 from science.report import Report, record_block
 
@@ -104,14 +108,9 @@ def _read_entries(source: Path, store_id: str, path: str, resources) -> list[tup
     return entries
 
 
-def handle(ctx, writer, *, path, title, locator=None, facets=None, resources=None) -> Report:
-    holdings = writer.holdings_context(instrument=INSTRUMENT)
-    source = Path(path)
-    entries = _read_entries(source, writer.store_id, path, resources)
+def _propose(ctx, writer, title, locator, facets, resources):
     domain_facets = _parse_facets(facets)
-    declaration = DatasetDeclaration(
-        resources=tuple(ResourceDeclaration(name=name, digest=digest) for name, _, digest in entries)
-    )
+    declaration = DatasetDeclaration(tuple(ResourceDeclaration(name, digest) for name, digest in resources))
     address = dataset_address(declaration)
     found = ctx.dataset_at(address)
     if found is not None:
@@ -121,20 +120,6 @@ def handle(ctx, writer, *, path, title, locator=None, facets=None, resources=Non
             "world record, and a second would be a duplicate location"
         )
     view = ctx.write_view()
-    planned_writes = []
-    for name, content, digest in entries:
-        relative = f"{digest.removeprefix('sha256:')}/{name}"
-        try:
-            location = StoreLocator(writer.store_id, relative)
-        except MalformedRecord as caught:
-            _refuse(str(caught))
-        standing = tuple(
-            stored.holdings_observation_value(node)
-            for node in view.iter_stored()
-            if node.kind == "holdings-observation"
-            and stored.holdings_observation_value(node).location == location
-        )
-        planned_writes.append((location, standing, content, digest))
     # The record is built and validated BEFORE the first act: a facet the
     # profile does not know, or a payload it refuses, must leave no bytes in
     # the store and no observation behind.
@@ -144,7 +129,7 @@ def handle(ctx, writer, *, path, title, locator=None, facets=None, resources=Non
     try:
         proposed = stored.dataset_node(
             title=title,
-            resources=[{"name": name, "digest": digest} for name, _, digest in entries],
+            resources=[{"name": name, "digest": digest} for name, digest in resources],
             empirical_observation=empirical, domain_facets=domain_facets or None,
         )
     except MalformedRecord as caught:
@@ -176,6 +161,35 @@ def handle(ctx, writer, *, path, title, locator=None, facets=None, resources=Non
         reason = validity_refusal(view, proposed, profile)
         if reason is not None:
             _refuse(f"locator refused: {reason}")
+    return proposed
+
+
+def handle(ctx, writer, *, path, title, locator=None, facets=None, resources=None, tree=None) -> Report:
+    if tree:
+        with tempfile.TemporaryDirectory(dir=ctx.config.operations_root) as tmp:
+            held, members = stage_tree(Path(path), Path(tmp), ctx.config.acquire, selected=resources)
+            proposed = _propose(ctx, writer, title, locator, facets, [("data", tree_digest(held))])
+            hold_tree(ctx, writer, INSTRUMENT, held, members)
+            return (record_block(writer.add(proposed)),)
+    holdings = writer.holdings_context(instrument=INSTRUMENT)
+    source = Path(path)
+    entries = _read_entries(source, writer.store_id, path, resources)
+    proposed = _propose(ctx, writer, title, locator, facets, [(name, digest) for name, _, digest in entries])
+    view = ctx.write_view()
+    planned_writes = []
+    for name, content, digest in entries:
+        relative = f"{digest.removeprefix('sha256:')}/{name}"
+        try:
+            location = StoreLocator(writer.store_id, relative)
+        except MalformedRecord as caught:
+            _refuse(str(caught))
+        standing = tuple(
+            stored.holdings_observation_value(node)
+            for node in view.iter_stored()
+            if node.kind == "holdings-observation"
+            and stored.holdings_observation_value(node).location == location
+        )
+        planned_writes.append((location, standing, content, digest))
     # --- first act: the holdings writes --------------------------------------
     observations: list[ByteObservation] = []
     seen_locations: set[StoreLocator] = set()

@@ -1,0 +1,23 @@
+schema_version = 1
+name = "acquire-seal"
+purpose = "Accept the retrieved members as a governed dataset."
+write_class = "mints:dataset,act-report,holdings-observation"
+output_budget = 4096
+
+[write.routes]
+holdings-observation = "holdings"
+act-report = "corpus-write"
+dataset = "corpus-write"
+
+[inputs.set]
+type = "string"
+required = true
+doc = "The acquisition set token."
+
+[inputs.accept_partial]
+type = "bool"
+required = false
+doc = "Explicitly accept a set containing incomplete requests."
+
+[reads]
+families = ["corpus-stored", "holdings"]

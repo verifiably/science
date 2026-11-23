@@ -9,13 +9,15 @@ ORDINARY = frozenset({
 })
 CONFINED = frozenset({"dataset", "derive", "fetch", "run", "spec"})
 REFUSED = frozenset({
-    "adopt", "provider-bind", "provider-inspect", "publish", "publish-preview", "show", "verify",
+    "acquire-seal", "acquire-import", "adopt", "provider-bind", "provider-inspect", "publish", "publish-preview", "show", "verify",
 })
 
 
 def admit(command, inputs):
     if command not in ORDINARY and command not in CONFINED:
         raise Refused(Refusal("permit-exceeded", "This command is unavailable through a run handle"))
+    if command == "dataset" and inputs.get("tree"):
+        raise Refused(Refusal("permit-exceeded", "Tree writes require an attended session"))
     if command == "heads" and inputs.get("resolve"):
         raise Refused(Refusal("permit-exceeded", "Resolving pending transactions requires the supervisor"))
     if command == "fetch" and str(inputs.get("source", "")).lower().startswith(("https:", "http:")):

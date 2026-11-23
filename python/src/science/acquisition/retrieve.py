@@ -91,33 +91,34 @@ def retrieve_set(journal, *, seam=None, monotonic=time.monotonic, sleep=time.sle
         if prior.state == "failed":
             journal.append("budget-renewed", seq=seq)
         while (request := journal.requests[seq - 1]).state == "pending":
-            journal.append("attempt-open", seq=seq, started_at=stamp())
-            bound = min(policy.max_response_bytes, policy.max_total_bytes - total)
-            result = retrieve(request.seed.url, RetrievalBounds(60, bound, 5), paced, journal.path / "scratch")
-            close = {}
-            retry_after = 0
-            if isinstance(result, Retrieved):
-                close["status"] = result.status
-                close["headers"] = dict(result.headers)
-                if request.seed.expected is not None and result.digest != request.seed.expected:
-                    result.path.unlink()
-                    close.update(outcome="failed", failure="expected-mismatch")
-                else:
-                    _install(journal.path / "objects", result)
-                    close.update(outcome="fetched", digest=result.digest, size=result.size)
-                    total += result.size
-            elif isinstance(result, NotAttempted):
-                close.update(outcome="not-attempted", failure=result.reason)
-            elif isinstance(result, Failed):
-                close.update(outcome="failed", failure=result.category)
-                if result.status is not None:
+            with journal.recording(seq):
+                journal.append("attempt-open", seq=seq, started_at=stamp())
+                bound = min(policy.max_response_bytes, policy.max_total_bytes - total)
+                result = retrieve(request.seed.url, RetrievalBounds(60, bound, 5), paced, journal.path / "scratch")
+                close = {}
+                retry_after = 0
+                if isinstance(result, Retrieved):
                     close["status"] = result.status
-                if result.refusal is not None:
-                    close["redirect_refusal"] = result.refusal
-                if result.retry_after is not None:
-                    retry_after = result.retry_after
-                    deadlines[answering_host] = max(deadlines[answering_host], monotonic() + retry_after)
-            journal.append("attempt-close", seq=seq, completed_at=stamp(), **close)
+                    close["headers"] = dict(result.headers)
+                    if request.seed.expected is not None and result.digest != request.seed.expected:
+                        result.path.unlink()
+                        close.update(outcome="failed", failure="expected-mismatch")
+                    else:
+                        _install(journal.path / "objects", result)
+                        close.update(outcome="fetched", digest=result.digest, size=result.size)
+                        total += result.size
+                elif isinstance(result, NotAttempted):
+                    close.update(outcome="not-attempted", failure=result.reason)
+                elif isinstance(result, Failed):
+                    close.update(outcome="failed", failure=result.category)
+                    if result.status is not None:
+                        close["status"] = result.status
+                    if result.refusal is not None:
+                        close["redirect_refusal"] = result.refusal
+                    if result.retry_after is not None:
+                        retry_after = result.retry_after
+                        deadlines[answering_host] = max(deadlines[answering_host], monotonic() + retry_after)
+                journal.append("attempt-close", seq=seq, completed_at=stamp(), **close)
             after = journal.requests[seq - 1]
             if after.state == "pending":
                 # For a positive integral millisecond base, 2**16 already exceeds the cap.

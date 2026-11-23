@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import sys
+import tempfile
+from dataclasses import replace
 from hashlib import sha256
 from pathlib import Path
 
@@ -10,6 +12,9 @@ from beliefs.holdings.boundary import write
 from beliefs.holdings.records import StoreLocator, url_locator
 from beliefs.holdings.transport import Failed, NotAttempted, RetrievalBounds, retrieve, url_seam
 
+from beliefs.tree import tree_digest
+from science.acquisition.staging import stage_tree
+from science.acquisition.tree_write import hold_tree
 from science.refusal import Refusal, Refused
 from science.report import Report, record_block
 
@@ -55,6 +60,21 @@ def handle(ctx, writer, *, dataset, source) -> Report:
     digest, name = resource.digest, resource.name
     if digest is None:
         _refuse(f"{dataset} declares no digest to check the bytes against")
+    if digest.startswith("sha256-tree:"):
+        path = Path(source)
+        if not path.is_absolute():
+            _refuse("fetching a declared tree requires an absolute local directory")
+        bounds = ctx.config.acquire
+        if policy.max_bytes:
+            bounds = replace(bounds, max_total_bytes=min(bounds.max_total_bytes, policy.max_bytes))
+        with tempfile.TemporaryDirectory(dir=ctx.config.operations_root) as tmp:
+            tree, members = stage_tree(path, Path(tmp), bounds)
+            actual = tree_digest(tree)
+            if actual != digest:
+                _refuse(f"local tree {actual} differs from declared digest {digest}")
+            published = hold_tree(ctx, writer, INSTRUMENT, tree, members)
+            ref = "holdings-observation:" + published.record.identity()
+            return (record_block(ctx.write_view().get(ref)),)
     content = _bytes_of(ctx, writer, source, policy.max_bytes)
     actual = "sha256:" + sha256(content).hexdigest()
     if actual != digest:

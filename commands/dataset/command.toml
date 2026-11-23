@@ -32,5 +32,10 @@ type = "list-of-string"
 required = false
 doc = "Relative POSIX file paths within --path when --path is a directory; absent, all regular files under --path are held."
 
+[inputs.tree]
+type = "bool"
+required = false
+doc = "Hold a directory as one tree resource named data."
+
 [reads]
 families = ["corpus-stored", "holdings"]

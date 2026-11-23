@@ -399,3 +399,24 @@ def test_dataset_reads_each_admitted_file_exactly_once(rig, tmp_path, monkeypatc
     assert orig_read_bytes(held_map["datapackage.json"]) == bytes_a
     assert orig_read_bytes(held_map["tables/data.tsv"]) == bytes_b
 
+
+
+@pytest.mark.parametrize("locator", [None, "accession:GSE1"])
+def test_dataset_tree_resolves_to_held_tree(rig, tmp_path, locator):
+    from beliefs import stored
+    from beliefs.boundary import HeldTree
+    from beliefs.dataset import dataset_address
+    from science.config import ReadContext
+    dispatcher, ctx = rig
+    (tmp_path / "file").write_bytes(b"held")
+    inputs = {"path": str(tmp_path), "title": "tree", "tree": True}
+    if locator:
+        inputs["locator"] = locator
+    dispatcher.invoke("dataset", inputs)
+    node = next(n for n in ctx.write_view().iter_stored() if n.kind == "dataset" and n.title == "tree")
+    decl = stored.dataset_declaration(node)
+    assert len(decl.resources) == 1
+    resource = decl.resources[0]
+    assert resource.name == "data" and resource.digest.startswith("sha256-tree:")
+    refreshed = ReadContext.open(ctx.config)
+    assert refreshed.held_resources(dataset_address(decl)) == {"data": HeldTree(ctx.config.store_root, resource.digest)}

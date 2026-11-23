@@ -120,3 +120,14 @@ def test_source_coreference_requires_addresses_stance_and_grounds():
         with pytest.raises(SystemExit) as caught:
             parser.parse_args(args[:index] + args[index + 2:])
         assert caught.value.code == 2
+
+
+def test_acquire_requires_a_subcommand_and_confines_plan_to_start():
+    import pytest
+    from science.cli import build_parser
+    from science.loader import production_tree
+    parser = build_parser(production_tree())
+    for args in (["acquire"], ["acquire", "--plan", "f", "resume", "--set", "x"]):
+        with pytest.raises(SystemExit):
+            parser.parse_args(args)
+    assert parser.parse_args(["acquire", "seal", "--set", "x"]).command == "acquire-seal"

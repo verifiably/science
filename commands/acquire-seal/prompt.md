@@ -1,0 +1,1 @@
+Accept a retrieved acquisition set and record its dataset and acquisition report. Supply partial acceptance only when the researcher explicitly accepts the missing members. Report the governed dataset and act-report references.
