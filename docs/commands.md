@@ -363,7 +363,11 @@ finished set's status includes its dataset address and acquisition report.
 To accept an external program's converted log, use `science acquire import
 --log FILE --members DIR --journals DIR --title TITLE --locator LOCATOR`.
 Member files and the original journals must match the canonical log.
-The service records the original fetching instrument.
+The service records the original fetching instrument. The log and all declared
+original journals together may occupy up to 64 MiB by default. Configure
+`[acquire].max_import_evidence_bytes` to change that limit. A fresh import
+over the limit is refused before the set is published. Recovery of a committed
+report uses its binding without recopying original journals.
 
 `science dataset --tree --path DIR --title TITLE` holds a local directory as a
 single resource named `data`. A declared tree can also be held using

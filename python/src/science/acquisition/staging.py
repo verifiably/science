@@ -74,11 +74,13 @@ def _regular(fd, relative):
         os.close(current)
 
 
-def copy_regular(path: Path, out) -> str:
+def copy_regular(path: Path, out, *, max_bytes: int) -> str:
     """Copy precisely the observed file size without following links or a growing tail."""
     try:
         with _root(path.parent) as fd, _regular(fd, path.name) as inp:
             size = os.fstat(inp.fileno()).st_size
+            if size > max_bytes:
+                raise ValueError("import exceeds max_import_evidence_bytes")
             remaining = size
             digest = hashlib.sha256()
             while remaining:
@@ -95,9 +97,9 @@ def copy_regular(path: Path, out) -> str:
         raise Refused(Refusal("invalid-input", f"Cannot stage {path}: {exc}")) from exc
 
 
-def read_regular(path: Path) -> bytes:
+def read_regular(path: Path, *, max_bytes: int) -> bytes:
     with io.BytesIO() as buffer:
-        copy_regular(path, buffer)
+        copy_regular(path, buffer, max_bytes=max_bytes)
         return buffer.getvalue()
 
 

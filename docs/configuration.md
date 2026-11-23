@@ -159,3 +159,9 @@ Two members with identical bytes count twice toward the logical set size.
 | `backoff_ms` | 1000 | milliseconds of initial retry delay |
 
 The two durations accept zero. The other settings require positive integers.
+
+For imports, the service also accepts `[acquire].max_import_evidence_bytes`,
+a positive integer with a default of 67,108,864 bytes (64 MiB). It counts
+the converted log and all declared original journals together. Member data
+has its own byte budget. Raise the evidence limit for larger journals after
+allowing for the extra memory needed to decode and seal them.

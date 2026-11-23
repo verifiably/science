@@ -111,3 +111,44 @@ def test_redirected_config_root_refuses_before_creating_set(certified_work, monk
     with pytest.raises(Refused, match="redirect"):
         operate(args)
     assert not (true_root / "acquisitions").exists()
+
+
+@pytest.mark.parametrize("invalid", [
+    "all-pending", "partial-pending", "failed-without-partial", "no-fetched",
+    "log", "tree", "dataset", "origin", "title", "locator",
+])
+def test_reopen_refuses_invalid_sealing_row_at_its_position(certified_work, invalid):
+    from beliefs.dataset import DatasetDeclaration, ResourceDeclaration, dataset_address
+    from beliefs.identity import v1
+
+    j = create(certified_work)
+    if invalid not in ("all-pending", "no-fetched"):
+        j.append("attempt-open", seq=1, started_at="start")
+        j.append("attempt-close", seq=1, completed_at="end", outcome="fetched", digest=DIGEST, size=5)
+    if invalid == "no-fetched":
+        for seq in (1, 2):
+            j.append("attempt-open", seq=seq, started_at="start")
+            j.append("attempt-close", seq=seq, completed_at="refused", outcome="not-attempted", failure="scheme")
+    elif invalid == "partial-pending":
+        j.append("partial")
+    elif invalid != "all-pending":
+        for _ in range(3):
+            failure(j)
+        if invalid != "failed-without-partial":
+            j.append("partial")
+    row = dict(event="sealing", store="1" * 32, corpus="2" * 32, invocation="seal", session="3" * 32,
+               log=DIGEST, tree="sha256-tree:" + "4" * 64, dataset="dataset:" + "5" * 64,
+               origin="fetched", title="test", locator="instrument:fixture")
+    if invalid in ("log", "tree", "dataset", "origin", "title", "locator", "failed-without-partial"):
+        summary = log_summary(j.acquisition_log())
+        row.update(log=summary.log, tree=summary.tree,
+                   dataset=dataset_address(DatasetDeclaration((ResourceDeclaration("data", summary.tree),))))
+        if invalid != "failed-without-partial":
+            row[invalid] += "-changed"
+    path = j.path / "journal.v1"
+    with path.open("ab") as handle:
+        handle.write(v1.encode(row) + b"\n")
+    before = path.read_bytes()
+    with pytest.raises(Refused, match=f"journal line {j.position + 1}:"):
+        Journal.open(certified_work, j.path.name, repair=True)
+    assert path.read_bytes() == before

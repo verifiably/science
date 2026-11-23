@@ -159,3 +159,64 @@ def test_identical_sets_get_separate_reports_with_shared_dataset(certified_work)
     receipts = [Journal.open(cfg.operations_root, j.path.name).receipt for j in sets]
     assert receipts[0]["report"] != receipts[1]["report"]
     assert receipts[0]["dataset"] == receipts[1]["dataset"]
+
+
+@pytest.mark.parametrize("directory,name", [
+    ("scratch", "retrieve-20261123T120000000000-1234"),
+    ("objects", hashlib.sha256(b"uncommitted").hexdigest()),
+])
+def test_partial_seal_cleans_interrupted_download(certified_work, directory, name):
+    cfg = build_belief_world(certified_work)
+    journal = ready(cfg)
+    journal.append("attempt-open", seq=2, started_at="interrupted")
+    private = journal.path / directory
+    orphan = private / name
+    orphan.write_bytes(b"uncommitted")
+    other = private / "operator-notes"
+    other.write_bytes(b"keep")
+    link = journal.path / "objects" / ("f" * 64)
+    link.symlink_to(other)
+    with open_rig(cfg, ("acquire-seal",)) as (dispatcher, _):
+        args = {"set": journal.path.name, "accept_partial": True}
+        dispatcher.invoke("acquire-seal", args)
+        assert not orphan.exists()
+        assert link.is_symlink() and other.read_bytes() == b"keep"
+        orphan.write_bytes(b"cleanup interrupted")
+        with pytest.raises(Refused, match="already sealed"):
+            dispatcher.invoke("acquire-seal", args)
+        assert not orphan.exists()
+
+
+@pytest.mark.parametrize("allowance", ["below-log", "below-total", "exact"])
+def test_import_evidence_admission(certified_work, allowance):
+    from dataclasses import replace
+    from beliefs.holdings.acquisition_log import AcquisitionLog, LogHeader, Recorded, RequestLine, render_acquisition_log
+
+    originals = certified_work / "journals"
+    members = certified_work / "members"
+    originals.mkdir()
+    members.mkdir()
+    (members / "a").write_bytes(b"a")
+    def sha(data):
+        return "sha256:" + hashlib.sha256(data).hexdigest()
+    sources = []
+    for name in ("first", "second"):
+        (originals / name).write_bytes(b"journal")
+        sources.append((name, sha(b"journal")))
+    header = LogHeader("4" * 32, "imported", "recorder", None, tuple(sources))
+    line = RequestLine(1, "https://example.org", None, None, (), "fetched", sha(b"a"), 1, "a", Recorded(0, 1, None))
+    raw = render_acquisition_log(AcquisitionLog(header, (line,)))
+    log = certified_work / "log.jsonl"
+    log.write_bytes(raw)
+    limit = len(raw) + {"below-log": -1, "below-total": 13, "exact": 14}[allowance]
+    cfg = replace(build_belief_world(certified_work), max_import_evidence_bytes=limit,
+                  acquire=AcquisitionBounds(max_total_bytes=1))
+    args = dict(log=str(log), members=str(members), journals=str(originals), title="one", locator="accession:a")
+    with open_rig(cfg, ("acquire-import",)) as (dispatcher, _):
+        if allowance == "exact":
+            assert "act-report:" in dispatcher.invoke("acquire-import", args).text
+        else:
+            with pytest.raises(Refused, match="max_import_evidence_bytes"):
+                dispatcher.invoke("acquire-import", args, invocation_id="over-limit")
+            assert not dispatcher._session.invocation_acts("over-limit")
+            assert not (cfg.operations_root / "acquisitions" / header.set).exists()

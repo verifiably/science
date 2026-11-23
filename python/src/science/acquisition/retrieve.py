@@ -13,7 +13,7 @@ from beliefs.holdings.transport import Failed, NotAttempted, RetrievalBounds, Re
 from science.acquisition.journal import Journal, sync_dir
 from science.refusal import Refusal, Refused
 
-__all__ = ["retrieve_set", "verified_members"]
+__all__ = ["clean_work_files", "retrieve_set", "verified_members"]
 
 
 def _stamp():
@@ -44,13 +44,15 @@ def verified_members(journal: Journal):
     return members
 
 
-def _clean_uncommitted(journal, members):
-    committed = set(members.values())
+def clean_work_files(journal, keep=()):
+    """Drop owned working files except the objects still needed by retrieval."""
+    committed = set(keep)
     for directory, pattern in (("objects", r"[0-9a-f]{64}"), ("scratch", r"retrieve-[0-9]{8}T[0-9]{12}-[0-9]+")):
         parent = journal.path / directory
         for entry in parent.iterdir():
             if entry not in committed and re.fullmatch(pattern, entry.name) and stat.S_ISREG(entry.lstat().st_mode):
                 entry.unlink()
+        sync_dir(parent)
 
 
 def _install(directory, result):
@@ -66,7 +68,7 @@ def _install(directory, result):
 def retrieve_set(journal, *, seam=None, monotonic=time.monotonic, sleep=time.sleep, stamp=_stamp):
     """The start/resume caller holds both nonblocking directory locks."""
     members = verified_members(journal)
-    _clean_uncommitted(journal, members)
+    clean_work_files(journal, members.values())
     policy = journal.bounds
     transport = seam if seam is not None else url_seam()
     deadlines = {}

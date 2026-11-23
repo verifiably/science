@@ -19,10 +19,11 @@ from beliefs.durable import ensure_directory
 from beliefs.errors import IdentityError, MalformedRecord
 from beliefs.holdings.acquisition_log import AcquisitionLog, LogHeader
 from beliefs.identity import v1
+from science.acquisition.binding import seal_identity
 from science.acquisition.bounds import AcquisitionBounds
 from science.acquisition.plan import StaticPlan, parse_plan
 from science.acquisition.request import RequestState
-from science.refusal import Refusal, Refused
+from science.refusal import INVOCATION_ID_RE, Refusal, Refused
 
 __all__ = ["Journal", "locked_directory", "prepare_root", "set_directory", "sync_dir", "validate_root"]
 
@@ -197,6 +198,9 @@ class Journal:
         if self.receipt:
             raise ValueError("event after sealed")
         if event == "partial" and row.keys() == {"event"} and not self.partial and self.binding is None:
+            states = {request.state for request in self.requests}
+            if "fetched" not in states or states == {"fetched"}:
+                raise ValueError("partial acceptance requires both fetched and missing members")
             self.partial = True
             return
         if event == "sealing":
@@ -204,6 +208,17 @@ class Journal:
             payload = {key: value for key, value in row.items() if key != "event"}
             if payload.keys() != keys or not all(isinstance(v, str) and v for v in payload.values()):
                 raise ValueError("invalid seal binding")
+            states = {request.state for request in self.requests}
+            if "fetched" not in states or "pending" in states:
+                raise ValueError("seal requires a fetched member and a decision on every request")
+            if states != {"fetched"} and not self.partial:
+                raise ValueError("seal of missing members requires partial acceptance")
+            valid_ids = all(_TOKEN.fullmatch(payload[k]) for k in ("store", "corpus", "session"))
+            if not valid_ids or not INVOCATION_ID_RE.fullmatch(payload["invocation"]):
+                raise ValueError("invalid seal destination or writer identifier")
+            expected = seal_identity(self.acquisition_log(), self.plan.source["title"], self.plan.source["locator"])
+            if any(payload[k] != value for k, value in expected.items()):
+                raise ValueError("seal binding differs from the folded acquisition evidence")
             if self.binding and any(payload[k] != self.binding[k] for k in keys - {"invocation", "session"}):
                 raise ValueError("seal binding changed")
             self.binding = payload
