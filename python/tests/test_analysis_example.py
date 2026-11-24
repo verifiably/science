@@ -94,7 +94,7 @@ def test_phf19_probe_walks_the_gene_stage_contrast(certified_work):
         paths[name] = sources / f"{name}.txt"
         paths[name].write_text(f"Synthetic {name} provenance\n")
     pins = {name: sha256(path.read_bytes()).hexdigest() for name, path in paths.items()}
-    root = certified_work / "phf19"
+    root = certified_work / 'PHF19 "probe" \\test'
     with pytest.raises(ValueError, match="matrix.*digest"):
         example["create_phf19"](root, paths)
     assert not root.exists()
@@ -104,6 +104,9 @@ def test_phf19_probe_walks_the_gene_stage_contrast(certified_work):
     counts = before["records"]["by_kind"]
     assert counts["procedure"] == 2 and counts["classification-rule"] == 1
     assert counts["referent-mapping"] == 1 and counts["assumptions-register"] == 3
+    reason = host_prerequisites()
+    if reason is not None:
+        pytest.skip(f"confinement unavailable: {reason}")
     cfg, proposition = example["walk"](world)
     assert proposition == "proposition:phf19-rna-pd-vs-ndmm"
     found = example["readback"](world.config)

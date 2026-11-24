@@ -161,25 +161,27 @@ coordination = {COORDINATION}
 
 def write_config_for(cfg: ScienceConfig, service_socket: Path | None = None, *,
                      document: Path | None = None, domains: tuple[str, ...] = DOMAINS) -> Path:
-    """The launcher TOML for a world `build_fixture_world_with_contract` built:
-    every key the loader requires, the test contract document it compiled, and
-    `service_socket`, by default the world's."""
+    """Write the launcher settings, defaulting to the testing contract and the world's socket."""
     work = cfg.world.world_root.parent
     contract = work / "testing.yaml" if document is None else document
     assert contract.is_file(), "write_config_for needs the contract world's document"
-    socket_line = f'service_socket = "{cfg.service_socket if service_socket is None else service_socket}"\n'
     path = work / "science.toml"
-    path.write_text(f'''\
-world_root = "{cfg.world.world_root}"
-world_id = "{cfg.world.world_id}"
-corpus_roots = ["{cfg.world.corpus_roots[0]}"]
-operations_root = "{cfg.operations_root}"
-domains = {list(domains)!r}
-contracts = ["{contract}"]
-store_root = "{cfg.store_root}"
-read_store_roots = {[str(root) for root in cfg.read_store_roots]!r}
-coordination = {COORDINATION}
-{socket_line}''')
+    settings = {
+        "world_root": str(cfg.world.world_root),
+        "world_id": cfg.world.world_id,
+        "corpus_roots": [str(root) for root in cfg.world.corpus_roots],
+        "operations_root": str(cfg.operations_root),
+        "domains": list(domains),
+        "contracts": [str(contract)],
+        "store_root": str(cfg.store_root),
+        "read_store_roots": [str(root) for root in cfg.read_store_roots],
+        "coordination": cfg.coordination,
+        "service_socket": str(cfg.service_socket if service_socket is None else service_socket),
+    }
+    # JSON escapes for these strings and arrays also encode TOML basic strings.
+    path.write_text("".join(
+        f"{key} = {json.dumps(value, ensure_ascii=False)}\n" for key, value in settings.items()
+    ), encoding="utf-8")
     return path
 
 
