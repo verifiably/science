@@ -165,6 +165,11 @@ def test_real_locked_fixture_syncs_offline_excludes_default_groups_and_root_sour
     ops_root = tmp_path / "ops"
     ops_root.mkdir()
     empty_cache = tmp_path / "empty-uv-cache"
+    fixture_home = tmp_path / "fixture-home"
+    fixture_home.mkdir()
+    monkeypatch.setenv("HOME", str(fixture_home))
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", "/dev/null")
+    monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
     monkeypatch.setenv("UV_CACHE_DIR", str(empty_cache))
     # Ambient redirection/group variables must not affect preparation.
     monkeypatch.setenv("UV_PROJECT_ENVIRONMENT", str(tmp_path / "wrong-venv"))
@@ -181,6 +186,8 @@ def test_real_locked_fixture_syncs_offline_excludes_default_groups_and_root_sour
     with open_environment(key, ops_root) as venv_path:
         assert venv_path == ops_root / "workflow-environments" / key / "venv"
         py = venv_path / "bin" / "python"
+        py_home = tmp_path / "py-check-home"
+        py_home.mkdir()
         check = subprocess.run(
             [
                 str(py),
@@ -194,6 +201,11 @@ def test_real_locked_fixture_syncs_offline_excludes_default_groups_and_root_sour
                     "print('OK')"
                 ),
             ],
+            env={
+                "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+                "HOME": str(py_home),
+                "PYTHONDONTWRITEBYTECODE": "1",
+            },
             capture_output=True,
             text=True,
             check=True,
@@ -215,6 +227,11 @@ def test_stale_lock_refuses_preparation_and_leaves_no_ready_entry(tmp_path, monk
     project, _ = _make_locked_fixture(tmp_path)
     ops_root = tmp_path / "ops"
     ops_root.mkdir()
+    fixture_home = tmp_path / "fixture-home"
+    fixture_home.mkdir()
+    monkeypatch.setenv("HOME", str(fixture_home))
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", "/dev/null")
+    monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
     monkeypatch.setenv("UV_CACHE_DIR", str(tmp_path / "empty-cache"))
 
     # Edit pyproject.toml to add a dependency without updating uv.lock -> stale lock.
@@ -283,13 +300,15 @@ def test_uv_invocation_argv_and_controlled_env(tmp_path, monkeypatch):
 
     argv = recorded["argv"]
     assert isinstance(argv, list)
-    assert argv[1:7] == [
+    assert argv[1:9] == [
         "sync",
         "--no-config",
         "--locked",
         "--no-default-groups",
         "--no-install-project",
         "--no-install-workspace",
+        "--no-python-downloads",
+        "--link-mode=copy",
     ]
     assert "--python" in argv
     py_arg = argv[argv.index("--python") + 1]
@@ -299,6 +318,7 @@ def test_uv_invocation_argv_and_controlled_env(tmp_path, monkeypatch):
     assert isinstance(env, dict)
     assert env["UV_PROJECT_ENVIRONMENT"] == str(ops_root / "workflow-environments" / key / "venv")
     assert env["UV_NO_CONFIG"] == "1"
+    assert env["UV_LINK_MODE"] == "copy"
     for forbidden in ("UV_DEFAULT_GROUPS", "UV_CONFIG_FILE", "VIRTUAL_ENV", "PYTHONPATH"):
         assert forbidden not in env
 
@@ -636,3 +656,182 @@ def test_workspace_member_extra_mutable_dependency_is_refused(tmp_path, monkeypa
         prepare_environment(proj, ops_root)
     assert caught.value.refusal.code == "invalid-input"
     assert calls == []
+
+
+def test_prepared_environments_use_copy_mode_and_isolate_cache_across_keys(tmp_path, monkeypatch):
+    wheels = tmp_path / "wheels"
+    shared_whl = _build_wheel(
+        wheels,
+        "wf-shared-copy",
+        "0.1.0",
+        {"wf_shared_copy/__init__.py": "VALUE = 'original'\n"},
+    )
+    private_cache = tmp_path / "private-uv-cache"
+    fixture_home = tmp_path / "fixture-home"
+    fixture_home.mkdir()
+    monkeypatch.setenv("UV_CACHE_DIR", str(private_cache))
+    monkeypatch.setenv("HOME", str(fixture_home))
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", "/dev/null")
+    monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
+
+    def _make_proj(name: str, version: str) -> Path:
+        proj = tmp_path / name
+        proj.mkdir()
+        (proj / "pyproject.toml").write_text(
+            f'[project]\nname = "{name}"\nversion = "{version}"\n'
+            'requires-python = ">=3.11"\n'
+            'dependencies = ["wf-shared-copy==0.1.0"]\n\n'
+            "[tool.uv.sources]\n"
+            f'wf-shared-copy = {{ path = "{shared_whl}" }}\n'
+        )
+        lock_res = subprocess.run(
+            ["uv", "lock", "--no-config", "--offline"],
+            cwd=proj,
+            env={
+                "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+                "HOME": str(fixture_home),
+                "UV_CACHE_DIR": str(private_cache),
+            },
+            capture_output=True,
+            text=True,
+        )
+        assert lock_res.returncode == 0, lock_res.stderr
+        return proj
+
+    proj1 = _make_proj("copy-proj-one", "0.1.0")
+    proj2 = _make_proj("copy-proj-two", "0.2.0")
+    ops_root = tmp_path / "ops"
+    ops_root.mkdir()
+
+    key1 = prepare_environment(proj1, ops_root)
+    with open_environment(key1, ops_root) as venv1:
+        installed1 = list(venv1.rglob("wf_shared_copy/__init__.py"))
+        assert len(installed1) == 1
+        assert installed1[0].stat().st_nlink == 1, "prepared module must not be hard-linked to uv cache"
+        # In-place edit on key1 must not mutate the private uv cache.
+        installed1[0].write_text("VALUE = 'mutated-in-key1'\n")
+
+    key2 = prepare_environment(proj2, ops_root)
+    assert key2 != key1
+    with open_environment(key2, ops_root) as venv2:
+        installed2 = list(venv2.rglob("wf_shared_copy/__init__.py"))
+        assert len(installed2) == 1
+        assert installed2[0].stat().st_nlink == 1
+        assert installed2[0].read_text() == "VALUE = 'original'\n"
+
+
+def test_workspace_stale_lock_refuses_even_after_warm_cache_and_direct_open_still_works(tmp_path, monkeypatch):
+    from science import workflow_environment as mod
+
+    wheels = tmp_path / "wheels"
+    runtime_whl = _build_wheel(
+        wheels,
+        "wf-ws-runtime",
+        "0.1.0",
+        {"wf_ws_runtime/__init__.py": "WS_TOKEN = 'v1'\n"},
+    )
+    private_cache = tmp_path / "ws-uv-cache"
+    fixture_home = tmp_path / "ws-home"
+    fixture_home.mkdir()
+    monkeypatch.setenv("UV_CACHE_DIR", str(private_cache))
+    monkeypatch.setenv("HOME", str(fixture_home))
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", "/dev/null")
+    monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
+
+    project = tmp_path / "ws-root"
+    member_dir = project / "packages" / "ws-member"
+    (member_dir / "src" / "ws_member").mkdir(parents=True)
+    (member_dir / "src" / "ws_member" / "__init__.py").write_text("MEMBER_REV = 1\n")
+    (member_dir / "pyproject.toml").write_text(
+        "[project]\n"
+        'name = "ws-member"\n'
+        'version = "0.1.0"\n'
+        'requires-python = ">=3.11"\n'
+        'dependencies = ["wf-ws-runtime==0.1.0"]\n\n'
+        "[build-system]\n"
+        'requires = ["hatchling"]\n'
+        'build-backend = "hatchling.build"\n\n'
+        "[tool.hatch.build.targets.wheel]\n"
+        'packages = ["src/ws_member"]\n'
+    )
+    (project / "pyproject.toml").write_text(
+        "[project]\n"
+        'name = "ws-root"\n'
+        'version = "0.1.0"\n'
+        'requires-python = ">=3.11"\n'
+        'dependencies = ["ws-member"]\n\n'
+        "[tool.uv.workspace]\n"
+        'members = ["packages/*"]\n\n'
+        "[tool.uv.sources]\n"
+        'ws-member = { workspace = true }\n'
+        f'wf-ws-runtime = {{ path = "{runtime_whl}" }}\n'
+    )
+    lock_res = subprocess.run(
+        ["uv", "lock", "--no-config", "--offline"],
+        cwd=project,
+        env={
+            "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+            "HOME": str(fixture_home),
+            "UV_CACHE_DIR": str(private_cache),
+        },
+        capture_output=True,
+        text=True,
+    )
+    assert lock_res.returncode == 0, lock_res.stderr
+
+    ops_root = tmp_path / "ops"
+    ops_root.mkdir()
+    key1 = prepare_environment(project, ops_root)
+    assert WORKFLOW_ENVIRONMENT_KEY_RE.fullmatch(key1)
+
+    # Editing member Python source preserves key and hits warm cache with zero syncs.
+    (member_dir / "src" / "ws_member" / "__init__.py").write_text("MEMBER_REV = 2\n")
+    sync_calls: list[object] = []
+    real_sync = mod._run_uv_sync
+    monkeypatch.setattr(mod, "_run_uv_sync", lambda *a, **kw: sync_calls.append(a))
+    assert prepare_environment(project, ops_root) == key1
+    assert sync_calls == []
+    monkeypatch.setattr(mod, "_run_uv_sync", real_sync)
+
+    # Bumping member version in pyproject.toml without re-locking makes the lock stale;
+    # warm cache must NOT mask it, while direct open_environment(key1, ops_root) still works.
+    member_toml = member_dir / "pyproject.toml"
+    member_toml.write_text(member_toml.read_text().replace('version = "0.1.0"', 'version = "0.2.0"'))
+    with pytest.raises(Refused) as stale:
+        prepare_environment(project, ops_root)
+    assert stale.value.refusal.code == "invalid-input"
+
+    with open_environment(key1, ops_root) as venv_path:
+        assert (venv_path / "bin" / "python").exists()
+
+
+@pytest.mark.parametrize("setting", [None, "true"])
+def test_open_environment_rejects_omitted_or_true_system_site_packages(tmp_path, setting):
+    ops_root = tmp_path / "ops"
+    key = "e" * 64
+    entry_dir = ops_root / "workflow-environments" / key
+    venv_dir = entry_dir / "venv"
+    base_py = Path(os.path.realpath(sys.executable))
+    _make_fake_venv(venv_dir, base_py)
+    cfg_lines = [
+        f"home = {base_py.parent}",
+        f"version_info = {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
+    ]
+    if setting is not None:
+        cfg_lines.append(f"include-system-site-packages = {setting}")
+    (venv_dir / "pyvenv.cfg").write_text("\n".join(cfg_lines) + "\n")
+    (entry_dir / "ready.json").write_text(
+        json.dumps(
+            {
+                "base_executable": str(base_py),
+                "base_prefix": os.path.realpath(sys.base_prefix),
+                "format_version": 1,
+                "key": key,
+            }
+        )
+        + "\n"
+    )
+    with pytest.raises(Refused) as caught:
+        with open_environment(key, ops_root):
+            pass
+    assert caught.value.refusal.code == "invalid-input"

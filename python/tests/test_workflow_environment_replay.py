@@ -11,6 +11,7 @@ import signal
 import subprocess
 import sys
 import time
+import tomllib
 import zipfile
 from pathlib import Path
 
@@ -36,9 +37,19 @@ def _require_certified_confinement() -> None:
 
 
 def _uv_cache_dir() -> str | None:
-    res = subprocess.run(["uv", "cache", "dir"], capture_output=True, text=True)
-    if res.returncode == 0 and res.stdout.strip():
-        return res.stdout.strip()
+    env_val = os.environ.get("UV_CACHE_DIR")
+    if env_val:
+        return env_val
+    xdg = Path(os.environ.get("XDG_CONFIG_HOME") or (Path.home() / ".config"))
+    uv_toml = xdg / "uv" / "uv.toml"
+    if uv_toml.is_file():
+        try:
+            data = tomllib.loads(uv_toml.read_text(encoding="utf-8"))
+        except (OSError, tomllib.TOMLDecodeError):
+            return None
+        cache_dir = data.get("cache-dir")
+        if isinstance(cache_dir, str) and cache_dir:
+            return cache_dir
     return None
 
 
@@ -70,10 +81,17 @@ def _build_wheel(wheel_dir: Path, name: str, version: str, files: dict[str, str]
     return wheel_path
 
 
-def _clean_env(cache_dir: str | None) -> dict[str, str]:
+def _clean_env(fixture_root: Path, cache_dir: str | None) -> dict[str, str]:
+    fixture_home = fixture_root / "fixture-home"
+    fixture_xdg = fixture_root / "fixture-xdg"
+    fixture_home.mkdir(parents=True, exist_ok=True)
+    fixture_xdg.mkdir(parents=True, exist_ok=True)
     env = {
         "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
-        "HOME": os.environ.get("HOME", ""),
+        "HOME": str(fixture_home),
+        "XDG_CONFIG_HOME": str(fixture_xdg),
+        "GIT_CONFIG_GLOBAL": "/dev/null",
+        "GIT_CONFIG_NOSYSTEM": "1",
         "PYTHONDONTWRITEBYTECODE": "1",
     }
     if cache_dir:
@@ -137,7 +155,7 @@ def test_cross_client_cli_derive_run_and_verify_with_selected_workflow_environme
 ):
     _require_certified_confinement()
     cache_dir = _uv_cache_dir()
-    base_env = _clean_env(cache_dir)
+    base_env = _clean_env(tmp_path, cache_dir)
 
     # 1. Build locked workflow project (snakemake 8.11.4 + wf-replay-sentinel absent from both Science clients).
     wheels_dir = tmp_path / "wheels"
@@ -185,10 +203,20 @@ def test_cross_client_cli_derive_run_and_verify_with_selected_workflow_environme
         {"inert_client_pkg/__init__.py": "INERT = True\n"},
     )
     client_b_venv = tmp_path / "client-b-venv"
-    sync_env = {**base_env, "UV_PROJECT_ENVIRONMENT": str(client_b_venv), "UV_NO_CONFIG": "1"}
+    sync_env = {**base_env, "UV_PROJECT_ENVIRONMENT": str(client_b_venv), "UV_NO_CONFIG": "1", "UV_LINK_MODE": "copy"}
     base_py = Path(os.path.realpath(sys.executable))
     sync_b = subprocess.run(
-        ["uv", "--directory", str(_SCIENCE_PY_ROOT), "sync", "--frozen", "--no-python-downloads", "--python", str(base_py)],
+        [
+            "uv",
+            "--directory",
+            str(_SCIENCE_PY_ROOT),
+            "sync",
+            "--frozen",
+            "--no-python-downloads",
+            "--link-mode=copy",
+            "--python",
+            str(base_py),
+        ],
         env=sync_env,
         capture_output=True,
         text=True,
@@ -197,7 +225,18 @@ def test_cross_client_cli_derive_run_and_verify_with_selected_workflow_environme
     assert sync_b.returncode == 0, f"Client B uv sync failed: {sync_b.stderr}"
     client_b_py = client_b_venv / "bin" / "python"
     pip_b = subprocess.run(
-        ["uv", "pip", "install", "--no-config", "--offline", "--no-deps", "--python", str(client_b_py), str(inert_whl)],
+        [
+            "uv",
+            "pip",
+            "install",
+            "--no-config",
+            "--offline",
+            "--no-deps",
+            "--link-mode=copy",
+            "--python",
+            str(client_b_py),
+            str(inert_whl),
+        ],
         env=base_env,
         capture_output=True,
         text=True,
@@ -435,7 +474,10 @@ def test_cross_client_cli_derive_run_and_verify_with_selected_workflow_environme
         venv_root = cfg.operations_root / "workflow-environments" / env_key / "venv"
         sentinel_files = list(venv_root.rglob("wf_replay_sentinel/__init__.py"))
         assert len(sentinel_files) == 1
-        sentinel_files[0].write_text('SENTINEL = "mutated-workflow-venv-v2"\n')
+        assert sentinel_files[0].stat().st_nlink == 1
+        mutated_tmp = sentinel_files[0].with_suffix(".py.tmp")
+        mutated_tmp.write_text('SENTINEL = "mutated-workflow-venv-v2"\n', encoding="utf-8")
+        os.replace(mutated_tmp, sentinel_files[0])
 
         drift_res = _cli(
             client_b_py,
@@ -461,14 +503,21 @@ def test_cross_client_cli_derive_run_and_verify_with_selected_workflow_environme
 
 
 def _resolve_mm_checkout() -> Path | None:
-    res = subprocess.run(["tasks", "resolve", "mm", "--json"], capture_output=True, text=True)
-    if res.returncode != 0:
+    xdg = Path(os.environ.get("XDG_CONFIG_HOME") or (Path.home() / ".config"))
+    projects_toml = xdg / "tasks" / "projects.toml"
+    if not projects_toml.is_file():
         return None
-    data = json.loads(res.stdout)
-    results = data.get("results", [])
-    if not results or not results[0].get("root"):
+    try:
+        data = tomllib.loads(projects_toml.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
         return None
-    root = Path(results[0]["root"])
+    projects = data.get("projects")
+    if not isinstance(projects, dict):
+        return None
+    raw_root = projects.get("mm")
+    if not isinstance(raw_root, str) or not raw_root:
+        return None
+    root = Path(raw_root)
     return root if (root / "pyproject.toml").is_file() and (root / "uv.lock").is_file() else None
 
 
@@ -485,6 +534,14 @@ def test_mm_lock_native_imports_and_gse24080_shell_rule_on_certified_host(
     from science.workflow_environment import prepare_environment
 
     cache_dir = _uv_cache_dir()
+    fixture_home = tmp_path / "mm-fixture-home"
+    fixture_xdg = tmp_path / "mm-fixture-xdg"
+    fixture_home.mkdir()
+    fixture_xdg.mkdir()
+    monkeypatch.setenv("HOME", str(fixture_home))
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(fixture_xdg))
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", "/dev/null")
+    monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
     if cache_dir:
         monkeypatch.setenv("UV_CACHE_DIR", cache_dir)
 
@@ -589,4 +646,6 @@ def test_mm_lock_native_imports_and_gse24080_shell_rule_on_certified_host(
         assert shell_refusal.value.refusal.data["kind"] == "RunRefused"
         assert shell_refusal.value.refusal.data["reason"] == "execution-failed"
         detail = shell_refusal.value.refusal.data.get("detail", "")
-        assert detail, "expected concrete execution failure detail for GSE24080 shell rule"
+        assert "Cannot set bash as default shell" in detail, detail
+        assert "Cannot fall back to sh" in detail, detail
+        assert "Error in rule expression" in detail, detail

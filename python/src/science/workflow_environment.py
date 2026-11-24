@@ -43,12 +43,15 @@ INSTALL_FLAGS = (
     "--no-install-project",
     "--no-install-workspace",
     "--no-python-downloads",
+    "--link-mode=copy",
 )
 _PASSTHROUGH_ENV_KEYS = (
     "PATH",
     "HOME",
     "UV_CACHE_DIR",
     "XDG_CACHE_HOME",
+    "GIT_CONFIG_GLOBAL",
+    "GIT_CONFIG_NOSYSTEM",
     "SSL_CERT_FILE",
     "SSL_CERT_DIR",
     "REQUESTS_CA_BUNDLE",
@@ -93,13 +96,22 @@ def _base_interpreter_identity(base_python: Path) -> dict[str, object]:
     }
 
 
-def _compute_key(pyproject_bytes: bytes, lock_bytes: bytes, base_identity: Mapping[str, object]) -> str:
-    payload = {
+def _compute_key(
+    pyproject_bytes: bytes,
+    lock_bytes: bytes,
+    base_identity: Mapping[str, object],
+    workspace_manifests: Mapping[str, bytes | None] | None = None,
+) -> str:
+    payload: dict[str, object] = {
         "base_interpreter": dict(base_identity),
         "format_version": KEY_FORMAT_VERSION,
         "install_flags": list(INSTALL_FLAGS),
         "lock_sha256": hashlib.sha256(lock_bytes).hexdigest(),
         "pyproject_sha256": hashlib.sha256(pyproject_bytes).hexdigest(),
+        "workspace_manifests": {
+            rel: (hashlib.sha256(raw).hexdigest() if raw is not None else None)
+            for rel, raw in sorted((workspace_manifests or {}).items())
+        },
     }
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
@@ -184,7 +196,86 @@ def _validate_installed_source(pkg: Mapping[str, object], project: Path) -> None
     _invalid(f"workflow dependency {name!r} uses unsupported source class {kind!r}")
 
 
-def _validate_project_inputs(project: Path) -> tuple[bytes, bytes]:
+def _collect_workspace_manifests(
+    project: Path,
+    pyproject_data: Mapping[str, object],
+    packages: list[dict[str, object]],
+    workspace_members: set[str],
+) -> dict[str, bytes | None]:
+    project_real = Path(os.path.realpath(project))
+    manifests: dict[str, bytes | None] = {}
+
+    def _read_member_manifest(member_dir: Path, label: str) -> tuple[str, bytes]:
+        dir_real = Path(os.path.realpath(member_dir))
+        if not dir_real.is_relative_to(project_real) or dir_real == project_real:
+            _invalid(f"workflow workspace member {label} escapes project {project}")
+        manifest_path = member_dir / "pyproject.toml"
+        manifest_real = Path(os.path.realpath(manifest_path))
+        if not manifest_real.is_relative_to(project_real):
+            _invalid(f"workflow workspace manifest {manifest_path} escapes project {project}")
+        raw = _read_regular_file(manifest_path, f"workspace member {label}/pyproject.toml")
+        try:
+            tomllib.loads(raw.decode("utf-8"))
+        except (UnicodeDecodeError, tomllib.TOMLDecodeError) as exc:
+            _invalid(f"workflow workspace manifest {label}/pyproject.toml is invalid: {exc}")
+        rel_key = (dir_real.relative_to(project_real) / "pyproject.toml").as_posix()
+        return rel_key, raw
+
+    tool = pyproject_data.get("tool")
+    uv_cfg = tool.get("uv") if isinstance(tool, Mapping) else None
+    ws_cfg = uv_cfg.get("workspace") if isinstance(uv_cfg, Mapping) else None
+    if isinstance(ws_cfg, Mapping):
+        excluded_dirs: set[Path] = set()
+        raw_exclude = ws_cfg.get("exclude")
+        if isinstance(raw_exclude, list):
+            for pattern in raw_exclude:
+                if not isinstance(pattern, str) or not pattern or os.path.isabs(pattern):
+                    continue
+                for candidate in project.glob(pattern):
+                    excluded_dirs.add(Path(os.path.realpath(candidate)))
+        raw_members = ws_cfg.get("members")
+        if isinstance(raw_members, list):
+            for pattern in raw_members:
+                if not isinstance(pattern, str) or not pattern:
+                    continue
+                if os.path.isabs(pattern):
+                    _invalid(f"workflow workspace member pattern must be relative: {pattern!r}")
+                for candidate in sorted(project.glob(pattern)):
+                    cand_real = Path(os.path.realpath(candidate))
+                    if not cand_real.is_relative_to(project_real):
+                        _invalid(f"workflow workspace member {candidate} escapes project {project}")
+                    if cand_real == project_real or cand_real in excluded_dirs:
+                        continue
+                    if candidate.is_dir() and (candidate / "pyproject.toml").exists():
+                        rel_hint = cand_real.relative_to(project_real).as_posix()
+                        rel_key, raw = _read_member_manifest(candidate, rel_hint)
+                        manifests[rel_key] = raw
+
+    for pkg in packages:
+        if not _is_omitted_workspace_member(pkg, workspace_members) or _is_root_source(pkg.get("source")):
+            continue
+        source = pkg.get("source")
+        assert isinstance(source, Mapping)
+        (_kind, target), = source.items()
+        if not isinstance(target, str) or not target or target == ".":
+            continue
+        if os.path.isabs(target):
+            _invalid(f"workflow workspace member path must be relative: {target!r}")
+        lexical = Path(os.path.normpath(os.path.join(os.fspath(project_real), target)))
+        if not lexical.is_relative_to(project_real) or lexical == project_real:
+            _invalid(f"workflow workspace member {target!r} escapes project {project}")
+        member_dir = project / target
+        if (member_dir / "pyproject.toml").exists():
+            rel_key, raw = _read_member_manifest(member_dir, target)
+            manifests[rel_key] = raw
+        else:
+            rel_key = (lexical.relative_to(project_real) / "pyproject.toml").as_posix()
+            manifests.setdefault(rel_key, None)
+
+    return manifests
+
+
+def _validate_project_inputs(project: Path) -> tuple[bytes, bytes, dict[str, bytes | None]]:
     if not isinstance(project, Path):
         _invalid("workflow project must be a filesystem path")
     if not project.exists() or not project.is_dir():
@@ -192,7 +283,7 @@ def _validate_project_inputs(project: Path) -> tuple[bytes, bytes]:
     pyproject_bytes = _read_regular_file(project / "pyproject.toml", "pyproject.toml")
     lock_bytes = _read_regular_file(project / "uv.lock", "uv.lock")
     try:
-        tomllib.loads(pyproject_bytes.decode("utf-8"))
+        pyproject_data = tomllib.loads(pyproject_bytes.decode("utf-8"))
     except (UnicodeDecodeError, tomllib.TOMLDecodeError) as exc:
         _invalid(f"workflow project pyproject.toml is invalid: {exc}")
     try:
@@ -265,7 +356,8 @@ def _validate_project_inputs(project: Path) -> tuple[bytes, bytes]:
                 for req_extra in requested_extras:
                     queue.append((candidate, req_extra))
 
-    return pyproject_bytes, lock_bytes
+    workspace_manifests = _collect_workspace_manifests(project, pyproject_data, packages, workspace_members)
+    return pyproject_bytes, lock_bytes, workspace_manifests
 
 
 def _open_dir_nofollow(path: str | Path, *, dir_fd: int | None = None, label: str) -> int:
@@ -365,8 +457,8 @@ def _validate_venv_layout(entry_fd: int, entry_dir: Path, key: str, base_python:
             if cfg_fd >= 0:
                 os.close(cfg_fd)
 
-        if cfg.get("include-system-site-packages", "false").lower() != "false":
-            _invalid(f"workflow environment {key} enables system site-packages")
+        if cfg.get("include-system-site-packages", "").lower() != "false":
+            _invalid(f"workflow environment {key} must explicitly set include-system-site-packages = false")
         home = cfg.get("home")
         if not home or Path(os.path.realpath(home)) != base_python.parent:
             _invalid(f"workflow environment {key} base home does not match {base_python.parent}")
@@ -443,6 +535,7 @@ def _controlled_uv_env(venv_dir: Path) -> dict[str, str]:
     env["UV_NO_CONFIG"] = "1"
     env["UV_PYTHON_DOWNLOADS"] = "never"
     env["UV_NO_SYNC"] = "0"
+    env["UV_LINK_MODE"] = "copy"
     return env
 
 
@@ -469,10 +562,10 @@ def prepare_environment(project: Path, operations_root: Path) -> str:
     """Prepare an immutable locked workflow venv under operations storage and return its key."""
     project = Path(project)
     operations_root = Path(operations_root)
-    pyproject_bytes, lock_bytes = _validate_project_inputs(project)
+    pyproject_bytes, lock_bytes, workspace_manifests = _validate_project_inputs(project)
     base_python = _base_python()
     base_identity = _base_interpreter_identity(base_python)
-    key = _compute_key(pyproject_bytes, lock_bytes, base_identity)
+    key = _compute_key(pyproject_bytes, lock_bytes, base_identity, workspace_manifests)
 
     if operations_root.is_symlink():
         _invalid(f"operations_root redirects through a symlink: {operations_root}")
@@ -531,10 +624,13 @@ def prepare_environment(project: Path, operations_root: Path) -> str:
                         _run_uv_sync(project, venv_dir, base_python)
 
                         # Re-read frozen inputs and confirm they still match the computed key.
-                        after_pyproject = _read_regular_file(project / "pyproject.toml", "pyproject.toml")
-                        after_lock = _read_regular_file(project / "uv.lock", "uv.lock")
-                        if after_pyproject != pyproject_bytes or after_lock != lock_bytes:
-                            _invalid("workflow project pyproject.toml or uv.lock changed during preparation")
+                        after_pyproject, after_lock, after_workspace = _validate_project_inputs(project)
+                        if (
+                            after_pyproject != pyproject_bytes
+                            or after_lock != lock_bytes
+                            or after_workspace != workspace_manifests
+                        ):
+                            _invalid("workflow project manifests or uv.lock changed during preparation")
 
                         _validate_venv_layout(entry_fd, entry_dir, key, base_python)
                         _write_ready_marker(entry_fd, key, base_python)
