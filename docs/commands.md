@@ -260,33 +260,6 @@ Exact current inputs, defaults and prompts are the public files under
   the verification's scope and verdict. Supplied code/environment must match the captured recipe;
   no publication marker supplies the workspace checkout for you. Execution
   materials are obtained separately.
-
-### Workflow environments (`derive`, `run`, `verify`)
-
-`derive`, `run` and `verify` accept an optional `workflow_environment` input (64
-lowercase hex digits identifying a ready prepared venv under
-`<operations_root>/workflow-environments/<key>/`, outside job scratch and the
-kernel snapshot cache). Omitting it keeps the executing Science interpreter's
-capture and preserves existing canonical digests. Attended CLI invocations also
-accept the mutually exclusive CLI-only `--workflow-project <dir>` option, which
-runs `uv sync --locked --no-default-groups --no-install-project --no-install-workspace`
-against the project's `pyproject.toml` and `uv.lock` with the shared base CPython
-interpreter, rejects mutable local directory dependencies and stale locks, reports
-`"workflow_environment": "<key>"` in the single stderr JSON metadata line once
-preparation succeeds, and forwards only the key to the service. Direct MCP and
-socket callers pass `workflow_environment` directly (raw `workflow_project` paths
-refuse), and restricted run handles reject both `--workflow-project` (`handle-mode`
-before preparation) and `workflow_environment` (`permit-exceeded` at endpoint
-admission). Retries and `--continue` calls cannot use `--workflow-project` and
-should pass the reported `--workflow-environment <key>` directly.
-
-Prepared environments hold Snakemake 8.11.4 and the workflow's locked runtime
-Python dependencies; confined sandboxes still expose no ambient host shell
-binaries beyond the confined mount plan, so workflows using `shell:` rules that
-depend on host executables can refuse until adapted to Python rules. Retaining
-replayability requires keeping both the prepared workflow environment entry and
-the verified kernel snapshot under `operations_root` (or restoring an identical
-candidate).
 - `belief` evaluates one accepted, unretracted assessed target key. `--key` is
   optional for exactly one key, which the report includes. No assessments yields
   NoBelief without an invented key. An unmatched key refuses `invalid-input`;
@@ -305,6 +278,34 @@ candidate).
 - `recheck` observes the named store location without writing its bytes and publishes
   governed observation/act-report evidence; a failed or inconclusive retrieval does
   not assume absence or clear an unsettled block. See [stores](stores.md).
+
+### Workflow environments (`derive`, `run`, `verify`)
+
+`derive`, `run` and `verify` accept an optional `workflow_environment` input (64
+lowercase hex digits identifying a ready prepared venv under
+`<operations_root>/workflow-environments/<key>/`, outside job scratch and the
+kernel snapshot cache). Omitting it keeps the executing Science interpreter's
+capture and preserves existing canonical digests. Attended CLI invocations also
+accept the mutually exclusive CLI-only `--workflow-project <dir>` option, which
+runs `uv sync --locked --no-default-groups --no-install-project --no-install-workspace`
+against the project's `pyproject.toml` and `uv.lock` with the shared base CPython
+interpreter, rejects mutable local directory dependencies and stale locks, reports
+`"workflow_environment": "<key>"` in the single stderr JSON metadata line once
+preparation succeeds, and forwards only the key to the service. Direct MCP and
+socket callers pass `workflow_environment` directly (raw `workflow_project` paths
+refuse), and restricted run handles reject both `--workflow-project` (`handle-mode`
+before preparation) and `workflow_environment` (`permit-exceeded` at endpoint
+admission). `--continue` refuses `--workflow-project`, and retries wanting to
+reproduce the original payload directly should pass the reported
+`--workflow-environment <key>`.
+
+Prepared environments hold Snakemake 8.11.4 and the workflow's locked runtime
+Python dependencies; confined sandboxes still expose no ambient host shell
+binaries beyond the confined mount plan, so workflows using `shell:` rules that
+depend on host executables can refuse until adapted to Python rules. Retaining
+replayability requires keeping both the prepared workflow environment entry and
+the verified kernel snapshot under `operations_root` (or restoring an identical
+candidate).
 
 ## Coordination command contracts
 

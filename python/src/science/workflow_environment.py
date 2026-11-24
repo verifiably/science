@@ -20,6 +20,13 @@ from typing import NoReturn
 
 from science.refusal import Refusal, Refused
 
+__all__ = [
+    "WORKFLOW_ENVIRONMENT_KEY_RE",
+    "open_environment",
+    "prepare_environment",
+    "validate_key",
+]
+
 WORKFLOW_ENVIRONMENT_KEY_RE = re.compile(r"^[0-9a-f]{64}$")
 _GIT_PINNED_REV_RE = re.compile(r"#[0-9a-f]{40}$")
 _SHA256_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
@@ -216,21 +223,26 @@ def _validate_project_inputs(project: Path) -> tuple[bytes, bytes]:
     if not roots:
         _invalid("workflow project uv.lock has no root project entry")
 
-    # Walk only runtime dependencies (excluding dev-dependencies and optional-dependencies).
-    visited: set[int] = set()
-    queue: list[dict[str, object]] = list(roots)
+    # Walk only runtime dependencies (including any extras explicitly requested
+    # on a runtime dependency edge, while excluding dev-dependencies).
+    visited: set[tuple[int, str | None]] = set()
+    queue: list[tuple[dict[str, object], str | None]] = [(root_pkg, None) for root_pkg in roots]
     while queue:
-        current = queue.pop()
-        obj_id = id(current)
-        if obj_id in visited:
+        current, extra_name = queue.pop()
+        visit_key = (id(current), extra_name)
+        if visit_key in visited:
             continue
-        visited.add(obj_id)
+        visited.add(visit_key)
 
         omitted = _is_root_source(current.get("source")) or _is_omitted_workspace_member(current, workspace_members)
-        if not omitted:
+        if not omitted and extra_name is None:
             _validate_installed_source(current, project)
 
-        deps = current.get("dependencies")
+        if extra_name is None:
+            deps = current.get("dependencies")
+        else:
+            opt_deps = current.get("optional-dependencies")
+            deps = opt_deps.get(extra_name) if isinstance(opt_deps, dict) else None
         if not isinstance(deps, list):
             continue
         for dep in deps:
@@ -241,13 +253,17 @@ def _validate_project_inputs(project: Path) -> tuple[bytes, bytes]:
                 continue
             dep_version = dep.get("version")
             dep_source = dep.get("source")
+            dep_extras = dep.get("extra")
+            requested_extras = [e for e in dep_extras if isinstance(e, str)] if isinstance(dep_extras, list) else []
             candidates = by_name.get(dep_name, [])
             for candidate in candidates:
                 if dep_version is not None and candidate.get("version") != dep_version:
                     continue
                 if dep_source is not None and candidate.get("source") != dep_source:
                     continue
-                queue.append(candidate)
+                queue.append((candidate, None))
+                for req_extra in requested_extras:
+                    queue.append((candidate, req_extra))
 
     return pyproject_bytes, lock_bytes
 

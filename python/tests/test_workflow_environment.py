@@ -598,3 +598,41 @@ def test_frozen_inputs_modified_during_sync_refuse_before_readiness(tmp_path, mo
     assert caught.value.refusal.code == "invalid-input"
     entries = [p for p in (ops_root / "workflow-environments").iterdir() if p.name != ".locks"]
     assert entries == []
+
+
+def test_workspace_member_extra_mutable_dependency_is_refused(tmp_path, monkeypatch):
+    from science import workflow_environment as mod
+
+    calls: list[object] = []
+    monkeypatch.setattr(mod, "_run_uv_sync", lambda *a, **kw: calls.append(a))
+    ops_root = tmp_path / "ops"
+    ops_root.mkdir()
+    proj = tmp_path / "ws-extra-bad"
+    _write_minimal_project(
+        proj,
+        lock_text=(
+            "version = 1\n"
+            'requires-python = ">=3.11"\n\n'
+            "[manifest]\n"
+            'members = ["demo", "ws-helper"]\n\n'
+            "[[package]]\n"
+            'name = "demo"\n'
+            'version = "0.1.0"\n'
+            'source = { editable = "." }\n'
+            'dependencies = [{ name = "ws-helper", extra = ["extras"] }]\n\n'
+            "[[package]]\n"
+            'name = "ws-helper"\n'
+            'version = "0.1.0"\n'
+            'source = { editable = "packages/ws-helper" }\n\n'
+            "[package.optional-dependencies]\n"
+            'extras = [{ name = "local-dep" }]\n\n'
+            "[[package]]\n"
+            'name = "local-dep"\n'
+            'version = "0.1.0"\n'
+            'source = { directory = "../local-dep" }\n'
+        ),
+    )
+    with pytest.raises(Refused) as caught:
+        prepare_environment(proj, ops_root)
+    assert caught.value.refusal.code == "invalid-input"
+    assert calls == []
