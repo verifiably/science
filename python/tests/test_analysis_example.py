@@ -94,7 +94,7 @@ def test_phf19_probe_walks_the_gene_stage_contrast(certified_work):
         paths[name] = sources / f"{name}.txt"
         paths[name].write_text(f"Synthetic {name} provenance\n")
     pins = {name: sha256(path.read_bytes()).hexdigest() for name, path in paths.items()}
-    root = certified_work / 'PHF19 "probe" \\test'
+    root = certified_work / 'PHF19 "probe" \\test\x7f'
     with pytest.raises(ValueError, match="matrix.*digest"):
         example["create_phf19"](root, paths)
     assert not root.exists()

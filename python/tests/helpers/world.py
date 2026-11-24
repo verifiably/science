@@ -178,10 +178,11 @@ def write_config_for(cfg: ScienceConfig, service_socket: Path | None = None, *,
         "coordination": cfg.coordination,
         "service_socket": str(cfg.service_socket if service_socket is None else service_socket),
     }
-    # JSON escapes for these strings and arrays also encode TOML basic strings.
-    path.write_text("".join(
+    # TOML basic strings also require an escape for DEL.
+    contents = "".join(
         f"{key} = {json.dumps(value, ensure_ascii=False)}\n" for key, value in settings.items()
-    ), encoding="utf-8")
+    )
+    path.write_text(contents.replace("\x7f", r"\u007f"), encoding="utf-8")
     return path
 
 
