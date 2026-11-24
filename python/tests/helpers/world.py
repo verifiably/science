@@ -159,12 +159,13 @@ coordination = {COORDINATION}
     return path
 
 
-def write_config_for(cfg: ScienceConfig, service_socket: Path | None = None) -> Path:
+def write_config_for(cfg: ScienceConfig, service_socket: Path | None = None, *,
+                     document: Path | None = None, domains: tuple[str, ...] = DOMAINS) -> Path:
     """The launcher TOML for a world `build_fixture_world_with_contract` built:
     every key the loader requires, the test contract document it compiled, and
     `service_socket`, by default the world's."""
     work = cfg.world.world_root.parent
-    contract = work / "testing.yaml"
+    contract = work / "testing.yaml" if document is None else document
     assert contract.is_file(), "write_config_for needs the contract world's document"
     socket_line = f'service_socket = "{cfg.service_socket if service_socket is None else service_socket}"\n'
     path = work / "science.toml"
@@ -173,7 +174,7 @@ world_root = "{cfg.world.world_root}"
 world_id = "{cfg.world.world_id}"
 corpus_roots = ["{cfg.world.corpus_roots[0]}"]
 operations_root = "{cfg.operations_root}"
-domains = {list(DOMAINS)!r}
+domains = {list(domains)!r}
 contracts = ["{contract}"]
 store_root = "{cfg.store_root}"
 read_store_roots = {[str(root) for root in cfg.read_store_roots]!r}
@@ -302,11 +303,22 @@ def build_fixture_world_with_contract(work: Path, *, hold_concepts: bool = True,
                                       extra_contracts: tuple[DomainContract, ...] = ()) -> ScienceConfig:
     """A world whose profile compiles the test contract, with the concept and
     level lists held (or not)."""
+    cfg = build_contract_world(work, fixture_contract_document(work), extra_contracts=extra_contracts)
+    if hold_concepts:
+        hold_fixture_dataset(cfg, "concepts.txt", CONCEPTS, "concept vocabulary")
+    if hold_levels:
+        hold_fixture_dataset(cfg, "levels.txt", LEVELS, "level vocabulary")
+    return cfg
+
+
+def build_contract_world(work: Path, document: Path, *, domains: tuple[str, ...] = DOMAINS,
+                         extra_contracts: tuple[DomainContract, ...] = ()) -> ScienceConfig:
+    """Initialize a disposable world for the supplied contract and operator plan."""
     from beliefs.profile import shipped_base_contract
     from science.contracts import load_contract_document
     base = shipped_base_contract()
-    contract, plan = load_contract_document(fixture_contract_document(work), base)
-    profile = compile_profile(base, [shipped_domain_contract(ns) for ns in DOMAINS] + [contract, *extra_contracts],
+    contract, plan = load_contract_document(document, base)
+    profile = compile_profile(base, [shipped_domain_contract(ns) for ns in domains] + [contract, *extra_contracts],
                               coordination=shipped_coordination(COORDINATION))
     pins = CorpusPins(
         science_contract="science:" + profile.base_contract_identity,
@@ -323,15 +335,11 @@ def build_fixture_world_with_contract(work: Path, *, hold_concepts: bool = True,
     world = open_world(config, authority=FIXTURE_AUTHORITY)
     world.admit(corpus_root, provenance=Fresh())
     _install_holdings_reducer(world)
-    cfg = ScienceConfig(world=config, operations_root=work / "ops", profile=profile,
-                        service_socket=short_socket(work), store_root=work / "store",
-                        coordination=COORDINATION, write_root=corpus_root,
-                        plans=(plan,), available_contracts=(contract, *extra_contracts))
-    if hold_concepts:
-        hold_fixture_dataset(cfg, "concepts.txt", CONCEPTS, "concept vocabulary")
-    if hold_levels:
-        hold_fixture_dataset(cfg, "levels.txt", LEVELS, "level vocabulary")
-    return cfg
+    return ScienceConfig(world=config, operations_root=work / "ops", profile=profile,
+                         service_socket=short_socket(work), store_root=work / "store",
+                         coordination=COORDINATION, write_root=corpus_root,
+                         plans=(plan,) if plan is not None else (),
+                         available_contracts=(contract, *extra_contracts))
 
 
 def build_two_corpus_world(work: Path) -> ScienceConfig:

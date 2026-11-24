@@ -82,6 +82,51 @@ finding about PHF19. The outcome-file rule produces no numerical estimate, and
 none is invented from the estimand reference. The bootstrap helpers are not an
 initialization API for a scientific deployment.
 
+## A PHF19 world for harness probes
+
+The PHF19 probe uses the pinned GSE179929 gene TPM matrix and predecessor
+crosswalk, HGNC 2025-09-05, and the Ensembl 115 GRCh38.p14 annotation. Use the
+beliefs sibling checkout pinned for this Science build. The demo checks the kernel's
+PHF19 declaration, contract, register, vocabularies and analysis bundle by digest.
+The declaration names the matrix, crosswalk, dataset record and proposition record
+relative to the predecessor checkout. The release files are explicit arguments.
+Keep the original inputs in their existing locations.
+
+From `science/python` after the frozen install, set `PHF19_WORLD` to an absolute,
+nonexistent directory on certified storage, `MM30_PREDECESSOR` to the predecessor
+multiple-myeloma checkout, and `PHF19_RELEASES` to the directory containing the
+verified copies of the two release files.
+
+```sh
+PYTHONPATH=tests .venv/bin/python tests/fixtures/analysis/demo.py create-phf19 "$PHF19_WORLD" \
+  --predecessor "$MM30_PREDECESSOR" \
+  --hgnc "$PHF19_RELEASES/hgnc_complete_set_2025-09-05.tsv" \
+  --ensembl "$PHF19_RELEASES/Homo_sapiens.GRCh38.115.gtf.gz"
+```
+
+The operator checks the six input digests before creating the world. Bootstrap holds
+the vocabularies, mapping and its evidence, classification rule, assay and estimator
+procedures, and assumptions registers. It writes `science.toml` and
+`authoring.json` with the Science command inputs. The verified matrix copy is ready
+for the agent's `dataset` command. Run `dataset`, `claim`, `spec`, `run`, `assess`
+and `verify` in order, using the minted addresses for subsequent command arguments.
+Use `walk-phf19` in place of `create-phf19` to create and walk a fresh world with
+the same inputs, including the final keyed `belief` query.
+
+```sh
+PYTHONPATH=tests .venv/bin/python tests/fixtures/analysis/demo.py readback "$PHF19_WORLD/science.toml"
+```
+
+Expect `proposition:phf19-rna-pd-vs-ndmm` with the kernel's statistical
+gene–stage claim identity. The estimand is probability of superiority for
+`hgnc:24566`, with NDMM as baseline, PD as comparison, and GSE179929 as cohort
+applicability. Readback shows the original and clean-environment replay runs,
+an `inconclusive` assessment, and a `passed` verification. The workflow writes
+an effect of approximately `0.600346` to `outputs/stats.tsv` and the keyed
+query returns `NoBelief(no-directional-outcome)`. This is an engineering
+demonstration with unmodeled subject pairing and unestablished independence and
+assay validity.
+
 ## Author a native estimand
 
 `spec` takes `--estimand PATH`, required `--standing` and `--evidence-mode`, and

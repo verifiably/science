@@ -1,6 +1,8 @@
 """The documented source-checkout example must finish through production confinement,
 and its probe world must build and read back against current code."""
 from pathlib import Path
+from hashlib import sha256
+import gzip
 import runpy
 import subprocess
 import sys
@@ -76,3 +78,46 @@ def test_created_probe_world_holds_only_its_prerequisites(certified_work, tmp_pa
     assert completed.stdout.splitlines() == [
         "records 7: classification-rule 1, dataset 2, holdings-observation 2, procedure 2"
     ]
+
+
+def test_phf19_probe_walks_the_gene_stage_contrast(certified_work):
+    example = runpy.run_path(str(ASSETS / "demo.py"))
+    sources = certified_work / "sources"
+    sources.mkdir()
+    matrix = sources / "GSE179929_gene_tpm.txt.gz"
+    matrix.write_bytes(gzip.compress(
+        b"gene\ta_NDMM\tb_NDMM\tc_NDMM\td_PD\te_PD\tf_PD\n"
+        b"ENSG00000119403\t1\t2\t3\t1\t2\t3\n"
+    ))
+    paths = {"matrix": matrix}
+    for name in ("crosswalk", "dataset", "proposition", "hgnc", "ensembl"):
+        paths[name] = sources / f"{name}.txt"
+        paths[name].write_text(f"Synthetic {name} provenance\n")
+    pins = {name: sha256(path.read_bytes()).hexdigest() for name, path in paths.items()}
+    root = certified_work / "phf19"
+    with pytest.raises(ValueError, match="matrix.*digest"):
+        example["create_phf19"](root, paths)
+    assert not root.exists()
+    world = example["create_phf19"](root, paths, input_digests=pins)
+    before = example["readback"](world.config)
+    assert not before["propositions"] and not before["runs"]
+    counts = before["records"]["by_kind"]
+    assert counts["procedure"] == 2 and counts["classification-rule"] == 1
+    assert counts["referent-mapping"] == 1 and counts["assumptions-register"] == 3
+    cfg, proposition = example["walk"](world)
+    assert proposition == "proposition:phf19-rna-pd-vs-ndmm"
+    found = example["readback"](world.config)
+    assert found["propositions"] == [{
+        "id": proposition,
+        "claim_identity": "3d6ded48093271ce7985d8debf9bded3aa87a7aa449523c10fe57fa4a7f062ae",
+    }]
+    (spec,) = found["specs"]
+    assert '"functional":"general/probability-of-superiority"' in spec["estimand"]
+    assert '"term":"level:ndmm"},{"sort":"mm30/stage-level","term":"level:pd"' in spec["estimand"]
+    assert len(found["runs"]) == 2
+    (assessment,) = found["assessments"]
+    assert assessment["outcome"] == "inconclusive"
+    (checked,) = found["verifications"]
+    assert (checked["scope"], checked["verdict"]) == ("clean-environment", "passed")
+    key, = ReadContext.open(cfg).claim_view(proposition).beliefs
+    assert ReadContext.open(cfg).evaluate(proposition, key=key).reason == "no-directional-outcome"
