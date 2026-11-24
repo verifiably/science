@@ -42,6 +42,10 @@ type = "int"
 required = false
 default = 1
 doc = "Core count passed to the workflow engine."
+[inputs.workflow_environment]
+type = "string"
+required = false
+doc = "Prepared workflow environment key (64 lowercase hex digits) to capture instead of the executing interpreter."
 
 [reads]
 families = ["corpus-stored", "holdings"]

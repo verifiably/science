@@ -823,3 +823,50 @@ def test_a_subordinate_mint_without_a_selection_refuses_over_stdio_and_replays(c
         assert result["structuredContent"]["refusal"]["code"] == "no-current-project"
         assert result["structuredContent"]["invocation_id"] == "N" * 8
     assert results[0] == results[1]
+
+
+def test_mcp_exposes_workflow_environment_and_rejects_workflow_project(certified_work, short_tmp):
+    from helpers.world import write_cli_config
+
+    for cmd in ("derive", "run", "verify"):
+        decl = next(d for d in production_tree() if d.name == cmd)
+        schema = tool_schema(decl)["inputSchema"]
+        assert "workflow_environment" in schema["properties"]
+        assert schema["properties"]["workflow_environment"]["type"] == "string"
+        assert "workflow_environment" not in schema.get("required", [])
+        assert "workflow_project" not in schema["properties"]
+
+    # Raw workflow_project must be rejected by MCP schema validation.
+    bad_project_call = rpc("tools/call", {
+        "name": "run",
+        "arguments": {
+            "spec": "analysis-spec:s1",
+            "dataset": "dataset:d1",
+            "code": "/tmp/code",
+            "entrypoint": "code/Snakefile",
+            "targets": ["out.txt"],
+            "workflow_project": "/tmp/proj",
+        },
+    }, id=1)
+    # Malformed workflow_environment key reaches attended MCP handler and refuses invalid-input before intent.
+    bad_key_call = rpc("tools/call", {
+        "name": "run",
+        "arguments": {
+            "spec": "analysis-spec:s1",
+            "dataset": "dataset:d1",
+            "code": "/tmp/code",
+            "entrypoint": "code/Snakefile",
+            "targets": ["out.txt"],
+            "workflow_environment": "../not-a-key",
+        },
+    }, id=2)
+    stdin = io.BytesIO((json.dumps(bad_project_call) + "\n" + json.dumps(bad_key_call) + "\n").encode())
+    stdout = io.StringIO()
+    serve(write_cli_config(certified_work, service_socket=short_tmp / "mcp-wf.sock"),
+          stdin=stdin, stdout=stdout, stderr=io.StringIO())
+    responses = [json.loads(line) for line in stdout.getvalue().splitlines()]
+    assert len(responses) == 2
+    assert responses[0]["result"]["isError"] is True
+    assert responses[0]["result"]["structuredContent"]["refusal"]["code"] == "invalid-input"
+    assert responses[1]["result"]["isError"] is True
+    assert responses[1]["result"]["structuredContent"]["refusal"]["code"] == "invalid-input"

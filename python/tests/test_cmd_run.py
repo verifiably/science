@@ -388,3 +388,72 @@ def test_run_stages_reads_roles_on_multi_role_spec(certified_work, monkeypatch):
         assert "[verification] verification:" in verify_out.text
 
 
+def test_run_workflow_environment_forwarding_refusal_replay_and_mismatch(rig, certified_work, monkeypatch):
+    import json
+    import os
+    import shutil
+    import sys
+    from pathlib import Path
+    import science.commands.run as run_module
+    from science.canonical import canonicalize
+    from science.loader import production_tree
+
+    d, ctx, spec_ref, ref = rig
+    decl = next(dd for dd in production_tree() if dd.name == "run")
+    code, entrypoint, targets = fixture_bundle(certified_work)
+    base = {
+        "spec": spec_ref,
+        "dataset": ref,
+        "code": str(code),
+        "entrypoint": entrypoint,
+        "targets": list(targets),
+    }
+    assert "workflow_environment" not in canonicalize(decl, base)
+
+    key_a = "1" * 64
+    key_b = "2" * 64
+    before_acts = sum(1 for n in ctx.write_view().iter_stored() if n.kind == "act-report")
+    for bad in ("/abs/path", key_a):
+        with pytest.raises(Refused) as caught:
+            d.invoke("run", {**base, "workflow_environment": bad})
+        assert caught.value.refusal.code == "invalid-input"
+    assert sum(1 for n in ctx.write_view().iter_stored() if n.kind == "act-report") == before_acts
+
+    entry_dir = ctx.config.operations_root / "workflow-environments" / key_a
+    base_py = Path(os.path.realpath(sys.executable))
+    (entry_dir / "venv" / "bin").mkdir(parents=True)
+    os.symlink(base_py, entry_dir / "venv" / "bin" / "python")
+    (entry_dir / "venv" / "pyvenv.cfg").write_text(
+        f"home = {base_py.parent}\ninclude-system-site-packages = false\n"
+    )
+    (entry_dir / "ready.json").write_text(
+        json.dumps({
+            "format_version": 1,
+            "key": key_a,
+            "base_executable": str(base_py),
+            "base_prefix": os.path.realpath(sys.base_prefix),
+        })
+    )
+
+    seen_venv: list[object] = []
+    real_exec = run_module.execute_assessment_run
+
+    def spy_exec(*args, **kwargs):
+        seen_venv.append(kwargs.get("workflow_venv"))
+        kwargs["workflow_venv"] = None
+        return real_exec(*args, **kwargs)
+
+    monkeypatch.setattr(run_module, "execute_assessment_run", spy_exec)
+    first = d.invoke("run", {**base, "workflow_environment": key_a}, invocation_id="R" * 8)
+    assert seen_venv == [entry_dir / "venv"]
+
+    shutil.rmtree(entry_dir)
+    again = d.invoke("run", {**base, "workflow_environment": key_a}, invocation_id="R" * 8)
+    assert again.text == first.text
+
+    for changed in ({**base, "workflow_environment": key_b}, base):
+        with pytest.raises(Refused) as caught:
+            d.invoke("run", changed, invocation_id="R" * 8)
+        assert caught.value.refusal.code == "input-mismatch"
+
+

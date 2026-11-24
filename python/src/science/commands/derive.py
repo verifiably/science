@@ -5,6 +5,7 @@ import shutil
 import socket
 import tempfile
 from collections.abc import Mapping, Sequence
+from contextlib import nullcontext
 from hashlib import sha256
 from pathlib import Path
 
@@ -27,6 +28,7 @@ from beliefs.spec import Deterministic
 from science.commands.run import _check_staged_collisions, _stage_binding_for, now
 from science.refusal import Refusal, Refused
 from science.report import Report, record_block
+from science.workflow_environment import open_environment, validate_key
 
 POLICY = CONFINED_POLICY
 INSTRUMENT = "science/derive.v1"
@@ -67,10 +69,13 @@ def handle(
     reads: Sequence[str] | None = None,
     parameters: Sequence[str] | None = None,
     cores: int | None = None,
+    workflow_environment: str | None = None,
 ) -> Report:
     reason = host_prerequisites()
     if reason is not None:
         _refuse(f"confinement is unavailable on this host: {reason}")
+    if workflow_environment is not None:
+        validate_key(workflow_environment)
     if not isinstance(title, str) or not title.strip():
         _refuse("title must be a non-empty string")
     if cores is not None and cores < 1:
@@ -141,28 +146,36 @@ def handle(
         export_root = owner.invocation_dir(invocation)
         scratch_base = None
     export_dir = Path(tempfile.mkdtemp(prefix="export-", dir=export_root))
+    env_ctx = (
+        open_environment(workflow_environment, ctx.config.operations_root)
+        if workflow_environment is not None
+        else nullcontext(None)
+    )
     try:
-        outcome = execute_production_run(
-            inputs=tuple(recipe_inputs),
-            port=port,
-            boundary_policy=POLICY,
-            expected_inputs=expected_inputs,
-            parameters=parsed_params,
-            nondeterminism=Deterministic(),
-            definition=WorkflowDefinition(snakefile=snakefile.read_bytes(), family_streams={}),
-            code_roots=(code_root,),
-            held_inputs=held_inputs,
-            entrypoint=entrypoint,
-            targets=tuple(targets),
-            declared_outputs=tuple(targets),
-            dataset_title=title,
-            output_dir=export_dir,
-            observer=writer.actor,
-            started_at=now(),
-            host_realization=socket.gethostname(),
-            scratch_base=scratch_base,
-            cores=cores or 1,
-        )
+        with env_ctx as workflow_venv:
+            extra_kwargs = {} if workflow_venv is None else {"workflow_venv": workflow_venv}
+            outcome = execute_production_run(
+                inputs=tuple(recipe_inputs),
+                port=port,
+                boundary_policy=POLICY,
+                expected_inputs=expected_inputs,
+                parameters=parsed_params,
+                nondeterminism=Deterministic(),
+                definition=WorkflowDefinition(snakefile=snakefile.read_bytes(), family_streams={}),
+                code_roots=(code_root,),
+                held_inputs=held_inputs,
+                entrypoint=entrypoint,
+                targets=tuple(targets),
+                declared_outputs=tuple(targets),
+                dataset_title=title,
+                output_dir=export_dir,
+                observer=writer.actor,
+                started_at=now(),
+                host_realization=socket.gethostname(),
+                scratch_base=scratch_base,
+                cores=cores or 1,
+                **extra_kwargs,
+            )
         if isinstance(outcome, RunRefused):
             raise KernelRefusalValue(outcome)
         assert isinstance(outcome, RunMinted)

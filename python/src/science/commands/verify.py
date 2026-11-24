@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import socket
+from contextlib import nullcontext
 from pathlib import Path
 
 from beliefs.boundary import HeldTree
@@ -30,15 +31,20 @@ from science.commands.run import _check_staged_collisions, _stage_binding_for, n
 from science.holdings import dataset_at
 from science.refusal import Refusal, Refused
 from science.report import Report, record_block
+from science.workflow_environment import open_environment, validate_key
 
 
 def _refuse(message: str):
     raise Refused(Refusal("invalid-input", message))
 
 
-def handle(ctx, writer, *, assessment=None, run=None, code, entrypoint, cores=None) -> Report:
+def handle(
+    ctx, writer, *, assessment=None, run=None, code, entrypoint, cores=None, workflow_environment=None
+) -> Report:
     if (assessment is None) == (run is None):
         _refuse("verify requires exactly one of --assessment or --run")
+    if workflow_environment is not None:
+        validate_key(workflow_environment)
 
     if assessment is not None:
         try:
@@ -80,16 +86,24 @@ def handle(ctx, writer, *, assessment=None, run=None, code, entrypoint, cores=No
                 f"the original run bound {spec.equivalence_rule!r} to {bound!r}; "
                 f"the kernel now ships {equivalence.identity!r}"
             )
-        outcome = replay(
-            original,
-            port=writer.operation_port(),
-            spec=spec,
-            observer=writer.actor,
-            started_at=now(),
-            scratch_base=ctx.config.operations_root / "scratch" / writer.invocation_id,
-            cores=cores or 1,
-            **prepared,
+        env_ctx = (
+            open_environment(workflow_environment, ctx.config.operations_root)
+            if workflow_environment is not None
+            else nullcontext(None)
         )
+        with env_ctx as workflow_venv:
+            extra_kwargs = {} if workflow_venv is None else {"workflow_venv": workflow_venv}
+            outcome = replay(
+                original,
+                port=writer.operation_port(),
+                spec=spec,
+                observer=writer.actor,
+                started_at=now(),
+                scratch_base=ctx.config.operations_root / "scratch" / writer.invocation_id,
+                cores=cores or 1,
+                **prepared,
+                **extra_kwargs,
+            )
         if isinstance(outcome, RunRefused):
             raise KernelRefusalValue(outcome)
         assert isinstance(outcome, RunMinted)
@@ -152,23 +166,31 @@ def handle(ctx, writer, *, assessment=None, run=None, code, entrypoint, cores=No
         held_inputs[inp.dataset] = held_entry
         expected_inputs[inp.dataset] = expected_entry
     _check_staged_collisions(held_inputs)
-    outcome = replay(
-        original,
-        port=writer.operation_port(),
-        spec=None,
-        definition=WorkflowDefinition(snakefile=snakefile.read_bytes(), family_streams={}),
-        code_roots=(code_root,),
-        held_inputs=held_inputs,
-        expected_inputs=expected_inputs,
-        entrypoint=entrypoint,
-        targets=original.recipe.invocation.targets,
-        declared_outputs=original.recipe.invocation.declared_outputs,
-        observer=writer.actor,
-        started_at=now(),
-        host_realization=socket.gethostname(),
-        scratch_base=ctx.config.operations_root / "scratch" / writer.invocation_id,
-        cores=cores or 1,
+    env_ctx = (
+        open_environment(workflow_environment, ctx.config.operations_root)
+        if workflow_environment is not None
+        else nullcontext(None)
     )
+    with env_ctx as workflow_venv:
+        extra_kwargs = {} if workflow_venv is None else {"workflow_venv": workflow_venv}
+        outcome = replay(
+            original,
+            port=writer.operation_port(),
+            spec=None,
+            definition=WorkflowDefinition(snakefile=snakefile.read_bytes(), family_streams={}),
+            code_roots=(code_root,),
+            held_inputs=held_inputs,
+            expected_inputs=expected_inputs,
+            entrypoint=entrypoint,
+            targets=original.recipe.invocation.targets,
+            declared_outputs=original.recipe.invocation.declared_outputs,
+            observer=writer.actor,
+            started_at=now(),
+            host_realization=socket.gethostname(),
+            scratch_base=ctx.config.operations_root / "scratch" / writer.invocation_id,
+            cores=cores or 1,
+            **extra_kwargs,
+        )
     if isinstance(outcome, RunRefused):
         raise KernelRefusalValue(outcome)
     assert isinstance(outcome, RunMinted)

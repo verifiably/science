@@ -183,3 +183,166 @@ def test_build_validates_the_command_tree(capsys):
 
     assert main(["build"]) == 0
     assert capsys.readouterr().out == f"ok: {len(production_tree())} command(s)\n"
+
+
+def test_workflow_project_cli_prechecks_refuse_before_preparation_and_service(
+    certified_work, capsys, monkeypatch
+):
+    import science.cli as cli
+    import science.workflow_environment as wf_env
+
+    cfg_path = write_cli_config(certified_work)
+    prep_calls: list[object] = []
+    service_calls: list[object] = []
+    monkeypatch.setattr(wf_env, "prepare_environment", lambda p, ops: prep_calls.append((p, ops)) or "a" * 64)
+    monkeypatch.setattr(cli, "_via_service", lambda *a, **kw: service_calls.append((a, kw)) or 0)
+
+    proj = certified_work / "wf-proj"
+    proj.mkdir()
+    base = [
+        "derive",
+        "--config", str(cfg_path),
+        "--dataset", "dataset:d1",
+        "--code", str(certified_work),
+        "--entrypoint", "code/Snakefile",
+        "--targets", "out.txt",
+        "--title", "t",
+    ]
+
+    # 1. Mutually exclusive --workflow-project and --workflow-environment
+    rc = cli.main([*base, "--workflow-project", str(proj), "--workflow-environment", "a" * 64])
+    assert rc == 3
+    err = capsys.readouterr().err
+    assert len(err.splitlines()) == 1
+    meta = json.loads(err)
+    assert meta["refusal"]["code"] == "invalid-input"
+    assert "workflow_environment" not in meta
+
+    # 2. --continue with --workflow-project refuses invalid-input directing caller to --workflow-environment <key>
+    rc = cli.main([*base, "--workflow-project", str(proj), "--continue", "scur1.fake"])
+    assert rc == 3
+    err = capsys.readouterr().err
+    assert len(err.splitlines()) == 1
+    meta = json.loads(err)
+    assert meta["refusal"]["code"] == "invalid-input"
+    assert "--workflow-environment" in meta["refusal"]["message"]
+    assert "workflow_environment" not in meta
+
+    # 3. Handle mode rejects --workflow-project before preparation
+    monkeypatch.delenv("SCIENCE_CONFIG", raising=False)
+    monkeypatch.setenv("VERIFIABLY_ENDPOINT", str(certified_work / "ep.sock"))
+    monkeypatch.setenv("VERIFIABLY_TOKEN_FILE", str(certified_work / "tok"))
+    rc = cli.main([
+        "derive",
+        "--dataset", "dataset:d1",
+        "--code", str(certified_work),
+        "--entrypoint", "code/Snakefile",
+        "--targets", "out.txt",
+        "--title", "t",
+        "--workflow-project", str(proj),
+    ])
+    assert rc == 3
+    err = capsys.readouterr().err
+    assert len(err.splitlines()) == 1
+    meta = json.loads(err)
+    assert meta["refusal"]["code"] == "handle-mode"
+    assert "workflow_environment" not in meta
+
+    assert prep_calls == []
+    assert service_calls == []
+
+
+@pytest.mark.parametrize("outcome_mode", ["success", "service-refusal", "transport-failure", "prep-failure"])
+def test_workflow_project_cli_stderr_single_json_line_and_key_reporting(
+    certified_work, short_tmp, capsys, monkeypatch, outcome_mode
+):
+    import socket
+    import threading
+    import science.cli as cli
+    import science.workflow_environment as wf_env
+    from science.refusal import Refusal, Refused
+
+    sock_path = short_tmp / f"svc-{outcome_mode}.sock"
+    cfg_path = write_cli_config(certified_work, service_socket=sock_path)
+    proj = certified_work / f"proj-{outcome_mode}"
+    proj.mkdir()
+    key = "a" * 64
+
+    def fake_prepare(project, ops_root):
+        if outcome_mode == "prep-failure":
+            raise Refused(Refusal("invalid-input", "stale lock"))
+        return key
+
+    monkeypatch.setattr(wf_env, "prepare_environment", fake_prepare)
+
+    received: list[dict[str, object]] = []
+    server_sock = None
+    thread = None
+    if outcome_mode in ("success", "service-refusal"):
+        server_sock = socket.socket(socket.AF_UNIX)
+        server_sock.settimeout(5)
+        server_sock.bind(str(sock_path))
+        server_sock.listen(1)
+
+        def serve_once():
+            try:
+                conn, _ = server_sock.accept()
+            except OSError:
+                return
+            with conn:
+                req = json.loads(conn.makefile().readline())
+                received.append(req)
+                if outcome_mode == "success":
+                    reply = {"ok": True, "text": "ok\n", "invocation_id": req["invocation_id"]}
+                else:
+                    reply = {
+                        "ok": False,
+                        "invocation_id": req["invocation_id"],
+                        "refusal": {"code": "invalid-input", "message": "bad", "data": {}},
+                    }
+                conn.sendall(json.dumps(reply).encode() + b"\n")
+
+        thread = threading.Thread(target=serve_once, daemon=True)
+        thread.start()
+
+    try:
+        rc = cli.main([
+            "run",
+            "--config", str(cfg_path),
+            "--invocation-id", "inv-wf-1",
+            "--spec", "analysis-spec:s1",
+            "--dataset", "dataset:d1",
+            "--code", str(certified_work),
+            "--entrypoint", "code/Snakefile",
+            "--targets", "out.txt",
+            "--workflow-project", str(proj),
+        ])
+    finally:
+        if thread is not None:
+            thread.join(timeout=5)
+        if server_sock is not None:
+            server_sock.close()
+
+    captured = capsys.readouterr()
+    lines = captured.err.splitlines()
+    assert len(lines) == 1, f"expected 1 stderr JSON line, got: {lines!r}"
+    meta = json.loads(lines[0])
+    assert meta["invocation_id"] == "inv-wf-1"
+
+    if outcome_mode == "prep-failure":
+        assert rc == 3
+        assert "workflow_environment" not in meta
+        assert meta["refusal"]["code"] == "invalid-input"
+    elif outcome_mode == "success":
+        assert rc == 0
+        assert meta["workflow_environment"] == key
+        assert received and received[0]["inputs"]["workflow_environment"] == key
+        assert "workflow_project" not in received[0]["inputs"]
+    elif outcome_mode == "service-refusal":
+        assert rc == 3
+        assert meta["workflow_environment"] == key
+        assert meta["refusal"]["code"] == "invalid-input"
+    else:
+        assert rc == 3
+        assert meta["workflow_environment"] == key
+        assert meta["refusal"]["code"] == "permit-exceeded"

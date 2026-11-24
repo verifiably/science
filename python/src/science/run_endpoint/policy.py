@@ -22,3 +22,5 @@ def admit(command, inputs):
         raise Refused(Refusal("permit-exceeded", "Resolving pending transactions requires the supervisor"))
     if command == "fetch" and str(inputs.get("source", "")).lower().startswith(("https:", "http:")):
         raise Refused(Refusal("permit-exceeded", "A run handle can fetch only from its scratch directory"))
+    if "workflow_environment" in inputs:
+        raise Refused(Refusal("permit-exceeded", "Selecting a workflow environment requires an attended session"))

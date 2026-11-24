@@ -181,3 +181,67 @@ def test_publishes_class_requires_the_publication_permit():
     dispatcher = Dispatcher((publish,), {"pub": lambda ctx, writer: ()},
                             read_context=StubContext(), session=object())
     assert dispatcher._required(publish) == RequiredCapabilities.publishes()
+
+
+@pytest.mark.parametrize("cmd", ["derive", "run", "verify"])
+def test_workflow_write_continuation_validates_resubmitted_inputs(certified_work, cmd, monkeypatch):
+    from helpers.world import build_fixture_world_with_contract, fixture_proposition_node
+    from science.config import ReadContext
+    from science.session import open_session
+    import science.workflow_environment as wf_env
+
+    cfg = build_fixture_world_with_contract(certified_work)
+    decl = Declaration(
+        cmd,
+        "fixture workflow write",
+        WriteClass("mints", ("proposition",), {"proposition": "corpus-write"}),
+        MIN_OUTPUT_BUDGET,
+        (
+            InputSpec("code", "string", True, "code"),
+            InputSpec("cores", "int", False, "cores", default=1),
+            InputSpec("workflow_environment", "string", False, "env"),
+        ),
+        (),
+        Path("."),
+    )
+
+    def handler(ctx, writer, *, code, cores=1, workflow_environment=None):
+        nodes = [writer.add(fixture_proposition_node(f"{cmd}-{i}-" + "x" * 60)) for i in range(40)]
+        from science.report import record_block
+        return tuple(record_block(n) for n in nodes)
+
+    key_a = "a" * 64
+    key_b = "b" * 64
+    env_calls: list[object] = []
+    monkeypatch.setattr(wf_env, "open_environment", lambda *a, **kw: env_calls.append(("open", a)))
+    monkeypatch.setattr(wf_env, "prepare_environment", lambda *a, **kw: env_calls.append(("prep", a)))
+
+    session = open_session(cfg)
+    try:
+        dispatcher = Dispatcher((decl,), {cmd: handler}, ReadContext.open(cfg), session=session)
+        first = dispatcher.invoke(cmd, {"code": "/wf", "workflow_environment": key_a}, invocation_id="W" * 8)
+        assert "continue with cursor scur1." in first.text
+        cursor = cursor_from(first.text)
+
+        # 1. Empty inputs -> cursor-only paging succeeds without opening venv.
+        page_empty = dispatcher.invoke(cmd, {}, cursor=cursor)
+        assert page_empty.text and page_empty.text != first.text
+
+        # 2. Complete matching payload (with default omitted) -> succeeds.
+        page_match = dispatcher.invoke(cmd, {"code": "/wf", "workflow_environment": key_a}, cursor=cursor)
+        assert page_match.text == page_empty.text
+
+        # 3. Partial non-empty payload missing required field -> invalid-input.
+        with pytest.raises(Refused) as partial:
+            dispatcher.invoke(cmd, {"workflow_environment": key_a}, cursor=cursor)
+        assert partial.value.refusal.code == "invalid-input"
+
+        # 4. Complete mismatching payloads (changed key or removed key) -> input-mismatch.
+        for mismatched in ({"code": "/wf", "workflow_environment": key_b}, {"code": "/wf"}):
+            with pytest.raises(Refused) as caught:
+                dispatcher.invoke(cmd, mismatched, cursor=cursor)
+            assert caught.value.refusal.code == "input-mismatch"
+
+        assert env_calls == []
+    finally:
+        session.close()

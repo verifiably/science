@@ -285,3 +285,100 @@ def test_derive_propagates_kernel_refusal_after_execution_begins_without_contrac
     view = ctx.write_view()
     assert not any(n.kind == "dataset" and n.title == "failing derive" for n in view.iter_stored())
     assert sum(1 for n in view.iter_stored() if n.kind == "act-report") >= 1
+
+
+def test_derive_workflow_environment_forwarding_refusal_replay_and_mismatch(
+    certified_work, tmp_path, monkeypatch
+):
+    import json
+    import os
+    import shutil
+    import sys
+    from pathlib import Path
+    import science.commands.derive as derive_module
+    from beliefs.recipe import CONFINED_POLICY
+    from science.canonical import canonicalize, input_digest
+    from science.loader import production_tree
+
+    cfg = build_belief_world(certified_work)
+    decl = next(d for d in production_tree() if d.name == "derive")
+    raw_file = tmp_path / "raw.tsv"
+    raw_file.write_bytes(b"x\n")
+
+    with open_rig(cfg, ("dataset", "derive")) as (d, ctx):
+        raw_id = _minted_ref(d.invoke("dataset", {"path": str(raw_file), "title": "raw"}).text, "dataset:")
+        code = certified_work / "derive_env"
+        (code / "workflow").mkdir(parents=True, exist_ok=True)
+        (code / "workflow" / "Snakefile").write_text(
+            'rule go:\n    input: "inputs/raw.tsv"\n    output: "out.tsv"\n'
+            '    run:\n        import pathlib\n        pathlib.Path(output[0]).write_text("ok\\n")\n'
+        )
+        base = {
+            "dataset": raw_id,
+            "code": str(code),
+            "entrypoint": "derive_env/workflow/Snakefile",
+            "targets": ["out.tsv"],
+            "title": "derived with env",
+        }
+        # Omission preserves canonical form without workflow_environment.
+        assert "workflow_environment" not in canonicalize(decl, base)
+
+        # Malformed, missing, and incomplete entries refuse invalid-input before kernel intent.
+        key_a = "a" * 64
+        key_b = "b" * 64
+        inc_dir = cfg.operations_root / "workflow-environments" / key_b
+        (inc_dir / "venv").mkdir(parents=True)
+        before_acts = sum(1 for n in ctx.write_view().iter_stored() if n.kind == "act-report")
+        for bad_key in ("../bad", key_a, key_b):
+            with pytest.raises(Refused) as caught:
+                d.invoke("derive", {**base, "workflow_environment": bad_key})
+            assert caught.value.refusal.code == "invalid-input"
+        assert sum(1 for n in ctx.write_view().iter_stored() if n.kind == "act-report") == before_acts
+
+        # Prepare a ready entry and verify open_environment holds lock across execute_production_run.
+        entry_dir = cfg.operations_root / "workflow-environments" / key_a
+        base_py = Path(os.path.realpath(sys.executable))
+        (entry_dir / "venv" / "bin").mkdir(parents=True)
+        os.symlink(base_py, entry_dir / "venv" / "bin" / "python")
+        (entry_dir / "venv" / "pyvenv.cfg").write_text(
+            f"home = {base_py.parent}\ninclude-system-site-packages = false\n"
+        )
+        (entry_dir / "ready.json").write_text(
+            json.dumps({
+                "format_version": 1,
+                "key": key_a,
+                "base_executable": str(base_py),
+                "base_prefix": os.path.realpath(sys.base_prefix),
+            })
+        )
+
+        seen_venv: list[object] = []
+        real_exec = derive_module.execute_production_run
+
+        def spy_exec(*args, **kwargs):
+            seen_venv.append(kwargs.get("workflow_venv"))
+            # Use host environment inside spy to avoid needing full Snakemake venv in unit test.
+            kwargs["workflow_venv"] = None
+            return real_exec(*args, **kwargs)
+
+        monkeypatch.setattr(derive_module, "execute_production_run", spy_exec)
+        monkeypatch.setattr(derive_module, "POLICY", CONFINED_POLICY)
+        if derive_module.host_prerequisites() is not None:
+            from beliefs.recipe import MINIMAL_POLICY
+            monkeypatch.setattr(derive_module, "POLICY", MINIMAL_POLICY)
+            monkeypatch.setattr(derive_module, "host_prerequisites", lambda: None)
+
+        first = d.invoke("derive", {**base, "workflow_environment": key_a}, invocation_id="E" * 8)
+        assert seen_venv == [entry_dir / "venv"]
+
+        # Removing the entry does NOT break completed invocation replay with identical key.
+        shutil.rmtree(entry_dir)
+        replay_out = d.invoke("derive", {**base, "workflow_environment": key_a}, invocation_id="E" * 8)
+        assert replay_out.text == first.text
+        assert len(seen_venv) == 1
+
+        # Changed key or omitted key with same invocation_id yields input-mismatch.
+        for changed in ({**base, "workflow_environment": key_b}, base):
+            with pytest.raises(Refused) as caught:
+                d.invoke("derive", changed, invocation_id="E" * 8)
+            assert caught.value.refusal.code == "input-mismatch"

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import socket
 from collections.abc import Mapping
+from contextlib import nullcontext
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -22,6 +23,7 @@ from beliefs.session.routes import run_staging_of
 from science.holdings import dataset_at
 from science.refusal import Refusal, Refused
 from science.report import Report, record_block
+from science.workflow_environment import open_environment, validate_key
 
 POLICY = CONFINED_POLICY
 
@@ -124,18 +126,29 @@ def prepare(ctx, spec_ref: str, dataset_ref: str, code: str, entrypoint: str, ta
     }
 
 
-def handle(ctx, writer, *, spec, dataset, code, entrypoint, targets, cores=None) -> Report:
+def handle(
+    ctx, writer, *, spec, dataset, code, entrypoint, targets, cores=None, workflow_environment=None
+) -> Report:
     reason = host_prerequisites()
     if reason is not None:
         _refuse(f"confinement is unavailable on this host: {reason}")
+    if workflow_environment is not None:
+        validate_key(workflow_environment)
     prepared = prepare(ctx, spec, dataset, code, entrypoint, targets)
     port = writer.operation_port()
     scratch_base = None if run_staging_of(port) is not None else ctx.config.operations_root / "scratch" / writer.invocation_id
-    outcome = execute_assessment_run(
-        port=port, boundary_policy=POLICY, observer=writer.actor,
-        started_at=now(), scratch_base=scratch_base,
-        cores=cores or 1, **prepared,
+    env_ctx = (
+        open_environment(workflow_environment, ctx.config.operations_root)
+        if workflow_environment is not None
+        else nullcontext(None)
     )
+    with env_ctx as workflow_venv:
+        extra_kwargs = {} if workflow_venv is None else {"workflow_venv": workflow_venv}
+        outcome = execute_assessment_run(
+            port=port, boundary_policy=POLICY, observer=writer.actor,
+            started_at=now(), scratch_base=scratch_base,
+            cores=cores or 1, **prepared, **extra_kwargs,
+        )
     if isinstance(outcome, RunRefused):
         # Both pre-intent refusals and later reported refusals retain the kernel reason.
         raise KernelRefusalValue(outcome)

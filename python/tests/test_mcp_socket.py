@@ -98,3 +98,55 @@ def test_mcp_socket_teardown_failure_still_closes_the_session(certified_work, sh
     ledgers = list((load_config(config_path).operations_root / "sessions").glob("*/ledger.v1"))
     assert len(ledgers) == 1
     assert json.loads(ledgers[0].read_text().splitlines()[-1])["line"] == "session-close"
+
+
+def test_socket_rejects_workflow_project_and_malformed_workflow_environment_before_intent(certified_work, short_tmp):
+    from science.config import ReadContext, load_config
+    from science.mcp import serve as mcp_serve
+
+    sock = short_tmp / "wf-socket.sock"
+    config_path = write_cli_config(certified_work, service_socket=sock)
+    stdin = _BlockingStdin()
+    thread = threading.Thread(
+        target=mcp_serve,
+        args=(config_path,),
+        kwargs={"stdin": io.BufferedReader(stdin), "stdout": io.StringIO(), "stderr": io.StringIO()},
+        daemon=True,
+    )
+    thread.start()
+    try:
+        _wait_for(sock)
+        proj_reply = _request(sock, {
+            "command": "run",
+            "inputs": {
+                "spec": "analysis-spec:s1",
+                "dataset": "dataset:d1",
+                "code": str(certified_work),
+                "entrypoint": "code/Snakefile",
+                "targets": ["out.txt"],
+                "workflow_project": "/tmp/proj",
+            },
+        })
+        assert proj_reply["ok"] is False
+        assert proj_reply["refusal"]["code"] == "invalid-input"
+
+        key_reply = _request(sock, {
+            "command": "run",
+            "inputs": {
+                "spec": "analysis-spec:s1",
+                "dataset": "dataset:d1",
+                "code": str(certified_work),
+                "entrypoint": "code/Snakefile",
+                "targets": ["out.txt"],
+                "workflow_environment": "not-64-hex",
+            },
+        })
+        assert key_reply["ok"] is False
+        assert key_reply["refusal"]["code"] == "invalid-input"
+    finally:
+        stdin.release()
+        thread.join(timeout=30)
+        stdin.close()
+
+    ctx = ReadContext.open(load_config(config_path))
+    assert not any(n.kind in ("run", "act-report") for n in ctx.write_view().iter_stored())

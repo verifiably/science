@@ -27,6 +27,7 @@ _LAUNCHER_PROJECT_HELP = "Open the session under this project, by name or coord:
 # vocabulary's short names too, so the generated surface is the shared option
 # See tools/cli.toml for the parser inventory.
 _VOCABULARY_ALIASES = {"limit": ("-n",)}
+_WORKFLOW_ENV_COMMANDS = frozenset({"derive", "run", "verify"})
 
 
 def _add_command(
@@ -53,6 +54,14 @@ def _add_command(
             case "list-of-string":
                 kwargs["action"] = "append"
         parser.add_argument("--" + spec.name.replace("_", "-"), *_VOCABULARY_ALIASES.get(spec.name, ()), **kwargs)
+
+    if decl.name in _WORKFLOW_ENV_COMMANDS:
+        parser.add_argument(
+            "--workflow-project",
+            dest="workflow_project",
+            type=Path,
+            help="Local workflow project directory (pyproject.toml + uv.lock) to prepare into a workflow environment before dispatch.",
+        )
 
     if decl.selects:
         parser.add_argument(
@@ -174,6 +183,7 @@ def _ambient_selection(config):
 
 def main(argv: list[str] | None = None) -> int:
     invocation_id = None
+    prepared_environment: str | None = None
     try:
         declarations = production_tree()
         namespace = build_parser(declarations).parse_args(argv)
@@ -209,11 +219,48 @@ def main(argv: list[str] | None = None) -> int:
             for spec in declaration.inputs
             if (value := getattr(namespace, spec.name)) is not None
         }
+        workflow_project = getattr(namespace, "workflow_project", None)
+        prepared_config = None
+        if workflow_project is not None:
+            if handle is not None:
+                raise Refused(
+                    Refusal("handle-mode", "--workflow-project is unavailable in handle mode"),
+                    invocation_id,
+                )
+            if namespace.command not in _WORKFLOW_ENV_COMMANDS:
+                raise Refused(
+                    Refusal("invalid-input", f"{namespace.command} does not accept --workflow-project"),
+                    invocation_id,
+                )
+            if "workflow_environment" in inputs:
+                raise Refused(
+                    Refusal("invalid-input", "--workflow-project and --workflow-environment are mutually exclusive"),
+                    invocation_id,
+                )
+            if namespace.cursor is not None:
+                raise Refused(
+                    Refusal(
+                        "invalid-input",
+                        "--workflow-project cannot be used with --continue; pass --workflow-environment <key> instead",
+                    ),
+                    invocation_id,
+                )
+            from science.workflow_environment import prepare_environment
+
+            prepared_config = load_config(resolve_config_path(namespace.config))
+            prepared_environment = prepare_environment(workflow_project, prepared_config.operations_root)
+            inputs["workflow_environment"] = prepared_environment
         project = getattr(namespace, "project", None)
         if handle is not None:
             dispatcher = handle
         elif declaration.write_class.kind != "read-only":
-            return _via_service(namespace, declaration, inputs)
+            return _via_service(
+                namespace,
+                declaration,
+                inputs,
+                prepared_environment=prepared_environment,
+                config=prepared_config,
+            )
         else:
             config = load_config(resolve_config_path(namespace.config))
             if namespace.command in {"heads", "log"}:
@@ -233,19 +280,26 @@ def main(argv: list[str] | None = None) -> int:
             project=project,
         )
         sys.stdout.write(output.text)
-        _json_line({"invocation_id": output.invocation_id})
+        meta: dict[str, object] = {"invocation_id": output.invocation_id}
+        if prepared_environment is not None:
+            meta["workflow_environment"] = prepared_environment
+        _json_line(meta)
         return EXIT_OK
     except Refused as error:
         payload: dict[str, object] = {"refusal": envelope(error.refusal)}
         bound_id = error.invocation_id or invocation_id
         if bound_id is not None:
             payload["invocation_id"] = bound_id
+        if prepared_environment is not None:
+            payload["workflow_environment"] = prepared_environment
         _json_line(payload)
         return EXIT_REFUSED
     except Exception:  # noqa: BLE001 -- CLI last resort
         payload = {"error": {"code": "internal-error", "message": "Internal error"}}
         if invocation_id is not None:
             payload["invocation_id"] = invocation_id
+        if prepared_environment is not None:
+            payload["workflow_environment"] = prepared_environment
         _json_line(payload)
         return EXIT_INTERNAL
 
@@ -308,7 +362,14 @@ def _framework_verb(namespace) -> int:
     raise NotImplementedError(f"{namespace.command} arrives in a later task")
 
 
-def _via_service(namespace, declaration: Declaration, inputs: dict[str, object]) -> int:
+def _via_service(
+    namespace,
+    declaration: Declaration,
+    inputs: dict[str, object],
+    *,
+    prepared_environment: str | None = None,
+    config=None,
+) -> int:
     """Any write-class command goes over the service socket, preserving the
     read path's public wire: text on stdout, one JSON line on stderr."""
     invocation_id = namespace.invocation_id or mint_token()
@@ -316,10 +377,16 @@ def _via_service(namespace, declaration: Declaration, inputs: dict[str, object])
         inputs = {**inputs, **{key: str(Path(inputs[key]).absolute()) for key in ("log", "members", "journals")}}
     if declaration.name == "spec" and "estimand" in inputs:
         inputs = {**inputs, "estimand": str(Path(inputs["estimand"]).absolute())}
+
+    def _meta(payload: dict[str, object]) -> dict[str, object]:
+        if prepared_environment is not None:
+            payload["workflow_environment"] = prepared_environment
+        return payload
+
     try:
-        config = load_config(resolve_config_path(namespace.config))
+        resolved_config = config if config is not None else load_config(resolve_config_path(namespace.config))
         with socket.socket(socket.AF_UNIX) as connection:
-            connection.connect(str(config.service_socket))
+            connection.connect(str(resolved_config.service_socket))
             connection.sendall(json.dumps({
                 "command": declaration.name,
                 "inputs": inputs,
@@ -330,18 +397,18 @@ def _via_service(namespace, declaration: Declaration, inputs: dict[str, object])
     except (FileNotFoundError, ConnectionRefusedError):
         refusal = Refusal("permit-exceeded",
                           "no writer service; start one with: science serve")
-        _json_line({"invocation_id": invocation_id, "refusal": envelope(refusal)})
+        _json_line(_meta({"invocation_id": invocation_id, "refusal": envelope(refusal)}))
         return EXIT_REFUSED
     except Refused as error:
-        _json_line({"invocation_id": error.invocation_id or invocation_id,
-                    "refusal": envelope(error.refusal)})
+        _json_line(_meta({"invocation_id": error.invocation_id or invocation_id,
+                          "refusal": envelope(error.refusal)}))
         return EXIT_REFUSED
     if reply["ok"]:
         sys.stdout.write(reply["text"])
-        _json_line({"invocation_id": reply["invocation_id"]})
+        _json_line(_meta({"invocation_id": reply["invocation_id"]}))
         return EXIT_OK
-    _json_line({"invocation_id": reply.get("invocation_id", invocation_id),
-                "refusal": reply["refusal"]})
+    _json_line(_meta({"invocation_id": reply.get("invocation_id", invocation_id),
+                      "refusal": reply["refusal"]}))
     return EXIT_REFUSED
 
 

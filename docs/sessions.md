@@ -92,8 +92,12 @@ service. Callers sharing access to it share that session's capability ceiling.
 CLI declared input names become hyphenated flags. List inputs repeat according to
 CLI help; booleans use the generated boolean flags. Reads execute without opening
 a writer session; writes and write cursors route to the configured service. The
-CLI prints report text on stdout and invocation/refusal metadata on stderr.
-Exit 0 means success; refusal uses exit 3. `build` validates declarations without
+CLI prints report text on stdout and invocation/refusal metadata on stderr. When
+attended `derive`, `run` or `verify` succeeds in preparing a `--workflow-project`,
+the single stderr JSON metadata line also includes `workflow_environment` with the
+64-hex key for direct reuse across retries or MCP calls; installer diagnostics are
+captured so stderr remains one JSON line, and the key is omitted if preparation
+fails. Exit 0 means success; refusal uses exit 3. `build` validates declarations without
 opening a world; `adapters build` generates harness artifacts without one.
 
 ## MCP stdio
@@ -181,7 +185,8 @@ An existing capture reserves its invocation ID until the directory is reclaimed.
    after establishing that the operations root is idle and its owner has gone.
 3. Remove the identified session staging directories and whole orphan invocation
    capture directories individually. Preserve session ledgers, seal evidence,
-   other sessions' data and the shared `scratch/environments` cache. Leave a
+   other sessions' data, prepared `<operations_root>/workflow-environments/`
+   entries needed for replay, and the shared `scratch/environments` cache. Leave a
    directory with uncertain ownership in place for investigation.
 4. Resume launches. A new session can now claim a formerly orphaned invocation
    ID. Retries within the original session still follow its ledger.

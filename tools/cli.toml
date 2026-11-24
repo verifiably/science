@@ -332,6 +332,16 @@ options = [
 ]
 
 [[cli.tasks.commands]]
+path = ["register"]
+summary = "Register every discovered records entry whose checkout is on this host, through init"
+args = [{ name = "prefixes", value = "string", required = false, variadic = true }]
+options = [{ names = ["--explain"], value = "none" }]
+
+[[cli.tasks.commands]]
+path = ["notices"]
+summary = "What this host must run to take up its synced records; prints nothing when nothing"
+
+[[cli.tasks.commands]]
 path = ["unregister"]
 summary = "Remove a prefix from the registry. Project files are left untouched"
 args = [{ name = "prefix", value = "string", required = true }]
@@ -451,6 +461,7 @@ args = [{ name = "id", value = "ref", required = true }]
 options = [
   { names = ["--no-fetch"], value = "none" },
   { shared = "all_projects", value = "none" },
+  { names = ["--summary"], value = "none" },
 ]
 
 [[cli.tasks.commands]]
@@ -503,6 +514,7 @@ options = [
   { names = ["--waiting-on"], value = "enum", values = ["agent", "user"] },
   { names = ["--periodic"], value = "none" },
   { names = ["--deferred"], value = "none" },
+  { shared = "limit", value = "int" },
   { shared = "project", role = "select", value = "string", repeatable = false },
   { shared = "all_projects", value = "none" },
   { names = ["--group"], value = "string" },
@@ -535,6 +547,7 @@ options = [
   { names = ["--waiting-on"], value = "enum", values = ["agent", "user"] },
   { names = ["--periodic"], value = "none" },
   { names = ["--deferred"], value = "none" },
+  { shared = "limit", value = "int" },
   { shared = "project", role = "select", value = "string", repeatable = false },
   { shared = "all_projects", value = "none" },
   { names = ["--group"], value = "string" },
@@ -1911,6 +1924,8 @@ options = [
   { names = ["--entrypoint"], value = "string", required = true },
   { names = ["--spec"], value = "string", required = true },
   { names = ["--targets"], value = "string", repeatable = true, required = true },
+  { names = ["--workflow-environment"], value = "string" },
+  { names = ["--workflow-project"], value = "path" },
 ]
 
 [[cli.science.commands]]
@@ -1939,6 +1954,8 @@ options = [
   { names = ["--reads"], value = "string", repeatable = true },
   { names = ["--targets"], value = "string", repeatable = true, required = true },
   { names = ["--title"], value = "string", required = true },
+  { names = ["--workflow-environment"], value = "string" },
+  { names = ["--workflow-project"], value = "path" },
 ]
 
 [[cli.science.commands]]
@@ -1963,6 +1980,8 @@ options = [
   { names = ["--cores"], value = "int" },
   { names = ["--entrypoint"], value = "string", required = true },
   { names = ["--run"], value = "string" },
+  { names = ["--workflow-environment"], value = "string" },
+  { names = ["--workflow-project"], value = "path" },
 ]
 
 [[cli.science.commands]]
@@ -3533,35 +3552,6 @@ path = ["model"]
 summary = "The model and effort of a Codex or agy tool call, read from the harness's own record"
 options = [
   { shared = "harness", role = "select", value = "enum", values = ["codex", "agy"], required = true, repeatable = false },
-]
-
-# Minimal adoption surface; existing ops-projects commands remain outside this inventory.
-[cli.ops-projects]
-project = "ops"
-tier = "automation"
-default_output = "pretty"
-env = "OPS-PROJECTS"
-protocol = "link progress and refusal diagnostics"
-
-[[cli.ops-projects.commands]]
-path = []
-
-[[cli.ops-projects.commands]]
-path = ["link"]
-summary = "Keep project records in the profile overlay and link its checkout"
-args = [{name = "checkout", value = "path", required = true}]
-options = [
-  {names = ["--prefix"], value = "string", required = true},
-  {names = ["--purpose"], value = "string", required = true},
-  {names = ["--name"], value = "string"},
-  {names = ["--explain"], value = "none"},
-]
-
-[[cli.ops-projects.commands]]
-path = ["atlas"]
-summary = "Render the cross-project document of purposes, abstracts, subsystems and goal status"
-options = [
-  {names = ["--out"], value = "path"},
 ]
 
 # Minimal adoption surface; existing doc-review options remain outside this inventory.

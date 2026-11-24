@@ -472,3 +472,137 @@ def test_a_derived_package_is_assessed_and_verified_through_lineage_standing(cer
         assert replayed != run_ref
 
 
+def test_verify_workflow_environment_forwarding_refusal_replay_and_mismatch(rig, monkeypatch):
+    import json
+    import os
+    import shutil
+    import sys
+    from pathlib import Path
+    import science.commands.verify as verify_module
+    from science.canonical import canonicalize
+    from science.loader import production_tree
+
+    d, ctx, assessment_ref, (code, entrypoint, _) = rig
+    decl = next(dd for dd in production_tree() if dd.name == "verify")
+    base = {"assessment": assessment_ref, "code": str(code), "entrypoint": entrypoint}
+    assert "workflow_environment" not in canonicalize(decl, base)
+
+    key_a = "3" * 64
+    key_b = "4" * 64
+    before_acts = sum(1 for n in ctx.write_view().iter_stored() if n.kind == "act-report")
+    for bad in ("not-hex", key_a):
+        with pytest.raises(Refused) as caught:
+            d.invoke("verify", {**base, "workflow_environment": bad})
+        assert caught.value.refusal.code == "invalid-input"
+    assert sum(1 for n in ctx.write_view().iter_stored() if n.kind == "act-report") == before_acts
+
+    entry_dir = ctx.config.operations_root / "workflow-environments" / key_a
+    base_py = Path(os.path.realpath(sys.executable))
+    (entry_dir / "venv" / "bin").mkdir(parents=True)
+    os.symlink(base_py, entry_dir / "venv" / "bin" / "python")
+    (entry_dir / "venv" / "pyvenv.cfg").write_text(
+        f"home = {base_py.parent}\ninclude-system-site-packages = false\n"
+    )
+    (entry_dir / "ready.json").write_text(
+        json.dumps({
+            "format_version": 1,
+            "key": key_a,
+            "base_executable": str(base_py),
+            "base_prefix": os.path.realpath(sys.base_prefix),
+        })
+    )
+
+    seen_venv: list[object] = []
+    real_replay = verify_module.replay
+
+    def spy_replay(*args, **kwargs):
+        seen_venv.append(kwargs.get("workflow_venv"))
+        kwargs["workflow_venv"] = None
+        return real_replay(*args, **kwargs)
+
+    monkeypatch.setattr(verify_module, "replay", spy_replay)
+    first = d.invoke("verify", {**base, "workflow_environment": key_a}, invocation_id="V" * 10)
+    assert seen_venv == [entry_dir / "venv"]
+
+    shutil.rmtree(entry_dir)
+    again = d.invoke("verify", {**base, "workflow_environment": key_a}, invocation_id="V" * 10)
+    assert again.text == first.text
+
+    for changed in ({**base, "workflow_environment": key_b}, base):
+        with pytest.raises(Refused) as caught:
+            d.invoke("verify", changed, invocation_id="V" * 10)
+        assert caught.value.refusal.code == "input-mismatch"
+
+
+def test_verify_run_branch_forwards_workflow_environment(certified_work, tmp_path, monkeypatch):
+    import json
+    import os
+    import sys
+    from pathlib import Path
+    import science.commands.derive as derive_module
+    import science.commands.verify as verify_module
+    from beliefs.confinement import host_prerequisites
+    from beliefs.recipe import MINIMAL_POLICY
+
+    cfg = build_belief_world(certified_work)
+    raw_file = tmp_path / "raw.tsv"
+    raw_file.write_bytes(b"v\n1\n")
+    with open_rig(cfg, ("dataset", "derive", "verify")) as (d, ctx):
+        if host_prerequisites() is not None:
+            monkeypatch.setattr(derive_module, "POLICY", MINIMAL_POLICY)
+            monkeypatch.setattr(derive_module, "host_prerequisites", lambda: None)
+        raw_id = next(
+            t for t in d.invoke("dataset", {"path": str(raw_file), "title": "raw"}).text.split()
+            if t.startswith("dataset:")
+        )
+        code = certified_work / "prod_wf"
+        (code / "workflow").mkdir(parents=True, exist_ok=True)
+        (code / "workflow" / "Snakefile").write_text(
+            'rule make:\n    input: "inputs/raw.tsv"\n    output: "out.tsv"\n'
+            '    run:\n        import pathlib\n        pathlib.Path(output[0]).write_text("ok\\n")\n'
+        )
+        run_id = next(
+            t for t in d.invoke("derive", {
+                "dataset": raw_id,
+                "code": str(code),
+                "entrypoint": "prod_wf/workflow/Snakefile",
+                "targets": ["out.tsv"],
+                "title": "prod",
+            }).text.split()
+            if t.startswith("run:")
+        )
+        key_a = "5" * 64
+        entry_dir = ctx.config.operations_root / "workflow-environments" / key_a
+        base_py = Path(os.path.realpath(sys.executable))
+        (entry_dir / "venv" / "bin").mkdir(parents=True)
+        os.symlink(base_py, entry_dir / "venv" / "bin" / "python")
+        (entry_dir / "venv" / "pyvenv.cfg").write_text(
+            f"home = {base_py.parent}\ninclude-system-site-packages = false\n"
+        )
+        (entry_dir / "ready.json").write_text(
+            json.dumps({
+                "format_version": 1,
+                "key": key_a,
+                "base_executable": str(base_py),
+                "base_prefix": os.path.realpath(sys.base_prefix),
+            })
+        )
+        seen: list[object] = []
+        real_replay = verify_module.replay
+
+        def spy_replay(*args, **kwargs):
+            seen.append(kwargs.get("workflow_venv"))
+            kwargs["workflow_venv"] = None
+            return real_replay(*args, **kwargs)
+
+        monkeypatch.setattr(verify_module, "replay", spy_replay)
+        out = d.invoke("verify", {
+            "run": run_id,
+            "code": str(code),
+            "entrypoint": "prod_wf/workflow/Snakefile",
+            "workflow_environment": key_a,
+        })
+        assert "[verification] verification:" in out.text
+        assert seen == [entry_dir / "venv"]
+
+

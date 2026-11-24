@@ -109,7 +109,14 @@ JSON parse. Cursors are not authority or signatures: the dispatcher rechecks the
 bindings, report digest and valid UTF-8 position. Read continuation reruns the
 read with the same canonical inputs and current selection; changed report content
 refuses `stale-cursor`. Write continuation rebuilds the ledger-bound outcome,
-never repeats effects. A write cursor stays bound to its original session and
+never repeats effects. For `derive`, `run` and `verify`, an empty input object
+performs cursor-only paging, while any non-empty input object is treated as a full
+resubmission: it runs ordinary canonicalization (refusing partial payloads missing
+required fields as `invalid-input`) and compares `input_digest` against the
+historical invocation digest (refusing changes, including a changed or removed
+`workflow_environment`, as `input-mismatch`); neither paging route opens or
+prepares a workflow environment. Other write continuations retain their existing
+ledger-bound paging behavior. A write cursor stays bound to its original session and
 invocation ledger, but any endpoint over the same `operations_root` can continue
 it while the ledger and referenced records remain available; the library reader
 needs no active writer session or handler. This durable lookup is distinct from
@@ -253,6 +260,33 @@ Exact current inputs, defaults and prompts are the public files under
   the verification's scope and verdict. Supplied code/environment must match the captured recipe;
   no publication marker supplies the workspace checkout for you. Execution
   materials are obtained separately.
+
+### Workflow environments (`derive`, `run`, `verify`)
+
+`derive`, `run` and `verify` accept an optional `workflow_environment` input (64
+lowercase hex digits identifying a ready prepared venv under
+`<operations_root>/workflow-environments/<key>/`, outside job scratch and the
+kernel snapshot cache). Omitting it keeps the executing Science interpreter's
+capture and preserves existing canonical digests. Attended CLI invocations also
+accept the mutually exclusive CLI-only `--workflow-project <dir>` option, which
+runs `uv sync --locked --no-default-groups --no-install-project --no-install-workspace`
+against the project's `pyproject.toml` and `uv.lock` with the shared base CPython
+interpreter, rejects mutable local directory dependencies and stale locks, reports
+`"workflow_environment": "<key>"` in the single stderr JSON metadata line once
+preparation succeeds, and forwards only the key to the service. Direct MCP and
+socket callers pass `workflow_environment` directly (raw `workflow_project` paths
+refuse), and restricted run handles reject both `--workflow-project` (`handle-mode`
+before preparation) and `workflow_environment` (`permit-exceeded` at endpoint
+admission). Retries and `--continue` calls cannot use `--workflow-project` and
+should pass the reported `--workflow-environment <key>` directly.
+
+Prepared environments hold Snakemake 8.11.4 and the workflow's locked runtime
+Python dependencies; confined sandboxes still expose no ambient host shell
+binaries beyond the confined mount plan, so workflows using `shell:` rules that
+depend on host executables can refuse until adapted to Python rules. Retaining
+replayability requires keeping both the prepared workflow environment entry and
+the verified kernel snapshot under `operations_root` (or restoring an identical
+candidate).
 - `belief` evaluates one accepted, unretracted assessed target key. `--key` is
   optional for exactly one key, which the report includes. No assessments yields
   NoBelief without an invented key. An unmatched key refuses `invalid-input`;

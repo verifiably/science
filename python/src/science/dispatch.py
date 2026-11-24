@@ -31,6 +31,7 @@ from science.schema import Declaration
 KERNEL_REFUSALS = (PermitExceeded, KernelRefusalValue, WriteRefused,
                    CitationContractMismatch, AddressMapConflict, BuildContended,
                    StoreWriteRefused, *WORLD_READ_ERRORS)
+_VALIDATED_WRITE_CONTINUATIONS = frozenset({"derive", "run", "verify"})
 
 
 class HandlerContractViolation(RuntimeError):
@@ -188,7 +189,7 @@ class Dispatcher:
             if project is not None:
                 raise Refused(Refusal(
                     "invalid-input", "no write takes `project`; a write binds to the session's selection"))
-            return self._continue_write(command, cursor, iid)
+            return self._continue_write(command, inputs, cursor, iid)
         decl = self._decls.get(cursor.command)
         if decl is None:
             raise Refused(Refusal("unknown-cursor", f"cursor names unknown command {cursor.command!r}"))
@@ -517,8 +518,11 @@ class Dispatcher:
             report = self._minted_report(outcome["done"])
         return self._render_write(decl.output_budget, report, iid, position)
 
-    def _continue_write(self, command: str, cursor: WriteCursor, iid: str) -> Outcome:
-        """Re-render from the ledger: never a handler call, never canonicalization."""
+    def _continue_write(
+        self, command: str, inputs: Mapping[str, object], cursor: WriteCursor, iid: str
+    ) -> Outcome:
+        """Re-render from the ledger: never a handler call; derive/run/verify
+        validate non-empty resubmitted inputs against the recorded digest."""
         from beliefs.session import open_ledger_reader
 
         decl = self._decls.get(command)
@@ -540,6 +544,12 @@ class Dispatcher:
             raise Refused(
                 Refusal("unknown-cursor", "that invocation refused; nothing to page")
             )
+        if command in _VALIDATED_WRITE_CONTINUATIONS and inputs:
+            canonical = canonicalize(decl, inputs)
+            if input_digest(canonical) != record.input_digest:
+                raise Refused(
+                    Refusal("input-mismatch", "cursor was issued for different inputs")
+                )
         if decl.write_class.kind == "session":
             if record.selection is None:
                 raise HandlerContractViolation(

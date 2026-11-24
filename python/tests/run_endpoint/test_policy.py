@@ -14,6 +14,10 @@ def test_every_production_name_has_an_explicit_run_decision():
     ("publish", {}), ("publish-preview", {}), ("verify", {}), ("provider-inspect", {}),
     ("adopt", {}), ("unaudited", {}), ("heads", {"resolve": True}),
     ("fetch", {"source": "https://example.invalid/item"}),
+    ("derive", {"workflow_environment": "a" * 64}),
+    ("run", {"workflow_environment": "a" * 64}),
+    ("verify", {"workflow_environment": "a" * 64}),
+    ("derive", {"workflow_environment": ""}),
 ])
 def test_restricted_routes_refuse_before_the_body(command, inputs):
     from science.run_endpoint.policy import admit
