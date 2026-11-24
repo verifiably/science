@@ -535,6 +535,7 @@ def test_concurrent_prepare_and_open_serialize_and_sync_once(tmp_path, monkeypat
         _make_fake_venv(venv_dir, base_python)
 
     monkeypatch.setattr(mod, "_run_uv_sync", slow_sync)
+    monkeypatch.setattr(mod, "_check_uv_lock_freshness", lambda *a, **kw: None)
 
     results: dict[str, object] = {}
 
@@ -835,3 +836,85 @@ def test_open_environment_rejects_omitted_or_true_system_site_packages(tmp_path,
         with open_environment(key, ops_root):
             pass
     assert caught.value.refusal.code == "invalid-input"
+
+
+def test_warm_cache_refuses_stale_lock_after_external_local_dev_dependency_version_bump_and_keeps_ready_entry(
+    tmp_path, monkeypatch
+):
+    wheels = tmp_path / "wheels"
+    runtime_whl = _build_wheel(
+        wheels,
+        "wf-ext-dev-runtime",
+        "0.1.0",
+        {"wf_ext_dev_runtime/__init__.py": "RUNTIME_OK = True\n"},
+    )
+    private_cache = tmp_path / "ext-dev-uv-cache"
+    fixture_home = tmp_path / "ext-dev-home"
+    fixture_home.mkdir()
+    monkeypatch.setenv("UV_CACHE_DIR", str(private_cache))
+    monkeypatch.setenv("HOME", str(fixture_home))
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", "/dev/null")
+    monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
+
+    # External local editable package outside workspace membership, referenced only in dev group.
+    ext_dev = tmp_path / "local-dev-pkg"
+    (ext_dev / "src" / "local_dev_pkg").mkdir(parents=True)
+    (ext_dev / "src" / "local_dev_pkg" / "__init__.py").write_text("DEV_V = 1\n")
+    (ext_dev / "pyproject.toml").write_text(
+        "[project]\n"
+        'name = "local-dev-pkg"\n'
+        'version = "1.0.0"\n'
+        'requires-python = ">=3.11"\n\n'
+        "[build-system]\n"
+        'requires = ["hatchling"]\n'
+        'build-backend = "hatchling.build"\n\n'
+        "[tool.hatch.build.targets.wheel]\n"
+        'packages = ["src/local_dev_pkg"]\n'
+    )
+
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "pyproject.toml").write_text(
+        "[project]\n"
+        'name = "ext-dev-root"\n'
+        'version = "0.1.0"\n'
+        'requires-python = ">=3.11"\n'
+        'dependencies = ["wf-ext-dev-runtime==0.1.0"]\n\n'
+        "[dependency-groups]\n"
+        'dev = ["local-dev-pkg"]\n\n'
+        "[tool.uv.sources]\n"
+        f'wf-ext-dev-runtime = {{ path = "{runtime_whl}" }}\n'
+        'local-dev-pkg = { path = "../local-dev-pkg", editable = true }\n'
+    )
+    lock_res = subprocess.run(
+        ["uv", "lock", "--no-config", "--offline"],
+        cwd=project,
+        env={
+            "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+            "HOME": str(fixture_home),
+            "UV_CACHE_DIR": str(private_cache),
+            "GIT_CONFIG_GLOBAL": "/dev/null",
+            "GIT_CONFIG_NOSYSTEM": "1",
+        },
+        capture_output=True,
+        text=True,
+    )
+    assert lock_res.returncode == 0, lock_res.stderr
+
+    ops_root = tmp_path / "ops"
+    ops_root.mkdir()
+    key1 = prepare_environment(project, ops_root)
+    assert WORKFLOW_ENVIRONMENT_KEY_RE.fullmatch(key1)
+
+    # Bump external local dev package version without updating uv.lock -> lock is now stale.
+    dev_toml = ext_dev / "pyproject.toml"
+    dev_toml.write_text(dev_toml.read_text().replace('version = "1.0.0"', 'version = "2.0.0"'))
+
+    # Project-based warm hit MUST refuse with invalid-input instead of returning stale key1.
+    with pytest.raises(Refused) as stale:
+        prepare_environment(project, ops_root)
+    assert stale.value.refusal.code == "invalid-input"
+
+    # Existing ready entry for key1 must remain intact for explicit-key replay.
+    with open_environment(key1, ops_root) as venv_path:
+        assert (venv_path / "bin" / "python").exists()

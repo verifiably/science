@@ -558,6 +558,26 @@ def _run_uv_sync(project: Path, venv_dir: Path, base_python: Path) -> None:
         _invalid(f"uv sync failed for workflow project {project}: {summary}")
 
 
+def _check_uv_lock_freshness(project: Path, venv_dir: Path, base_python: Path) -> None:
+    argv = [
+        *_uv_command(),
+        "sync",
+        "--dry-run",
+        *INSTALL_FLAGS,
+        "--python",
+        str(base_python),
+    ]
+    env = _controlled_uv_env(venv_dir)
+    try:
+        result = subprocess.run(argv, cwd=project, env=env, capture_output=True, text=True)
+    except OSError as exc:
+        _invalid(f"failed to invoke uv sync --dry-run: {exc}")
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout or "").strip().splitlines()
+        summary = " | ".join(detail[-4:]) if detail else f"exit code {result.returncode}"
+        _invalid(f"workflow project lock is stale or invalid ({project}): {summary}")
+
+
 def prepare_environment(project: Path, operations_root: Path) -> str:
     """Prepare an immutable locked workflow venv under operations storage and return its key."""
     project = Path(project)
@@ -605,13 +625,17 @@ def prepare_environment(project: Path, operations_root: Path) -> str:
                             except FileNotFoundError:
                                 existing_fd = -1
                             if existing_fd >= 0:
+                                is_ready = False
                                 try:
                                     _validate_ready_entry(existing_fd, entry_dir, key, base_python)
-                                    return key
+                                    is_ready = True
                                 except Refused:
-                                    pass
+                                    is_ready = False
                                 finally:
                                     os.close(existing_fd)
+                                if is_ready:
+                                    _check_uv_lock_freshness(project, entry_dir / "venv", base_python)
+                                    return key
                             shutil.rmtree(entry_dir)
                         else:
                             os.unlink(key, dir_fd=envs_fd)
