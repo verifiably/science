@@ -1,0 +1,13 @@
+schema_version = 1
+name = "exposure-event"
+purpose = "Record one look at data, or one piece of prior knowledge, as an exposure event."
+write_class = "mints:exposure-event"
+output_budget = 4096
+
+[inputs.payload]
+type = "string"
+required = true
+doc = "UTF-8 schema_version 1 JSON path: title and the exposure-event facet less recorded_by. CLI resolves relative to its caller; MCP should supply an absolute service-accessible path."
+
+[reads]
+families = ["corpus-stored"]

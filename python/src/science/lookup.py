@@ -2,11 +2,12 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import cache
 
 from beliefs import stored
-from beliefs.errors import IdentifierMalformed, MalformedRecord, ScienceError, SourceAssertionRefused
+from beliefs.errors import (CitationContractMismatch, IdentifierMalformed, MalformedRecord, ScienceError,
+                            SourceAssertionRefused)
 from beliefs.reservation import UNREAD
 from beliefs.source import normalized_identifiers
 from beliefs.source_assertion import SourceAssertion, source_assertion_refusal
@@ -14,15 +15,18 @@ from beliefs.stored import SOURCE_FACET, source_assertion_value
 from beliefs.world.rules_v1.coreference import reduce_coreference
 from nodes.core.node import Node
 
-from science.config import _retired
+from science.config import Mount, _retired
 from science.refusal import Refusal, Refused, kernel_refusal
 
 __all__ = [
     "CoreferencePair",
     "Located",
+    "captured_mounts",
     "coreference_attestation_shape",
     "decode_source_assertion",
     "identifiers",
+    "located_among",
+    "require_citation_pins",
     "require_identifiers",
     "session_record",
     "shared_with",
@@ -87,8 +91,18 @@ def _located(ctx, holders, ref):
     return Located(node, tuple(sorted({mount.corpus_id for mount in holders})))
 
 
+def captured_mounts(ctx) -> tuple[Mount, ...]:
+    """The configured non-retired mounts, each view frozen: an ordinary view enumerates the store as it is now
+    and fetches as of its opening, so a scan that does both needs one capture."""
+    return tuple(replace(mount, view=mount.view.captured()) for mount in _live(ctx, ctx.mounts()))
+
+
+def located_among(ctx, mounts: Iterable[Mount], ref: str) -> Located | None:
+    return _located(ctx, [mount for mount in mounts if mount.view.holds(ref)], ref)
+
+
 def world_record(ctx, ref: str) -> Located | None:
-    return _located(ctx, [mount for mount in _live(ctx, ctx.mounts()) if mount.view.holds(ref)], ref)
+    return located_among(ctx, _live(ctx, ctx.mounts()), ref)
 
 
 def session_record(ctx, ref: str) -> Located | None:
@@ -96,7 +110,21 @@ def session_record(ctx, ref: str) -> Located | None:
     session-mounted non-retired corpora (`_live(ctx, ctx.session_mounts())`).
     Differing copies refuse `invalid-input` as `world_record` does; corrupt
     stored nodes (`ScienceError` from `ReadView.get`) refuse `kernel-refused`."""
-    return _located(ctx, [mount for mount in _live(ctx, ctx.session_mounts()) if mount.view.holds(ref)], ref)
+    return located_among(ctx, _live(ctx, ctx.session_mounts()), ref)
+
+
+def require_citation_pins(ctx, ref: str) -> None:
+    """Every live session read mount holding `ref` pins what the writer activates. The kernel's citation check:
+    a disagreeing holder refuses even when another copy is acceptable."""
+    for mount in _live(ctx, ctx.session_mounts()):
+        if mount.root == ctx.config.write_root or not mount.view.holds(ref):
+            continue
+        pinned = ctx.pins(mount.root).domains
+        for namespace, identity in sorted(ctx.config.profile.activated_contracts.items()):
+            held = pinned.get(namespace)
+            if held is not None and held != f"{namespace}:{identity}":
+                raise Refused(kernel_refusal(
+                    CitationContractMismatch(mount.root, namespace, held, f"{namespace}:{identity}")))
 
 
 def decode_source_assertion(node: Node) -> SourceAssertion:

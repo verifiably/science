@@ -26,6 +26,18 @@ def test_restricted_routes_refuse_before_the_body(command, inputs):
     assert caught.value.refusal.code == "permit-exceeded"
 
 
+@pytest.mark.parametrize("command,inputs,confined", [
+    ("exposure-event", {"payload": "/scratch/payload.json"}, True),
+    ("reservation-assignment", {"payload": "/scratch/payload.json"}, True),
+    ("exposure-log", {"subject": "dataset:a"}, False),
+    ("reservation-head", {"chain": "roster"}, False),
+])
+def test_exposure_and_reservation_commands_have_their_run_admission(command, inputs, confined):
+    from science.run_endpoint.policy import CONFINED, ORDINARY, admit
+    assert command in (CONFINED if confined else ORDINARY)
+    admit(command, inputs)
+
+
 @pytest.mark.parametrize("has_act", [False, True])
 def test_sealed_run_keeps_the_real_invocation_outcome(certified_work, has_act):
     import json

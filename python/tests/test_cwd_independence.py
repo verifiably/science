@@ -220,3 +220,56 @@ def test_cli_spec_reads_the_client_source_path_with_service_in_another_directory
     assert not sock.exists()
     spec, = [n for n in ReadContext.open(cfg).write_view().iter_stored() if n.kind == "analysis-spec"]
     assert stored.analysis_spec_value(spec, profile=cfg.profile).estimand.reference.value == Decimal("0.5")
+
+
+def test_cli_payloads_resolve_in_the_callers_directory_with_service_in_another(
+        certified_work, short_tmp, tmp_path, monkeypatch, capsys):
+    import os
+    import signal
+    import subprocess
+    import sys
+    import time
+    import beliefs
+    import science
+    from helpers.reservation import assignment_facet, event_facet, write_payload
+    from helpers.world import write_config_for
+    from science.cli import main
+    from science.config import ReadContext
+    from test_launcher_stop import _wait_for_socket
+
+    cfg = build_fixture_world_with_contract(certified_work)
+    client, server, home = (tmp_path / name for name in ("client", "server", "child-home"))
+    for directory in (client, server, home):
+        directory.mkdir()
+    write_payload(client, event_facet(), name="event.json", title="The caller's event")
+    write_payload(client, assignment_facet(), name="assignment.json", title="The caller's assignment")
+    for name in ("event.json", "assignment.json"):
+        (server / name).write_text('{"schema_version": false}')
+    sock = short_tmp / "service.sock"
+    config = write_config_for(cfg, service_socket=sock)
+    environment = {
+        "PATH": os.environ["PATH"], "HOME": str(home), "PYTHONDONTWRITEBYTECODE": "1",
+        "PYTHONPATH": os.pathsep.join(str(Path(package.__file__).resolve().parents[1])
+                                      for package in (science, beliefs)),
+    }
+    child = subprocess.Popen([sys.executable, "-m", "science.cli", "serve", "--config", str(config)],
+                             cwd=server, env=environment, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                             stderr=subprocess.PIPE)
+    try:
+        _wait_for_socket(child, sock, time.monotonic() + 30)
+        monkeypatch.chdir(client)
+        for command, name in (("exposure-event", "event.json"), ("reservation-assignment", "assignment.json")):
+            assert main([command, "--config", str(config), "--payload", name]) == 0, capsys.readouterr().err
+            assert f"[{command}] {command}:" in capsys.readouterr().out
+    finally:
+        if child.poll() is None:
+            child.send_signal(signal.SIGTERM)
+        try:
+            _, stderr = child.communicate(timeout=15)
+        finally:
+            if child.poll() is None:
+                child.kill()
+                child.communicate()
+    assert child.returncode == 128 + signal.SIGTERM, stderr.decode()
+    titles = {n.title for n in ReadContext.open(cfg).write_view().iter_stored()}
+    assert {"The caller's event", "The caller's assignment"} <= titles

@@ -63,6 +63,8 @@ The command surface is recorded in `tools/cli.toml`:
 - Published works: `source`, deduplicated across live corpora by shared identifier;
   `source-correct` adds or replaces identifiers on sources held only in the write root;
   `source-assertion` records that a source asserts, denies or hypothesizes a proposition at a quoted span.
+- Exposure and reservation: `exposure-event` and `reservation-assignment` record what was seen and
+  which data is held back; `exposure-log` and `reservation-head` read them.
 - Record reading: `record`, by world or coordination address, or source identifier.
 - Sharing: `publish`, `publish-preview`, `provider-inspect`, `provider-bind`,
   `adopt`, `fetch`, `show`.

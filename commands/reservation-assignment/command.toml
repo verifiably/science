@@ -1,0 +1,13 @@
+schema_version = 1
+name = "reservation-assignment"
+purpose = "Freeze a reservation assignment as a chain root or as its head's successor."
+write_class = "mints:reservation-assignment"
+output_budget = 4096
+
+[inputs.payload]
+type = "string"
+required = true
+doc = "UTF-8 schema_version 1 JSON path: title and the reservation-assignment facet less assigned_by. CLI resolves relative to its caller; MCP should supply an absolute service-accessible path."
+
+[reads]
+families = ["corpus-stored"]

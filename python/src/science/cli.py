@@ -28,6 +28,13 @@ _LAUNCHER_PROJECT_HELP = "Open the session under this project, by name or coord:
 # See tools/cli.toml for the parser inventory.
 _VOCABULARY_ALIASES = {"limit": ("-n",)}
 _WORKFLOW_ENV_COMMANDS = frozenset({"derive", "run", "verify"})
+# Path inputs a write resolves in its caller's directory before the service, which runs in another, reads them.
+_CALLER_PATHS = {
+    "acquire-import": ("log", "members", "journals"),
+    "exposure-event": ("payload",),
+    "reservation-assignment": ("payload",),
+    "spec": ("estimand",),
+}
 
 
 def _add_command(
@@ -373,10 +380,8 @@ def _via_service(
     """Any write-class command goes over the service socket, preserving the
     read path's public wire: text on stdout, one JSON line on stderr."""
     invocation_id = namespace.invocation_id or mint_token()
-    if declaration.name == "acquire-import":
-        inputs = {**inputs, **{key: str(Path(inputs[key]).absolute()) for key in ("log", "members", "journals")}}
-    if declaration.name == "spec" and "estimand" in inputs:
-        inputs = {**inputs, "estimand": str(Path(inputs["estimand"]).absolute())}
+    inputs = {**inputs, **{key: str(Path(inputs[key]).absolute())
+                           for key in _CALLER_PATHS.get(declaration.name, ()) if key in inputs}}
 
     def _meta(payload: dict[str, object]) -> dict[str, object]:
         if prepared_environment is not None:

@@ -532,3 +532,114 @@ def test_coreference_keeps_each_projects_notes_and_each_sources_assertions(coref
         assert text.count("state: positive") == 2
         assert "state: unassessed" not in text
         assert left.id in text and right.id in text
+
+
+RESERVATION_NAMES = ("record", "exposure-event", "reservation-assignment")
+
+
+def _reservation_chain(cfg):
+    """A read event, a root that considers it and a successor that suspends a reserved group, all in the write root."""
+    from helpers.reservation import assignment_facet, assignment_node, event_facet, event_node, group, hold_record
+
+    source = hold_record(cfg.write_root, cfg.profile, stored.source_node(title="GSE24080", identifiers={"accession": "GSE24080"}))
+    event = hold_record(cfg.write_root, cfg.profile, event_node(event_facet(
+        channel="read", subjects=[source.id], bound={"freeze": "sha256:" + "3" * 64}, evidence=["atoms-event:3d426b17"],
+        account="First line.\nSecond line."), actor="fixture"))
+    root = hold_record(cfg.write_root, cfg.profile, assignment_node(
+        assignment_facet(events=[event.id], groups=[group("a", role="reserved"), group("b")]), actor="fixture"))
+    successor = hold_record(cfg.write_root, cfg.profile, assignment_node(assignment_facet(
+        events=[event.id], groups=[group("a"), group("b")], predecessor=root.id, evidence=[event.id], flagged=[]),
+        actor="fixture"))
+    return event, root, successor
+
+
+def _facets_of(text):
+    import yaml
+    return yaml.safe_load(text.split("  facets: ", 1)[1].split("\nchanges from", 1)[0])
+
+
+def test_exposure_and_reservation_records_render_their_whole_facet_and_changes(certified_work):
+    cfg = build_two_corpus_world(certified_work)
+    event, root, successor = _reservation_chain(cfg)
+    with research_rig(cfg, RESERVATION_NAMES) as (d, _):
+        text = d.invoke("record", {"address": event.id}).text
+        assert f"address: {event.id}\n" in text and "changes from the predecessor" not in text
+        assert _facets_of(text)[stored.EXPOSURE_EVENT_FACET] == event.facets[stored.EXPOSURE_EVENT_FACET]
+        text = d.invoke("record", {"address": root.id}).text
+        assert "changes from the predecessor:\n  count: 0\n" in text
+        # the successor is the head; the root is a historical assignment and reads the same way
+        text = d.invoke("record", {"address": successor.id}).text
+        assert _facets_of(text)[stored.RESERVATION_ASSIGNMENT_FACET] == (
+            successor.facets[stored.RESERVATION_ASSIGNMENT_FACET])
+        assert ('changes from the predecessor:\n  count: 1\n'
+                '  changed: testing/cohort "a"; was reserved; suspended\n') in text
+
+
+def test_a_historical_assignment_keeps_its_own_changes_after_it_is_superseded(certified_work):
+    from helpers.reservation import assignment_facet, assignment_node, digest, group, hold_record
+
+    cfg = build_two_corpus_world(certified_work)
+    event, _, successor = _reservation_chain(cfg)
+    hold_record(cfg.write_root, cfg.profile, assignment_node(assignment_facet(
+        events=[event.id], groups=[group("a"), group("b")], predecessor=successor.id, inputs={"roster.yaml": digest("next")}),
+        actor="fixture"))
+    with research_rig(cfg, RESERVATION_NAMES) as (d, _):
+        assert 'changed: testing/cohort "a"; was reserved; suspended' in d.invoke("record", {"address": successor.id}).text
+
+
+@pytest.mark.parametrize("damage,kind", [("stale-stamp", "SemanticHashStale"), ("malformed-facet", "MalformedRecord")])
+@pytest.mark.parametrize("which", ["event", "assignment"])
+def test_a_damaged_exposure_or_reservation_record_refuses_structurally(certified_work, which, damage, kind):
+    from helpers.reservation import assignment_facet, assignment_node, event_facet, event_node
+
+    cfg = build_two_corpus_world(certified_work)
+    node, facet, field = ((event_node(event_facet(), actor="fixture"), stored.EXPOSURE_EVENT_FACET, "account")
+                          if which == "event" else
+                          (assignment_node(assignment_facet(), actor="fixture"), stored.RESERVATION_ASSIGNMENT_FACET, "rule"))
+    del node.facets[facet][field]
+    if damage == "malformed-facet":
+        stored.stamp_semantic_identity(node)
+    raw_write_node(cfg.write_root, node)
+    with research_rig(cfg, RESERVATION_NAMES) as (d, _):
+        with pytest.raises(Refused) as caught:
+            d.invoke("record", {"address": node.id})
+    assert caught.value.refusal.code == "kernel-refused" and caught.value.refusal.data == {"kind": kind}
+
+
+@pytest.mark.parametrize("predecessor", ["missing", "divergent", "malformed"])
+def test_an_assignment_whose_predecessor_cannot_be_read_refuses_structurally(certified_work, predecessor):
+    from helpers.research import archive_config
+    from helpers.reservation import assignment_facet, assignment_node, digest, hold_record
+
+    cfg = build_two_corpus_world(certified_work)
+    archive = archive_config(cfg)
+    root = assignment_node(assignment_facet(groups=[{"units": [{"start": "open", "end": "2026-01-01T00:00:00Z"}],
+                                                     "role": "open"}]), actor="fixture")
+    if predecessor == "divergent":
+        for index, target in enumerate((cfg, archive)):
+            hold_record(target.write_root, target.profile, root.model_copy(update={"title": f"copy {index}"}))
+    elif predecessor == "malformed":
+        damaged = root.model_copy(deep=True)
+        del damaged.facets[stored.RESERVATION_ASSIGNMENT_FACET]["rule"]
+        stored.stamp_semantic_identity(damaged)
+        raw_write_node(archive.write_root, damaged)
+    successor = assignment_node(assignment_facet(
+        groups=[{"units": [{"start": "open", "end": "2026-01-01T00:00:00Z"}], "role": "open"}],
+        inputs={"roster.yaml": digest("next")}, predecessor=root.id), actor="fixture")
+    raw_write_node(cfg.write_root, successor)
+    with research_rig(cfg, RESERVATION_NAMES) as (d, _):
+        with pytest.raises(Refused) as caught:
+            d.invoke("record", {"address": successor.id})
+    refusal = caught.value.refusal
+    if predecessor == "divergent":
+        assert refusal.code == "invalid-input" and "copies differ" in refusal.message
+        assert all(corpus_id_at(target.write_root) in refusal.message for target in (cfg, archive))
+    else:
+        assert refusal.code == "kernel-refused"
+        assert refusal.data == {"kind": {"missing": "RefError", "malformed": "MalformedRecord"}[predecessor]}
+
+
+def test_an_absent_exposure_or_reservation_address_is_an_ordinary_miss(certified_work):
+    with research_rig(build_two_corpus_world(certified_work), RESERVATION_NAMES) as (d, _):
+        for kind in ("exposure-event", "reservation-assignment"):
+            refused(d, {"address": f"{kind}:" + "0" * 64})

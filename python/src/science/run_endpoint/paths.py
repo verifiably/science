@@ -14,7 +14,9 @@ from beliefs.session.routes import run_staging_of
 from science.refusal import INVOCATION_ID_RE, Refusal, Refused
 
 _RESOLVE = linux.RESOLVE_BENEATH | linux.RESOLVE_NO_XDEV | linux.RESOLVE_NO_MAGICLINKS | linux.RESOLVE_NO_SYMLINKS
-_FILES = {"dataset": "path", "fetch": "source", "spec": "estimand", "run": "code", "derive": "code", "verify": "code"}
+_FILES = {"dataset": "path", "fetch": "source", "spec": "estimand", "run": "code", "derive": "code", "verify": "code",
+          "exposure-event": "payload", "reservation-assignment": "payload"}
+_FILE_ONLY = frozenset({"exposure-event", "reservation-assignment"})
 _DIRECTORY = os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
 
 
@@ -118,11 +120,11 @@ class Scratch:
         if self.cancelled.is_set():
             raise Refused(Refusal("run-sealed", "The session is sealing"))
 
-    def _copy(self, parent, name, target):
+    def _copy(self, parent, name, target, *, file_only=False):
         self.check()
         with _opened(parent, name) as fd:
             info = os.fstat(fd)
-            if stat.S_ISDIR(info.st_mode):
+            if stat.S_ISDIR(info.st_mode) and not file_only:
                 target.mkdir(mode=0o700)
                 for child in os.listdir(fd):
                     self._copy(fd, child, target / child)
@@ -175,7 +177,7 @@ class Scratch:
         self.owned[iid] = parent, directory
         target = self.capture_root / iid / path.name
         try:
-            self._copy(self.fd, relative, target)
+            self._copy(self.fd, relative, target, file_only=command in _FILE_ONLY)
             if command in ("run", "derive", "verify"):
                 entry = _relative(inputs["entrypoint"])
                 if not entry.startswith(path.name + "/"):

@@ -141,6 +141,82 @@ def test_sandbox_cli_and_bridge(autonomy_source, launch_file, certified_work, tm
         assert endpoint.wait(timeout=20) == 0
 
 
+_RESERVATION_ACTOR = """
+import json, os, re, subprocess, sys
+assert sys.stdin.buffer.readline() == b"go\\n"
+env = {name: os.environ[name] for name in ("VERIFIABLY_ENDPOINT", "VERIFIABLY_TOKEN_FILE", "PATH", "HOME")}
+cli = [sys.executable, "-I", "-m", "science.cli"]
+def call(args, stdin=""):
+    response = subprocess.run(cli + args, input=stdin, capture_output=True, env=env, text=True, timeout=30)
+    return [response.returncode, response.stdout, response.stderr]
+event, assignment = json.loads(sys.argv[1])
+for name, document in (("event.json", event), ("assignment.json", assignment)):
+    with open(name, "w") as out:
+        json.dump(document, out)
+os.symlink(os.path.abspath("event.json"), "linked.json")
+os.mkdir("directory.json")
+meta = {"io.modelcontextprotocol/protocolVersion": "2026-07-28",
+        "io.modelcontextprotocol/clientInfo": {"name": "fixture", "version": "1"},
+        "io.modelcontextprotocol/clientCapabilities": {}}
+def rpc(i, name, **arguments):
+    return json.dumps({"jsonrpc": "2.0", "id": i, "method": "tools/call",
+                       "params": {"_meta": meta, "name": name, "arguments": arguments}}) + "\\n"
+here = os.getcwd()
+unconfined = [call(["exposure-event", "--payload", path]) for path in (
+    "event.json", here + "/linked.json", here + "/directory.json", "/etc/hostname")]
+minted = call(["exposure-event", "--payload", here + "/event.json"])
+bridged = call(["mcp", "bridge"], rpc(1, "reservation-assignment", payload=here + "/assignment.json")
+               + rpc(2, "exposure-log") + rpc(3, "reservation-head", chain="mm-roster"))
+print(json.dumps([unconfined, minted, bridged, call(["exposure-log"]), call(["reservation-head", "--chain", "mm-roster"])]))
+"""
+
+
+@pytest.mark.parametrize("permitted", [True, False])
+def test_sandboxed_actor_records_exposure_and_freezes_an_assignment(autonomy_source, launch_file, certified_work, tmp_path,
+                                                                    permitted):
+    from autonomy.tiers import Permit, tier
+    from helpers.reservation import assignment_facet, event_facet
+    from science.config import ReadContext
+
+    source, doc = launch_file
+    work = certified_work / "with-contract"
+    work.mkdir()
+    cfg = build_fixture_world_with_contract(work)
+    doc["config"] = str(write_config_for(cfg))
+    routes = {"exposure-event": "corpus-write", "reservation-assignment": "corpus-write"}
+    # autonomy's mints tier lists neither kind yet, so the allowed permit is written out.
+    doc["permit"] = (Permit(frozenset(routes), frozenset(routes.values())) if permitted
+                     else tier("coordination").permit).to_json()
+    doc["written_chains"] = [{"role": "corpus", "id": corpus_id_at(cfg.write_root), "root": str(cfg.write_root)}]
+    doc["lease_seconds"] = 120
+    source.write_text(json.dumps(doc))
+    documents = json.dumps([{"schema_version": 1, "title": "From the sandbox", "facet": facet}
+                            for facet in (event_facet(), assignment_facet())])
+    with sandbox_actor(source, doc, tmp_path, _RESERVATION_ACTOR, documents) as (endpoint, actor, conn, control):
+        out, err = actor.communicate(b"go\n", timeout=120)
+        assert actor.returncode == 0, err.decode()
+        unconfined, minted, bridged, log, head = json.loads(out)
+        refused = "path-outside-run" if permitted else "permit-exceeded"
+        for attempt in unconfined:
+            assert attempt[0] == 3 and json.loads(attempt[2])["refusal"]["code"] == refused, attempt
+        assignment, bridge_log, bridge_head = [json.loads(line)["result"] for line in bridged[1].splitlines()]
+        if permitted:
+            assert minted[0] == 0 and "From the sandbox" in minted[1], minted
+            assert assignment["isError"] is False
+        else:
+            assert minted[0] == 3 and json.loads(minted[2])["refusal"]["code"] == "permit-exceeded"
+            assert assignment["isError"] and "permit-exceeded" in assignment["content"][0]["text"]
+        for text in (log[1], bridge_log["content"][0]["text"]):
+            assert f"events: {1 if permitted else 0}\n" in text
+        for text in (head[1], bridge_head["content"][0]["text"]):
+            assert ("  head: reservation-assignment:" if permitted else "  head: none\n") in text
+        conn.sendall(wire({"type": "seal", "version": "control.v1"}))
+        assert json.loads(control.readline())["type"] == "sealed"
+        assert endpoint.wait(timeout=20) == 0
+    kinds = [n.kind for n in ReadContext.open(cfg).write_view().iter_stored()]
+    assert [kinds.count(kind) for kind in routes] == ([1, 1] if permitted else [0, 0])
+
+
 def _descendants(pid):
     """Walk only the fixture endpoint's process tree, including thread-owned children."""
     for children in Path(f"/proc/{pid}/task").glob("*/children"):

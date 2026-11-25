@@ -346,3 +346,57 @@ def test_workflow_project_cli_stderr_single_json_line_and_key_reporting(
         assert rc == 3
         assert meta["workflow_environment"] == key
         assert meta["refusal"]["code"] == "permit-exceeded"
+
+
+def test_exposure_and_reservation_from_mint_to_query_over_the_cli(certified_work, short_tmp, tmp_path, capsys):
+    import threading
+    from helpers.reservation import assignment_facet, event_facet, write_payload
+    from helpers.world import build_fixture_world_with_contract, write_config_for
+    from science.cli import main
+    from science.config import load_config
+    from science.serve import serve
+
+    config = write_config_for(build_fixture_world_with_contract(certified_work), service_socket=short_tmp / "service.sock")
+
+    def run(code, command, *args):
+        assert main([command, "--config", str(config), *args]) == code, capsys.readouterr().err
+        captured = capsys.readouterr()
+        return captured.out, json.loads(captured.err)
+
+    event_path = write_payload(tmp_path, event_facet(), name="event.json")
+    loaded = load_config(config)
+    server = serve(loaded, loaded.service_socket)
+    runner = threading.Thread(target=server.serve_forever)
+    runner.start()
+    try:
+        first, _ = run(0, "exposure-event", "--payload", event_path, "--invocation-id", "EVENT-ONE")
+        event = re.search(r"exposure-event:[0-9a-f]{64}", first)[0]
+        assert run(0, "exposure-event", "--payload", event_path, "--invocation-id", "EVENT-ONE")[0] == first
+        _, line = run(3, "exposure-event", "--payload", event_path, "--invocation-id", "EVENT-TWO")
+        assert line["refusal"]["code"] == "invalid-input"
+        assert line["refusal"]["data"]["existing"][0]["address"] == event
+        assignment_path = write_payload(tmp_path, assignment_facet(events=[event]), name="assignment.json")
+        minted, _ = run(0, "reservation-assignment", "--payload", assignment_path)
+        head = re.search(r"reservation-assignment:[0-9a-f]{64}", minted)[0]
+        for kind, address in (("exposure-event", event), ("reservation-assignment", head)):
+            assert f"{kind}:\n  address: {address}\n" in run(0, "record", "--address", address)[0]
+        assert "events: 1" in run(0, "exposure-log")[0]
+        assert "events: 0" in run(0, "exposure-log", "--subject", "dataset:none", "--proposition", "proposition:none")[0]
+        assert f"  head: {head}\n" in run(0, "reservation-head", "--chain", "mm-roster")[0]
+        assert "  head: none\n" in run(0, "reservation-head", "--chain", "mm-roster", "--scope", "proposition:p1")[0]
+        assert run(3, "exposure-log", "--subject", "GSE24080")[1]["refusal"]["data"] == {"field": "subject"}
+    finally:
+        server.shutdown()
+        runner.join()
+        server.server_close()
+
+
+@pytest.mark.parametrize("args,missing", [
+    (["exposure-event"], "--payload"), (["reservation-assignment"], "--payload"), (["reservation-head"], "--chain"),
+])
+def test_exposure_and_reservation_commands_require_their_input(args, missing, capsys):
+    from science.cli import main
+
+    with pytest.raises(SystemExit) as caught:
+        main(args)
+    assert caught.value.code == 2 and missing in capsys.readouterr().err

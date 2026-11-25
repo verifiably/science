@@ -209,9 +209,8 @@ A research program keeps its workflows, scripts, environments, notebooks and
 prose in a workspace repository of its own; its claims, datasets, specs and runs
 are minted through `science` into the world. The workspace is the program's, but
 the epistemic and methodological components it needs usually are not. Before
-building one — a record kind, a cohort or overlap model, a prior-exposure or
-validation-reservation ledger, an independence rule, a reader for a shared
-resource — ask whether the problem is general to the domain or to every program.
+building one — a record kind, a cohort or overlap model, an independence rule, a
+reader for a shared resource — ask whether the problem is general to the domain or to every program.
 If it is, file it upstream first and build it there: `beliefs` owns record kinds
 and belief policy, `science` owns the surface and the skills it ships, and
 `quarry` owns access to scientific resources. When the program cannot wait for
@@ -224,7 +223,82 @@ The rule comes from the multiple-myeloma program, which defined cohort nodes,
 overlap groups, prior exposure, validation reservation, catchments and assumed
 disjointness in its phase-1 protocol and a roster package of about 3,000 lines
 because neither `beliefs` nor `science` had them; lifting them out afterwards
-took four separate upstream tasks.
+took four separate upstream tasks. Prior exposure and validation reservation are
+now commands.
+
+## Recording what was seen and what is held back
+
+Data someone has already looked at stays usable for discovery; whether it can also
+confirm an idea formed from it is for the program's reservation rule to decide. Record
+each look and each piece of prior knowledge when it happens, with `exposure-event`, and
+freeze which data may be explored and which is reserved, with
+`reservation-assignment`. Both kinds are world records that any program's
+readers can inspect, and neither is an input to `belief`.
+
+A look at data before formulating a question is recorded the same way. Recording it
+forces no new assignment: the current one stays the head and `reservation-head` lists
+the look as not considered, until the program decides whether its rule changes a role.
+
+With `SCIENCE_CONFIG` set and the service running, this walk records prior knowledge,
+roots a chain of epochs that considers it, records a read that exposes the reserved
+epoch, and supersedes the assignment. The read cites a `source:` record, which the walk
+mints first. Addresses in a payload are sorted.
+
+```sh
+address() { grep -o "$1:[0-9a-f]\{64\}"; }
+
+cat > knowledge.json <<'JSON'
+{"schema_version": 1, "title": "Model knowledge through its date of use",
+ "facet": {"channel": "knowledge", "subjects": [],
+           "units": [{"start": "open", "end": "2026-11-07T14:40:51Z"}],
+           "effect": "exposing", "class": "training-knowledge",
+           "account": "Possible training exposure; no specific learned result asserted.",
+           "observer": "agent/K5", "observed_at": "2026-11-07T14:40:51Z", "propositions": []}}
+JSON
+knowledge=$(science exposure-event --payload knowledge.json | address exposure-event)
+
+assignment() {  # title, events, role of the later epoch, further fields
+cat <<JSON
+{"schema_version": 1, "title": "$1",
+ "facet": {"chain": "epochs", "rule": {"name": "epoch-rule", "version": "1"},
+           "inputs": {"boundaries": "sha256:a4b5b8812c9e966f013c55655176cbd22531e7afd0c304cb93cc38e00e50e4a0"},
+           "events": [$2],
+           "groups": [{"units": [{"start": "open", "end": "2008-12-01T00:00:00Z"}], "role": "open"},
+                      {"units": [{"start": "2008-12-01T00:00:00Z", "end": "open"}], "role": "$3"}],
+           $4 "assigned_at": "2026-11-08T09:00:00Z"}}
+JSON
+}
+assignment "Epochs, first assignment" "\"$knowledge\"" reserved "" > first.json
+first=$(science reservation-assignment --payload first.json | address reservation-assignment)
+
+source=$(science source --title "GSE24080" --accession GSE24080 | address source)
+look() {  # title, time
+cat <<JSON
+{"schema_version": 1, "title": "$1",
+ "facet": {"channel": "read", "subjects": ["$source"],
+           "units": [{"start": "2008-12-01T00:00:00Z", "end": "open"}],
+           "effect": "exposing", "class": "unmask", "account": "$1",
+           "observer": "agent/K5", "observed_at": "$2", "propositions": []}}
+JSON
+}
+look "Unmasked the later epoch" "2026-11-09T10:00:00Z" > look.json
+look=$(science exposure-event --payload look.json | address exposure-event)
+
+science reservation-head --chain epochs   # still the first assignment; the look is not considered
+
+considered=$(printf '"%s"\n' "$knowledge" "$look" | sort | paste -sd, -)
+assignment "Epochs, after the unmask" "$considered" open \
+  "\"predecessor\": \"$first\", \"evidence\": [\"$look\"], \"flagged\": []," > second.json
+science reservation-assignment --payload second.json
+
+look "Looked at the later epoch again" "2026-11-10T10:00:00Z" > again.json
+science exposure-event --payload again.json
+science reservation-head --chain epochs
+```
+
+`flagged` lists the assessments already made against the group that stops being
+reserved, and is empty here because there were none. The last command shows the second
+assignment, its one suspended change, and the second look as not considered.
 
 ## Reading and discussing research
 

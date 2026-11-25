@@ -2,12 +2,12 @@
 from science.refusal import Refusal, Refused
 
 ORDINARY = frozenset({
-    "assess", "belief", "claim", "decide", "heads", "hypothesis", "log", "next", "note",
+    "assess", "belief", "claim", "decide", "exposure-log", "heads", "hypothesis", "log", "next", "note",
     "project", "projects", "project-select", "project-show", "question", "recheck", "record",
-    "reuse", "revise", "run-output", "source", "source-assertion", "source-coreference", "source-correct",
-    "status", "task", "topic",
+    "reservation-head", "reuse", "revise", "run-output", "source", "source-assertion", "source-coreference",
+    "source-correct", "status", "task", "topic",
 })
-CONFINED = frozenset({"dataset", "derive", "fetch", "run", "spec"})
+CONFINED = frozenset({"dataset", "derive", "exposure-event", "fetch", "reservation-assignment", "run", "spec"})
 REFUSED = frozenset({
     "acquire-seal", "acquire-import", "adopt", "provider-bind", "provider-inspect", "publish", "publish-preview", "show", "verify",
 })

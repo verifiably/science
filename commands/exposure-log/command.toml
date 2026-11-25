@@ -1,0 +1,17 @@
+schema_version = 1
+name = "exposure-log"
+purpose = "List recorded exposure events, narrowed by subject or proposition."
+write_class = "read-only"
+output_budget = 8192
+
+[inputs.subject]
+type = "string"
+required = false
+doc = "A dataset: or source: address the event names among its subjects."
+[inputs.proposition]
+type = "string"
+required = false
+doc = "A proposition: address the event concerns."
+
+[reads]
+families = ["corpus-stored"]

@@ -1,0 +1,17 @@
+schema_version = 1
+name = "reservation-head"
+purpose = "Show a reservation chain's head, its changes and the events it did not consider."
+write_class = "read-only"
+output_budget = 8192
+
+[inputs.chain]
+type = "string"
+required = true
+doc = "The chain's name, lowercase letters, digits and hyphens."
+[inputs.scope]
+type = "string"
+required = false
+doc = "The proposition: address a scoped chain is for. Omitted, the program-level chain."
+
+[reads]
+families = ["corpus-stored"]

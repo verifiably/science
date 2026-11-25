@@ -145,7 +145,10 @@ Exact current inputs, defaults and prompts are the public files under
   `proposition` it lists stored `source assertions` across configured live
   corpora (following source redirects; attributed readings inert in `belief`).
   With a selected project it lists notes about the world record, following
-  source redirects.
+  source redirects. An `exposure-event` or `reservation-assignment` address prints
+  its decoded record; an assignment, current or historical, also prints its group
+  changes from its predecessor. A malformed record, or a predecessor that is missing
+  or held in differing copies, refuses.
 - `project-show` shows the selected or explicitly named project's query, open
   tasks, questions, hypotheses, decisions, topics, notes and closed tasks.
 - `source` mints a world source without a project selection, with a publisher
@@ -196,6 +199,29 @@ Exact current inputs, defaults and prompts are the public files under
   resolve by kind in the session's live corpora (`data.unresolved`, plus
   `data.unmounted` when `coordination = false`, or `data.wrong_kind`). Source
   assertions are attributed readings and are inert in `belief`.
+
+- `exposure-event` mints one exposure event from `--payload`, without a project
+  selection: a look at data, or knowledge held before one. It changes no assignment.
+- `reservation-assignment` mints one reservation assignment from `--payload`: a chain
+  root, or the successor of the predecessor its facet names. Each invocation is one
+  act. To record an event and then an assignment that considers it, run
+  `exposure-event` first and cite the address it returns; a refused assignment leaves
+  the event recorded and the earlier head current. See the
+  [payloads and checks](#exposure-and-reservation-payloads).
+- `exposure-log` lists the exposure events of every configured live corpus by
+  observation time, then address. `--subject` (a `dataset:` or `source:` address) and
+  `--proposition` match the address the event stores, and intersect. A malformed
+  filter refuses `invalid-input` with `data.field` before any record is read; a
+  well-formed one that matches nothing lists no events.
+- `reservation-head` shows the head of one exact `--chain` and `--scope` (the
+  program-level chain when `--scope` is omitted): its predecessor, rule, frozen input
+  digests, considered events, group roles and changes from its predecessor. A chain
+  with no record reports `head: none`. Under "visible events not considered by this
+  assignment" it lists the visible events missing from the head's considered set, in
+  log order. An event listed there can be older than the head or about other data:
+  neither its time nor its presence establishes relevance, a role change or
+  invalidation, which the program's own rule decides. Two roots or two heads refuse
+  as ambiguous.
 
 - `claim` uses the first activated operator plan, mapping subject/object into
   named roles. Two one roles or two canonical many-role members are supported.
@@ -279,6 +305,97 @@ Exact current inputs, defaults and prompts are the public files under
   governed observation/act-report evidence; a failed or inconclusive retrieval does
   not assume absence or clear an unsettled block. See [stores](stores.md).
 
+### Exposure and reservation payloads
+
+Both write commands read one UTF-8 JSON object with exactly `schema_version` (the
+integer `1`), `title` (one non-empty line) and `facet`. The facet is the kernel's, as
+[beliefs records](https://github.com/verifiably/beliefs/blob/main/docs/records.md#exposure-events-and-reservation-assignments)
+specify it, without the writer: the session supplies `recorded_by` or `assigned_by`,
+and a payload that gives one refuses. Duplicate keys, extra envelope keys and a facet
+the kernel does not decode back to the same object refuse. Omit an optional field
+instead of giving it `null` or an empty value; `units`, `subjects`, `propositions` and
+`events` are required and may be empty, and an empty `flagged` is meaningful.
+
+This event needs nothing else in the world:
+
+```json
+{
+  "schema_version": 1,
+  "title": "agent/K5 date-of-use extension, 2026-11-07",
+  "facet": {
+    "channel": "knowledge",
+    "subjects": [],
+    "units": [{"start": "open", "end": "2026-11-07T14:40:51Z"}],
+    "effect": "exposing",
+    "class": "training-knowledge",
+    "account": "Possible training exposure through the date of use; no specific learned result asserted.",
+    "observer": "agy/gemini-4-argon",
+    "observed_at": "2026-11-07T14:40:51Z",
+    "propositions": [],
+    "evidence": ["task:sun-7bfa16"]
+  }
+}
+```
+
+```sh
+science exposure-event --payload event.json
+```
+
+This assignment roots a chain. Its `events` would name the addresses it considered,
+and a later assignment adds `predecessor`, the current head's address:
+
+```json
+{
+  "schema_version": 1,
+  "title": "epoch assignment 1",
+  "facet": {
+    "chain": "sun-epochs",
+    "rule": {"name": "epoch-reservation-rule", "version": "3"},
+    "inputs": {"boundary-table": "sha256:a4b5b8812c9e966f013c55655176cbd22531e7afd0c304cb93cc38e00e50e4a0"},
+    "events": [],
+    "groups": [
+      {"units": [{"start": "open", "end": "2007-11-01T00:00:00Z"}], "role": "open", "label": "exploration"},
+      {"units": [{"start": "2007-11-01T00:00:00Z", "end": "2008-12-01T00:00:00Z"}], "role": "withheld", "label": "guard"},
+      {"units": [{"start": "2008-12-01T00:00:00Z", "end": "open"}], "role": "reserved", "label": "reserved pool"}
+    ],
+    "assigned_at": "2026-11-07T15:00:00Z"
+  }
+}
+```
+
+```sh
+science reservation-assignment --payload assignment.json
+```
+
+The [guide](guide.md#recording-what-was-seen-and-what-is-held-back) walks an event, an
+assignment and its successor. An attended CLI call resolves the path in the caller's
+directory; MCP supplies an absolute path the service can read. Under a run handle the
+path must be a regular file below the actor's scratch directory, and the handler reads
+a private copy of it.
+
+Every check runs before the act, so a refusal writes nothing:
+
+- **Address.** The address derives from the facet and the session's writer. A live
+  corpus already holding it refuses `invalid-input` with `data.existing`, or
+  `data.occupied` when another kind holds it.
+- **Citations.** Every kernel reference resolves to the kind its slot admits among the
+  session's live corpora. `data.unresolved` names the missing ones together, and
+  `data.unmounted` the configured read mounts that hold them when `coordination = false`.
+  A read mount holding a cited record must pin the contracts the writer activates, even
+  when another copy is acceptable. External evidence tokens pass through.
+- **Units.** Each term unit's sort is one the configuration's profile declares.
+- **Chain.** Over every configured live corpus, a root's `chain` and `scope` have no
+  assignment, and a successor's `predecessor` is the one head and is held by the write
+  root. Otherwise `data.head` names the visible head. A head held only by a read mount
+  cannot be extended here.
+- **Succession.** The kernel's rules, named in `data.check`: a changed, dropped or added
+  group needs `evidence`; a changed or dropped `reserved` group needs `flagged`; and an
+  assignment equal to its predecessor but for its writer and time refuses.
+
+The preflight reads a snapshot of the mounts. The kernel's final admission runs in the
+write root, so a competing local writer is refused at commit. A fork written
+independently into another corpus is reported by the next `reservation-head`.
+
 ### Workflow environments (`derive`, `run`, `verify`)
 
 `derive`, `run` and `verify` accept an optional `workflow_environment` input (64
@@ -360,6 +477,11 @@ Either path missing or empty, or a handle combined with `--config` or
 `handle-mode`, apart from help, version and `science mcp bridge`. The bridge
 serves the same MCP discovery and tool-call protocol over stdio and forwards
 calls through the handle. The supervisor owns the session and its selection.
+
+A command that reads a file takes it from the actor's scratch directory and reads
+a private copy made before its handler runs; a link, a traversal or a path outside
+scratch refuses `path-outside-run`. An `exposure-event` or `reservation-assignment`
+payload must be a regular file, and either write still needs a permit for its kind.
 
 `science heads` prints a `heads.v1` JSON object with the configured world's
 genesis, head and pending registrations, and each mounted corpus or store's

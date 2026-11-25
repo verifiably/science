@@ -870,3 +870,56 @@ def test_mcp_exposes_workflow_environment_and_rejects_workflow_project(certified
     assert responses[0]["result"]["structuredContent"]["refusal"]["code"] == "invalid-input"
     assert responses[1]["result"]["isError"] is True
     assert responses[1]["result"]["structuredContent"]["refusal"]["code"] == "invalid-input"
+
+
+def test_exposure_and_reservation_over_mcp_match_the_cli(certified_work, short_tmp, tmp_path, capsys):
+    from helpers.reservation import assignment_facet, event_facet, write_payload
+    from helpers.world import build_fixture_world_with_contract, write_config_for
+    from science.cli import main
+    from science.config import ReadContext, load_config
+    from science.dispatch import Dispatcher
+    from science.loader import resolve_handlers
+    from science.session import open_session
+
+    config = write_config_for(build_fixture_world_with_contract(certified_work), service_socket=short_tmp / "service.sock")
+    cfg = load_config(config)
+    declarations = production_tree()
+    session = open_session(cfg)
+    try:
+        dispatcher = Dispatcher(declarations, resolve_handlers(declarations), ReadContext.open(cfg), session=session)
+
+        def call(name, **arguments):
+            return handle_request(rpc("tools/call", {"name": name, "arguments": arguments}), dispatcher, declarations)["result"]
+
+        payload = write_payload(tmp_path, event_facet())
+        first = call("exposure-event", payload=payload, invocation_id="EVENT-ONE")
+        assert first["isError"] is False
+        assert call("exposure-event", payload=payload, invocation_id="EVENT-ONE") == first
+        event = re.search(r"exposure-event:[0-9a-f]{64}", first["content"][0]["text"])[0]
+        duplicate = call("exposure-event", payload=payload, invocation_id="EVENT-TWO")
+        assert duplicate["isError"] is True
+        assert duplicate["structuredContent"]["refusal"]["data"]["existing"][0]["address"] == event
+        minted = call("reservation-assignment", payload=write_payload(tmp_path, assignment_facet(events=[event])))
+        assert minted["isError"] is False
+        head = re.search(r"reservation-assignment:[0-9a-f]{64}", minted["content"][0]["text"])[0]
+        for name, arguments, argv in (
+            ("exposure-log", {}, []),
+            ("reservation-head", {"chain": "mm-roster"}, ["--chain", "mm-roster"]),
+            ("record", {"address": event}, ["--address", event]),
+            ("record", {"address": head}, ["--address", head]),
+        ):
+            assert main([name, "--config", str(config), *argv]) == 0
+            assert call(name, **arguments)["content"][0]["text"] == capsys.readouterr().out
+    finally:
+        session.close()
+
+
+def test_mcp_declares_the_exposure_and_reservation_tools():
+    schemas = {d.name: tool_schema(d)["inputSchema"] for d in production_tree()}
+    protocol = {"invocation_id", "cursor"}
+    for name, inputs, required in (
+        ("exposure-event", {"payload"}, ["payload"]), ("reservation-assignment", {"payload"}, ["payload"]),
+        ("exposure-log", {"subject", "proposition"}, None), ("reservation-head", {"chain", "scope"}, ["chain"]),
+    ):
+        assert set(schemas[name]["properties"]) == inputs | protocol
+        assert schemas[name].get("required") == required

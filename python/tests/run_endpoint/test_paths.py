@@ -73,6 +73,81 @@ def test_invalid_source_refuses_and_cleans_only_its_capture(tmp_path, kind):
     assert sentinel.read_bytes() == b"untouched"
 
 
+PAYLOAD_WRITERS = ("exposure-event", "reservation-assignment")
+
+
+@pytest.mark.parametrize("command", PAYLOAD_WRITERS)
+def test_a_payload_is_captured_privately_and_survives_the_callers_rewrite(tmp_path, command):
+    from science.run_endpoint.paths import Scratch
+    scratch, ops = tmp_path / "scratch", tmp_path / "ops"
+    scratch.mkdir()
+    ops.mkdir()
+    payload = scratch / "payload.json"
+    payload.write_text("original")
+    with Scratch(scratch, ops, threading.Event()) as confined:
+        with confined.prepare(command, "write", {"payload": str(payload)}) as prepared:
+            payload.write_text("changed")
+            captured = Path(prepared["payload"])
+            assert captured == ops / "capture/write/payload.json"
+            assert captured.read_text() == "original"
+        assert not captured.parent.exists()
+
+
+@pytest.mark.parametrize("command", PAYLOAD_WRITERS)
+@pytest.mark.parametrize("root", [False, True])
+def test_a_payload_directory_refuses_before_its_entries_are_read(tmp_path, monkeypatch, command, root):
+    from science.run_endpoint import paths
+    scratch, ops = tmp_path / "scratch", tmp_path / "ops"
+    directory = scratch / "payload"
+    directory.mkdir(parents=True)
+    (directory / "payload.json").write_text("{}")
+    ops.mkdir()
+    monkeypatch.setattr(paths.os, "listdir", lambda *_: pytest.fail("a payload directory was enumerated"))
+    with paths.Scratch(scratch, ops, threading.Event()) as confined:
+        with pytest.raises(Refused) as caught, confined.prepare(
+                command, "write", {"payload": str(scratch if root else directory)}):
+            pytest.fail("a directory reached the handler")
+        assert caught.value.refusal.code == "path-outside-run"
+        assert not (ops / "capture/write").exists()
+
+
+@pytest.mark.parametrize("command", PAYLOAD_WRITERS)
+@pytest.mark.parametrize("kind", ["symlink", "hardlink", "fifo", "relative", "outside", "prefix", "traversal", "linked-parent"])
+def test_an_unconfined_payload_refuses_before_dispatch(tmp_path, command, kind):
+    import os
+    from science.run_endpoint.paths import Scratch
+
+    root, ops, elsewhere = tmp_path / "scratch", tmp_path / "ops", tmp_path / "elsewhere"
+    for each in (root, ops, elsewhere):
+        each.mkdir()
+    sentinel = elsewhere / "payload.json"
+    sentinel.write_bytes(b"untouched")
+    item = root / "payload.json"
+    if kind == "symlink":
+        item.symlink_to(sentinel)
+    elif kind == "hardlink":
+        os.link(sentinel, item)
+    elif kind == "fifo":
+        os.mkfifo(item)
+    elif kind == "relative":
+        item = Path("payload.json")
+    elif kind == "outside":
+        item = sentinel
+    elif kind == "prefix":
+        item = tmp_path / "scratch-extra/payload.json"
+    elif kind == "traversal":
+        item = root / "../elsewhere/payload.json"
+    else:
+        (root / "linked").symlink_to(elsewhere)
+        item = root / "linked/payload.json"
+    with Scratch(root, ops, threading.Event()) as confined:
+        with pytest.raises(Refused) as caught, confined.prepare(command, "write", {"payload": str(item)}):
+            pytest.fail("an unconfined payload reached the handler")
+        assert caught.value.refusal.code == "path-outside-run"
+        assert not (ops / "capture/write").exists()
+    assert sentinel.read_bytes() == b"untouched"
+
+
 def test_unavailable_openat2_blocks_only_commands_taking_a_path(tmp_path, monkeypatch):
     import errno
     from science.run_endpoint import paths
@@ -207,3 +282,106 @@ def test_scratch_descriptor_refuses_an_input_on_a_nested_mount(tmp_path):
                 with confined.prepare("fetch", "mount-check", {"source": source.name}):
                     pytest.fail("cross-mount input admitted")
         assert not (tmp_path / "capture/mount-check").exists()
+
+
+@pytest.fixture
+def supervised(certified_work):
+    """`open(kinds)` yields a production dispatcher under a run permit for those kinds, and its session; `seen`
+    records the payload path each write handler was given."""
+    from contextlib import ExitStack, contextmanager
+    from beliefs.permit import WritePermit
+    from beliefs.session import open_run_session
+    from helpers.world import build_fixture_world_with_contract
+    from science.config import ReadContext
+    from science.dispatch import Dispatcher
+    from science.loader import production_tree, resolve_handlers
+    from science.run_endpoint.paths import Scratch
+
+    cfg = build_fixture_world_with_contract(certified_work)
+    scratch = certified_work / "actor"
+    scratch.mkdir()
+    seen = []
+
+    @contextmanager
+    def opened(kinds, rewrite=False):
+        permit = WritePermit(frozenset(kinds), frozenset({"corpus-write"}))
+        decls = production_tree()
+        handlers = dict(resolve_handlers(decls))
+        for name in PAYLOAD_WRITERS:
+            real = handlers[name]
+
+            def observed(ctx, writer, *, payload, real=real):
+                seen.append(payload)
+                if rewrite:
+                    for original in scratch.iterdir():
+                        original.write_text("replaced after capture")
+                return real(ctx, writer, payload=payload)
+
+            handlers[name] = observed
+        with ExitStack() as stack:
+            session = open_run_session(cfg.world, cfg.operations_root, write_root=cfg.write_root, profile=cfg.profile,
+                                       ceiling=permit)
+            stack.callback(session.close)
+            capture = stack.enter_context(Scratch(scratch, cfg.operations_root, threading.Event()))
+            yield Dispatcher(decls, handlers, ReadContext.open(cfg), session=session, run_inputs=capture), session
+
+    return cfg, scratch, seen, opened
+
+
+def _facet_for(command):
+    from helpers.reservation import assignment_facet, event_facet
+    return {"exposure-event": event_facet, "reservation-assignment": assignment_facet}[command]()
+
+
+@pytest.mark.parametrize("command", PAYLOAD_WRITERS)
+def test_a_supervised_handler_reads_only_its_private_capture(supervised, command):
+    from helpers.reservation import stored_of, write_payload
+    cfg, scratch, seen, opened = supervised
+    payload = write_payload(scratch, _facet_for(command), title="As captured")
+    with opened(PAYLOAD_WRITERS, rewrite=True) as (dispatcher, session):
+        text = dispatcher.invoke(command, {"payload": payload}, invocation_id="write").text
+        assert f"[{command}] " in text and "As captured" in text
+        assert seen == [str(cfg.operations_root / "capture/write/payload.json")]
+        assert Path(payload).read_text() == "replaced after capture"
+        assert not (cfg.operations_root / "capture/write").exists()
+        assert len(session.invocation_acts("write")) == 1
+        # a replay neither captures nor calls the handler again
+        assert dispatcher.invoke(command, {"payload": payload}, invocation_id="write").text == text
+        assert len(seen) == 1 and len(stored_of(dispatcher._context(), command)) == 1
+
+
+@pytest.mark.parametrize("command", PAYLOAD_WRITERS)
+def test_a_supervised_caller_without_the_kind_commits_no_act(supervised, command):
+    from helpers.reservation import stored_of, write_payload
+    cfg, scratch, seen, opened = supervised
+    payload = write_payload(scratch, _facet_for(command))
+    other = next(name for name in PAYLOAD_WRITERS if name != command)
+    with opened([other]) as (dispatcher, session):
+        with pytest.raises(Refused) as caught:
+            dispatcher.invoke(command, {"payload": payload}, invocation_id="write")
+        assert caught.value.refusal.code == "permit-exceeded"
+        assert seen == [] and session.invocation_acts("write") == ()
+        assert not (cfg.operations_root / "capture/write").exists()
+        assert stored_of(dispatcher._context(), command) == []
+        assert "events: 0" in dispatcher.invoke("exposure-log", {}).text
+        assert "head: none" in dispatcher.invoke("reservation-head", {"chain": "mm-roster"}).text
+
+
+@pytest.mark.parametrize("command", PAYLOAD_WRITERS)
+@pytest.mark.parametrize("kind", ["outside", "symlink", "directory", "relative"])
+def test_a_supervised_unconfined_payload_commits_no_act(supervised, tmp_path, command, kind):
+    from helpers.reservation import stored_of, write_payload
+    _, scratch, seen, opened = supervised
+    outside = write_payload(tmp_path, _facet_for(command))
+    item = scratch / "payload.json"
+    if kind == "symlink":
+        item.symlink_to(outside)
+    elif kind == "directory":
+        item.mkdir()
+    payload = {"outside": outside, "relative": "payload.json"}.get(kind, str(item))
+    with opened(PAYLOAD_WRITERS) as (dispatcher, session):
+        with pytest.raises(Refused) as caught:
+            dispatcher.invoke(command, {"payload": payload}, invocation_id="write")
+        assert caught.value.refusal.code == "path-outside-run"
+        assert seen == [] and session.invocation_acts("write") == ()
+        assert stored_of(dispatcher._context(), command) == []

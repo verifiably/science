@@ -7,6 +7,7 @@ import yaml
 from beliefs import stored
 from beliefs.coordination import CoordinationAddress
 from beliefs.errors import ScienceError
+from beliefs.reservation import assignment_changes_of
 from nodes.core.errors import NodesError
 
 from science.coordination import content_of, selected_project, tip_nodes
@@ -15,6 +16,7 @@ from science.lookup import (CoreferencePair, decode_source_assertion, identifier
                             world_record, write_root_only)
 from science.refusal import Refusal, Refused, kernel_refusal
 from science.report import Finding, Heading, KeyVals, Report, Text
+from science.reservation import LiveRecords, changes_block
 
 __all__ = ["handle"]
 
@@ -109,6 +111,7 @@ def _source_assertions(ctx, node):
 
 def _world_blocks(ctx, found, incident=()):
     node = found.node
+    derived = []
     pairs = [("address", node.id), ("uid", node.uid), ("title", node.title)]
     if node.kind == "source":
         pairs += sorted(node.facets[stored.SOURCE_FACET]["identifiers"].items())
@@ -121,8 +124,14 @@ def _world_blocks(ctx, found, incident=()):
             decode_source_assertion(node)
         elif node.kind == "coreference-attestation":
             validate_coreference_attestation(ctx, node)
+        elif node.kind == "exposure-event":
+            stored.exposure_event_value(node)
+        elif node.kind == "reservation-assignment":
+            records = LiveRecords.capture(ctx, "reservation-assignment")
+            derived.append(changes_block(assignment_changes_of(records, node.id)))
         pairs += [("relations", _yaml(_relation_dicts(node.relations))), ("facets", _yaml(node.facets))]
-    blocks = [KeyVals(node.kind, tuple(pairs)), Text(node.body), *_source_assertions(ctx, node), *_notes(ctx, node)]
+    blocks = [KeyVals(node.kind, tuple(pairs)), Text(node.body), *derived, *_source_assertions(ctx, node),
+              *_notes(ctx, node)]
     if incident:
         blocks.append(Heading("source coreference (live evidence)"))
         blocks.extend(_pair_block(pair) for pair in incident)
@@ -210,6 +219,7 @@ def handle(ctx, *, address=None, doi=None, pmid=None, isbn=None, accession=None)
     try:
         return _read(ctx, address=address, doi=doi, pmid=pmid, isbn=isbn, accession=accession)
     except (ScienceError, NodesError, OSError) as caught:
-        if address is None or address.startswith(("source:", "coreference-attestation:")):
+        if address is None or address.startswith(
+                ("source:", "coreference-attestation:", "exposure-event:", "reservation-assignment:")):
             raise Refused(kernel_refusal(caught)) from caught
         raise
