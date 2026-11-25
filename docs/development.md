@@ -43,7 +43,7 @@ reproduce this build.
 
 | Sibling | Git revision |
 | --- | --- |
-| beliefs | `087e5ef4cc1fbd833707f881a23e4b19145e782d` |
+| beliefs | `6d993df38cbe7e8081575ffba2bee38dc040e1d4` |
 | atoms | `a4d414b924c0f939056c4f63b3c902e7e5c4809d` |
 | nodes | `d8c73b2321e30bc563782fbab517630bae1d631a` |
 
@@ -165,7 +165,7 @@ record-order boundaries, separately from byte-for-byte packaging checks.
 
 The endpoint tests import the supervisor's sandbox vocabulary, ledger reader
 and closing check from a test-only checkout of `verifiably/autonomy` at
-`4b218474eba454c1d93a10dbde020e9401fd0059`. Place that checkout beside
+`dbc682795c27e058f0720656c09dd78218c3161c`. Place that checkout beside
 science or set `SCIENCE_TEST_AUTONOMY_ROOT` to its root when testing in a
 worktree. Hosted CI checks out the same revision and records it in the
 module inventory. Running the science application requires only its ordinary

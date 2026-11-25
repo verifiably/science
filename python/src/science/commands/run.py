@@ -144,14 +144,14 @@ def handle(
     )
     with env_ctx as workflow_venv:
         extra_kwargs = {} if workflow_venv is None else {"workflow_venv": workflow_venv}
-        outcome = execute_assessment_run(
-            port=port, boundary_policy=POLICY, observer=writer.actor,
-            started_at=now(), scratch_base=scratch_base,
-            cores=cores or 1, **prepared, **extra_kwargs,
-        )
-    if isinstance(outcome, RunRefused):
-        # Both pre-intent refusals and later reported refusals retain the kernel reason.
-        raise KernelRefusalValue(outcome)
+        with ctx.job_slot:
+            outcome = execute_assessment_run(
+                port=port, boundary_policy=POLICY, observer=writer.actor,
+                started_at=now(), scratch_base=scratch_base,
+                cores=cores or 1, **prepared, **extra_kwargs,
+            )
+            if isinstance(outcome, RunRefused):
+                raise KernelRefusalValue(outcome)
     assert isinstance(outcome, RunMinted)
     view = ctx.write_view()
     return (record_block(view.get(run_ref(outcome.run.address()))),)

@@ -262,9 +262,11 @@ def _seal_session(launch, opened, actors, cause, deadline, clock):
             raise RuntimeError("An invocation failed to close")
         if stop is not None:
             tips = session.seal(max(0, deadline - clock()))
-            if getattr(launch.research, "selection", None) is not None:
+            if getattr(launch.research, "selected_here", False):
                 _persist(launch.run_dir, "selection", {"session_id": session.session_id,
                          "proposition": launch.research.action["proposition"], "class": launch.research.selection})
+            if getattr(launch.research, "belief_read", None) is not None:
+                _persist(launch.run_dir, "belief-read", {"session_id": session.session_id, **launch.research.belief_read})
             observation = stop.observation()
             if observation is not None:
                 persist_job_stop(launch.run_dir, session.session_id, stop.cause, observation)
@@ -348,7 +350,7 @@ def _shutdown(launch, opened, actors, control, cause, clock, *, server=None, dis
 
 def serve_run(launch, *, clock=time.monotonic):
     """Run in the endpoint process's main thread; return its exit status."""
-    if any(os.path.lexists(launch.run_dir / name) for name in ("seal.json", "job-stop.json", "selection.json")):
+    if any(os.path.lexists(launch.run_dir / name) for name in ("seal.json", "job-stop.json", "selection.json", "belief-read.json")):
         raise Refused(Refusal("invalid-input", "This run directory already contains closing evidence"))
     with ExitStack() as resources:
         wake, term = resources.enter_context(_term_wakeup())

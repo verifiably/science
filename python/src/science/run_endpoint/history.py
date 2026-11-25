@@ -41,6 +41,17 @@ def _predecessors(launch, ids):
         require(set(seal) == {"cause", "sealed_tips", "basis_seal"} and seal["cause"] in ("stop", "lease", "term", "eof")
                 and disposition["run"] == directory.name and disposition["disposition"] == "clean",
                 "Predecessor requires recovery")
+        selection_file = directory / "selection.json"
+        try:
+            row = _record(selection_file)
+        except FileNotFoundError:
+            pass
+        else:
+            require(set(row) == {"session_id", "proposition", "class"} and row["session_id"] == sessions[0]
+                    and row["proposition"] == launch.research.action["proposition"]
+                    and row["class"] in ("ready", "not-ready", "assessed-unevaluated", "assessed-not-admitted", "admitted")
+                    and launch.research.selection is None, "Substituted or duplicate queue selection")
+            launch.research.selection = row["class"]
         result[sessions[0]] = disposition["members"]
     require(set(result) == set(ids), "Missing predecessor evidence")
     return result

@@ -74,6 +74,8 @@ class ResearchAction:
                                                ensure_ascii=False).encode()).hexdigest()
         self.records = {}
         self.selection = None
+        self.selected_here = False
+        self.belief_read = None
         self._selection_lock = Lock()
 
     def queue(self, ctx):
@@ -82,6 +84,7 @@ class ResearchAction:
         with self._selection_lock:
             require(self.selection is None and not self.records, "The member already selected its target")
             self.selection = classify(ctx, self.action["proposition"])
+            self.selected_here = True
             return (Heading("Next"), KeyVals("propositions", ((self.action["proposition"], self.selection),)))
 
     def require_selected(self, ctx):

@@ -81,7 +81,8 @@ def test_captured_job_uses_kernel_staging(certified_work, command, monkeypatch):
         session.close()
 
 
-def test_prepared_action_uses_two_slots_and_keyed_read(certified_work, autonomy_source):
+@pytest.mark.parametrize("cut_before_mint", [False, True])
+def test_prepared_action_uses_two_slots_and_keyed_read(certified_work, autonomy_source, monkeypatch, cut_before_mint):
     import json
     import runpy
     from pathlib import Path
@@ -126,21 +127,50 @@ def test_prepared_action_uses_two_slots_and_keyed_read(certified_work, autonomy_
         pool.register_actor(name, envelope, session.session_id)
         with HostPeer(pool, name, envelope, "job") as host, host.take_socket() as peer:
             decls = production_tree()
+            peer.set_inheritable(True)
+            jobs = JobAdmission(peer)
+            assert not peer.get_inheritable()
             actor = Dispatcher(decls, resolve_handlers(decls), ctx, session=session, run_inputs=paths,
-                               research=action, jobs=JobAdmission(peer))
+                               research=action, jobs=jobs)
             original = world.authoring_inputs()["run"] | {"code": str(code), "spec": target["spec"], "dataset": target["dataset"]}
             assert "ready" in actor.invoke("next", {}).text
             actor.invoke("run", original, invocation_id="A")
             with pytest.raises(Refused, match="already completed"):
                 actor.invoke("run", original, invocation_id="duplicate")
             actor.invoke("assess", {"run": action.records["run"]}, invocation_id="B")
-            actor.invoke("verify", world.authoring_inputs()["verify"] | {"code": str(code), "assessment": action.records["assessment"]}, invocation_id="C")
-            with pytest.raises(Refused) as refused:
-                actor.invoke("belief", {"proposition": target["proposition"], "key": "wrong"})
-            assert refused.value.refusal.code == "allowance-scope"
-            assert "Belief" in actor.invoke("belief", {"proposition": target["proposition"]}).text
-            assert action.records["verification"].startswith("verification:")
-            session.begin_close("stop", 10)
+            with monkeypatch.context() as patch:
+                import science.commands.verify as verify
+                patch.setattr(verify, "REFERENCE_RULES", {})
+                with pytest.raises(Refused, match="not a reference rule"):
+                    actor.invoke("verify", world.authoring_inputs()["verify"] | {"code": str(code),
+                                 "assessment": action.records["assessment"]}, invocation_id="invalid-before-replay")
+            assert len(pool.snapshot(name)["reservations"]) == 1
+            verification = world.authoring_inputs()["verify"] | {"code": str(code), "assessment": action.records["assessment"]}
+            if cut_before_mint:
+                import science.commands.verify as verify
+                build = verify.build_verification
+
+                def close_after_replay(*args, **kwargs):
+                    acts = session.invocation_acts("C")
+                    assert len(acts) == 1 and any(ref.startswith("run:") for _, ref in acts[0].record_ids)
+                    session.begin_close("stop", 10)
+                    return build(*args, **kwargs)
+
+                monkeypatch.setattr(verify, "build_verification", close_after_replay)
+                with pytest.raises(Refused) as cut:
+                    actor.invoke("verify", verification, invocation_id="C")
+                assert cut.value.refusal.code == "run-sealed"
+                assert len(session.invocation_acts("C")) == 1 and "verification" not in action.records
+            else:
+                actor.invoke("verify", verification, invocation_id="C")
+                with pytest.raises(Refused) as refused:
+                    actor.invoke("belief", {"proposition": target["proposition"], "key": "wrong"})
+                assert refused.value.refusal.code == "allowance-scope"
+                assert "Belief" in actor.invoke("belief", {"proposition": target["proposition"]}).text
+                assert action.belief_read["verification"] == action.records["verification"]
+                assert action.belief_read["assessment"] == action.records["assessment"]
+                assert action.belief_read["answer"]["key"] == action.assessment_key(ctx)
+                session.begin_close("stop", 10)
             session.seal(10)
     report = pool.snapshot(name)
     assert report["remaining"]["job_starts"] == 0

@@ -217,7 +217,11 @@ class Dispatcher:
         ctx = self._read_context(decl, project)
         if self._research is not None and decl.name == "belief":
             from science.commands.belief import belief_report
-            return belief_report(ctx, **canonical, bound_key=self._research.assessment_key(ctx))
+            report = belief_report(ctx, **canonical, bound_key=self._research.assessment_key(ctx))
+            self._research.belief_read = {"proposition": canonical["proposition"],
+                "assessment": self._research.records["assessment"], "verification": self._research.records.get("verification"),
+                "answer": dict(report[1].pairs)}
+            return report
         return self._handlers[decl.name](ctx, **canonical)
 
     def _required(self, decl: Declaration):
@@ -292,12 +296,11 @@ class Dispatcher:
                     if self._run_inputs is not None and decl.name in ("run", "derive", "verify"):
                         self._run_inputs.retain_staging(writer)
                     ctx = self._context()
-                    execution = nullcontext()
                     if self._research is not None and decl.name in ("run", "verify"):
                         self._research.prepare_job(decl.name, inputs, ctx)
-                        execution = self._jobs.execution(self._session, iid, "original" if decl.name == "run" else "replay")
-                    with execution:
-                        report = self._handlers[decl.name](ctx, writer, **inputs)
+                        ctx = dataclasses.replace(ctx, job_slot=self._jobs.execution(self._session, iid,
+                                                  "original" if decl.name == "run" else "replay"))
+                    report = self._handlers[decl.name](ctx, writer, **inputs)
             except SessionSealed as caught:
                 self._close_sealed(iid, caught)
             except (*KERNEL_REFUSALS, Refused) as caught:

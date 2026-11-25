@@ -109,6 +109,26 @@ def test_target_keys_are_explicit_and_never_pool_evidence(certified_work):
         ctx.evaluate("proposition:p1", key=second.key())
     assert retracted.value.refusal.data["available_keys"] == [first.key()]
 
+    from beliefs.permit import WritePermit
+    from science.dispatch import Dispatcher
+    from science.loader import production_tree, resolve_handlers
+    from science.run_endpoint.research import ResearchAction
+
+    action = ResearchAction({
+        "campaign_id": "test", "member_id": "member", "conversation_id": "512b02da-ccbe-47cd-bd24-2a9d2f62c5f5",
+        "commands": ["next", "run", "assess", "verify", "belief"], "proposition": "proposition:p1",
+        "spec": "analysis-spec:fixture", "dataset": "dataset:fixture",
+        "workflow": {"cores": 1, "entrypoint": "Snakefile", "targets": ["out"], "tree_digest": "sha256-tree:" + "a"*64}
+    }, WritePermit(frozenset(("act-report", "assessment", "decision", "hypothesis", "note", "project",
+                              "question", "run", "task", "theme", "topic", "verification")),
+                   frozenset(("run", "corpus-write"))))
+    action.records["assessment"] = second_ref
+    decls = production_tree()
+    actor = Dispatcher(decls, resolve_handlers(decls), ctx, research=action)
+    with pytest.raises(Refused) as unrelated:
+        actor.invoke("belief", {"proposition": "proposition:p1"})
+    assert unrelated.value.refusal.code == "allowance-scope" and action.belief_read is None
+
 
 def test_no_assessment_does_not_invent_a_target_key(certified_work):
     from science.refusal import Refused

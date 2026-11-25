@@ -243,3 +243,5 @@ and nonzero process return code. A missing terminal act settles as unknown on
 `allowance.v1`. The authority keeps the job charged.
 
 For a research member, `next` classifies the bound proposition once. The original job requires that it was selected ready and is still ready at dispatch. The endpoint publishes the session, proposition and queue class in private `selection.json` during drain before publishing the seal.
+
+A governed endpoint records a successful keyed actor read in private `belief-read.json` before sealing. It binds the session, proposition, assessment, verification and rendered answer. On resume the endpoint restores the single selection from its sealed predecessor and rechecks current readiness before the original run. Job reservation follows input and equivalence-rule validation and brackets the kernel execution or replay. A verification mint is a separate writer act.

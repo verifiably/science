@@ -94,19 +94,20 @@ def handle(
         )
         with env_ctx as workflow_venv:
             extra_kwargs = {} if workflow_venv is None else {"workflow_venv": workflow_venv}
-            outcome = replay(
-                original,
-                port=writer.operation_port(),
-                spec=spec,
-                observer=writer.actor,
-                started_at=now(),
-                scratch_base=None if run_staging_of(writer.operation_port()) is not None else ctx.config.operations_root / "scratch" / writer.invocation_id,
-                cores=cores or 1,
-                **prepared,
-                **extra_kwargs,
-            )
-        if isinstance(outcome, RunRefused):
-            raise KernelRefusalValue(outcome)
+            with ctx.job_slot:
+                outcome = replay(
+                    original,
+                    port=writer.operation_port(),
+                    spec=spec,
+                    observer=writer.actor,
+                    started_at=now(),
+                    scratch_base=None if run_staging_of(writer.operation_port()) is not None else ctx.config.operations_root / "scratch" / writer.invocation_id,
+                    cores=cores or 1,
+                    **prepared,
+                    **extra_kwargs,
+                )
+                if isinstance(outcome, RunRefused):
+                    raise KernelRefusalValue(outcome)
         assert isinstance(outcome, RunMinted)
         view = ctx.write_view()
         replayed = decode_run_closure(view.get(run_ref_of(outcome.run.address())))

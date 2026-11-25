@@ -5,7 +5,8 @@ import os
 import re
 import tomllib
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass, replace
+from contextlib import AbstractContextManager, nullcontext
+from dataclasses import dataclass, field, replace
 from functools import cached_property
 from hashlib import sha256
 from pathlib import Path
@@ -471,6 +472,9 @@ class ReadContext:
     selection: object = None  # a beliefs.coordination.CoordinationAddress or None; typed
     # `object` because `beliefs.coordination` is imported lazily like the rest
     # of this module's kernel reads.
+
+    # Installed for one trusted run or replay invocation only.
+    job_slot: AbstractContextManager = field(default_factory=nullcontext, compare=False, repr=False)
 
     @classmethod
     def open(cls, config: ScienceConfig) -> ReadContext:

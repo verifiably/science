@@ -25,6 +25,7 @@ class JobAdmission:
     def __init__(self, stream):
         if stream.family != socket.AF_UNIX or stream.getsockopt(socket.SOL_SOCKET, socket.SO_TYPE) != socket.SOCK_SEQPACKET:
             raise ValueError("job admissions require a Unix sequenced-packet peer")
+        stream.set_inheritable(False)
         self.stream = stream
         self.stream.settimeout(2)
         self.sequence = 0
