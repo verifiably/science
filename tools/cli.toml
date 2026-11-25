@@ -32,7 +32,7 @@ grammar = "<n>d | <n>w"
 meaning = "a duration; 0d disables an age check"
 
 [vocabulary.values.harness]
-set = ["claude-code", "codex", "opencode", "agy"]
+set = ["claude-code", "codex", "opencode", "agy", "pi"]
 
 [vocabulary.values.color]
 set = ["auto", "always", "never"]
@@ -1991,6 +1991,23 @@ options = [
 ]
 
 [[cli.science.commands]]
+path = ["reservation-statement"]
+summary = "Check a reservation chain's checked-in statement against its current records and the exposure they have not considered"
+options = [
+  { shared = "config", value = "path" },
+  { names = ["--invocation-id"], value = "string" },
+  { names = ["--continue"], value = "string" },
+  { names = ["--chain"], value = "string", required = true },
+  { names = ["--scope"], value = "string" },
+  { names = ["--check"], value = "string" },
+  { names = ["--write"], value = "path" },
+  { names = ["--as-of"], value = "string" },
+  { names = ["--block-on"], value = "string", repeatable = true },
+  { names = ["--all-considered", "--no-all-considered"], value = "none" },
+  { shared = "project", role = "select", value = "string", repeatable = false },
+]
+
+[[cli.science.commands]]
 path = ["spec"]
 summary = "Freeze an analysis spec against the kernel's reference rules and mint its record"
 options = [
@@ -3539,7 +3556,7 @@ protocol = "harness hook: stdout is the reply, exit code is the guard's"
 summary = "Dispatch one harness hook event to the subscribers and guards"
 args = [{ name = "event", value = "string", required = true }]
 options = [
-  { shared = "harness", role = "select", value = "enum", values = ["claude-code", "codex", "opencode", "agy"], required = true, repeatable = false },
+  { shared = "harness", role = "select", value = "enum", values = ["claude-code", "codex", "opencode", "agy", "pi"], required = true, repeatable = false },
   { names = ["--outer-ms"], value = "int" },
   { names = ["--subscribers"], value = "path" },
 ]

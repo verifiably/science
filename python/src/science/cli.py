@@ -7,12 +7,14 @@ import os
 import socket
 import sys
 import time
+from dataclasses import replace
 from pathlib import Path
 
 from science.config import ReadContext, load_config, resolve_config_path
 from science.dispatch import Dispatcher
 from science.loader import production_tree, resolve_handlers
-from science.refusal import INVOCATION_ID_RE, Refusal, Refused, envelope, mint_token
+from science.refusal import INVOCATION_ID_RE, WORLD_READ_ERRORS, Refusal, Refused, envelope, kernel_refusal, mint_token
+from science.report import serialize_block
 from science.run_endpoint.handle import Handle
 from science.schema import Declaration
 from science.stop import stop_signals_exit, stop_signals_held
@@ -28,13 +30,17 @@ _LAUNCHER_PROJECT_HELP = "Open the session under this project, by name or coord:
 # See tools/cli.toml for the parser inventory.
 _VOCABULARY_ALIASES = {"limit": ("-n",)}
 _WORKFLOW_ENV_COMMANDS = frozenset({"derive", "run", "verify"})
-# Path inputs a write resolves in its caller's directory before the service, which runs in another, reads them.
+# Path inputs resolved in the caller's directory: a write's are read by the service, which runs in another.
 _CALLER_PATHS = {
     "acquire-import": ("log", "members", "journals"),
     "exposure-event": ("payload",),
     "reservation-assignment": ("payload",),
+    "reservation-statement": ("check",),
     "spec": ("estimand",),
 }
+# A read whose directory input the attended CLI may write instead: exactly one of the two is given. The option is
+# no declared input, so MCP, run handles and cursors never carry it.
+_WRITABLE_INPUTS = {"reservation-statement": "check"}
 
 
 def _add_command(
@@ -60,7 +66,13 @@ def _add_command(
                 kwargs["choices"] = spec.choices
             case "list-of-string":
                 kwargs["action"] = "append"
-        parser.add_argument("--" + spec.name.replace("_", "-"), *_VOCABULARY_ALIASES.get(spec.name, ()), **kwargs)
+        target = parser
+        if _WRITABLE_INPUTS.get(decl.name) == spec.name:
+            kwargs["required"] = False
+            target = parser.add_mutually_exclusive_group(required=True)
+            target.add_argument("--write", dest="write_directory", type=Path,
+                                help="Directory whose files to replace; attended CLI only.")
+        target.add_argument("--" + spec.name.replace("_", "-"), *_VOCABULARY_ALIASES.get(spec.name, ()), **kwargs)
 
     if decl.name in _WORKFLOW_ENV_COMMANDS:
         parser.add_argument(
@@ -257,6 +269,8 @@ def main(argv: list[str] | None = None) -> int:
             prepared_config = load_config(resolve_config_path(namespace.config))
             prepared_environment = prepare_environment(workflow_project, prepared_config.operations_root)
             inputs["workflow_environment"] = prepared_environment
+        if getattr(namespace, "write_directory", None) is not None:
+            return _write_files(namespace, inputs, handle, invocation_id)
         project = getattr(namespace, "project", None)
         if handle is not None:
             dispatcher = handle
@@ -269,6 +283,7 @@ def main(argv: list[str] | None = None) -> int:
                 config=prepared_config,
             )
         else:
+            inputs = _from_caller(declaration, inputs)
             config = load_config(resolve_config_path(namespace.config))
             if namespace.command in {"heads", "log"}:
                 # These handlers inspect the configured chains themselves. Opening
@@ -369,6 +384,34 @@ def _framework_verb(namespace) -> int:
     raise NotImplementedError(f"{namespace.command} arrives in a later task")
 
 
+def _from_caller(declaration: Declaration, inputs: dict[str, object]) -> dict[str, object]:
+    return {**inputs, **{key: str(Path(inputs[key]).absolute())
+                         for key in _CALLER_PATHS.get(declaration.name, ()) if key in inputs}}
+
+
+def _write_files(namespace, inputs: dict[str, object], handle, invocation_id: str) -> int:
+    """`reservation-statement --write`: render in this process and replace the two files."""
+    if handle is not None:
+        raise Refused(Refusal("handle-mode", "--write is unavailable in handle mode"), invocation_id)
+    checked = sorted({"block_on", "all_considered"} & set(inputs))
+    if namespace.cursor is not None or checked:
+        refused = ", ".join("--" + name.replace("_", "-") for name in (*checked, *(("continue",) if namespace.cursor else ())))
+        raise Refused(Refusal("invalid-input", f"--write does not combine with {refused}"), invocation_id)
+    from science.commands.reservation_statement import write
+    from science.coordination import resolve_project_ref
+
+    config = load_config(resolve_config_path(namespace.config))
+    ctx = ReadContext.open(config)
+    selection = _ambient_selection(config) if namespace.project is None else resolve_project_ref(ctx, namespace.project)
+    try:
+        report = write(replace(ctx, selection=selection), directory=namespace.write_directory.absolute(), **inputs)
+    except WORLD_READ_ERRORS as caught:
+        raise Refused(kernel_refusal(caught), invocation_id) from caught
+    sys.stdout.write("".join(serialize_block(block) for block in report))
+    _json_line({"invocation_id": invocation_id})
+    return EXIT_OK
+
+
 def _via_service(
     namespace,
     declaration: Declaration,
@@ -380,8 +423,7 @@ def _via_service(
     """Any write-class command goes over the service socket, preserving the
     read path's public wire: text on stdout, one JSON line on stderr."""
     invocation_id = namespace.invocation_id or mint_token()
-    inputs = {**inputs, **{key: str(Path(inputs[key]).absolute())
-                           for key in _CALLER_PATHS.get(declaration.name, ()) if key in inputs}}
+    inputs = _from_caller(declaration, inputs)
 
     def _meta(payload: dict[str, object]) -> dict[str, object]:
         if prepared_environment is not None:

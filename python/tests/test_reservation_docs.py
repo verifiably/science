@@ -76,5 +76,7 @@ def test_the_guides_walk_runs_as_printed(certified_work, short_tmp, tmp_path):
     (change,) = assignment_changes_of(view, head.id)
     assert change.suspended and head.flagged == ()
     (unconsidered,) = {n.id for n in events} - set(head.events)
-    assert walked.stdout.rstrip().splitlines()[-8] == f"{unconsidered}:"
+    # The walk ends with the statement's check, whose last block is the second look, in an epoch now open.
+    assert walked.stdout.rstrip().splitlines()[-10:-7] == [f"{unconsidered}:", "  whose: program", "  falls: open"]
+    assert sorted(path.name for path in (cwd / "reservation").iterdir()) == ["epochs.json", "epochs.md"]
     assert stored.exposure_event_value(view.get(unconsidered)).channel == "read"

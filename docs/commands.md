@@ -85,7 +85,7 @@ Codes: `unknown-command`, `invalid-input`, `permit-exceeded`, `outcome-unknown`,
 `unknown-cursor`, `stale-cursor`, `input-mismatch`, `kernel-refused`,
 `no-current-project`, `unknown-project`, `ambiguous-project`, `no-epoch`,
 `epoch-stale`, `multiple-assessed-propositions`, `pin-unsourced`, `world-mismatch`, `adopt-conflict`, `corpus-retired`,
-`divergent-publication`, `config-stale`. Kernel normalization preserves the named
+`divergent-publication`, `config-stale`, `chain-absent`, `statement-stale`, `events-unconsidered`. Kernel normalization preserves the named
 kind/reason or permit requirement/capability in `data`; callers should use codes
 and detail instead of parsing prose. These are refusals, not evidence of a run.
 
@@ -222,6 +222,10 @@ Exact current inputs, defaults and prompts are the public files under
   neither its time nor its presence establishes relevance, a role change or
   invalidation, which the program's own rule decides. Two roots or two heads refuse
   as ambiguous.
+- `reservation-statement` checks the two files a program's repository holds for one
+  chain against the live corpora, and reports or refuses on the exposure the head has
+  not considered. The attended CLI's `--write` renders the files. See the
+  [statement and its gate](#reservation-statements).
 
 - `claim` uses the first activated operator plan, mapping subject/object into
   named roles. Two one roles or two canonical many-role members are supported.
@@ -395,6 +399,95 @@ Every check runs before the act, so a refusal writes nothing:
 The preflight reads a snapshot of the mounts. The kernel's final admission runs in the
 write root, so a competing local writer is refused at commit. A fork written
 independently into another corpus is reported by the next `reservation-head`.
+
+### Reservation statements
+
+A statement renders one chain into `<chain>.json` and `<chain>.md`, or
+`<chain>/<slug>.json` and `.md` for a chain scoped to `proposition:<slug>`. It is a
+function of the chain's records alone (the head, its predecessors to the root, and the
+events the head considers), read from their facets and addresses and never from a title
+or body. Every corpus holding the head renders the same bytes. Text is in NFC, the form
+the kernel's addresses are computed over.
+
+The JSON file, schema `science.reservation-statement.v1`:
+
+| Key | Value |
+|---|---|
+| `schema_version` | `1` |
+| `chain`; `scope` | The chain's name; its `proposition:` address, when scoped |
+| `head` | `address`, and the head's complete kernel `facet` |
+| `history` | One entry per assignment, root first |
+| `events` | Every event the head considers, in exposure-log order: `address` and complete `facet` |
+
+A history entry has `address`, `assigned_at`, `assigned_by`, `rule`, and the record's
+`account`, `applies`, `evidence`, `flagged`, `participants` and `prior_runs` when it has
+them. It also has six lists, each possibly empty: `changes` (the kernel's derived group
+changes: `kind`, `unit`, `suspended`, and `previous_role` unless `added`),
+`groups_removed` and `groups_added` (whole groups, against the predecessor),
+`events_added` and `events_dropped`, and `inputs_changed` (names added, removed or given
+a new digest). The kernel keys a change by its group's first unit, so `changes` alone can
+hide another unit's change of role; the group lists, applied backwards from the head's
+groups, give every earlier assignment's groups. The root lists all its events and
+inputs, and no groups.
+
+The file is UTF-8 with two-space indentation, keys in code-point order at every depth,
+lists in the kernel's order, absent optional values omitted and one trailing newline.
+The page is rendered from the same content and adds nothing to it. Neither is edited by
+hand.
+
+`--check <directory>` compares both files byte for byte. MCP supplies an absolute path;
+the CLI resolves a relative one in its caller's directory. The CLI takes `--write
+<directory>` instead, which replaces the page and then the JSON file, each atomically,
+and writes nothing to the world. `--write` is no declared input: MCP and cursors never
+carry it, it refuses `handle-mode` through a run handle, and it does not combine with
+`--continue` or the gate options. The command itself is refused through a run handle.
+
+Both print the head, each file's sha256 and what was examined: every live corpus read,
+with its publication marker and whether it holds the head, and the selected project's
+pinned revision. A corpus holding only exposure events can change the gate's verdict,
+so it is listed.
+
+`--as-of <reservation-assignment:...>` renders or checks the statement as it stood when
+that assignment was the head. It resolves that record and its predecessors and does not
+look for the current head, so a chain that forked later still verifies. It does not
+combine with the gate options.
+
+Under a selected project (`--project`, else the session's selection, else
+`default_project` when no session is live), each visible event
+the head did not consider is `program`, when the project's query claims it;
+`another-program`, when only another standing project's query does (any standing tip's,
+where that project diverged); or `unattributed`. A query claims the addresses of a
+clause that holds one `addresses` predicate and nothing else, because the kernel
+intersects a clause's predicates. With no project selected, every visible event is the
+program's.
+
+An event falls in each role (`open`, `reserved`, `unresolved`, `withheld`) of a group
+one of its units overlaps: terms by equal sort and term, intervals as half-open
+`[start, end)`. It falls `outside` when part of a unit is in no group, and is
+`unscoped` with no units. A unit of another shape, or a term of a sort the groups do
+not use, falls nowhere. Two options state the program's rule, and science applies no
+default:
+
+- `--block-on <place>`, repeatable: one of those six places, for an exposing event of
+  the program's; or `unattributed`, for an event of any effect that no project claims.
+- `--all-considered`: every event of the program's must be considered, whatever its
+  effect and wherever it falls.
+
+Another program's event never blocks. A caller acts on the exit status and the
+refusal, never on report text:
+
+| Code | Cause and data |
+|---|---|
+| `chain-absent` | No record of the chain is visible; `--write` leaves existing files alone |
+| `statement-stale` | A file is missing or differs: `head`, and `files` relative to the directory |
+| `events-unconsidered` | The gate blocked: `head`, and `events` with each one's `address`, `whose`, `places` and `effect` |
+
+An ambiguous chain, a malformed record and an unreadable predecessor refuse as
+`reservation-head` does. Staleness is judged before the gate.
+
+A publication's reader gets the author's verdict when the exposure events the
+publication selects are exactly those the project claims. `publish-preview` compares
+them under `exposure claims`, at the project revision it prints.
 
 ### Workflow environments (`derive`, `run`, `verify`)
 

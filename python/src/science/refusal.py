@@ -26,6 +26,7 @@ CODES = frozenset({
     "no-current-project", "unknown-project", "ambiguous-project",
     "no-epoch", "epoch-stale", "multiple-assessed-propositions",
     "pin-unsourced", "world-mismatch", "adopt-conflict", "corpus-retired", "divergent-publication", "config-stale",
+    "chain-absent", "statement-stale", "events-unconsidered",
 })
 WORLD_READ_ERRORS = (WorldReadUnavailable, WorldUninitialized, WorldIdMismatch)
 INVOCATION_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")

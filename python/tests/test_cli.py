@@ -400,3 +400,58 @@ def test_exposure_and_reservation_commands_require_their_input(args, missing, ca
     with pytest.raises(SystemExit) as caught:
         main(args)
     assert caught.value.code == 2 and missing in capsys.readouterr().err
+
+
+def test_a_reservation_statement_is_written_and_checked_over_the_cli(certified_work, tmp_path, monkeypatch, capsys):
+    from helpers.reservation import assignment_facet, assignment_node, event_facet, event_node, hold_record
+    from helpers.world import build_fixture_world_with_contract, write_config_for
+    from science.cli import main
+
+    cfg = build_fixture_world_with_contract(certified_work)
+    config = write_config_for(cfg)
+    monkeypatch.chdir(tmp_path)
+
+    def run(code, *args):
+        assert main(["reservation-statement", "--config", str(config), "--chain", "mm-roster", *args]) == code
+        captured = capsys.readouterr()
+        return captured.out, json.loads(captured.err)
+
+    assert run(3, "--write", "kept")[1]["refusal"]["code"] == "chain-absent" and not (tmp_path / "kept").exists()
+    head = hold_record(cfg.write_root, cfg.profile, assignment_node(assignment_facet(), actor="fixture")).id
+    assert run(3, "--check", "kept")[1]["refusal"]["data"] == {"head": head, "files": ["mm-roster.json", "mm-roster.md"]}
+    text, line = run(0, "--write", "kept")
+    assert f"  head: {head}\n" in text and set(line) == {"invocation_id"}
+    assert sorted(path.name for path in (tmp_path / "kept").iterdir()) == ["mm-roster.json", "mm-roster.md"]
+    assert run(0, "--check", "kept")[0].startswith(text)
+    assert run(0, "--check", str(tmp_path / "kept"))[0].startswith(text)
+    event = hold_record(cfg.write_root, cfg.profile, event_node(event_facet(units=[]), actor="fixture")).id
+    assert run(0, "--check", "kept", "--block-on", "reserved", "--block-on", "withheld", "--no-all-considered")
+    _, line = run(3, "--check", "kept", "--block-on", "reserved", "--block-on", "unscoped")
+    assert line["refusal"]["code"] == "events-unconsidered" and line["refusal"]["data"]["events"][0]["address"] == event
+    assert run(3, "--check", "kept", "--all-considered")[1]["refusal"]["code"] == "events-unconsidered"
+    assert run(0, "--check", "kept", "--as-of", head)[0].count(head) == 1
+
+    before = {path: path.read_bytes() for path in (tmp_path / "kept").iterdir()}
+    for args in (["--block-on", "open"], ["--all-considered"], ["--continue", "cursor"]):
+        assert run(3, "--write", "kept", *args)[1]["refusal"]["code"] == "invalid-input"
+    assert run(3, "--write", "kept", "--project", "absent")[1]["refusal"]["code"] == "unknown-project"
+    assert {path: path.read_bytes() for path in (tmp_path / "kept").iterdir()} == before
+
+
+@pytest.mark.parametrize("args", [["--chain", "c"], ["--chain", "c", "--write", "a", "--check", "b"], ["--check", "a"]])
+def test_a_reservation_statement_takes_a_chain_and_one_directory(args, capsys):
+    from science.cli import main
+
+    with pytest.raises(SystemExit) as caught:
+        main(["reservation-statement", *args])
+    assert caught.value.code == 2
+
+
+def test_writing_a_reservation_statement_is_unavailable_through_a_run_handle(tmp_path, monkeypatch, capsys):
+    from science.cli import main
+
+    monkeypatch.delenv("SCIENCE_CONFIG", raising=False)
+    monkeypatch.setenv("VERIFIABLY_ENDPOINT", str(tmp_path / "endpoint"))
+    monkeypatch.setenv("VERIFIABLY_TOKEN_FILE", str(tmp_path / "token"))
+    assert main(["reservation-statement", "--chain", "c", "--write", str(tmp_path / "kept")]) == 3
+    assert json.loads(capsys.readouterr().err)["refusal"]["code"] == "handle-mode" and not (tmp_path / "kept").exists()

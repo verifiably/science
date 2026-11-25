@@ -907,9 +907,19 @@ def test_exposure_and_reservation_over_mcp_match_the_cli(certified_work, short_t
             ("reservation-head", {"chain": "mm-roster"}, ["--chain", "mm-roster"]),
             ("record", {"address": event}, ["--address", event]),
             ("record", {"address": head}, ["--address", head]),
+            ("reservation-statement", {"chain": "mm-roster", "check": str(tmp_path / "kept")},
+             ["--chain", "mm-roster", "--check", str(tmp_path / "kept")]),
         ):
+            if name == "reservation-statement":
+                assert main([name, "--config", str(config), "--chain", "mm-roster", "--write", str(tmp_path / "kept")]) == 0
+                capsys.readouterr()
             assert main([name, "--config", str(config), *argv]) == 0
             assert call(name, **arguments)["content"][0]["text"] == capsys.readouterr().out
+        relative = call("reservation-statement", chain="mm-roster", check="kept")
+        assert relative["structuredContent"]["refusal"]["code"] == "invalid-input"
+        assert relative["structuredContent"]["refusal"]["data"] == {"field": "check"}
+        written = call("reservation-statement", chain="mm-roster", check=str(tmp_path / "kept"), write=str(tmp_path / "new"))
+        assert written["isError"] is True and not (tmp_path / "new").exists()
     finally:
         session.close()
 
@@ -920,6 +930,8 @@ def test_mcp_declares_the_exposure_and_reservation_tools():
     for name, inputs, required in (
         ("exposure-event", {"payload"}, ["payload"]), ("reservation-assignment", {"payload"}, ["payload"]),
         ("exposure-log", {"subject", "proposition"}, None), ("reservation-head", {"chain", "scope"}, ["chain"]),
+        ("reservation-statement", {"chain", "scope", "check", "as_of", "block_on", "all_considered", "project"},
+         ["chain", "check"]),
     ):
         assert set(schemas[name]["properties"]) == inputs | protocol
         assert schemas[name].get("required") == required

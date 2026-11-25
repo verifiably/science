@@ -1,0 +1,34 @@
+schema_version = 1
+name = "reservation-statement"
+purpose = "Check a reservation chain's checked-in statement against its current records and the exposure they have not considered."
+write_class = "read-only"
+selects = true
+output_budget = 8192
+
+[inputs.chain]
+type = "string"
+required = true
+doc = "The chain's name, lowercase letters, digits and hyphens."
+[inputs.scope]
+type = "string"
+required = false
+doc = "The proposition: address a scoped chain is for. Omitted, the program-level chain."
+[inputs.check]
+type = "string"
+required = true
+doc = "Directory holding the checked-in files. CLI resolves relative to its caller; MCP needs an absolute path."
+[inputs.as_of]
+type = "string"
+required = false
+doc = "A reservation-assignment: address of the chain, checked as it stood when it was the head. Takes no gate option."
+[inputs.block_on]
+type = "list-of-string"
+required = false
+doc = "Refuse on an unconsidered exposing event of the program's that falls here: open, reserved, unresolved, withheld, outside or unscoped; or on any unattributed event."
+[inputs.all_considered]
+type = "bool"
+required = false
+doc = "Refuse unless the head considers every event of the program's, whatever its effect and wherever it falls."
+
+[reads]
+families = ["corpus-stored", "coordination"]

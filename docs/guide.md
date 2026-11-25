@@ -226,6 +226,53 @@ because neither `beliefs` nor `science` had them; lifting them out afterwards
 took four separate upstream tasks. Prior exposure and validation reservation are
 now commands.
 
+### Showing reservation evidence in the program's repository
+
+The program's public repository holds its reservation rule and one generated statement
+per chain, and nothing else of the evidence:
+
+- **The rule**, authored as a `standard` (`docs/reservation-rule.md` by convention). It
+  states the exact `rule.name` and `rule.version` its assignments carry, and links to
+  the statement.
+- **The statement**, written by `science reservation-statement --chain <chain> --write
+  docs/reservation` after each `reservation-assignment` and committed with what the
+  assignment governs. Earlier assignments and events stay in the world; the statement
+  names each by address.
+
+After `exposure-event`, add the event's address with `revise` to a clause of the
+program's project query that holds one `addresses` predicate and nothing else. That is
+what makes the event the program's in a world it shares, and what a publication carries.
+Recording an event changes no statement.
+
+A runner, with no world and no `science` installed, reads the JSON file: it compares the
+digests of its inputs with `head.facet.inputs`, takes the units it may read from
+`head.facet.groups`, and records `head.address` and the file's sha256. A program may also
+pin the expected sha256 with the runner's configuration. Where a configuration is present,
+the preflight also runs `--check docs/reservation --project <the program's project>` with
+the options its rule calls for (`--block-on reserved --block-on withheld --block-on
+unscoped`, or `--all-considered --block-on unattributed`). In a world several programs
+share it always names its project: otherwise the live session's selection or the
+configuration's `default_project` decides, and under another program's project this
+program's events never block, while with none selected every program's do. The run records
+one of three outcomes:
+
+| Outcome | The run | What it establishes |
+|---|---|---|
+| passed | proceeds, recording every corpus, marker and project revision the check printed | the statement was the head of the corpora examined, and the gate held for their events at that project revision |
+| `chain-absent`, or no configuration | proceeds only if the program's rule allows a run without the world | which statement bytes it read, nothing about currency |
+| any other refusal | stops, and the cause is repaired | nothing |
+
+`--check` with `--as-of <head.address>` later confirms that the bytes a run read are that
+assignment's statement, not that it was the head at the time.
+
+Publish when the program's own gate passes and `publish-preview` reports `exposure claims`
+equal. One addresses-only clause of the project's query names every `history` address,
+every address under `events_added`, and every event the program recorded; add the further
+references a `closure-incomplete` refusal names. A reader who adopts the publication runs
+the same `--check` and gate options against a clone with no project selected (no
+`--project`, no session selection and no `default_project`), from a configuration that
+mounts only the program's publication beside its own empty write root.
+
 ## Recording what was seen and what is held back
 
 Data someone has already looked at stays usable for discovery; whether it can also
@@ -294,11 +341,15 @@ science reservation-assignment --payload second.json
 look "Looked at the later epoch again" "2026-11-10T10:00:00Z" > again.json
 science exposure-event --payload again.json
 science reservation-head --chain epochs
+
+science reservation-statement --chain epochs --write reservation
+science reservation-statement --chain epochs --check reservation --block-on reserved
 ```
 
 `flagged` lists the assessments already made against the group that stops being
-reserved, and is empty here because there were none. The last command shows the second
-assignment, its one suspended change, and the second look as not considered.
+reserved, and is empty here because there were none. The last `reservation-head` shows the second
+assignment, its one suspended change, and the second look as not considered. The check
+passes: that look falls in an epoch the rule no longer reserves.
 
 ## Reading and discussing research
 

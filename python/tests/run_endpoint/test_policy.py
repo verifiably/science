@@ -11,7 +11,7 @@ def test_every_production_name_has_an_explicit_run_decision():
 
 
 @pytest.mark.parametrize("command,inputs", [
-    ("publish", {}), ("publish-preview", {}), ("verify", {}), ("provider-inspect", {}),
+    ("publish", {}), ("publish-preview", {}), ("reservation-statement", {"chain": "roster", "check": "/scratch"}), ("verify", {}), ("provider-inspect", {}),
     ("adopt", {}), ("unaudited", {}), ("heads", {"resolve": True}),
     ("fetch", {"source": "https://example.invalid/item"}),
     ("derive", {"workflow_environment": "a" * 64}),

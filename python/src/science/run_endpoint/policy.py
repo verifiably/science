@@ -9,7 +9,8 @@ ORDINARY = frozenset({
 })
 CONFINED = frozenset({"dataset", "derive", "exposure-event", "fetch", "reservation-assignment", "run", "spec"})
 REFUSED = frozenset({
-    "acquire-seal", "acquire-import", "adopt", "provider-bind", "provider-inspect", "publish", "publish-preview", "show", "verify",
+    "acquire-seal", "acquire-import", "adopt", "provider-bind", "provider-inspect", "publish", "publish-preview",
+    "reservation-statement", "show", "verify",
 })
 
 

@@ -5,6 +5,7 @@ from collections import Counter
 
 from beliefs.errors import EpochUnknown, PublicationRefused, SelectionRefused
 from beliefs.publish import publication_preview
+from beliefs.view_query import stored_query
 from nodes.core.ids import NodeId
 
 from science.acceptance import acceptance_inputs
@@ -12,7 +13,21 @@ from science.coordination import resolve_project_ref
 from science.publication import parse_destination, publication_detail, require_live_session, selection_detail
 from science.refusal import Refusal, Refused
 from science.report import Heading, KeyVals, Report, Text
+from science.reservation import claimed_events, differing_events
 from science.world_belief import REMEDY
+
+
+def _exposure_claims(ctx, preview) -> KeyVals:
+    """Whether the publication would carry exactly the exposure events its project claims, which is what makes
+    `reservation-statement`'s verdict the same for a reader."""
+    query = stored_query(ctx.coordination().revision(preview.view.revision))
+    unclaimed, unselected = differing_events(query, preview.selected)
+    if not unclaimed and not unselected:
+        return KeyVals("exposure claims", (("status", "equal to the selected events"),
+                                           ("events", str(len(claimed_events(query))))))
+    return KeyVals("exposure claims", (("status", "differ from the selected events"),
+                                       *(("selected and not claimed", ref) for ref in unclaimed),
+                                       *(("claimed and not selected", ref) for ref in unselected)))
 
 
 def handle(ctx, *, target, to) -> Report:
@@ -37,6 +52,7 @@ def handle(ctx, *, target, to) -> Report:
         Heading(f"publish {preview.view} to {destination.locator} at epoch {preview.epoch}"),
         KeyVals("selection", selection),
         KeyVals("closure", (("status", "complete"),)),
+        _exposure_claims(ctx, preview),
     ]
     # Own-only selections, including declared replicas, have no entries: None under v2, () under v3.
     if preview.attributions:
