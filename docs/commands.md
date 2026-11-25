@@ -409,3 +409,10 @@ single resource named `data`. A declared tree can also be held using
 `science fetch --dataset REF --source DIR` with an absolute directory and the
 fetch policy enabled. Runs and derivations stage trees under the declared
 resource name and verify each member against its stored digest.
+
+
+In a governed research run, the actor can call `next`, the bound `run`, `assess`,
+assessment-only `verify`, and `belief`. The run and verification use the
+privately captured workflow. The original recipe supplies the replay targets.
+The bound assessment also determines the key for `belief`; an omitted key must
+resolve to that assessment under the ordinary selection rules.

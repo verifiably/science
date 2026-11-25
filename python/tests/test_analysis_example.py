@@ -124,3 +124,15 @@ def test_phf19_probe_walks_the_gene_stage_contrast(certified_work):
     assert (checked["scope"], checked["verdict"]) == ("clean-environment", "passed")
     key, = ReadContext.open(cfg).claim_view(proposition).beliefs
     assert ReadContext.open(cfg).evaluate(proposition, key=key).reason == "no-directional-outcome"
+
+
+def test_preparation_closes_writer_and_leaves_one_ready_action(certified_work):
+    example = runpy.run_path(str(ASSETS / "demo.py"))
+    world = example["create"](certified_work / "demo")
+    action = example["prepare"](world)
+    cfg = example["load_config"](world.config)
+    assert classify(ReadContext.open(cfg), action["proposition"]) == "ready"
+    assert action["workflow"]["targets"] == list(world.targets)
+    assert action["workflow"]["tree_digest"].startswith("sha256-tree:")
+    found = example["readback"](world.config)
+    assert not found["runs"] and not found["assessments"] and not found["verifications"]

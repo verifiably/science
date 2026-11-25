@@ -14,7 +14,7 @@ from beliefs.session.routes import run_staging_of
 from science.refusal import INVOCATION_ID_RE, Refusal, Refused
 
 _RESOLVE = linux.RESOLVE_BENEATH | linux.RESOLVE_NO_XDEV | linux.RESOLVE_NO_MAGICLINKS | linux.RESOLVE_NO_SYMLINKS
-_FILES = {"dataset": "path", "fetch": "source", "spec": "estimand", "run": "code", "derive": "code"}
+_FILES = {"dataset": "path", "fetch": "source", "spec": "estimand", "run": "code", "derive": "code", "verify": "code"}
 _DIRECTORY = os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
 
 
@@ -176,14 +176,14 @@ class Scratch:
         target = self.capture_root / iid / path.name
         try:
             self._copy(self.fd, relative, target)
-            if command in ("run", "derive"):
+            if command in ("run", "derive", "verify"):
                 entry = _relative(inputs["entrypoint"])
                 if not entry.startswith(path.name + "/"):
                     _outside()
                 with _opened(directory, entry) as fd:
                     if not stat.S_ISREG(os.fstat(fd).st_mode):
                         _outside()
-                for output in inputs["targets"]:
+                for output in (() if command == "verify" else inputs["targets"]):
                     _relative(output)
             elif command == "dataset":
                 for resource in inputs.get("resources", ()):

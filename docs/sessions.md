@@ -222,3 +222,22 @@ freezes which members enter the tree. The service binds the canonical log to
 the write corpus, store, session and invocation, then records the committed
 report before releasing member objects. A retry can identify that report even
 if the process stopped before recording its local receipt.
+
+
+## Governed research runs
+
+A research launch binds the prepared proposition, spec, dataset, command set and workflow
+in `research_action`. The endpoint checks the prepared records and writer ceiling,
+verifies the supervisor's `resume_handoff` against prior closed sessions, and echoes the
+canonical policy digest in its open reply. The inherited `allowance_fd` carries only
+job reservations and settlements. A retry of a recorded reservation cannot dispatch a job.
+A closed original run or assessment in the member history supplies the input for the next
+step. Each new write must match the captured workflow and the preceding member record.
+
+On close, the endpoint cuts ordinary writer admissions, sweeps the identified job and
+drains existing work before taking final tips. A confirmed sweep uses the kernel's
+`run-cancelled` report. An independently observed failure whose terminal registration
+was cut is published in `job-stop.json` before the durable seal. The record names
+`job-stop.v1`, the session, invocation, phase, intent, first seal cause, observation
+and nonzero process return code. A missing terminal act settles as unknown on
+`allowance.v1`. The authority keeps the job charged.

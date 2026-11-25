@@ -70,3 +70,22 @@ def test_launch_and_control_examples_match_open(launch_file):
         assert wire(sample) == (fixtures / "control.v1.jsonl").read_bytes().splitlines(keepends=True)[0]
     finally:
         opened.session.close()
+
+
+def test_governed_launch_uses_frozen_wire_bytes_and_digest(launch_file, autonomy_source):
+    from science.run_endpoint.launch import read_launch
+
+    source, local = launch_file
+    fixtures = autonomy_source / "python/tests/fixtures/allowance"
+    launch = json.loads((fixtures / "research-launch.json").read_bytes())
+    golden = json.loads((fixtures / "research-open.json").read_bytes())
+    for key in ("allowance_fd", "research_action", "resume_handoff", "permit"):
+        local[key] = launch[key]
+    source.write_text(json.dumps(local))
+    parsed = read_launch(source)
+    assert parsed.research.digest == golden["research_action_digest"]
+    assert parsed.research.action == launch["research_action"] and parsed.resume_handoff == {"sessions": []}
+    for key in ("allowance_fd", "resume_handoff", "research_action"):
+        source.write_text(json.dumps({k: v for k, v in local.items() if k != key}))
+        with pytest.raises(Refused):
+            read_launch(source)

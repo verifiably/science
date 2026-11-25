@@ -11,7 +11,7 @@ import stat
 import threading
 import time
 from pathlib import Path
-import tempfile
+import secrets
 
 from beliefs.errors import SealTimeout, ScienceError
 
@@ -28,26 +28,37 @@ from science.run_endpoint.launch import open_run
 from science.run_endpoint.paths import Scratch
 
 
-def persist_seal(run_dir: Path, document: dict) -> None:
-    """Publish the witness only after syncing the complete private file."""
+def _persist(run_dir, stem, document):
     parent = os.open(run_dir, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
     try:
-        with tempfile.NamedTemporaryFile(dir=run_dir, prefix=".seal-", delete=False) as stream:
-            temp = Path(stream.name)
-            try:
+        temp = "." + stem + "-" + secrets.token_hex(12)
+        fd = os.open(temp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600, dir_fd=parent)
+        try:
+            with os.fdopen(fd, "wb") as stream:
                 stream.write(wire(document))
                 stream.flush()
                 os.fsync(stream.fileno())
-            except BaseException:
-                temp.unlink()
-                raise
-        try:
-            os.replace(temp.name, "seal.json", src_dir_fd=parent, dst_dir_fd=parent)
+            os.replace(temp, stem + ".json", src_dir_fd=parent, dst_dir_fd=parent)
             os.fsync(parent)
         finally:
-            temp.unlink(missing_ok=True)
+            try:
+                os.unlink(temp, dir_fd=parent)
+            except FileNotFoundError:
+                pass
     finally:
         os.close(parent)
+
+
+def persist_seal(run_dir: Path, document: dict) -> None:
+    _persist(run_dir, "seal", document)
+
+
+def persist_job_stop(run_dir, session_id, cause, observation):
+    if type(observation.returncode) is not int or observation.returncode == 0:
+        raise ValueError("independent failure requires the observed nonzero child status")
+    _persist(run_dir, "job-stop", {"version": "job-stop.v1", "session_id": session_id,
+             "invocation_id": observation.invocation_id, "phase": observation.phase, "intent": observation.intent,
+             "seal_cause": cause, "observation": "independent-failure", "returncode": observation.returncode})
 
 
 @contextmanager
@@ -236,11 +247,24 @@ def _seal_session(launch, opened, actors, cause, deadline, clock):
     session = opened.session
     sweep = drain.sweep_children if actors.can_execute else lambda: None
     try:
-        tips = session.seal(max(0, deadline - clock()))
+        stop = None
+        if getattr(launch, "research", None) is not None:
+            stop = session.begin_close(cause, max(0, deadline - clock()))
+            def sweep():
+                stop.sweep()
+                if actors.can_execute:
+                    drain.sweep_children()
+        else:
+            tips = session.seal(max(0, deadline - clock()))
         if not drain.drain_workers(actors.finished, sweep, deadline, clock=clock, wait=actors.wait):
             raise SealTimeout("Invocation drain timed out")
         if actors.failed.is_set() or session.current_invocation is not None:
             raise RuntimeError("An invocation failed to close")
+        if stop is not None:
+            tips = session.seal(max(0, deadline - clock()))
+            observation = stop.observation()
+            if observation is not None:
+                persist_job_stop(launch.run_dir, session.session_id, stop.cause, observation)
         basis = seal_basis(opened.basis, launch.config)
         document, report = seal_evidence(cause, tips, basis)
         persist_seal(launch.run_dir, document)
@@ -321,8 +345,8 @@ def _shutdown(launch, opened, actors, control, cause, clock, *, server=None, dis
 
 def serve_run(launch, *, clock=time.monotonic):
     """Run in the endpoint process's main thread; return its exit status."""
-    if os.path.lexists(launch.run_dir / "seal.json"):
-        raise Refused(Refusal("invalid-input", "This run directory already contains a seal"))
+    if any(os.path.lexists(launch.run_dir / name) for name in ("seal.json", "job-stop.json")):
+        raise Refused(Refusal("invalid-input", "This run directory already contains closing evidence"))
     with ExitStack() as resources:
         wake, term = resources.enter_context(_term_wakeup())
         scratch = resources.enter_context(Scratch(launch.scratch_dir, launch.config.operations_root, threading.Event()))
@@ -335,6 +359,14 @@ def serve_run(launch, *, clock=time.monotonic):
         handlers = resolve_handlers(declarations)
         ctx = ReadContext.open_detached(launch.config)
         can_execute = drain.can_control_jobs()
+        research = launch.research
+        jobs = None
+        if research is not None:
+            from science.run_endpoint.allowance import JobAdmission
+            peer = resources.enter_context(socket.socket(fileno=launch.allowance_fd))
+            jobs = JobAdmission(peer)
+            research.check_preparation(ctx)
+            research.restore(launch, ctx)
         opened = open_run(launch)
         expires = clock() + launch.lease_seconds
         try:
@@ -342,7 +374,7 @@ def serve_run(launch, *, clock=time.monotonic):
                              {d.name for d in declarations if d.write_class.kind != "read-only"})
             dispatcher = Dispatcher(declarations, handlers, ctx, session=opened.session,
                                     selection=launch.config.default_project, run_inputs=scratch,
-                                    on_invocation_close=actors.complete)
+                                    on_invocation_close=actors.complete, research=research, jobs=jobs)
             control.queue(opened.open_report())
         except (OSError, EOFError):
             cause = "eof"

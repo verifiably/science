@@ -94,6 +94,9 @@ class RunLaunch:
     store_root: Path | None
     lease_seconds: float
     seal_timeout_seconds: float
+    research: object = None
+    allowance_fd: int | None = None
+    resume_handoff: dict | None = None
 
 
 @dataclass(frozen=True)
@@ -101,11 +104,13 @@ class OpenedRun:
     session: object
     basis: BasisInventory
 
+    research_digest: str | None = None
+
     def open_report(self):
         session = self.session
         return {"version": "control.v1", "type": "open", "session_id": session.session_id,
                 "ledger_path": str(ledger_path(session.operations_root, session.session_id)),
-                "basis_open": self.basis.digest}
+                "basis_open": self.basis.digest, **({"research_action_digest": self.research_digest} if self.research_digest else {})}
 
 
 def read_launch(source: Path) -> RunLaunch:
@@ -117,7 +122,10 @@ def read_launch(source: Path) -> RunLaunch:
 
 def _read_launch(source):
     doc = json.loads(_private_bytes(source, 1 << 20), object_pairs_hook=_closed)
-    if (type(doc) is not dict or not _REQUIRED <= doc.keys() or doc.keys() - _REQUIRED - {"lease_seconds", "seal_timeout_seconds"}
+    governed = {"research_action", "allowance_fd", "resume_handoff"}
+    has_research = type(doc) is dict and bool(governed.intersection(doc))
+    if (type(doc) is not dict or not _REQUIRED <= doc.keys() or doc.keys() - _REQUIRED - {"lease_seconds", "seal_timeout_seconds"} - governed
+            or (has_research and not governed <= doc.keys())
             or doc["version"] != "launch.v1"):
         _bad("Invalid launch.v1 fields or version")
     config_path, run, scratch, actor, control, token_path = (_path(doc[k]) for k in _PATHS)
@@ -158,8 +166,18 @@ def _read_launch(source):
     actual = {(r["role"], r["id"], _path(r["root"])) for r in rows}
     if len(rows) != len(actual) or actual != expected:
         _bad("Written chains do not match this configuration and permit")
+    research = None
+    if has_research:
+        from science.run_endpoint.research import ResearchAction
+        research = ResearchAction(doc["research_action"], permit)
+        if type(doc["allowance_fd"]) is not int or doc["allowance_fd"] < 3:
+            _bad("Invalid allowance descriptor")
+        handoff = doc["resume_handoff"]
+        if type(handoff) is not dict or set(handoff) != {"sessions"} or type(handoff["sessions"]) is not list:
+            _bad("Invalid resume handoff")
     return RunLaunch(cfg, run, scratch, actor, control, token, permit, writable,
-                     _limit(doc, "lease_seconds", 60, 10), _limit(doc, "seal_timeout_seconds", 30, 0))
+                     _limit(doc, "lease_seconds", 60, 10), _limit(doc, "seal_timeout_seconds", 30, 0),
+                     research, doc.get("allowance_fd"), doc.get("resume_handoff"))
 
 
 def open_run(launch: RunLaunch) -> OpenedRun:
@@ -173,4 +191,4 @@ def open_run(launch: RunLaunch) -> OpenedRun:
         raise Refused(Refusal("corpus-claimed", str(error))) from error
     except ScienceError as error:
         raise Refused(Refusal("kernel-refused", str(error))) from error
-    return OpenedRun(session, basis)
+    return OpenedRun(session, basis, launch.research.digest if launch.research else None)

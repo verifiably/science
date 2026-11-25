@@ -543,3 +543,46 @@ def test_worker_closing_after_the_deadline_leaves_no_session_close(tmp_path, mon
     assert control.queue.call_args.args[0]["type"] == "seal-timeout"
     session.close.assert_not_called()
     assert not (tmp_path / "seal.json").exists()
+
+
+def test_job_stop_observation_published_privately_before_seal(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from science.run_endpoint.service import persist_job_stop
+    calls = []
+    fsync = os.fsync
+    def sync(fd):
+        calls.append((tmp_path / "job-stop.json").exists())
+        fsync(fd)
+    monkeypatch.setattr(os, "fsync", sync)
+    observation = SimpleNamespace(invocation_id="A", phase="original", intent="a" * 64, returncode=1)
+    persist_job_stop(tmp_path, "b" * 32, "lease", observation)
+    record = tmp_path / "job-stop.json"
+    assert calls == [False, True]
+    assert record.stat().st_mode & 0o777 == 0o600
+    assert json.loads(record.read_bytes()) == {"version": "job-stop.v1", "session_id": "b" * 32,
+        "invocation_id": "A", "phase": "original", "intent": "a" * 64, "seal_cause": "lease",
+        "observation": "independent-failure", "returncode": 1}
+    assert not (tmp_path / "seal.json").exists()
+
+
+@pytest.mark.parametrize("code", [0, True, False, "1"])
+def test_uncertified_failure_has_no_job_stop_record(tmp_path, code):
+    from types import SimpleNamespace
+    from science.run_endpoint.service import persist_job_stop
+    with pytest.raises(ValueError):
+        persist_job_stop(tmp_path, "b"*32, "stop", SimpleNamespace(returncode=code))
+    assert not list(tmp_path.iterdir())
+
+
+def test_serve_refuses_a_dangling_job_stop_before_opening(launch_file):
+    from science.refusal import Refused
+    from science.run_endpoint.launch import read_launch
+    from science.run_endpoint.service import serve_run
+
+    source, _ = launch_file
+    launch = read_launch(source)
+    (launch.run_dir / "job-stop.json").symlink_to(launch.run_dir / "missing")
+    with pytest.raises(Refused) as caught:
+        serve_run(launch)
+    assert caught.value.refusal.code == "invalid-input"
+    assert not launch.socket.exists()

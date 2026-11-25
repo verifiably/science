@@ -8,6 +8,7 @@ from pathlib import Path
 from beliefs.boundary import HeldTree
 
 from beliefs import stored
+from beliefs.session.routes import run_staging_of
 from beliefs.adapter import WorkflowDefinition
 from beliefs.boundary import RunMinted, RunRefused
 from beliefs.confinement import host_prerequisites
@@ -99,7 +100,7 @@ def handle(
                 spec=spec,
                 observer=writer.actor,
                 started_at=now(),
-                scratch_base=ctx.config.operations_root / "scratch" / writer.invocation_id,
+                scratch_base=None if run_staging_of(writer.operation_port()) is not None else ctx.config.operations_root / "scratch" / writer.invocation_id,
                 cores=cores or 1,
                 **prepared,
                 **extra_kwargs,
@@ -187,7 +188,7 @@ def handle(
             observer=writer.actor,
             started_at=now(),
             host_realization=socket.gethostname(),
-            scratch_base=ctx.config.operations_root / "scratch" / writer.invocation_id,
+            scratch_base=None if run_staging_of(writer.operation_port()) is not None else ctx.config.operations_root / "scratch" / writer.invocation_id,
             cores=cores or 1,
             **extra_kwargs,
         )

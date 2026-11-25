@@ -42,7 +42,8 @@ def authenticate(stream, namespace, expected, presented):
 
 def answer(dispatcher, request, *, can_execute):
     def admit(command, inputs, invocation_id, cursor):
-        if command in ("run", "derive") and not can_execute:
+        executable = command in ("run", "derive") or (command == "verify" and getattr(dispatcher, "_research", None) is not None)
+        if executable and not can_execute:
             raise Refused(Refusal("confinement-unavailable", "Run child containment is unavailable"), invocation_id)
     return answer_request(dispatcher, request, admit=admit)
 

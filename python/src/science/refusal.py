@@ -17,6 +17,7 @@ from beliefs.session import KernelRefusalValue
 
 CODES = frozenset({
     "set-busy", "retrieval-busy",
+    "allowance-scope", "allowance-exhausted", "allowance-expired", "allowance-closed", "allowance-unavailable",
     "path-confinement-unavailable", "path-outside-run", "capture-exists",
     "bad-peer", "bad-token", "handle-incomplete", "handle-mode", "confinement-unavailable", "run-sealed",
     "corpus-claimed", "tip-unknown", "read-unavailable", "chain-unknown",

@@ -10,8 +10,17 @@ from science.report import Heading, KeyVals, Report
 
 
 def handle(ctx, *, proposition, key=None) -> Report:
+    return belief_report(ctx, proposition=proposition, key=key)
+
+
+def belief_report(ctx, *, proposition, key=None, bound_key=None) -> Report:
     ctx.mount_holding(proposition)  # refuses an absent proposition or differing copies
+    from science.refusal import Refusal, Refused
+    if bound_key is not None and key is not None and key != bound_key:
+        raise Refused(Refusal("allowance-scope", "Explicit key differs from the bound assessment"))
     selected, answer = select_answer(ctx.claim_view(proposition), key)
+    if bound_key is not None and selected != bound_key:
+        raise Refused(Refusal("allowance-scope", "Selected key differs from the bound assessment"))
     if isinstance(answer, Belief):
         pairs = (("kind", "Belief"), ("value", str(answer.value)),
                  ("belief_input_digest", answer.belief_input_digest),

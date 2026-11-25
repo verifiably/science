@@ -272,7 +272,7 @@ def _phf19_measurement(pins, held, mapping, parser, estimator):
     return assay, estimate, grouping, estimand
 
 
-def walk(world: World):
+def _commands(world):
     cfg = load_config(world.config)
     declarations = production_tree()
     session = open_session(cfg)
@@ -289,11 +289,40 @@ def walk(world: World):
     def record(text, kind):
         return next(word for word in text.split() if word.startswith(kind + ":"))
 
+    return cfg, session, context, invoke, record
+
+
+def _prepare_inputs(world, invoke, record):
+    inputs = world.authoring_inputs()
+    dataset = record(invoke("dataset", inputs["dataset"]), "dataset")
+    proposition = record(invoke("claim", inputs["claim"]), "proposition")
+    spec = record(invoke("spec", {"target": proposition, "dataset": dataset, **inputs["spec"]}), "analysis-spec")
+    return inputs, dataset, proposition, spec
+
+
+def prepare(world):
+    from importlib import import_module
+    from science.config import corpus_id_at
+    from science.run_endpoint.research import workflow_digest
+
+    cfg, session, _, invoke, record = _commands(world)
     try:
-        inputs = world.authoring_inputs()
-        dataset = record(invoke("dataset", inputs["dataset"]), "dataset")
-        proposition = record(invoke("claim", inputs["claim"]), "proposition")
-        spec = record(invoke("spec", {"target": proposition, "dataset": dataset, **inputs["spec"]}), "analysis-spec")
+        _, dataset, proposition, spec = _prepare_inputs(world, invoke, record)
+    finally:
+        session.close()
+    report = import_module("science.commands.next").handle(ReadContext.open_detached(cfg))
+    rows = next(block.pairs for block in report if getattr(block, "title", "") == "propositions")
+    if [key for key, value in rows if value.startswith("ready: ")] != [proposition]:
+        raise ValueError("Preparation did not leave exactly the bound proposition ready")
+    return {"world_id": cfg.world.world_id, "corpus_id": corpus_id_at(cfg.write_root), "dataset": dataset,
+            "proposition": proposition, "spec": spec, "workflow": {"tree_digest": workflow_digest(world.code),
+            "entrypoint": world.entrypoint, "targets": list(world.targets), "cores": 1}}
+
+
+def walk(world: World):
+    cfg, session, context, invoke, record = _commands(world)
+    try:
+        inputs, dataset, proposition, spec = _prepare_inputs(world, invoke, record)
         run = record(invoke("run", {"spec": spec, "dataset": dataset, **inputs["run"]}), "run")
         assessment = record(invoke("assess", {"run": run}), "assessment")
         invoke("verify", {"assessment": assessment, **inputs["verify"]})
@@ -366,7 +395,7 @@ if __name__ == "__main__":
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("create", help="build a fresh world in a new directory").add_argument("root", type=Path)
     commands.add_parser("walk", help="build a fresh world and run the command path").add_argument("root", type=Path)
-    for name in ("create-phf19", "walk-phf19"):
+    for name in ("create-phf19", "walk-phf19", "prepare-phf19"):
         command = commands.add_parser(name, help="build a PHF19 probe on pinned GSE179929 inputs")
         command.add_argument("root", type=Path)
         command.add_argument("--predecessor", type=Path, required=True)
@@ -378,7 +407,7 @@ if __name__ == "__main__":
         create(arguments.root)
     elif arguments.command == "walk":
         walk(create(arguments.root))
-    elif arguments.command in ("create-phf19", "walk-phf19"):
+    elif arguments.command in ("create-phf19", "walk-phf19", "prepare-phf19"):
         declaration = json.loads(_checked_bytes(
             _kernel_asset_path() / "phf19-inputs.json", PHF19_ASSETS["phf19-inputs.json"], "PHF19 declaration"
         ))
@@ -388,6 +417,8 @@ if __name__ == "__main__":
             world = create_phf19(arguments.root, paths)
             if arguments.command == "walk-phf19":
                 walk(world)
+            elif arguments.command == "prepare-phf19":
+                print("ACTION", json.dumps(prepare(world), sort_keys=True))
         except (OSError, ValueError, Refused) as error:
             parser.exit(3, f"PHF19 probe refused: {error}\n")
     else:

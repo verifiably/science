@@ -68,13 +68,15 @@ class SessionPort:
 class Dispatcher:
     def __init__(
         self, declarations, handlers: Mapping[str, Callable], read_context, session=None, selection=None, *,
-        run_inputs=None, on_invocation_close=None
+        run_inputs=None, on_invocation_close=None, research=None, jobs=None
     ) -> None:
         self._decls = {decl.name: decl for decl in declarations}
         self._handlers = dict(handlers)
         self._ctx = read_context
         self._session = session
         self._run_inputs = run_inputs
+        self._research = research
+        self._jobs = jobs
         self._on_invocation_close = on_invocation_close
         self._selection = selection
         self._lock = threading.Lock()  # serializes write-class steps 4-7
@@ -133,7 +135,10 @@ class Dispatcher:
             if self._run_inputs is not None:
                 from science.run_endpoint.policy import admit
                 self._run_inputs.check()
-                admit(command, inputs)
+                if self._research is None:
+                    admit(command, inputs)
+                else:
+                    self._research.admit(command, inputs)
             if cursor is not None:
                 return self._continue(command, inputs, decode(cursor), iid, project)
             assert decl is not None
@@ -147,7 +152,7 @@ class Dispatcher:
                 if decl.write_class.kind == "sharing":
                     return self._invoke_sharing(decl, canonical, iid)
                 return self._invoke_write(decl, canonical, iid)
-            report = self._handlers[decl.name](self._read_context(decl, project), **canonical)
+            report = self._read_report(decl, project, canonical)
             return Outcome(self._render(decl, canonical, report, (0, 0)), iid)
         except SessionSealed:
             raise Refused(Refusal("run-sealed", "The run session was sealed"), iid) from None
@@ -198,15 +203,25 @@ class Dispatcher:
         canonical = canonicalize(decl, inputs)
         if input_digest(canonical) != cursor.input_digest:
             raise Refused(Refusal("input-mismatch", "cursor was issued for different inputs"))
-        report = self._handlers[decl.name](self._read_context(decl, project), **canonical)
+        report = self._read_report(decl, project, canonical)
         if report_digest(report) != cursor.report_digest:
             raise Refused(Refusal("stale-cursor", "the world moved; re-run the command"))
         self._check_position(report, cursor.block, cursor.offset)
         return Outcome(self._render(decl, canonical, report, (cursor.block, cursor.offset)), iid)
 
+    def _read_report(self, decl, project, canonical):
+        ctx = self._read_context(decl, project)
+        if self._research is not None and decl.name == "belief":
+            from science.commands.belief import belief_report
+            return belief_report(ctx, **canonical, bound_key=self._research.assessment_key(ctx))
+        return self._handlers[decl.name](ctx, **canonical)
+
     def _required(self, decl: Declaration):
         from beliefs.permit import RequiredCapabilities
 
+        if self._research is not None and decl.name == "verify":
+            return RequiredCapabilities.for_kinds({"act-report", "run", "verification"},
+                                                 {"act-report": "run", "run": "run"})
         write_class = decl.write_class
         match write_class.kind:
             case "read-only":
@@ -265,12 +280,20 @@ class Dispatcher:
                     node = self._context().cited(canonical["dataset"]).view.get(canonical["dataset"])
                     if any((r.digest or "").startswith("sha256-tree:") for r in stored.dataset_declaration(node).resources):
                         raise Refused(Refusal("permit-exceeded", "Fetching a tree requires an attended session"))
+                if self._research is not None:
+                    self._research.fresh(decl.name)
                 prepared = (self._run_inputs.prepare(decl.name, iid, canonical)
                             if self._run_inputs is not None else nullcontext(canonical))
                 with prepared as inputs:
-                    if self._run_inputs is not None and decl.name in ("run", "derive"):
+                    if self._run_inputs is not None and decl.name in ("run", "derive", "verify"):
                         self._run_inputs.retain_staging(writer)
-                    report = self._handlers[decl.name](self._context(), writer, **inputs)
+                    ctx = self._context()
+                    execution = nullcontext()
+                    if self._research is not None and decl.name in ("run", "verify"):
+                        self._research.prepare_job(decl.name, inputs, ctx)
+                        execution = self._jobs.execution(self._session, iid, "original" if decl.name == "run" else "replay")
+                    with execution:
+                        report = self._handlers[decl.name](ctx, writer, **inputs)
             except SessionSealed as caught:
                 self._close_sealed(iid, caught)
             except (*KERNEL_REFUSALS, Refused) as caught:
@@ -301,6 +324,8 @@ class Dispatcher:
             )
             try:
                 audit_write_report(report, minted)
+                if self._research is not None:
+                    self._research.record(decl.name, sorted(minted), self._context())
             finally:
                 # Close FIRST in every case: the ledger records act truth, and
                 # the acts committed whether or not the report survives audit.

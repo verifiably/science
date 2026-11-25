@@ -19,3 +19,9 @@ holds; they are examples, not substitutes for a program's own scientific facts.
 The workflow writes a canned supported verdict. The shipped outcome-file rule
 produces no numeric estimates, uncertainty or curves; the estimand reference
 `0.5` does not become an observed estimate.
+
+
+`prepare-phf19` accepts the same pinned inputs as `walk-phf19`. It closes the
+preparation writer, checks the ready row and prints the operator's action target.
+The prepared fixture leaves the original run, assessment and verification for the
+actor. Offline tests use disposable synthetic inputs.
