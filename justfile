@@ -14,7 +14,7 @@ tt := "python3 tools/tt"
 
 # The commands, each written once. Recipes and hooks all run these, so a hook can
 # never drift from the gate it is supposed to be. Avoid single quotes inside them.
-# The package lives under python/; `uv run` syncs the dev group (pytest, pytest-testmon,
+# The package lives under python/; `uv run --frozen` syncs the dev group (pytest, pytest-testmon,
 # pytest-xdist). Each test builds its own certified world, and atoms certifies the volume
 # on every open by spawning children, so tests wait on I/O and subprocesses rather than
 # CPU: 8 workers with work-stealing took the suite from 626 s to 79 s on 2026-09-23,
@@ -24,9 +24,9 @@ tt := "python3 tools/tt"
 # SCIENCE_TEST_ROOT: conftest resolves the certified test root through the main checkout.
 xdist := "-n auto --dist worksteal"
 # Requires pytest-testmon >=2.3.0; run one --testmon process per .testmondata at a time.
-fast_cmd := "cd python && uv run pytest --testmon " + xdist
-test_cmd := "cd python && uv run pytest " + xdist
-one_cmd := "cd python && uv run pytest"
+fast_cmd := "cd python && uv run --frozen pytest --testmon " + xdist
+test_cmd := "cd python && uv run --frozen pytest " + xdist
+one_cmd := "cd python && uv run --frozen pytest"
 # No formatter, linter, or typechecker is configured for this repository yet, so the
 # seconds-long hygiene gate is the guide checks (ops-check, ops-docs) and the task-record check.
 check_hygiene_cmd := "python3 tools/ops-check && python3 tools/ops-docs check && tasks check"

@@ -100,13 +100,13 @@ class FrontDoor:
             'check_hygiene_cmd := "python3 tools/ops-check && python3 tools/ops-docs check && tasks check"': (
                 f'check_hygiene_cmd := "{py} {mk} hygiene"'
             ),
-            'fast_cmd := "cd python && uv run pytest --testmon " + xdist': (
+            'fast_cmd := "cd python && uv run --frozen pytest --testmon " + xdist': (
                 f'fast_cmd := "{py} {mk} fast"'
             ),
-            'test_cmd := "cd python && uv run pytest " + xdist': (
+            'test_cmd := "cd python && uv run --frozen pytest " + xdist': (
                 f'test_cmd := "{py} {mk} suite"'
             ),
-            'one_cmd := "cd python && uv run pytest"': (
+            'one_cmd := "cd python && uv run --frozen pytest"': (
                 f'one_cmd := "{py} {mk} one"'
             ),
             'ci_py_test_cmd := "cd python && uv run --frozen pytest --junitxml=\\"$SCIENCE_CI_EVIDENCE_DIR/pytest.xml\\" " + xdist': (
@@ -644,6 +644,126 @@ def test_live_repository_policy_and_ci_suite_refs(front_door: FrontDoor) -> None
         check=True,
     )
     assert remote.stdout == "origin"
+
+
+def test_python_test_recipes_invoke_uv_run_frozen(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    (repo / "python").mkdir(parents=True)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    home_dir = tmp_path / "home"
+    home_dir.mkdir()
+    evidence_dir = tmp_path / "evidence"
+    evidence_dir.mkdir()
+    tt_log = tmp_path / "timings.jsonl"
+    uv_log = tmp_path / "uv_calls.jsonl"
+
+    budget = bin_dir / "host-budget"
+    budget.write_text(
+        "#!/bin/sh\n"
+        '[ "$1" = run ] && [ "$2" = -- ] || exit 91\n'
+        "shift 2\n"
+        'exec "$@"\n',
+        encoding="utf-8",
+    )
+    budget.chmod(0o755)
+
+    uv_shim = bin_dir / "uv"
+    uv_shim.write_text(
+        f"#!{sys.executable}\n"
+        "import json, os, pathlib, sys\n"
+        "log = pathlib.Path(os.environ['UV_CALL_LOG'])\n"
+        "with log.open('a', encoding='utf-8') as fh:\n"
+        "    fh.write(json.dumps({'cwd': str(pathlib.Path.cwd().resolve()), 'argv': sys.argv[1:]}) + '\\n')\n"
+        "print('1 passed in 0.01s')\n",
+        encoding="utf-8",
+    )
+    uv_shim.chmod(0o755)
+
+    for rel in ("justfile", "tools/tt"):
+        dst = repo / rel
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(REPO / rel, dst)
+
+    ops_check = repo / "tools/ops-check"
+    ops_check.write_text("#!/usr/bin/env python3\nimport sys\nsys.exit(0)\n", encoding="utf-8")
+    ops_check.chmod(0o755)
+
+    env = {
+        "PATH": f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '/usr/bin:/bin')}",
+        "HOME": str(home_dir),
+        "USER": "tester",
+        "GIT_CONFIG_GLOBAL": "/dev/null",
+        "GIT_CONFIG_NOSYSTEM": "1",
+        "GIT_AUTHOR_NAME": "Test",
+        "GIT_AUTHOR_EMAIL": "test@example.invalid",
+        "GIT_COMMITTER_NAME": "Test",
+        "GIT_COMMITTER_EMAIL": "test@example.invalid",
+        "TT_LOG": str(tt_log),
+        "TT_FORCE": "1",
+        "SCIENCE_CI_EVIDENCE_DIR": str(evidence_dir),
+        "UV_CALL_LOG": str(uv_log),
+    }
+
+    subprocess.run(["git", "init", "-q", "-b", "main"], cwd=repo, env=env, check=True)
+    toplevel = Path(
+        subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=repo,
+            env=env,
+            text=True,
+            capture_output=True,
+            check=True,
+        ).stdout.strip()
+    ).resolve()
+    git_dir = Path(
+        subprocess.run(
+            ["git", "rev-parse", "--absolute-git-dir"],
+            cwd=repo,
+            env=env,
+            text=True,
+            capture_output=True,
+            check=True,
+        ).stdout.strip()
+    ).resolve()
+    assert toplevel == repo.resolve()
+    assert git_dir.is_relative_to(repo.resolve())
+    subprocess.run(["git", "add", "."], cwd=repo, env=env, check=True)
+    subprocess.run(["git", "commit", "-q", "-m", "init"], cwd=repo, env=env, check=True)
+
+    cases = [
+        (["test-one", "tests/test_sample.py"], ["run", "--frozen", "pytest", "tests/test_sample.py"]),
+        (["test-fast"], ["run", "--frozen", "pytest", "--testmon", "-n", "auto", "--dist", "worksteal"]),
+        (["test"], ["run", "--frozen", "pytest", "-n", "auto", "--dist", "worksteal"]),
+        (
+            ["ci-python"],
+            [
+                "run",
+                "--frozen",
+                "pytest",
+                f"--junitxml={evidence_dir}/pytest.xml",
+                "-n",
+                "auto",
+                "--dist",
+                "worksteal",
+            ],
+        ),
+    ]
+    expected_cwd = str((repo / "python").resolve())
+    for just_args, expected_uv_argv in cases:
+        uv_log.unlink(missing_ok=True)
+        res = subprocess.run(
+            ["just", *just_args],
+            cwd=repo,
+            env=env,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        assert res.returncode == 0, res.stderr
+        calls = [json.loads(line) for line in uv_log.read_text(encoding="utf-8").splitlines()]
+        assert calls == [{"cwd": expected_cwd, "argv": expected_uv_argv}]
+
 
 
 
