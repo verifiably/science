@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import re
 import stat
+from threading import Lock
 from uuid import UUID
 
 from beliefs import stored
@@ -72,6 +73,22 @@ class ResearchAction:
         self.digest = hashlib.sha256(json.dumps(action, sort_keys=True, separators=(",", ":"),
                                                ensure_ascii=False).encode()).hexdigest()
         self.records = {}
+        self.selection = None
+        self._selection_lock = Lock()
+
+    def queue(self, ctx):
+        from science.commands.next import classify
+        from science.report import Heading, KeyVals
+        with self._selection_lock:
+            require(self.selection is None and not self.records, "The member already selected its target")
+            self.selection = classify(ctx, self.action["proposition"])
+            return (Heading("Next"), KeyVals("propositions", ((self.action["proposition"], self.selection),)))
+
+    def require_selected(self, ctx):
+        from science.commands.next import classify
+        with self._selection_lock:
+            require(self.selection == "ready" and classify(ctx, self.action["proposition"]) == "ready",
+                    "The original requires the selected ready proposition")
 
     def check_preparation(self, ctx):
         a = self.action
@@ -97,6 +114,8 @@ class ResearchAction:
                     "Belief requires the assessed proposition")
 
     def prepare_job(self, command, inputs, ctx):
+        if command == "run":
+            self.require_selected(ctx)
         workflow = self.action["workflow"]
         require(inputs["entrypoint"] == workflow["entrypoint"] and inputs.get("cores", 1) == workflow["cores"],
                 "Workflow entrypoint or cores differ")

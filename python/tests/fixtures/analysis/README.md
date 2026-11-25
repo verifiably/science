@@ -25,3 +25,5 @@ produces no numeric estimates, uncertainty or curves; the estimand reference
 preparation writer, checks the ready row and prints the operator's action target.
 The prepared fixture leaves the original run, assessment and verification for the
 actor. Offline tests use disposable synthetic inputs.
+
+The governed fixture also supports `readback CONFIG --proposition ID --assessment ID --verification ID`. It checks the three linked records in a detached read context and emits a JSON result with the assessment outcome, replay verdict and keyed belief.

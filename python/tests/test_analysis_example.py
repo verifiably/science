@@ -36,6 +36,9 @@ def test_documented_example_reaches_a_verified_keyed_belief(certified_work):
     (spec,) = found["specs"]
     (assessment,) = found["assessments"]
     (checked,) = found["verifications"]
+    evidence = example["member_readback"](cfg, proposition, assessment["id"], checked["id"])
+    assert evidence["belief"]["key"] == key
+    assert evidence["outcome"] == "supported" and evidence["verdict"] == "passed"
     assert claim["id"] == proposition and spec["target"] == proposition
     assert spec["id"] == "analysis-spec:" + spec["identity"] and '"form":"contrast"' in spec["estimand"]
     assert len(found["runs"]) == 2

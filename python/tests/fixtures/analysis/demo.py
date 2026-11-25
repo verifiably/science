@@ -370,6 +370,27 @@ def readback(config: Path) -> dict:
     return result
 
 
+def member_readback(config, proposition, assessment, verification):
+    from science.commands.belief import belief_report
+    from science.config import corpus_id_at
+    from science.refusal import Refusal
+    ctx = ReadContext.open_detached(config)
+    view = ctx.write_view()
+    if not all(view.holds(address) for address in (proposition, assessment, verification)):
+        raise Refused(Refusal("allowance-scope", "Readback records are outside the configured write corpus"))
+    value = stored.assessment_value(view.get(assessment), profile=config.profile)
+    checked = stored.verification_value(view.get(verification))
+    if value.proposition != proposition or stored.typed_ref("assessment", checked.assessment) != assessment:
+        raise Refused(Refusal("allowance-scope", "Readback assessment and verification have different targets"))
+    key = value.key()
+    blocks = belief_report(ctx, proposition=proposition, key=key, bound_key=key)
+    _, answer, *_ = blocks
+    return {"version": "research-readback.v1", "world_id": config.world.world_id, "corpus_id": corpus_id_at(config.write_root),
+            "proposition": proposition, "assessment": assessment, "verification": verification,
+            "run": stored.typed_ref("run", value.run), "spec": stored.typed_ref("analysis-spec", value.spec),
+            "outcome": value.outcome, "scope": checked.scope, "verdict": checked.verdict, "belief": dict(answer.pairs)}
+
+
 def render(found: dict) -> str:
     counts = ", ".join(f"{kind} {count}" for kind, count in found["records"]["by_kind"].items())
     lines = [f"records {found['records']['total']}: {counts}"]
@@ -401,7 +422,10 @@ if __name__ == "__main__":
         command.add_argument("--predecessor", type=Path, required=True)
         command.add_argument("--hgnc", type=Path, required=True)
         command.add_argument("--ensembl", type=Path, required=True)
-    commands.add_parser("readback", help="print a world's records").add_argument("config", type=Path)
+    inspection = commands.add_parser("readback", help="print a world's records")
+    inspection.add_argument("config", type=Path)
+    for name in ("proposition", "assessment", "verification"):
+        inspection.add_argument("--" + name)
     arguments = parser.parse_args()
     if arguments.command == "create":
         create(arguments.root)
@@ -423,7 +447,13 @@ if __name__ == "__main__":
             parser.exit(3, f"PHF19 probe refused: {error}\n")
     else:
         try:
-            print(render(readback(arguments.config)))
+            fields = (arguments.proposition, arguments.assessment, arguments.verification)
+            if all(fields):
+                print(json.dumps(member_readback(load_config(arguments.config), *fields), allow_nan=False))
+            elif any(fields):
+                parser.error("bound readback requires proposition, assessment and verification")
+            else:
+                print(render(readback(arguments.config)))
         except Refused as refused:
             print(f"readback refused: {refused}", file=sys.stderr)
             sys.exit(3)

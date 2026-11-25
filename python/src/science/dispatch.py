@@ -210,6 +210,10 @@ class Dispatcher:
         return Outcome(self._render(decl, canonical, report, (cursor.block, cursor.offset)), iid)
 
     def _read_report(self, decl, project, canonical):
+        if self._research is not None and decl.name == "next":
+            if project is not None:
+                raise Refused(Refusal("allowance-scope", "Research selection is bound to its proposition"))
+            return self._research.queue(self._context())
         ctx = self._read_context(decl, project)
         if self._research is not None and decl.name == "belief":
             from science.commands.belief import belief_report

@@ -241,3 +241,5 @@ was cut is published in `job-stop.json` before the durable seal. The record name
 `job-stop.v1`, the session, invocation, phase, intent, first seal cause, observation
 and nonzero process return code. A missing terminal act settles as unknown on
 `allowance.v1`. The authority keeps the job charged.
+
+For a research member, `next` classifies the bound proposition once. The original job requires that it was selected ready and is still ready at dispatch. The endpoint publishes the session, proposition and queue class in private `selection.json` during drain before publishing the seal.

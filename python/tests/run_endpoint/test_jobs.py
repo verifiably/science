@@ -129,6 +129,7 @@ def test_prepared_action_uses_two_slots_and_keyed_read(certified_work, autonomy_
             actor = Dispatcher(decls, resolve_handlers(decls), ctx, session=session, run_inputs=paths,
                                research=action, jobs=JobAdmission(peer))
             original = world.authoring_inputs()["run"] | {"code": str(code), "spec": target["spec"], "dataset": target["dataset"]}
+            assert "ready" in actor.invoke("next", {}).text
             actor.invoke("run", original, invocation_id="A")
             with pytest.raises(Refused, match="already completed"):
                 actor.invoke("run", original, invocation_id="duplicate")
@@ -144,3 +145,26 @@ def test_prepared_action_uses_two_slots_and_keyed_read(certified_work, autonomy_
     report = pool.snapshot(name)
     assert report["remaining"]["job_starts"] == 0
     assert [row["settlement"]["status"] for row in report["reservations"]] == ["completed", "completed"]
+
+
+def test_member_queue_uses_bound_proposition_and_checks_readiness_before_original(certified_work, autonomy_source):
+    import json
+    import runpy
+    from pathlib import Path
+    from science.config import load_config
+    from science.refusal import Refused
+    from science.run_endpoint.research import ResearchAction
+    gold = json.loads((autonomy_source / "python/tests/fixtures/allowance/research-launch.json").read_bytes())
+    example = runpy.run_path(str(Path(__file__).parents[1] / "fixtures/analysis/demo.py"))
+    world = example["create"](certified_work / "prepared")
+    target = example["prepare"](world)
+    ctx = ReadContext.open_detached(load_config(world.config))
+    action = ResearchAction(gold["research_action"] | {k: target[k] for k in ("workflow","spec","dataset","proposition")},
+                            WritePermit.from_json(gold["permit"]))
+    with pytest.raises(Refused, match="ready"):
+        action.require_selected(ctx)
+    report = action.queue(ctx)
+    assert report[-1].pairs == ((target["proposition"], "ready"),)
+    action.require_selected(ctx)
+    with pytest.raises(Refused, match="already"):
+        action.queue(ctx)
