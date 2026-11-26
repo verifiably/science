@@ -17,8 +17,9 @@ Code follows `tools/code-organization.md`. Every member uses language roots (pyt
 git config core.hooksPath .githooks
 ```
 
-The hooks in `.githooks/` run the `just` recipes below. `uv run` under `python/` creates
-the environment on first use, with `beliefs` as an editable path dependency.
+The hooks in `.githooks/` run the `just` recipes below. `uv run --frozen` under `python/`
+creates the environment from `uv.lock` on first use, with `beliefs` as an editable path
+dependency.
 
 ## Gates
 
