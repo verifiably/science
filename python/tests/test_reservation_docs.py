@@ -73,6 +73,7 @@ def test_the_guides_walk_runs_as_printed(certified_work, short_tmp, tmp_path):
     events = [n for n in view.iter_stored() if n.kind == "exposure-event"]
     head = assignment_head(view, "epochs")
     assert len(events) == 3 and head.predecessor is not None
+    assert all(stored.exposure_event_value(view.get(ref)).observed_at < head.assigned_at for ref in head.events)
     (change,) = assignment_changes_of(view, head.id)
     assert change.suspended and head.flagged == ()
     (unconsidered,) = {n.id for n in events} - set(head.events)

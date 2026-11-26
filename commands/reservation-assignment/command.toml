@@ -7,7 +7,7 @@ output_budget = 4096
 [inputs.payload]
 type = "string"
 required = true
-doc = "UTF-8 schema_version 1 JSON path: title and the reservation-assignment facet less assigned_by. CLI resolves relative to its caller; MCP should supply an absolute service-accessible path."
+doc = "UTF-8 schema_version 1 JSON path: title and the reservation-assignment facet less assigned_by. Attended CLI resolves relative to its caller; under a run handle give an absolute path below the actor's scratch directory, and over MCP an absolute service-accessible path."
 
 [reads]
 families = ["corpus-stored"]

@@ -193,12 +193,12 @@ def test_a_root_head_reports_its_frozen_derivation(shared):
     text = _read(cfg, "reservation-head", chain=CHAIN)
     assert _section(text, "reservation head") == [
         f"chain: {CHAIN}", "scope: none", f"head: {root}", "title: Recorded by a test", "predecessor: none",
-        "rule: mm-phase-1-protocol, version amendment-7", "assigned at: 2026-11-06T13:00:00Z", "assigned by: fixture"]
+        'rule: "mm-phase-1-protocol", version "amendment-7"', "assigned at: 2026-11-06T13:00:00Z", "assigned by: fixture"]
     assert _section(text, "frozen inputs") == [f"amendment-7: {digest('a7')}", f"roster.yaml: {digest('roster')}"]
     assert _section(text, "considered events") == ["count: 1", f"event: {event}"]
     assert _section(text, "group roles") == [
         "count: 2", 'unresolved: testing/cohort "a20-mm-patients"',
-        f'reserved: testing/cohort "uams-tt2", testing/cohort "uams-tt3"; label reserved (A1); basis {digest("comparison")}']
+        f'reserved: testing/cohort "uams-tt2", testing/cohort "uams-tt3"; label "reserved (A1)"; basis {digest("comparison")}']
     assert _section(text, "changes from the predecessor") == ["count: 0"]
     assert _section(text, "visible events not considered by this assignment") == ["count: 0"]
     assert _listed(text) == []
@@ -223,13 +223,21 @@ def test_a_successor_head_reports_its_changes_across_mounts(shared):
 
 def test_the_head_of_each_exact_chain_and_scope(shared):
     cfg = shared
-    program = _assignment(cfg)
-    scoped = _assignment(mount_config(cfg), scope="proposition:shared", chain=CHAIN)
+    mounted = mount_config(cfg)
+    program_node = assignment_node(assignment_facet(), actor="fixture")
+    for target in (cfg, mounted):
+        _hold(target, program_node)
+    program = program_node.id
+    scoped = _assignment(mounted, scope="proposition:shared", applies=program, chain=CHAIN)
     other = _assignment(cfg, chain="sun-epochs")
     for inputs, head in (({"chain": CHAIN}, program), ({"chain": CHAIN, "scope": "proposition:shared"}, scoped),
                          ({"chain": "sun-epochs"}, other)):
         section = _section(_read(cfg, "reservation-head", **inputs), "reservation head")
         assert f"head: {head}" in section and f"scope: {inputs.get('scope', 'none')}" in section
+        if "scope" in inputs:
+            assert f"applies: {program}" in section
+        else:
+            assert not any(line.startswith("applies:") for line in section)
 
 
 @pytest.mark.parametrize("inputs", [{"chain": "absent"}, {"chain": CHAIN, "scope": "proposition:shared"}])
@@ -307,11 +315,65 @@ def test_a_foreign_pinned_mount_is_read_like_any_other(shared):
 
 def test_text_a_record_supplies_cannot_start_a_report_line(shared):
     cfg = shared
-    event = _event(cfg, observer="codex\n  effect: non-exposing", **{"class": "a\nb"},
-                   units=[{"sort": "testing/cohort", "term": "x\n  observer: someone"}])
+    event = _event(
+        cfg,
+        observer="codex\n  effect: non-exposing\u2028  extra: 1",
+        **{"class": "a\nb\u2029c\x85d\x7fe\u200bf — g"},
+        units=[{"sort": "testing/cohort", "term": "x\n  observer: someone\u2028\u2029\x85\x7f — ok"}],
+    )
     section = _section(_read(cfg, "exposure-log"), event)
-    assert section[3:] == ['units: testing/cohort "x\\n  observer: someone"', "effect: exposing", 'class: "a\\nb"',
-                           'observer: "codex\\n  effect: non-exposing"']
+    assert section[3:] == [
+        'units: testing/cohort "x\\n  observer: someone\\u2028\\u2029\\u0085\\u007f — ok"',
+        "effect: exposing",
+        'class: "a\\nb\\u2029c\\u0085d\\u007fe\\u200bf — g"',
+        'observer: "codex\\n  effect: non-exposing\\u2028  extra: 1"',
+    ]
+
+
+def test_labels_rules_and_references_cannot_imitate_other_head_fields(shared):
+    cfg = shared
+    mounted = mount_config(cfg)
+    spoof_basis = digest("spoof")
+    predecessor_ref = "reservation-assignment:pred\n  spoof: 1"
+    applies_ref = "reservation-assignment:app\u2028  spoof: 2"
+    event_ref = "exposure-event:ev\x85  spoof: 3"
+    raw_write_node(
+        mounted.write_root,
+        assignment_node(assignment_facet(chain="other"), actor="fixture").model_copy(
+            update={"deprecated_ids": [predecessor_ref]}
+        ),
+    )
+    raw_write_node(
+        mounted.write_root,
+        assignment_node(
+            assignment_facet(
+                scope="proposition:shared",
+                predecessor=predecessor_ref,
+                applies=applies_ref,
+                events=[event_ref],
+                rule={"name": 'proto", version "1', "version": "2\u2029  head: none"},
+                groups=[
+                    group("a", label=f"core; basis {spoof_basis}"),
+                    group("b", label="core", basis=spoof_basis),
+                ],
+            ),
+            actor="fixture",
+        ),
+    )
+    text = _read(cfg, "reservation-head", chain=CHAIN, scope="proposition:shared")
+    head = _section(text, "reservation head")
+    assert 'predecessor: "reservation-assignment:pred\\n  spoof: 1"' in head
+    assert 'rule: "proto\\", version \\"1", version "2\\u2029  head: none"' in head
+    assert 'applies: "reservation-assignment:app\\u2028  spoof: 2"' in head
+    assert _section(text, "considered events") == [
+        "count: 1",
+        'event: "exposure-event:ev\\u0085  spoof: 3"',
+    ]
+    assert _section(text, "group roles") == [
+        "count: 2",
+        f'open: testing/cohort "a"; label "core; basis {spoof_basis}"',
+        f'open: testing/cohort "b"; label "core"; basis {spoof_basis}',
+    ]
 
 
 def test_a_long_report_pages_to_the_same_text_and_a_changed_world_stales_its_cursor(certified_work):

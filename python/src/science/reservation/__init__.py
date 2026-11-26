@@ -5,7 +5,7 @@ from science.reservation.attribution import claimed_events, differing_events, re
 from science.reservation.filters import require_chain, require_reference
 from science.reservation.gate import gate_of, unconsidered_blocks, unconsidered_events
 from science.reservation.payload import EXPOSURE_EVENT, RESERVATION_ASSIGNMENT, read_payload
-from science.reservation.presentation import changes_block, event_block, group_text, one_line
+from science.reservation.presentation import changes_block, event_block, group_text, one_line, quoted
 from science.reservation.records import LiveRecords, kernel_reads
 from science.reservation.statement import (
     Statement,
@@ -31,6 +31,7 @@ __all__ = [
     "group_text",
     "kernel_reads",
     "one_line",
+    "quoted",
     "read_claims",
     "read_payload",
     "read_statement",

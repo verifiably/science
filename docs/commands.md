@@ -374,8 +374,8 @@ science reservation-assignment --payload assignment.json
 The [guide](guide.md#recording-what-was-seen-and-what-is-held-back) walks an event, an
 assignment and its successor. An attended CLI call resolves the path in the caller's
 directory; MCP supplies an absolute path the service can read. Under a run handle the
-path must be a regular file below the actor's scratch directory, and the handler reads
-a private copy of it.
+path must be an absolute path to a regular file below the actor's scratch directory, and
+the handler reads a private copy of it.
 
 Every check runs before the act, so a refusal writes nothing:
 
@@ -571,9 +571,9 @@ Either path missing or empty, or a handle combined with `--config` or
 serves the same MCP discovery and tool-call protocol over stdio and forwards
 calls through the handle. The supervisor owns the session and its selection.
 
-A command that reads a file takes it from the actor's scratch directory and reads
-a private copy made before its handler runs; a link, a traversal or a path outside
-scratch refuses `path-outside-run`. An `exposure-event` or `reservation-assignment`
+A command that reads a file takes an absolute path below the actor's scratch directory
+and reads a private copy made before its handler runs; a relative path, a link, a
+traversal or a path outside scratch refuses `path-outside-run`. An `exposure-event` or `reservation-assignment`
 payload must be a regular file, and either write still needs a permit for its kind.
 
 `science heads` prints a `heads.v1` JSON object with the configured world's

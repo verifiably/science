@@ -11,6 +11,7 @@ from science.reservation import (
     group_text,
     kernel_reads,
     one_line,
+    quoted,
     require_chain,
     require_reference,
 )
@@ -31,15 +32,20 @@ def handle(ctx, *, chain: str, scope: str | None = None) -> Report:
         changes = assignment_changes_of(assignments, head.id)
         visible = exposure_events(assignments.of("exposure-event"))
     unconsidered = [event for event in visible if event.id not in head.events]
-    facts = [*asked, ("head", head.id), ("title", one_line(title)), ("predecessor", head.predecessor or "none"),
-             ("rule", f"{one_line(head.rule_name)}, version {one_line(head.rule_version)}")]
+    facts = [
+        *asked,
+        ("head", head.id),
+        ("title", one_line(title)),
+        ("predecessor", "none" if head.predecessor is None else one_line(head.predecessor)),
+        ("rule", f"{quoted(head.rule_name)}, version {quoted(head.rule_version)}"),
+    ]
     if head.applies is not None:
-        facts.append(("applies", head.applies))
+        facts.append(("applies", one_line(head.applies)))
     facts += [("assigned at", head.assigned_at), ("assigned by", one_line(head.assigned_by))]
     return (
         KeyVals("reservation head", tuple(facts)),
         KeyVals("frozen inputs", tuple((one_line(name), digest) for name, digest in head.inputs)),
-        KeyVals("considered events", (("count", str(len(head.events))), *(("event", ref) for ref in head.events))),
+        KeyVals("considered events", (("count", str(len(head.events))), *(("event", one_line(ref)) for ref in head.events))),
         KeyVals("group roles", (("count", str(len(head.groups))),
                                 *((group.role, group_text(group)) for group in head.groups))),
         changes_block(changes),

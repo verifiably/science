@@ -304,7 +304,7 @@ cat > knowledge.json <<'JSON'
 JSON
 knowledge=$(science exposure-event --payload knowledge.json | address exposure-event)
 
-assignment() {  # title, events, role of the later epoch, further fields
+assignment() {  # title, events, role of the later epoch, time, further fields
 cat <<JSON
 {"schema_version": 1, "title": "$1",
  "facet": {"chain": "epochs", "rule": {"name": "epoch-rule", "version": "1"},
@@ -312,10 +312,10 @@ cat <<JSON
            "events": [$2],
            "groups": [{"units": [{"start": "open", "end": "2008-12-01T00:00:00Z"}], "role": "open"},
                       {"units": [{"start": "2008-12-01T00:00:00Z", "end": "open"}], "role": "$3"}],
-           $4 "assigned_at": "2026-11-08T09:00:00Z"}}
+           $5 "assigned_at": "$4"}}
 JSON
 }
-assignment "Epochs, first assignment" "\"$knowledge\"" reserved "" > first.json
+assignment "Epochs, first assignment" "\"$knowledge\"" reserved "2026-11-08T09:00:00Z" "" > first.json
 first=$(science reservation-assignment --payload first.json | address reservation-assignment)
 
 source=$(science source --title "GSE24080" --accession GSE24080 | address source)
@@ -334,7 +334,7 @@ look=$(science exposure-event --payload look.json | address exposure-event)
 science reservation-head --chain epochs   # still the first assignment; the look is not considered
 
 considered=$(printf '"%s"\n' "$knowledge" "$look" | sort | paste -sd, -)
-assignment "Epochs, after the unmask" "$considered" open \
+assignment "Epochs, after the unmask" "$considered" open "2026-11-09T11:00:00Z" \
   "\"predecessor\": \"$first\", \"evidence\": [\"$look\"], \"flagged\": []," > second.json
 science reservation-assignment --payload second.json
 

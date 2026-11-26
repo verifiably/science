@@ -78,12 +78,19 @@ def test_the_mm_unmask_event_is_minted_under_the_sessions_recorder(shared, tmp_p
 
 def test_interval_and_kernel_evidence_survive_with_their_edges(shared, tmp_path):
     """A Sun date-of-use event: interval units, no subject, and kernel evidence held by a read mount."""
+    from beliefs.root import store_identity
     cfg, mounted = shared
     view = mount_config(cfg)
+    with research_rig(view, ("recheck",)) as (recheck_rig, _):
+        rechecked = recheck_rig.invoke(
+            "recheck", {"location": f"store:{store_identity(view.store_root)}:{'0' * 64}/absent.txt"}
+        ).text
+    act_report = re.search(r"act-report:[0-9a-f]{64}", rechecked)[0]
     with research_rig(cfg, COMMANDS) as (d, ctx):
         mount = next(m for m in ctx.mounts() if m.root == view.write_root)
-        refs = sorted([mounted["run"], next(
+        refs = sorted([act_report, mounted["run"], next(
             n.id for n in mount.view.iter_stored() if n.kind == "holdings-observation")])
+        assert [ref.split(":", 1)[0] for ref in refs] == ["act-report", "holdings-observation", "run"]
         payload = write_payload(tmp_path, event_facet(
             units=[{"start": "open", "end": "2026-11-07T14:40:51Z"}], observed_at="2026-11-07T14:40:51Z",
             evidence=sorted([*refs, "task:sun-7bfa16"])))
@@ -336,12 +343,23 @@ def test_a_holder_pinning_another_contract_refuses_even_beside_an_acceptable_cop
 def test_a_retired_mount_supplies_no_citation_and_occupies_no_address(shared, tmp_path):
     from beliefs.root import open_world
     from helpers.world import FIXTURE_AUTHORITY
-    cfg, mounted = shared
+    cfg, _ = shared
     mount = mount_config(cfg)
-    open_world(cfg.world, authority=FIXTURE_AUTHORITY).retire(corpus_id_at(mount.write_root))
-    with research_rig(replace(cfg, coordination=None), COMMANDS) as (d, ctx):
-        refusal = _refusal(d, write_payload(tmp_path, event_facet(propositions=["proposition:shared"])), "RETIRED")
-        assert refusal.data == {"unresolved": ["proposition:shared"]}
+    facet = event_facet(units=[])
+    payload = write_payload(tmp_path, facet)
+    citing = write_payload(tmp_path, event_facet(propositions=["proposition:shared"]), name="citing.json")
+    with research_rig(cfg, COMMANDS) as (d, ctx):
+        prior = hold_record(mount.write_root, mount.profile, event_node(facet, actor=d._session.actor),
+                            actor=d._session.actor)
+        assert _refusal(d, payload, "LIVE-MOUNT").data["existing"][0]["address"] == prior.id
+        open_world(cfg.world, authority=FIXTURE_AUTHORITY).retire(corpus_id_at(mount.write_root))
+        refusal = _refusal(d, citing, "RETIRED-ON")
+        assert refusal.code == "invalid-input" and refusal.data == {"unresolved": ["proposition:shared"]}
+        minted = _minted(d.invoke(COMMAND, {"payload": payload}, invocation_id="AFTER-RETIRE").text)
+        assert minted == prior.id and stored_of(ctx, COMMAND) == [prior.id]
+    with research_rig(replace(cfg, coordination=None), COMMANDS) as (d, _):
+        refusal = _refusal(d, citing, "RETIRED-OFF")
+        assert refusal.code == "invalid-input" and refusal.data == {"unresolved": ["proposition:shared"]}
 
 
 @pytest.mark.parametrize("where", ["corpus", "shared"])
